@@ -1,0 +1,21 @@
+trigger:
+- main
+
+pool:
+  vmImage: windows-latest
+
+steps:
+- script: echo Hello, world!
+  displayName: 'Run a one-line script'
+  
+- script: 
+- task: SqlAzureDacpacDeployment@1
+  displayName: 'Run a SQL Scripts'
+  inputs:
+    AuthenticationType: 'aadAuthenticationIntegrated'
+    ServerName: 'azrvaultdatasit001.database.windows.net'
+    DatabaseName: 'vault_edw'
+    deployType: 'SqlTask'
+    SqlFile: 'prueba.sql'
+    IpDetectionMethod: 'AutoDetect'
+
