@@ -1,5 +1,5 @@
 trigger:
-- main
+- Development
 
 pool:
   vmImage: windows-latest
@@ -10,12 +10,12 @@ steps:
   
 - script: 
 - task: SqlAzureDacpacDeployment@1
-  displayName: 'Run a SQL Scripts'
   inputs:
-    AuthenticationType: 'aadAuthenticationIntegrated'
+    azureConnectionType: 'ConnectedServiceName'
+    AuthenticationType: 'servicePrincipal'
     ServerName: 'azrvaultdatasit001.database.windows.net'
     DatabaseName: 'vault_edw'
     deployType: 'SqlTask'
     SqlFile: 'prueba.sql'
     IpDetectionMethod: 'AutoDetect'
-
+  
