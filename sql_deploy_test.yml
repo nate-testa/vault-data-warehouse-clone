@@ -11,10 +11,11 @@ steps:
 - script: 
 - task: SqlAzureDacpacDeployment@1
   inputs:
-    azureConnectionType: 'ConnectedServiceName'
-    AuthenticationType: 'servicePrincipal'
+    AuthenticationType: 'server'
     ServerName: 'azrvaultdatasit001.database.windows.net'
     DatabaseName: 'vault_edw'
+    SqlUsername: 'svc_airflow'
+    SqlPassword: 'V@ult22$'
     deployType: 'SqlTask'
     SqlFile: 'prueba.sql'
     IpDetectionMethod: 'AutoDetect'
