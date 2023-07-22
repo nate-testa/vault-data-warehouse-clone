@@ -5,5 +5,5 @@ GO
 CREATE PROCEDURE edw_core.z_sp_test
 AS
 BEGIN
-    PRINT '¡Test sp!'
+    PRINT '¡Test sp!dfsggasdgsdf'
 END;
