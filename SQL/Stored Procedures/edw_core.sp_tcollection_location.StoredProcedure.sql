@@ -1,9 +1,3 @@
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[edw_core].[sp_tcollection_location]') AND type in (N'P'))
-BEGIN
-    DROP PROCEDURE [edw_core].[sp_tcollection_location]
-END
-GO
-
 SET ANSI_NULLS ON
 GO
 
@@ -15,9 +9,9 @@ GO
 -- =============================================
 -- Author:		Hernando Gonzalez Garcia
 -- Create Date: 2023-08-11
--- Description: This procedures insert and update info related to Collection Location.
+-- Description: This stored procedure insert and update info related to Collection Location.
 -- =============================================
-CREATE PROCEDURE [edw_core].[sp_tcollection_location]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_location]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
