@@ -49,12 +49,14 @@ BEGIN
 					WHEN p.product_cd = 'HO' THEN CONCAT(hl.address_line_1,'-',hl.address_line_2,'-',hl.unit_no,'-',hl.city_nm,'-',hl.state_cd,'-',hl.zip_cd)
 					ELSE '***!Pending!***'
 				END as risk_item,
-				ss.source_system_nm
+				ss.source_system_nm,
+				d1.actual_dt as transaction_dt
 		INTO [edw_temp].[tclaim_policy_search_api_temp1] 
-		FROM (SELECT DISTINCT policy_sk, transaction_seq_no, transaction_dt_sk, transaction_effective_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk, item_sk FROM edw_core.tpolicy_transaction) AS pt
+		FROM (SELECT DISTINCT policy_sk, transaction_seq_no, transaction_dt_sk, transaction_effective_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk, item_sk 
+				FROM edw_core.tpolicy_transaction) AS pt
 		INNER JOIN edw_core.tdate as d1 ON pt.transaction_dt_sk = d1.date_sk AND d1.actual_dt >= @last_source_extract_ts
-		INNER JOIN edw_core.tpolicy_history AS ph ON pt.policy_sk = ph.policy_sk
-		INNER JOIN edw_core.tpolicy AS p ON p.policy_sk = ph.policy_sk
+		INNER JOIN edw_core.tpolicy_history AS ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no
+		INNER JOIN edw_core.tpolicy AS p ON p.policy_sk = ph.policy_sk AND p.effective_dt = ph.effective_dt
 		LEFT JOIN edw_core.tdate AS d2 ON pt.transaction_effective_dt_sk = d2.date_sk
 		LEFT JOIN edw_core.tcustomer AS c ON pt.customer_sk = c.customer_sk
 		LEFT JOIN edw_core.tproduct AS pr ON p.product_cd = pr.product_cd
@@ -63,29 +65,8 @@ BEGIN
 		LEFT JOIN edw_core.thome_location AS hl ON pt.item_sk = hl.home_location_sk
 
 
-		-- Start Merge process
-		MERGE INTO [edw_integration].[claim_policy_search_api] AS tgt
-		USING [edw_temp].[tclaim_policy_search_api_temp1] AS src
-		ON src.policy_no = tgt.policy_no
-		AND src.effective_dt = tgt.effective_dt
-		AND src.transaction_seq_no = tgt.transaction_seq_no
-		AND src.risk_item = tgt.risk_item
-		-- Updates
-		WHEN MATCHED THEN 
-		UPDATE SET tgt.expiration_dt = src.expiration_dt
-					,tgt.transaction_effective_dt = src.transaction_effective_dt
-					,tgt.policy_status = src.policy_status
-					,tgt.insured_nm = src.insured_nm
-					,tgt.insured_type = src.insured_type
-					,tgt.uw_company_nm = src.uw_company_nm
-					,tgt.product_nm = src.product_nm
-					,tgt.transaction_type = src.transaction_type
-					,tgt.source_system_nm = src.source_system_nm
-					,tgt.update_ts = getdate()
-					,tgt.etl_audit_sk = @etl_audit_sk
-		-- Inserts
-		WHEN NOT MATCHED BY TARGET THEN
-		INSERT (
+		-- Start Insert process
+		INSERT INTO [edw_integration].[claim_policy_search_api](
 			policy_no,
 			effective_dt,
 			expiration_dt,
@@ -103,8 +84,7 @@ BEGIN
 			update_ts,
 			etl_audit_sk
 		)
-		VALUES (
-			policy_no,
+		SELECT policy_no,
 			effective_dt,
 			expiration_dt,
 			transaction_effective_dt,
@@ -120,13 +100,13 @@ BEGIN
 			getdate(),
 			getdate(),
 		    @etl_audit_sk
-		);			
+		FROM [edw_temp].[tclaim_policy_search_api_temp1];
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.transaction_effective_dt) FROM edw_temph.[tclaim_policy_search_api_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.transaction_dt) FROM [edw_temp].[tclaim_policy_search_api_temp1] t1),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS edw_temph.[tclaim_policy_search_api_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[tclaim_policy_search_api_temp1];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
