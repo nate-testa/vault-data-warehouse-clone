@@ -465,9 +465,29 @@ with DAG(
 
         sp_tpolicy >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tloss_history >> sp_tadditional_interest >> send_policy_email
 
+    with TaskGroup("integration_group") as integration_group:
+
+        integration_group_items = ['sp_tclaim_policy_search_api']
+
+        sp_tclaim_policy_search_api = MsSqlOperator(
+            task_id='sp_tclaim_policy_search_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tclaim_policy_search_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        send_integration_email = EmailOperator(
+            task_id='send_integration_email',
+            to=to_email,
+            subject='Airflow - Integration tables loaded successfully',
+            html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
+        )
+
+        sp_tclaim_policy_search_api >> send_integration_email
 
     end = DummyOperator(
         task_id='end',
     )
 
-start >> ADF_group >> reference_group >> policy_group >> [home_group , PEL_group, collection_group] >> policy_transaction_group >> datamart_group >> end
+start >> ADF_group >> reference_group >> policy_group >> [home_group , PEL_group, collection_group] >> policy_transaction_group >> datamart_group >> integration_group >> end
