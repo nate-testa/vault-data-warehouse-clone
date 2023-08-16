@@ -7,7 +7,7 @@ GO
 -- =============================================
 -- Author:		Alberto Almario Valbuena
 -- Create Date: 2023-08-01
--- Description: This procedures insert and update info related to Policy Search API
+-- Description: This procedures insert and update info related to Claim Policy Search API
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_policy_search_api]
 AS
@@ -33,9 +33,9 @@ BEGIN
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tclaim_policy_search_api_temp1];
-		SELECT DISTINCT ph.policy_no,
-				ph.effective_dt,
-				ph.expiration_dt,
+		SELECT DISTINCT p.policy_no,
+				p.effective_dt,
+				p.expiration_dt,
 				d2.actual_dt as transaction_effective_dt,
 				pt.transaction_seq_no,
 				p.policy_status,
@@ -50,19 +50,18 @@ BEGIN
 					ELSE '***!Pending!***'
 				END as risk_item,
 				ss.source_system_nm,
-				d1.actual_dt as transaction_dt
+				pt.create_ts as policy_transaction_create_ts
 		INTO [edw_temp].[tclaim_policy_search_api_temp1] 
-		FROM (SELECT DISTINCT policy_sk, transaction_seq_no, transaction_dt_sk, transaction_effective_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk, item_sk 
+		FROM (SELECT DISTINCT policy_sk, transaction_seq_no, transaction_effective_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk, item_sk, create_ts
 				FROM edw_core.tpolicy_transaction) AS pt
-		INNER JOIN edw_core.tdate as d1 ON pt.transaction_dt_sk = d1.date_sk AND d1.actual_dt >= @last_source_extract_ts
-		INNER JOIN edw_core.tpolicy_history AS ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no
-		INNER JOIN edw_core.tpolicy AS p ON p.policy_sk = ph.policy_sk AND p.effective_dt = ph.effective_dt
+		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
 		LEFT JOIN edw_core.tdate AS d2 ON pt.transaction_effective_dt_sk = d2.date_sk
 		LEFT JOIN edw_core.tcustomer AS c ON pt.customer_sk = c.customer_sk
 		LEFT JOIN edw_core.tproduct AS pr ON p.product_cd = pr.product_cd
 		LEFT JOIN edw_core.tpolicy_transaction_type AS ptt ON pt.policy_transaction_type_sk = ptt.policy_transaction_type_sk
 		LEFT JOIN edw_core.tsource_system AS ss ON pt.source_system_sk = ss.source_system_sk
 		LEFT JOIN edw_core.thome_location AS hl ON pt.item_sk = hl.home_location_sk
+		WHERE pt.create_ts >= @last_source_extract_ts
 
 
 		-- Start Insert process
@@ -104,7 +103,7 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.transaction_dt) FROM [edw_temp].[tclaim_policy_search_api_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_transaction_create_ts) FROM [edw_temp].[tclaim_policy_search_api_temp1] t1),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS [edw_temp].[tclaim_policy_search_api_temp1];
 		
