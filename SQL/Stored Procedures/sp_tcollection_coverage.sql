@@ -7,7 +7,7 @@ GO
 
 -- =============================================
 -- Author:		Hernando Gonzalez Garcia
--- Create Date: <Create Date, , >
+-- Create Date: 2023-08-16
 -- Description: This procedures insert and update info related to Collection Coverage 
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_coverage]
