@@ -81,9 +81,11 @@ with DAG(
     tags=["master dag", "vault"],
 ) as dag:
     
+
     start = DummyOperator(
         task_id='start',
     )
+
 
     with TaskGroup("ADF_group") as ADF_group:
 
@@ -102,6 +104,7 @@ with DAG(
         )
 
         adf_etl_load_stage >> send_adf_email
+
 
     with TaskGroup("home_group") as home_group:
 
@@ -148,6 +151,7 @@ with DAG(
 
         sp_thome_location >> sp_thome_coverage >> sp_tmortgagee >> sp_thome_additional_coverage >> send_home_email
 
+
     with TaskGroup("collection_group") as collection_group:
 
         collection_group_items = ['sp_tcollection_location','sp_tcollection_additional_coverage','sp_tcollection_coverage','sp_tcollection_scheduled_item_detail']
@@ -192,6 +196,7 @@ with DAG(
         )
 
         sp_tcollection_location >> sp_tcollection_additional_coverage >> sp_tcollection_coverage >> sp_tcollection_scheduled_item_detail >> send_collection_email
+
 
     with TaskGroup("PEL_group") as PEL_group:
 
@@ -254,6 +259,7 @@ with DAG(
 
         sp_tpel_location >> sp_tpel_driver >> sp_tpel_driver_incident >> sp_tpel_vehicle >> sp_tpel_watercraft >> sp_tpel_coverage >> send_PEL_email
 
+
     with TaskGroup("policy_transaction_group") as policy_transaction_group:
 
         policy_transaction_group_items = ['sp_tpolicy_transaction','sp_treconciliation']
@@ -289,6 +295,7 @@ with DAG(
         )
 
         sp_tpolicy_transaction >> sp_treconciliation >> treconciliation_email >> send_policy_transaction_email
+
 
     with TaskGroup("datamart_group") as datamart_group:
 
@@ -359,6 +366,7 @@ with DAG(
 
         sp_tdaily_inforce_policy >> sp_tpolicy_summary >> sp_tcustomer_summary >> sp_titem_inforce >> sp_titem_summary >> sp_tinternal_coverage_inforce >> sp_tinternal_coverage_summary >> send_datamart_email
 
+
     with TaskGroup("reference_group") as reference_group:
 
         reference_group_items = ['sp_tbroker','sp_tcustomer','sp_tuser','sp_tinternal_coverage','sp_ttax_fee_surcharge']
@@ -411,6 +419,7 @@ with DAG(
         )
 
         sp_tbroker >> sp_tcustomer >> sp_tuser >> sp_tinternal_coverage >> sp_ttax_fee_surcharge >> send_reference_email
+
 
     with TaskGroup("policy_group") as policy_group:
 
@@ -465,6 +474,107 @@ with DAG(
 
         sp_tpolicy >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tloss_history >> sp_tadditional_interest >> send_policy_email
 
+
+    with TaskGroup("vendor_report_group") as vendor_report_group:
+
+        vendor_report_group_items = ['sp_tvendor_report']
+
+        sp_tvendor_report_CarfaxVin = MsSqlOperator(
+            task_id='sp_tvendor_report_CarfaxVin',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tvendor_report 'CarfaxVin'",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tvendor_report_ClueProperty = MsSqlOperator(
+            task_id='sp_tvendor_report_ClueProperty',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tvendor_report 'Clue Property'",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tvendor_report_GuyCarpenter = MsSqlOperator(
+            task_id='sp_tvendor_report_GuyCarpenter',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tvendor_report 'GuyCarpenter'",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tvendor_report_IsoVin = MsSqlOperator(
+            task_id='sp_tvendor_report_IsoVin',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tvendor_report 'IsoVin'",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tvendor_report_LC360 = MsSqlOperator(
+            task_id='sp_tvendor_report_LC360',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tvendor_report 'LC360'",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tvendor_report_SAQ = MsSqlOperator(
+            task_id='sp_tvendor_report_SAQ',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tvendor_report 'SAQ'",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tvendor_report_TransUnion = MsSqlOperator(
+            task_id='sp_tvendor_report_TransUnion',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tvendor_report 'TransUnion'",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tvendor_report_IsoProperty = MsSqlOperator(
+            task_id='sp_tvendor_report_IsoProperty',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tvendor_report 'IsoProperty'",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        send_vendor_report_email = EmailOperator(
+            task_id='send_vendor_report_email',
+            to=to_email,
+            subject='Airflow - Vendor report stored procedure executions finalized successfully',
+            html_content=get_sp_success_data_HTML(vendor_report_group_items, 'All executions of stored procedure vendor report executed successfully'),
+        )
+
+        sp_tvendor_report_CarfaxVin >> sp_tvendor_report_ClueProperty >> sp_tvendor_report_GuyCarpenter >> sp_tvendor_report_IsoVin >> sp_tvendor_report_LC360 >> sp_tvendor_report_SAQ >> sp_tvendor_report_TransUnion >> sp_tvendor_report_IsoProperty >> send_vendor_report_email
+
+
+    with TaskGroup("validation_result_group") as validation_result_group:
+
+        validation_result_group_items = ['sp_tvalidation_result']
+
+        sp_tvalidation_result = MsSqlOperator(
+            task_id='sp_tvalidation_result',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tvalidation_result",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        send_validation_email = EmailOperator(
+            task_id='send_validation_email',
+            to=to_email,
+            subject='Airflow - Validation result tables loaded successfully',
+            html_content=get_sp_success_data_HTML(validation_result_group_items, 'All stored procedures executed successfully for all the validation resul tables'),
+        )
+
+        sp_tvalidation_result >> send_validation_email
+
+
     with TaskGroup("integration_group") as integration_group:
 
         integration_group_items = ['sp_tclaim_policy_search_api']
@@ -486,8 +596,10 @@ with DAG(
 
         sp_tclaim_policy_search_api >> send_integration_email
 
+
     end = DummyOperator(
         task_id='end',
     )
 
-start >> ADF_group >> reference_group >> policy_group >> [home_group , PEL_group, collection_group] >> policy_transaction_group >> datamart_group >> integration_group >> end
+
+start >> ADF_group >> reference_group >> policy_group >> [home_group , PEL_group, collection_group] >> policy_transaction_group >> datamart_group >> vendor_report_group >> validation_result_group >> integration_group >> end
