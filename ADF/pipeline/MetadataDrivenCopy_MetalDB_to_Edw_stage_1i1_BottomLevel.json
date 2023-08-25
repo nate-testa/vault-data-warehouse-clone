@@ -86,7 +86,7 @@
 													"sink": {
 														"type": "AzureSqlSink",
 														"preCopyScript": {
-															"value": "@json(item().CopySinkSettings).preCopyScript",
+															"value": "@{json(item().CopySinkSettings).preCopyScript}",
 															"type": "Expression"
 														},
 														"writeBehavior": {
@@ -102,13 +102,10 @@
 															"type": "Expression"
 														},
 														"tableOption": {
-															"value": "@json(item().CopySinkSettings).tableOption",
+															"value": "@{json(item().CopySinkSettings).tableOption}",
 															"type": "Expression"
 														},
-														"disableMetricsCollection": {
-															"value": "@json(item().CopySinkSettings).disableMetricsCollection",
-															"type": "Expression"
-														}
+														"disableMetricsCollection": true
 													},
 													"enableStaging": false,
 													"validateDataConsistency": false,
