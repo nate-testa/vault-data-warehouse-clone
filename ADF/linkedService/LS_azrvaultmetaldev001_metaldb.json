@@ -1,0 +1,15 @@
+{
+	"name": "LS_azrvaultmetaldev001_metaldb",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"connectionString": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=azrvaultmetaldev001.database.windows.net;Initial Catalog=metaldb"
+		},
+		"connectVia": {
+			"referenceName": "integrationRuntimeAzure",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
