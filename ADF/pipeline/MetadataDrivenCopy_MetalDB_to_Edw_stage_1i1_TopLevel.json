@@ -23,6 +23,7 @@
 							"value": "SELECT count(*) as count FROM @{pipeline().parameters.MainControlTableName} where TopLevelPipelineName='@{pipeline().Pipeline}' and CopyEnabled = 1",
 							"type": "Expression"
 						},
+						"isolationLevel": "ReadUncommitted",
 						"partitionOption": "None"
 					},
 					"dataset": {
@@ -62,7 +63,7 @@
 									"referenceName": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_MiddleLevel",
 									"type": "PipelineReference"
 								},
-								"waitOnCompletion": true,
+								"waitOnCompletion": false,
 								"parameters": {
 									"MaxNumberOfObjectsReturnedFromLookupActivity": {
 										"value": "@pipeline().parameters.MaxNumberOfObjectsReturnedFromLookupActivity",
