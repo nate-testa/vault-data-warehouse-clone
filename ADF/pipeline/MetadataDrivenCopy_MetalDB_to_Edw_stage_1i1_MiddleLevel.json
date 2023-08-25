@@ -64,7 +64,7 @@
 									"referenceName": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_BottomLevel",
 									"type": "PipelineReference"
 								},
-								"waitOnCompletion": true,
+								"waitOnCompletion": false,
 								"parameters": {
 									"ObjectsPerGroupToCopy": {
 										"value": "@activity('GetObjectsPerGroupToCopy').output.value",
