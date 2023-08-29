@@ -369,15 +369,7 @@ with DAG(
 
     with TaskGroup("reference_group") as reference_group:
 
-        reference_group_items = ['sp_tbroker','sp_tcustomer','sp_tuser','sp_tinternal_coverage','sp_ttax_fee_surcharge']
-
-        sp_tbroker = MsSqlOperator(
-            task_id='sp_tbroker',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tbroker",
-            database="vault_edw",
-            autocommit=True,
-        )
+        reference_group_items = ['sp_tcustomer','sp_tuser','sp_tinternal_coverage','sp_ttax_fee_surcharge','sp_tbillingaccount']
 
         sp_tcustomer = MsSqlOperator(
             task_id='sp_tcustomer',
@@ -411,6 +403,14 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tbillingaccount = MsSqlOperator(
+            task_id='sp_tbillingaccount',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tbillingaccount",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_reference_email = EmailOperator(
             task_id='send_reference_email',
             to=to_email,
@@ -418,7 +418,53 @@ with DAG(
             html_content=get_sp_success_data_HTML(reference_group_items, 'All stored procedures executed successfully for all the Reference tables'),
         )
 
-        sp_tbroker >> sp_tcustomer >> sp_tuser >> sp_tinternal_coverage >> sp_ttax_fee_surcharge >> send_reference_email
+        sp_tcustomer >> sp_tuser >> sp_tinternal_coverage >> sp_ttax_fee_surcharge >> sp_tbillingaccount >> send_reference_email
+
+
+    with TaskGroup("broker_group") as broker_group:
+
+        broker_group_items = ['sp_tbroker','sp_tbroker_commission','sp_tbroker_license','sp_tbroker_vault_team']
+
+        sp_tbroker = MsSqlOperator(
+            task_id='sp_tbroker',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tbroker",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tbroker_commission = MsSqlOperator(
+            task_id='sp_tbroker_commission',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tbroker_commission",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tbroker_license = MsSqlOperator(
+            task_id='sp_tbroker_license',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tbroker_license",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tbroker_vault_team = MsSqlOperator(
+            task_id='sp_tbroker_vault_team',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tbroker_vault_team",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        send_broker_email = EmailOperator(
+            task_id='send_broker_email',
+            to=to_email,
+            subject='Airflow - Broker tables loaded successfully',
+            html_content=get_sp_success_data_HTML(broker_group_items, 'All stored procedures executed successfully for all the Broker tables'),
+        )
+
+        sp_tbroker >> sp_tbroker_commission >> sp_tbroker_license >> sp_tbroker_vault_team >> send_broker_email
 
 
     with TaskGroup("policy_group") as policy_group:
@@ -577,12 +623,20 @@ with DAG(
 
     with TaskGroup("integration_group") as integration_group:
 
-        integration_group_items = ['sp_tclaim_policy_search_api']
+        integration_group_items = ['sp_tclaim_policy_search_api','sp_tclaim_symbility_api']
 
         sp_tclaim_policy_search_api = MsSqlOperator(
             task_id='sp_tclaim_policy_search_api',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tclaim_policy_search_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tclaim_symbility_api = MsSqlOperator(
+            task_id='sp_tclaim_symbility_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tclaim_symbility_api",
             database="vault_edw",
             autocommit=True,
         )
@@ -594,7 +648,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
         )
 
-        sp_tclaim_policy_search_api >> send_integration_email
+        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> send_integration_email
 
 
     end = DummyOperator(
@@ -602,4 +656,4 @@ with DAG(
     )
 
 
-start >> ADF_group >> reference_group >> policy_group >> [home_group , PEL_group, collection_group] >> policy_transaction_group >> datamart_group >> vendor_report_group >> validation_result_group >> integration_group >> end
+start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, collection_group] >> policy_transaction_group >> datamart_group >> vendor_report_group >> validation_result_group >> integration_group >> end
