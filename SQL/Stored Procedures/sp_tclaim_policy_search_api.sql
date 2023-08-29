@@ -61,7 +61,7 @@ BEGIN
 		LEFT JOIN edw_core.tpolicy_transaction_type AS ptt ON pt.policy_transaction_type_sk = ptt.policy_transaction_type_sk
 		LEFT JOIN edw_core.tsource_system AS ss ON pt.source_system_sk = ss.source_system_sk
 		LEFT JOIN edw_core.thome_location AS hl ON pt.item_sk = hl.home_location_sk
-		WHERE pt.create_ts > @last_source_extract_ts
+		WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
 
 
 		-- Start Insert process
