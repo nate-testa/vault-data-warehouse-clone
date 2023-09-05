@@ -6,10 +6,10 @@ GO
 
 -- =============================================
 -- Author:		Alberto Almario Valbuena
--- Create Date: 2023-08-30
--- Description: This procedures insert and update info related to HSB - HSP
+-- Create Date: 2023-09-05
+-- Description: This procedures insert info related to HSB - SLC
 -- =============================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_hsb_hsp_feed]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_hsb_slc_feed]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -32,12 +32,12 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
 		-- Step1 limit amount of rows.
-		DROP TABLE IF EXISTS [edw_temp].[tpolicy_hsb_hsp_feed_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[tpolicy_hsb_slc_feed_temp1];
 		SELECT 
             getdate() as reporting_date,
-            '4271' as company_product_cd,
-            'HSP' as product_nm,
-            '1004006' as contract_no,
+            '4280' as company_product_cd,
+            'SLC' as product_nm,
+            '1004013' as contract_no,
             CASE 
                 WHEN CHARINDEX('-', ph.policy_no) > 0 THEN LEFT(ph.policy_no, CHARINDEX('-', ph.policy_no) - 1)
                 ELSE ph.policy_no
@@ -52,10 +52,10 @@ BEGIN
             c.city_nm as dwelling_city,
             c.state_cd as dwelling_state,
             c.zip_cd as dwelling_zip_cd,
-            NULL as hsp_net_premium_amt,
-            hac.home_systems_protection_limit_amt as hsp_limit_amt,
-            '' as hsp_deductible_amt,
-            NULL as base_homeowner_premium,
+            ROUND(pt.net_premium_amt,0) as slc_net_premium_amt,
+            50000 as slc_limit_amt,
+            500 as slc_deductible_amt,
+            '' as base_homeowner_premium,
             ROUND(pt.net_premium_amt,0) as final_homeowner_premium,
             hc.aop_deductible as policy_deductible,
             hc.dwelling_limit_amt as coverage_a_value,
@@ -65,18 +65,18 @@ BEGIN
             '' as homeowners_or_dwelling_fire_policy_form_type,
             '' as product_form_no,
             '' as client_product_nm,
-            hc.residence_type,
+            hc.occupancy_type as residence_type,
             '' as usage_type,
             hc.occupancy_type as occupancy,
             hc.built_year as year_build,
             hc.total_finished_square_feet as total_living_area,
-            NULL as no_of_units_in_dwelling,
+            '' as no_of_units_in_dwelling,
             hc.hvac_updated_year as heating_system_updated_yr,
             hc.electrical_updated_year as electrical_system_updated_yr,
             hc.plumbing_updated_year as plumbing_system_updated_yr,
-            NULL as distance_to_hydrant,
+            '' as distance_to_hydrant,
             '' as pricing_tier,
-            NULL as insurance_score,
+            '' as insurance_score,
             '' as rating_territory_cd,
             '' as protection_class_cd,
             CASE 
@@ -90,7 +90,7 @@ BEGIN
  			getdate() as update_ts,
  		    @etl_audit_sk as etl_audit_sk,
             ph.create_ts as policy_history_create_ts
-		INTO [edw_temp].[tpolicy_hsb_hsp_feed_temp1] 
+		INTO [edw_temp].[tpolicy_hsb_slc_feed_temp1] 
 		FROM edw_core.tpolicy_history AS ph
         LEFT JOIN edw_core.tcustomer AS c ON ph.customer_sk = c.customer_sk
         LEFT JOIN edw_core.thome_coverage AS hc ON ph.policy_history_sk = hc.policy_history_sk
@@ -108,8 +108,8 @@ BEGIN
 
 
 		-- Start Insert process
-		INSERT INTO [edw_integration].[policy_hsb_hsp_feed](
-			reporting_date,
+		INSERT INTO [edw_integration].[policy_hsb_slc_feed](
+            reporting_date,
             company_product_cd,
             product_nm,
             contract_no,
@@ -124,9 +124,9 @@ BEGIN
             dwelling_city,
             dwelling_state,
             dwelling_zip_cd,
-            hsp_net_premium_amt,
-            hsp_limit_amt,
-            hsp_deductible_amt,
+            slc_net_premium_amt,
+            slc_limit_amt,
+            slc_deductible_amt,
             base_homeowner_premium,
             final_homeowner_premium,
             policy_deductible,
@@ -159,7 +159,8 @@ BEGIN
             update_ts,
             etl_audit_sk
 		)
-		SELECT reporting_date,
+		SELECT 
+            reporting_date,
             company_product_cd,
             product_nm,
             contract_no,
@@ -174,9 +175,9 @@ BEGIN
             dwelling_city,
             dwelling_state,
             dwelling_zip_cd,
-            hsp_net_premium_amt,
-            hsp_limit_amt,
-            hsp_deductible_amt,
+            slc_net_premium_amt,
+            slc_limit_amt,
+            slc_deductible_amt,
             base_homeowner_premium,
             final_homeowner_premium,
             policy_deductible,
@@ -208,13 +209,13 @@ BEGIN
             create_ts,
             update_ts,
             etl_audit_sk
-		FROM [edw_temp].[tpolicy_hsb_hsp_feed_temp1];
+		FROM [edw_temp].[tpolicy_hsb_slc_feed_temp1];
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_history_create_ts) FROM [edw_temp].[tpolicy_hsb_hsp_feed_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_history_create_ts) FROM [edw_temp].[tpolicy_hsb_slc_feed_temp1] t1),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS [edw_temp].[tpolicy_hsb_hsp_feed_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[tpolicy_hsb_slc_feed_temp1];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
