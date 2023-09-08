@@ -10,7 +10,7 @@ from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.microsoft.azure.operators.data_factory import AzureDataFactoryRunPipelineOperator
-from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_treconciliation_data_HTML
+from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
 
 to_email = "sandeep.gundreddy@vault.insurance, architha.gudimalla@vault.insurance, yunus.mohammed@vault.insurance, tuba.mohsin@vault.insurance, rushin.shah@vault.insurance, hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
 # to_email = "hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
@@ -30,11 +30,31 @@ def check_treconciliation_and_send_email(**kwargs):
         EmailOperator(
             task_id='send_email_treconciliation',
             to=to_email,
-            subject='Airflow - Reconciliation Errors',
-            html_content=get_treconciliation_data_HTML(sql_qry,'There are reconciliation errors. Please review the details below.'),
+            subject='Airflow - Report - Reconciliation Errors',
+            html_content=get_vault_data_HTML(sql_qry,'There are reconciliation errors. Please review the details below.'),
             dag=kwargs['dag'],
         ).execute(context=kwargs)
 
+def check_tvalidation_and_send_email(**kwargs):
+    sql_qry = """
+                SELECT tr.validation_result_sk ,ts.validation_sql_sk ,process_run_start_ts,process_run_end_ts ,ts.validation_sql_desc , tr.source_value, tr.target_value 
+                FROM edw_core.tvalidation_result AS tr 
+                INNER JOIN edw_core.tvalidation_sql AS ts 
+                ON tr.validation_sql_sk = ts.validation_sql_sk
+                WHERE cast(process_run_start_ts as date) = cast(getdate() as date)
+                AND status_desc ='failure'
+                ORDER BY 1 DESC
+              """
+    mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
+    result = mssql_hook.get_first(sql_qry)
+    if result is not None:
+        EmailOperator(
+            task_id='send_email_tvalidation',
+            to=to_email,
+            subject='Airflow - Report - Validation Errors',
+            html_content=get_vault_data_HTML(sql_qry,'There are validation errors. Please review the details below.'),
+            dag=kwargs['dag'],
+        ).execute(context=kwargs)
 
 def on_failure_callback(context):
 
@@ -154,7 +174,7 @@ with DAG(
 
     with TaskGroup("collection_group") as collection_group:
 
-        collection_group_items = ['sp_tcollection_location','sp_tcollection_additional_coverage','sp_tcollection_coverage','sp_tcollection_scheduled_item_detail']
+        collection_group_items = ['sp_tcollection_location','sp_tcollection_additional_coverage','sp_tcollection_coverage','sp_tcollection_scheduled_item']
         
         sp_tcollection_location = MsSqlOperator(
             task_id='sp_tcollection_location',
@@ -180,10 +200,10 @@ with DAG(
             autocommit=True,
         )
 
-        sp_tcollection_scheduled_item_detail = MsSqlOperator(
-            task_id='sp_tcollection_scheduled_item_detail',
+        sp_tcollection_scheduled_item = MsSqlOperator(
+            task_id='sp_tcollection_scheduled_item',
             mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tcollection_scheduled_item_detail",
+            sql="EXEC edw_core.sp_tcollection_scheduled_item",
             database="vault_edw",
             autocommit=True,
         )
@@ -195,7 +215,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(collection_group_items, 'All stored procedures executed successfully for all the Collection tables'),
         )
 
-        sp_tcollection_location >> sp_tcollection_additional_coverage >> sp_tcollection_coverage >> sp_tcollection_scheduled_item_detail >> send_collection_email
+        sp_tcollection_location >> sp_tcollection_additional_coverage >> sp_tcollection_coverage >> sp_tcollection_scheduled_item >> send_collection_email
 
 
     with TaskGroup("PEL_group") as PEL_group:
@@ -619,6 +639,13 @@ with DAG(
             autocommit=True,
         )
 
+        tvalidation_email = PythonOperator(
+            task_id='tvalidation_email',
+            python_callable=check_tvalidation_and_send_email,
+            provide_context=True,
+            dag=dag,
+        )
+
         send_validation_email = EmailOperator(
             task_id='send_validation_email',
             to=to_email,
@@ -626,7 +653,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(validation_result_group_items, 'All stored procedures executed successfully for all the validation resul tables'),
         )
 
-        sp_tvalidation_result >> send_validation_email
+        sp_tvalidation_result >> tvalidation_email >> send_validation_email
 
 
     with TaskGroup("integration_group") as integration_group:

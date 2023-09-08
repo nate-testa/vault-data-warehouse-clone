@@ -45,7 +45,7 @@ BEGIN
 				pr.product_nm,
 				ptt.policy_transaction_type_nm as transaction_type,
 				CASE 
-					WHEN p.product_cd in ('PEL','LUX') THEN CONCAT(p.mailing_address_line1,'-',p.mailing_address_line2,'-',p.unit_no,'-',p.city_nm,'-',p.state_cd,'-',p.zip_cd)
+					WHEN p.product_cd in ('PEL','LUX') THEN CONCAT(p.mailing_address_line1,'-',p.mailing_address_line2,'-',p.mailing_address_unit_no,'-',p.mailing_address_city_nm,'-',p.mailing_address_state_cd,'-',p.mailing_address_zip_cd)
 					WHEN p.product_cd = 'HO' THEN CONCAT(hl.address_line_1,'-',hl.address_line_2,'-',hl.unit_no,'-',hl.city_nm,'-',hl.state_cd,'-',hl.zip_cd)
 					ELSE '***!Pending!***'
 				END as risk_item,
