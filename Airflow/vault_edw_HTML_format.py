@@ -84,7 +84,7 @@ def get_sp_error_data_HTML(process_nm_list, msg_text):
     return html_str
 
 
-def get_treconciliation_data_HTML(sql_qry, msg_text):
+def get_vault_data_HTML(sql_qry, msg_text):
 
     conn_str = MsSqlHook(mssql_conn_id="Vault_EDW")
 
@@ -93,7 +93,7 @@ def get_treconciliation_data_HTML(sql_qry, msg_text):
     html_str = html_str = get_HTML_on_vault_format(msg_text, html_tbl)
 
     return html_str
-    
+
 if __name__ == "__main__":
     print('*****name == main******')
 

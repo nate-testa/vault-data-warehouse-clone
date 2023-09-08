@@ -39,16 +39,16 @@ BEGIN
             'HCP' as product_nm,
             '1004100' as contract_no,
             CASE 
-                WHEN CHARINDEX('-', ph.policy_no) > 0 THEN LEFT(ph.policy_no, CHARINDEX('-', ph.policy_no) - 1)
-                ELSE ph.policy_no
+                WHEN CHARINDEX('-', p.policy_no) > 0 THEN LEFT(p.policy_no, CHARINDEX('-', p.policy_no) - 1)
+                ELSE p.policy_no
             END AS policy_no,
-            CONVERT(VARCHAR(8), ph.effective_dt, 112) as coverage_effective_dt,
-            CONVERT(VARCHAR(8), ph.expiration_dt, 112) as coverage_expiration_dt,
+            CONVERT(VARCHAR(8), p.effective_dt, 112) as coverage_effective_dt,
+            CONVERT(VARCHAR(8), p.expiration_dt, 112) as coverage_expiration_dt,
             c.customer_nm as insured_nm,
-            c.address_line_1 as dwelling_address,
-            c.city_nm as dwelling_city,
-            c.state_cd as dwelling_state,
-            c.zip_cd as dwelling_zip_cd,
+            c.mailing_address_line1 as dwelling_address,
+            c.mailing_address_city_nm as dwelling_city,
+            c.mailing_address_state_cd as dwelling_state,
+            c.mailing_address_zip_cd as dwelling_zip_cd,
             ROUND(pt.net_premium_amt,0) as hcp_net_premium_amt,
             hac.home_cyber_protection_coverage_deductible as hcp_deductible_amt,
             hc.dwelling_limit_amt as coverage_a_value,
@@ -66,28 +66,57 @@ BEGIN
             '' as email_address,
             '' as home_business,
             CASE 
-                WHEN CHARINDEX('-', ph.policy_no) > 0 THEN LEFT(ph.policy_no, CHARINDEX('-', ph.policy_no) - 1)
-                ELSE ph.policy_no
+                WHEN CHARINDEX('-', p.policy_no) > 0 THEN LEFT(p.policy_no, CHARINDEX('-', p.policy_no) - 1)
+                ELSE p.policy_no
             END AS previous_policy_number,
             ss.source_system_nm,
             getdate() as create_ts,
  			getdate() as update_ts,
  		    @etl_audit_sk as etl_audit_sk,
-            ph.create_ts as policy_history_create_ts
+            p.create_ts as policy_history_create_ts
 		INTO [edw_temp].[tpolicy_hsb_cyber_feed_temp1] 
-		FROM edw_core.tpolicy_history AS ph
-        LEFT JOIN edw_core.tcustomer AS c ON ph.customer_sk = c.customer_sk
-        LEFT JOIN edw_core.thome_coverage AS hc ON ph.policy_history_sk = hc.policy_history_sk
-        LEFT JOIN edw_core.thome_additional_coverage AS hac ON ph.policy_history_sk = hac.policy_history_sk
-        LEFT JOIN edw_core.tpolicy_insured AS pi ON ph.policy_history_sk = pi.policy_history_sk AND ph.transaction_effective_dt = pi.transaction_effective_dt AND pi.primary_insured_in = 'Yes'
-        LEFT JOIN edw_core.tpolicy AS p ON ph.policy_sk = p.policy_sk AND ph.effective_dt = p.effective_dt
-		LEFT JOIN edw_core.tproduct AS pr ON p.product_cd = pr.product_cd
-        LEFT JOIN edw_core.tsource_system AS ss ON ph.source_system_sk = ss.source_system_sk
-        LEFT JOIN (select policy_sk, effective_dt_sk , transaction_seq_no, sum(net_premium_amt) as net_premium_amt 
-                    from edw_core.tpolicy_transaction group by policy_sk, effective_dt_sk, transaction_seq_no) AS pt
-        ON ph.policy_sk = pt.policy_sk
-        AND ph.transaction_seq_no = pt.transaction_seq_no
-        WHERE cast(ph.create_ts as datetime2(7)) > @last_source_extract_ts
+        FROM 
+            edw_core.tpolicy AS p
+        INNER JOIN 
+            edw_core.tdate AS d ON d.actual_dt = p.effective_dt
+        LEFT JOIN 
+            edw_core.tcustomer AS c ON c.customer_id = p.customer_id
+        LEFT JOIN 
+            edw_core.tproduct AS pr ON pr.product_cd = p.product_cd
+        LEFT JOIN 
+            (
+                select 
+                    policy_no, effective_dt, transaction_seq_no, aop_deductible, dwelling_limit_amt, other_structures_limit_amt, contents_limit_amt, residence_type, 
+                    occupancy_type, built_year, total_finished_square_feet, hvac_updated_year, electrical_updated_year, plumbing_updated_year,
+                    ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt ORDER BY transaction_seq_no DESC) AS RN
+                from edw_core.thome_coverage 
+            ) AS hc 
+            ON hc.policy_no = p.policy_no 
+            AND hc.effective_dt = p.effective_dt
+            AND hc.RN = 1
+        LEFT JOIN 
+            (
+                select 
+                    policy_no, effective_dt, transaction_seq_no, home_systems_protection_limit_amt, home_cyber_protection_coverage_deductible, home_cyber_protection_coverage_limit_amt,
+                    ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt ORDER BY transaction_seq_no DESC) AS RN
+                from edw_core.thome_additional_coverage
+            ) AS hac
+            ON hac.policy_no = p.policy_no 
+            AND hac.effective_dt = p.effective_dt
+            AND hac.RN = 1
+        LEFT JOIN 
+            edw_core.tsource_system AS ss ON ss.source_system_sk = p.source_system_sk
+        LEFT JOIN
+            (
+                select 
+                    pt.policy_sk, d.actual_dt as effective_dt, SUM(pt.net_premium_amt) as net_premium_amt
+                from edw_core.tpolicy_transaction as pt
+                inner join edw_core.tdate d on pt.effective_dt_sk = d.date_sk
+                group by pt.policy_sk, d.actual_dt
+            ) AS pt 
+            ON pt.policy_sk = p.policy_sk 
+            AND pt.effective_dt = p.effective_dt
+        WHERE cast(p.create_ts as datetime2(7)) > @last_source_extract_ts
         ;
 
 
