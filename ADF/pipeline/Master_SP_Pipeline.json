@@ -24,6 +24,7 @@
 			},
 			{
 				"name": "Master_Ref",
+				"description": "This is a comment",
 				"type": "ExecutePipeline",
 				"dependsOn": [],
 				"userProperties": [],
