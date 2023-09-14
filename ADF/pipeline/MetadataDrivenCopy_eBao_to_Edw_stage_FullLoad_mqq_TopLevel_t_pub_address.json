@@ -1,5 +1,5 @@
 {
-	"name": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_TopLevel",
+	"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_TopLevel_t_pub_address",
 	"properties": {
 		"description": "This pipeline will count the total number of objects (tables etc.) required to be copied in this run, come up with the number of sequential batches based on the max allowed concurrent copy task, and then execute another pipeline to copy different batches sequentially.",
 		"activities": [
@@ -23,11 +23,10 @@
 							"value": "SELECT count(*) as count FROM @{pipeline().parameters.MainControlTableName} where TopLevelPipelineName='@{pipeline().Pipeline}' and CopyEnabled = 1",
 							"type": "Expression"
 						},
-						"isolationLevel": "ReadUncommitted",
 						"partitionOption": "None"
 					},
 					"dataset": {
-						"referenceName": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_ControlDS",
+						"referenceName": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS",
 						"type": "DatasetReference"
 					}
 				}
@@ -50,8 +49,7 @@
 						"value": "@range(0, add(div(activity('GetSumOfObjectsToCopy').output.firstRow.count,\n                    pipeline().parameters.MaxNumberOfConcurrentTasks),\n                    if(equals(mod(activity('GetSumOfObjectsToCopy').output.firstRow.count,\n                    pipeline().parameters.MaxNumberOfConcurrentTasks), 0), 0, 1)))",
 						"type": "Expression"
 					},
-					"isSequential": false,
-					"batchCount": 50,
+					"isSequential": true,
 					"activities": [
 						{
 							"name": "CopyObjectsInOneBatch",
@@ -61,7 +59,7 @@
 							"userProperties": [],
 							"typeProperties": {
 								"pipeline": {
-									"referenceName": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_MiddleLevel",
+									"referenceName": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_MiddleLevel_t_pub_address",
 									"type": "PipelineReference"
 								},
 								"waitOnCompletion": true,
@@ -101,7 +99,6 @@
 				}
 			}
 		],
-		"concurrency": 50,
 		"parameters": {
 			"MaxNumberOfObjectsReturnedFromLookupActivity": {
 				"type": "Int",
@@ -109,7 +106,7 @@
 			},
 			"MaxNumberOfConcurrentTasks": {
 				"type": "Int",
-				"defaultValue": 100
+				"defaultValue": 32
 			},
 			"MainControlTableName": {
 				"type": "String",
@@ -117,12 +114,12 @@
 			}
 		},
 		"folder": {
-			"name": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_20230530"
+			"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_address"
 		},
 		"annotations": [
 			"MetadataDrivenSolution"
 		],
-		"lastPublishTime": "2023-08-31T16:32:25Z"
+		"lastPublishTime": "2023-09-06T20:32:31Z"
 	},
 	"type": "Microsoft.DataFactory/factories/pipelines"
 }
