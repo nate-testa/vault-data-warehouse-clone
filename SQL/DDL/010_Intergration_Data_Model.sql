@@ -1,8 +1,5 @@
 --metadata table
 
-select * from edw_integration.tintegration_table_detail 
-
-
 CREATE TABLE edw_integration.tintegration_table_detail 
 (
     integration_table_detail_sk int IDENTITY(1,1) NOT NULL,
@@ -358,19 +355,7 @@ CREATE TABLE edw_integration.policy_workday_ceded_premium_feed (
 INSERT INTO edw_integration.tintegration_table_detail(table_nm,table_type,table_desc,load_method,load_type,load_frequency,create_ts,update_ts) 
     VALUES ('policy_workday_ceded_premium_feed','Feed','This table provides ITD ceded premium file to Workday','Stored Procedure','Insert','Monthly',getdate(),getdate());
 
-edw_integration.policy_workday_wp_feed
-edw_integration.policy_workday_uep_feed
-edw_integration.policy_workday_ceded_feed
-edw_integration.policy_prism_claim_reserve_feed
-edw_integration.policy_prism_claim_payment_feed
-edw_integration.policy_prism_itd_claim_reserve_feed
-
-edw_integration.policy_prism_itd_claim_reserve_feed
-
---ADD Primary Keys
--- Workday PRISM Claims Reserves
-
- CREATE TABLE edw_integration.claim_workday_reserve_feed 
+CREATE TABLE edw_integration.claim_workday_reserve_feed 
  (
   company varchar(255),
   claim_no varchar(255),
