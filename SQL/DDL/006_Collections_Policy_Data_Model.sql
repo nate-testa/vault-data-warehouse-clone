@@ -1,0 +1,230 @@
+CREATE TABLE edw_core.tcollection_location 
+(
+collection_location_sk     int NOT NULL IDENTITY(1,1),
+policy_no                  varchar(255),
+effective_dt               date,
+address_line_1             varchar(255),
+address_line_2             varchar(255),
+unit_no				       varchar(255),
+city_nm                    varchar(255),
+state_cd                   varchar(255),
+zip_cd                     varchar(255),
+county_nm                  varchar(255), 
+country_nm                 varchar(255), 
+longitude                  varchar(255), 
+latitude                   varchar(255), 
+source_system_sk           int,
+create_ts                  datetime,
+update_ts                  datetime,
+etl_audit_sk               int,
+CONSTRAINT pk_tcollection_location PRIMARY KEY (collection_location_sk),
+CONSTRAINT uidx_tcollection_location_policy_no_effective_dt UNIQUE (policy_no,effective_dt)
+);
+
+
+INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
+    VALUES ('tcollection_location','Type-1 Dimension','Base','Collections','Stored Procedure','Insert/Update','Daily',getdate(),getdate());
+
+   
+   
+CREATE TABLE edw_core.tcollection_coverage
+(
+collection_coverage_sk     int NOT NULL IDENTITY(1,1),
+policy_no                  varchar(255),
+effective_dt               date,
+transaction_effective_dt   date,
+expiration_dt              date,
+transaction_dt             date,
+transaction_seq_no         int,
+collection_location_sk     int, 
+policy_history_sk          int,
+class_type                  varchar(255),
+scheduled_limit_amt         int,
+scheduled_highest_value_limit_amt      int,
+blanket_limit_amt   int,
+blanket_highest_value_limit_amt      int,
+blanket_single_article_limit_amt int,
+highest_value_scheduled_item_appraisal_dt date,
+source_system_sk           int,
+create_ts                  datetime,
+update_ts                  datetime,
+etl_audit_sk               int,
+CONSTRAINT pk_tcollection_coverage PRIMARY KEY (collection_coverage_sk),
+CONSTRAINT fk_tcollection_coverage_location_sk FOREIGN KEY (collection_location_sk) REFERENCES  edw_core.tcollection_location(collection_location_sk),
+CONSTRAINT uidx_tcollection_coverage_policy_no_effective_dt_transeq_class UNIQUE (policy_no,effective_dt,transaction_seq_no,class_type)
+);
+
+INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
+    VALUES ('tcollection_coverage','Type-2 Dimension','Base','Collections','Stored Procedure','Insert/Update','Daily',getdate(),getdate());
+   
+  
+CREATE TABLE edw_core.tcollection_scheduled_item
+(
+collection_scheduled_item_sk     int NOT NULL IDENTITY(1,1),
+policy_no                  varchar(255),
+effective_dt               date,
+transaction_effective_dt   date,
+expiration_dt              date,
+transaction_dt             date,
+transaction_seq_no         int,
+policy_history_sk          int,
+collection_coverage_sk     int,
+item_desc                  nvarchar(max),
+coverage_limit_amt         int,
+schedule_on_file_in		   varchar(255),
+appraisal_dt               date,
+collector_car_in           varchar(255),
+source_system_sk           int,
+create_ts                  datetime,
+update_ts                  datetime,
+etl_audit_sk               int,
+CONSTRAINT pk_tcollection_scheduled_item PRIMARY KEY (collection_scheduled_item_sk)
+);
+
+INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
+    VALUES ('tcollection_scheduled_item','Type-2 Dimension','Base','Collections','Stored Procedure','Insert','Daily',getdate(),getdate());
+   
+
+CREATE TABLE edw_core.tcollection_additional_coverage
+(
+collection_additional_coverage_sk           int NOT NULL IDENTITY(1,1),
+policy_no                   varchar(255),
+effective_dt                date,
+transaction_effective_dt    date,
+expiration_dt               date,
+transaction_dt              date,
+transaction_seq_no          int,
+collection_location_sk      int, 
+policy_history_sk           int,
+-- General
+unoccupied_more_than_three_months_in            varchar(255),
+valuable_article_losses_last3_years_ct          int,
+-- Location
+protection_class                                varchar(255),
+terrain_cd                                      varchar(255),
+distance_to_coast                               varchar(255),
+-- Roof Details
+roof_geometry                                   varchar(255),
+roof_covering                                   varchar(255),
+roof_cover_deck                                 varchar(255), -- values like 'Reinforced Concrete Roof Deck'
+roof_deck_Attachment                            varchar(255), -- values like 'Level C'
+roof_wall_Attachment                            varchar(255), -- values like 'Single Wraps'
+hail_resistant_rating                           varchar(255),
+secondary_water_resistance                      varchar(255), -- values like 'No SWR'
+-- Construction
+construction_type                               varchar(255),
+built_year                                      int,
+fire_protection                                 varchar(255),
+opening_protection                              varchar(255),
+no_of_stories                                   varchar(255),
+-- Protections
+central_reporting_fire_alarm_in                 varchar(255),
+central_reporting_burglar_alarm_in              varchar(255),
+home_safe_in                                    varchar(255),
+fulltime_live_in_caretaker_in                   varchar(255),
+backup_generator_in                             varchar(255),
+residential_sprinkler_system_in                 varchar(255),
+-- Coverages
+market_value_scheduled_items_coverage_in        varchar(255),
+bank_vaulted_jewelry_coverage_in                varchar(255),
+coins_coverage_in                               varchar(255),
+collectibles_coverage_in                        varchar(255),
+fine_arts_coverage_in                           varchar(255),
+furs_coverage_in                                varchar(255),
+guns_coverage_in                                varchar(255),
+jewelry_coverage_in                             varchar(255),
+miscellaneous_coverage_in                       varchar(255),
+musical_instruments_coverage_in                 varchar(255),
+silver_coverage_in                              varchar(255),
+stamps_coverage_in                              varchar(255),
+wearable_collectibles_coverage_in               varchar(255),
+wine_coverage_in                                varchar(255),
+-- Additional Coverages (Not sure where to find it in UI) and Companion Credits (somehow there is only HO and not other products) -- Discuss
+minimum_earned_premium_endorsement_in           varchar(255),
+minimum_earned_premium_endorsement_limit_pc      float,
+wardrobe_loss_prevention_in                     varchar(255),
+companion_credit_homeowner_in                   varchar(255),
+-- Coverage Limitations
+agreed_value_limitations_in                                         varchar(255),
+agreed_value_specified_class_limitations_in                         varchar(255),
+agreed_value_specified_class_bank_vaulted_jewelry_limitations_in    varchar(255),
+agreed_value_specified_class_coins_limitations_in                   varchar(255),
+agreed_value_specified_class_collectibles_limitations_in            varchar(255),
+agreed_value_specified_class_fine_arts_limitations_in               varchar(255),
+agreed_value_specified_class_furs_limitations_in                    varchar(255),
+agreed_value_specified_class_guns_limitations_in                    varchar(255),
+agreed_value_specified_class_worldwide_jewelry_limitations_in       varchar(255),
+agreed_value_specified_class_miscellaneous_limitations_in           varchar(255),
+agreed_value_specified_class_musicalInstruments_limitations_in      varchar(255),
+agreed_value_specified_class_silver_limitations_in                  varchar(255),
+agreed_value_specified_class_stamps_limitations_in                  varchar(255),
+agreed_value_specified_class_wearable_collectibles_limitations_in   varchar(255),
+agreed_value_specified_class_wine_limitations_in                    varchar(255),
+agreed_value_specified_items_limitations_in                         varchar(255),
+alarm_warranty_limitations_in                                       varchar(255),
+breakage_exclusion_limitations_in                                   varchar(255),
+terrorism_limitations_in                                            varchar(255),
+Terrorism_limitations_amt                                           int,
+theft_mysterious_disappearance_exclusion_in                         varchar(255),
+transit_limit_in                                                    varchar(255),
+transit_limit_amt                                                   int,
+hurricane_loss_exclusion_in                                         varchar(255),
+hurricane_loss_limitation_in                                        varchar(255),
+hurricane_loss_limitation_amt                                       int,
+outdoor_fine_art_hurricane_exclusion_in                             varchar(255),
+terrorism_exclusion_in                                              varchar(255),
+deletion_of_cosmetic_marring_exclusion_in                           varchar(255),
+earthquake_exclusion_in                                             varchar(255),
+earthquake_deductible_loss_limitations_in                           varchar(255),
+earthquake_deductible_loss_limitations_limit                        int,
+hotel_motel_exclusion_in                                            varchar(255),
+jewelry_off_premises_loss_limitation_in                             varchar(255),
+spoilage_exclusion_in                                               varchar(255),
+change_in_terms_summary_in                                          varchar(255),
+change_in_terms_options                                             nvarchar(max), 
+manuscript_in                                                       varchar(255),
+-- Deductibles
+coverage_deductible_in                                              varchar(255),
+coverage_deductible_amt                                             int,
+hurricane_deductible_in                                             varchar(255),
+hurricane_deductible_type                                           varchar(255),
+hurricane_deductible_amt                                            int,
+earthquake_deductible_in                                            varchar(255),
+earthquake_deductible_amt                                           int,
+wildfire_deductible_in                                              varchar(255),
+wildfire_deductible_type                                            varchar(255),
+wildfire_deductible_amt                                             int,
+-- Wildfire Related (Not sure where it is captured in UI, but when we search in Insights from hazardhub then we get these details there) -- To discuss
+wildfire_bark_mulch_within_ten_feet_of_any_structure_in             varchar(255),
+wildfire_combustible_deck_or_attached_structure_in                  varchar(255),
+wildfire_combustible_wood_siding_in                                 varchar(255),
+wildfire_defensible_space_in                                        varchar(255),
+wildfire_distance_to_high_fuel_feet                                 int,
+wildfire_distance_to_moderate_fuel_feet                             int,
+wildfire_distance_to_very_high_fuel_feet                            int,
+wildfire_eaves_or_enclosed_eaves_in                                 varchar(255),
+wildfire_exteriorWildfireSprinklers_in                              varchar(255),
+wildfire_firewood_or_combustibles_stored_against_home_in            varchar(255),
+wildfire_flammable_vegetation_within_ten_feet_of_any_structure_in   varchar(255),
+wildfire_gutter_guards_in                                           varchar(255),
+wildfire_hazard_severity                                            varchar(255), 
+wildfire_nearest_distance_to_perimeter                              varchar(255),
+wildfire_no_of_occurrences_near                                     varchar(255),
+wildfire_no_of_occurrences                                          varchar(255),
+wildfire_permanently_installed_spray_system_in                      varchar(255),
+wildfire_portable_fire_break_system_in                              varchar(255),
+wildfire_speciality_ember_resistant_venting_in                      varchar(255),
+wildfire_threat                                                     varchar(255),
+wildfire_wood_shake_or_shingle_roof_in                              varchar(255),
+couture_wearable_collectibles_class_in                              varchar(255),
+source_system_sk           int,
+create_ts                  datetime,
+update_ts                  datetime,
+etl_audit_sk               int,
+CONSTRAINT pk_tcollection_additional_coverage PRIMARY KEY (collection_additional_coverage_sk),
+CONSTRAINT uidx_tcollection_additional_coverage_polno_effdt_transeq UNIQUE (policy_no,effective_dt,transaction_seq_no),
+CONSTRAINT fk_tcollection_additional_coverage_location_sk FOREIGN KEY (collection_location_sk) REFERENCES  edw_core.tcollection_location(collection_location_sk),
+);
+
+INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
+    VALUES ('tcollection_additional_coverage','Type-2 Dimension','Base','Collections','Stored Procedure','Insert','Daily',getdate(),getdate());
