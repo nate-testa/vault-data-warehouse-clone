@@ -1,3 +1,5 @@
+--
+
 CREATE TABLE edw_core.tbroker
 (
 broker_sk                int IDENTITY(1,1) NOT NULL,
@@ -149,9 +151,6 @@ broker_id                varchar(255) NOT NULL,
 broker_sk                int NOT NULL,
 state_cd                 varchar(255),
 license_no               varchar(255),
-licenseholder_nm         varchar(255),
-residency_status         varchar(255),
-category_nm              varchar(255),
 expiration_dt            date,
 create_ts                datetime,
 update_ts                datetime,
@@ -161,4 +160,6 @@ CONSTRAINT fk_tbroker_license_broker_sk FOREIGN KEY (broker_sk) REFERENCES edw_c
 );
 
 INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
-    VALUES ('tbroker_license','Type-1 Dimension','Base','Broker','Stored Procedure','Full Load','Daily',getdate(),getdate()); 
+    VALUES ('tbroker_license','Type-1 Dimension','Base','Broker','Stored Procedure','Full Load','Daily',getdate(),getdate());     
+
+    
