@@ -1,6 +1,4 @@
-﻿DROP PROCEDURE IF EXISTS edw_core.sp_tbroker;
-
--- =================================================================================================
+﻿-- =================================================================================================
 -- Author:		Mohammed Yunus
 -- Description: This procedures insert and update broker data 
 ---------------------------------------------------------------------------------------------------
@@ -11,7 +9,7 @@
 -- 08/29/23		Mohammed Yunus					3. Procedure updated for new columns
 -- ================================================================================================= 
 
-CREATE   PROCEDURE [edw_core].[sp_tbroker]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker]
 
 AS
 BEGIN

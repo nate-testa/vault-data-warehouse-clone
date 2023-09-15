@@ -1,6 +1,4 @@
-﻿DROP PROCEDURE IF EXISTS edw_core.sp_tinternal_coverage_summary;
- 
--- =================================================================================================
+﻿-- =================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This procedure summarizes data at the internal coverages level for each month
 ---------------------------------------------------------------------------------------------------
