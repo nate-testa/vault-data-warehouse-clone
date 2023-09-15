@@ -1,6 +1,4 @@
-﻿DROP PROCEDURE IF EXISTS edw_core.sp_tpolicy_update_non_renwal_billing;
- 
--- =================================================================================================
+﻿-- =================================================================================================
 -- Author:		Hernando Gonzalez Garcia
 -- Description: This procedures update non_renewal_in and billingaccount_sk in tpolicy
 ---------------------------------------------------------------------------------------------------
@@ -9,7 +7,7 @@
 -- 09/08/23		Architha Gudimalla		1. Created this procedure  
 -- ================================================================================================= 
 
-CREATE   PROCEDURE [edw_core].[sp_tpolicy_update_non_renwal_billing]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_non_renwal_billing]
 
 AS 
 BEGIN
