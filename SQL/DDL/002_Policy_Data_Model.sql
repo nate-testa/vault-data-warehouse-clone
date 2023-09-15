@@ -8,13 +8,6 @@ CREATE TABLE edw_core.tproduct (
   CONSTRAINT pk_tproduct PRIMARY KEY (product_sk)
 );
 
-EXEC sys.sp_addextendedproperty 'MS_Description', N'Product code', 'schema', N'edw_core', 'table', N'tproduct', 'column', N'product_cd';
-EXEC sys.sp_addextendedproperty 'MS_Description', N'Product description', 'schema', N'edw_core', 'table', N'tproduct', 'column', N'product_desc';
-EXEC sys.sp_addextendedproperty 'MS_Description', N'Surrogate key', 'schema', N'edw_core', 'table', N'tproduct', 'column', N'product_sk';
-EXEC sys.sp_addextendedproperty 'MS_Description', N'eBao product code', 'schema', N'edw_core', 'table', N'tproduct', 'column', N'ebao_product_cd';
-EXEC sys.sp_addextendedproperty 'MS_Description', N'Last update timestamp', 'schema', N'edw_core', 'table', N'tproduct', 'column', N'update_ts';
-EXEC sys.sp_addextendedproperty 'MS_Description', N'This is a reference table consists of product types and their description', 'schema', N'edw_core', 'table', N'tproduct';
-
 INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
     VALUES ('tproduct','Type-1 Dimension','Base','Common','Manual','Insert/Update','Static',getdate(),getdate());
 
