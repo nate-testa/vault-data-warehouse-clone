@@ -1,14 +1,6 @@
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-
-
--- =============================================
+﻿-- =============================================
 -- Author:		Hernando Gonzalez Garcia
--- Create Date: 2023-08-14
+-- Create Date: 2023-08-11
 -- Description: This stored procedure insert and update info related to Collection Location.
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_location]
@@ -154,6 +146,4 @@ BEGIN
 
 	END CATCH
 END
-GO
-
 

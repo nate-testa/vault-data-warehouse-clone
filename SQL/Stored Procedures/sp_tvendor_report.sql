@@ -7,7 +7,7 @@
 -- 07/27/23		Architha Gudimalla				1. Created this procedure  
 -- ================================================================================================= 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tvendor_reports_3]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tvendor_report]
 @in_source varchar(255)
 AS
 BEGIN
@@ -91,8 +91,8 @@ BEGIN
 				set @parameter_desc = 'ReportType=' + @reporttype +'; Source=' + @source + '; '
 				SET @parameter_desc= @parameter_desc + 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-				print 'source'
-				print @source
+				--print 'source'
+				--print @source
 
 				set @ColumnsToPivot = ''
 				set @ColumnsToPivot1 = ''
@@ -151,12 +151,14 @@ BEGIN
 				set @ColumnsToPivot1  = REPLACE(@ColumnsToPivot1,', =','')
 				set @ColumnsToPivot2  = REPLACE(@ColumnsToPivot2,', =','') 
 				
+				/*
 				print 'ColumnsToPivot'  
 				print @ColumnsToPivot 
 				print 'ColumnsToPivot1' 
 				print @ColumnsToPivot1 
 				print 'ColumnsToPivot2' 
-				print @ColumnsToPivot2  
+				print @ColumnsToPivot2 
+				*/
 
 				set @tablename = 'edw_stage.tvendor_reports_' + replace(@source,' ','')
 				set @tablename1 = case when LEN(@ColumnsToPivot1) > 0 
@@ -166,7 +168,7 @@ BEGIN
 										then 'edw_stage.tvendor_reports_' + replace(@source,' ','') + '_2'
 								 end
 
-				set @sql = 'drop table if exists ' + @tablename 
+				/*set @sql = 'drop table if exists ' + @tablename 
 				EXECUTE sp_executesql @sql
 				print @sql
 
@@ -176,20 +178,19 @@ BEGIN
 
 				set @sql = 'drop table if exists ' + @tablename2 
 				EXECUTE sp_executesql @sql
-				print @sql 
+				print @sql */
 
 				set @i = 0
 
 				while @i <= 2
 				begin
-					print @ColumnsToPivot
-					print @tablename
-					
+					--print @ColumnsToPivot
+					--print @tablename 
 						
-					select @sql=cast('select policynumber,effectivedate,dateordered,dateTimeRecieved,dateTimeCompleted,TransactionStatus,[source],reporttype'
-								+ @ColumnsToPivot
-								+ ' into '
+					select @sql=cast('Insert into '
 								+  @tablename
+								+	' select policynumber,effectivedate,dateordered,dateTimeRecieved,dateTimeCompleted,TransactionStatus,[source],reporttype'
+								+ @ColumnsToPivot 
 								+	'
 									from
 									(
@@ -204,19 +205,21 @@ BEGIN
 										and		accr.Id =accri.ReportId */
 										select *
 										from edw_temp.tvendor_report_field_data accr
-										where accr.source = '''
+										where  GREATEST(accr.UpdatedDate,accr.CreatedDate) > '''
+								+ cast(@last_source_extract_ts as varchar(255))
+								+ ''' and accr.source = '''
 								+ @source
 								+ '''
 										and		accr.reporttype = '''
 								 + @reporttype
-								 +
+								 + 
 									 '''
 									) as temp
 									group by policynumber,effectivedate,dateordered,dateTimeRecieved,dateTimeCompleted,TransactionStatus,[source],reporttype
 									' as nvarchar(max))  
 						
-						print len(@sql)
-						print @sql
+						--print len(@sql)
+						--print @sql
 
 						EXECUTE sp_executesql @sql
 				

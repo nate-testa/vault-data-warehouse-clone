@@ -1,10 +1,4 @@
-/****** Object:  StoredProcedure [edw_core].[sp_tbroker_license]    Script Date: 07-09-2023 08:47:05 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- =================================================================================================
+﻿-- =================================================================================================
 -- Author:		Mohammed Yunus
 -- Description: This procedures insert broker license data 
 ---------------------------------------------------------------------------------------------------
@@ -36,7 +30,7 @@ BEGIN
 		SELECT
 			tbrk.broker_id,tbrk.broker_sk,
 			brkl.StateCode as state_cd,brkl.License AS license_no,brkl.ExpirationDate AS expiration_dt,
-			brkl.LicenseHolderName AS licenseholder_nm,brkl.ResidencyCode AS residency_status,brkl.Category AS category_nm,
+			brkl.HolderName AS licenseholder_nm,brkl.ResidencyCode AS residency_status,brkl.licenseCategory AS category_nm,
 			brkl.CreatedDate,brkl.UpdatedDate
 		INTO edw_temp.tbroker_license_temp
 		FROM
@@ -88,3 +82,4 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
+

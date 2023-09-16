@@ -1,12 +1,4 @@
-/****** Object:  StoredProcedure [edw_core].[sp_tbroker_vault_team]    Script Date: 07-09-2023 08:48:23 ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-
--- =================================================================================================
+﻿-- =================================================================================================
 -- Author:		Mohammed Yunus
 -- Description: This procedures insert broker vault team data 
 ---------------------------------------------------------------------------------------------------
@@ -92,4 +84,4 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-GO
+

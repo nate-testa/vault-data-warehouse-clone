@@ -1,10 +1,4 @@
-/****** Object:  StoredProcedure [edw_core].[sp_tsub_cause_of_loss]    Script Date: 15-09-2023 20:34:40 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
- 
--- =================================================================================================
+﻿-- =================================================================================================
 -- Author:		Yunus Mohammed
 -- Create Date: 15/09/2023
 -- Description: This procedures inserts and updates claim sub cause of loss
@@ -91,3 +85,4 @@ BEGIN
 		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
 	END CATCH
 END
+

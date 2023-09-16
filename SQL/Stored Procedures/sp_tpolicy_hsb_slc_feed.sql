@@ -1,10 +1,4 @@
-
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- =============================================
+﻿-- =============================================
 -- Author:		Alberto Almario Valbuena
 -- Create Date: 2023-09-05
 -- Description: This procedures insert info related to HSB - SLC
@@ -268,3 +262,4 @@ BEGIN
 
 	END CATCH
 END
+

@@ -1,10 +1,4 @@
-/****** Object:  StoredProcedure [edw_core].[sp_tbroker_commission]    Script Date: 07-09-2023 08:45:26 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- =================================================================================================
+﻿-- =================================================================================================
 -- Author:		Mohammed Yunus
 -- Description: This procedures insert broker commission data 
 ---------------------------------------------------------------------------------------------------
@@ -97,3 +91,4 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
+

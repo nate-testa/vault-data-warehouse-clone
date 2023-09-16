@@ -1,9 +1,9 @@
 ﻿-- =================================================================================================
 -- Author:		Yunus Mohammed
 -- Create Date: 09/13/2023
--- Description: This procedures updated tclaim tables amount columns
+-- Description: This procedures updated tclaim features tables amount columns
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_update_tclaim]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_update_tclaim_feature]
 
 AS
 BEGIN
@@ -25,57 +25,58 @@ BEGIN
 		-- Get last source extract date
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
-		-- update claim table's payment columns
-	UPDATE cl
-	SET
-		cl.loss_reserve_amt=ISNULL(src.loss_reserve_amt,0),
-		cl.expense_reserve_amt=ISNULL(src.expense_reserve_amt,0),
-		cl.adjusting_other_reserve_amt=ISNULL(src.adjusting_other_reserve_amt,0),
-		cl.subro_reserve_amt=ISNULL(src.subro_reserve_amt,0),
-		cl.salvage_reserve_amt=ISNULL(src.salvage_reserve_amt,0),
-		cl.salvage_expense_reserve_amt=ISNULL(src.salvage_expense_reserve_amt,0),
-		cl.subro_expense_reserve_amt=ISNULL(src.subro_expense_reserve_amt,0),
-		cl.loss_paid_amt=ISNULL(src.loss_paid_amt,0),
-		cl.expense_paid_amt=ISNULL(src.expense_paid_amt,0),
-		cl.adjusting_other_paid_amt=ISNULL(src.adjusting_other_paid_amt,0),
-		cl.subro_recovery_amt=ISNULL(src.subro_recovery_amt,0),
-		cl.salvage_recovery_amt=ISNULL(src.salvage_recovery_amt,0),
-		cl.salvage_expense_paid_amt=ISNULL(src.salvage_expense_paid_amt,0),
-		cl.subro_expense_paid_amt=ISNULL(src.subro_expense_paid_amt,0),
-		cl.refund_indemnity_paid_amt=ISNULL(src.refund_indemnity_paid_amt,0),
-		cl.refund_expense_paid_amt=ISNULL(src.refund_expense_paid_amt,0)		
-	FROM
-	edw_core.tclaim cl
-	INNER JOIN (
-		SELECT
-			clt.claim_sk,
-			SUM(clt.loss_reserve_amt) AS loss_reserve_amt,
-			SUM(clt.expense_reserve_amt) AS expense_reserve_amt,
-			SUM(clt.adjusting_other_reserve_amt) AS adjusting_other_reserve_amt,
-			SUM(clt.subro_reserve_amt) AS subro_reserve_amt,
-			SUM(clt.salvage_reserve_amt) AS salvage_reserve_amt,
-			SUM(clt.salvage_expense_reserve_amt) AS salvage_expense_reserve_amt,
-			SUM(clt.subro_expense_reserve_amt) AS subro_expense_reserve_amt,
-			SUM(clt.loss_paid_amt) AS loss_paid_amt,
-			SUM(clt.expense_paid_amt) AS expense_paid_amt,
-			SUM(clt.adjusting_other_paid_amt) AS adjusting_other_paid_amt,
-			SUM(clt.subro_recovery_amt) AS subro_recovery_amt,
-			SUM(clt.salvage_recovery_amt) AS salvage_recovery_amt,
-			SUM(clt.salvage_expense_paid_amt) AS salvage_expense_paid_amt,
-			SUM(clt.subro_expense_paid_amt) AS subro_expense_paid_amt,
-			SUM(clt.refund_indemnity_paid_amt) AS refund_indemnity_paid_amt,
-			SUM(clt.refund_expense_paid_amt) AS refund_expense_paid_amt
+		-- update claim feature table's payment columns
+		UPDATE cf
+		SET
+			cf.loss_reserve_amt=ISNULL(src.loss_reserve_amt,0),
+			cf.expense_reserve_amt=ISNULL(src.expense_reserve_amt,0),
+			cf.adjusting_other_reserve_amt=ISNULL(src.adjusting_other_reserve_amt,0),
+			cf.subro_reserve_amt=ISNULL(src.subro_reserve_amt,0),
+			cf.salvage_reserve_amt=ISNULL(src.salvage_reserve_amt,0),
+			cf.salvage_expense_reserve_amt=ISNULL(src.salvage_expense_reserve_amt,0),
+			cf.subro_expense_reserve_amt=ISNULL(src.subro_expense_reserve_amt,0),
+			cf.loss_paid_amt=ISNULL(src.loss_paid_amt,0),
+			cf.expense_paid_amt=ISNULL(src.expense_paid_amt,0),
+			cf.adjusting_other_paid_amt=ISNULL(src.adjusting_other_paid_amt,0),
+			cf.subro_recovery_amt=ISNULL(src.subro_recovery_amt,0),
+			cf.salvage_recovery_amt=ISNULL(src.salvage_recovery_amt,0),
+			cf.salvage_expense_paid_amt=ISNULL(src.salvage_expense_paid_amt,0),
+			cf.subro_expense_paid_amt=ISNULL(src.subro_expense_paid_amt,0),
+			cf.refund_indemnity_paid_amt=ISNULL(src.refund_indemnity_paid_amt,0),
+			cf.refund_expense_paid_amt=ISNULL(src.refund_expense_paid_amt,0)
 		FROM
-		edw_core.tclaim cl
-		INNER JOIN edw_core.tclaim_transaction clt ON cl.claim_sk=clt.claim_sk
-		GROUP BY clt.claim_sk
-	) src ON cl.claim_sk=src.claim_sk
+		tclaim_feature cf
+		INNER JOIN 
+		(
+			SELECT
+				clt.claim_feature_sk,
+				SUM(clt.loss_reserve_amt) AS loss_reserve_amt,
+				SUM(clt.expense_reserve_amt) AS expense_reserve_amt,
+				SUM(clt.adjusting_other_reserve_amt) AS adjusting_other_reserve_amt,
+				SUM(clt.subro_reserve_amt) AS subro_reserve_amt,
+				SUM(clt.salvage_reserve_amt) AS salvage_reserve_amt,
+				SUM(clt.salvage_expense_reserve_amt) AS salvage_expense_reserve_amt,
+				SUM(clt.subro_expense_reserve_amt) AS subro_expense_reserve_amt,
+				SUM(clt.loss_paid_amt) AS loss_paid_amt,
+				SUM(clt.expense_paid_amt) AS expense_paid_amt,
+				SUM(clt.adjusting_other_paid_amt) AS adjusting_other_paid_amt,
+				SUM(clt.subro_recovery_amt) AS subro_recovery_amt,
+				SUM(clt.salvage_recovery_amt) AS salvage_recovery_amt,
+				SUM(clt.salvage_expense_paid_amt) AS salvage_expense_paid_amt,
+				SUM(clt.subro_expense_paid_amt) AS subro_expense_paid_amt,
+				SUM(clt.refund_indemnity_paid_amt) AS refund_indemnity_paid_amt,
+				SUM(clt.refund_expense_paid_amt) AS refund_expense_paid_amt
+			FROM
+			tclaim_feature cf
+			INNER JOIN tclaim_transaction clt ON cf.claim_feature_sk=clt.claim_feature_sk
+			GROUP BY clt.claim_feature_sk
+		) src ON cf.claim_feature_sk=src.claim_feature_sk;
 
 	
-	SET @rows_affected=@@ROWCOUNT
+		SET @rows_affected=@@ROWCOUNT
 	
-	UPDATE edw_core.tclaim
-	SET 
+		UPDATE edw_core.tclaim_feature
+		SET 
 		adjusting_other_paid_amt=CASE WHEN adjusting_other_paid_amt IS NULL THEN 0 ELSE adjusting_other_paid_amt END,
 		adjusting_other_reserve_amt=CASE WHEN adjusting_other_reserve_amt IS NULL THEN 0 ELSE adjusting_other_reserve_amt END,
 		expense_paid_amt=CASE WHEN expense_paid_amt IS NULL THEN 0 ELSE expense_paid_amt END,

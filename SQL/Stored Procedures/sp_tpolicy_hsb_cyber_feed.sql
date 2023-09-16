@@ -1,10 +1,4 @@
-
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- =============================================
+﻿-- =============================================
 -- Author:		Alberto Almario Valbuena
 -- Create Date: 2023-09-01
 -- Description: This procedures insert info related to HSB - Cyber
@@ -220,3 +214,4 @@ BEGIN
 
 	END CATCH
 END
+
