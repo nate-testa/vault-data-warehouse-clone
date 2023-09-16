@@ -1,10 +1,4 @@
-
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- =============================================
+﻿-- =============================================
 -- Author:		Alberto Almario Valbuena
 -- Create Date: 2023-08-25
 -- Description: This procedures insert and update info related to claim symbility api
@@ -132,3 +126,4 @@ BEGIN
 
 	END CATCH
 END
+

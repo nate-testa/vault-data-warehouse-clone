@@ -1,10 +1,4 @@
-
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- =============================================
+﻿-- =============================================
 -- Author:		Alberto Almario Valbuena
 -- Create Date: 2023-08-01
 -- Description: This procedures insert and update info related to Claim Policy Search API
@@ -129,3 +123,4 @@ BEGIN
 
 	END CATCH
 END
+
