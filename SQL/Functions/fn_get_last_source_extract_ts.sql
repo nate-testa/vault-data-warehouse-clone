@@ -7,7 +7,7 @@ GO
 -- Create Date: <Create Date, , >
 -- Description: Returns last source extract timestamp from given process name
 -- =============================================
-CREATE FUNCTION [edw_core].[fn_get_last_source_extract_ts]
+CREATE OR ALTER FUNCTION [edw_core].[fn_get_last_source_extract_ts]
 (
    @process_nm varchar(255)
 )
