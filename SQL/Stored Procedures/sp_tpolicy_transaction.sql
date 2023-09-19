@@ -1,4 +1,8 @@
-﻿-- =================================================================================================
+﻿SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =================================================================================================
 -- Author:		Hernando Gonzalez Garcia  
 -- Description: This procedures inserts into TPolicy_Transaction  
 ---------------------------------------------------------------------------------------------------
@@ -9,6 +13,7 @@
 -- 06/29/23		Architha Gudimalla				3. Updated to add the premiums at coverage level
 -- 07/05/23		Architha Gudimalla				4. Updated the logic for item_sk, coverage_sk
 -- 07/06/23		Architha Gudimalla				5. Updated the logic for cal_mn and acc_mn
+-- 09/18/23		Sandeep Gundreddy				6. Updated the logic for cal_mn and policy_transaction_type_sk
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -64,7 +69,7 @@ BEGIN
 			tmp1.IssuedDate,
 			tmp1.CancellationReason,
 			tmp1.CreatedDate,
-			iif(tmp1.TransactionEffectiveDate > tmp1.CreatedDate, tmp1.TransactionEffectiveDate, tmp1.CreatedDate) cal_mn,
+			iif(tmp1.TransactionEffectiveDate > tmp1.IssuedDate, tmp1.TransactionEffectiveDate, tmp1.IssuedDate) cal_mn,
 			tmp1.UpdatedDate,
 			tmp1.stage, 
 			acctrcp.Coverage ,acctrcp.label,
@@ -173,7 +178,7 @@ BEGIN
 		LEFT JOIN edw_core.tcustomer cust on pol.customer_id = cust.customer_id
 		LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) and pr.product_cd = ic.product_cd  
 		--LEFT JOIN edw_core.ttax_fee_surcharge ttfs on ttfs.tax_fee_surcharge_desc = source.coverage 
-		LEFT JOIN edw_core.tpolicy_transaction_type tt on tt.policy_transaction_type_nm = source.stage 
+		LEFT JOIN edw_core.tpolicy_transaction_type tt on tt.policy_transaction_type_cd = source.stage 
 
 		SET @rows_affected=@@ROWCOUNT; 
 
@@ -224,4 +229,4 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-
+GO
