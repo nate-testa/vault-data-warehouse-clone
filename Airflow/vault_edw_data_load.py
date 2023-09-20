@@ -400,6 +400,68 @@ with DAG(
         sp_tpolicy_transaction >> sp_treconciliation >> treconciliation_email >> send_policy_transaction_email
 
 
+    with TaskGroup("claim_group") as claim_group:
+
+        claim_group_items = ['sp_tclaim','sp_tclaim_feature','sp_tclaim_payment','sp_tclaim_transaction','sp_update_tclaim','sp_update_tclaim_feature']
+
+        sp_tclaim = MsSqlOperator(
+            task_id='sp_tclaim',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tclaim",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tclaim_feature = MsSqlOperator(
+            task_id='sp_tclaim_feature',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tclaim_feature",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tclaim_payment = MsSqlOperator(
+            task_id='sp_tclaim_payment',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tclaim_payment",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tclaim_transaction = MsSqlOperator(
+            task_id='sp_tclaim_transaction',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tclaim_transaction",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_update_tclaim = MsSqlOperator(
+            task_id='sp_update_tclaim',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_update_tclaim",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_update_tclaim_feature = MsSqlOperator(
+            task_id='sp_update_tclaim_feature',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_update_tclaim_feature",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        send_claim_email = EmailOperator(
+            task_id='send_claim_email',
+            to=to_email,
+            subject='Airflow - Claim tables loaded successfully',
+            html_content=get_sp_success_data_HTML(claim_group_items, 'All stored procedures executed successfully for all the Claim tables'),
+        )
+
+        sp_tclaim >> sp_tclaim_feature >> sp_tclaim_payment >> sp_tclaim_transaction >> sp_update_tclaim >> sp_update_tclaim_feature >> send_claim_email
+
+
     with TaskGroup("datamart_group") as datamart_group:
 
         datamart_group_items = ['sp_tdaily_inforce_policy','sp_tpolicy_summary','sp_tpolicy_transaction_summary','sp_tcustomer_summary','sp_titem_inforce','sp_titem_summary','sp_tinternal_coverage_inforce','sp_tinternal_coverage_summary']
@@ -806,4 +868,4 @@ with DAG(
     )
 
 
-start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, collection_group, auto_group] >> policy_transaction_group >> datamart_group >> vendor_report_group >> validation_result_group >> integration_group >> end
+start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, collection_group, auto_group] >> policy_transaction_group >> claim_group >> datamart_group >> vendor_report_group >> validation_result_group >> integration_group >> end
