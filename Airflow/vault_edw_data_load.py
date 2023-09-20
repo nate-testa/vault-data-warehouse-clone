@@ -116,14 +116,35 @@ with DAG(
             # parameters={"myParam": "value"},
         )
 
+        adf_etl_load_ebao_mqq: BaseOperator = AzureDataFactoryRunPipelineOperator(
+            task_id="adf_etl_load_ebao_mqq",
+            azure_data_factory_conn_id='azure_data_factory_vault_data',
+            pipeline_name="MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_TopLevel",
+            # parameters={"myParam": "value"},
+        )
+
+        adf_etl_load_ebao_mqq_address: BaseOperator = AzureDataFactoryRunPipelineOperator(
+            task_id="adf_etl_load_ebao_mqq_address",
+            azure_data_factory_conn_id='azure_data_factory_vault_data',
+            pipeline_name="MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_TopLevel_t_pub_address",
+            # parameters={"myParam": "value"},
+        )
+
+        adf_etl_load_ebao_mqq_diary: BaseOperator = AzureDataFactoryRunPipelineOperator(
+            task_id="adf_etl_load_ebao_mqq_diary",
+            azure_data_factory_conn_id='azure_data_factory_vault_data',
+            pipeline_name="MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_TopLevel_t_pub_diary",
+            # parameters={"myParam": "value"},
+        )        
+
         send_adf_email = EmailOperator(
             task_id='send_adf_email',
             to=to_email,
-            subject='Airflow - ADF pipeline executed successfully',
-            html_content=get_HTML_on_vault_format('The Azure Data Factory pipeline MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_TopLevel executed successfully',''),
+            subject='Airflow - ADF pipelines executed successfully',
+            html_content=get_HTML_on_vault_format('The Azure Data Factory pipelines executed successfully',''),
         )
 
-        adf_etl_load_stage >> send_adf_email
+        adf_etl_load_stage >> adf_etl_load_ebao_mqq >> adf_etl_load_ebao_mqq_address >> adf_etl_load_ebao_mqq_diary >> send_adf_email
 
 
     with TaskGroup("home_group") as home_group:
@@ -278,6 +299,68 @@ with DAG(
         )
 
         sp_tpel_location >> sp_tpel_driver >> sp_tpel_driver_incident >> sp_tpel_vehicle >> sp_tpel_watercraft >> sp_tpel_coverage >> send_PEL_email
+
+
+    with TaskGroup("auto_group") as auto_group:
+
+        auto_group_items = ['sp_tauto_vehicle','sp_tauto_garage_location','sp_tauto_vehicle_coverage','sp_tauto_policy_coverage','sp_tauto_driver','sp_tauto_driver_incident']
+
+        sp_tauto_vehicle = MsSqlOperator(
+            task_id='sp_tauto_vehicle',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tauto_vehicle",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tauto_garage_location = MsSqlOperator(
+            task_id='sp_tauto_garage_location',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tauto_garage_location",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tauto_vehicle_coverage = MsSqlOperator(
+            task_id='sp_tauto_vehicle_coverage',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tauto_vehicle_coverage",
+            database="vault_edw",
+            autocommit=True,
+        )
+        
+        sp_tauto_policy_coverage = MsSqlOperator(
+            task_id='sp_tauto_policy_coverage',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tauto_policy_coverage",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tauto_driver = MsSqlOperator(
+            task_id='sp_tauto_driver',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tauto_driver",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tauto_driver_incident = MsSqlOperator(
+            task_id='sp_tauto_driver_incident',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tauto_driver_incident",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        send_auto_email = EmailOperator(
+            task_id='send_auto_email',
+            to=to_email,
+            subject='Airflow - Auto tables loaded successfully',
+            html_content=get_sp_success_data_HTML(auto_group_items, 'All stored procedures executed successfully for all the Auto tables'),
+        )
+
+        sp_tauto_vehicle >> sp_tauto_garage_location >> sp_tauto_vehicle_coverage >> sp_tauto_policy_coverage >> sp_tauto_driver >> sp_tauto_driver_incident >> send_auto_email
 
 
     with TaskGroup("policy_transaction_group") as policy_transaction_group:
@@ -497,12 +580,20 @@ with DAG(
 
     with TaskGroup("policy_group") as policy_group:
 
-        policy_group_items = ['sp_tpolicy','sp_tpolicy_history', 'sp_tpolicy_insured', 'sp_tloss_history', 'sp_tadditional_interest']
+        policy_group_items = ['sp_tpolicy','sp_tpolicy_history', 'sp_tpolicy_insured', 'sp_tloss_history', 'sp_tadditional_interest', 'sp_tpolicy_update_non_renwal_billing']
 
         sp_tpolicy = MsSqlOperator(
             task_id='sp_tpolicy',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tpolicy",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tpolicy_update_non_renwal_billing = MsSqlOperator(
+            task_id='sp_tpolicy_update_non_renwal_billing',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tpolicy_update_non_renwal_billing",
             database="vault_edw",
             autocommit=True,
         )
@@ -546,7 +637,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(policy_group_items, 'All stored procedures executed successfully for all the Policy tables'),
         )
 
-        sp_tpolicy >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tloss_history >> sp_tadditional_interest >> send_policy_email
+        sp_tpolicy >> sp_tpolicy_update_non_renwal_billing >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tloss_history >> sp_tadditional_interest >> send_policy_email
 
 
     with TaskGroup("vendor_report_group") as vendor_report_group:
@@ -715,4 +806,4 @@ with DAG(
     )
 
 
-start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, collection_group] >> policy_transaction_group >> datamart_group >> vendor_report_group >> validation_result_group >> integration_group >> end
+start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, collection_group, auto_group] >> policy_transaction_group >> datamart_group >> vendor_report_group >> validation_result_group >> integration_group >> end

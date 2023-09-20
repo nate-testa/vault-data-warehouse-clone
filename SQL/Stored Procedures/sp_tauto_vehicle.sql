@@ -1,0 +1,200 @@
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- =============================================
+-- Author:		Alberto Almario
+-- Create Date: 2023-09-11
+-- Description: This stored procedure insert and update info related to tauto_vehicle.
+-- =============================================
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle]
+AS
+BEGIN
+    -- SET NOCOUNT ON added to prevent extra result sets from
+    -- interfering with SELECT statements.
+    SET NOCOUNT ON
+
+	BEGIN TRY
+		DECLARE @last_source_extract_ts DATETIME2(7)
+		DECLARE @etl_audit_sk INT
+		DECLARE @new_last_source_extract_ts DATETIME2(7)
+		DECLARE @rows_affected INT
+		DECLARE @process_nm VARCHAR(255)=OBJECT_NAME(@@PROCID)
+		DECLARE @current_date DATETIME=GETDATE()
+		DECLARE @parameter_desc VARCHAR(255)
+		-- Get last source extract date
+		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
+		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+
+		--************Start************
+
+        -- Step1 limit amount of rows.
+		DROP TABLE IF EXISTS [edw_temp].[tauto_vehicle_temp1];
+
+		SELECT 
+			PolicyNumber, EffectiveDate, [Index] as vehicle_no, IssuedDate,
+            [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],
+			source_system_sk
+		
+        INTO [edw_temp].[tauto_vehicle_temp1]
+		
+        FROM
+			(
+                SELECT
+                    acct.PolicyNumber, acct.EffectiveDate, acct.IssuedDate,
+                    acctvo.[Index], acctvof.[Field], acctvof.[Value],
+                    CASE 
+                        WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
+                        ELSE 4 --(Metal)
+                    END as [source_system_sk]
+                FROM
+                    (SELECT
+                        *
+                        ,ROW_NUMBER() OVER (PARTITION BY PolicyNumber, EffectiveDate ORDER BY policychangenumber DESC) AS AccountTransaction_Rank
+                    FROM [edw_stage].[AccountTransaction]
+                    WHERE
+                        [State] = 'ISSUED'
+                        AND IssuedDate > @last_source_extract_ts
+                    ) acct
+                INNER JOIN [edw_stage].[Product] p on p.Id = acct.ProductId
+                INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
+                INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
+                INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof ON acctvof.VersionObjectId = acctvo.id
+                WHERE
+                    acct.AccountTransaction_Rank = 1
+                    AND p.[Name] = 'Automobile'
+                    AND p.ProductLine = 'PersonalLines'
+                    AND acctvof.[Group] = 'Vehicle'
+			) t
+		PIVOT 
+			(
+				MAX([Value]) FOR [Field] IN 
+                (
+                    [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate]
+                )
+			) pivottable
+
+		-- Start Merge process
+		MERGE [edw_core].[tauto_vehicle] AS trg
+		USING (
+	        SELECT 
+                t1.PolicyNumber as policy_no,
+                t1.EffectiveDate as effective_dt,
+                t1.vehicle_no,
+                t1.VehicleType as vehicle_type,
+                t1.CollectorCarType as collector_car_type,
+                t1.VIN as vehicle_vin,
+                t1.ModelYear as vehicle_model_year,
+                t1.Make as vehicle_make,
+                t1.Model as vehicle_model,
+                t1.Body as vehicle_body,
+                t1.Weight as vehicle_weight,
+                t1.Horsepower as vehicle_horsepower,
+                t1.EngineSize as vehicle_engine_size,
+                t1.EngineType as vehicle_engine_type,
+                t1.HighPerformanceVehicle as high_performance_vehicle_in,
+                t1.PurchaseDate as purchase_dt,
+                t1.source_system_sk
+			FROM 
+				[edw_temp].[tauto_vehicle_temp1] AS t1
+		) AS src
+		ON src.policy_no = trg.policy_no
+        AND src.effective_dt = trg.effective_dt
+        AND src.vehicle_no = trg.vehicle_no
+		-- For Inserts
+		WHEN NOT MATCHED BY TARGET THEN
+		INSERT (
+            policy_no,
+            effective_dt,
+            vehicle_no,
+            vehicle_type,
+            collector_car_type,
+            vehicle_vin,
+            vehicle_model_year,
+            vehicle_make,
+            vehicle_model,
+            vehicle_body,
+            vehicle_weight,
+            vehicle_horsepower,
+            vehicle_engine_size,
+            vehicle_engine_type,
+            high_performance_vehicle_in,
+            purchase_dt,
+            source_system_sk,
+            create_ts,
+            update_ts,
+            etl_audit_sk
+			)
+		VALUES (
+            src.policy_no,
+            src.effective_dt,
+            src.vehicle_no,
+            src.vehicle_type,
+            src.collector_car_type,
+            src.vehicle_vin,
+            src.vehicle_model_year,
+            src.vehicle_make,
+            src.vehicle_model,
+            src.vehicle_body,
+            src.vehicle_weight,
+            src.vehicle_horsepower,
+            src.vehicle_engine_size,
+            src.vehicle_engine_type,
+            src.high_performance_vehicle_in,
+            src.purchase_dt,
+            src.source_system_sk,
+            getdate(), 
+            getdate(), 
+            @etl_audit_sk
+            )
+		-- For Updates
+		WHEN MATCHED THEN UPDATE 
+		SET
+            trg.vehicle_type = src.vehicle_type,
+            trg.collector_car_type = src.collector_car_type,
+            trg.vehicle_vin = src.vehicle_vin,
+            trg.vehicle_model_year = src.vehicle_model_year,
+            trg.vehicle_make = src.vehicle_make,
+            trg.vehicle_model = src.vehicle_model,
+            trg.vehicle_body = src.vehicle_body,
+            trg.vehicle_weight = src.vehicle_weight,
+            trg.vehicle_horsepower = src.vehicle_horsepower,
+            trg.vehicle_engine_size = src.vehicle_engine_size,
+            trg.vehicle_engine_type = src.vehicle_engine_type,
+            trg.high_performance_vehicle_in = src.high_performance_vehicle_in,
+            trg.purchase_dt = src.purchase_dt,
+            trg.update_ts = getdate()
+        ;
+
+        --************End************
+
+		SET @rows_affected=@@ROWCOUNT;
+
+		
+		-- Update control table
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(IssuedDate) FROM edw_temp.[tauto_vehicle_temp1]),@last_source_extract_ts);
+        EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
+		-- Update audit table
+		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
+
+        -- Drop temp table
+        DROP TABLE IF EXISTS edw_temp.[tauto_vehicle_temp1];
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @error_message nvarchar(4000)
+		SET @error_message = 'Error Number:' + ISNULL(CAST(ERROR_NUMBER() AS NVARCHAR(100)),'') + 
+						    ' Error State:' + ISNULL(CAST(ERROR_STATE() AS NVARCHAR(100)),'')
+							+ ' Error Severity:' + ISNULL(CAST(ERROR_SEVERITY() AS NVARCHAR(100)),'') +
+							CHAR(13) + 'Error Procedure:' + ISNULL(ERROR_PROCEDURE(),'') + ' Error Line:' + ISNULL(CAST(ERROR_LINE() AS NVARCHAR(100)),'') +
+							CHAR(13) + 'Error Message:' + ISNULL(ERROR_MESSAGE(),'')
+	
+		EXEC [edw_core].[sp_upd_error_tetl_audit] @etl_audit_sk,@error_message;
+
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
+	
+    END CATCH
+END
