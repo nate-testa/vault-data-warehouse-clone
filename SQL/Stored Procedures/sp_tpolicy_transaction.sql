@@ -14,6 +14,7 @@ GO
 -- 07/05/23		Architha Gudimalla				4. Updated the logic for item_sk, coverage_sk
 -- 07/06/23		Architha Gudimalla				5. Updated the logic for cal_mn and acc_mn
 -- 09/18/23		Sandeep Gundreddy				6. Updated the logic for cal_mn and policy_transaction_type_sk
+-- 09/27/2023	Mohammed Yunus					7. Added HSB Ceded Premium columns and updated logic to convert renewal transaction
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -71,12 +72,14 @@ BEGIN
 			tmp1.CreatedDate,
 			iif(tmp1.TransactionEffectiveDate > tmp1.IssuedDate, tmp1.TransactionEffectiveDate, tmp1.IssuedDate) cal_mn,
 			tmp1.UpdatedDate,
-			tmp1.stage, 
+			iif(isrenewal=1,'RENEWAL',tmp1.stage) as stage,
 			acctrcp.Coverage ,acctrcp.label,
 			COALESCE (acctrcp.PremiumDeltaProRated ,premium) as wp, 
 			COALESCE (acctrcp.Premiumdelta ,premium) as ap,
 			COALESCE (acctrcp.CommissionDeltaProRated ,acctrcp.commission) as comm,
-			0 as tfs, tmp1.ssk, 'prm' typ
+			0 as tfs, tmp1.ssk, 'prm' typ,
+			isnull(acctrcp.CededPremiumDelta,0) as ceded_annual_premium_amt,
+			isnull(acctrcp.CededPremiumDeltaProRated,0) as ceded_premium_amt
 		INTO edw_temp.tpolicy_transaction_temp2  
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
 		inner join edw_stage.AccountTransactionCoveragePremium acctrcp on acctrcp.AccountTransactionId = tmp1.Id
@@ -97,13 +100,15 @@ BEGIN
 			tmp1.CreatedDate,
 			iif(tmp1.TransactionEffectiveDate > tmp1.CreatedDate, tmp1.TransactionEffectiveDate, tmp1.CreatedDate) cal_mn,
 			tmp1.UpdatedDate,
-			tmp1.stage,
+			iif(isrenewal=1,'RENEWAL',tmp1.stage) as stage,
 			--ROW_NUMBER() OVER (PARTITION BY tmp1.PolicyNumber, tmp1.EffectiveDate, tmp1.PolicyChangeNumber ORDER BY tmp1.CreatedDate DESC) AS PolicyNumber_Rank,
 			acctrtf.Name, '',
 			COALESCE (acctrtf.AmountDeltaProRated ,acctrtf.Amount) as wp, 
 			COALESCE (acctrtf.AmountDelta  ,acctrtf.Amount) as ap, 
 			0 as comm ,
-			COALESCE (acctrtf.AmountDeltaProRated ,acctrtf.Amount) as tfs, tmp1.ssk, 'tfs' typ
+			COALESCE (acctrtf.AmountDeltaProRated ,acctrtf.Amount) as tfs, tmp1.ssk, 'tfs' typ,
+			0 as ceded_annual_premium_amt,
+			0 as ceded_premium_amt
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
 		inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = tmp1.Id 
 
@@ -132,7 +137,9 @@ BEGIN
            ,source_system_sk -- not sure ¿From Policy?
            ,policy_status_sk -- from policy_status ¿?
            --,tax_fee_surcharge_sk
-           ,user_sk -- not sure
+			,ceded_annual_premium_amt
+			,ceded_premium_amt
+		   ,user_sk -- not sure
            ,create_ts
            ,update_ts
            ,etl_audit_sk)
@@ -159,6 +166,8 @@ BEGIN
 			source.ssk, 
 			case when isnull(tt.policy_transaction_type_sk,0) = 5 then 2 else 1 end pol_status,
 			--isnull(ttfs.tax_fee_surcharge_sk,0), 
+			ceded_annual_premium_amt,
+		    ceded_premium_amt,
 			0 user_sk, 
 			getdate(),getdate(), @etl_audit_sk --select source.coverage, source.label,ic.*
 		FROM
