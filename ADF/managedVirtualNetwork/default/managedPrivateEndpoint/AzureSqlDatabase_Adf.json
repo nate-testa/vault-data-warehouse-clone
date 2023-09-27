@@ -1,0 +1,10 @@
+{
+	"name": "AzureSqlDatabase_Adf",
+	"properties": {
+		"privateLinkResourceId": "/subscriptions/61591278-f31e-4706-ac18-ebb142d84d24/resourceGroups/AZR-INFRA-RG/providers/Microsoft.Sql/servers/azrvaultdatasit001",
+		"groupId": "sqlServer",
+		"fqdns": [
+			"azrvaultdatasit001.database.windows.net"
+		]
+	}
+}
