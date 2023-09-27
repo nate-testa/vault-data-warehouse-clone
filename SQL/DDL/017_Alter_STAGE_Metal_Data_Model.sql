@@ -52,18 +52,6 @@ ALTER TABLE [edw_stage].[AccountReportItem] ADD DataName nvarchar(3000);
 ALTER TABLE [edw_stage].[AccountReportItem] ADD ExternalSourceUniqueId nvarchar(2000); 
 ALTER TABLE [edw_stage].[AccountReportItem] ADD RelatedObjectId int; 
 
-CREATE TABLE [edw_stage].[AccountRequirement]
-(
-	[Id] [uniqueidentifier] NOT NULL,
-	[AccountId] [uniqueidentifier] NOT NULL,
-	[Message] [nvarchar](3000) NULL,
-	[Prevent] [nvarchar](200) NULL,
-	[ExternalSourceId] [nvarchar](2000) NULL,
-	[CreatedDate] [datetime2](7) NOT NULL,
-	[UpdatedDate] [datetime2](7) NOT NULL,
-    CONSTRAINT PK_AccountRequirement PRIMARY KEY (id)
-);
-
 ALTER TABLE [edw_stage].[AccountTransaction] ADD DeclineNote nvarchar(3000); 
 ALTER TABLE [edw_stage].[AccountTransaction] ADD IsExternallySubmitted bit ; 
 ALTER TABLE [edw_stage].[AccountTransaction] ADD IsRenewal bit ; 
@@ -148,17 +136,6 @@ ALTER TABLE [edw_stage].[ProductDefinition] ADD Version nvarchar(500);
 ALTER TABLE [edw_stage].[ProductObject] ADD TableIdentifier nvarchar(2000); 
 ALTER TABLE [edw_stage].[Role] ADD ExternalSourceUniqueId nvarchar(2000); 
 
-CREATE TABLE [edw_stage].[SubjectivityDocument](
-	[Id] [int] NOT NULL,
-	[DocumentId] [uniqueidentifier] NOT NULL,
-	[AccountSubjectivityId] [uniqueidentifier] NOT NULL,
-	[ExternalSourceId] [nvarchar](2000) NULL,
-	[CreatedDate] [datetime2](7) NOT NULL,
-	[UpdatedDate] [datetime2](7) NULL,
-	[ExternalSourceUniqueId] [nvarchar](2000) NULL,
-    CONSTRAINT PK_SubjectivityDocument PRIMARY KEY(id)
-);
-
 CREATE TABLE [edw_stage].[WebhookRequestLog]
 (
 	[Id] [uniqueidentifier] NOT NULL,
@@ -187,18 +164,6 @@ ALTER TABLE [edw_stage].[WorkflowStep] ADD TriggerSuspenseOnCreate nvarchar(3000
 ALTER TABLE [edw_stage].[WorkflowStep] ADD TriggerType nvarchar(3000); 
 ALTER TABLE [edw_stage].[WorkflowStepActivity] ADD ExternalSourceUniqueId nvarchar(2000); 
 
-CREATE TABLE [edw_stage].[WorkflowStepRole](
-	[Id] [int] NOT NULL,
-	[WorkFlowStepId] [uniqueidentifier] NOT NULL,
-	[RoleId] [nvarchar](100) NULL,
-	[RoleName] [nvarchar](200) NULL,
-	[ExternalSourceId] [nvarchar](2000) NULL,
-	[CreatedDate] [datetime2](7) NOT NULL,
-	[UpdatedDate] [datetime2](7) NULL,
-	[ExternalSourceUniqueId] [nvarchar](2000) NULL,
-    CONSTRAINT PK_WorkflowStepRole PRIMARY KEY(id)
-) 
-;
 
 ALTER TABLE [edw_stage].[WorkTask] ADD AccountTransactionId uniqueidentifier; 
 ALTER TABLE [edw_stage].[WorkTask] ADD ConcurrencyId nvarchar(3000); 
@@ -206,16 +171,3 @@ ALTER TABLE [edw_stage].[WorkTask] ADD FinishedById uniqueidentifier;
 ALTER TABLE [edw_stage].[WorkTask] ADD FinishedDate datetime2; 
 ALTER TABLE [edw_stage].[WorkTask] ADD SuspenseUntilDate datetime2; 
 ALTER TABLE [edw_stage].[WorkTaskActivity] ADD ExternalSourceUniqueId nvarchar(2000); 
-
-
-CREATE TABLE [edw_stage].[WorkTaskRole](
-	[Id] [int] NOT NULL,
-	[WorkTaskId] [uniqueidentifier] NOT NULL,
-	[RoleId] [nvarchar](100) NULL,
-	[RoleName] [nvarchar](200) NULL,
-	[ExternalSourceId] [nvarchar](2000) NULL,
-	[CreatedDate] [datetime2](7) NOT NULL,
-	[UpdatedDate] [datetime2](7) NULL,
-	[ExternalSourceUniqueId] [nvarchar](2000) NULL,
-    CONSTRAINT PK_WorkTaskRole PRIMARY KEY(Id)
-);
