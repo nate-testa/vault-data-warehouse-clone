@@ -7,7 +7,8 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 06/02/23		Yunus Mohammed					1. Created this procedure
--- 06/28/23		Architha Gudimalla				2. Made changes to fix the errors on first run 
+-- 06/28/23		Architha Gudimalla				2. Made changes to fix the errors on first run
+-- 09/27/2023	Yunus Mohammed					3. Removed tax_fee_surcharge_category_nm from Merge
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_ttax_fee_surcharge]
@@ -46,7 +47,7 @@ BEGIN
 		-- Insert and Update [ttax_fee_surcharge] table
 		MERGE [edw_core].[ttax_fee_surcharge] AS Target
 		USING edw_temp.ttax_fee_surcharge_temp1 AS Source
-		ON Source.tax_fee_surcharge_name = Target.tax_fee_surcharge_cd and source.tax_fee_surcharge_type = target.tax_fee_surcharge_category_nm
+		ON Source.tax_fee_surcharge_name = Target.tax_fee_surcharge_cd
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT 
