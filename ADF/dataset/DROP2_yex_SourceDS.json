@@ -2,7 +2,7 @@
 	"name": "DROP2_yex_SourceDS",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "LS_eBao_uat_aws_us_address_uat",
+			"referenceName": "LS_eBao_preProd_aws_us_preprod_address",
 			"type": "LinkedServiceReference"
 		},
 		"parameters": {

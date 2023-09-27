@@ -1,9 +1,9 @@
 {
-	"name": "AZR-VD-UAT-ADF",
+	"name": "AZR-VD-PREPROD-ADF",
 	"location": "eastus",
 	"identity": {
 		"type": "SystemAssigned",
-		"principalId": "d906534a-e3e0-4f44-941f-db5de1318d28",
+		"principalId": "9244d9a0-b3b5-4f91-ad8b-f81b88e8fef3",
 		"tenantId": "348d7f3f-9dec-4a47-a2a1-d314cc2e5774"
 	}
 }

@@ -2,7 +2,7 @@
 	"name": "MetadataDrivenCopy_eBao_to_Edw_stage_DestinationDS",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "LS_EDW_UAT",
+			"referenceName": "LS_EDW_PREPROD",
 			"type": "LinkedServiceReference"
 		},
 		"parameters": {

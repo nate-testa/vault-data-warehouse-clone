@@ -20,7 +20,7 @@
 					"storedProcedureName": "[edw_core].[sp_thome_location]"
 				},
 				"linkedServiceName": {
-					"referenceName": "LS_EDW_UAT",
+					"referenceName": "LS_EDW_PREPROD",
 					"type": "LinkedServiceReference"
 				}
 			},
@@ -47,7 +47,7 @@
 					"storedProcedureName": "[edw_core].[sp_thome_coverage]"
 				},
 				"linkedServiceName": {
-					"referenceName": "LS_EDW_UAT",
+					"referenceName": "LS_EDW_PREPROD",
 					"type": "LinkedServiceReference"
 				}
 			},
@@ -74,7 +74,7 @@
 					"storedProcedureName": "[edw_core].[sp_thome_additional_coverage]"
 				},
 				"linkedServiceName": {
-					"referenceName": "LS_EDW_UAT",
+					"referenceName": "LS_EDW_PREPROD",
 					"type": "LinkedServiceReference"
 				}
 			}

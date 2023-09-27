@@ -1,5 +1,5 @@
 {
-	"name": "integrationRuntime1",
+	"name": "AWS-PREPROD",
 	"properties": {
 		"type": "SelfHosted"
 	}

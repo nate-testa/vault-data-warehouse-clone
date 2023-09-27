@@ -2,7 +2,7 @@
 	"name": "DROP2_yex_ControlDS",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "LS_EDW_UAT",
+			"referenceName": "LS_EDW_PREPROD",
 			"type": "LinkedServiceReference"
 		},
 		"folder": {

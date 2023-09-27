@@ -1,0 +1,16 @@
+{
+	"name": "LS_eBao_preProd_aws_us_preprod_diary",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "MySql",
+		"typeProperties": {
+			"connectionString": "server=aws-us-gi-preprod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com;port=3306;database=aws_us_preprod_diary;user=vault_us_preprod_dms_ro;sslmode=0",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiI5YzA4ZmQ0Yi0xOGViLTQzMGMtYjMyOC0yMTU0ZWUxOGU1YTAiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "AWS-PREPROD",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
