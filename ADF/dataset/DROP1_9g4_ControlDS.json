@@ -2,7 +2,7 @@
 	"name": "DROP1_9g4_ControlDS",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "AzureSqlDatabase_edw_dev",
+			"referenceName": "LS_EDW_UAT",
 			"type": "LinkedServiceReference"
 		},
 		"folder": {

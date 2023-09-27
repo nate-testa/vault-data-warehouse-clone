@@ -2,7 +2,7 @@
 	"name": "DROP1_o1f_SourceDS",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "LS_azrvaultmetaldev001_metaldb",
+			"referenceName": "LS_EDW_UAT",
 			"type": "LinkedServiceReference"
 		},
 		"parameters": {

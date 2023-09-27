@@ -2,7 +2,7 @@
 	"name": "Metal_to_Vault_Manual_zue_DestinationDS",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "AzureSqlDatabase_edw_dev",
+			"referenceName": "LS_EDW_UAT",
 			"type": "LinkedServiceReference"
 		},
 		"parameters": {

@@ -340,7 +340,7 @@
 												},
 												"userProperties": [],
 												"typeProperties": {
-													"storedProcedureName": "[UpdateWatermarkColumnValue_zue]",
+													"storedProcedureName": "[edw_stage].[UpdateWatermarkColumnValue_1i1]",
 													"storedProcedureParameters": {
 														"Id": {
 															"value": {
@@ -359,7 +359,7 @@
 													}
 												},
 												"linkedServiceName": {
-													"referenceName": "AzureSqlDatabase_edw_dev",
+													"referenceName": "LS_EDW_UAT",
 													"type": "LinkedServiceReference"
 												}
 											}

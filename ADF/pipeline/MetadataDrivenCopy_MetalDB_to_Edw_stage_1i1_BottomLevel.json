@@ -362,7 +362,7 @@
 													}
 												},
 												"linkedServiceName": {
-													"referenceName": "AzureSqlDatabase_edw_dev",
+													"referenceName": "LS_EDW_UAT",
 													"type": "LinkedServiceReference"
 												}
 											},
@@ -419,7 +419,7 @@
 													}
 												},
 												"linkedServiceName": {
-													"referenceName": "AzureSqlDatabase_edw_dev",
+													"referenceName": "LS_EDW_UAT",
 													"type": "LinkedServiceReference"
 												}
 											},
