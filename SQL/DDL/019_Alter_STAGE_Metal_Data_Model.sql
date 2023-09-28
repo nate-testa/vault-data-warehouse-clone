@@ -1,0 +1,17 @@
+ALTER TABLE [edw_stage].[BillingAccount] ADD AutoPayMethod nvarchar(1000); 
+ALTER TABLE [edw_stage].[BillingAccount] ADD AutoPayToken nvarchar(1000); 
+ALTER TABLE [edw_stage].[BillingAccount] ADD IsAutoPay bit NULL; 
+ALTER TABLE [edw_stage].[AccountTransactionVersionPremiumFactor] ADD ObjectId int; 
+ALTER TABLE [edw_stage].[AccountTransactionVersionPremiumFactor] ADD ObjectUniqueId uniqueidentifier; 
+ALTER TABLE [edw_stage].[AccountTransactionVersionPremiumSummary] ADD ObjectUniqueId uniqueidentifier; 
+ALTER TABLE [edw_stage].[Account] ADD IsReviseQuote bit NULL; 
+ALTER TABLE [edw_stage].[Account] ADD ReviseQuoteTransactionId uniqueidentifier; 
+ALTER TABLE [edw_stage].[Account] ADD IsCopiedFromRenewal bit NULL; 
+ALTER TABLE [edw_stage].[AccountReport] ADD IsCopy bit NULL; 
+ALTER TABLE [edw_stage].[AccountPremiumFactor] ADD ObjectId int; 
+ALTER TABLE [edw_stage].[AccountPremiumFactor] ADD ObjectUniqueId uniqueidentifier; 
+ALTER TABLE [edw_stage].[AccountPremiumSummary] ADD ObjectUniqueId uniqueidentifier; 
+ALTER TABLE [edw_stage].[AccountTransactionVersion] ADD IsCopiedFromRenewal bit NULL; 
+ALTER TABLE [edw_stage].[AccountTransaction] ADD PreviousStage nvarchar(200); 
+ALTER TABLE [edw_stage].[AccountTransaction] ADD PreviousState nvarchar(200); 
+ALTER TABLE [edw_stage].[Account] ALTER COLUMN CopyOfAccountNumber nvarchar(25);
