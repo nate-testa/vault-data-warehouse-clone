@@ -62,7 +62,6 @@ BEGIN
                 FROM
                     (SELECT
                         *
-                        ,ROW_NUMBER() OVER (PARTITION BY PolicyNumber, EffectiveDate ORDER BY policychangenumber DESC) AS AccountTransaction_Rank
                     FROM [edw_stage].[AccountTransaction]
                     WHERE [State] = 'ISSUED'
                         AND IssuedDate > @last_source_extract_ts
@@ -85,8 +84,7 @@ BEGIN
                     --AND agl.garage_location_no = av. --**Pending
                     AND agl.transaction_seq_no = acct.PolicyChangeNumber
                 WHERE
-                    acct.AccountTransaction_Rank = 1
-                    AND p.[Name] = 'Automobile'
+                    p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'
                     AND acctvof.[Group] in ('Vehicle','Registration','Symbols','Symbols - ISO','Vehicle Coverages','AntiTheftDevice','Discounts','Surcharge')
 			) t
