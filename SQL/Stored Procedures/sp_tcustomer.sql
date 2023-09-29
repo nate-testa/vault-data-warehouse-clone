@@ -7,6 +7,7 @@
 -- 06/02/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 06/29/23		Architha Gudimalla				2. Made changes to fix the errors on first run
 -- 07/09/23		Mohammed Yunus					3. Mailing address column names updated
+-- 9/29/2023    Sandeep Gundreddy				4. Added ins.ReferenceCode!=0 to exclude secondary customers
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcustomer]
@@ -56,7 +57,7 @@ BEGIN
 				ins.IsVip, CreatedDate, UpdatedDate
         INTO edw_temp.[tcustomer_temp1] 
 		FROM edw_stage.[Insured] ins
-		WHERE GREATEST(CreatedDate,UpdatedDate)>@last_source_extract_ts
+		WHERE GREATEST(CreatedDate,UpdatedDate)>@last_source_extract_ts and ins.ReferenceCode!=0
 
 		-- Start Merge process
 		MERGE [edw_core].[tcustomer] AS Target
