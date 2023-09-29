@@ -65,7 +65,6 @@ BEGIN
                 FROM
                     (SELECT
                         *
-                        ,ROW_NUMBER() OVER (PARTITION BY PolicyNumber, EffectiveDate ORDER BY policychangenumber DESC) AS AccountTransaction_Rank
                     FROM [edw_stage].[AccountTransaction]
                     WHERE [State] = 'ISSUED'
                         AND IssuedDate > @last_source_extract_ts
@@ -79,8 +78,7 @@ BEGIN
                     AND ph.effective_dt = acct.EffectiveDate
                     AND ph.transaction_seq_no = acct.policychangenumber
                 WHERE
-                    acct.AccountTransaction_Rank = 1
-                    AND p.[Name] = 'Automobile'
+                    p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'
                     AND acctvof.[Group] in ('Coverages','Additional Coverages')
 			) t
@@ -288,7 +286,7 @@ BEGIN
             t1.[NumberofPPAwithPhysDam] as ppa_with_physical_damage_ct,
             t1.[NumberofCollectorCars] as collector_cars_ct,
             t1.[TotalInsuredLocations] as total_insured_locations_ct,
-            t1.[HOClaims] as ho_claims_ct,
+            cast(cast(t1.[HOClaims] as decimal) as int) as ho_claims_ct,
             t1.[NumberofDriversonPolicy] as drivers_on_policy_ct,
             t1.[NumberofYouthsonPolicy] as youths_on_policy_ct,
             t1.[YearsCleanDiscount] as years_clean_discount,

@@ -464,7 +464,7 @@ with DAG(
 
     with TaskGroup("datamart_group") as datamart_group:
 
-        datamart_group_items = ['sp_tdaily_inforce_policy','sp_tpolicy_summary','sp_tpolicy_transaction_summary','sp_tcustomer_summary','sp_titem_inforce','sp_titem_summary','sp_tinternal_coverage_inforce','sp_tinternal_coverage_summary']
+        datamart_group_items = ['sp_tdaily_inforce_policy','sp_tpolicy_summary','sp_tpolicy_transaction_summary','sp_tcustomer_summary','sp_titem_inforce','sp_titem_summary','sp_tinternal_coverage_inforce','sp_tinternal_coverage_summary', 'sp_tclaim_feature_summary', 'sp_tclaim_summary']
 
         sp_tdaily_inforce_policy = MsSqlOperator(
             task_id='sp_tdaily_inforce_policy',
@@ -529,6 +529,22 @@ with DAG(
             database="vault_edw",
             autocommit=True,
         )
+        
+        sp_tclaim_feature_summary = MsSqlOperator(
+            task_id='sp_tclaim_feature_summary',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tclaim_feature_summary",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tclaim_summary = MsSqlOperator(
+            task_id='sp_tclaim_summary',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tclaim_summary",
+            database="vault_edw",
+            autocommit=True,
+        )
 
         send_datamart_email = EmailOperator(
             task_id='send_datamart_email',
@@ -537,7 +553,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(datamart_group_items, 'All stored procedures executed successfully for all the Datamart tables'),
         )
 
-        sp_tdaily_inforce_policy >> sp_tpolicy_summary >> sp_tpolicy_transaction_summary >> sp_tcustomer_summary >> sp_titem_inforce >> sp_titem_summary >> sp_tinternal_coverage_inforce >> sp_tinternal_coverage_summary >> send_datamart_email
+        sp_tdaily_inforce_policy >> sp_tpolicy_summary >> sp_tpolicy_transaction_summary >> sp_tcustomer_summary >> sp_titem_inforce >> sp_titem_summary >> sp_tinternal_coverage_inforce >> sp_tinternal_coverage_summary >> sp_tclaim_feature_summary >> sp_tclaim_summary >> send_datamart_email
 
 
     with TaskGroup("reference_group") as reference_group:
