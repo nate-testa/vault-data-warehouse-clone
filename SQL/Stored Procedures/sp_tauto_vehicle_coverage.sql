@@ -44,7 +44,7 @@ BEGIN
             [ExpenseLoadPIP], [ExpenseLoadMED], [ExpenseLoadOTC], [ExpenseLoadCOLL], [ExpenseLoadUM], [BodilyInjuryNCRBPremium], [PropertyDamageNCRBPremium], [MedicalPaymentsNCRBPremium], 
             [UninsuredMotoristsBodilyInjuryNCRBPremium], [UninsuredMotoristsPropertyDamageNCRBPremium], [SendVehicleToLiabilityReporting], [AntiTheftDevice], [AntiLockBrakes], [PassiveRestraint], 
             [SeasonalUse], [DirectRepair], [CarStorageFacility], [VINEtching], [LossProtectionDiscount], [SeasonalUsePart2], [MarketAppreciationandDiminutionofValue],
-			source_system_sk
+			source_system_sk, vehicle_deleted_in
 		
         INTO [edw_temp].[tauto_vehicle_coverage_temp1]
 		
@@ -53,7 +53,7 @@ BEGIN
                 SELECT
                     acct.IssuedDate, acct.PolicyNumber as policy_no, acct.EffectiveDate as effective_dt, acctvo.[Index] as vehicle_no, acct.TransactionEffectiveDate as transaction_effective_dt, 
                     acct.ExpirationDate as expiration_dt, acct.IssuedDate as transaction_dt, acct.PolicyChangeNumber as transaction_seq_no,
-                    ph.policy_history_sk, av.auto_vehicle_sk, agl.auto_garage_location_sk,
+                    ph.policy_history_sk, av.auto_vehicle_sk, agl.auto_garage_location_sk, acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
                     acctvof.[Field], acctvof.[Value],
                     CASE 
                         WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
@@ -193,7 +193,8 @@ BEGIN
             source_system_sk,
             create_ts,
             update_ts,
-            etl_audit_sk
+            etl_audit_sk,
+            vehicle_deleted_in
 		)
         SELECT 
             t1.policy_no,
@@ -282,7 +283,8 @@ BEGIN
             t1.source_system_sk,
             getdate() AS create_ts,
             getdate() AS update_ts,
-            @etl_audit_sk AS etl_audit_sk
+            @etl_audit_sk AS etl_audit_sk,
+            t1.vehicle_deleted_in
         FROM 
             [edw_temp].[tauto_vehicle_coverage_temp1] AS t1
         ;
