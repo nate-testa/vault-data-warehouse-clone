@@ -6,6 +6,7 @@
 -------------------------------------------------------------------------------------------------------------------
 -- 08/14/23		Architha Gudimalla				1. Created this procedure 
 -- 09/12/23		Architha Gudimalla				2. Added additional columns after discussing with Olivia 
+-- 10/02/23		Architha Gudimalla				3. Corrected code afrer testing
 -- ================================================================================================================ 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -113,25 +114,25 @@ BEGIN
 				 SELECT tr.policy_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk, 
 		 				sum(tr.premium_amt) premium_amt,
 						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk and policy_transaction_type_sk in (1,3) --'Renewal','New Business' 
-								then tr.premium_amt * round((365*1/(expiration_dt_sk - effective_dt_sk)),5) 
+								then tr.premium_amt * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
 								else 0 
 								end) as initial_written_prem,
 						sum(CASE WHEN transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk  < 61 
-								then tr.premium_amt * round((365*1/(expiration_dt_sk - effective_dt_sk)),5) 
+								then tr.premium_amt * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
 								else 0 
 								end) as effective_date_60_day_prem,
 						sum(CASE WHEN transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk  < 61 
-								then tr.commission_amt  * round((365*1/(expiration_dt_sk - effective_dt_sk)),5) 
+								then tr.commission_amt  * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
 								else 0 
 								end) as effective_date_60_day_comm,  
 						sum(CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
 								  and transaction_effective_dt_sk <> expiration_dt_sk and policy_transaction_type_sk in (4,5) --('Cancellation', 'Reinstatement')
 								  and  (transaction_effective_dt_sk - effective_dt_sk  > 60 or transaction_dt_sk - effective_dt_sk  > 60)
-								then tr.premium_amt * round((365*1/(expiration_dt_sk - effective_dt_sk)),5) 
+								then tr.premium_amt * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
 								else 0 
 								end) as mid_term_cancel_amount, 
 						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk  
-								then tr.premium_amt * round((365*1/(expiration_dt_sk - effective_dt_sk)),5) 
+								then tr.premium_amt * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
 								else 0 
 								end) as expiring_premium_amount,
 						count(distinct CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk

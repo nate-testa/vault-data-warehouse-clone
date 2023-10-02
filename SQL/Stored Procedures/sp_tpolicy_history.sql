@@ -39,6 +39,7 @@ BEGIN
 			acct.ExpirationDate, 
 			--acct.AccountId,
 			brk.producerid as BrokerId,
+			brk.Name as producer_nm,
 			ins.ReferenceCode as customer_id,
 			ins.id as MasterInsuredId,
 			acct.PolicyChangeNumber,
@@ -57,7 +58,8 @@ BEGIN
 				case when acct.ExternalSourceId is not NULL 
 					 then 2 --(AV2) 
 					 Else 4 --(Metal)
-				end ssk--, acct.*
+				end ssk,
+				nullif(trim(pr.ProductCode),'') product_cd 
 		INTO edw_temp.tpolicy_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id  
@@ -134,6 +136,11 @@ BEGIN
            ,create_ts
            ,update_ts
            ,etl_audit_sk
+		   --[underwriter_nm]
+		   ,[producer_nm]
+		   ,[product_sk]
+		   ,[policy_change_summary]
+		   --,[commission_pc],[override_commission_pc],[override_commission_pc]
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.PolicyChangeNumber, 
 				pol.policy_sk, br.broker_sk, cust.customer_sk, br.Broker_Id, Source.customer_id, 
@@ -145,16 +152,22 @@ BEGIN
 				source1.CompanionCreditCollections, source1.CompanionCreditPersonalExcessLiability, 
 				source1.CompanionCreditAuto, source1.CompanionCreditHomeowner,
 				ResidenceHasPrior, PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
-				PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, 
-				source.ssk, getdate(), getdate(), @etl_audit_sk --select *
+				PriorResidenceAddr   essState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, 
+				source.ssk, getdate(), getdate(), @etl_audit_sk
+				--[underwriter_nm]
+				,source.producer_nm
+				,pr.product_sk
+				,source.policychangenotes
+				--,[commission_pc],[override_commission_pc],[override_commission_pc] --select *
 		FROM edw_temp.tpolicy_history_temp1 source
 		LEFT JOIN edw_temp.tpolicy_history_temp2 source1 on source.id = source1.AccountTransactionId
 	    --left join edw_stage.Insured cid on source.createdbyid = cid.Id
 	    --left join edw_stage.Insured rid on source.reviewedbyid = rid.Id
 		LEFT JOIN edw_core.tpolicy pol on source.PolicyNumber = pol.policy_no and cast(source.EffectiveDate as date)=pol.effective_dt
 		LEFT JOIN edw_core.tbroker br on source.BrokerId = br.broker_id 
+		LEFT JOIN edw_core.tproduct pr on pr.product_cd = source.product_cd 
 		left join edw_core.tcustomer cust on source.customer_id = cust.customer_id
-		LEFT JOIN edw_core.tpolicy_transaction_type tt on tt.policy_transaction_type_nm = source.stage
+		LEFT JOIN edw_core.tpolicy_transaction_type tt on tt.policy_transaction_type_cd = source.stage
 
 		SET @rows_affected=@@ROWCOUNT;
 

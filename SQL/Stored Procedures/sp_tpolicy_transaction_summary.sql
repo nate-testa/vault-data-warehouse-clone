@@ -102,6 +102,7 @@ BEGIN
 						tr.transaction_dt_sk,
 						tr.policy_transaction_type_sk, 
 						max(tr.coverage_sk) coverage_sk,
+						max(tr.vehicle_coverage_sk) vehicle_coverage_sk,
 		 				sum(tr.premium_amt) premium_amt,
 		 				sum(
 		 					--for transactions issued in the month, eff in the month or later
@@ -126,7 +127,7 @@ BEGIN
 				)
 				INSERT INTO edw_core.tpolicy_transaction_summary
 					( 
-						month_sk, policy_sk, item_sk, transaction_seq_no, internal_coverage_sk, coverage_sk, customer_sk, broker_sk, product_sk, 
+						month_sk, policy_sk, item_sk, transaction_seq_no, internal_coverage_sk, coverage_sk, vehicle_coverage_sk, customer_sk, broker_sk, product_sk, 
 						effective_dt_sk,
 						transaction_effective_dt_sk,
 						expiration_dt_sk,
@@ -135,7 +136,7 @@ BEGIN
 						earned_premium_amt, unearned_premium_amt,  source_system_sk, update_ts, etl_audit_sk
 					)
 				select 	@month_end_dt_sk, prm.policy_sk, prm.item_sk, prm.transaction_seq_no,  prm.internal_coverage_sk,
-						prm.coverage_sk, 
+						prm.coverage_sk, prm.vehicle_coverage_sk, 
 						prm.customer_sk, prm.broker_sk, prm.product_sk,  
 						prm.effective_dt_sk,
 						prm.transaction_effective_dt_sk,
