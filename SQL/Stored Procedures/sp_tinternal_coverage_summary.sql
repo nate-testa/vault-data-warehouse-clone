@@ -102,7 +102,7 @@ BEGIN
 			
 				with inf as
 				(
-				 SELECT policy_sk, item_sk, internal_coverage_sk, coverage_sk, 
+				 SELECT policy_sk, item_sk, internal_coverage_sk, coverage_sk, vehicle_coverage_sk, 
 				 		premium_amt inforce_premium_amt, 
 				 		net_premium_amt inforce_net_premium_amt
 				 FROM	edw_core.tinternal_coverage_inforce
@@ -235,6 +235,7 @@ BEGIN
 				(
 				 SELECT tr.policy_sk, tr.item_sk, tr.internal_coverage_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk,
 						max(tr.coverage_sk)  coverage_sk,
+						max(tr.vehicle_coverage_sk)  vehicle_coverage_sk,
 		 				--max(first_value(tr.coverage_sk)  over (partition by tr.policy_sk order by tr.transaction_seq_no desc)) coverage_sk,
 		 				sum(case when calendar_month_sk between @month_begin_dt_sk 	AND @month_end_dt_sk THEN tr.premium_amt ELSE 0 END) mtd_premium_amt,
 		 				sum(case when calendar_month_sk between @month_begin_dt_sk 	AND @month_end_dt_sk THEN tr.commission_amt ELSE 0 END) mtd_commission_amt,
@@ -287,7 +288,7 @@ BEGIN
 				)
 				INSERT INTO edw_core.tinternal_coverage_summary
 					( 
-						month_sk, policy_sk, item_sk, internal_coverage_sk, coverage_sk, customer_sk, broker_sk, product_sk, source_system_sk, 
+						month_sk, policy_sk, item_sk, internal_coverage_sk, coverage_sk, vehicle_coverage_sk, customer_sk, broker_sk, product_sk, source_system_sk, 
 						inforce_ct, inforce_premium_amt, inforce_net_premium_amt,
 						mtd_premium_amt, mtd_commission_amt, mtd_tax_fee_surcharge_amt, mtd_net_premium_amt, 
 						ytd_premium_amt, ytd_commission_amt, ytd_tax_fee_surcharge_amt, ytd_net_premium_amt, 
@@ -299,6 +300,7 @@ BEGIN
 					)
 				select 	@month_end_dt_sk, prm.policy_sk, prm.item_sk, prm.internal_coverage_sk,
 						case when inf.coverage_sk is not null then inf.coverage_sk else prm.coverage_sk end coverage_sk, 
+						case when inf.vehicle_coverage_sk is not null then inf.vehicle_coverage_sk else prm.vehicle_coverage_sk end vehicle_coverage_sk, 
 						prm.customer_sk, prm.broker_sk, prm.product_sk, prm.sourcE_system_sk, 
 						iif(inf.policy_sk is null,0,1) inforce_ct, 
 						iif(inf.policy_sk is null,0,inf.inforce_premium_amt) inforce_premium_amt, 

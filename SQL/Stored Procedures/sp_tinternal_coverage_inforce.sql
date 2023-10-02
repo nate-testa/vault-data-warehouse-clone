@@ -67,7 +67,7 @@ BEGIN
 				with max_tr as
 				(
 				 SELECT policy_sk, item_sk, internal_coverage_sk ,
-						policy_transaction_sk, coverage_sk ,
+						policy_transaction_sk, coverage_sk , vehicle_coverage_sk ,
 						row_number() over (partition by policy_sk,item_sk, internal_coverage_sk order by transaction_seq_no desc, policy_transaction_sk desc) rnk,
 						sum(premium_amt) over (partition by policy_sk, item_sk, internal_coverage_sk) prm,
 				 		sum(annual_premium_amt) over (partition by policy_sk, item_sk, internal_coverage_sk) ann_prm,
@@ -79,10 +79,10 @@ BEGIN
 				)
 				INSERT INTO edw_core.tinternal_coverage_inforce
 					( 
-						policy_sk, item_sk, internal_coverage_sk, coverage_sk, customer_sk, broker_sk, product_sk, source_system_sk, month_sk, 
+						policy_sk, item_sk, internal_coverage_sk, coverage_sk, vehicle_coverage_sk, customer_sk, broker_sk, product_sk, source_system_sk, month_sk, 
 						premium_amt, net_premium_amt, annual_premium_amt, update_ts, etl_audit_sk
 			        )
-			    select 	tr.policy_sk, tr.item_sk, tr.internal_coverage_sk, tr.coverage_sk, 
+			    select 	tr.policy_sk, tr.item_sk, tr.internal_coverage_sk, tr.coverage_sk, tr.vehicle_coverage_sk, 
 			    		tr.customer_sk, tr.broker_sk, tr.product_sk, tr.sourcE_system_sk, 
 						@month_end_sk, 
 						max_tr.prm, (max_tr.prm - max_tr.tfs), max_tr.ann_prm, getdate(), @etl_audit_sk
