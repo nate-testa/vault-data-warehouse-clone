@@ -5,6 +5,7 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 07/18/23		Architha Gudimalla				1. Created this procedure 
+-- 10/02/23		Architha Gudimalla				2. Changes after testing for veh cov
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tinternal_coverage_inforce]
@@ -67,9 +68,11 @@ BEGIN
 				with max_tr as
 				(
 				 SELECT policy_sk, item_sk, internal_coverage_sk ,
-						policy_transaction_sk, coverage_sk , vehicle_coverage_sk ,
+						coverage_sk , vehicle_coverage_sk ,
 						row_number() over (partition by policy_sk,item_sk, internal_coverage_sk order by transaction_seq_no desc, policy_transaction_sk desc) rnk,
-						sum(premium_amt) over (partition by policy_sk, item_sk, internal_coverage_sk) prm,
+						max(transaction_seq_no)  over (partition by policy_sk) transaction_seq_no,
+						max(policy_transaction_sk)  over (partition by policy_sk,item_sk, internal_coverage_sk order by transaction_seq_no desc, policy_transaction_sk desc) policy_transaction_sk,
+				 		sum(premium_amt) over (partition by policy_sk, item_sk, internal_coverage_sk) prm,
 				 		sum(annual_premium_amt) over (partition by policy_sk, item_sk, internal_coverage_sk) ann_prm,
 				 		sum(tax_fee_surcharge_amt) over (partition by policy_sk, item_sk, internal_coverage_sk) tfs
 				 FROM edw_core.tpolicy_transaction 
@@ -87,9 +90,8 @@ BEGIN
 						@month_end_sk, 
 						max_tr.prm, (max_tr.prm - max_tr.tfs), max_tr.ann_prm, getdate(), @etl_audit_sk
 				from  edw_core.tpolicy_transaction tr, max_tr
-				where tr.policy_sk = max_tr.policy_sk
-				  and tr.item_sk = max_tr.item_sk
-				  and tr.internal_coverage_sk = max_tr.internal_coverage_sk
+				where tr.policy_sk = max_tr.policy_sk  
+				  and tr.transaction_seq_no = max_tr.transaction_seq_no
 				  and tr.policy_transaction_sk = max_tr.policy_transaction_sk
 				  and tr.policy_transaction_type_sk <> 5
 				  and tr.internal_coverage_sk <> 0

@@ -1,4 +1,9 @@
-﻿-- ===========================================================================================================================
+﻿/****** Object:  StoredProcedure [edw_core].[sp_thome_coverage]    Script Date: 10/2/2023 7:04:14 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- ===========================================================================================================================
 -- Author:		Yunus Mohammed 
 -- Description: This procedures loads home coverage data
 ------------------------------------------------------------------------------------------------------------------------------
@@ -6,8 +11,9 @@
 ------------------------------------------------------------------------------------------------------------------------------
 --  			Yunus Mohammed					1. Created this procedure 
 -- 08/23/23		Architha Gudimalla				2. Added changes for residence type, loss_of_use_pc, total_insured_value_amt
+-- 10/02/23		Architha Gudimalla				3. Added replace to remove , from sq footage
 -- =========================================================================================================================== 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_coverage]
+CREATE or ALTER PROCEDURE [edw_core].[sp_thome_coverage]
 
 AS
 BEGIN
@@ -166,7 +172,8 @@ BEGIN
 				tthc.WindPoolEligibility AS windpool_eligibility_in,
 				tthc.SinkholeRiskLevel AS sinkhole_risk_level,
 				tthc.SinkHoleDistanceToNearestMiles AS sinkhole_distance_to_nearest_miles,
-				tthc.SquareFootage,tthc.constructionType AS construction_type,
+				-- added below on  10/02/23		Architha Gudimalla
+				replace(tthc.SquareFootage,',','') as SquareFootage,tthc.constructionType AS construction_type,
 				tthc.BasementType AS basement_type,tthc.ActiveRenovation AS active_renovation,
 				tthc.ActiveRenovationAnticipatedCompletionDate AS renovation_anticipated_completion_dt,
 				tthc.ULStandard AS ulstandard,tthc.UnitFloor AS unit_floor,tthc.YearBuilt AS built_year,

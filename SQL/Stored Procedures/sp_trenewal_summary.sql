@@ -1,4 +1,9 @@
-﻿-- ================================================================================================================
+﻿/****** Object:  StoredProcedure [edw_core].[sp_trenewal_summary]    Script Date: 10/2/2023 8:51:09 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- ================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the renewals data for each month
 -------------------------------------------------------------------------------------------------------------------
@@ -6,15 +11,16 @@
 -------------------------------------------------------------------------------------------------------------------
 -- 08/14/23		Architha Gudimalla				1. Created this procedure 
 -- 09/12/23		Architha Gudimalla				2. Added additional columns after discussing with Olivia 
--- 10/02/23		Architha Gudimalla				3. Corrected code afrer testing
+-- 10/02/23		Architha Gudimalla				3. Corrected code afrer testing table
 -- ================================================================================================================ 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_trenewal_summary]
+create or ALTER   PROCEDURE [edw_core].[sp_trenewal_summary]
 @in_yearmonth int
 AS 
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
     -- interfering with SELECT statements. 
+	SET ANSI_WARNINGS OFF 
     SET NOCOUNT ON
 
 	BEGIN TRY
@@ -96,7 +102,7 @@ BEGIN
 				with exp_pols as
 				--pols expiration in current month
 				(
-				 SELECT policy_sk, policy_no, effective_dt, expiration_dt
+				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no
 				 FROM	edw_core.tpolicy
 				 where	expiration_dt between @begin_dt and @end_dt
 				 --where	concat(datepart(yyyy,expiration_dt),iif(datepart(mm,expiration_dt) < 10,'0','') ,datepart(mm,expiration_dt) ) = @yearmonth
@@ -104,7 +110,7 @@ BEGIN
 				ren_pols as
 				--pols renewing in current month
 				(
-				 SELECT policy_sk, policy_no, effective_dt, expiration_dt
+				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no
 				 FROM	edw_core.tpolicy
 				 where	effective_dt between @begin_dt and @end_dt
 				 --where	concat(datepart(yyyy,effective_dt),iif(datepart(mm,effective_dt) < 10,'0','') ,datepart(mm,effective_dt) ) = @yearmonth
@@ -113,7 +119,7 @@ BEGIN
 				(
 				 SELECT tr.policy_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk, 
 		 				sum(tr.premium_amt) premium_amt,
-						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk and policy_transaction_type_sk in (1,3) --'Renewal','New Business' 
+						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk and tt.policy_transaction_type_nm in ('New','Renewal') --'Renewal','New Business' 
 								then tr.premium_amt * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
 								else 0 
 								end) as initial_written_prem,
@@ -126,7 +132,7 @@ BEGIN
 								else 0 
 								end) as effective_date_60_day_comm,  
 						sum(CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
-								  and transaction_effective_dt_sk <> expiration_dt_sk and policy_transaction_type_sk in (4,5) --('Cancellation', 'Reinstatement')
+								  and transaction_effective_dt_sk <> expiration_dt_sk and tt.policy_transaction_type_nm in ('Cancellation') --('Cancellation', 'Reinstatement')
 								  and  (transaction_effective_dt_sk - effective_dt_sk  > 60 or transaction_dt_sk - effective_dt_sk  > 60)
 								then tr.premium_amt * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
 								else 0 
@@ -135,16 +141,16 @@ BEGIN
 								then tr.premium_amt * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
 								else 0 
 								end) as expiring_premium_amount,
-						count(distinct CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
-								  and policy_transaction_type_sk in (4) --('Cancellation'')
+						sum(distinct CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
+								  and tt.policy_transaction_type_nm in ('Cancellation') --('Cancellation'')
 								  and  (transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk < 61)
-								then pol.policy_sk  
+								then 1
+								else 0
 								end) as cancel_sixty_days_ind, 
 						count(distinct CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
-								  and policy_transaction_type_sk in (4) --('Cancellation'')
-								  and  (transaction_dt_sk - expiration_dt_sk < 61)
-								then NULL 
-								else pol.policy_sk  
+								  and tt.policy_transaction_type_nm in ('Cancellation') --('Cancellation'')
+								  and  (transaction_dt_sk - expiration_dt_sk >= 61)
+								then pol.policy_sk  
 								end) cancel_ind, --expiring_ind, --all_cancelled_policy_num,
 						sum(CASE WHEN tr.policy_transaction_sk = sixty_day_pol_tr.policy_transaction_sk
 								  then hoc.total_insured_value_amt  
@@ -174,6 +180,7 @@ BEGIN
 						max(pol.policy_term) policy_term,
 						max(pol.product_cd) product_cd 
 				 FROM	edw_core.tpolicy_transaction tr
+				 inner join edw_core.tpolicy_transaction_type tt on tt.policy_transaction_type_sk = tr.policy_transaction_type_sk
 				 inner join edw_core.tpolicy pol on tr.policy_sk = pol.policy_sk
 				 inner join (
 								 SELECT policy_sk, max(policy_transaction_sk) over (partition by policy_sk 
@@ -199,8 +206,8 @@ BEGIN
 				 and sixty_day_pol_tr.rnk = 1
 				 and effective_dt_sk <= @end_dt_sk
 				 and	transaction_effective_dt_sk <= @end_dt_sk
-				 and   (concat(datepart(yyyy,pol.expiration_dt),iif(datepart(mm,pol.expiration_dt) < 10,'0','') ,datepart(mm,pol.expiration_dt) ) = @yearmonth or
-						concat(datepart(yyyy,pol.effective_dt),iif(datepart(mm,pol.effective_dt) < 10,'0','') ,datepart(mm,pol.effective_dt) ) = @yearmonth)
+				 and   (pol.expiration_dt between @begin_dt and @end_dt or
+						pol.effective_dt between @begin_dt and @end_dt)
 				 group by tr.policy_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk
 				)
 				INSERT INTO --select * from  
@@ -226,6 +233,7 @@ BEGIN
 						mid_term_cancelled_ct,
 						expiring_ct,
 						non_renewal_ct,
+						renewal_policy_sk,
 						renewal_ct,
 						renewal_non_flat_cancelled_ct, 
 						renewal_initial_written_premium_amt,
@@ -241,8 +249,8 @@ BEGIN
 						exp_pols_prm.policy_sk, exp_pols_prm.customer_sk, exp_pols_prm.broker_sk, exp_pols_prm.product_sk, exp_pols_prm.sourcE_system_sk, 
 						exp_pols_prm.initial_written_prem, exp_pols_prm.effective_date_60_day_prem, exp_pols_prm.effective_date_60_day_comm, 
 						exp_pols_prm.mid_term_cancel_amount, 
-						case when exp_pols_prm.cancel_ind is null then exp_pols_prm.expiring_premium_amount else 0 end expiring_premium_amount, 
-						exp_pols_prm.expiring_premium_amount * (case when ren_pols_prm.cancel_sixty_days_ind is null then 1 else 0 end) as expiringpremiumrenewalaccepted,
+						case when exp_pols_prm.cancel_ind = 0 then exp_pols_prm.expiring_premium_amount else 0 end expiring_premium_amount, 
+						exp_pols_prm.expiring_premium_amount * (case when ren_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end) as expiringpremiumrenewalaccepted,
 						exp_pols_prm.expiring_premium_amount * (case when exp_pols_prm.non_renewal_in = 'Yes' then -1 else 0 end) as non_renewal_expiring_premium_amount,
 						exp_pols_prm.totalsquarefeet,  
 						(CASE when exp_pols_prm.product_cd = 'HO'  and exp_pols_prm.max_tr_residencetype =  'Homeowners' then 'Homeowners'
@@ -254,15 +262,16 @@ BEGIN
 						exp_pols_prm.expiring_TIV * (case when exp_pols_prm.non_renewal_in = 'Yes' then 1 else 0 end) as expiring_TIV_post_NR,
 						exp_pols_prm.expiring_COVA,
 						--1 as policy_ct,
-						case when exp_pols_prm.cancel_sixty_days_ind is not null then 1 else 0 end flatcancel_ind, 
-						case when exp_pols_prm.cancel_sixty_days_ind is null then 1 else 0 end non_flatcancel_ind, 
-						case when exp_pols_prm.cancel_ind is not null and exp_pols_prm.cancel_sixty_days_ind is null then 1 else 0 end midterm_cancel_ind,  
-						case when exp_pols_prm.cancel_ind is null then 1 else 0 end expiring_ind,   
+						case when exp_pols_prm.cancel_sixty_days_ind <> 0 then 1 else 0 end flatcancel_ind, 
+						case when exp_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end non_flatcancel_ind, 
+						case when exp_pols_prm.cancel_ind <> 0 and exp_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end midterm_cancel_ind,  
+						case when exp_pols_prm.cancel_ind = 0 then 1 else 0 end expiring_ind,   
 						case when exp_pols_prm.non_renewal_in = 'Yes' then 1 else 0 end as nonrenewal_ind,
 						--case when exp_pols_prm.policy_term	 = 'New' then 1 else 0 end as newbusiness_ind,
 						--case when exp_pols_prm.policy_term	 = 'Renewal' then 1 else 0 end as renewal_ind,
+						case when ren_pols.policy_sk is not null then ren_pols.policy_sk else null end renewalcount,
 						case when ren_pols.policy_sk is not null then 1 else 0 end renewalcount,
-						case when ren_pols_prm.cancel_sixty_days_ind is null then 1 else 0 end non_flatcancel_renewal_ind,
+						case when ren_pols_prm.cancel_sixty_days_ind <> 0 then 1 else 0 end non_flatcancel_renewal_ind,
 						case when ren_pols.policy_sk is not null then ren_pols_prm.initial_written_prem else null end initial_written_renewal_prem,
 						case when ren_pols.policy_sk is not null then ren_pols_prm.effective_date_60_day_prem else null end effective_date_60_day_renewal_prem, 
 						case when ren_pols.policy_sk is not null then ren_pols_prm.effective_date_60_day_comm else null end effective_date_60_day_renewal_comm,
@@ -277,7 +286,7 @@ BEGIN
 				-- join to get prms for expiring policies
 				inner join prm exp_pols_prm on exp_pols_prm.policy_sk = exp_pols.policy_sk 
 				-- join to get renewals for expiring policies
-				left join ren_pols on ren_pols.policy_no = exp_pols.policy_no and ren_pols.effective_dt = exp_pols.effective_dt 
+				left join ren_pols on ren_pols.original_policy_no = exp_pols.policy_no and ren_pols.effective_dt = exp_pols.expiration_dt 
 				-- join to get prm for renewals 
 				left join prm ren_pols_prm on ren_pols_prm.policy_sk = ren_pols.policy_sk 
 				 

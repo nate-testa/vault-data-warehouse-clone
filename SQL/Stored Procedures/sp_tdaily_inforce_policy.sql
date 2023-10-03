@@ -78,10 +78,11 @@ BEGIN
 			    select 	tr.policy_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.sourcE_system_sk, 
 						@var_date_sk, 
 						max_tr.prm, max_tr.ann_prm, max_tr.prm-max_tr.tfs, getdate(), @etl_audit_sk
-				from  edw_core.tpolicy_transaction tr, max_tr
-				where tr.policy_sk = max_tr.policy_sk
+				from  edw_core.tpolicy_transaction tr, edw_core.tpolicy_transaction_type tt, max_tr
+				where tr.policy_transaction_type_sk = tt.policy_transaction_type_sk
+				  and tr.policy_sk = max_tr.policy_sk
 				  and tr.policy_transaction_sk = max_tr.policy_transaction_sk
-				  and policy_transaction_type_sk <> 5
+				  and tt.policy_transaction_type_nm <> 'Cancellation'
 				  and expiration_dt_sk > @var_date_sk
 				  and max_tr.rnk = 1;
 		       
