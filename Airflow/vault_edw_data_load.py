@@ -93,6 +93,8 @@ args = {
 
 with DAG(
     dag_id='vault_edw_data_load',
+    catchup=False,
+    max_active_runs=1,
     default_args=args,
     start_date=pendulum.datetime(2023, 8, 7, tz="America/New_York"),
     schedule_interval='0 5 * * 1-5', # At 05:00 every day
