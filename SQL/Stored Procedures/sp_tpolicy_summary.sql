@@ -379,11 +379,19 @@ BEGIN
 				SET @rows_affected=@@ROWCOUNT;
 
 				-- Update control table
-				SET @new_last_source_extract_ts=COALESCE(@end_dt,@last_source_extract_ts);
+				SET @new_last_source_extract_ts=COALESCE(@end_dt,@last_source_extract_ts);	
+				if @in_end_dt is not null
+				begin
+					set @new_last_source_extract_ts= @last_source_extract_ts
+				end 	
 				EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 				-- Update audit table
 				SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+				if @in_end_dt is not null
+				begin
+					set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_end_dt AS VARCHAR(200))
+				end 
 				EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc; 
 				 
 				FETCH NEXT FROM c1_rec INTO @yearmonth, @year;

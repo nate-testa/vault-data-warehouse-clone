@@ -67,9 +67,9 @@ BEGIN
 				with max_tr as
 				(
 				 SELECT policy_sk, item_sk,
-						row_number() over (partition by policy_sk order by transaction_seq_no desc, policy_transaction_sk desc) rnk,
+						row_number() over (partition by policy_sk,item_sk order by transaction_seq_no desc, policy_transaction_sk desc) rnk,
 						max(transaction_seq_no)  over (partition by policy_sk) transaction_seq_no,
-						max(policy_transaction_sk)  over (partition by policy_sk order by transaction_seq_no desc, policy_transaction_sk desc) policy_transaction_sk,
+						max(policy_transaction_sk)  over (partition by policy_sk,item_sk order by transaction_seq_no desc, policy_transaction_sk desc) policy_transaction_sk,
 				 		sum(premium_amt) over (partition by policy_sk, item_sk) prm,
 				 		sum(annual_premium_amt) over (partition by policy_sk, item_sk) ann_prm,
 				 		sum(tax_fee_surcharge_amt) over (partition by policy_sk, item_sk) tfs

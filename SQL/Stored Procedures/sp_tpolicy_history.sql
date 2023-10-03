@@ -152,7 +152,7 @@ BEGIN
 				source1.CompanionCreditCollections, source1.CompanionCreditPersonalExcessLiability, 
 				source1.CompanionCreditAuto, source1.CompanionCreditHomeowner,
 				ResidenceHasPrior, PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
-				PriorResidenceAddr   essState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, 
+				PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, 
 				source.ssk, getdate(), getdate(), @etl_audit_sk
 				--[underwriter_nm]
 				,source.producer_nm
