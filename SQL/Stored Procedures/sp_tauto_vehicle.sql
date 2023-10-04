@@ -34,7 +34,7 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[tauto_vehicle_temp1];
 
 		SELECT 
-			PolicyNumber, EffectiveDate, [Index] as vehicle_no, IssuedDate,
+			PolicyNumber, EffectiveDate, [Index] as vehicle_no, MAX(IssuedDate) AS IssuedDate,
             [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],
 			source_system_sk
 		
@@ -52,18 +52,16 @@ BEGIN
                 FROM
                     (SELECT
                         *
-                        ,ROW_NUMBER() OVER (PARTITION BY PolicyNumber, EffectiveDate ORDER BY policychangenumber DESC) AS AccountTransaction_Rank
                     FROM [edw_stage].[AccountTransaction]
                     WHERE
                         [State] = 'ISSUED'
                         AND IssuedDate > @last_source_extract_ts
                     ) acct
-                INNER JOIN [edw_stage].[Product] p on p.Id = acct.ProductId
+                INNER JOIN [edw_stage].[Product] p ON p.Id = acct.ProductId
                 INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
                 INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
                 INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof ON acctvof.VersionObjectId = acctvo.id
-                WHERE
-                    acct.AccountTransaction_Rank = 1
+                WHERE 1=1
                     AND p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'
                     AND acctvof.[Group] = 'Vehicle'
@@ -75,6 +73,9 @@ BEGIN
                     [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate]
                 )
 			) pivottable
+        GROUP BY PolicyNumber, EffectiveDate, [Index], 
+                [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],
+                source_system_sk
 
 		-- Start Merge process
 		MERGE [edw_core].[tauto_vehicle] AS trg
