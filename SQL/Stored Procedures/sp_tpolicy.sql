@@ -7,8 +7,6 @@
 -- 06/20/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 06/20/23		Architha Gudimalla				2. Modified for errors after first run 
 -- 09/08/23		Architha Gudimalla				3. Modifed to reflect model changes
--- 10/05/23		Architha Gudimalla				4. Updated insured_nm, insured_type for all pols
--- 10/05/23		Architha Gudimalla				4. Updated uw_company and program type for AU
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy]
@@ -60,12 +58,6 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.tpolicy_temp2;
 		SELECT	AccountTransactionId,  
 				nullif(trim(NamedInsured),'') NamedInsured, 
-				nullif(trim(FirstName),'') FirstName, 
-				nullif(trim(MiddleName),'') MiddleName, 
-				nullif(trim(LastName),'') LastName, 
-				nullif(trim(Prefix),'') Prefix, 
-				nullif(trim(Suffix),'') Suffix, 
-				nullif(trim(InsuredType),'') InsuredType, 
 				nullif(trim(CompanyName),'') CompanyName, 
 				nullif(trim(MailingAddressLine1),'') MailingAddressLine1, 
 				nullif(trim(MailingAddressLine2),'') MailingAddressLine2, 
@@ -90,7 +82,7 @@ BEGIN
 			) t
 		PIVOT 
 			(
-				MAX(Value) FOR Field IN (InsuredType, NamedInsured, FirstName, LastName, MiddleName, Prefix, Suffix, CompanyName, MailingAddressLine1, MailingAddressLine2, MailingAddressLineUnit, 
+				MAX(Value) FOR Field IN (NamedInsured, CompanyName, MailingAddressLine1, MailingAddressLine2, MailingAddressLineUnit, 
 				MailingAddressCity, MailingAddressState, MailingAddressZipCode, MailingAddressCounty, MailingAddressCountry, Program)
 			) pivottable
 
@@ -105,19 +97,14 @@ BEGIN
 				ins.ReferenceCode as customer_id,
 				nullif(trim(pr.ProductCode),'') product_cd,
 				nullif(trim(COALESCE(acctv.RiskStateCode, 'DNA')),'') as RiskStateCode, --review
-				nullif(trim(isnull(tmp2.Prefix + ' ','') + isnull(tmp2.FirstName + ' ','') 
-				+ isnull(tmp2.LastName + ' ','') + isnull(tmp2.MiddleName + ' ','') + isnull(tmp2.Suffix,'')),'') as insured_nm,
-				tmp2.InsuredType as insured_type,
+				tmp2.NamedInsured as insured_nm,
 				case when acc.IsRenewal = 1 then 'Renewal' else 'New' end as policy_term,
-				case when trim(pr.ProductCode) = 'AU' then 'Vault Reciprocal Exchange' 
-				     when tmp2.program = 'Admitted' then 'Vault Reciprocal Exchange' 
+				case when tmp2.program = 'Admitted' then 'Vault Reciprocal Exchange' 
 				     when tmp2.program = 'Non-Admitted' then 'Vault E & S Insurance Company' 
 				     else null
 				end as uw_company_nm,
 				--tmp2.CompanyName as uw_company_nm,
-				case when trim(pr.ProductCode) = 'AU' then 'Admitted' 
-				     else tmp2.program
-				end as program,
+				tmp2.program,
 				tmp1.State,
 				tmp1.TransactionEffectiveDate,
 				tmp2.MailingAddressLine1,
@@ -161,7 +148,6 @@ BEGIN
            ,product_cd
            ,risk_state_cd
            ,insured_nm
-		   ,insured_type
            ,policy_term
 		   ,uw_company_nm
            ,program_type
@@ -188,7 +174,6 @@ BEGIN
 				Source.product_cd,
 				Source.RiskStateCode,
 				Source.insured_nm,
-				Source.insured_type,
 				Source.policy_term,
 				Source.uw_company_nm, 
 				Source.program,
@@ -214,7 +199,6 @@ BEGIN
         Target.customer_id					= Source.customer_id,
         Target.risk_state_cd				= Source.RiskStateCode,
         Target.insured_nm					= Source.insured_nm,
-        Target.insured_type					= Source.insured_type,
         Target.policy_term					= Source.policy_term,
         Target.uw_company_nm				= Source.uw_company_nm,
         Target.program_type					= Source.program,
@@ -236,15 +220,7 @@ BEGIN
 		
 		update edw_core.tpolicy
 		set policy_status = 'Expired'
-		where expiration_dt <= cast(getdate() as date); 
-
-		update edw_core.tpolicy
-		set latest_term_in = 'N'; 
-
-		update pol
-		set latest_term_in = 'Y'
-		from edw_core.tpolicy pol
-		where effective_dt = (select max(effective_dt) from edw_core.tpolicy pol1 where pol.original_policy_no = pol1.original_policy_no);
+		where expiration_dt <= cast(getdate() as date);
 	
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t2.IssuedDate) FROM edw_temp.tpolicy_temp1 t2),@last_source_extract_ts);
 

@@ -241,8 +241,8 @@ BEGIN
 			update [edw_core].[thome_coverage]
 			set total_insured_value_amt = 	isnull(dwelling_limit_amt,0) + isnull(other_structures_limit_amt,0) + isnull(contents_limit_amt,0) +
 											isnull(CASE WHEN loss_of_use_option = loss_of_use_limit_amt and cast(loss_of_use_limit_amt as INT) >1000 THEN cast(loss_of_use_limit_amt AS INT)
-														WHEN cast(loss_of_use_pc as float) = 0.0 and isnull(loss_of_use_limit_amt,0)<> 0  THEN cast(loss_of_use_limit_amt AS INT)
-														else cast(loss_of_use_pc as float)*cast(iif(residence_type = 'Homeowners', dwelling_limit_amt, contents_limit_amt) as int) END 
+														WHEN loss_of_use_pc = 0 and isnull(loss_of_use_limit_amt,0)<> 0  THEN cast(loss_of_use_limit_amt AS INT)
+														else cast(loss_of_use_pc as int)*cast(iif(residence_type = 'Homeowners', dwelling_limit_amt, contents_limit_amt) as int) END 
 												 , 0)
 			where update_ts >= @last_source_extract_ts;
 			
