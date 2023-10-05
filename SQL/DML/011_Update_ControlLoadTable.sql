@@ -1952,7 +1952,414 @@ UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"ty
 UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"type":"TabularTranslator","mappings":[{"source":{"name":"Id","type":"Int32","physicalType":"int"},"sink":{"name":"Id","type":"Int32"}},{"source":{"name":"AccountTransactionVersionPremiumId","type":"Int32","physicalType":"int"},"sink":{"name":"AccountTransactionVersionPremiumId","type":"Int32"}},{"source":{"name":"Coverage","type":"String","physicalType":"nvarchar"},"sink":{"name":"Coverage","type":"String"}},{"source":{"name":"Label","type":"String","physicalType":"nvarchar"},"sink":{"name":"Label","type":"String"}},{"source":{"name":"Value","type":"String","physicalType":"nvarchar"},"sink":{"name":"Value","type":"String"}},{"source":{"name":"CreatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"CreatedDate","type":"DateTime"}},{"source":{"name":"UpdatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"UpdatedDate","type":"DateTime"}},{"source":{"name":"Group","type":"String","physicalType":"nvarchar"},"sink":{"name":"Group","type":"String"}},{"source":{"name":"ExternalSourceId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceId","type":"String"}},{"source":{"name":"ValueAsNumber","type":"Decimal","physicalType":"decimal","scale":4,"precision":16},"sink":{"name":"ValueAsNumber","type":"Decimal"}},{"source":{"name":"CustomName","type":"String","physicalType":"nvarchar"},"sink":{"name":"CustomName","type":"String"}},{"source":{"name":"ExternalSourceUniqueId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceUniqueId","type":"String"}},{"source":{"name":"ObjectId","type":"Int32","physicalType":"int"},"sink":{"name":"ObjectId","type":"Int32"}},{"source":{"name":"ObjectType","type":"String","physicalType":"nvarchar"},"sink":{"name":"ObjectType","type":"String"}},{"source":{"name":"ObjectUniqueId","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"ObjectUniqueId","type":"Guid"}}],"typeConversion":true,"typeConversionSettings":{"allowDataTruncation":true,"treatBooleanAsNumber":false}}}' WHERE ID = 254;
 UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"type":"TabularTranslator","mappings":[{"source":{"name":"Id","type":"Int32","physicalType":"int"},"sink":{"name":"Id","type":"Int32"}},{"source":{"name":"AccountTransactionVersionPremiumId","type":"Int32","physicalType":"int"},"sink":{"name":"AccountTransactionVersionPremiumId","type":"Int32"}},{"source":{"name":"Name","type":"String","physicalType":"nvarchar"},"sink":{"name":"Name","type":"String"}},{"source":{"name":"Type","type":"String","physicalType":"nvarchar"},"sink":{"name":"Type","type":"String"}},{"source":{"name":"Amount","type":"Decimal","physicalType":"decimal","scale":4,"precision":16},"sink":{"name":"Amount","type":"Decimal"}},{"source":{"name":"CreatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"CreatedDate","type":"DateTime"}},{"source":{"name":"UpdatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"UpdatedDate","type":"DateTime"}},{"source":{"name":"ExternalSourceId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceId","type":"String"}},{"source":{"name":"AppliesToPolicyChange","type":"Boolean","physicalType":"bit"},"sink":{"name":"AppliesToPolicyChange","type":"Boolean"}},{"source":{"name":"IsFullyEarned","type":"Boolean","physicalType":"bit"},"sink":{"name":"IsFullyEarned","type":"Boolean"}},{"source":{"name":"ExternalSourceUniqueId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceUniqueId","type":"String"}}],"typeConversion":true,"typeConversionSettings":{"allowDataTruncation":true,"treatBooleanAsNumber":false}}}' WHERE ID = 255;
 UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"type":"TabularTranslator","mappings":[{"source":{"name":"Id","type":"Int32","physicalType":"int"},"sink":{"name":"Id","type":"Int32"}},{"source":{"name":"AccountTransactionVersionPremiumId","type":"Int32","physicalType":"int"},"sink":{"name":"AccountTransactionVersionPremiumId","type":"Int32"}},{"source":{"name":"Label","type":"String","physicalType":"nvarchar"},"sink":{"name":"Label","type":"String"}},{"source":{"name":"Value","type":"String","physicalType":"nvarchar"},"sink":{"name":"Value","type":"String"}},{"source":{"name":"CreatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"CreatedDate","type":"DateTime"}},{"source":{"name":"UpdatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"UpdatedDate","type":"DateTime"}},{"source":{"name":"ExternalSourceId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceId","type":"String"}},{"source":{"name":"ExternalSourceUniqueId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceUniqueId","type":"String"}}],"typeConversion":true,"typeConversionSettings":{"allowDataTruncation":true,"treatBooleanAsNumber":false}}}' WHERE ID = 256;
-UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"type":"TabularTranslator","mappings":[{"source":{"name":"Id","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"Id","type":"Guid"}},{"source":{"name":"InsuredId","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"InsuredId","type":"Guid"}},{"source":{"name":"Description","type":"String","physicalType":"nvarchar"},"sink":{"name":"Description","type":"String"}},{"source":{"name":"BillToType","type":"String","physicalType":"nvarchar"},"sink":{"name":"BillToType","type":"String"}},{"source":{"name":"BillToBrokerageId","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"BillToBrokerageId","type":"Guid"}},{"source":{"name":"IsFinanced","type":"Boolean","physicalType":"bit"},"sink":{"name":"IsFinanced","type":"Boolean"}},{"source":{"name":"FinanceCompanyName","type":"String","physicalType":"nvarchar"},"sink":{"name":"FinanceCompanyName","type":"String"}},{"source":{"name":"EffectiveDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"EffectiveDate","type":"DateTime"}},{"source":{"name":"ExpirationDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"ExpirationDate","type":"DateTime"}},{"source":{"name":"ReferenceCode","type":"Int32","physicalType":"int"},"sink":{"name":"ReferenceCode","type":"Int32"}},{"source":{"name":"BillingAddressIsMailingAddress","type":"Boolean","physicalType":"bit"},"sink":{"name":"BillingAddressIsMailingAddress","type":"Boolean"}},{"source":{"name":"AddressLine1","type":"String","physicalType":"nvarchar"},"sink":{"name":"AddressLine1","type":"String"}},{"source":{"name":"AddressLine2","type":"String","physicalType":"nvarchar"},"sink":{"name":"AddressLine2","type":"String"}},{"source":{"name":"AddressCity","type":"String","physicalType":"nvarchar"},"sink":{"name":"AddressCity","type":"String"}},{"source":{"name":"AddressState","type":"String","physicalType":"nvarchar"},"sink":{"name":"AddressState","type":"String"}},{"source":{"name":"AddressZipCode","type":"String","physicalType":"nvarchar"},"sink":{"name":"AddressZipCode","type":"String"}},{"source":{"name":"AddressCounty","type":"String","physicalType":"nvarchar"},"sink":{"name":"AddressCounty","type":"String"}},{"source":{"name":"AddressCountry","type":"String","physicalType":"nvarchar"},"sink":{"name":"AddressCountry","type":"String"}},{"source":{"name":"ContactInfoIsInsured","type":"Boolean","physicalType":"bit"},"sink":{"name":"ContactInfoIsInsured","type":"Boolean"}},{"source":{"name":"ContactEntityName","type":"String","physicalType":"nvarchar"},"sink":{"name":"ContactEntityName","type":"String"}},{"source":{"name":"ContactPrefix","type":"String","physicalType":"nvarchar"},"sink":{"name":"ContactPrefix","type":"String"}},{"source":{"name":"ContactFirstName","type":"String","physicalType":"nvarchar"},"sink":{"name":"ContactFirstName","type":"String"}},{"source":{"name":"ContactMiddleName","type":"String","physicalType":"nvarchar"},"sink":{"name":"ContactMiddleName","type":"String"}},{"source":{"name":"ContactLastName","type":"String","physicalType":"nvarchar"},"sink":{"name":"ContactLastName","type":"String"}},{"source":{"name":"ContactSuffix","type":"String","physicalType":"nvarchar"},"sink":{"name":"ContactSuffix","type":"String"}},{"source":{"name":"ContactPhone","type":"String","physicalType":"nvarchar"},"sink":{"name":"ContactPhone","type":"String"}},{"source":{"name":"ContactEmail","type":"String","physicalType":"nvarchar"},"sink":{"name":"ContactEmail","type":"String"}},{"source":{"name":"MortgageeLoanNumber","type":"String","physicalType":"nvarchar"},"sink":{"name":"MortgageeLoanNumber","type":"String"}},{"source":{"name":"PaymentPlan","type":"String","physicalType":"nvarchar"},"sink":{"name":"PaymentPlan","type":"String"}},{"source":{"name":"PaymentMethod","type":"String","physicalType":"nvarchar"},"sink":{"name":"PaymentMethod","type":"String"}},{"source":{"name":"CreatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"CreatedDate","type":"DateTime"}},{"source":{"name":"UpdatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"UpdatedDate","type":"DateTime"}},{"source":{"name":"ExternalSourceId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceId","type":"String"}},{"source":{"name":"AddressLineUnit","type":"String","physicalType":"nvarchar"},"sink":{"name":"AddressLineUnit","type":"String"}},{"source":{"name":"AutoPayMethod","type":"String","physicalType":"nvarchar"},"sink":{"name":"AutoPayMethod","type":"String"}},{"source":{"name":"AutoPayToken","type":"String","physicalType":"nvarchar"},"sink":{"name":"AutoPayToken","type":"String"}},{"source":{"name":"IsAutoPay","type":"Boolean","physicalType":"bit"},"sink":{"name":"IsAutoPay","type":"Boolean"}}],"typeConversion":true,"typeConversionSettings":{"allowDataTruncation":true,"treatBooleanAsNumber":false}}}' WHERE ID = 257;
+UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{
+    "translator": {
+        "type": "TabularTranslator",
+        "mappings": [
+            {
+                "source": {
+                    "name": "Id",
+                    "type": "Guid",
+                    "physicalType": "uniqueidentifier"
+                },
+                "sink": {
+                    "name": "Id",
+                    "type": "Guid"
+                }
+            },
+            {
+                "source": {
+                    "name": "InsuredId",
+                    "type": "Guid",
+                    "physicalType": "uniqueidentifier"
+                },
+                "sink": {
+                    "name": "InsuredId",
+                    "type": "Guid"
+                }
+            },
+            {
+                "source": {
+                    "name": "Description",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "Description",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "BillToType",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "BillToType",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "BillToBrokerageId",
+                    "type": "Guid",
+                    "physicalType": "uniqueidentifier"
+                },
+                "sink": {
+                    "name": "BillToBrokerageId",
+                    "type": "Guid"
+                }
+            },
+            {
+                "source": {
+                    "name": "IsFinanced",
+                    "type": "Boolean",
+                    "physicalType": "bit"
+                },
+                "sink": {
+                    "name": "IsFinanced",
+                    "type": "Boolean"
+                }
+            },
+            {
+                "source": {
+                    "name": "FinanceCompanyName",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "FinanceCompanyName",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "EffectiveDate",
+                    "type": "DateTime",
+                    "physicalType": "datetime2"
+                },
+                "sink": {
+                    "name": "EffectiveDate",
+                    "type": "DateTime"
+                }
+            },
+            {
+                "source": {
+                    "name": "ExpirationDate",
+                    "type": "DateTime",
+                    "physicalType": "datetime2"
+                },
+                "sink": {
+                    "name": "ExpirationDate",
+                    "type": "DateTime"
+                }
+            },
+            {
+                "source": {
+                    "name": "ReferenceCode",
+                    "type": "Int32",
+                    "physicalType": "int"
+                },
+                "sink": {
+                    "name": "ReferenceCode",
+                    "type": "Int32"
+                }
+            },
+            {
+                "source": {
+                    "name": "BillingAddressIsMailingAddress",
+                    "type": "Boolean",
+                    "physicalType": "bit"
+                },
+                "sink": {
+                    "name": "BillingAddressIsMailingAddress",
+                    "type": "Boolean"
+                }
+            },
+            {
+                "source": {
+                    "name": "AddressLine1",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "AddressLine1",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "AddressLine2",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "AddressLine2",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "AddressCity",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "AddressCity",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "AddressState",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "AddressState",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "AddressZipCode",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "AddressZipCode",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "AddressCounty",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "AddressCounty",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "AddressCountry",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "AddressCountry",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "ContactInfoIsInsured",
+                    "type": "Boolean",
+                    "physicalType": "bit"
+                },
+                "sink": {
+                    "name": "ContactInfoIsInsured",
+                    "type": "Boolean"
+                }
+            },
+            {
+                "source": {
+                    "name": "ContactEntityName",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "ContactEntityName",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "ContactPrefix",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "ContactPrefix",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "ContactFirstName",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "ContactFirstName",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "ContactMiddleName",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "ContactMiddleName",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "ContactLastName",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "ContactLastName",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "ContactSuffix",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "ContactSuffix",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "ContactPhone",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "ContactPhone",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "ContactEmail",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "ContactEmail",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "MortgageeLoanNumber",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "MortgageeLoanNumber",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "PaymentPlan",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "PaymentPlan",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "PaymentMethod",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "PaymentMethod",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "CreatedDate",
+                    "type": "DateTime",
+                    "physicalType": "datetime2"
+                },
+                "sink": {
+                    "name": "CreatedDate",
+                    "type": "DateTime"
+                }
+            },
+            {
+                "source": {
+                    "name": "UpdatedDate",
+                    "type": "DateTime",
+                    "physicalType": "datetime2"
+                },
+                "sink": {
+                    "name": "UpdatedDate",
+                    "type": "DateTime"
+                }
+            },
+            {
+                "source": {
+                    "name": "ExternalSourceId",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "ExternalSourceId",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "AddressLineUnit",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "AddressLineUnit",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "AutoPayToken",
+                    "type": "String",
+                    "physicalType": "nvarchar"
+                },
+                "sink": {
+                    "name": "AutoPayToken",
+                    "type": "String"
+                }
+            },
+            {
+                "source": {
+                    "name": "IsAutoPay",
+                    "type": "Boolean",
+                    "physicalType": "bit"
+                },
+                "sink": {
+                    "name": "IsAutoPay",
+                    "type": "Boolean"
+                }
+            }
+        ],
+        "typeConversion": true,
+        "typeConversionSettings": {
+            "allowDataTruncation": true,
+            "treatBooleanAsNumber": false
+        }
+    }
+}' WHERE ID = 257;
 UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{
             "translator": {
                 "type": "TabularTranslator",
@@ -11893,12 +12300,7 @@ UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{
             }
         }' WHERE ID = 345;
 UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"type":"TabularTranslator","mappings":[{"source":{"name":"Id","type":"Int32","physicalType":"int"},"sink":{"name":"Id","type":"Int32"}},{"source":{"name":"DocumentId","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"DocumentId","type":"Guid"}},{"source":{"name":"AccountSubjectivityId","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"AccountSubjectivityId","type":"Guid"}},{"source":{"name":"ExternalSourceId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceId","type":"String"}},{"source":{"name":"CreatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"CreatedDate","type":"DateTime"}},{"source":{"name":"UpdatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"UpdatedDate","type":"DateTime"}},{"source":{"name":"ExternalSourceUniqueId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceUniqueId","type":"String"}}],"typeConversion":true,"typeConversionSettings":{"allowDataTruncation":true,"treatBooleanAsNumber":false}}}' WHERE ID = 356;
-UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"type":"TabularTranslator","mappings":[{"source":{"name":"Id","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"Id","type":"Guid"}},{"source":{"name":"AccountId","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"AccountId","type":"Guid"}},{"source":{"name":"Message","type":"String","physicalType":"nvarchar"},"sink":{"name":"Message","type":"String"}},{"source":{"name":"Prevent","type":"String","physicalType":"nvarchar"},"sink":{"name":"Prevent","type":"String"}},{"source":{"name":"ExternalSourceId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceId","type":"String"}},{"source":{"name":"CreatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"CreatedDate","type":"DateTime"}},{"source":{"name":"UpdatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"UpdatedDate","type":"DateTime"}}],"typeConversion":true,"typeConversionSettings":{"allowDataTruncation":true,"treatBooleanAsNumber":false}}}' WHERE ID = 360;
 UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"type":"TabularTranslator","mappings":[{"source":{"name":"Id","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"Id","type":"Guid"}},{"source":{"name":"RequestLog","type":"String","physicalType":"nvarchar"},"sink":{"name":"RequestLog","type":"String"}},{"source":{"name":"Type","type":"String","physicalType":"nvarchar"},"sink":{"name":"Type","type":"String"}},{"source":{"name":"Status","type":"String","physicalType":"nvarchar"},"sink":{"name":"Status","type":"String"}},{"source":{"name":"ErrorMessage","type":"String","physicalType":"nvarchar"},"sink":{"name":"ErrorMessage","type":"String"}},{"source":{"name":"ExternalSourceId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceId","type":"String"}},{"source":{"name":"CreatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"CreatedDate","type":"DateTime"}},{"source":{"name":"UpdatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"UpdatedDate","type":"DateTime"}}],"typeConversion":true,"typeConversionSettings":{"allowDataTruncation":true,"treatBooleanAsNumber":false}}}' WHERE ID = 357;
-UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"type":"TabularTranslator","mappings":[{"source":{"name":"Id","type":"Int32","physicalType":"int"},"sink":{"name":"Id","type":"Int32"}},{"source":{"name":"WorkFlowStepId","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"WorkFlowStepId","type":"Guid"}},{"source":{"name":"RoleId","type":"String","physicalType":"nvarchar"},"sink":{"name":"RoleId","type":"String"}},{"source":{"name":"RoleName","type":"String","physicalType":"nvarchar"},"sink":{"name":"RoleName","type":"String"}},{"source":{"name":"ExternalSourceId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceId","type":"String"}},{"source":{"name":"CreatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"CreatedDate","type":"DateTime"}},{"source":{"name":"UpdatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"UpdatedDate","type":"DateTime"}},{"source":{"name":"ExternalSourceUniqueId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceUniqueId","type":"String"}}],"typeConversion":true,"typeConversionSettings":{"allowDataTruncation":true,"treatBooleanAsNumber":false}}}' WHERE ID = 358;
 UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"type":"TabularTranslator","mappings":[{"source":{"name":"Id","type":"Int32","physicalType":"int"},"sink":{"name":"Id","type":"Int32"}},{"source":{"name":"WorkTaskId","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"WorkTaskId","type":"Guid"}},{"source":{"name":"RoleId","type":"String","physicalType":"nvarchar"},"sink":{"name":"RoleId","type":"String"}},{"source":{"name":"RoleName","type":"String","physicalType":"nvarchar"},"sink":{"name":"RoleName","type":"String"}},{"source":{"name":"ExternalSourceId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceId","type":"String"}},{"source":{"name":"CreatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"CreatedDate","type":"DateTime"}},{"source":{"name":"UpdatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"UpdatedDate","type":"DateTime"}},{"source":{"name":"ExternalSourceUniqueId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceUniqueId","type":"String"}}],"typeConversion":true,"typeConversionSettings":{"allowDataTruncation":true,"treatBooleanAsNumber":false}}}' WHERE ID = 359;
-UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"type":"TabularTranslator","mappings":[{"source":{"name":"Id","type":"Int32","physicalType":"int"},"sink":{"name":"Id","type":"Int32"}},{"source":{"name":"DocumentId","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"DocumentId","type":"Guid"}},{"source":{"name":"AccountSubjectivityId","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"AccountSubjectivityId","type":"Guid"}},{"source":{"name":"ExternalSourceId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceId","type":"String"}},{"source":{"name":"CreatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"CreatedDate","type":"DateTime"}},{"source":{"name":"UpdatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"UpdatedDate","type":"DateTime"}},{"source":{"name":"ExternalSourceUniqueId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceUniqueId","type":"String"}}],"typeConversion":true,"typeConversionSettings":{"allowDataTruncation":true,"treatBooleanAsNumber":false}}}' WHERE ID = 356;
 UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"type":"TabularTranslator","mappings":[{"source":{"name":"Id","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"Id","type":"Guid"}},{"source":{"name":"AccountId","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"AccountId","type":"Guid"}},{"source":{"name":"Message","type":"String","physicalType":"nvarchar"},"sink":{"name":"Message","type":"String"}},{"source":{"name":"Prevent","type":"String","physicalType":"nvarchar"},"sink":{"name":"Prevent","type":"String"}},{"source":{"name":"ExternalSourceId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceId","type":"String"}},{"source":{"name":"CreatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"CreatedDate","type":"DateTime"}},{"source":{"name":"UpdatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"UpdatedDate","type":"DateTime"}}],"typeConversion":true,"typeConversionSettings":{"allowDataTruncation":true,"treatBooleanAsNumber":false}}}' WHERE ID = 360;
-UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"type":"TabularTranslator","mappings":[{"source":{"name":"Id","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"Id","type":"Guid"}},{"source":{"name":"RequestLog","type":"String","physicalType":"nvarchar"},"sink":{"name":"RequestLog","type":"String"}},{"source":{"name":"Type","type":"String","physicalType":"nvarchar"},"sink":{"name":"Type","type":"String"}},{"source":{"name":"Status","type":"String","physicalType":"nvarchar"},"sink":{"name":"Status","type":"String"}},{"source":{"name":"ErrorMessage","type":"String","physicalType":"nvarchar"},"sink":{"name":"ErrorMessage","type":"String"}},{"source":{"name":"ExternalSourceId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceId","type":"String"}},{"source":{"name":"CreatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"CreatedDate","type":"DateTime"}},{"source":{"name":"UpdatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"UpdatedDate","type":"DateTime"}}],"typeConversion":true,"typeConversionSettings":{"allowDataTruncation":true,"treatBooleanAsNumber":false}}}' WHERE ID = 357;
 UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"type":"TabularTranslator","mappings":[{"source":{"name":"Id","type":"Int32","physicalType":"int"},"sink":{"name":"Id","type":"Int32"}},{"source":{"name":"WorkFlowStepId","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"WorkFlowStepId","type":"Guid"}},{"source":{"name":"RoleId","type":"String","physicalType":"nvarchar"},"sink":{"name":"RoleId","type":"String"}},{"source":{"name":"RoleName","type":"String","physicalType":"nvarchar"},"sink":{"name":"RoleName","type":"String"}},{"source":{"name":"ExternalSourceId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceId","type":"String"}},{"source":{"name":"CreatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"CreatedDate","type":"DateTime"}},{"source":{"name":"UpdatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"UpdatedDate","type":"DateTime"}},{"source":{"name":"ExternalSourceUniqueId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceUniqueId","type":"String"}}],"typeConversion":true,"typeConversionSettings":{"allowDataTruncation":true,"treatBooleanAsNumber":false}}}' WHERE ID = 358;
-UPDATE edw_stage.ControlLoadTable SET CopyActivitySettings = '{"translator":{"type":"TabularTranslator","mappings":[{"source":{"name":"Id","type":"Int32","physicalType":"int"},"sink":{"name":"Id","type":"Int32"}},{"source":{"name":"WorkTaskId","type":"Guid","physicalType":"uniqueidentifier"},"sink":{"name":"WorkTaskId","type":"Guid"}},{"source":{"name":"RoleId","type":"String","physicalType":"nvarchar"},"sink":{"name":"RoleId","type":"String"}},{"source":{"name":"RoleName","type":"String","physicalType":"nvarchar"},"sink":{"name":"RoleName","type":"String"}},{"source":{"name":"ExternalSourceId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceId","type":"String"}},{"source":{"name":"CreatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"CreatedDate","type":"DateTime"}},{"source":{"name":"UpdatedDate","type":"DateTime","physicalType":"datetime2"},"sink":{"name":"UpdatedDate","type":"DateTime"}},{"source":{"name":"ExternalSourceUniqueId","type":"String","physicalType":"nvarchar"},"sink":{"name":"ExternalSourceUniqueId","type":"String"}}],"typeConversion":true,"typeConversionSettings":{"allowDataTruncation":true,"treatBooleanAsNumber":false}}}' WHERE ID = 359;
