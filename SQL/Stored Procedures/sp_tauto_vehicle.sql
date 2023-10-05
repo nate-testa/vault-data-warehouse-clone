@@ -33,48 +33,53 @@ BEGIN
         -- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tauto_vehicle_temp1];
 
-		SELECT 
-			PolicyNumber, EffectiveDate, [Index] as vehicle_no, IssuedDate,
-            [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],
-			source_system_sk
-		
-        INTO [edw_temp].[tauto_vehicle_temp1]
-		
-        FROM
-			(
-                SELECT
-                    acct.PolicyNumber, acct.EffectiveDate, acct.IssuedDate,
-                    acctvo.[Index], acctvof.[Field], acctvof.[Value],
-                    CASE 
-                        WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
-                        ELSE 4 --(Metal)
-                    END as [source_system_sk]
-                FROM
-                    (SELECT
-                        *
-                        ,ROW_NUMBER() OVER (PARTITION BY PolicyNumber, EffectiveDate ORDER BY policychangenumber DESC) AS AccountTransaction_Rank
-                    FROM [edw_stage].[AccountTransaction]
-                    WHERE
-                        [State] = 'ISSUED'
-                        AND IssuedDate > @last_source_extract_ts
-                    ) acct
-                INNER JOIN [edw_stage].[Product] p on p.Id = acct.ProductId
-                INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
-                INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
-                INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof ON acctvof.VersionObjectId = acctvo.id
-                WHERE
-                    acct.AccountTransaction_Rank = 1
-                    AND p.[Name] = 'Automobile'
-                    AND p.ProductLine = 'PersonalLines'
-                    AND acctvof.[Group] = 'Vehicle'
-			) t
-		PIVOT 
-			(
-				MAX([Value]) FOR [Field] IN 
+		WITH FinalTable AS (
+            SELECT
+                ROW_NUMBER() OVER (PARTITION BY PolicyNumber, EffectiveDate, [Index] ORDER BY policychangenumber DESC) AS RN, 
+                PolicyNumber, EffectiveDate, [Index] as vehicle_no, IssuedDate,
+                [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],
+                source_system_sk
+            
+            FROM
                 (
-                    [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate]
-                )
-			) pivottable
+                    SELECT
+                        acct.PolicyNumber, acct.EffectiveDate, acct.IssuedDate, acct.policychangenumber,
+                        acctvo.[Index], acctvof.[Field], acctvof.[Value],
+                        CASE 
+                            WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
+                            ELSE 4 --(Metal)
+                        END as [source_system_sk]
+                    FROM
+                        (SELECT
+                            *
+                        FROM [edw_stage].[AccountTransaction]
+                        WHERE
+                            [State] = 'ISSUED'
+                            AND IssuedDate > @last_source_extract_ts
+                        ) acct
+                    INNER JOIN [edw_stage].[Product] p ON p.Id = acct.ProductId
+                    INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
+                    INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
+                    INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof ON acctvof.VersionObjectId = acctvo.id
+                    WHERE 1=1
+                        AND p.[Name] = 'Automobile'
+                        AND p.ProductLine = 'PersonalLines'
+                        AND acctvof.[Group] = 'Vehicle'
+                ) t
+            PIVOT 
+                (
+                    MAX([Value]) FOR [Field] IN 
+                    (
+                        [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate]
+                    )
+                ) pivottable
+
+        )
+
+        SELECT * 
+        INTO [edw_temp].[tauto_vehicle_temp1]
+        FROM FinalTable WHERE RN = 1
+        
 
 		-- Start Merge process
 		MERGE [edw_core].[tauto_vehicle] AS trg

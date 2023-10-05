@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.thome_coverage ALTER COLUMN loss_of_use_pc varchar(255);
