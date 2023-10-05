@@ -5,17 +5,18 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 09/28/2023	Mohammed Yunus					1. Procedure created
+-- 10/04/2023	Mohammed Yunus					2. Removed start date & end date param
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_summary]
-@start_month int,
-@end_month int
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
 	DECLARE @etl_audit_sk INT
 	DECLARE @begin_dt_sk INT
 	DECLARE @end_dt_sk INT
+	DECLARE @begin_dt DATE
+	DECLARE @end_dt DATE
 	DECLARE @rows_affected INT
 	DECLARE @procedure_sk INT, @procedure_nm VARCHAR(255)
 	DECLARE @process_nm VARCHAR(255)=OBJECT_NAME(@@PROCID)
@@ -24,20 +25,27 @@ BEGIN
 	DECLARE @last_source_extract_ts DATETIME2(7)
 	DECLARE @new_last_source_extract_ts DATETIME2(7)
 
+	-- Get last source extract date
+	SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+
 	DECLARE cur_main CURSOR FOR
-	SELECT MIN(date_sk) AS begin_dt_sk, MAX(date_sk) AS end_dt_sk
+	SELECT MIN(date_sk) AS begin_dt_sk, MAX(date_sk) AS end_dt_sk, MIN(actual_dt) AS begin_dt, MAX(actual_dt) AS end_dt
 	FROM edw_core.tdate
-	WHERE yearmonth BETWEEN @start_month AND @end_month
+	WHERE
+		actual_dt >  @last_source_extract_ts
+		and actual_dt <= GETDATE()
 	GROUP BY yearmonth
-	ORDER BY yearmonth
+	ORDER BY yearmonth;
 
 	OPEN cur_main
-	FETCH NEXT FROM cur_main INTO @begin_dt_sk,@end_dt_sk
+	FETCH NEXT FROM cur_main INTO @begin_dt_sk ,@end_dt_sk , @begin_dt, @end_dt;
 
 	WHILE @@FETCH_STATUS = 0
     BEGIN
-		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
-		
+		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;  
+	
+		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+
 		DELETE FROM edw_core.tclaim_feature_summary WHERE month_sk=@end_dt_sk
 		INSERT INTO edw_core.tclaim_feature_summary
 		(
@@ -120,19 +128,11 @@ BEGIN
 		) AS fs ON ct.claim_feature_sk =fs.claim_feature_sk
 		INNER JOIN edw_core.tclaim_status cs ON fs.feature_status_sk =cs.claim_status_sk
 		WHERE ct.transaction_dt_sk <=@end_dt_sk
-		AND fs.feature_status_sk =cs.claim_status_sk 
+		AND fs.feature_status_sk =cs.claim_status_sk
 		GROUP BY ct.claim_sk,ct.claim_feature_sk,cf.aslob_sk,ct.product_sk,ct.policy_sk, broker_sk,customer_sk,ct.source_system_sk;
 		
-		-- @end_dt_sk,ct.claim_sk,ct.claim_feature_sk,cf.aslob_sk,ct.product_sk,policy_sk,broker_sk,customer_sk;
-
-		SET @parameter_desc='@begin_dt_sk='+ CAST(@begin_dt_sk as varchar(100)) + '@end_dt_sk='+ CAST(@end_dt_sk as varchar(100))
-		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc
-
 		SET @rows_affected=@@ROWCOUNT
-		-- Update audit table
-		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
-		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
-
+		
 		UPDATE tclaim_feature_summary
 		SET
 		itd_loss_incurred_gt_250k_ct=(CASE WHEN itd_total_incurred_amt>250000 THEN 1 ELSE 0 END),
@@ -142,7 +142,17 @@ BEGIN
 		itd_dcc_expense_paid_on_close_amt=(CASE WHEN feature_closed_ct=1 THEN itd_dcc_expense_paid_amt ELSE 0 END )
 		WHERE month_sk=@end_dt_sk;
 
-		FETCH NEXT FROM cur_main INTO @begin_dt_sk,@end_dt_sk
+		-- Update control table
+		SET @new_last_source_extract_ts=COALESCE(@end_dt,@last_source_extract_ts); 	
+		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
+
+		-- Update audit table
+		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;		
+
+		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+
+		FETCH NEXT FROM cur_main INTO @begin_dt_sk,@end_dt_sk, @begin_dt, @end_dt;
     END
 	
 	CLOSE cur_main;
