@@ -286,7 +286,7 @@ BEGIN
             t1.[NumberofPPAwithPhysDam] as ppa_with_physical_damage_ct,
             t1.[NumberofCollectorCars] as collector_cars_ct,
             t1.[TotalInsuredLocations] as total_insured_locations_ct,
-            cast(cast(t1.[HOClaims] as decimal) as int) as ho_claims_ct,
+            t1.[HOClaims] as ho_claims_ct,
             t1.[NumberofDriversonPolicy] as drivers_on_policy_ct,
             t1.[NumberofYouthsonPolicy] as youths_on_policy_ct,
             t1.[YearsCleanDiscount] as years_clean_discount,
