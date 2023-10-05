@@ -118,16 +118,14 @@ BEGIN
 				insurance_score_cd3, insurance_score_desc3, insurance_score_cd4, insurance_score_desc4, subscriber_contribution_end_dt,
 				source_system_sk, create_ts, update_ts, etl_audit_sk 
 			)
-		select 	t1.PolicyNumber, t1.EffectiveDate, t1.TransactionEffectiveDate, t1.PolicyChangeNumber, t1.IssuedDate, ph.policy_history_sk, 
-				nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') 
-				+ isnull(t2.LastName + ' ','') + isnull(t2.MiddleName + ' ','') + isnull(t2.Suffix,'')),'') as  NamedInsured, 
-				t2.DBA, t2.FirstName, t2.MiddleName, t2.LastName, t2.InsuredType,t2.IsPrimaryInsured, 
-				t2.IsCoInsured, t2.Birthdate, t2.HomePhone, t2.MobilePhone, t2.Title, t2.Prefix, t2.Suffix, 
-				t2.MailingAddressLine1, t2.MailingAddressLine2, t2.UnitFloor, t2.MailingAddressCity, 
-				t2.MailingAddressState, t2.MailingAddressZipCode, t2.MailingAddressCounty, t2.MailingAddressCountry, 
-				t2.IncludeOnDec, t2.Email, t2.Employer, t2.InsuranceScore,
-				t2.InsuranceScoreCode1, '', InsuranceScoreCode2, '', InsuranceScoreCode3, '', InsuranceScoreCode4, '', 
-				t2.SubscriberContributionEndDate, t1.ssk, getdate(), getdate(), @etl_audit_sk
+		select 	t1.PolicyNumber, t1.EffectiveDate, t1.TransactionEffectiveDate, t1.PolicyChangeNumber, t1.IssuedDate, ph.policy_history_sk,
+				NamedInsured, DBA, FirstName, MiddleName, LastName, InsuredType, IsPrimaryInsured, 
+				IsCoInsured, Birthdate, HomePhone, MobilePhone, Title, Prefix, Suffix, 
+				MailingAddressLine1, MailingAddressLine2, UnitFloor, MailingAddressCity, 
+				MailingAddressState, MailingAddressZipCode, MailingAddressCounty, MailingAddressCountry, 
+				IncludeOnDec, Email, Employer, InsuranceScore,
+				InsuranceScoreCode1, '', InsuranceScoreCode2, '', InsuranceScoreCode3, '', InsuranceScoreCode4, '', 
+				SubscriberContributionEndDate, t1.ssk, getdate(), getdate(), @etl_audit_sk
 		FROM 	edw_temp.tpolicy_insured_temp1 t1
 		inner join edw_temp.tpolicy_insured_temp2 t2 on t1.id = t2.AccountTransactionId
 		LEFT JOIN edw_core.tpolicy pol on t1.PolicyNumber = pol.policy_no and cast(t1.EffectiveDate as date) = pol.effective_dt
