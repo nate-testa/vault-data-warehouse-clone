@@ -1,15 +1,16 @@
-﻿-- =================================================================================================
+﻿-- =====================================================================================================================
 -- Author:		Hernando Gonzalez Garcia
 -- Description: This procedures inserts and updates TPolicy 
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 -- 06/20/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 06/20/23		Architha Gudimalla				2. Modified for errors after first run 
 -- 09/08/23		Architha Gudimalla				3. Modifed to reflect model changes
 -- 10/05/23		Architha Gudimalla				4. Updated insured_nm, insured_type for all pols
 -- 10/05/23		Architha Gudimalla				4. Updated uw_company and program type for AU
--- ================================================================================================= 
+-- 10/05/23		Architha Gudimalla				5. Moved out update statements for policy_status, latest_term_in
+-- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy]
 
@@ -233,18 +234,6 @@ BEGIN
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
-		
-		update edw_core.tpolicy
-		set policy_status = 'Expired'
-		where expiration_dt <= cast(getdate() as date); 
-
-		update edw_core.tpolicy
-		set latest_term_in = 'N'; 
-
-		update pol
-		set latest_term_in = 'Y'
-		from edw_core.tpolicy pol
-		where effective_dt = (select max(effective_dt) from edw_core.tpolicy pol1 where pol.original_policy_no = pol1.original_policy_no);
 	
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t2.IssuedDate) FROM edw_temp.tpolicy_temp1 t2),@last_source_extract_ts);
 

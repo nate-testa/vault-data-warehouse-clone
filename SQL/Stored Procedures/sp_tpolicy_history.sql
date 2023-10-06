@@ -7,6 +7,7 @@
 -- 06/02/23		Hernando Gonzalez Garcia		1. Created this procedure
 -- 06/28/23		Architha Gudimalla				2. Made changes to fix the errors on first run 
 -- 09/08/23		Architha Gudimalla				3. Made changes for updated model 
+-- 10/06/23		Architha Gudimalla				4. Added commission override columns
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -53,6 +54,9 @@ BEGIN
 			acct.totalpremiumdelta,
 			acct.commissiondelta , 
 			acct.commission , 
+			acctvp.CommissionPercent , 
+			acctvp.CommissionPercentOverride , 
+			acctvp.CommissionPercentOverrideRetention , 
 			nullif(trim(acct.policychangenotes),'') policychangenotes, acct.stage,
 			acct.reviewedbyid, acct.createdbyid,
 				case when acct.ExternalSourceId is not NULL 
@@ -62,7 +66,8 @@ BEGIN
 				nullif(trim(pr.ProductCode),'') product_cd 
 		INTO edw_temp.tpolicy_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
-		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id  
+		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id 
+		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id  
 		left join edw_stage.Brokerage brk on acctv.BrokerageId = brk.id
 		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acctv.ProductId = pr.id
@@ -140,14 +145,14 @@ BEGIN
 		   ,[producer_nm]
 		   ,[product_sk]
 		   ,[policy_change_summary]
-		   --,[commission_pc],[override_commission_pc],[override_commission_pc]
+		   ,[commission_pc],[override_commission_pc],[override_commission_pc]
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.PolicyChangeNumber, 
 				pol.policy_sk, br.broker_sk, cust.customer_sk, br.Broker_Id, Source.customer_id, 
 				tt.policy_transaction_type_nm, Source.IssuedDate, source.policychangenotes, Source.CancellationReason, 
 				coalesce(Source.totalpremiumdeltaprorated,source.totalpremium, 0), 
-				coalesce(Source.totalpremiumdelta,Source.totalpremium,0), 
 				coalesce(Source.commissiondelta,Source.commission,0),
+				coalesce(Source.totalpremiumdelta,Source.totalpremium,0), 
 				null,null, --rid.ReferenceCode, cid.ReferenceCode, 
 				source1.CompanionCreditCollections, source1.CompanionCreditPersonalExcessLiability, 
 				source1.CompanionCreditAuto, source1.CompanionCreditHomeowner,
@@ -158,7 +163,9 @@ BEGIN
 				,source.producer_nm
 				,pr.product_sk
 				,source.policychangenotes
-				--,[commission_pc],[override_commission_pc],[override_commission_pc] --select *
+				,source.CommissionPercent
+				,source.CommissionPercentOverride
+				,source.CommissionPercentOverrideRetention
 		FROM edw_temp.tpolicy_history_temp1 source
 		LEFT JOIN edw_temp.tpolicy_history_temp2 source1 on source.id = source1.AccountTransactionId
 	    --left join edw_stage.Insured cid on source.createdbyid = cid.Id

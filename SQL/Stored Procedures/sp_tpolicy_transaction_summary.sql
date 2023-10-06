@@ -6,6 +6,7 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 08/30/23		Architha Gudimalla				1. Created this procedure  
+-- 10/05/23		Architha Gudimalla				2. Fixed division by 0 error for EP calculation 
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction_summary]
@@ -106,10 +107,13 @@ BEGIN
 		 				sum(tr.premium_amt) premium_amt,
 		 				sum(
 		 					--for transactions issued in the month, eff in the month or later
-							 	(1+(iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
-								- (greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) ))
-								* tr.premium_amt/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
-							
+								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) > 0
+								then
+									(1+(iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+									- (greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) ))
+									* tr.premium_amt/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+								else 0
+								end
 						   ) mtd_ep 
 				 FROM edw_core.tpolicy_transaction tr, edw_core.tpolicy pol 
 				 where tr.policy_sk = pol.policy_sk
