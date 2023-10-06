@@ -74,7 +74,7 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX([update_ts]) FROM [edw_core].[tpolicy] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX([update_ts]) FROM [edw_integration].[policy_customer_portal_api] t1),@last_source_extract_ts);
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
