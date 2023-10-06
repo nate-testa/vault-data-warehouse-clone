@@ -12,6 +12,7 @@ GO
 --  			Yunus Mohammed					1. Created this procedure 
 -- 08/23/23		Architha Gudimalla				2. Added changes for residence type, loss_of_use_pc, total_insured_value_amt
 -- 10/02/23		Architha Gudimalla				3. Added replace to remove , from sq footage
+-- 10/05/23		Architha Gudimalla				4. Removed TIV update and moved to separate proc
 -- =========================================================================================================================== 
 CREATE or ALTER PROCEDURE [edw_core].[sp_thome_coverage]
 
@@ -235,17 +236,7 @@ BEGIN
 			FROM
 				edw_temp.thome_coverage_temp1 AS tthc
 
-			SET @rows_affected=@@ROWCOUNT;
-		
-			--AG - added on 20230823
-			update [edw_core].[thome_coverage]
-			set total_insured_value_amt = 	isnull(dwelling_limit_amt,0) + isnull(other_structures_limit_amt,0) + isnull(contents_limit_amt,0) +
-											isnull(CASE WHEN loss_of_use_option = loss_of_use_limit_amt and cast(loss_of_use_limit_amt as INT) >1000 THEN cast(loss_of_use_limit_amt AS INT)
-														WHEN cast(loss_of_use_pc as float) = 0.0 and isnull(loss_of_use_limit_amt,0)<> 0  THEN cast(loss_of_use_limit_amt AS INT)
-														else cast(loss_of_use_pc as float)*cast(iif(residence_type = 'Homeowners', dwelling_limit_amt, contents_limit_amt) as int) END 
-												 , 0)
-			where update_ts >= @last_source_extract_ts;
-			
+			SET @rows_affected=@@ROWCOUNT;  
 
 			-- Update control table
 			SET @new_last_source_extract_ts=COALESCE((SELECT MAX(IssuedDate) FROM edw_temp.thome_coverage_temp1),@last_source_extract_ts);	

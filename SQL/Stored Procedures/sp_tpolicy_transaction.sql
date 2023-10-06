@@ -16,6 +16,9 @@ GO
 -- 09/18/23		Sandeep Gundreddy				6. Updated the logic for cal_mn and policy_transaction_type_sk
 -- 09/27/23		Mohammed Yunus					7. Added HSB Ceded Premium cols and updated logic to convert renewal transaction
 -- 10/02/23		Architha Gudimalla				8. Added logic for AU vehicle level premium
+-- 10/05/23		Architha Gudimalla				9. Moved out updates at the end to another proc
+--												   Removed pel loc join
+--												   Corrected ceded premium
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -80,8 +83,8 @@ BEGIN
 			COALESCE (acctrcp.Premiumdelta ,premium) as ap,
 			COALESCE (acctrcp.CommissionDeltaProRated ,acctrcp.commission) as comm,
 			0 as tfs, tmp1.ssk, 'prm' typ,
-			isnull(acctrcp.CededPremiumDelta,0) as ceded_annual_premium_amt,
-			isnull(acctrcp.CededPremiumDeltaProRated,0) as ceded_premium_amt
+			COALESCE(acctrcp.CededPremiumDelta,acctrcp.CededPremium) as ceded_annual_premium_amt,
+			COALESCE(acctrcp.CededPremiumDeltaProRated,acctrcp.CededPremium) as ceded_premium_amt
 		INTO edw_temp.tpolicy_transaction_temp2  
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
 		inner join edw_stage.AccountTransactionCoveragePremium acctrcp on acctrcp.AccountTransactionId = tmp1.Id
@@ -153,7 +156,7 @@ BEGIN
 			br.broker_sk, cust.customer_sk, source.wp, Source.comm, source.ap, source.tfs, source.wp - source.tfs, 
 			case when ho.policy_no is not null then ho.home_location_sk 
 				 when coll.policy_no is not null then coll.collection_location_sk 
-			     when pel_loc.policy_no is not null then pel_loc.pel_location_sk  
+			     --when pel_loc.policy_no is not null then pel_loc.pel_location_sk  
 			     when au_veh.policy_no is not null then au_veh.auto_vehicle_sk 
 			     else 0 
 			end item_sk, 
@@ -192,7 +195,7 @@ BEGIN
 		LEFT JOIN edw_core.thome_coverage ho on source.PolicyNumber = ho.policy_no and cast(source.EffectiveDate as date) = ho.effective_dt and source.PolicyChangeNumber = ho.transaction_seq_no
 		LEFT JOIN edw_core.tcollection_coverage coll on source.PolicyNumber = coll.policy_no and cast(source.EffectiveDate as date) = coll.effective_dt and source.PolicyChangeNumber = coll.transaction_seq_no
 		LEFT JOIN edw_core.tpel_coverage pel_cov on source.PolicyNumber = pel_cov.policy_no and cast(source.EffectiveDate as date) = pel_cov.effective_dt and source.PolicyChangeNumber = pel_cov.transaction_seq_no
-		LEFT JOIN edw_core.tpel_location pel_loc on source.PolicyNumber = pel_loc.policy_no and cast(source.EffectiveDate as date) = pel_loc.effective_dt and source.PolicyChangeNumber = pel_loc.transaction_seq_no
+		--LEFT JOIN edw_core.tpel_location pel_loc on source.PolicyNumber = pel_loc.policy_no and cast(source.EffectiveDate as date) = pel_loc.effective_dt and source.PolicyChangeNumber = pel_loc.transaction_seq_no
 		LEFT JOIN edw_core.tauto_vehicle au_veh on source.PolicyNumber = au_veh.policy_no and cast(source.EffectiveDate as date) = au_veh.effective_dt and source.vehicle_no = au_veh.vehicle_no
 		LEFT JOIN edw_core.tauto_policy_coverage au_pol_cov on source.PolicyNumber = au_pol_cov.policy_no and cast(source.EffectiveDate as date) = au_pol_cov.effective_dt and source.PolicyChangeNumber = au_pol_cov.transaction_seq_no
 		LEFT JOIN edw_core.tauto_vehicle_coverage au_veh_cov on source.PolicyNumber = au_veh_cov.policy_no and cast(source.EffectiveDate as date) = au_veh_cov.effective_dt and source.PolicyChangeNumber = au_veh_cov.transaction_seq_no and source.vehicle_no = au_veh_cov.vehicle_no
@@ -204,26 +207,6 @@ BEGIN
 		LEFT JOIN edw_core.tpolicy_transaction_type tt on tt.policy_transaction_type_cd = source.stage 
 
 		SET @rows_affected=@@ROWCOUNT; 
-
-		update edw_core.tpolicy  
-		set policy_status = 'Active',
-			cancellation_effective_dt = null
-		from edw_core.tpolicy
-		where policy_status = 'Cancelled';
-
-		with cancels as
-		(
-			select  policy_sk, max(transaction_effective_dt_sk) transaction_effective_dt_sk
-			from edw_core.tpolicy_transaction tr 
-			where transaction_seq_no = (select max(transaction_seq_no) from edw_core.tpolicy_transaction tr1 where tr1.policy_sk = tr.policy_sk)
-			and policy_transaction_type_sk = 5
-			group by policy_sk
-		)
-		update edw_core.tpolicy  
-		set policy_status = 'Cancelled',
-			cancellation_effective_dt = (select actual_dt from edw_core.tdate where date_sk = cancels.transaction_effective_dt_sk)
-		from edw_core.tpolicy pol, cancels 
-		where pol.policy_sk = cancels.policy_sk;
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.IssuedDate) FROM edw_temp.tpolicy_transaction_temp1 t1),@last_source_extract_ts);
 

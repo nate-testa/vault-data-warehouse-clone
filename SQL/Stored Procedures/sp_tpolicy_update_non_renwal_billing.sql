@@ -1,11 +1,12 @@
-﻿-- =================================================================================================
+﻿-- ==========================================================================================================
 -- Author:		Hernando Gonzalez Garcia
 -- Description: This procedures update non_renewal_in and billingaccount_sk in tpolicy
----------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
--- 09/08/23		Architha Gudimalla		1. Created this procedure  
--- ================================================================================================= 
+-------------------------------------------------------------------------------------------------------------
+-- 09/08/23		Architha Gudimalla			1. Created this procedure  
+-- 10/05/23		Architha Gudimalla			2. Added update statements for policy_status, latest_term_in
+-- ========================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_non_renwal_billing]
 
@@ -13,6 +14,7 @@ AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
     -- interfering with SELECT statements.
+    SET ANSI_WARNINGS OFF
     SET NOCOUNT ON
 
 	BEGIN TRY
@@ -27,7 +29,19 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;
 	
 		DECLARE @parameter_desc VARCHAR(255)
-		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) 		
+		
+		update edw_core.tpolicy
+		set policy_status = 'Expired'
+		where expiration_dt <= cast(getdate() as date); 
+
+		update edw_core.tpolicy
+		set latest_term_in = 'N'; 
+
+		update pol
+		set latest_term_in = 'Y'
+		from edw_core.tpolicy pol
+		where effective_dt = (select max(effective_dt) from edw_core.tpolicy pol1 where pol.original_policy_no = pol1.original_policy_no);
 
 		update a
 		set non_renewal_in = 'Yes' 
