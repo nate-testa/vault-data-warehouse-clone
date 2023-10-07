@@ -60,7 +60,7 @@ BEGIN
 			--acct.commission , 
 			coalesce(acctvp.CommissionPercent, 0) CommissionPercent, 
 			coalesce(acctvp.CommissionPercentOverride, 0) CommissionPercentOverride, 
-			coalesce(acctvp.CommissionPercentOverrideRetention, 0) CommissionPercentOverrideRetention, 
+			CommissionPercentOverrideRetention, 
 			nullif(trim(acct.policychangenotes),'') policychangenotes, acct.stage,
 			acct.reviewedbyid, acct.createdbyid,
 				case when acct.ExternalSourceId is not NULL 
@@ -73,7 +73,7 @@ BEGIN
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id 
 		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id 
-		inner join edw_stage.[user] usr on usr.id = acctv.UnderwriterUserId 
+		left join edw_stage.[user] usr on usr.id = acctv.UnderwriterUserId 
 		left join edw_stage.Brokerage brk on acctv.BrokerageId = brk.id
 		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acctv.ProductId = pr.id

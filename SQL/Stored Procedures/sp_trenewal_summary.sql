@@ -222,6 +222,7 @@ BEGIN
 				 and sixty_day_pol_tr.rnk = 1
 				 and effective_dt_sk <= @end_dt_sk
 				 and	transaction_effective_dt_sk <= @end_dt_sk
+				 and transaction_dt_sk - expiration_dt_sk <= 60
 				 and   (pol.expiration_dt between @begin_dt and @end_dt or
 						pol.effective_dt between @begin_dt and @end_dt)
 				 group by tr.policy_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk
@@ -287,7 +288,7 @@ BEGIN
 						--case when exp_pols_prm.policy_term	 = 'Renewal' then 1 else 0 end as renewal_ind,
 						case when ren_pols.policy_sk is not null then ren_pols.policy_sk else null end renewalcount,
 						case when ren_pols.policy_sk is not null then 1 else 0 end renewalcount,
-						case when ren_pols_prm.cancel_sixty_days_ind <> 0 then 1 else 0 end non_flatcancel_renewal_ind,
+						case when ren_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end non_flatcancel_renewal_ind,
 						case when ren_pols.policy_sk is not null then ren_pols_prm.initial_written_prem else null end initial_written_renewal_prem,
 						case when ren_pols.policy_sk is not null then ren_pols_prm.effective_date_60_day_prem else null end effective_date_60_day_renewal_prem, 
 						case when ren_pols.policy_sk is not null then ren_pols_prm.effective_date_60_day_comm else null end effective_date_60_day_renewal_comm,
