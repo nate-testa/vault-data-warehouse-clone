@@ -48,26 +48,32 @@ BEGIN
 			acct.TransactionEffectiveDate,
 			acct.CancellationReason,
 			acct.IssuedDate,
-			acct.UpdatedDate, 
-			acct.totalpremium,
-			acct.totalpremiumdeltaprorated,
-			acct.totalpremiumdelta,
-			acct.commissiondelta , 
-			acct.commission , 
-			acctvp.CommissionPercent , 
-			acctvp.CommissionPercentOverride , 
-			acctvp.CommissionPercentOverrideRetention , 
+			acct.UpdatedDate,  
+			coalesce(acct.totalpremiumdeltaprorated,acct.totalpremium, 0) wp,
+			coalesce(acct.commissiondelta,acct.commission,0) comm,
+			coalesce(acct.totalpremiumdelta,acct.totalpremium,0) ap, 
+			0 tfs,
+			--acct.totalpremium,
+			--acct.totalpremiumdeltaprorated,
+			--acct.totalpremiumdelta,
+			--acct.commissiondelta , 
+			--acct.commission , 
+			coalesce(acctvp.CommissionPercent, 0) CommissionPercent, 
+			coalesce(acctvp.CommissionPercentOverride, 0) CommissionPercentOverride, 
+			coalesce(acctvp.CommissionPercentOverrideRetention, 0) CommissionPercentOverrideRetention, 
 			nullif(trim(acct.policychangenotes),'') policychangenotes, acct.stage,
 			acct.reviewedbyid, acct.createdbyid,
 				case when acct.ExternalSourceId is not NULL 
 					 then 2 --(AV2) 
 					 Else 4 --(Metal)
 				end ssk,
-				nullif(trim(pr.ProductCode),'') product_cd 
+				nullif(trim(pr.ProductCode),'') product_cd,
+				usr.name uw_nm
 		INTO edw_temp.tpolicy_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id 
-		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id  
+		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id 
+		inner join edw_stage.[user] usr on usr.id = acctv.UnderwriterUserId 
 		left join edw_stage.Brokerage brk on acctv.BrokerageId = brk.id
 		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acctv.ProductId = pr.id
@@ -75,6 +81,24 @@ BEGIN
 		and	acct.PolicyNumber is not null 
 		and pr.ProductLine = 'PersonalLines'  
 		AND acct.IssuedDate>@last_source_extract_ts
+
+
+		DROP TABLE IF EXISTS edw_temp.tpolicy_history_temp3
+        SELECT acct.id, 
+			sum(COALESCE (acctrtf.AmountDeltaProRated ,acctrtf.Amount)) as tfs  
+		INTO edw_temp.tpolicy_history_temp3 --select acct.* 
+		FROM edw_stage.AccountTransaction acct 
+		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id  
+		inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = acct.Id 
+		inner join edw_stage.[user] usr on usr.id = acctv.UnderwriterUserId
+		left join edw_stage.Brokerage brk on acctv.BrokerageId = brk.id
+		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
+		left join edw_stage.Product pr on acctv.ProductId = pr.id
+		WHERE acct.State ='ISSUED' --- Review BOUND transactions
+		and	acct.PolicyNumber is not null 
+		and pr.ProductLine = 'PersonalLines'  
+		AND acct.IssuedDate>@last_source_extract_ts
+		group by acct.id 
 
 		-- Pivot Table
 		DROP TABLE IF EXISTS edw_temp.tpolicy_history_temp2;
@@ -125,8 +149,8 @@ BEGIN
            ,transaction_desc
            ,cancellation_reason_desc
            ,premium_amt
-           --,net_premium_amt
-           --,[tax_fee_surcharge_amt]
+           ,net_premium_amt
+           ,[tax_fee_surcharge_amt]
            ,commission_amt
            ,annual_premium_amt 
            ,transaction_initiated_by
@@ -141,25 +165,26 @@ BEGIN
            ,create_ts
            ,update_ts
            ,etl_audit_sk
-		   --[underwriter_nm]
-		   ,[producer_nm]
-		   ,[product_sk]
-		   ,[policy_change_summary]
-		   ,[commission_pc],[override_commission_pc],[override_commission_pc]
+		   ,underwriter_nm
+		   ,producer_nm
+		   ,product_sk
+		   ,policy_change_summary
+		   ,commission_pc,override_commission_pc,commission_retention
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.PolicyChangeNumber, 
 				pol.policy_sk, br.broker_sk, cust.customer_sk, br.Broker_Id, Source.customer_id, 
 				tt.policy_transaction_type_nm, Source.IssuedDate, source.policychangenotes, Source.CancellationReason, 
-				coalesce(Source.totalpremiumdeltaprorated,source.totalpremium, 0), 
-				coalesce(Source.commissiondelta,Source.commission,0),
-				coalesce(Source.totalpremiumdelta,Source.totalpremium,0), 
-				null,null, --rid.ReferenceCode, cid.ReferenceCode, 
+				wp, 
+				wp-isnull(tfs.tfs,0),isnull(tfs.tfs,0),
+				comm,
+				ap, 
+				rid.Name, cid.Name, 
 				source1.CompanionCreditCollections, source1.CompanionCreditPersonalExcessLiability, 
 				source1.CompanionCreditAuto, source1.CompanionCreditHomeowner,
 				ResidenceHasPrior, PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 				PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, 
 				source.ssk, getdate(), getdate(), @etl_audit_sk
-				--[underwriter_nm]
+				,source.uw_nm
 				,source.producer_nm
 				,pr.product_sk
 				,source.policychangenotes
@@ -167,9 +192,10 @@ BEGIN
 				,source.CommissionPercentOverride
 				,source.CommissionPercentOverrideRetention
 		FROM edw_temp.tpolicy_history_temp1 source
+		LEFT JOIN edw_temp.tpolicy_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tpolicy_history_temp2 source1 on source.id = source1.AccountTransactionId
-	    --left join edw_stage.Insured cid on source.createdbyid = cid.Id
-	    --left join edw_stage.Insured rid on source.reviewedbyid = rid.Id
+	    left join edw_stage.[user] cid on source.createdbyid = cid.Id
+	    left join edw_stage.[user] rid on source.reviewedbyid = rid.Id
 		LEFT JOIN edw_core.tpolicy pol on source.PolicyNumber = pol.policy_no and cast(source.EffectiveDate as date)=pol.effective_dt
 		LEFT JOIN edw_core.tbroker br on source.BrokerId = br.broker_id 
 		LEFT JOIN edw_core.tproduct pr on pr.product_cd = source.product_cd 
