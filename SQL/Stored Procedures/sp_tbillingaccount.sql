@@ -1,9 +1,10 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_tbillingaccount]    Script Date: 2/10/2023 10:12:00 a. m. ******/
+﻿/****** Object:  StoredProcedure [edw_core].[sp_tbillingaccount]    Script Date: 9/10/2023 4:26:01 p. m. ******/
 SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
 GO
+
 
 -- =============================================
 -- Author:		Hernando Gonzalez Garcia
@@ -54,6 +55,7 @@ BEGIN
 					,ba.ContactLastName
 					,ba.ContactSuffix
 					,ba.ContactPhone
+					,ins.Birthdate as [birth_dt]
 					,ba.ContactEmail
 					,ba.AddressLine1
 					,ba.AddressLine2
@@ -74,8 +76,9 @@ BEGIN
 					[edw_stage].[BillingAccount] ba
 				LEFT JOIN [edw_stage].[Insured] ins
 				ON ba.InsuredId = ins.id
+				--ON ba.ReferenceCode = ins.ReferenceCode
 				LEFT JOIN [edw_core].[tcustomer] tc
-				ON ins.ReferenceCode = tc.customer_id
+				ON ba.ReferenceCode = tc.customer_id
 				WHERE
 					GREATEST(ba.CreatedDate, ba.UpdatedDate)>@last_source_extract_ts --20230717 added
 			) Source
@@ -98,6 +101,7 @@ BEGIN
 				,[ContactLastName]
 				,[ContactSuffix]
 				,[ContactPhone]
+				,[birth_dt]
 				,[ContactEmail]
 				,[AddressLine1]
 				,[AddressLine2]
@@ -135,6 +139,7 @@ BEGIN
            ,[last_nm]
            ,[suffix]
            ,[phone_no]
+		   ,[birth_dt]
            ,[email]
            ,[mailing_address_line_1]
            ,[mailing_address_line_2]
@@ -155,7 +160,7 @@ BEGIN
 			)
 		VALUES (Source.[BillingAccountId], Source.[EffectiveDate], Source.[ExpirationDate], Source.[TransactionEffectiveDate], Source.[BillToType], Source.[PaymentPlan]
 		,Source.[PaymentMethod], Source.[Payor], Source.[ContactPrefix], Source.[ContactFirstName], Source.[ContactMiddleName], Source.[ContactLastName], Source.[ContactSuffix]
-		, Source.[ContactPhone], Source.[ContactEmail], Source.[AddressLine1], Source.[AddressLine2], Source.[mailing_address_unit_no], Source.[AddressCity], Source.[AddressState]
+		, Source.[ContactPhone], Source.[birth_dt], Source.[ContactEmail], Source.[AddressLine1], Source.[AddressLine2], Source.[mailing_address_unit_no], Source.[AddressCity], Source.[AddressState]
 		, Source.[AddressZipCode], Source.[AddressCounty], Source.[AddressCountry], Source.[source_system_sk], Source.[create_ts], Source.[update_ts], @etl_audit_sk, [IsAutoPay]
 		--, [AutoPayMethod]
 		, [AutoPayToken], [customer_sk])
