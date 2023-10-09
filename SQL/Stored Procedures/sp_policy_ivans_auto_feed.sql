@@ -152,80 +152,88 @@ BEGIN
                 INNER JOIN edw_core.tinternal_coverage as ic ON pt.internal_coverage_sk = ic.internal_coverage_sk
         ),
         json_au_vehicles AS (
-            SELECT avcf.policy_no, avcf.effective_dt, avcf.transaction_seq_no,
-                (
-                    SELECT 
-                        av.auto_vehicle_sk as id,
-                        av.vehicle_vin as vin,
-                        av.vehicle_model as model,
-                        avc.symbol_cost_new_amt as costNew,
-                        av.vehicle_body as bodyType,
-                        avc.annual_miles as numUnits,
-                        'Vehicle' as riskType,
-                        (
-                            SELECT coverageCd, deductibles, coverageDesc, netChangeAmt, currentTermAmt
-                            FROM json_au_vehicles_sub_coverages AS javsc
-                            WHERE 1=1
-                                AND avc.policy_no = javsc.policy_no 
-                                AND avc.effective_dt = javsc.effective_dt
-                                AND avc.transaction_seq_no = javsc.transaction_seq_no
-                                AND avc.vehicle_no = javsc.vehicle_no
-                            FOR JSON PATH
-                        ) AS coverages,
-                        av.vehicle_model_year as modelYear,
-                        '' as garagingCd,
-                        '' as purchaseDt,
-                        agl.garage_location_no as locationRef,
-                        avc.rating_territory_cd as territoryCd,
-                        av.vehicle_type as vehicleType,
-                        CASE WHEN avc.vehicle_ownership = 'leased' THEN 1 ELSE 0 END as leasedVehInd,
-                        av.vehicle_make as manufacturer,
-                        CASE WHEN avc.vehicle_usage = 'pleasure' THEN 'PL' WHEN avc.vehicle_usage = 'commute'  THEN 'DO' ELSE '' END vehicleUseCd,
-                        '' as vehicleSymbolCd,
-                        CASE WHEN apc.multi_car_discount_in = 'No' THEN 0 WHEN apc.multi_car_discount_in = 'Yes'  THEN 1 ELSE '' END as multiCarDiscount,
-                        ai.additional_interest_nm as [additionalInterests.commercialName],
-                        ai.address_line_1 as [additionalInterests.address1],
-                        ai.city_nm as  [additionalInterests.city],
-                        ai.state_cd as [additionalInterests.stateProvCd],
-                        ai.zip_cd as [additionalInterests.postalCode],
-                        CASE WHEN ai.additional_interest_nm IS NULL THEN NULL ELSE 'US' END as [additionalInterests.countryCd],
-                        CASE WHEN ai.additional_interest_nm IS NULL THEN NULL ELSE 'United States' END as [additionalInterests.countryName],
-                        CASE WHEN ai.additional_interest_nm IS NULL THEN NULL
-                        ELSE
-                            CASE ai.interest_type
-                                WHEN 'Additional Insured' THEN 'ADDIN'
-                                WHEN 'Additional Interest' THEN 'AINT'
-                                WHEN 'Additional Insured - Individual' THEN 'ADDIN'
-                                WHEN 'Additional Insured - Limited Liability' THEN 'OT'
-                                WHEN 'Additional Insured - Contents' THEN 'OT'
-                                WHEN 'Loss Payee' THEN 'LOSSP'
-                                WHEN 'NJ Senior Citizen Designee' THEN 'OT'
-                                WHEN 'Designated Additional Person to Receive Notice of Cancellation or Nonrenewal' THEN 'OT'
-                                WHEN 'Third Party Designee' THEN 'TP'
-                                ELSE 'NA' 
-                            END 
-                        END AS [additionalInterests.natureInterestCd],
-                        '' as [numDaysDrivenPerWeek],
-                        '' as [principalOperatorRef],
-                        avc.distance_to_work as vehicleDistanceToWork
-                    FROM edw_core.tauto_vehicle_coverage as avc
-                    INNER JOIN edw_core.tauto_vehicle as av 
-                        ON avc.auto_vehicle_sk = av.auto_vehicle_sk
-                    INNER JOIN edw_core.tauto_garage_location as agl 
-                        ON avc.auto_garage_location_sk = agl.auto_garage_location_sk
-                    INNER JOIN edw_core.tauto_policy_coverage as apc 
-                        ON avc.policy_no = apc.policy_no AND avc.effective_dt = apc.effective_dt AND avc.transaction_seq_no = apc.transaction_seq_no
-                    LEFT JOIN edw_core.tadditional_interest as ai 
-                        ON avc.policy_no = ai.policy_no AND avc.effective_dt = ai.effective_dt AND avc.transaction_seq_no = ai.transaction_seq_no
-                    WHERE 1=1
-                        AND avcf.policy_no = avc.policy_no
-                        AND avcf.effective_dt = avc.effective_dt
-                        AND avcf.transaction_seq_no = avc.transaction_seq_no
-                    FOR JSON PATH, INCLUDE_NULL_VALUES 
-                ) AS AU_Vehicles
-            FROM  edw_core.tauto_vehicle_coverage as avcf
-            GROUP BY avcf.policy_no, avcf.effective_dt, avcf.transaction_seq_no
-        ),
+			SELECT avcf.policy_no, avcf.effective_dt, avcf.transaction_seq_no,
+				(
+					SELECT 
+						av.auto_vehicle_sk as id,
+						av.vehicle_vin as vin,
+						av.vehicle_model as model,
+						avc.symbol_cost_new_amt as costNew,
+						av.vehicle_body as bodyType,
+						avc.annual_miles as numUnits,
+						'Vehicle' as riskType,
+						(
+							SELECT coverageCd, deductibles, coverageDesc, netChangeAmt, currentTermAmt
+							FROM json_au_vehicles_sub_coverages AS javsc
+							WHERE javsc.policy_no = avc.policy_no 
+								AND javsc.effective_dt = avc.effective_dt
+								AND javsc.transaction_seq_no = avc.transaction_seq_no
+								AND javsc.vehicle_no = avc.vehicle_no
+							FOR JSON PATH
+						) AS coverages,
+						av.vehicle_model_year as modelYear,
+						'' as garagingCd,
+						'' as purchaseDt,
+						agl.garage_location_no as locationRef,
+						avc.rating_territory_cd as territoryCd,
+						av.vehicle_type as vehicleType,
+						CASE WHEN avc.vehicle_ownership = 'leased' THEN 1 ELSE 0 END as leasedVehInd,
+						av.vehicle_make as manufacturer,
+						CASE 
+							WHEN avc.vehicle_usage = 'pleasure' THEN 'PL' 
+							WHEN avc.vehicle_usage = 'commute' THEN 'DO' 
+							ELSE '' 
+						END vehicleUseCd,
+						'' as vehicleSymbolCd,
+						CASE 
+							WHEN apc.multi_car_discount_in = 'No' THEN 0 
+							WHEN apc.multi_car_discount_in = 'Yes' THEN 1 
+							ELSE '' 
+						END as multiCarDiscount,
+						(
+							SELECT 
+								ai.additional_interest_nm as commercialName,
+								ai.address_line_1 as address1,
+								ai.city_nm as city,
+								ai.state_cd as stateProvCd,
+								ai.zip_cd as postalCode,
+								CASE WHEN ai.additional_interest_nm IS NULL THEN NULL ELSE 'US' END as countryCd,
+								CASE WHEN ai.additional_interest_nm IS NULL THEN NULL ELSE 'United States' END as countryName,
+								CASE 
+									WHEN ai.additional_interest_nm IS NULL THEN NULL
+									ELSE
+										CASE ai.interest_type
+											WHEN 'Additional Insured' THEN 'ADDIN'
+											WHEN 'Additional Interest' THEN 'AINT'
+											WHEN 'Additional Insured - Individual' THEN 'ADDIN'
+											WHEN 'Additional Insured - Limited Liability' THEN 'OT'
+											WHEN 'Additional Insured - Contents' THEN 'OT'
+											WHEN 'Loss Payee' THEN 'LOSSP'
+											WHEN 'NJ Senior Citizen Designee' THEN 'OT'
+											WHEN 'Designated Additional Person to Receive Notice of Cancellation or Nonrenewal' THEN 'OT'
+											WHEN 'Third Party Designee' THEN 'TP'
+											ELSE 'NA' 
+										END 
+								END AS natureInterestCd
+							FROM edw_core.tadditional_interest as ai 
+							WHERE avc.policy_no = ai.policy_no AND avc.effective_dt = ai.effective_dt AND avc.transaction_seq_no = ai.transaction_seq_no
+							FOR JSON PATH, INCLUDE_NULL_VALUES 
+						) AS additionalInterests,
+						'' as numDaysDrivenPerWeek,
+						'' as principalOperatorRef,
+						avc.distance_to_work as vehicleDistanceToWork
+					FROM edw_core.tauto_vehicle_coverage as avc
+					INNER JOIN edw_core.tauto_vehicle as av ON avc.auto_vehicle_sk = av.auto_vehicle_sk
+					INNER JOIN edw_core.tauto_garage_location as agl ON avc.auto_garage_location_sk = agl.auto_garage_location_sk
+					INNER JOIN edw_core.tauto_policy_coverage as apc ON avc.policy_no = apc.policy_no AND avc.effective_dt = apc.effective_dt AND avc.transaction_seq_no = apc.transaction_seq_no
+					WHERE avcf.policy_no = avc.policy_no
+						AND avcf.effective_dt = avc.effective_dt
+						AND avcf.transaction_seq_no = avc.transaction_seq_no
+					FOR JSON PATH, INCLUDE_NULL_VALUES 
+				) AS AU_Vehicles
+			FROM edw_core.tauto_vehicle_coverage as avcf
+			GROUP BY avcf.policy_no, avcf.effective_dt, avcf.transaction_seq_no
+		),
         json_au_drivers AS (
             SELECT 
                 adf.policy_no, adf.effective_dt, adf.transaction_seq_no,
@@ -236,7 +244,7 @@ BEGIN
                         '' as addr1,
                         ad.birth_dt as birthDt,
                         '' as country,
-                        ad.last_nm as SurName,
+                        ad.last_nm as surName,
                         ad.gender as genderCd,
                         '' as latitude,
                         ad.license_country_nm as countryCd,
@@ -318,7 +326,7 @@ BEGIN
             'USD' as [CurCd_005],
             'P' as [BroadLOBCd_006],
             '2.0' as [IVANSXMLVersionCd_007],
-            'DWH2.0' as [SourceSystem_008],
+            'EDW' as [SourceSystem_008],
             '' as [ActivityDt_009],
             p.broker_id as [ContractNumber_010],
             '' as [ProducerSubCode_011],
@@ -327,7 +335,9 @@ BEGIN
             c.first_nm as [GivenName_014],
             c.middle_nm as [OtherGivenName_015],
             c.title as [TitlePrefix_016],
-            c.customer_nm as [CommercialName_100],
+            CASE 
+                WHEN pi.insured_type = 'Trust/LLC' THEN pi.insured_type
+            END AS [CommercialName_100],
             CASE
                 WHEN COALESCE(pi.mailing_address_line_1, p.mailing_address_line1) is null THEN ''
                 ELSE 'MailingAddress' 
@@ -362,7 +372,7 @@ BEGIN
             '' as [Dummy_037],
             '' as [Dummy_038],
             '****Pending****' as [BillingMethodCd_039],
-            NULL as [Amt_040], --'****Pending****'
+            pt.premium_amt as [Amt_040],
             pt.premium_amt as [Amt_041],
             'en' as [LanguageCd_042],
             op.min_effective_dt as [OriginalPolicyInceptionDt_043],
