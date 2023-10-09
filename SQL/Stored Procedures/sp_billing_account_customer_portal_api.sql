@@ -8,9 +8,9 @@ GO
 -- =============================================
 -- Author:		Hernando Gonzalez Garcia
 -- Create Date: 2023-10-05
--- Description: This stored procedure insert and update info related to Policy Customer
+-- Description: This stored procedure insert and update info related to Billing Account for Integration.
 -- =============================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_customer_portal_api]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_billing_account_customer_portal_api]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -32,50 +32,78 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) --20230717 added
 
-		MERGE [edw_integration].[policy_customer_portal_api] as TARGET
+		MERGE [edw_integration].[billing_account_customer_portal_api] as TARGET
 		USING (SELECT
-		tp.[policy_no]
-        ,tb.[billingaccount_no]
-        ,tprod.[product_nm]
-        ,tp.[insured_nm]
-        ,tp.[create_ts]
-        ,tp.[update_ts]
-        ,tp.[etl_audit_sk]
-		FROM [edw_core].[tpolicy] tp
-		LEFT JOIN [edw_core].[tbillingaccount] tb
-		ON tp.billingaccount_sk = tb.billingaccount_sk
-		LEFT JOIN [edw_core].[tproduct] tprod
-		ON tp.product_cd = tprod.product_cd
+		[billingaccount_no]
+	    ,[first_nm]
+        ,[last_nm]
+        ,[mailing_address_line_1]
+        ,[mailing_address_line_2]
+        ,[mailing_city_nm]
+        ,[mailing_state_cd]
+        ,[mailing_zip_cd]
+        ,[email]
+        ,[auto_pay_in]
+        ,[birth_dt]
+        ,[effective_dt]
+        ,[expiration_dt]
+        ,[payor_nm]
+        ,[phone_no]
+        ,[create_ts]
+        ,[update_ts]
+        ,[etl_audit_sk]
+		FROM [edw_core].[tbillingaccount]
 		WHERE
-			GREATEST(tp.[update_ts])>@last_source_extract_ts --20230717 added
-			AND tb.[billingaccount_no] is not null
+			GREATEST([update_ts])>@last_source_extract_ts --20230717 added
 		) as SOURCE
-		ON Source.[policy_no] = Target.[policy_no]
+		ON Source.billingaccount_no = Target.billingaccount_no
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
-			[policy_no]
-            ,[billingaccount_no]
-            ,[product_nm]
-            ,[insured_nm]
-            ,[create_ts]
-            ,[update_ts]
-            ,[etl_audit_sk]
+			[billingaccount_no]
+			,[first_nm]
+			,[last_nm]
+			,[mailing_address_line_1]
+			,[mailing_address_line_2]
+			,[mailing_city_nm]
+			,[mailing_state_cd]
+			,[mailing_zip_cd]
+			,[email]
+			,[auto_pay_in]
+			,[birth_dt]
+			,[effective_dt]
+			,[expiration_dt]
+			,[payor_nm]
+			,[phone_no]
+			,[create_ts]
+			,[update_ts]
+			,[etl_audit_sk]
 			)
-		VALUES (Source.[policy_no],Source.[billingaccount_no],Source.[product_nm],Source.[insured_nm],Source.[create_ts],Source.[update_ts],Source.[etl_audit_sk])
+		VALUES (Source.[billingaccount_no],Source.[first_nm],Source.[last_nm],Source.[mailing_address_line_1],Source.[mailing_address_line_2],Source.[mailing_city_nm],Source.[mailing_state_cd],Source.[mailing_zip_cd],Source.[email],Source.[auto_pay_in],Source.[birth_dt],Source.[effective_dt],Source.[expiration_dt],Source.[payor_nm],Source.[phone_no],Source.[create_ts],Source.[update_ts],Source.[etl_audit_sk])
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-		Target.[billingaccount_no] = Source.[billingaccount_no],
-		Target.[product_nm] = Source.[product_nm],
-		Target.[insured_nm] = Source.[insured_nm],
+		Target.[first_nm] = Source.[first_nm],
+		Target.[last_nm] = Source.[last_nm],
+		Target.[mailing_address_line_1] = Source.[mailing_address_line_1],
+		Target.[mailing_address_line_2] = Source.[mailing_address_line_2],
+		Target.[mailing_city_nm] = Source.[mailing_city_nm],
+		Target.[mailing_state_cd] = Source.[mailing_state_cd],
+		Target.[mailing_zip_cd] = Source.[mailing_zip_cd],
+		Target.[email] = Source.[email],
+		Target.[auto_pay_in] = Source.[auto_pay_in],
+		Target.[birth_dt] = Source.[birth_dt],
+        Target.[effective_dt] = Source.[effective_dt],
+		Target.[expiration_dt] = Source.[expiration_dt],
+		Target.[payor_nm] = Source.[payor_nm],
+		Target.[phone_no] = Source.[phone_no],
 		--Target.[create_ts] = Source.[create_ts],
 		--Target.[update_ts] = Source.[update_ts],
 		Target.[etl_audit_sk] = Source.[etl_audit_sk];
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX([update_ts]) FROM [edw_integration].[policy_customer_portal_api] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX([update_ts]) FROM [edw_integration].[billing_account_customer_portal_api] t1),@last_source_extract_ts);
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
