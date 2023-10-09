@@ -98,7 +98,7 @@ BEGIN
 		Target.[payor_nm] = Source.[payor_nm],
 		Target.[phone_no] = Source.[phone_no],
 		--Target.[create_ts] = Source.[create_ts],
-		--Target.[update_ts] = Source.[update_ts],
+		Target.[update_ts] = Source.[update_ts],
 		Target.[etl_audit_sk] = Source.[etl_audit_sk];
 
 		SET @rows_affected=@@ROWCOUNT;

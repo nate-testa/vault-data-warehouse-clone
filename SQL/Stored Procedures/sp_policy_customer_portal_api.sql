@@ -70,7 +70,7 @@ BEGIN
 		Target.[product_nm] = Source.[product_nm],
 		Target.[insured_nm] = Source.[insured_nm],
 		--Target.[create_ts] = Source.[create_ts],
-		--Target.[update_ts] = Source.[update_ts],
+		Target.[update_ts] = Source.[update_ts],
 		Target.[etl_audit_sk] = Source.[etl_audit_sk];
 
 		SET @rows_affected=@@ROWCOUNT;
