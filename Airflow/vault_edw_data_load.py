@@ -205,7 +205,7 @@ with DAG(
 
     with TaskGroup("collection_group") as collection_group:
 
-        collection_group_items = ['sp_tcollection_location','sp_tcollection_additional_coverage','sp_tcollection_coverage','sp_tcollection_scheduled_item']
+        collection_group_items = ['sp_tcollection_location','sp_tcollection_coverage','sp_tcollection_class_type','sp_tcollection_scheduled_item']
         
         sp_tcollection_location = MsSqlOperator(
             task_id='sp_tcollection_location',
@@ -215,10 +215,10 @@ with DAG(
             autocommit=True,
         )
 
-        sp_tcollection_additional_coverage = MsSqlOperator(
-            task_id='sp_tcollection_additional_coverage',
+        sp_tcollection_class_type = MsSqlOperator(
+            task_id='sp_tcollection_class_type',
             mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tcollection_additional_coverage",
+            sql="EXEC edw_core.sp_tcollection_class_type",
             database="vault_edw",
             autocommit=True,
         )
@@ -246,7 +246,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(collection_group_items, 'All stored procedures executed successfully for all the Collection tables'),
         )
 
-        sp_tcollection_location >> sp_tcollection_additional_coverage >> sp_tcollection_coverage >> sp_tcollection_scheduled_item >> send_collection_email
+        sp_tcollection_location >> sp_tcollection_coverage >> sp_tcollection_class_type >> sp_tcollection_scheduled_item >> send_collection_email
 
 
     with TaskGroup("PEL_group") as PEL_group:
@@ -845,7 +845,7 @@ with DAG(
 
     with TaskGroup("integration_group") as integration_group:
 
-        integration_group_items = ['sp_tclaim_policy_search_api','sp_tclaim_symbility_api', 'sp_tpolicy_hsb_hsp_feed', 'sp_tpolicy_hsb_cyber_feed', 'sp_tpolicy_hsb_slc_feed']
+        integration_group_items = ['sp_tclaim_policy_search_api','sp_tclaim_symbility_api', 'sp_tpolicy_hsb_hsp_feed', 'sp_tpolicy_hsb_cyber_feed', 'sp_tpolicy_hsb_slc_feed', 'sp_billing_account_customer_portal_api', 'sp_policy_customer_portal_api']
 
         sp_tclaim_policy_search_api = MsSqlOperator(
             task_id='sp_tclaim_policy_search_api',
@@ -887,6 +887,22 @@ with DAG(
             autocommit=True,
         )
 
+        sp_billing_account_customer_portal_api = MsSqlOperator(
+            task_id='sp_billing_account_customer_portal_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_billing_account_customer_portal_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_policy_customer_portal_api = MsSqlOperator(
+            task_id='sp_policy_customer_portal_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_policy_customer_portal_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_integration_email = EmailOperator(
             task_id='send_integration_email',
             to=to_email,
@@ -894,7 +910,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
         )
 
-        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_tpolicy_hsb_hsp_feed >> sp_tpolicy_hsb_cyber_feed >> sp_tpolicy_hsb_slc_feed >> send_integration_email
+        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_tpolicy_hsb_hsp_feed >> sp_tpolicy_hsb_cyber_feed >> sp_tpolicy_hsb_slc_feed >> sp_billing_account_customer_portal_api >> sp_policy_customer_portal_api >> send_integration_email
 
 
     end = DummyOperator(
@@ -902,4 +918,4 @@ with DAG(
     )
 
 
-start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, collection_group, auto_group] >> policy_transaction_group >> claim_group >> datamart_group >> vendor_report_group >> validation_result_group >> integration_group >> end
+start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group] >> collection_group >> policy_transaction_group >> claim_group >> datamart_group >> vendor_report_group >> validation_result_group >> integration_group >> end
