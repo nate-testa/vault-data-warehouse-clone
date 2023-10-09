@@ -32,6 +32,277 @@ BEGIN
 
  		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_auto_feed_temp1];
+
+        WITH 
+        policy_transaction AS (
+            SELECT 
+                policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
+                MAX(create_ts) as create_ts, 
+                SUM(premium_amt) as premium_amt,
+                SUM(annual_premium_amt) as annual_premium_amt
+            FROM edw_core.tpolicy_transaction as pt
+            WHERE 1=1
+                AND product_sk = 3
+                AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+            GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
+        ),
+        loss_history AS (
+            SELECT 
+                policy_no, effective_dt, transaction_seq_no, max(loss_seq_no) as loss_seq_no 
+            FROM 
+                edw_core.tloss_history
+            GROUP BY 
+                policy_no, effective_dt, transaction_seq_no
+        ),
+        original_policy AS (
+            SELECT original_policy_no, min(effective_dt) as min_effective_dt, min(expiration_dt) as min_expiration_dt 
+                FROM edw_core.tpolicy 
+            GROUP BY original_policy_no                
+        ),
+        json_au_coverages AS (
+            SELECT ptf.policy_sk, ptf.effective_dt_sk ,ptf.transaction_seq_no,
+                (
+                    SELECT  
+                        CASE 
+                            WHEN apc.limit_type = 'Combined' AND ic.internal_coverage_cd='Underinsured Motorist'    THEN 'umCSLPrem'
+                            WHEN apc.limit_type = 'Combined' AND ic.internal_coverage_cd='Uninsured Motorist'    THEN 'umCSLPrem'
+                            ELSE ic.internal_coverage_cd
+                        END AS coverageCd,
+                        CASE 
+                            WHEN apc.limit_type = 'Combined' AND ic.internal_coverage_cd='Underinsured Motorist'    THEN 'umCSLPrem'
+                            WHEN apc.limit_type = 'Combined' AND ic.internal_coverage_cd='Uninsured Motorist'    THEN 'umCSLPrem'
+                            ELSE ic.internal_coverage_cd
+                        END AS coverageDesc,
+                        CASE 
+                            WHEN apc.limit_type = 'Combined' then apc.combined_single_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Added First Party' then apc.added_first_party_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Bodily Injury' then apc.bodily_injury_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Basic First Party' then apc.combination_fpb_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Auto Death Disability' then apc.accidental_death_benefit_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Medical Payments' then apc.medical_payment_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Personal Injury Protection' then apc.pip_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Property Damage' then apc.property_damage_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Underinsured Motorist' AND apc.limit_type = 'Combined' then apc.combined_underinsured_motorist_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Underinsured Motorist' AND apc.limit_type = 'Split' then apc.underinsured_motorist_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Uninsured Motorist' AND apc.limit_type = 'Combined' then apc.combined_uninsured_motorist_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Uninsured Bodily Injury' AND apc.limit_type = 'Combined' then apc.combined_um_bi_policy_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Uninsured Property Damage' AND apc.limit_type = 'Combined' then apc.combined_um_pd_policy_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Uninsured Motorist' AND apc.limit_type = 'Split' then apc.uninsured_motorist_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Uninsured Bodily Injury' AND apc.limit_type = 'Split' then apc.um_bi_policy_limit_amt
+                            WHEN ic.internal_coverage_cd = 'Uninsured Property Damage' AND apc.limit_type = 'Split' then apc.um_pd_policy_limit_amt 
+                            ELSE '' 
+                        END 	AS limits,
+                        pt.annual_premium_amt AS currentTermAmt,
+                        pt.premium_amt AS netChangeAmt
+                        FROM 
+                            (
+                                SELECT 
+                                    policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk,
+                                    SUM(annual_premium_amt) AS annual_premium_amt, 
+                                    SUM(premium_amt) AS premium_amt 
+                                FROM edw_core.tpolicy_transaction as pt
+                                WHERE 1=1
+                                    AND product_sk = 3
+                                AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+                                GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk
+                            ) as pt 
+                            INNER JOIN edw_core.tauto_policy_coverage as apc ON pt.coverage_sk = apc.auto_policy_coverage_sk
+                            INNER JOIN edw_core.tinternal_coverage as ic ON pt.internal_coverage_sk = ic.internal_coverage_sk
+                        WHERE  1=1
+                            AND pt.policy_sk = ptf.policy_sk
+                            AND pt.effective_dt_sk = ptf.effective_dt_sk
+                            AND pt.transaction_seq_no = ptf.transaction_seq_no
+                        FOR JSON PATH
+                ) AS AU_Coverages
+                FROM policy_transaction as ptf
+        ),
+        json_au_vehicles_sub_coverages AS (
+            SELECT 
+                avc.policy_no, 
+                avc.effective_dt, 
+                avc.transaction_seq_no, 
+                avc.vehicle_no,
+                CASE 
+                    WHEN ic.internal_coverage_desc IN ('Underinsured Motorist','Uninsured Motorist') THEN 'um_uim_Prem'
+                    ELSE ic.internal_coverage_desc
+                END AS coverageCd,
+                CASE 
+                    WHEN ic.internal_coverage_desc = 'Collision' THEN avc.collision_deductible
+                    WHEN ic.internal_coverage_desc = 'other than collision' THEN avc.otc_deductible
+                    WHEN ic.internal_coverage_desc IN ('property damage','uninsured motorist') THEN avc.umpd_deductible
+                END AS deductibles,
+                CASE 
+                    WHEN ic.internal_coverage_desc IN ('Underinsured Motorist','Uninsured Motorist') THEN 'um_uim_Prem'
+                    ELSE ic.internal_coverage_desc
+                END AS coverageDesc,
+                pt.premium_amt as netChangeAmt,
+                pt.annual_premium_amt as currentTermAmt
+            FROM 
+                (
+                    SELECT 
+                        policy_sk, effective_dt_sk, transaction_seq_no, vehicle_coverage_sk, internal_coverage_sk,
+                        SUM(annual_premium_amt) AS annual_premium_amt, 
+                        SUM(premium_amt) AS premium_amt 
+                    FROM edw_core.tpolicy_transaction as pt
+                    WHERE product_sk = 3
+                    AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+                    GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, vehicle_coverage_sk, internal_coverage_sk
+                ) as pt 
+                INNER JOIN edw_core.tauto_vehicle_coverage as avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
+                INNER JOIN edw_core.tinternal_coverage as ic ON pt.internal_coverage_sk = ic.internal_coverage_sk
+        ),
+        json_au_vehicles AS (
+            SELECT avcf.policy_no, avcf.effective_dt, avcf.transaction_seq_no,
+                (
+                    SELECT 
+                        av.auto_vehicle_sk as id,
+                        av.vehicle_vin as vin,
+                        av.vehicle_model as model,
+                        avc.symbol_cost_new_amt as costNew,
+                        av.vehicle_body as bodyType,
+                        avc.annual_miles as numUnits,
+                        'Vehicle' as riskType,
+                        (
+                            SELECT coverageCd, deductibles, coverageDesc, netChangeAmt, currentTermAmt
+                            FROM json_au_vehicles_sub_coverages AS javsc
+                            WHERE 1=1
+                                AND avc.policy_no = javsc.policy_no 
+                                AND avc.effective_dt = javsc.effective_dt
+                                AND avc.transaction_seq_no = javsc.transaction_seq_no
+                                AND avc.vehicle_no = javsc.vehicle_no
+                            FOR JSON PATH
+                        ) AS coverages,
+                        av.vehicle_model_year as modelYear,
+                        '' as garagingCd,
+                        '' as purchaseDt,
+                        agl.garage_location_no as locationRef,
+                        avc.rating_territory_cd as territoryCd,
+                        av.vehicle_type as vehicleType,
+                        CASE WHEN avc.vehicle_ownership = 'leased' THEN 1 ELSE 0 END as leasedVehInd,
+                        av.vehicle_make as manufacturer,
+                        CASE WHEN avc.vehicle_usage = 'pleasure' THEN 'PL' WHEN avc.vehicle_usage = 'commute'  THEN 'DO' ELSE '' END vehicleUseCd,
+                        '' as vehicleSymbolCd,
+                        CASE WHEN apc.multi_car_discount_in = 'No' THEN 0 WHEN apc.multi_car_discount_in = 'Yes'  THEN 1 ELSE '' END as multiCarDiscount,
+                        ai.additional_interest_nm as [additionalInterests.commercialName],
+                        ai.address_line_1 as [additionalInterests.address1],
+                        ai.city_nm as  [additionalInterests.city],
+                        ai.state_cd as [additionalInterests.stateProvCd],
+                        ai.zip_cd as [additionalInterests.postalCode],
+                        CASE WHEN ai.additional_interest_nm IS NULL THEN NULL ELSE 'US' END as [additionalInterests.countryCd],
+                        CASE WHEN ai.additional_interest_nm IS NULL THEN NULL ELSE 'United States' END as [additionalInterests.countryName],
+                        CASE WHEN ai.additional_interest_nm IS NULL THEN NULL
+                        ELSE
+                            CASE ai.interest_type
+                                WHEN 'Additional Insured' THEN 'ADDIN'
+                                WHEN 'Additional Interest' THEN 'AINT'
+                                WHEN 'Additional Insured - Individual' THEN 'ADDIN'
+                                WHEN 'Additional Insured - Limited Liability' THEN 'OT'
+                                WHEN 'Additional Insured - Contents' THEN 'OT'
+                                WHEN 'Loss Payee' THEN 'LOSSP'
+                                WHEN 'NJ Senior Citizen Designee' THEN 'OT'
+                                WHEN 'Designated Additional Person to Receive Notice of Cancellation or Nonrenewal' THEN 'OT'
+                                WHEN 'Third Party Designee' THEN 'TP'
+                                ELSE 'NA' 
+                            END 
+                        END AS [additionalInterests.natureInterestCd],
+                        '' as [numDaysDrivenPerWeek],
+                        '' as [principalOperatorRef],
+                        avc.distance_to_work as vehicleDistanceToWork
+                    FROM edw_core.tauto_vehicle_coverage as avc
+                    INNER JOIN edw_core.tauto_vehicle as av 
+                        ON avc.auto_vehicle_sk = av.auto_vehicle_sk
+                    INNER JOIN edw_core.tauto_garage_location as agl 
+                        ON avc.auto_garage_location_sk = agl.auto_garage_location_sk
+                    INNER JOIN edw_core.tauto_policy_coverage as apc 
+                        ON avc.policy_no = apc.policy_no AND avc.effective_dt = apc.effective_dt AND avc.transaction_seq_no = apc.transaction_seq_no
+                    LEFT JOIN edw_core.tadditional_interest as ai 
+                        ON avc.policy_no = ai.policy_no AND avc.effective_dt = ai.effective_dt AND avc.transaction_seq_no = ai.transaction_seq_no
+                    WHERE 1=1
+                        AND avcf.policy_no = avc.policy_no
+                        AND avcf.effective_dt = avc.effective_dt
+                        AND avcf.transaction_seq_no = avc.transaction_seq_no
+                    FOR JSON PATH, INCLUDE_NULL_VALUES 
+                ) AS AU_Vehicles
+            FROM  edw_core.tauto_vehicle_coverage as avcf
+            GROUP BY avcf.policy_no, avcf.effective_dt, avcf.transaction_seq_no
+        ),
+        json_au_drivers AS (
+            SELECT 
+                adf.policy_no, adf.effective_dt, adf.transaction_seq_no,
+                (
+                    SELECT 
+                        ad.auto_driver_sk as id,
+                        '' as city,
+                        '' as addr1,
+                        ad.birth_dt as birthDt,
+                        '' as country,
+                        ad.last_nm as SurName,
+                        ad.gender as genderCd,
+                        '' as latitude,
+                        ad.license_country_nm as countryCd,
+                        ad.first_nm as givenName,
+                        ad.license_year as licenseDt,
+                        '' as longitude,
+                        '' as addrTypeCd,
+                        '' as postalCode,
+                        ad.license_state_nm as stateProvCd,
+                        ad.prefix as titlePrefix,
+                        '' as driverTypeCd,
+                        '' as licenseTypeCd,
+                        '' as restrictionCd,
+                        '' as otherGivenName,
+                        ad.license_status as licenseStatusCd,
+                        COALESCE(SUBSTRING(ad.marital_status,1,1),'NA') as martialStatusCd,
+                        '' as restrictionDesc,
+                        ad.license_no as licensePermitNumber,
+                        (
+                            COALESCE(NULLIF(ad.aaf_prior_ct,'null'),0) +
+                            COALESCE(NULLIF(ad.afb_prior_ct,'null'),0) +
+                            COALESCE(NULLIF(ad.cpa_prior_ct,'null'),0) +
+                            COALESCE(NULLIF(ad.maj_prior_ct,'null'),0) +
+                            COALESCE(NULLIF(ad.min_prior_ct,'null'),0) +
+                            COALESCE(NULLIF(ad.naf_prior_ct,'null'),0) +
+                            COALESCE(NULLIF(ad.spd_prior_ct,'null'),0) +
+                            COALESCE(NULLIF(ad.aaf_with_vault_ct,'null'),0) +
+                            COALESCE(NULLIF(ad.afb_with_vault_ct,'null'),0) + 
+                            COALESCE(NULLIF(ad.cpa_with_vault_ct,'null'),0) +
+                            COALESCE(NULLIF(ad.maj_with_vault_ct,'null'),0) +
+                            COALESCE(NULLIF(ad.min_with_vault_ct,'null'),0) +
+                            COALESCE(NULLIF(ad.naf_with_vault_ct,'null'),0) +
+                            COALESCE(NULLIF(ad.spd_with_vault_ct,'null'),0)
+                        ) as totalNumLicensePoints
+                    FROM edw_core.tauto_driver AS ad
+                    WHERE ad.policy_no = adf.policy_no
+                        AND ad.effective_dt = adf.effective_dt
+                        AND ad.transaction_seq_no = adf.transaction_seq_no
+                    FOR JSON PATH
+                ) AS AU_Drivers
+            FROM edw_core.tauto_driver AS adf
+            GROUP BY adf.policy_no, adf.effective_dt, adf.transaction_seq_no
+        ),
+        json_au_garaging_locations AS (
+            SELECT 
+                aglf.policy_no, aglf.effective_dt, aglf.transaction_seq_no,
+                (
+                    SELECT 
+                        agl.garage_location_no as locationNo,
+                        agl.garage_address_line1 as addr1,
+                        agl.garage_address_city_nm as city,
+                        agl.garage_address_state_cd as [state],
+                        agl.garage_address_zip_code as zip,
+                        '' as latitude,
+                        '' as longitude,
+                        agl.garage_address_county_nm as county
+                    FROM edw_core.tauto_garage_location as agl
+                    WHERE agl.policy_no = aglf.policy_no
+                        AND agl.effective_dt = aglf.effective_dt
+                        AND agl.transaction_seq_no = aglf.transaction_seq_no
+                    FOR JSON PATH
+                ) as AU_Garaging_Locations
+            FROM edw_core.tauto_garage_location as aglf
+        )
+
+
 		SELECT 
             'PolicyDownload' as [MsgTypeCd_001],
             CASE 
@@ -76,14 +347,8 @@ BEGIN
             END as [PhoneTypeCd_026],
             COALESCE(pi.home_phone_no, pi.mobile_phone_no, '') as [PhoneNumber_027],
             pi.email as [EmailAddr_028],
-            CASE 
-                WHEN pi.primary_insured_in = 'Yes' THEN 'Primary'
-                ELSE ''
-            END as [InsuredOrPrincipalRoleCd_029],
-            CASE 
-                WHEN pi.primary_insured_in = 'Yes' THEN 'Primary'
-                ELSE ''
-            END as [InsuredOrPrincipalRoleDesc_030],
+            'Primary' as [InsuredOrPrincipalRoleCd_029],
+            'Primary' as [InsuredOrPrincipalRoleDesc_030],
             p.policy_no as [PolicyNumber_031],
             'P' as [BroadLOBCd_032],
             pr.product_nm as [LOBCd_033],
@@ -136,41 +401,35 @@ BEGIN
                 WHEN ba.payment_plan is null OR ba.payment_method = '' THEN ''
                 ELSE 'N'
             END AS [PaidInFullInd_061],
-            '' as AU_Coverages,
-            '' as AU_Vehicles,
-            '' as AU_Drivers,
-            '' as AU_Garaging_Locations,
+            jac.AU_Coverages,
+            jav.AU_Vehicles,
+            jad.AU_Drivers,
+            jagl.AU_Garaging_Locations,
             pt.transaction_seq_no,
             getdate() as create_ts,
             getdate() as update_ts,
             @etl_audit_sk as etl_audit_sk,
             pt.create_ts as policy_transaction_create_ts
         INTO [edw_temp].[policy_ivans_auto_feed_temp1] 
-        FROM (
-                SELECT DISTINCT policy_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk, item_sk, create_ts, sum(premium_amt) as premium_amt
-			    FROM edw_core.tpolicy_transaction
-                WHERE product_sk = 3 --Auto
-                GROUP BY policy_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk, item_sk, create_ts
-            ) AS pt
+        FROM policy_transaction AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
-        LEFT JOIN edw_core.tpolicy_insured as pi ON p.policy_no = pi.policy_no AND p.effective_dt = pi.effective_dt AND pt.transaction_seq_no = pi.transaction_seq_no
+        LEFT JOIN edw_core.tpolicy_insured as pi ON p.policy_no = pi.policy_no AND p.effective_dt = pi.effective_dt AND pt.transaction_seq_no = pi.transaction_seq_no AND pi.primary_insured_in = 'Yes'
 		LEFT JOIN edw_core.tdate AS d1 ON pt.transaction_effective_dt_sk = d1.date_sk
         LEFT JOIN edw_core.tdate AS d2 ON pt.transaction_dt_sk = d2.date_sk
 		LEFT JOIN edw_core.tcustomer AS c ON pt.customer_sk = c.customer_sk
 		LEFT JOIN edw_core.tproduct AS pr ON p.product_cd = pr.product_cd
 		LEFT JOIN edw_core.tpolicy_transaction_type AS ptt ON pt.policy_transaction_type_sk = ptt.policy_transaction_type_sk
         LEFT JOIN edw_core.tbillingaccount AS ba ON p.billingaccount_sk = ba.billingaccount_sk
-        LEFT JOIN (
-                    SELECT policy_no, effective_dt, transaction_seq_no, max(loss_seq_no) as loss_seq_no 
-                    FROM edw_core.tloss_history
-                    GROUP BY policy_no, effective_dt, transaction_seq_no
-                ) AS lh ON p.policy_no = lh.policy_no AND p.effective_dt = lh.effective_dt AND pt.transaction_seq_no = lh.transaction_seq_no
-        LEFT JOIN (
-                    select original_policy_no, min(effective_dt) as min_effective_dt, min(expiration_dt) as min_expiration_dt 
-                    from edw_core.tpolicy 
-                    group by original_policy_no
-                ) AS op ON p.original_policy_no = op.original_policy_no
-		WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+        LEFT JOIN loss_history AS lh ON p.policy_no = lh.policy_no AND p.effective_dt = lh.effective_dt AND pt.transaction_seq_no = lh.transaction_seq_no
+        LEFT JOIN original_policy AS op ON p.original_policy_no = op.original_policy_no
+        LEFT JOIN json_au_coverages AS jac
+            ON pt.policy_sk = jac.policy_sk AND pt.effective_dt_sk = jac.effective_dt_sk AND pt.transaction_seq_no = jac.transaction_seq_no
+        LEFT JOIN json_au_vehicles AS jav
+            ON p.policy_no = jav.policy_no AND p.effective_dt = jav.effective_dt AND pt.transaction_seq_no = jav.transaction_seq_no
+        LEFT JOIN json_au_garaging_locations AS jagl
+            ON p.policy_no = jagl.policy_no AND p.effective_dt = jagl.effective_dt AND pt.transaction_seq_no = jagl.transaction_seq_no
+        LEFT JOIN json_au_drivers AS jad
+            ON p.policy_no = jad.policy_no AND p.effective_dt = jad.effective_dt AND pt.transaction_seq_no = jad.transaction_seq_no
         ;
 
         -- Start Insert process
