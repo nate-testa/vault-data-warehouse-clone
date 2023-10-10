@@ -1,8 +1,13 @@
-﻿-- =============================================
+﻿-- ========================================================================================================
 -- Author:		Hernando Gonzalez Garcia
--- Create Date: 2023-08-11
 -- Description: This stored procedure insert and update info related to Collection Location.
--- =============================================
+-----------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+-----------------------------------------------------------------------------------------------------------
+-- 08/11/23		Hernando Gonzalez Garcia		1. Created this procedure 
+-- 10/09/23		Architha Gudimalla				2. Made changes after sandeep renamed the coll tables
+-- ======================================================================================================== 
+
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_location]
 AS
 BEGIN

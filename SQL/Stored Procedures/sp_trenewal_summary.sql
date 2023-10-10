@@ -77,7 +77,9 @@ BEGIN
 		where	yearmonth >  case when @in_yearmonth is null then @last_source_yearmonth end
 		  and   yearmonth <= case when @in_yearmonth is null then concat(datepart(yyyy,getdate()),iif(datepart(mm,getdate()) < 10,'0','') ,datepart(mm,getdate()) ) end
 		group by yearmonth
-		order by 1;    
+		order by 1; 
+
+		print 'aa'   
 
 		DECLARE @parameter_desc VARCHAR(255) 
 
@@ -85,6 +87,8 @@ BEGIN
 		FETCH NEXT FROM c1_rec INTO @yearmonth; 
 		WHILE @@FETCH_STATUS = 0
 			BEGIN
+
+			print @yearmonth
 
 				SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 				EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;  
@@ -163,10 +167,10 @@ BEGIN
 								then 1
 								else 0
 								end) as cancel_sixty_days_ind, 
-						count(distinct CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
-								  and tt.policy_transaction_type_nm in ('Cancellation') --('Cancellation'')
-								  and  (transaction_dt_sk - expiration_dt_sk >= 61)
-								then pol.policy_sk  
+						sum( CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
+								  and tt.policy_transaction_type_nm in ('Cancellation') --('Cancellation'') 
+								then 1
+								else 0
 								end) cancel_ind, --expiring_ind, --all_cancelled_policy_num,
 						sum(CASE WHEN tr.policy_transaction_sk = sixty_day_pol_tr.policy_transaction_sk
 								  then hoc.total_insured_value_amt  
@@ -322,7 +326,7 @@ BEGIN
 				SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 				if @in_yearmonth is not null
 				begin
-					set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_yearmonth AS VARCHAR(200))
+					set @parameter_desc= 'last_source_extract_ts = ' + CAST(@yearmonth AS VARCHAR(200))
 				end 
 				EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc; 
 				 
