@@ -6,6 +6,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 08/14/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 10/09/23		Architha Gudimalla				2. Made changes after sandeep renamed the coll tables
+-- 10/09/23		Sandeep Gundreddy				3. renamed temp table name
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_coverage]
@@ -31,7 +32,7 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) --20230717 added
 
 		-- Step1 limit amount of rows.
-		DROP TABLE IF EXISTS [edw_temp].[tcollection_additional_coverage_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[tcollection_coverage_temp1];
 
 		DECLARE @ColumnsToPivot NVARCHAR(MAX)=''
 		SELECT @ColumnsToPivot+=QUOTENAME(Field) + ','
@@ -60,7 +61,7 @@ BEGIN
 			--,4 as [source_system_sk] --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
-			INTO [edw_temp].[tcollection_additional_coverage_temp1]
+			INTO [edw_temp].[tcollection_coverage_temp1]
 			FROM
 			(
 				SELECT acct.Id, acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, acc.PolicyChangeNumber
@@ -229,13 +230,13 @@ BEGIN
 		SELECT 
 			[PolicyNumber],[EffectiveDate],[IssuedDate],[ExpirationDate],[transaction_dt],[PolicyChangeNumber],[collection_location_sk],[policy_history_sk],[UnoccupiedMoreThanThreeMonths],[NumberOfLossesLastThreeYears],[ProtectionClass],[Terrain],[DistanceToCoast],[RoofGeometry],[RoofCovering],[RoofCoverDeck],[RoofDeckAttachment],[RoofWallAttachment],[HailResistantRating],[SecondaryWaterResistance],[ConstructionType],[YearBuilt],[FireProtection],[OpeningProtection],[NumberOfStories],[CentralReportingFireAlarm],[CentralReportingBurglarAlarm],[HomeSafe],[FulltimeLiveInCaretaker],[BackupGenerator],[ResidentialSprinklerSystem],[MarketValueScheduledItems],[MarketScheduledClassBankVaultedJewelry],[MarketScheduledClassCoins],[MarketScheduledClassCollectibles],[MarketScheduledClassFineArts],[MarketScheduledClassFurs],[MarketScheduledClassGuns],[MarketScheduledClassWorldwideJewelry],[MarketScheduledClassMiscellaneous],[MarketScheduledClassMusicalInstruments],[MarketScheduledClassSilver],[MarketScheduledClassStamps],[MarketScheduledClassWearableCollectibles],[MarketScheduledClassWine],[MinimumEarnedPremiumEndorsement],[MinimumEarnedPremiumEndorsementLimit],[WardrobeLossPrevention],[CompanionCreditHomeowner],[AgreedValue],[AgreedValueSpecifiedClass],[AgreedValueSpecifiedClassBankVaultedJewelry],[AgreedValueSpecifiedClassCoins],[AgreedValueSpecifiedClassCollectibles],[AgreedValueSpecifiedClassFineArts],[AgreedValueSpecifiedClassFurs],[AgreedValueSpecifiedClassGuns],[AgreedValueSpecifiedClassWorldwideJewelry],[AgreedValueSpecifiedClassMiscellaneous],[AgreedValueSpecifiedClassMusicalInstruments],[AgreedValueSpecifiedClassSilver],[AgreedValueSpecifiedClassStamps],[AgreedValueSpecifiedClassWearableCollectibles],[AgreedValueSpecifiedClassWine],[AgreedValueSpecifiedItems],[AlarmWarranty],[BreakageExclusion],[TerrorismLimitation],[TerrorismLimitationAmount],[TheftMysteriousDisappearanceExclusion],[TransitLimit],[TransitLimitAmount],[HurricaneLossExclusion],[HurricaneLossLimitation],[HurricaneLossLimitationAmount],[OutdoorFineArtHurricaneExclusion],[TerrorismExclusion],[DeletionofCosmeticMarringExclusion],[EarthquakeExclusion],[EarthquakeDeductibleLossLimitation],[EarthquakeDeductibleLossLimitationLimit],[HotelMotelExclusion],[JewelryOffPremisesLossLimitation],[SpoilageExclusion],[ChangeinTermsSummary],[ChangeinTermsOptions],[Manuscript],[CoverageDeductible],[CoverageDeductibleAmount],[HurricaneDeductible],[HurricaneDeductibleType],[HurricaneDeductibleLimit],[EarthquakeDeductible],[EarthquakeDeductibleAmount],[WildfireDeductible],[WildfireDeductibleType],[WildfireDeductibleAmount],[WildfireBarkMulchWithinTenFeetofAnyStructure],[WildfireCombustibleDeckOrAttachedStructure],[WildfireCombustibleWoodSiding],[WildfireDefensibleSpace],[WildfireDistanceToHighFuelFeet],[WildfireDistanceToModerateFuelFeet],[WildfireDistanceToVeryHighFuelFeet],[WildfireEavesorEnclosedEaves],[WildfireExteriorWildfireSprinklers],[WildfireFireWoodOrCombustiblesStoredAgainstHome],[WildfireFlammableVegetationWithinTenFeetofAnyStructure],[WildfireGutterGuards],[WildfireHazardSeverity],[WildfireNearestDistanceToPerimeter],[WildfireNumberOfOccurrencesNear],[WildfireNumberOfOccurrences],[WildfirePermanentlyInstalledSpraySystem],[WildfirePortableFireBreakSystem],[WildfireSpecialityEmberResistantVenting],[WildfireThreat],[WildfireWoodShakeOrShingleRoof],[CoutureAndWearableCollectiblesClassCouture],[source_system_sk],getdate(),getdate(), @etl_audit_sk
 		FROM
-			[edw_temp].[tcollection_additional_coverage_temp1] 
+			[edw_temp].[tcollection_coverage_temp1] 
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.IssuedDate) FROM edw_temp.[tcollection_additional_coverage_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.IssuedDate) FROM edw_temp.[tcollection_coverage_temp1] t1),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS edw_temp.[tcollection_additional_coverage_temp1];
+        DROP TABLE IF EXISTS edw_temp.[tcollection_coverage_temp1];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
