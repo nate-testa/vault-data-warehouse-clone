@@ -2,6 +2,7 @@
 -- Author:		Hernando Gonzalez Garcia
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert and update info related to Collection Item Detail 
+-- 10/09/23		Sandeep  Gundreddy				2. Added Homeowners to product filter
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_scheduled_item]
 AS
@@ -71,7 +72,7 @@ BEGIN
 				LEFT JOIN [edw_core].[tpolicy_history] his ON his.policy_no = acc.PolicyNumber and his.effective_dt = acc.EffectiveDate and his.transaction_seq_no = acc.policychangenumber
 				LEFT JOIN [edw_core].[tcollection_class_type] ct on ct.policy_no = acc.PolicyNumber and ct.effective_dt = acc.EffectiveDate and ct.transaction_seq_no = acc.policychangenumber
 			WHERE
-				p.[Name]='Collections'
+				p.[Name] in ('Collections','Homeowners')
 				AND acct.ObjectType = 'CollectionClassScheduleItem'
 				AND p.ProductLine='PersonalLines' --20230717 added
 			) t

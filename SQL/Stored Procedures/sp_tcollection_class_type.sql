@@ -6,6 +6,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 08/16/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 10/09/23		Architha Gudimalla				2. Made changes after sandeep renamed the coll tables
+-- 10/09/23		Sandeep  Gundreddy				3. Added Homeowners to product filter
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_class_type]
@@ -31,7 +32,7 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) --20230717 added
 
 		-- Step1 limit amount of rows.
-		DROP TABLE IF EXISTS [edw_temp].[tcollection_coverage_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[tcollection_class_type_temp1];
 		SELECT 
 			Id, PolicyNumber, EffectiveDate, IssuedDate, ExpirationDate, transaction_dt, PolicyChangeNumber
 			,collection_location_sk, policy_history_sk, collection_coverage_sk, home_coverage_sk
@@ -39,7 +40,7 @@ BEGIN
 			--,4 as [source_system_sk] --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
-		INTO [edw_temp].[tcollection_coverage_temp1]
+		INTO [edw_temp].[tcollection_class_type_temp1]
 		FROM
 			(
 			SELECT
@@ -69,7 +70,7 @@ BEGIN
 				LEFT JOIN [edw_core].[thome_coverage] hcov on hcov.policy_no = acc.PolicyNumber and hcov.effective_dt = acc.EffectiveDate and hcov.transaction_seq_no = acc.policychangenumber
 				LEFT JOIN [edw_core].[tpolicy_history] his ON his.policy_no = acc.PolicyNumber AND his.effective_dt=acc.EffectiveDate AND his.transaction_seq_no = acc.policychangenumber
 			WHERE
-				p.[Name]='Collections'
+				p.[Name] in ('Collections','Homeowners')
 				AND acct.ObjectType = 'CollectionClass'
 				AND p.ProductLine='PersonalLines' --20230717 added
 			) t
@@ -126,13 +127,13 @@ BEGIN
            ,getdate()
 		   ,@etl_audit_sk
 		FROM 
-			[edw_temp].[tcollection_coverage_temp1]
+			[edw_temp].[tcollection_class_type_temp1]
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.IssuedDate) FROM edw_temp.[tcollection_coverage_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.IssuedDate) FROM edw_temp.[tcollection_class_type_temp1] t1),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS edw_temp.[tcollection_coverage_temp1];
+        DROP TABLE IF EXISTS edw_temp.[tcollection_class_type_temp1];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
