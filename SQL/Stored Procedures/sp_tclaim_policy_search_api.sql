@@ -61,7 +61,7 @@ BEGIN
 		LEFT JOIN edw_core.thome_location AS hl ON pt.item_sk = hl.home_location_sk
 		LEFT JOIN edw_core.tauto_vehicle_coverage AS avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
 		LEFT JOIN edw_core.tauto_vehicle AS av ON pt.item_sk = av.auto_vehicle_sk
-		
+		WHERE avc.vehicle_deleted_in = 'No'
 
 
 		-- Start Insert process
