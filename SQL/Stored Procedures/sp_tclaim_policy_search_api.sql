@@ -41,6 +41,7 @@ BEGIN
 				CASE 
 					WHEN p.product_cd in ('PEL','LUX') THEN CONCAT(p.mailing_address_line1,'-',p.mailing_address_line2,'-',p.mailing_address_unit_no,'-',p.mailing_address_city_nm,'-',p.mailing_address_state_cd,'-',p.mailing_address_zip_cd)
 					WHEN p.product_cd = 'HO' THEN CONCAT(hl.address_line_1,'-',hl.address_line_2,'-',hl.unit_no,'-',hl.city_nm,'-',hl.state_cd,'-',hl.zip_cd)
+					WHEN p.product_cd = 'AU' THEN av.vehicle_vin
 					ELSE '***!Pending!***'
 				END as risk_item,
 				ss.source_system_nm,
@@ -55,6 +56,8 @@ BEGIN
 		LEFT JOIN edw_core.tpolicy_transaction_type AS ptt ON pt.policy_transaction_type_sk = ptt.policy_transaction_type_sk
 		LEFT JOIN edw_core.tsource_system AS ss ON pt.source_system_sk = ss.source_system_sk
 		LEFT JOIN edw_core.thome_location AS hl ON pt.item_sk = hl.home_location_sk
+		LEFT JOIN edw_core.tauto_vehicle_coverage AS avc ON p.policy_no = avc.policy_no AND p.effective_dt = avc.effective_dt AND pt.transaction_seq_no = avc.transaction_seq_no
+		LEFT JOIN edw_core.tauto_vehicle AS av ON avc.auto_vehicle_sk = av.auto_vehicle_sk
 		WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
 
 
