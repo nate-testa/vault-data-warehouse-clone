@@ -284,7 +284,7 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
-            t1.vehicle_deleted_in
+            CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in
         FROM 
             [edw_temp].[tauto_vehicle_coverage_temp1] AS t1
         ;
