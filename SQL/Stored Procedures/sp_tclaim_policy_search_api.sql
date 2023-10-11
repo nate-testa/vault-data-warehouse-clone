@@ -47,8 +47,11 @@ BEGIN
 				ss.source_system_nm,
 				pt.create_ts as policy_transaction_create_ts
 		INTO [edw_temp].[tclaim_policy_search_api_temp1] 
-		FROM (SELECT DISTINCT policy_sk, transaction_seq_no, transaction_effective_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk, item_sk, create_ts
-				FROM edw_core.tpolicy_transaction) AS pt
+		FROM (
+				SELECT DISTINCT policy_sk, transaction_seq_no, transaction_effective_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk, item_sk, vehicle_coverage_sk, create_ts
+				FROM edw_core.tpolicy_transaction
+				WHERE cast(create_ts as datetime2(7)) > @last_source_extract_ts
+			) AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
 		LEFT JOIN edw_core.tdate AS d2 ON pt.transaction_effective_dt_sk = d2.date_sk
 		LEFT JOIN edw_core.tcustomer AS c ON pt.customer_sk = c.customer_sk
@@ -56,9 +59,9 @@ BEGIN
 		LEFT JOIN edw_core.tpolicy_transaction_type AS ptt ON pt.policy_transaction_type_sk = ptt.policy_transaction_type_sk
 		LEFT JOIN edw_core.tsource_system AS ss ON pt.source_system_sk = ss.source_system_sk
 		LEFT JOIN edw_core.thome_location AS hl ON pt.item_sk = hl.home_location_sk
-		LEFT JOIN edw_core.tauto_vehicle_coverage AS avc ON p.policy_no = avc.policy_no AND p.effective_dt = avc.effective_dt AND pt.transaction_seq_no = avc.transaction_seq_no
-		LEFT JOIN edw_core.tauto_vehicle AS av ON avc.auto_vehicle_sk = av.auto_vehicle_sk
-		WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+		LEFT JOIN edw_core.tauto_vehicle_coverage AS avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
+		LEFT JOIN edw_core.tauto_vehicle AS av ON pt.item_sk = av.auto_vehicle_sk
+		
 
 
 		-- Start Insert process
