@@ -7,9 +7,9 @@ GO
 -- =================================================================================================
 -- Author:		Hernando Gonzalez Garcia
 -- Create Date: 2023-10-05
--- Description: This stored search data related to Policy Customer
+-- Description: This stored search data related to Billing Account
 -- ================================================================================================= 
-CREATE OR ALTER PROCEDURE [edw_integration].[sp_policy_customer_portal_api_search]
+CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_billing_account_customer_portal_api_search]
 (
   @billingaccount_no varchar(255)
 )
@@ -20,15 +20,26 @@ BEGIN
     SET NOCOUNT ON
 
 	SELECT
-	[policy_no]
-      ,[billingaccount_no]
-      ,[product_nm]
-      ,[insured_nm]
+	[billingaccount_no]
+      ,[first_nm]
+      ,[last_nm]
+      ,[mailing_address_line_1]
+      ,[mailing_address_line_2]
+      ,[mailing_city_nm]
+      ,[mailing_state_cd]
+      ,[mailing_zip_cd]
+      ,[email]
+      ,[auto_pay_in]
+      ,[birth_dt]
+      ,[effective_dt]
+      ,[expiration_dt]
+      ,[payor_nm]
+      ,[phone_no]
       ,[create_ts]
       ,[update_ts]
       ,[etl_audit_sk]
 	FROM
-	[edw_integration].[policy_customer_portal_api]
+	[edw_integration].[billing_account_customer_portal_api]
 	WHERE  
 		[billingaccount_no]=@billingaccount_no
 END

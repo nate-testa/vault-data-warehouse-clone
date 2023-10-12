@@ -10,7 +10,7 @@ GO
 -- Create Date: 2023-10-05
 -- Description: This stored procedure insert and update info related to Policy Customer
 -- =============================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_customer_portal_api]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_get_policy_customer_portal_api]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
