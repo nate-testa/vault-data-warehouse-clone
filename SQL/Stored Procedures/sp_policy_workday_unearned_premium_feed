@@ -1,0 +1,151 @@
+-- =================================================================================================
+-- Author:		Yunus Mohammed
+-- Create Date: 09/13/2023
+-- Description: This procedures inserts unearned premium data
+
+CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
+AS
+BEGIN
+	DECLARE @ProcedureName NVARCHAR(120)
+    SET @ProcedureName = OBJECT_NAME(@@PROCID)
+	BEGIN TRY
+		DECLARE @last_source_extract_ts DATETIME2(7)
+		DECLARE @etl_audit_sk INT
+		DECLARE @new_last_source_extract_ts DATETIME2(7)
+		DECLARE @rows_affected INT
+		DECLARE @process_nm VARCHAR(255)=@ProcedureName
+		DECLARE @current_date DATETIME=GETDATE()
+		DECLARE @parameter_desc VARCHAR(255)
+
+		-- Get last source extract date
+		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+
+		DECLARE @year_month INT
+		DECLARE @acounting_date_sk int,@last_day_month date
+
+		DECLARE cur_main CURSOR FOR
+		SELECT yearmonth
+		FROM edw_core.tdate
+		WHERE
+			actual_dt >= CAST(@last_source_extract_ts AS DATE)
+			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
+		GROUP BY yearmonth
+		ORDER BY yearmonth
+
+		OPEN cur_main
+		FETCH NEXT FROM cur_main INTO @year_month
+		
+		WHILE @@FETCH_STATUS = 0
+		BEGIN
+			EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;  
+	
+			SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+
+			SELECT @acounting_date_sk=date_sk, @last_day_month=actual_dt FROM edw_core.tdate WHERE yearmonth=@year_month and month_end_in='Y';
+		
+			DELETE FROM edw_integration.policy_workday_unearned_premium_feed WHERE accounting_date=@last_day_month;
+
+			WITH policy_workday_unearned_premium_feed_temp AS
+			(
+				SELECT
+				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
+				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
+				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
+				aslob,sum(amount) as amount,sum(unearned) as unearned,contribcutoffdate,
+				getdate() as extraction_time,
+				getdate() as create_ts,
+				getdate() as update_ts,
+				@etl_audit_sk AS etl_audit_sk
+			FROM
+			(
+			 SELECT
+				distinct
+				@last_day_month AS [accounting_date],
+				tp.policy_sk AS policy_image_id,
+				tp.policy_no AS [policy_number],
+				tp.product_cd AS [product],
+				tp.uw_company_nm AS [company],
+				GREATEST(tdeff.actual_dt,tdpro.actual_dt) AS [transaction_date],
+				tpts.transaction_seq_no AS transaction_sequence,
+				tp.effective_dt AS [effective_date],
+				tp.expiration_dt AS [expiration_date],
+				tptt.policy_transaction_type_cd AS [transaction_type],
+				CAST(tb.broker_id AS VARCHAR(100)) AS producer_code,
+				tb.broker_nm AS agency_name,
+				NULL AS number_of_installments,
+				tp.insured_nm AS insured_name,
+				tp.mailing_address_line1 AS [address],
+				tp.mailing_address_county_nm AS county,
+				tp.mailing_address_city_nm  AS city,
+				tp.risk_state_cd AS risk_state,
+				tp.mailing_address_zip_cd AS zip,
+				NULL AS fire_protection,
+				tic.internal_coverage_category_nm  AS [category],
+				null as subcategory,
+				tic.internal_coverage_sk as financial_category_id,
+				tic.internal_coverage_desc AS [financial_category_name],
+				tic.aslob_cd AS [aslob],
+				tpts.premium_amt AS [amount],
+				tpts.unearned_premium_amt AS [unearned],
+				null as contribcutoffdate
+			FROM
+			edw_core.tpolicy_transaction_summary tpts
+			INNER JOIN edw_core.tpolicy tp on tp.policy_sk=tpts.policy_sk
+			INNER JOIN edw_core.tdate tdeff on tdeff.date_sk=tpts.transaction_effective_dt_sk
+			INNER JOIN edw_core.tdate tdpro on tdpro.date_sk=tpts.transaction_dt_sk
+			INNER JOIN edw_core.tpolicy_transaction_type tptt on tptt.policy_transaction_type_sk=tpts.policy_transaction_type_sk
+			INNER JOIN edw_core.tbroker tb on tb.broker_sk=tpts.broker_sk
+			LEFT JOIN edw_core.tinternal_coverage tic ON tic.internal_coverage_sk=tpts.internal_coverage_sk
+			WHERE
+				tpts.month_sk=@acounting_date_sk
+				AND (tic.internal_coverage_category_nm = 'Premium' OR tic.internal_coverage_desc like 'Subscriber Contribution%')
+			) AS t
+			GROUP BY
+				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
+				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
+				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
+				aslob,contribcutoffdate
+			)		
+		
+			INSERT INTO edw_integration.policy_workday_unearned_premium_feed
+			(
+				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
+				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
+				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
+				aslob,amount,unearned,contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
+			)
+			SELECT
+				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
+				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
+				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
+				aslob,amount,unearned,NULL AS contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
+			FROM
+				policy_workday_unearned_premium_feed_temp
+
+			SET @rows_affected=@@ROWCOUNT;
+
+			-- Update control table
+			SET @new_last_source_extract_ts=COALESCE(@last_day_month,@last_source_extract_ts); 	
+			EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
+
+			-- Update audit table
+			SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+			EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;		
+
+			SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+			FETCH NEXT FROM cur_main INTO @year_month;
+		END
+	
+		CLOSE cur_main;
+
+		DEALLOCATE cur_main;
+	END TRY
+	BEGIN CATCH
+		DECLARE @error_message nvarchar(4000)
+		SET @error_message = 'Error Number:' + CAST(ERROR_NUMBER() AS NVARCHAR(100)) + ' Error State:' + CAST(ERROR_STATE() AS NVARCHAR(100))
+							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
+							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
+							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+	END CATCH
+END
