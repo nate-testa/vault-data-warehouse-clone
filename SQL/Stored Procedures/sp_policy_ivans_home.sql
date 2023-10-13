@@ -1,4 +1,4 @@
-/****** Object:  StoredProcedure [edw_core].[sp_policy_ivans_home]    Script Date: 10/10/2023 5:46:00 p. m. ******/
+/****** Object:  StoredProcedure [edw_core].[sp_policy_ivans_home]    Script Date: 13/10/2023 3:54:51 p. m. ******/
 SET ANSI_NULLS ON
 GO
 
@@ -7,8 +7,9 @@ GO
 
 
 
+
 -- =============================================
--- Author:		Hernando González García
+-- Author:		Hernando Gonzalez Garcia
 -- Create Date: 2023-08-28
 -- Description: This procedures insert and update info related to IVANS Home
 -- =============================================
@@ -300,7 +301,7 @@ BEGIN
 					SELECT 
 						policyNumber
 						,CONCAT('L', ROW_NUMBER() OVER (PARTITION BY policyNumber, transaction_seq_no ORDER BY policyNumber, transaction_seq_no, (CONCAT(address1, '-', city, '-', [state], '-', RIGHT('00000' + zip, 5), '-', county)))) as location_no
-						,coverageType, IVANS_coverage_cd, coverageTypeDesc, ScheduledInd, InVaultInd, classType, limit, premium, saLimit, hviLimit, address1, address2, city, county, [state], zip, riskType
+						,coverageType, coverageCd, coverageTypeDesc, ScheduledInd, InVaultInd, classType, limit, premium, saLimit, hviLimit, address1, address2, city, county, [state], zip, riskType
 					FROM
 					(
 						SELECT 
@@ -326,7 +327,7 @@ BEGIN
 								when tcct.class_type = 'Wine' then 'SCHWINE'
 								when tcct.class_type = 'Stamps' then 'SCHSTMPS'
 								else ''
-							end as IVANS_coverage_cd--coverageCd
+							end as coverageCd
 							,'Scheduled Personal Property' as coverageTypeDesc
 							,1 as scheduledInd
 							,CASE WHEN tcct.class_type = 'Bank Vaulted Jewelry' THEN 1 ELSE 0 END AS inVaultInd
@@ -352,10 +353,14 @@ BEGIN
 						ON tp.policy_no = tcc.policy_no
 						AND tp.effective_dt = tcc.effective_dt
 						AND pt.transaction_seq_no = tcc.transaction_seq_no
+						LEFT JOIN edw_core.thome_coverage thc
+						ON tp.policy_no = thc.policy_no
+						AND tp.effective_dt = thc.effective_dt
+						AND pt.transaction_seq_no = thc.transaction_seq_no
 						LEFT JOIN edw_core.tcollection_location tcl
 						on tcc.collection_location_sk = tcl.collection_location_sk
 						LEFT JOIN edw_core.tcollection_class_type tcct
-						on tcc.collection_coverage_sk = tcct.collection_coverage_sk
+						on thc.home_coverage_sk = tcct.home_coverage_sk
 						LEFT JOIN edw_core.tinternal_coverage as ic
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
 						WHERE coalesce(pt.premium_amt, 0) + coalesce(tcct.scheduled_limit_amt, 0) + coalesce(tcct.scheduled_highest_value_limit_amt, 0) <> 0 
@@ -412,10 +417,14 @@ BEGIN
 						ON tp.policy_no = tcc.policy_no
 						AND tp.effective_dt = tcc.effective_dt
 						AND pt.transaction_seq_no = tcc.transaction_seq_no
+						LEFT JOIN edw_core.thome_coverage thc
+						ON tp.policy_no = thc.policy_no
+						AND tp.effective_dt = thc.effective_dt
+						AND pt.transaction_seq_no = thc.transaction_seq_no
 						LEFT JOIN edw_core.tcollection_location tcl
 						on tcc.collection_location_sk = tcl.collection_location_sk
 						LEFT JOIN edw_core.tcollection_class_type tcct
-						on tcc.collection_coverage_sk = tcct.collection_coverage_sk
+						on thc.home_coverage_sk = tcct.home_coverage_sk
 						LEFT JOIN edw_core.tinternal_coverage as ic
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
 						WHERE coalesce(pt.premium_amt, 0) + coalesce(tcct.blanket_limit_amt, 0) + coalesce(tcct.blanket_single_article_limit_amt, 0) + coalesce(tcct.blanket_highest_value_limit_amt, 0) <> 0 
@@ -427,6 +436,14 @@ BEGIN
 					FOR JSON PATH, INCLUDE_NULL_VALUES 
 				) Home_Collection_Coverages
 			FROM policy_transaction as ptf
+        ),
+		loss_history AS (
+            SELECT 
+                policy_no, effective_dt, transaction_seq_no, max(loss_seq_no) as loss_seq_no 
+            FROM 
+                edw_core.tloss_history
+            GROUP BY 
+                policy_no, effective_dt, transaction_seq_no
         )
 
 		SELECT 
@@ -724,7 +741,7 @@ BEGIN
 		on hc.home_coverage_sk = hac.home_coverage_sk
 		LEFT JOIN [edw_core].[thome_location] hl
 		on hc.home_location_sk = hl.home_location_sk
-		LEFT JOIN [edw_core].[tloss_history] lh
+		LEFT JOIN loss_history lh
 		on p.policy_no = lh.policy_no
 		AND p.effective_dt = lh.effective_dt
 		AND pt.transaction_seq_no = lh.transaction_seq_no
