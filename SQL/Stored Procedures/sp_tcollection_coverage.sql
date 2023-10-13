@@ -45,7 +45,7 @@ BEGIN
 			INNER JOIN edw_stage.[ProductObject] pdo on pd.Id=pdo.ProductId
 			INNER JOIN edw_stage.[ProductObjectField] pdof on pdo.Id=pdof.ProductObjectId
 			WHERE
-				pd.[Name] in ('Collections')
+				pd.[Name] = 'Collections'
 				AND pdo.ObjectType='Collection'
 				AND pd.ProductLine='PersonalLines' --20230717 added
 		) AS ColumnsToPivot_temp
