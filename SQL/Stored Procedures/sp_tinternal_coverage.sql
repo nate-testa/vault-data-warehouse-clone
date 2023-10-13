@@ -50,8 +50,7 @@ BEGIN
 		inner join edw_stage.Product p on p.Id=pc.ProductsId
 		WHERE	nullif(label,'') IS NOT NULL 
 		and p.ProductLine='PersonalLines'
-		and		GREATEST(atcp.CreatedDate,c.UpdatedDate)>@last_source_extract_ts
-		and nullif(label,'') not in ('2020 BMW 540I XDRIVE')
+		and		GREATEST(atcp.CreatedDate,c.UpdatedDate)>@last_source_extract_ts 
 		GROUP BY atcp.label, p.ProductCode, atcp.label, c.Aslob, nullif(trim(atcp.coverage) ,'') 
 		union all
 		SELECT	nullif(trim(replace(accttf.name, '  ',' ')),'') as tax_fee_surcharge_name, 
