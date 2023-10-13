@@ -8,6 +8,7 @@
 -- 10/09/23		Architha Gudimalla				2. Made changes after sandeep renamed the coll tables
 -- 10/09/23		Sandeep  Gundreddy				3. Added Homeowners to product filter
 -- 10/13/23		Architha Gudimalla				4. Added item no
+-- 10/13/23		Architha Gudimalla				5. Updated the parentid join to get the correct class type
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_scheduled_item]
@@ -75,8 +76,9 @@ BEGIN
 				LEFT JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
 				LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
 				LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
+				LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] pid ON pid.versionobjectid = acct.parentobjectid and pid.Field = 'ClassType'
 				LEFT JOIN [edw_core].[tpolicy_history] his ON his.policy_no = acc.PolicyNumber and his.effective_dt = acc.EffectiveDate and his.transaction_seq_no = acc.policychangenumber
-				LEFT JOIN [edw_core].[tcollection_class_type] ct on ct.policy_no = acc.PolicyNumber and ct.effective_dt = acc.EffectiveDate and ct.transaction_seq_no = acc.policychangenumber
+				LEFT JOIN [edw_core].[tcollection_class_type] ct on ct.policy_no = acc.PolicyNumber and ct.effective_dt = acc.EffectiveDate and ct.transaction_seq_no = acc.policychangenumber and pid.value = ct.class_type 
 			WHERE
 				p.[Name] in ('Collections','Homeowners')
 				AND acct.ObjectType = 'CollectionClassScheduleItem'
