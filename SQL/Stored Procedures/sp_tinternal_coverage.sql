@@ -40,7 +40,8 @@ BEGIN
 		SELECT	nullif(trim(atcp.label),'') internal_coverage_cd,
 				p.ProductCode  as product_cd, 
 				nullif(trim(c.Aslob),'') as aslob_cd,
-				'Premium' ic_type, nullif(trim(atcp.coverage) ,'') coverage,
+				'Premium' ic_type, 
+				nullif(trim(atcp.coverage) ,'') coverage,
 				max(atcp.CreatedDate)  as CreatedDate,
 				max(atcp.UpdatedDate) as  UpdatedDate
  		INTO edw_temp.tinternal_coverage_temp1
@@ -76,8 +77,7 @@ BEGIN
 		MERGE edw_core.tinternal_coverage AS Target
 		USING edw_temp.tinternal_coverage_temp1 AS Source
 		ON Source.internal_coverage_cd = Target.internal_coverage_cd 
-		AND Source.product_cd = Target.product_cd
-		--AND isnull(Source.coverage,'') = isnull(Target.primary_coverage_cd,'')
+		AND Source.product_cd = Target.product_cd 
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
