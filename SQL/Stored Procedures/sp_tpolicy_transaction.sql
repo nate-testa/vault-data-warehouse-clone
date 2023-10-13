@@ -19,6 +19,7 @@ GO
 -- 10/05/23		Architha Gudimalla				9. Moved out updates at the end to another proc
 --												   Removed pel loc join
 --												   Corrected ceded premium
+-- 10/13/23		Architha Gudimalla				10. corrected transaction_type_sk logic
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -77,7 +78,7 @@ BEGIN
 			tmp1.CreatedDate,
 			iif(tmp1.TransactionEffectiveDate > tmp1.IssuedDate, tmp1.TransactionEffectiveDate, tmp1.IssuedDate) cal_mn,
 			tmp1.UpdatedDate,
-			iif(isrenewal=1,'RENEWAL',tmp1.stage) as stage,
+			iif(acct.isrenewal=1,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage,
 			acctrcp.Coverage ,acctrcp.label,
 			COALESCE (acctrcp.PremiumDeltaProRated ,premium) as wp, 
 			COALESCE (acctrcp.Premiumdelta ,premium) as ap,
@@ -87,6 +88,7 @@ BEGIN
 			COALESCE(acctrcp.CededPremiumDeltaProRated,acctrcp.CededPremium) as ceded_premium_amt
 		INTO edw_temp.tpolicy_transaction_temp2  
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
+		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
 		inner join edw_stage.AccountTransactionCoveragePremium acctrcp on acctrcp.AccountTransactionId = tmp1.Id
 		left join edw_stage.AccountTransactionVersionObject acctrvo on acctrcp.objectid=acctrvo.id 
 		--where premium!=0  
@@ -107,7 +109,7 @@ BEGIN
 			tmp1.CreatedDate,
 			iif(tmp1.TransactionEffectiveDate > tmp1.CreatedDate, tmp1.TransactionEffectiveDate, tmp1.CreatedDate) cal_mn,
 			tmp1.UpdatedDate,
-			iif(isrenewal=1,'RENEWAL',tmp1.stage) as stage,
+			iif(acct.isrenewal=1,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage, 
 			--ROW_NUMBER() OVER (PARTITION BY tmp1.PolicyNumber, tmp1.EffectiveDate, tmp1.PolicyChangeNumber ORDER BY tmp1.CreatedDate DESC) AS PolicyNumber_Rank,
 			acctrtf.Name, '',
 			COALESCE (acctrtf.AmountDeltaProRated ,acctrtf.Amount) as wp, 
@@ -118,6 +120,7 @@ BEGIN
 			0 as ceded_premium_amt
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
 		inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = tmp1.Id 
+		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
 
 		-- Start Inserting records
 		INSERT INTO edw_core.tpolicy_transaction 

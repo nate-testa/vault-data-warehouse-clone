@@ -6,6 +6,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 08/11/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 10/09/23		Architha Gudimalla				2. Made changes after sandeep renamed the coll tables
+-- 10/09/23		Architha Gudimalla				3. Updated the merge statement
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_location]
@@ -93,7 +94,7 @@ BEGIN
 				FROM 
 					[edw_temp].[tcollection_location_temp1] t1
 		) AS Source
-		ON Source.PolicyNumber = Target.[policy_no]
+		ON Source.PolicyNumber = Target.[policy_no] and cast(Source.EffectiveDate as date) = Target.effective_Dt
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
@@ -114,12 +115,23 @@ BEGIN
            ,[update_ts]
            ,[etl_audit_sk]
 			)
-		VALUES (Source.PolicyNumber, Source.EffectiveDate, Source.[address_line_1], Source.[address_line_2], Source.[unit_no], Source.[city_nm], Source.[state_cd], Source.[zip_cd], Source.[county_nm], Source.[country_nm], Source.[longitude], Source.[latitude], Source.[source_system_sk], getdate(), getdate(), @etl_audit_sk)
+		VALUES (Source.PolicyNumber, Source.EffectiveDate, Source.[address_line_1], Source.[address_line_2], 
+			    Source.[unit_no], Source.[city_nm], Source.[state_cd], Source.[zip_cd], 
+				Source.[county_nm], Source.[country_nm], Source.[longitude], Source.[latitude],
+				 Source.[source_system_sk], getdate(), getdate(), @etl_audit_sk)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-        Target.[longitude]	= Source.[longitude],
-        Target.[latitude]= Source.[latitude];
+        Target.[longitude]		= Source.[longitude],
+        Target.[latitude]		= Source.[latitude],
+        Target.[address_line_1]	= Source.[address_line_1],
+        Target.[address_line_2]	= Source.[address_line_2],
+        Target.[unit_no]		= Source.[unit_no],
+        Target.[city_nm]		= Source.[city_nm],
+        Target.[state_cd]		= Source.[state_cd],
+        Target.[zip_cd]			= Source.[zip_cd],
+        Target.[county_nm]		= Source.[county_nm],
+        Target.[country_nm]		= Source.[country_nm];
 
 		SET @rows_affected=@@ROWCOUNT;
 

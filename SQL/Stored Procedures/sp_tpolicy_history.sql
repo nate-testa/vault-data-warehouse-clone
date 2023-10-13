@@ -8,6 +8,7 @@
 -- 06/28/23		Architha Gudimalla				2. Made changes to fix the errors on first run 
 -- 09/08/23		Architha Gudimalla				3. Made changes for updated model 
 -- 10/06/23		Architha Gudimalla				4. Added commission override columns
+-- 10/10/23		Architha Gudimalla				5. Updated logic for transaction_type - renewals
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -61,7 +62,8 @@ BEGIN
 			coalesce(acctvp.CommissionPercent, 0) CommissionPercent, 
 			coalesce(acctvp.CommissionPercentOverride, 0) CommissionPercentOverride, 
 			CommissionPercentOverrideRetention, 
-			nullif(trim(acct.policychangenotes),'') policychangenotes, acct.stage,
+			nullif(trim(acct.policychangenotes),'') policychangenotes, 
+			iif(acc.isrenewal=1,iif(acct.stage='POLICY','RENEWAL',acct.stage),acct.stage) stage,
 			acct.reviewedbyid, acct.createdbyid,
 				case when acct.ExternalSourceId is not NULL 
 					 then 2 --(AV2) 
@@ -71,6 +73,7 @@ BEGIN
 				usr.name uw_nm
 		INTO edw_temp.tpolicy_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
+		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
 		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id 
 		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id 
 		left join edw_stage.[user] usr on usr.id = acctv.UnderwriterUserId 

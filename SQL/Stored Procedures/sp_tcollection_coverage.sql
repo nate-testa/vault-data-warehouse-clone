@@ -45,7 +45,7 @@ BEGIN
 			INNER JOIN edw_stage.[ProductObject] pdo on pd.Id=pdo.ProductId
 			INNER JOIN edw_stage.[ProductObjectField] pdof on pdo.Id=pdof.ProductObjectId
 			WHERE
-				pd.[Name]='Collections'
+				pd.[Name] = 'Collections'
 				AND pdo.ObjectType='Collection'
 				AND pd.ProductLine='PersonalLines' --20230717 added
 		) AS ColumnsToPivot_temp
@@ -228,7 +228,31 @@ BEGIN
            ,[etl_audit_sk]
 			)
 		SELECT 
-			[PolicyNumber],[EffectiveDate],[IssuedDate],[ExpirationDate],[transaction_dt],[PolicyChangeNumber],[collection_location_sk],[policy_history_sk],[UnoccupiedMoreThanThreeMonths],[NumberOfLossesLastThreeYears],[ProtectionClass],[Terrain],[DistanceToCoast],[RoofGeometry],[RoofCovering],[RoofCoverDeck],[RoofDeckAttachment],[RoofWallAttachment],[HailResistantRating],[SecondaryWaterResistance],[ConstructionType],[YearBuilt],[FireProtection],[OpeningProtection],[NumberOfStories],[CentralReportingFireAlarm],[CentralReportingBurglarAlarm],[HomeSafe],[FulltimeLiveInCaretaker],[BackupGenerator],[ResidentialSprinklerSystem],[MarketValueScheduledItems],[MarketScheduledClassBankVaultedJewelry],[MarketScheduledClassCoins],[MarketScheduledClassCollectibles],[MarketScheduledClassFineArts],[MarketScheduledClassFurs],[MarketScheduledClassGuns],[MarketScheduledClassWorldwideJewelry],[MarketScheduledClassMiscellaneous],[MarketScheduledClassMusicalInstruments],[MarketScheduledClassSilver],[MarketScheduledClassStamps],[MarketScheduledClassWearableCollectibles],[MarketScheduledClassWine],[MinimumEarnedPremiumEndorsement],[MinimumEarnedPremiumEndorsementLimit],[WardrobeLossPrevention],[CompanionCreditHomeowner],[AgreedValue],[AgreedValueSpecifiedClass],[AgreedValueSpecifiedClassBankVaultedJewelry],[AgreedValueSpecifiedClassCoins],[AgreedValueSpecifiedClassCollectibles],[AgreedValueSpecifiedClassFineArts],[AgreedValueSpecifiedClassFurs],[AgreedValueSpecifiedClassGuns],[AgreedValueSpecifiedClassWorldwideJewelry],[AgreedValueSpecifiedClassMiscellaneous],[AgreedValueSpecifiedClassMusicalInstruments],[AgreedValueSpecifiedClassSilver],[AgreedValueSpecifiedClassStamps],[AgreedValueSpecifiedClassWearableCollectibles],[AgreedValueSpecifiedClassWine],[AgreedValueSpecifiedItems],[AlarmWarranty],[BreakageExclusion],[TerrorismLimitation],[TerrorismLimitationAmount],[TheftMysteriousDisappearanceExclusion],[TransitLimit],[TransitLimitAmount],[HurricaneLossExclusion],[HurricaneLossLimitation],[HurricaneLossLimitationAmount],[OutdoorFineArtHurricaneExclusion],[TerrorismExclusion],[DeletionofCosmeticMarringExclusion],[EarthquakeExclusion],[EarthquakeDeductibleLossLimitation],[EarthquakeDeductibleLossLimitationLimit],[HotelMotelExclusion],[JewelryOffPremisesLossLimitation],[SpoilageExclusion],[ChangeinTermsSummary],[ChangeinTermsOptions],[Manuscript],[CoverageDeductible],[CoverageDeductibleAmount],[HurricaneDeductible],[HurricaneDeductibleType],[HurricaneDeductibleLimit],[EarthquakeDeductible],[EarthquakeDeductibleAmount],[WildfireDeductible],[WildfireDeductibleType],[WildfireDeductibleAmount],[WildfireBarkMulchWithinTenFeetofAnyStructure],[WildfireCombustibleDeckOrAttachedStructure],[WildfireCombustibleWoodSiding],[WildfireDefensibleSpace],[WildfireDistanceToHighFuelFeet],[WildfireDistanceToModerateFuelFeet],[WildfireDistanceToVeryHighFuelFeet],[WildfireEavesorEnclosedEaves],[WildfireExteriorWildfireSprinklers],[WildfireFireWoodOrCombustiblesStoredAgainstHome],[WildfireFlammableVegetationWithinTenFeetofAnyStructure],[WildfireGutterGuards],[WildfireHazardSeverity],[WildfireNearestDistanceToPerimeter],[WildfireNumberOfOccurrencesNear],[WildfireNumberOfOccurrences],[WildfirePermanentlyInstalledSpraySystem],[WildfirePortableFireBreakSystem],[WildfireSpecialityEmberResistantVenting],[WildfireThreat],[WildfireWoodShakeOrShingleRoof],[CoutureAndWearableCollectiblesClassCouture],[source_system_sk],getdate(),getdate(), @etl_audit_sk
+			[PolicyNumber],[EffectiveDate],[IssuedDate],[ExpirationDate],[transaction_dt],[PolicyChangeNumber],
+            [collection_location_sk],[policy_history_sk],[UnoccupiedMoreThanThreeMonths],[NumberOfLossesLastThreeYears],[ProtectionClass],
+            [Terrain],[DistanceToCoast],[RoofGeometry],[RoofCovering],[RoofCoverDeck],[RoofDeckAttachment],[RoofWallAttachment],[HailResistantRating],
+            [SecondaryWaterResistance],[ConstructionType],[YearBuilt],[FireProtection],[OpeningProtection],[NumberOfStories],[CentralReportingFireAlarm],
+            [CentralReportingBurglarAlarm],[HomeSafe],[FulltimeLiveInCaretaker],[BackupGenerator],[ResidentialSprinklerSystem],[MarketValueScheduledItems],
+            [MarketScheduledClassBankVaultedJewelry],[MarketScheduledClassCoins],[MarketScheduledClassCollectibles],[MarketScheduledClassFineArts],
+            [MarketScheduledClassFurs],[MarketScheduledClassGuns],[MarketScheduledClassWorldwideJewelry],[MarketScheduledClassMiscellaneous],
+            [MarketScheduledClassMusicalInstruments],[MarketScheduledClassSilver],[MarketScheduledClassStamps],[MarketScheduledClassWearableCollectibles],
+            [MarketScheduledClassWine],[MinimumEarnedPremiumEndorsement],[MinimumEarnedPremiumEndorsementLimit],[WardrobeLossPrevention],[CompanionCreditHomeowner],
+            [AgreedValue],[AgreedValueSpecifiedClass],[AgreedValueSpecifiedClassBankVaultedJewelry],[AgreedValueSpecifiedClassCoins],
+            [AgreedValueSpecifiedClassCollectibles],[AgreedValueSpecifiedClassFineArts],[AgreedValueSpecifiedClassFurs],[AgreedValueSpecifiedClassGuns],
+            [AgreedValueSpecifiedClassWorldwideJewelry],[AgreedValueSpecifiedClassMiscellaneous],[AgreedValueSpecifiedClassMusicalInstruments],
+            [AgreedValueSpecifiedClassSilver],[AgreedValueSpecifiedClassStamps],[AgreedValueSpecifiedClassWearableCollectibles],[AgreedValueSpecifiedClassWine],
+            [AgreedValueSpecifiedItems],[AlarmWarranty],[BreakageExclusion],[TerrorismLimitation],[TerrorismLimitationAmount],[TheftMysteriousDisappearanceExclusion],
+            [TransitLimit],[TransitLimitAmount],[HurricaneLossExclusion],[HurricaneLossLimitation],[HurricaneLossLimitationAmount],[OutdoorFineArtHurricaneExclusion],
+            [TerrorismExclusion],[DeletionofCosmeticMarringExclusion],[EarthquakeExclusion],[EarthquakeDeductibleLossLimitation],
+            [EarthquakeDeductibleLossLimitationLimit],[HotelMotelExclusion],[JewelryOffPremisesLossLimitation],[SpoilageExclusion],[ChangeinTermsSummary],
+            [ChangeinTermsOptions],[Manuscript],[CoverageDeductible],[CoverageDeductibleAmount],[HurricaneDeductible],[HurricaneDeductibleType],
+            [HurricaneDeductibleLimit],[EarthquakeDeductible],[EarthquakeDeductibleAmount],[WildfireDeductible],[WildfireDeductibleType],[WildfireDeductibleAmount],
+            [WildfireBarkMulchWithinTenFeetofAnyStructure],[WildfireCombustibleDeckOrAttachedStructure],[WildfireCombustibleWoodSiding],[WildfireDefensibleSpace],
+            [WildfireDistanceToHighFuelFeet],[WildfireDistanceToModerateFuelFeet],[WildfireDistanceToVeryHighFuelFeet],[WildfireEavesorEnclosedEaves],
+            [WildfireExteriorWildfireSprinklers],[WildfireFireWoodOrCombustiblesStoredAgainstHome],[WildfireFlammableVegetationWithinTenFeetofAnyStructure],
+            [WildfireGutterGuards],[WildfireHazardSeverity],[WildfireNearestDistanceToPerimeter],[WildfireNumberOfOccurrencesNear],[WildfireNumberOfOccurrences],
+            [WildfirePermanentlyInstalledSpraySystem],[WildfirePortableFireBreakSystem],[WildfireSpecialityEmberResistantVenting],[WildfireThreat],
+            [WildfireWoodShakeOrShingleRoof],[CoutureAndWearableCollectiblesClassCouture],[source_system_sk],getdate(),getdate(), @etl_audit_sk
 		FROM
 			[edw_temp].[tcollection_coverage_temp1] 
 
