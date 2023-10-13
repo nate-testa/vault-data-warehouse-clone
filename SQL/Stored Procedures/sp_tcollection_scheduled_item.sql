@@ -7,6 +7,7 @@
 -- 08/11/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 10/09/23		Architha Gudimalla				2. Made changes after sandeep renamed the coll tables
 -- 10/09/23		Sandeep  Gundreddy				3. Added Homeowners to product filter
+-- 10/13/23		Architha Gudimalla				4. Added item no
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_scheduled_item]
@@ -42,7 +43,7 @@ BEGIN
 			transaction_dt,
 			PolicyChangeNumber,
 			[policy_history_sk],
-			[collection_class_type_sk],
+			[collection_class_type_sk], [Index] as scheduled_item_no,
 			[Description], [CoverageLimit], [SeeScheduleOnFileWithTheCompany], AppraisalDate, CollectorCar,
 			--4 as [source_system_sk], --20230717 removed
 			source_system_sk, --20230717 added
@@ -54,7 +55,7 @@ BEGIN
 			SELECT
 				acct.Id,
 				acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, acc.PolicyChangeNumber
-				,his.[policy_history_sk], ct.collection_class_type_sk
+				,his.[policy_history_sk], ct.collection_class_type_sk, acct.[Index]
 				,accto.Field, accto.[Value]
 				,acc.CreatedDate, acc.UpdatedDate
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
@@ -98,6 +99,7 @@ BEGIN
            ,[transaction_seq_no]
            ,[policy_history_sk]
            ,[collection_class_type_sk]
+		   ,[scheduled_item_no]
            ,[item_desc]
            ,[coverage_limit_amt]
            ,[schedule_on_file_in]
@@ -110,7 +112,7 @@ BEGIN
 			)
 		SELECT 
 			[PolicyNumber],[EffectiveDate],[IssuedDate],[ExpirationDate],[transaction_dt],[PolicyChangeNumber]
-			,[policy_history_sk],[collection_class_type_sk]
+			,[policy_history_sk],[collection_class_type_sk],[scheduled_item_no]
 			,[Description],[CoverageLimit],[SeeScheduleOnFileWithTheCompany],[AppraisalDate],[CollectorCar]
 			,[source_system_sk],getdate(),getdate(), @etl_audit_sk
 		FROM 
