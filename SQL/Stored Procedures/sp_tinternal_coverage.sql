@@ -8,6 +8,7 @@
 -- 06/28/23		Architha Gudimalla				2. Modified after first run errors
 -- 07/25/23		Architha Gudimalla				3. Added TFS to internal coverages
 -- 09/20/23     Sandeep Gundreddy				4. Added PersonalLines Filter & modified ASLOB code
+-- 10/12/23     Sandeep Gundreddy				5. Added logic for primary_coverage_cd
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tinternal_coverage]
@@ -39,7 +40,12 @@ BEGIN
 		SELECT	nullif(trim(atcp.label),'') internal_coverage_cd,
 				p.ProductCode  as product_cd, 
 				nullif(trim(c.Aslob),'') as aslob_cd,
-				'Premium' ic_type,
+				'Premium' ic_type, 
+				nullif(trim(case when atcp.label in ('Service Line') 
+					and atcp.coverage= 'Optional Coverages' then 'Service Line' 
+					when atcp.label in ('Systems Protection') 
+					and atcp.coverage= 'Optional Coverages' then 'Systems Protection' 
+					else atcp.coverage end) ,'') coverage,
 				max(atcp.CreatedDate)  as CreatedDate,
 				max(atcp.UpdatedDate) as  UpdatedDate
  		INTO edw_temp.tinternal_coverage_temp1
@@ -50,7 +56,12 @@ BEGIN
 		WHERE	nullif(label,'') IS NOT NULL 
 		and p.ProductLine='PersonalLines'
 		and		GREATEST(atcp.CreatedDate,c.UpdatedDate)>@last_source_extract_ts
-		GROUP BY atcp.label, p.ProductCode, atcp.label, c.Aslob
+		and nullif(label,'') not in ('2020 BMW 540I XDRIVE')
+		GROUP BY atcp.label, p.ProductCode, atcp.label, c.Aslob, nullif(trim(case when atcp.label in ('Service Line') 
+					and atcp.coverage= 'Optional Coverages' then 'Service Line' 
+					when atcp.label in ('Systems Protection') 
+					and atcp.coverage= 'Optional Coverages' then 'Systems Protection' 
+					else atcp.coverage end) ,'') 
 		union all
 		SELECT	nullif(trim(replace(accttf.name, '  ',' ')),'') as tax_fee_surcharge_name, 
 				pr.ProductCode  as product_cd, 
@@ -60,7 +71,7 @@ BEGIN
 					 when pr.ProductCode = 'PEL' then '171'
 					 else null
 				end aslob,
-				max(nullif(trim(accttf.Type),'')) as tax_fee_surcharge_type,
+				max(nullif(trim(accttf.Type),'')) as tax_fee_surcharge_type,null,
 				max(acct.CreatedDate)  as CreatedDate,
 				max(acct.UpdatedDate) as  UpdatedDate 
 		FROM edw_stage.AccountTransaction acct 
@@ -74,7 +85,9 @@ BEGIN
 		-- Insert and Update tinternal_coverage table
 		MERGE edw_core.tinternal_coverage AS Target
 		USING edw_temp.tinternal_coverage_temp1 AS Source
-		ON Source.internal_coverage_cd = Target.internal_coverage_cd AND Source.product_cd = Target.product_cd
+		ON Source.internal_coverage_cd = Target.internal_coverage_cd 
+		AND Source.product_cd = Target.product_cd
+		--AND isnull(Source.coverage,'') = isnull(Target.primary_coverage_cd,'')
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
@@ -82,6 +95,7 @@ BEGIN
 				product_cd,
 				internal_coverage_desc,
 				aslob_cd,
+				primary_coverage_cd,
 				internal_coverage_category_nm,
 				create_ts,update_ts
 			)
@@ -91,6 +105,7 @@ BEGIN
 				Source.product_cd,
 				Source.internal_coverage_cd,
 				Source.aslob_cd ,
+				nullif(trim(source.coverage),''),
 				source.ic_type,
 				GETDATE(),GETDATE()
 			)
@@ -98,6 +113,7 @@ BEGIN
 		WHEN MATCHED THEN UPDATE 
 		SET Target.internal_coverage_desc			= Source.internal_coverage_cd,
 			Target.aslob_cd							= Source.aslob_cd,
+			Target.primary_coverage_cd				= nullif(trim(source.coverage),''),
 			Target.internal_coverage_category_nm	= Source.ic_type,
 			Target.update_ts						= GETDATE();
 

@@ -7,6 +7,7 @@
 -- 08/16/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 10/09/23		Architha Gudimalla				2. Made changes after sandeep renamed the coll tables
 -- 10/09/23		Sandeep  Gundreddy				3. Added Homeowners to product filter
+-- 10/13/23		Architha Gudimalla				4. Correction the location table join
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_class_type]
@@ -65,7 +66,7 @@ BEGIN
 				LEFT JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
 				LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
 				LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
-				LEFT JOIN [edw_core].[tcollection_location] loc ON loc.policy_no = acc.PolicyNumber
+				LEFT JOIN [edw_core].[tcollection_location] loc ON loc.policy_no = acc.PolicyNumber and loc.effective_dt = acc.EffectiveDate
 				LEFT JOIN [edw_core].[tcollection_coverage] cov on cov.policy_no = acc.PolicyNumber and cov.effective_dt = acc.EffectiveDate and cov.transaction_seq_no = acc.policychangenumber
 				LEFT JOIN [edw_core].[thome_coverage] hcov on hcov.policy_no = acc.PolicyNumber and hcov.effective_dt = acc.EffectiveDate and hcov.transaction_seq_no = acc.policychangenumber
 				LEFT JOIN [edw_core].[tpolicy_history] his ON his.policy_no = acc.PolicyNumber AND his.effective_dt=acc.EffectiveDate AND his.transaction_seq_no = acc.policychangenumber
@@ -138,6 +139,7 @@ BEGIN
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		print @etl_audit_sk
+		
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200)) --20230717 added
 		--EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected; --20230717 removed

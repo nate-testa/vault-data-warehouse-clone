@@ -1,9 +1,14 @@
-﻿-- =============================================
+﻿-- ========================================================================================================
 -- Author:		Hernando Gonzalez Garcia
--- Create Date: <Create Date, , >
 -- Description: This procedures insert and update info related to Collection Item Detail 
--- 10/09/23		Sandeep  Gundreddy				2. Added Homeowners to product filter
--- =============================================
+-----------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+-----------------------------------------------------------------------------------------------------------
+-- 08/11/23		Hernando Gonzalez Garcia		1. Created this procedure 
+-- 10/09/23		Architha Gudimalla				2. Made changes after sandeep renamed the coll tables
+-- 10/09/23		Sandeep  Gundreddy				3. Added Homeowners to product filter
+-- ======================================================================================================== 
+
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_scheduled_item]
 AS
 BEGIN
