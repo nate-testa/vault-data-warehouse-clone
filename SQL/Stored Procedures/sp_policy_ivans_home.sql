@@ -53,8 +53,10 @@ BEGIN
 			SELECT ptf.policy_sk, ptf.effective_dt_sk ,ptf.transaction_seq_no, (
 				SELECT
 					hc.policy_no as policyNumber,
-					ic.internal_coverage_cd as coverageCd,
-					ic.internal_coverage_desc as coverageDesc,
+					--ic.internal_coverage_cd as coverageCd,
+					--ic.internal_coverage_desc as coverageDesc,
+					ic.internal_coverage_cd as IVANS_coverage_cd,
+					ic.internal_coverage_desc as IVANS_coverage_desc,
 				    pt.premium_amt AS changeAmount,
 					pt.annual_premium_amt AS currentAmount,
 					CASE
@@ -109,7 +111,7 @@ BEGIN
 						SELECT
 							tm.policy_no, tm.effective_dt, tm.transaction_seq_no,
 							--CONCAT('M-', tm.mortgage_sk) as unique_id,
-							CONCAT('M-', ROW_NUMBER() OVER (PARTITION BY tm.policy_no, tm.effective_dt ORDER BY tm.mortgage_sk ASC)) as unique_id,
+							CONCAT('M-', ROW_NUMBER() OVER (PARTITION BY tm.policy_no, tm.effective_dt, tm.transaction_seq_no ORDER BY tm.mortgage_sk ASC)) as unique_id,
 							tm.policy_no as policyNumber,
 							TRIM(NULLIF(tm.mortgagee_nm, 'null')) as CommercialName,
 							COALESCE(tm.address_line_1, '') as Addr1,
@@ -126,7 +128,7 @@ BEGIN
 						SELECT
 							ai.policy_no, ai.effective_dt, ai.transaction_seq_no,
 							--CONCAT('AI-', ai.additional_interest_sk) as unique_id,
-							CONCAT('AI-', ROW_NUMBER() OVER (PARTITION BY ai.policy_no, ai.effective_dt ORDER BY ai.additional_interest_sk ASC)) as unique_id,
+							CONCAT('AI-', ROW_NUMBER() OVER (PARTITION BY ai.policy_no, ai.effective_dt, ai.transaction_seq_no ORDER BY ai.additional_interest_sk ASC)) as unique_id,
 							ai.policy_no as policyNumber,
 							CONCAT(ISNULL(ai.first_nm, ''), ' ', ISNULL(ai.last_nm, '')) as CommercialName,
 							COALESCE(ai.address_line_1, '') as Addr1,
@@ -194,9 +196,9 @@ BEGIN
 			    ptf.policy_sk, ptf.effective_dt_sk ,ptf.transaction_seq_no,
 			    (
 					SELECT 
-						policyNumber, CustomerId
-						,CONCAT('L', ROW_NUMBER() OVER (PARTITION BY policyNumber ORDER BY policyNumber, transaction_seq_no, (CONCAT(address1, '-', city, '-', [state], '-', RIGHT('00000' + zip, 5), '-', county)))) as location_no
-						,coverageType, coverageCd, coverageTypeDesc, ScheduledInd, InVaultInd, classType, limit, premium, saLimit, hviLimit, address1, address2, city, county, [state], zip, riskType
+						policyNumber
+						,CONCAT('L', ROW_NUMBER() OVER (PARTITION BY policyNumber, transaction_seq_no ORDER BY policyNumber, transaction_seq_no, (CONCAT(address1, '-', city, '-', [state], '-', RIGHT('00000' + zip, 5), '-', county)))) as location_no
+						,coverageType, IVANS_coverage_cd, coverageTypeDesc, ScheduledInd, InVaultInd, classType, limit, premium, saLimit, hviLimit, address1, address2, city, county, [state], zip, riskType
 					FROM
 					(
 						SELECT 
@@ -205,8 +207,7 @@ BEGIN
 							,pt.transaction_seq_no
 							,pt.effective_dt_sk
 							,pt.policy_sk
-							--
-							,tc.customer_id as CustomerId
+							-- 
 							--,CONCAT('L', ROW_NUMBER() OVER (PARTITION BY tcc.policy_no ORDER BY tcc.policy_no, tcc.transaction_seq_no, (CONCAT(tcl.address_line_1, '-', tcl.city_nm, '-', tcl.state_cd, '-', RIGHT('00000' + tcl.zip_cd, 5), '-', tcl.county_nm)))) as location_no
 							,'SPP' as coverageType
 							,case when tcct.class_type = 'Coins' then 'SCHCOINS'
@@ -223,10 +224,10 @@ BEGIN
 								when tcct.class_type = 'Wine' then 'SCHWINE'
 								when tcct.class_type = 'Stamps' then 'SCHSTMPS'
 								else ''
-							end as coverageCd
+							end as IVANS_coverage_cd--coverageCd
 							,'Scheduled Personal Property' as coverageTypeDesc
-							,1 as ScheduledInd
-							,CASE WHEN tcct.class_type = 'Bank Vaulted Jewelry' THEN 1 ELSE 0 END AS InVaultInd
+							,1 as scheduledInd
+							,CASE WHEN tcct.class_type = 'Bank Vaulted Jewelry' THEN 1 ELSE 0 END AS inVaultInd
 							,tcct.class_type as classType
 							,floor(tcct.scheduled_limit_amt) as limit
 							,pt.premium_amt as premium
@@ -236,7 +237,7 @@ BEGIN
 							,tcl.address_line_2 as address2
 							,tcl.city_nm as city
 							,tcl.county_nm as county
-							,tcl.state_cd as [state]
+							,tcl.state_cd as [state] 
 							,tcl.zip_cd as zip
 							,'' as riskType
 						--FROM policy_transaction as pt
@@ -264,7 +265,6 @@ BEGIN
 							,pt.effective_dt_sk
 							,pt.policy_sk
 							--
-							,tc.customer_id as CustomerId
 							--,CONCAT('L', ROW_NUMBER() OVER (PARTITION BY tcc.policy_no ORDER BY tcc.policy_no, tcc.transaction_seq_no, (CONCAT(tcl.address_line_1, '-', tcl.city_nm, '-', tcl.state_cd, '-', RIGHT('00000' + tcl.zip_cd, 5), '-', tcl.county_nm)))) as location_no
 							,'BPP' as coverageType
 							,case when tcct.class_type = 'Coins' then 'SCHCOINS'
@@ -283,8 +283,8 @@ BEGIN
 								else ''
 							end as coverageCd
 							,'Blanket Personal Property' as coverageTypeDesc
-							,0 as ScheduledInd
-							,0 as InVaultInd
+							,0 as scheduledInd
+							,0 as inVaultInd
 							,tcct.class_type as classType
 							,floor(tcct.blanket_limit_amt) as limit
 							,pt.premium_amt as premium
