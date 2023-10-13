@@ -114,7 +114,7 @@ BEGIN
 						,CAST(hc.dwelling_limit_amt as NVARCHAR(255)) as limits
 						,'0.0' as deductible
 					FROM policy_transaction as pt 
-					LEFT JOIN edw_core.thome_coverage as hc
+					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					-- Other Structures
 					UNION ALL
@@ -127,7 +127,7 @@ BEGIN
 						,CAST(hc.other_structures_limit_amt as NVARCHAR(255)) as limits
 						,'0.0' as deductible
 					FROM policy_transaction as pt 
-					LEFT JOIN edw_core.thome_coverage as hc
+					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					-- Contents
 					UNION ALL
@@ -140,7 +140,7 @@ BEGIN
 						,CAST(hc.contents_limit_amt as NVARCHAR(255)) as limits
 						,'0.0' as deductible
 					FROM policy_transaction as pt 
-					LEFT JOIN edw_core.thome_coverage as hc
+					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					-- Loss of Use
 					UNION ALL
@@ -153,7 +153,7 @@ BEGIN
 						,CAST(hc.loss_of_use_limit_amt as NVARCHAR(255)) as limits
 						,'0.0' as deductible
 					FROM policy_transaction as pt 
-					LEFT JOIN edw_core.thome_coverage as hc
+					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					-- Homeowners Liability Premium
 					UNION ALL
@@ -166,7 +166,7 @@ BEGIN
 						,CAST(hc.personal_liability_limit_amt as NVARCHAR(255)) as limits
 						,'0.0' as deductible
 					FROM policy_transaction as pt 
-					LEFT JOIN edw_core.thome_coverage as hc
+					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					-- Homeowners Liability Premium
 					UNION ALL
@@ -179,7 +179,7 @@ BEGIN
 						,CAST(hc.medical_payments_limit_amt as NVARCHAR(255)) as limits
 						,'0.0' as deductible
 					FROM policy_transaction as pt 
-					LEFT JOIN edw_core.thome_coverage as hc
+					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					--
 				) jd FOR JSON PATH, INCLUDE_NULL_VALUES
@@ -338,7 +338,10 @@ BEGIN
 						on tcc.collection_location_sk = tcl.collection_location_sk
 						LEFT JOIN edw_core.tcollection_class_type tcct
 						on tcc.collection_coverage_sk = tcct.collection_coverage_sk
+						LEFT JOIN edw_core.tinternal_coverage as ic
+						ON pt.internal_coverage_sk = ic.internal_coverage_sk
 						WHERE coalesce(pt.premium_amt, 0) + coalesce(tcct.scheduled_limit_amt, 0) + coalesce(tcct.scheduled_highest_value_limit_amt, 0) <> 0 
+						and ic.aslob_cd ='090' and ic.product_cd = 'HO' and ic.internal_coverage_category_nm = 'Premium'
 						--
 						UNION ALL
 						--
@@ -395,8 +398,10 @@ BEGIN
 						on tcc.collection_location_sk = tcl.collection_location_sk
 						LEFT JOIN edw_core.tcollection_class_type tcct
 						on tcc.collection_coverage_sk = tcct.collection_coverage_sk
+						LEFT JOIN edw_core.tinternal_coverage as ic
+						ON pt.internal_coverage_sk = ic.internal_coverage_sk
 						WHERE coalesce(pt.premium_amt, 0) + coalesce(tcct.blanket_limit_amt, 0) + coalesce(tcct.blanket_single_article_limit_amt, 0) + coalesce(tcct.blanket_highest_value_limit_amt, 0) <> 0 
-						
+						and ic.aslob_cd ='090' and ic.product_cd = 'HO' and ic.internal_coverage_category_nm = 'Premium'
 					) ud
 						WHERE  ud.policy_sk = ptf.policy_sk
                        AND ud.effective_dt_sk = ptf.effective_dt_sk
