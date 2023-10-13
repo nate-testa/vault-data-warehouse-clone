@@ -116,6 +116,9 @@ BEGIN
 					FROM policy_transaction as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
 					-- Other Structures
 					UNION ALL
 					SELECT DISTINCT
@@ -129,6 +132,9 @@ BEGIN
 					FROM policy_transaction as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
 					-- Contents
 					UNION ALL
 					SELECT DISTINCT
@@ -142,6 +148,9 @@ BEGIN
 					FROM policy_transaction as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
 					-- Loss of Use
 					UNION ALL
 					SELECT DISTINCT
@@ -155,6 +164,9 @@ BEGIN
 					FROM policy_transaction as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
 					-- Homeowners Liability Premium
 					UNION ALL
 					SELECT DISTINCT
@@ -168,6 +180,9 @@ BEGIN
 					FROM policy_transaction as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
 					-- Homeowners Liability Premium
 					UNION ALL
 					SELECT DISTINCT
@@ -181,6 +196,9 @@ BEGIN
 					FROM policy_transaction as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
 					--
 				) jd FOR JSON PATH, INCLUDE_NULL_VALUES
 			) AS Home_Coverages
