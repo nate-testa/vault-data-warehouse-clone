@@ -13,6 +13,7 @@ GO
 -- 08/23/23		Architha Gudimalla				2. Added changes for residence type, loss_of_use_pc, total_insured_value_amt
 -- 10/02/23		Architha Gudimalla				3. Added replace to remove , from sq footage
 -- 10/05/23		Architha Gudimalla				4. Removed TIV update and moved to separate proc
+-- 10/13/23		Architha Gudimalla				5. Updated residence type
 -- =========================================================================================================================== 
 CREATE or ALTER PROCEDURE [edw_core].[sp_thome_coverage]
 
@@ -217,7 +218,7 @@ BEGIN
 				tthc.SolarPanels AS solar_feature_desc,
 				tthc.SecondaryWaterResistance AS secondary_water_resistance,
 				--AG - added on 20230823
-				case when tthc.product_name = 'Homeowners' then 'Homeowners' else ''--tthc.ResidenceType 
+				case when tthc.product_name = 'Homeowners' then 'Homeowners' else tthc.ResidenceType 
 				end as residence_type , 
 				--AG - added on 20230823
 				0 as total_insured_value_amt,
