@@ -40,12 +40,7 @@ BEGIN
 		SELECT	nullif(trim(atcp.label),'') internal_coverage_cd,
 				p.ProductCode  as product_cd, 
 				nullif(trim(c.Aslob),'') as aslob_cd,
-				'Premium' ic_type, 
-				nullif(trim(case when atcp.label in ('Service Line') 
-					and atcp.coverage= 'Optional Coverages' then 'Service Line' 
-					when atcp.label in ('Systems Protection') 
-					and atcp.coverage= 'Optional Coverages' then 'Systems Protection' 
-					else atcp.coverage end) ,'') coverage,
+				'Premium' ic_type, nullif(trim(atcp.coverage) ,'') coverage,
 				max(atcp.CreatedDate)  as CreatedDate,
 				max(atcp.UpdatedDate) as  UpdatedDate
  		INTO edw_temp.tinternal_coverage_temp1
@@ -57,11 +52,7 @@ BEGIN
 		and p.ProductLine='PersonalLines'
 		and		GREATEST(atcp.CreatedDate,c.UpdatedDate)>@last_source_extract_ts
 		and nullif(label,'') not in ('2020 BMW 540I XDRIVE')
-		GROUP BY atcp.label, p.ProductCode, atcp.label, c.Aslob, nullif(trim(case when atcp.label in ('Service Line') 
-					and atcp.coverage= 'Optional Coverages' then 'Service Line' 
-					when atcp.label in ('Systems Protection') 
-					and atcp.coverage= 'Optional Coverages' then 'Systems Protection' 
-					else atcp.coverage end) ,'') 
+		GROUP BY atcp.label, p.ProductCode, atcp.label, c.Aslob, nullif(trim(atcp.coverage) ,'') 
 		union all
 		SELECT	nullif(trim(replace(accttf.name, '  ',' ')),'') as tax_fee_surcharge_name, 
 				pr.ProductCode  as product_cd, 
