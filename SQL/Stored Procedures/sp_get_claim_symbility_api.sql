@@ -10,7 +10,7 @@ GO
 ---------------------------------------------------------------------------------------------------
 -- 08/28/23		Alberto Almario				1. Created this procedure 
 -- ================================================================================================= 
-CREATE OR ALTER PROCEDURE [edw_integration].[sp_claim_symbility_api]
+CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_claim_symbility_api]
 (
   @policy_number varchar(255),
   @dateOfLoss date
