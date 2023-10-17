@@ -1,13 +1,14 @@
-﻿-- =================================================================================================
+﻿-- ====================================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This procedures inserts summarized data at item level for each month
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------
 -- 07/18/23		Architha Gudimalla				1. Created this procedure  
 -- 08/24/23		Architha Gudimalla				2. Updated EP logic
 -- 10/05/23		Architha Gudimalla				3. Fixed division by 0 error for EP calculation 
--- ================================================================================================= 
+-- 10/16/23		Architha Gudimalla				4. Used source_system_sk from tpolicy instead of tpolicy_transaction in prm subquery 
+-- ==================================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_titem_summary]
 @in_month_end_dt date = null
@@ -216,7 +217,7 @@ BEGIN
 				),
 				prm as
 				(
-				 SELECT tr.policy_sk, tr.item_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk,
+				 SELECT tr.policy_sk, tr.item_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk,
 						max(tr.coverage_sk)  coverage_sk,
 						max(tr.vehicle_coverage_sk)  vehicle_coverage_sk,
 		 				--max(first_value(tr.coverage_sk)  over (partition by tr.policy_sk order by tr.transaction_seq_no desc)) coverage_sk,
@@ -274,7 +275,7 @@ BEGIN
 				 and   transaction_effective_dt_sk <= @end_dt_sk
 				 and   transaction_dt_sk <= @end_dt_sk
 				 and   expiration_dt > @month_begin_dt
-				 group by tr.policy_sk, tr.item_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk
+				 group by tr.policy_sk, tr.item_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk
 				)
 				INSERT INTO edw_core.titem_summary
 					( 

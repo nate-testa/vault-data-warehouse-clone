@@ -1,14 +1,15 @@
-﻿-- =================================================================================================
+﻿-- =============================================================================================================
 -- Author:		Hernando Gonzalez Garcia
 -- Description: This procedures inserts and updates Customer data
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------
 -- 06/02/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 06/29/23		Architha Gudimalla				2. Made changes to fix the errors on first run
 -- 07/09/23		Mohammed Yunus					3. Mailing address column names updated
--- 9/29/2023    Sandeep Gundreddy				4. Added ins.ReferenceCode!=0 to exclude secondary customers
--- ================================================================================================= 
+-- 09/29/23     Sandeep Gundreddy				4. Added ins.ReferenceCode!=0 to exclude secondary customers
+-- 09/29/23     Architha Gudimalla				5. Updated vip_in logic from 1/0 to Yes/No
+-- ============================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcustomer]
 
@@ -54,10 +55,11 @@ BEGIN
 				NULLIF(TRIM(ins.MailingAddressZipCode),'') MailingAddressZipCode,
 				NULLIF(TRIM(ins.MailingAddressCounty),'') MailingAddressCounty,
 				NULLIF(TRIM(ins.MailingAddressCountry),'') MailingAddressCountry,
-				ins.IsVip, CreatedDate, UpdatedDate
+				case when ins.IsVip = 1 then 'Yes' else 'No' end IsVip, CreatedDate, UpdatedDate
         INTO edw_temp.[tcustomer_temp1] 
 		FROM edw_stage.[Insured] ins
-		WHERE GREATEST(CreatedDate,UpdatedDate)>@last_source_extract_ts and ins.ReferenceCode!=0
+		WHERE GREATEST(CreatedDate,UpdatedDate)>@last_source_extract_ts 
+		and ins.ReferenceCode!=0
 
 		-- Start Merge process
 		MERGE [edw_core].[tcustomer] AS Target

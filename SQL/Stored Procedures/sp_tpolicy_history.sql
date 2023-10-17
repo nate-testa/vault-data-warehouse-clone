@@ -9,6 +9,8 @@
 -- 09/08/23		Architha Gudimalla				3. Made changes for updated model 
 -- 10/06/23		Architha Gudimalla				4. Added commission override columns
 -- 10/10/23		Architha Gudimalla				5. Updated logic for transaction_type - renewals
+-- 10/17/23		Architha Gudimalla				6. Updated logic for transaction_desc
+-- 10/17/23		Architha Gudimalla				7. Updated logic for producer_nm
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -41,7 +43,7 @@ BEGIN
 			acct.ExpirationDate, 
 			--acct.AccountId,
 			brk.producerid as BrokerId,
-			brk.Name as producer_nm,
+			nullif(trim(isnull(br.firstname,'') + ' ' + isnull(br.LastName,'')),'') as producer_nm,
 			ins.ReferenceCode as customer_id,
 			ins.id as MasterInsuredId,
 			acct.PolicyChangeNumber,
@@ -70,7 +72,7 @@ BEGIN
 					 Else 4 --(Metal)
 				end ssk,
 				nullif(trim(pr.ProductCode),'') product_cd,
-				usr.name uw_nm
+				usr.name uw_nm, nullif(trim(acct.note),'') note
 		INTO edw_temp.tpolicy_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
@@ -78,6 +80,7 @@ BEGIN
 		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id 
 		left join edw_stage.[user] usr on usr.id = acctv.UnderwriterUserId 
 		left join edw_stage.Brokerage brk on acctv.BrokerageId = brk.id
+		left join edw_stage.[Broker] br on acctv.BrokerId = br.id
 		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acctv.ProductId = pr.id
 		WHERE acct.State ='ISSUED' --- Review BOUND transactions
@@ -176,7 +179,7 @@ BEGIN
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.PolicyChangeNumber, 
 				pol.policy_sk, br.broker_sk, cust.customer_sk, br.Broker_Id, Source.customer_id, 
-				tt.policy_transaction_type_nm, Source.IssuedDate, source.policychangenotes, Source.CancellationReason, 
+				tt.policy_transaction_type_nm, Source.IssuedDate, source.note, Source.CancellationReason, 
 				wp, 
 				wp-isnull(tfs.tfs,0),isnull(tfs.tfs,0),
 				comm,
