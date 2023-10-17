@@ -10,6 +10,7 @@
 -- 10/05/23		Architha Gudimalla				4. Updated insured_nm, insured_type for all pols
 -- 10/05/23		Architha Gudimalla				4. Updated uw_company and program type for AU
 -- 10/05/23		Architha Gudimalla				5. Moved out update statements for policy_status, latest_term_in
+-- 10/16/23		Architha Gudimalla				6. Updated logic for original effective dt
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy]
@@ -45,9 +46,9 @@ BEGIN
 				end ssk
 				,ROW_NUMBER() OVER (PARTITION BY acct.PolicyNumber, acct.EffectiveDate 
 						ORDER BY acct.policychangenumber DESC) AS AccountTransaction_Rank
-			FROM edw_stage.AccountTransaction acct
+			FROM edw_stage.AccountTransaction acct 
 		    left join edw_stage.Product pr on acct.ProductId = pr.id
-			WHERE PolicyNumber is not null and  
+			WHERE acct.PolicyNumber is not null and  
 				acct.State ='ISSUED' --- Review BOUND transactions 
 				and pr.ProductLine = 'PersonalLines' 
 				AND GREATEST(acct.IssuedDate)>@last_source_extract_ts
@@ -121,6 +122,7 @@ BEGIN
 				end as program,
 				tmp1.State,
 				tmp1.TransactionEffectiveDate,
+				acc.OriginalEffectiveDate,
 				tmp2.MailingAddressLine1,
 				tmp2.MailingAddressLine2,
 				tmp2.UnitFloor,
@@ -195,7 +197,7 @@ BEGIN
 				Source.program,
 				'Active', 
 				source.original_policy_no,
-				Source.TransactionEffectiveDate, 
+				Source.OriginalEffectiveDate, 
 				Source.MailingAddressLine1, 
 				Source.MailingAddressLine2, 
 				Source.UnitFloor, 
@@ -220,7 +222,7 @@ BEGIN
         Target.uw_company_nm				= Source.uw_company_nm,
         Target.program_type					= Source.program,
         Target.original_policy_no			= Source.original_policy_no,
-        Target.original_policy_effective_dt	= Source.TransactionEffectiveDate,
+        Target.original_policy_effective_dt	= Source.OriginalEffectiveDate,
         Target.mailing_address_line1		= Source.MailingAddressLine1,
         Target.mailing_address_line2		= Source.MailingAddressLine2,
         Target.mailing_address_unit_no		= Source.UnitFloor,

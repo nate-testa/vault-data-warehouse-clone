@@ -1,12 +1,13 @@
-﻿-- =================================================================================================
+﻿-- ========================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the policy data for each month
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------
 -- 06/20/23		Architha Gudimalla				1. Created this procedure 
 -- 10/05/23		Architha Gudimalla				2. Fixed division by 0 error for EP calculation 
--- ================================================================================================= 
+-- 10/16/23		Architha Gudimalla				3. Used source_system_sk from tpolicy instead of tpolicy_transaction in prm subquery 
+-- ======================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_summary]
 @in_end_dt date = null
@@ -250,7 +251,8 @@ BEGIN
 				),
 				prm as
 				(
-				 SELECT tr.policy_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk,
+				 SELECT tr.policy_sk, --tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk,
+				 		max(tr.transaction_seq_no) transaction_seq_no,
 		 				sum(case when calendar_month_sk between @month_begin_dt_sk AND @month_end_dt_sk THEN tr.premium_amt ELSE 0 END) mtd_premium_amt,
 		 				sum(case when calendar_month_sk between @month_begin_dt_sk AND @month_end_dt_sk THEN tr.commission_amt ELSE 0 END) mtd_commission_amt,
 		 				sum(case when calendar_month_sk between @month_begin_dt_sk AND @month_end_dt_sk THEN tr.tax_fee_surcharge_amt ELSE 0 END) mtd_tax_fee_surcharge_amt,
@@ -331,7 +333,16 @@ BEGIN
 				 and   tr.transaction_effective_dt_sk <= @end_dt_sk
 				 and   tr.transaction_dt_sk <= @end_dt_sk
 				 and   pol.expiration_dt > @month_begin_dt
-				 group by tr.policy_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk
+				 group by tr.policy_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk
+				),
+				max_tr as
+				(
+					select policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
+					from edw_core.tpolicy_transaction 
+					where effective_dt_sk <= @end_dt_sk
+					and   transaction_effective_dt_sk <= @end_dt_sk
+					and   transaction_dt_sk <= @end_dt_sk 
+					group by policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 				)
 				INSERT INTO edw_core.tpolicy_summary
 					( 
@@ -345,7 +356,7 @@ BEGIN
 						earned_net_premium_amt, unearned_net_premium_amt, 
 						written_exposure, earned_exposure, update_ts, etl_audit_sk
 					)
-				select 	@month_end_dt_sk, prm.policy_sk, prm.customer_sk, prm.broker_sk, prm.product_sk, prm.sourcE_system_sk, 
+				select 	@month_end_dt_sk, prm.policy_sk, max_tr.customer_sk, max_tr.broker_sk, max_tr.product_sk, max_tr.sourcE_system_sk, 
 						iif(inf.policy_sk is null,0,1) inforce_ct, 
 						iif(inf.policy_sk is null,0,inf.inforce_premium_amt) inforce_premium_amt, 
 						iif(inf.policy_sk is null,0,inf.inforce_premium_amt-itd_tax_fee_surcharge_amt) inforce_net_premium_amt, 
@@ -361,6 +372,7 @@ BEGIN
 						earned_exposure, 
 						getdate(), @etl_audit_sk
 				from prm
+				inner join max_tr on prm.policy_sk = max_tr.policy_sk and prm.transaction_seq_no = max_tr.transaction_seq_no
 				left join inf on prm.policy_sk = inf.policy_sk
 				left join xpsr_new on prm.policy_sk = xpsr_new.policy_sk
 				left join xpsr_exp on prm.policy_sk = xpsr_exp.policy_sk
