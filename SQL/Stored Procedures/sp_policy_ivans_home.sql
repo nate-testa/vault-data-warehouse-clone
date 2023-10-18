@@ -5,9 +5,6 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-
-
-
 -- =============================================
 -- Author:		Hernando Gonzalez Garcia
 -- Create Date: 2023-08-28
@@ -62,7 +59,7 @@ BEGIN
 						--ic.internal_coverage_cd as IVANS_coverage_cd,
 						--ic.internal_coverage_desc as IVANS_coverage_desc,
 						pt.premium_amt AS changeAmount,
-						pt.annual_premium_amt AS previousAmount,
+						pt.annual_premium_amt AS currentAmount,
 						CASE
 							WHEN ic.internal_coverage_cd = 'Systems Protection' then hac.home_systems_protection_limit_amt
 							WHEN ic.internal_coverage_cd = 'Cyber Protection' then hac.home_cyber_protection_coverage_limit_amt
@@ -77,7 +74,7 @@ BEGIN
 							--WHEN ic.internal_coverage_cd = 'Premises Liability Limitation'
 							WHEN ic.internal_coverage_cd = 'Workers Compensation' then hac.workercompensation_liability_occurance_limit_amt
 							ELSE '' 
-						END AS limits,
+						END AS [limit],
 						CASE 
 							WHEN ic.internal_coverage_cd = 'AOP' then hc.aop_deductible 
 							WHEN ic.internal_coverage_cd = 'Cyber Protection' then hac.home_cyber_protection_coverage_deductible
@@ -111,8 +108,8 @@ BEGIN
 						,'DWELL' as coverageCd
 						,'Dwelling' as coverageDesc
 						,0.0 as changeAmount
-						,0.0 as previousAmount
-						,CAST(hc.dwelling_limit_amt as NVARCHAR(255)) as limits
+						,0.0 as currentAmount
+						,CAST(hc.dwelling_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
 					FROM policy_transaction as pt 
 					INNER JOIN edw_core.thome_coverage as hc
@@ -127,8 +124,8 @@ BEGIN
 						,'OS' as coverageCd
 						,'Other Structures' as coverageDesc
 						,0.0 as changeAmount
-						,0.0 as previousAmount
-						,CAST(hc.other_structures_limit_amt as NVARCHAR(255)) as limits
+						,0.0 as currentAmountcurrentAmount
+						,CAST(hc.other_structures_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
 					FROM policy_transaction as pt 
 					INNER JOIN edw_core.thome_coverage as hc
@@ -143,8 +140,8 @@ BEGIN
 						,'PP' as coverageCd
 						,'Contents' as coverageDesc
 						,0.0 as changeAmount
-						,0.0 as previousAmount
-						,CAST(hc.contents_limit_amt as NVARCHAR(255)) as limits
+						,0.0 as currentAmount
+						,CAST(hc.contents_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
 					FROM policy_transaction as pt 
 					INNER JOIN edw_core.thome_coverage as hc
@@ -159,8 +156,8 @@ BEGIN
 						,'LOU' as coverageCd
 						,'Loss of Use' as coverageDesc
 						,0.0 as changeAmount
-						,0.0 as previousAmount
-						,CAST(hc.loss_of_use_limit_amt as NVARCHAR(255)) as limits
+						,0.0 as currentAmount
+						,CAST(hc.loss_of_use_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
 					FROM policy_transaction as pt 
 					INNER JOIN edw_core.thome_coverage as hc
@@ -175,8 +172,8 @@ BEGIN
 						,'PL' as coverageCd
 						,'Homeowners Liability Premium' as coverageDesc
 						,0.0 as changeAmount
-						,0.0 as previousAmount
-						,CAST(hc.personal_liability_limit_amt as NVARCHAR(255)) as limits
+						,0.0 as currentAmount
+						,CAST(hc.personal_liability_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
 					FROM policy_transaction as pt 
 					INNER JOIN edw_core.thome_coverage as hc
@@ -191,8 +188,8 @@ BEGIN
 						,'MEDPM' as coverageCd
 						,'Medical' as coverageDesc
 						,0.0 as changeAmount
-						,0.0 as previousAmount
-						,CAST(hc.medical_payments_limit_amt as NVARCHAR(255)) as limits
+						,0.0 as currentAmount
+						,CAST(hc.medical_payments_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
 					FROM policy_transaction as pt 
 					INNER JOIN edw_core.thome_coverage as hc
@@ -209,38 +206,38 @@ BEGIN
 			SELECT
 			    ptf.policy_no, ptf.effective_dt, ptf.transaction_seq_no,
 			    (
-					SELECT unique_id, policyNumber, CommercialName, Addr1, City, StateProvCd, PostalCode, Latitude, Longitude, County, NatureInterestCd, AccountNumberId
+					SELECT uniqueId, policyNumber, commercialName, addr1, city, [state], zip, natureInterestCd, accountNumberId
 					FROM (
 						SELECT
 							tm.policy_no, tm.effective_dt, tm.transaction_seq_no,
 							--CONCAT('M-', tm.mortgage_sk) as unique_id,
-							CONCAT('M-', ROW_NUMBER() OVER (PARTITION BY tm.policy_no, tm.effective_dt, tm.transaction_seq_no ORDER BY tm.mortgage_sk ASC)) as unique_id,
+							CONCAT('M-', ROW_NUMBER() OVER (PARTITION BY tm.policy_no, tm.effective_dt, tm.transaction_seq_no ORDER BY tm.mortgage_sk ASC)) as uniqueId,
 							tm.policy_no as policyNumber,
-							TRIM(NULLIF(tm.mortgagee_nm, 'null')) as CommercialName,
-							COALESCE(tm.address_line_1, '') as Addr1,
-							COALESCE(tm.city_nm, '') as City,
-							COALESCE(tm.state_cd, '') as StateProvCd,
-							COALESCE(tm.zip_cd, '') as PostalCode,
-							'' as Latitude,
-							'' as Longitude,
-							'' as County,
-							'MORTG' as NatureInterestCd,
-							COALESCE(tm.loan_no, '') as AccountNumberId
+							TRIM(NULLIF(tm.mortgagee_nm, 'null')) as commercialName,
+							COALESCE(tm.address_line_1, '') as addr1,
+							COALESCE(tm.city_nm, '') as city,
+							COALESCE(tm.state_cd, '') as [state],
+							COALESCE(tm.zip_cd, '') as zip,
+							-- '' as Latitude,
+							-- '' as Longitude,
+							-- '' as County,
+							'MORTG' as natureInterestCd,
+							COALESCE(tm.loan_no, '') as accountNumberId
 						FROM [edw_core].[tmortgagee] tm
 						UNION ALL
 						SELECT
 							ai.policy_no, ai.effective_dt, ai.transaction_seq_no,
 							--CONCAT('AI-', ai.additional_interest_sk) as unique_id,
-							CONCAT('AI-', ROW_NUMBER() OVER (PARTITION BY ai.policy_no, ai.effective_dt, ai.transaction_seq_no ORDER BY ai.additional_interest_sk ASC)) as unique_id,
+							CONCAT('AI-', ROW_NUMBER() OVER (PARTITION BY ai.policy_no, ai.effective_dt, ai.transaction_seq_no ORDER BY ai.additional_interest_sk ASC)) as uniqueId,
 							ai.policy_no as policyNumber,
-							CONCAT(ISNULL(ai.first_nm, ''), ' ', ISNULL(ai.last_nm, '')) as CommercialName,
-							COALESCE(ai.address_line_1, '') as Addr1,
-							COALESCE(ai.city_nm, '') as City,
-							COALESCE(ai.state_cd, '') as StateProvCd,
-							COALESCE(ai.zip_cd, '') as PostalCode,
-							'' as Latitude,
-							'' as Longitude,
-							'' as County,
+							CONCAT(ISNULL(ai.first_nm, ''), ' ', ISNULL(ai.last_nm, '')) as commercialName,
+							COALESCE(ai.address_line_1, '') as addr1,
+							COALESCE(ai.city_nm, '') as city,
+							COALESCE(ai.state_cd, '') as [state],
+							COALESCE(ai.zip_cd, '') as zip,
+							-- '' as Latitude,
+							-- '' as Longitude,
+							-- '' as County,
 							CASE
 								WHEN ai.interest_type = 'Additional Insured' THEN 'ADDIN'
 								WHEN ai.interest_type = 'Additional Interest' THEN 'AINT'
@@ -252,8 +249,8 @@ BEGIN
 								WHEN ai.interest_type = 'Designated Additional Person to Receive Notice of Cancellation or Nonrenewal' THEN 'OT'
 								WHEN ai.interest_type = 'Third Party Designee' THEN 'TP'
 								ELSE 'NA'
-							END as NatureInterestCd,
-							COALESCE(tp.customer_id, '') as AccountNumberId
+							END as natureInterestCd,
+							COALESCE(tp.customer_id, '') as accountNumberId
 						FROM edw_core.tadditional_interest as ai
 						LEFT JOIN edw_core.tpolicy tp ON ai.policy_no = tp.policy_no AND ai.effective_dt = tp.effective_dt
 					) AS jdata
@@ -301,7 +298,7 @@ BEGIN
 					SELECT 
 						policyNumber
 						,CONCAT('L', ROW_NUMBER() OVER (PARTITION BY policyNumber, transaction_seq_no ORDER BY policyNumber, transaction_seq_no, (CONCAT(address1, '-', city, '-', [state], '-', RIGHT('00000' + zip, 5), '-', county)))) as location_no
-						,coverageType, coverageCd, coverageTypeDesc, ScheduledInd, InVaultInd, classType, limit, premium, saLimit, hviLimit, address1, address2, city, county, [state], zip, riskType
+						,coverageType, coverageCd, coverageTypeDesc, scheduledInd, inVaultInd, classType, [limit], premium, saLimit, hviLimit, address1, address2, city, county, [state], zip, riskType
 					FROM
 					(
 						SELECT 
@@ -332,7 +329,7 @@ BEGIN
 							,1 as scheduledInd
 							,CASE WHEN tcct.class_type = 'Bank Vaulted Jewelry' THEN 1 ELSE 0 END AS inVaultInd
 							,tcct.class_type as classType
-							,floor(tcct.scheduled_limit_amt) as limit
+							,floor(tcct.scheduled_limit_amt) as [limit]
 							,pt.premium_amt as premium
 							,0 as saLimit
 							,floor(tcct.scheduled_highest_value_limit_amt) as hviLimit
@@ -396,7 +393,7 @@ BEGIN
 							,0 as scheduledInd
 							,0 as inVaultInd
 							,tcct.class_type as classType
-							,floor(tcct.blanket_limit_amt) as limit
+							,floor(tcct.blanket_limit_amt) as [limit]
 							,pt.premium_amt as premium
 							,floor(tcct.blanket_single_article_limit_amt) as saLimit
 							,floor(tcct.blanket_highest_value_limit_amt) as hviLimit
