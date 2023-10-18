@@ -10,7 +10,7 @@ GO
 ---------------------------------------------------------------------------------------------------
 -- 08/18/23		Mohammed Yunus				1. Created this procedure 
 -- ================================================================================================= 
-CREATE OR ALTER PROCEDURE [edw_integration].[sp_claim_policy_search_api]
+CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_claim_policy_search_api]
 (
   @policy_number varchar(255),
   @dateOfLoss date
