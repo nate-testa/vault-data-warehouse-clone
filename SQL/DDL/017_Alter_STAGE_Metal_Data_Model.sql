@@ -1630,18 +1630,24 @@ BEGIN
 	ALTER TABLE [edw_stage].[Role] ADD ExternalSourceUniqueId nvarchar(2000) ;
 END
 
-CREATE TABLE [edw_stage].[WebhookRequestLog]
-(
-	[Id] [uniqueidentifier] NOT NULL,
-	[RequestLog] [nvarchar](max) NULL,
-	[Type] [nvarchar](200) NULL,
-	[Status] [nvarchar](200) NULL,
-	[ErrorMessage] [nvarchar](2000) NULL,
-	[ExternalSourceId] [nvarchar](2000) NULL,
-	[CreatedDate] [datetime2](7) NOT NULL,
-	[UpdatedDate] [datetime2](7) NOT NULL,
-    CONSTRAINT PK_WebhookRequestLog PRIMARY KEY(id)
-);
+IF NOT EXISTS (SELECT 1 
+               FROM sys.tables 
+               WHERE name = 'WebhookRequestLog' 
+               AND schema_id = SCHEMA_ID('edw_stage'))
+BEGIN
+    CREATE TABLE [edw_stage].[WebhookRequestLog]
+    (
+        [Id] [uniqueidentifier] NOT NULL,
+        [RequestLog] [nvarchar](max) NULL,
+        [Type] [nvarchar](200) NULL,
+        [Status] [nvarchar](200) NULL,
+        [ErrorMessage] [nvarchar](2000) NULL,
+        [ExternalSourceId] [nvarchar](2000) NULL,
+        [CreatedDate] [datetime2](7) NOT NULL,
+        [UpdatedDate] [datetime2](7) NOT NULL,
+        CONSTRAINT PK_WebhookRequestLog PRIMARY KEY(id)
+    );
+END;
 
 -- Workflow table column additions
 IF NOT EXISTS (
