@@ -1,0 +1,19 @@
+{
+	"name": "DROPANDDELETE_j13_ControlDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase_edw_dev",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "DROPANDDELETE_j13_20231018"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edw_stage",
+			"table": "ControlLoadTable"
+		}
+	}
+}
