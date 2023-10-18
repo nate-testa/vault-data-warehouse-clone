@@ -10,7 +10,8 @@
 -- 10/05/23		Architha Gudimalla				4. Updated insured_nm, insured_type for all pols
 -- 10/05/23		Architha Gudimalla				4. Updated uw_company and program type for AU
 -- 10/05/23		Architha Gudimalla				5. Moved out update statements for policy_status, latest_term_in
--- 10/16/23		Architha Gudimalla				6. Updated logic for original effective dt
+-- 10/16/23		Architha Gudimalla				6. Updated logic for original effective dtlatest_term_in
+-- 10/17/23		Architha Gudimalla				7. Added logic for prior_term_policy_no
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy]
@@ -140,6 +141,7 @@ BEGIN
 				end as original_policy_no
 				,acc_prior.PolicyNumber  prior_policy_no
 				,'No' as non_renewal_in
+				, acc.renewalofpolicynumber
 				--select *
 			FROM 
 				edw_temp.tpolicy_temp1 tmp1
@@ -182,6 +184,7 @@ BEGIN
            ,prior_policy_no
            ,non_renewal_in
            ,source_system_sk
+		   ,prior_term_policy_no
            ,create_ts
            ,update_ts
            ,etl_audit_sk
@@ -208,6 +211,7 @@ BEGIN
 				Source.MailingAddressCountry, 
 				source.prior_policy_no,
 				source.non_renewal_in,
+				source.renewalofpolicynumber,
 				Source.source_system_sk, 
 				getdate(), getdate(), @etl_audit_sk)
 		-- For Updates
@@ -232,6 +236,7 @@ BEGIN
         Target.mailing_address_county_nm	= Source.MailingAddressCounty,
 		Target.mailing_address_country_nm	= Source.MailingAddressCountry, 
 		Target.prior_policy_no				= source.prior_policy_no, 
+		Target.prior_term_policy_no			= source.renewalofpolicynumber, 
         Target.update_ts 					= getdate()
 		;
 

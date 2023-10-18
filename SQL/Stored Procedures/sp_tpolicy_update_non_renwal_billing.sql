@@ -1,12 +1,13 @@
-﻿-- ==========================================================================================================
+﻿-- =======================================================================================================================================================
 -- Author:		Hernando Gonzalez Garcia
 -- Description: This procedures update non_renewal_in and billingaccount_sk in tpolicy
--------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
--------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 09/08/23		Architha Gudimalla			1. Created this procedure  
 -- 10/05/23		Architha Gudimalla			2. Added update statements for policy_status, latest_term_in
--- ========================================================================================================== 
+-- 10/17/23		Architha Gudimalla			3. Added logic for non_renewal_in, pending_non_renewal_in, non_renewal_note_desc, non_renewal_sub_note_desc
+-- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_non_renwal_billing]
 
@@ -44,13 +45,27 @@ BEGIN
 		where effective_dt = (select max(effective_dt) from edw_core.tpolicy pol1 where pol.original_policy_no = pol1.original_policy_no);
 
 		update a
+		set non_renewal_in 				= case when b.NonRenewalState='NonRenewed' then 'Yes' else 'No' end,
+			pending_non_renewal_in      = case when b.NonRenewalState='Pending' then 'Yes' else 'No' end ,
+			conditional_renewal_in		= case when b.IsConditionalRenewal=1 then 'Yes' else 'No' end ,
+			non_renewal_note_desc 		= b.NonRenewalStateNote,
+			non_renewal_sub_note_desc 	= b.NonRenewalStateSubNote
+		from edw_core.tpolicy a
+		inner join (select policynumber, EffectiveDate, NonRenewalState, NonRenewalStateNote, NonRenewalStateSubNote, IsConditionalRenewal  from edw_stage.Account  acct  
+					where	CreatedDate --UpdatedDate 
+							> @last_source_extract_ts
+					) b on	a.policy_no = b.policynumber and		a.effective_dt = cast(b.EffectiveDate as date);
+
+		/*
+		update a
 		set non_renewal_in = 'Yes' 
 		from edw_core.tpolicy a
 		inner join (select policynumber, EffectiveDate, RenewalStatus  from edw_stage.Account  acct  
 					where	UpdatedDate > @last_source_extract_ts
 					and		RenewalStatus='NonRenewed'
 					) b on	a.policy_no = b.policynumber and		a.effective_dt = cast(b.EffectiveDate as date);
-					
+		*/
+
 		SET @rows_affected=@@ROWCOUNT; 
 	
 		update a

@@ -3,16 +3,17 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
--- ================================================================================================================
+-- ====================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the renewals data for each month
--------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
--------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------
 -- 08/14/23		Architha Gudimalla				1. Created this procedure 
 -- 09/12/23		Architha Gudimalla				2. Added additional columns after discussing with Olivia 
 -- 10/02/23		Architha Gudimalla				3. Corrected code afrer testing table
--- ================================================================================================================ 
+-- 10/18/23		Architha Gudimalla				4. Used source_system_sk from tpolicy instead of tpolicy_transaction in prm subquery 
+-- ==================================================================================================================================== 
 
 create or ALTER   PROCEDURE [edw_core].[sp_trenewal_summary]
 @in_yearmonth int = null
@@ -137,7 +138,9 @@ BEGIN
 				), 
 				prm as
 				(
-				 SELECT tr.policy_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk, 
+				 SELECT tr.policy_sk, 
+				 		--tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk, 
+				 		max(tr.transaction_seq_no) transaction_seq_no,
 		 				sum(tr.premium_amt) premium_amt,
 						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk and tt.policy_transaction_type_nm in ('New','Renewal') --'Renewal','New Business' 
 								then tr.premium_amt * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
@@ -229,7 +232,16 @@ BEGIN
 				 and transaction_dt_sk - expiration_dt_sk <= 60
 				 and   (pol.expiration_dt between @begin_dt and @end_dt or
 						pol.effective_dt between @begin_dt and @end_dt)
-				 group by tr.policy_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk
+				 group by tr.policy_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk
+				),
+				max_tr as
+				(
+					select policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
+					from edw_core.tpolicy_transaction 
+					where effective_dt_sk <= @end_dt_sk
+					and   transaction_effective_dt_sk <= @end_dt_sk
+					and   transaction_dt_sk <= @end_dt_sk 
+					group by policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 				)
 				INSERT INTO --select * from  
 				edw_core.trenewal_summary
@@ -267,7 +279,8 @@ BEGIN
 						etl_audit_sk
 					)
 				select 	@month_end_dt_sk, 
-						exp_pols_prm.policy_sk, exp_pols_prm.customer_sk, exp_pols_prm.broker_sk, exp_pols_prm.product_sk, exp_pols_prm.sourcE_system_sk, 
+						exp_pols_prm.policy_sk, 
+						max_tr.customer_sk, max_tr.broker_sk, max_tr.product_sk, max_tr.sourcE_system_sk, 
 						exp_pols_prm.initial_written_prem, 
 						exp_pols_prm.effective_date_60_day_prem, 
 						exp_pols_prm.effective_date_60_day_comm, 
@@ -311,6 +324,7 @@ BEGIN
 				left join ren_pols on ren_pols.original_policy_no = exp_pols.policy_no and ren_pols.effective_dt = exp_pols.expiration_dt 
 				-- join to get prm for renewals 
 				left join prm ren_pols_prm on ren_pols_prm.policy_sk = ren_pols.policy_sk 
+				inner join max_tr on exp_pols_prm.policy_sk = max_tr.policy_sk and exp_pols_prm.transaction_seq_no = max_tr.transaction_seq_no
 				 
        
 				SET @rows_affected=@@ROWCOUNT;

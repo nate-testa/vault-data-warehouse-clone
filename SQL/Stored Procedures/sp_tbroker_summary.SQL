@@ -164,7 +164,7 @@ BEGIN
 						broker_sk,
 						customer_sk,
 						product_sk,
-						state_sk, 
+						risk_state_sk, 
 						quote_ct,
 						customer_ct,
 						-- avg lines per account - can be calculated
