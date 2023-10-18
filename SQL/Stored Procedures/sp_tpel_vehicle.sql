@@ -61,7 +61,7 @@ BEGIN
 				and atvo.ObjectType='Vehicle'
 				and atvof.Field IN 
 				(
-					'VehicleType','Model','Vin','Year','Make'
+					'VehicleType','Model','Vin','ModelYear','Make'
 				)
 				and IssuedDate > @last_source_extract_ts
 			) as t
