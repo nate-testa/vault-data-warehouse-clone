@@ -5,6 +5,7 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 06/22/23		Architha Gudimalla				1. Created this procedure 
+-- 10/17/23		Architha Gudimalla				2. Removed group by on source system 
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcustomer_summary] 
@@ -68,7 +69,7 @@ BEGIN
 			
 				with prm as
 				(
-				 SELECT customer_sk, source_system_sk,
+				 SELECT customer_sk, max(source_system_sk) source_system_sk,
 						sum(inforce_ct) total_inforce_ct,
 						count(distinct summ.product_sk) total_line_ct,
 				 		sum(inforce_premium_amt) total_premium_amt,
@@ -81,7 +82,7 @@ BEGIN
 				 FROM edw_core.tpolicy_summary summ, edw_core.tproduct pr 
 				 where month_sk = @month_end_dt_sk 
 				 and pr.product_sk = summ.product_sk
-				 group by customer_sk, source_system_sk
+				 group by customer_sk 
 				)
 				INSERT INTO edw_core.tcustomer_summary
 					( 

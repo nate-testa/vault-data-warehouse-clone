@@ -8,6 +8,7 @@
 -- 08/24/23		Architha Gudimalla				2. Updated EP logic
 -- 10/05/23		Architha Gudimalla				3. Fixed division by 0 error for EP calculation 
 -- 10/16/23		Architha Gudimalla				4. Used source_system_sk from tpolicy instead of tpolicy_transaction in prm subquery 
+-- 10/17/23		Architha Gudimalla				5. Used source_system_sk, customer_sk, broker-sk, prudct_sk from max_tr
 -- ==================================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_titem_summary]
@@ -217,7 +218,8 @@ BEGIN
 				),
 				prm as
 				(
-				 SELECT tr.policy_sk, tr.item_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk,
+				 SELECT tr.policy_sk, tr.item_sk, --tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk,
+				 		max(tr.transaction_seq_no) transaction_seq_no,
 						max(tr.coverage_sk)  coverage_sk,
 						max(tr.vehicle_coverage_sk)  vehicle_coverage_sk,
 		 				--max(first_value(tr.coverage_sk)  over (partition by tr.policy_sk order by tr.transaction_seq_no desc)) coverage_sk,
@@ -275,7 +277,16 @@ BEGIN
 				 and   transaction_effective_dt_sk <= @end_dt_sk
 				 and   transaction_dt_sk <= @end_dt_sk
 				 and   expiration_dt > @month_begin_dt
-				 group by tr.policy_sk, tr.item_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk
+				 group by tr.policy_sk, tr.item_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk
+				),
+				max_tr as
+				(
+					select policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
+					from edw_core.tpolicy_transaction 
+					where effective_dt_sk <= @end_dt_sk
+					and   transaction_effective_dt_sk <= @end_dt_sk
+					and   transaction_dt_sk <= @end_dt_sk 
+					group by policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 				)
 				INSERT INTO edw_core.titem_summary
 					( 
@@ -293,7 +304,7 @@ BEGIN
 				select 	@month_end_dt_sk, prm.policy_sk, prm.item_sk,
 						case when inf.coverage_sk is not null then inf.coverage_sk else prm.coverage_sk end coverage_sk, 
 						case when inf.vehicle_coverage_sk is not null then inf.vehicle_coverage_sk else prm.vehicle_coverage_sk end vehicle_coverage_sk, 
-						prm.customer_sk, prm.broker_sk, prm.product_sk, prm.sourcE_system_sk, 
+						max_tr.customer_sk, max_tr.broker_sk, max_tr.product_sk, max_tr.sourcE_system_sk, 
 						iif(inf.policy_sk is null,0,1) inforce_ct,
 						iif(inf.policy_sk is null,0,inf.inforce_premium_amt) inforce_premium_amt, 
 						iif(inf.policy_sk is null,0,inf.inforce_net_premium_amt) inforce_net_premium_amt, 
@@ -309,6 +320,7 @@ BEGIN
 						earned_exposure, 
 						getdate(), @etl_audit_sk
 				from prm
+				inner join max_tr on prm.policy_sk = max_tr.policy_sk and prm.transaction_seq_no = max_tr.transaction_seq_no
 				left join inf on prm.policy_sk = inf.policy_sk and prm.item_sk = inf.item_sk
 				left join xpsr_new on prm.policy_sk = xpsr_new.policy_sk and prm.item_sk = xpsr_new.item_sk
 				left join xpsr_exp on prm.policy_sk = xpsr_exp.policy_sk and prm.item_sk = xpsr_exp.item_sk
