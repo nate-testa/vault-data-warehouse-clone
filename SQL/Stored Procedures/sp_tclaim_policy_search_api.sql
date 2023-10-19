@@ -41,7 +41,7 @@ BEGIN
 				CASE 
 					WHEN p.product_cd in ('PEL','LUX') THEN CONCAT(p.mailing_address_line1,'-',p.mailing_address_line2,'-',p.mailing_address_unit_no,'-',p.mailing_address_city_nm,'-',p.mailing_address_state_cd,'-',p.mailing_address_zip_cd)
 					WHEN p.product_cd = 'HO' THEN CONCAT(hl.address_line_1,'-',hl.address_line_2,'-',hl.unit_no,'-',hl.city_nm,'-',hl.state_cd,'-',hl.zip_cd)
-					WHEN p.product_cd = 'AU' THEN COALESCE(av.vehicle_vin, '')
+					WHEN p.product_cd = 'AU' THEN av.vehicle_vin
 					ELSE '***!Pending!***'
 				END as risk_item,
 				ss.source_system_nm,
@@ -51,6 +51,7 @@ BEGIN
 				SELECT DISTINCT policy_sk, transaction_seq_no, transaction_effective_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk, item_sk, vehicle_coverage_sk, create_ts
 				FROM edw_core.tpolicy_transaction
 				WHERE cast(create_ts as datetime2(7)) > @last_source_extract_ts
+				AND CASE WHEN product_sk = 3 AND item_sk = 0 THEN 0  ELSE 1 END = 1
 			) AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
 		LEFT JOIN edw_core.tdate AS d2 ON pt.transaction_effective_dt_sk = d2.date_sk
