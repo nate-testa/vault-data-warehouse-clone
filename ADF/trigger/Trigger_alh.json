@@ -1,0 +1,24 @@
+{
+	"name": "Trigger_alh",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DELANDROPEbao_alh_TopLevel",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 24,
+				"startTime": "2023-10-19T21:06:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}
