@@ -12,6 +12,7 @@
 -- 10/05/23		Architha Gudimalla				5. Moved out update statements for policy_status, latest_term_in
 -- 10/16/23		Architha Gudimalla				6. Updated logic for original effective dtlatest_term_in
 -- 10/17/23		Architha Gudimalla				7. Added logic for prior_term_policy_no
+-- 10/18/23		Architha Gudimalla				8. Updated Insured name logic
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy]
@@ -82,13 +83,20 @@ BEGIN
 		INTO edw_temp.tpolicy_temp2
 		FROM
 			(
-				SELECT  acctv.AccountTransactionId, 
-						acctvof.Field, 
-						acctvof.Value
+				SELECT  acctv.AccountTransactionId, acctvof.Field, acctvof.Value /*
+						case when pin.id is not null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then acctvof.Field 
+							 when pin.id is  null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then null 
+							 else acctvof.Field
+						end as Field, 
+						case when pin.id is not null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then acctvof.Value 
+							 when pin.id is  null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then null 
+							 else acctvof.Value
+						end as Value*/
 				FROM edw_temp.tpolicy_temp1 acc
 					INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acc.Id --acctv.AccountTransactionId = acc.Id
 					INNER JOIN edw_stage.AccountTransactionVersionObject acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
 					INNER JOIN edw_stage.AccountTransactionVersionObjectField acctvof ON acctvof.VersionObjectId = acctvo.id
+					--left join edw_stage.AccountTransactionVersionObjectField pin on pin.versionobjectid = acctvo.id and pin.field = 'IsPrimaryInsured' and pin.Value = 'True'
 				WHERE COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') != '''' --and acc.policynumber = 'HO100024581' 
 			) t
 		PIVOT 
@@ -96,6 +104,8 @@ BEGIN
 				MAX(Value) FOR Field IN (InsuredType, NamedInsured, FirstName, LastName, MiddleName, Prefix, Suffix, CompanyName, MailingAddressLine1, MailingAddressLine2, MailingAddressLineUnit, 
 				MailingAddressCity, MailingAddressState, MailingAddressZipCode, MailingAddressCounty, MailingAddressCountry, Program)
 			) pivottable
+
+			
 
 		-- Start Merge process
 		MERGE edw_core.tpolicy AS Target
@@ -183,8 +193,8 @@ BEGIN
            ,mailing_address_country_nm
            ,prior_policy_no
            ,non_renewal_in
-           ,source_system_sk
 		   ,prior_term_policy_no
+           ,source_system_sk
            ,create_ts
            ,update_ts
            ,etl_audit_sk
