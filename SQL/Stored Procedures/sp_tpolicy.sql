@@ -83,7 +83,7 @@ BEGIN
 		INTO edw_temp.tpolicy_temp2
 		FROM
 			(
-				SELECT  acctv.AccountTransactionId, acctvof.Field, acctvof.Value /*
+				SELECT  acctv.AccountTransactionId, --acctvof.Field, acctvof.Value 
 						case when pin.id is not null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then acctvof.Field 
 							 when pin.id is  null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then null 
 							 else acctvof.Field
@@ -91,12 +91,12 @@ BEGIN
 						case when pin.id is not null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then acctvof.Value 
 							 when pin.id is  null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then null 
 							 else acctvof.Value
-						end as Value*/
+						end as Value
 				FROM edw_temp.tpolicy_temp1 acc
 					INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acc.Id --acctv.AccountTransactionId = acc.Id
 					INNER JOIN edw_stage.AccountTransactionVersionObject acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
 					INNER JOIN edw_stage.AccountTransactionVersionObjectField acctvof ON acctvof.VersionObjectId = acctvo.id
-					--left join edw_stage.AccountTransactionVersionObjectField pin on pin.versionobjectid = acctvo.id and pin.field = 'IsPrimaryInsured' and pin.Value = 'True'
+					left join edw_stage.AccountTransactionVersionObjectField pin on pin.versionobjectid = acctvo.id and pin.field = 'IsPrimaryInsured' and pin.Value = 'True'
 				WHERE COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') != '''' --and acc.policynumber = 'HO100024581' 
 			) t
 		PIVOT 
