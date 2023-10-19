@@ -1,0 +1,26 @@
+{
+	"name": "DELANDROPEbao_alh_SourceDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_eBao_uat_aws_us_uat_vault",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"cw_tableName": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "DELANDROPEbao_alh_20231019"
+		},
+		"annotations": [],
+		"type": "MySqlTable",
+		"schema": [],
+		"typeProperties": {
+			"tableName": {
+				"value": "@dataset().cw_tableName",
+				"type": "Expression"
+			}
+		}
+	}
+}
