@@ -62,7 +62,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 		
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(br.CreatedDate,br.UpdatedDate)) FROM edw_temp.tbroker_vault_team_temp br),@last_source_extract_ts)
+		SET @new_last_source_extract_ts = '2017-01-01'
 		
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
