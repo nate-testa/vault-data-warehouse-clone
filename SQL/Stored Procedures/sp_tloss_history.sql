@@ -45,7 +45,7 @@ BEGIN
 				acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, acc.PolicyChangeNumber
 				,his.[policy_history_sk] as [policy_history_sk]
 				,acct.[Index]
-				,accto.[Field], accto.[Value]
+				,accto.[Field], NULLIF(accto.[Value], '') as [Value]
 				,acc.CreatedDate, acc.UpdatedDate
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
