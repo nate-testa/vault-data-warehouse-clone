@@ -482,7 +482,7 @@ with DAG(
 
     with TaskGroup("datamart_group") as datamart_group:
 
-        datamart_group_items = ['sp_tdaily_inforce_policy','sp_tpolicy_summary','sp_tpolicy_transaction_summary','sp_tcustomer_summary','sp_titem_inforce','sp_titem_summary','sp_tinternal_coverage_inforce','sp_tinternal_coverage_summary', 'sp_tclaim_feature_summary', 'sp_tclaim_summary']
+        datamart_group_items = ['sp_tdaily_inforce_policy','sp_tpolicy_summary','sp_tpolicy_transaction_summary','sp_tcustomer_summary','sp_titem_inforce','sp_titem_summary','sp_tinternal_coverage_inforce','sp_tinternal_coverage_summary', 'sp_tclaim_feature_summary', 'sp_tclaim_summary', 'sp_trenewal_summary', 'sp_tbroker_summary']
 
         sp_tdaily_inforce_policy = MsSqlOperator(
             task_id='sp_tdaily_inforce_policy',
@@ -564,6 +564,22 @@ with DAG(
             autocommit=True,
         )
 
+        sp_trenewal_summary = MsSqlOperator(
+            task_id='sp_trenewal_summary',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_trenewal_summary",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tbroker_summary = MsSqlOperator(
+            task_id='sp_tbroker_summary',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tbroker_summary",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_datamart_email = EmailOperator(
             task_id='send_datamart_email',
             to=to_email,
@@ -571,7 +587,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(datamart_group_items, 'All stored procedures executed successfully for all the Datamart tables'),
         )
 
-        sp_tdaily_inforce_policy >> sp_tpolicy_summary >> sp_tpolicy_transaction_summary >> sp_tcustomer_summary >> sp_titem_inforce >> sp_titem_summary >> sp_tinternal_coverage_inforce >> sp_tinternal_coverage_summary >> sp_tclaim_feature_summary >> sp_tclaim_summary >> send_datamart_email
+        sp_tdaily_inforce_policy >> sp_tpolicy_summary >> sp_tpolicy_transaction_summary >> sp_tcustomer_summary >> sp_titem_inforce >> sp_titem_summary >> sp_tinternal_coverage_inforce >> sp_tinternal_coverage_summary >> sp_tclaim_feature_summary >> sp_tclaim_summary >> sp_trenewal_summary >> sp_tbroker_summary >> send_datamart_email
 
 
     with TaskGroup("reference_group") as reference_group:
@@ -845,7 +861,18 @@ with DAG(
 
     with TaskGroup("integration_group") as integration_group:
 
-        integration_group_items = ['sp_tclaim_policy_search_api','sp_tclaim_symbility_api', 'sp_tpolicy_hsb_hsp_feed', 'sp_tpolicy_hsb_cyber_feed', 'sp_tpolicy_hsb_slc_feed', 'sp_billing_account_customer_portal_api', 'sp_policy_customer_portal_api']
+        integration_group_items = [
+            'sp_tclaim_policy_search_api',
+            'sp_tclaim_symbility_api', 
+            'sp_tpolicy_hsb_hsp_feed', 
+            'sp_tpolicy_hsb_cyber_feed', 
+            'sp_tpolicy_hsb_slc_feed', 
+            'sp_billing_account_customer_portal_api', 
+            'sp_policy_customer_portal_api',
+            'sp_policy_ivans_auto_feed',
+            'sp_policy_ivans_home',
+            'sp_policy_ivans_pel_feed',
+            ]
 
         sp_tclaim_policy_search_api = MsSqlOperator(
             task_id='sp_tclaim_policy_search_api',
@@ -903,6 +930,30 @@ with DAG(
             autocommit=True,
         )
 
+        sp_policy_ivans_auto_feed = MsSqlOperator(
+            task_id='sp_policy_ivans_auto_feed',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_policy_ivans_auto_feed",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_policy_ivans_home = MsSqlOperator(
+            task_id='sp_policy_ivans_home',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_policy_ivans_home",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_policy_ivans_pel_feed = MsSqlOperator(
+            task_id='sp_policy_ivans_pel_feed',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_policy_ivans_pel_feed",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_integration_email = EmailOperator(
             task_id='send_integration_email',
             to=to_email,
@@ -910,7 +961,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
         )
 
-        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_tpolicy_hsb_hsp_feed >> sp_tpolicy_hsb_cyber_feed >> sp_tpolicy_hsb_slc_feed >> sp_billing_account_customer_portal_api >> sp_policy_customer_portal_api >> send_integration_email
+        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_tpolicy_hsb_hsp_feed >> sp_tpolicy_hsb_cyber_feed >> sp_tpolicy_hsb_slc_feed >> sp_billing_account_customer_portal_api >> sp_policy_customer_portal_api >> sp_policy_ivans_auto_feed >> sp_policy_ivans_home >> sp_policy_ivans_pel_feed >> send_integration_email
 
 
     end = DummyOperator(
