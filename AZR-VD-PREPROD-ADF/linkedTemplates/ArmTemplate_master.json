@@ -1,0 +1,200 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "AZR-VD-PREPROD-ADF"
+		},
+		"LS_EDW_PREPROD_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_EDW_PREPROD'"
+		},
+		"LS_eBao_preProd_aws_us_preprod_address_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_address'"
+		},
+		"LS_eBao_preProd_aws_us_preprod_diary_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_diary'"
+		},
+		"LS_eBao_preProd_aws_us_preprod_pub_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_pub'"
+		},
+		"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_unicorn_insurepay'"
+		},
+		"LS_eBao_preProd_aws_us_preprod_vault_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_vault'"
+		},
+		"LS_metal_prePROD_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_metal_prePROD'"
+		},
+		"AzureMetalDBSit_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/61591278-f31e-4706-ac18-ebb142d84d24/resourceGroups/AZR-INFRA-RG/providers/Microsoft.Sql/servers/azrvaultmetaldev001"
+		},
+		"AzureMetalDBSit_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"AzureMetalDBSit_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azrvaultmetaldev001.database.windows.net"
+			]
+		},
+		"AzureSqlDatabase871_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/61591278-f31e-4706-ac18-ebb142d84d24/resourceGroups/DefaultResourceGroup-EUS2/providers/Microsoft.Sql/servers/azr-vault-data-sit-001"
+		},
+		"AzureSqlDatabase871_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"AzureSqlDatabase871_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-vault-data-sit-001.database.windows.net"
+			]
+		},
+		"AzureSqlDatabase_Adf_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/61591278-f31e-4706-ac18-ebb142d84d24/resourceGroups/AZR-INFRA-RG/providers/Microsoft.Sql/servers/azrvaultdatasit001"
+		},
+		"AzureSqlDatabase_Adf_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"AzureSqlDatabase_Adf_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azrvaultdatasit001.database.windows.net"
+			]
+		},
+		"containerUri": {
+			"type": "string",
+			"metadata": "URI to storage account containing linked ARM templates"
+		},
+		"containerSasToken": {
+			"type": "string",
+			"metadata": "Sas token to storage account containing linked ARM templates"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "AZR-VD-PREPROD-ADF_ArmTemplate_0",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"LS_EDW_PREPROD_connectionString": {
+						"value": "[parameters('LS_EDW_PREPROD_connectionString')]"
+					},
+					"LS_metal_prePROD_connectionString": {
+						"value": "[parameters('LS_metal_prePROD_connectionString')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "AZR-VD-PREPROD-ADF_ArmTemplate_1",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_1.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"LS_eBao_preProd_aws_us_preprod_address_connectionString": {
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_address_connectionString')]"
+					},
+					"LS_eBao_preProd_aws_us_preprod_diary_connectionString": {
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_diary_connectionString')]"
+					},
+					"LS_eBao_preProd_aws_us_preprod_pub_connectionString": {
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_pub_connectionString')]"
+					},
+					"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_connectionString": {
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_connectionString')]"
+					},
+					"LS_eBao_preProd_aws_us_preprod_vault_connectionString": {
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_vault_connectionString')]"
+					},
+					"AzureMetalDBSit_properties_privateLinkResourceId": {
+						"value": "[parameters('AzureMetalDBSit_properties_privateLinkResourceId')]"
+					},
+					"AzureMetalDBSit_properties_groupId": {
+						"value": "[parameters('AzureMetalDBSit_properties_groupId')]"
+					},
+					"AzureMetalDBSit_properties_fqdns": {
+						"value": "[parameters('AzureMetalDBSit_properties_fqdns')]"
+					},
+					"AzureSqlDatabase871_properties_privateLinkResourceId": {
+						"value": "[parameters('AzureSqlDatabase871_properties_privateLinkResourceId')]"
+					},
+					"AzureSqlDatabase871_properties_groupId": {
+						"value": "[parameters('AzureSqlDatabase871_properties_groupId')]"
+					},
+					"AzureSqlDatabase871_properties_fqdns": {
+						"value": "[parameters('AzureSqlDatabase871_properties_fqdns')]"
+					},
+					"AzureSqlDatabase_Adf_properties_privateLinkResourceId": {
+						"value": "[parameters('AzureSqlDatabase_Adf_properties_privateLinkResourceId')]"
+					},
+					"AzureSqlDatabase_Adf_properties_groupId": {
+						"value": "[parameters('AzureSqlDatabase_Adf_properties_groupId')]"
+					},
+					"AzureSqlDatabase_Adf_properties_fqdns": {
+						"value": "[parameters('AzureSqlDatabase_Adf_properties_fqdns')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Resources/deployments', 'AZR-VD-PREPROD-ADF_ArmTemplate_0')]"
+			]
+		},
+		{
+			"name": "AZR-VD-PREPROD-ADF_ArmTemplate_2",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_2.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Resources/deployments', 'AZR-VD-PREPROD-ADF_ArmTemplate_1')]"
+			]
+		}
+	]
+}

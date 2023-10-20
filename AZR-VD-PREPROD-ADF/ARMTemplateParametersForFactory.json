@@ -1,0 +1,63 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "AZR-VD-PREPROD-ADF"
+		},
+		"LS_EDW_PREPROD_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_preProd_aws_us_preprod_address_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_preProd_aws_us_preprod_diary_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_preProd_aws_us_preprod_pub_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_preProd_aws_us_preprod_vault_connectionString": {
+			"value": ""
+		},
+		"LS_metal_prePROD_connectionString": {
+			"value": ""
+		},
+		"AzureMetalDBSit_properties_privateLinkResourceId": {
+			"value": "/subscriptions/61591278-f31e-4706-ac18-ebb142d84d24/resourceGroups/AZR-INFRA-RG/providers/Microsoft.Sql/servers/azrvaultmetaldev001"
+		},
+		"AzureMetalDBSit_properties_groupId": {
+			"value": "sqlServer"
+		},
+		"AzureMetalDBSit_properties_fqdns": {
+			"value": [
+				"azrvaultmetaldev001.database.windows.net"
+			]
+		},
+		"AzureSqlDatabase871_properties_privateLinkResourceId": {
+			"value": "/subscriptions/61591278-f31e-4706-ac18-ebb142d84d24/resourceGroups/DefaultResourceGroup-EUS2/providers/Microsoft.Sql/servers/azr-vault-data-sit-001"
+		},
+		"AzureSqlDatabase871_properties_groupId": {
+			"value": "sqlServer"
+		},
+		"AzureSqlDatabase871_properties_fqdns": {
+			"value": [
+				"azr-vault-data-sit-001.database.windows.net"
+			]
+		},
+		"AzureSqlDatabase_Adf_properties_privateLinkResourceId": {
+			"value": "/subscriptions/61591278-f31e-4706-ac18-ebb142d84d24/resourceGroups/AZR-INFRA-RG/providers/Microsoft.Sql/servers/azrvaultdatasit001"
+		},
+		"AzureSqlDatabase_Adf_properties_groupId": {
+			"value": "sqlServer"
+		},
+		"AzureSqlDatabase_Adf_properties_fqdns": {
+			"value": [
+				"azrvaultdatasit001.database.windows.net"
+			]
+		}
+	}
+}
