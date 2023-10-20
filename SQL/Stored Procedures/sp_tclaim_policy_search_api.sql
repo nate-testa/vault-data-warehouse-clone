@@ -48,10 +48,14 @@ BEGIN
 				pt.create_ts as policy_transaction_create_ts
 		INTO [edw_temp].[tclaim_policy_search_api_temp1] 
 		FROM (
-				SELECT DISTINCT policy_sk, transaction_seq_no, transaction_effective_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk, item_sk, vehicle_coverage_sk, create_ts
-				FROM edw_core.tpolicy_transaction
-				WHERE cast(create_ts as datetime2(7)) > @last_source_extract_ts
-				AND CASE WHEN product_sk = 3 AND item_sk = 0 THEN 0  ELSE 1 END = 1
+				SELECT DISTINCT pt.policy_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk, pt.item_sk, pt.vehicle_coverage_sk, pt.create_ts
+				FROM edw_core.tpolicy_transaction as pt
+				INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
+				LEFT JOIN edw_core.tauto_vehicle_coverage AS avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
+				WHERE 1=1
+				AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+				AND CASE WHEN pr.product_cd = 'AU' AND pt.item_sk = 0 THEN 0  ELSE 1 END = 1
+				AND CASE WHEN pr.product_cd = 'AU' AND avc.vehicle_deleted_in = 'Yes' THEN 0  ELSE 1 END = 1
 			) AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
 		LEFT JOIN edw_core.tdate AS d2 ON pt.transaction_effective_dt_sk = d2.date_sk
@@ -60,7 +64,6 @@ BEGIN
 		LEFT JOIN edw_core.tpolicy_transaction_type AS ptt ON pt.policy_transaction_type_sk = ptt.policy_transaction_type_sk
 		LEFT JOIN edw_core.tsource_system AS ss ON pt.source_system_sk = ss.source_system_sk
 		LEFT JOIN edw_core.thome_location AS hl ON pt.item_sk = hl.home_location_sk
-		LEFT JOIN (select * from edw_core.tauto_vehicle_coverage where vehicle_deleted_in = 'No') AS avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
 		LEFT JOIN edw_core.tauto_vehicle AS av ON pt.item_sk = av.auto_vehicle_sk
 
 
