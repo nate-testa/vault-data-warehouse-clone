@@ -1,18 +1,23 @@
+
+IF OBJECT_ID('edw_stage.t_clm_subclaim_type', 'U') IS NOT NULL
+DROP TABLE edw_stage.t_clm_subclaim_type
+GO
+
 create table edw_stage.t_clm_subclaim_type
 (
-  subclaim_type_code varchar(30) not null,
-  product_line_code varchar(30) not null,
-  subclaim_type_name varchar(200) not null,
-  is_unique char(1) null,
-  is_insured_object char(1) null,
-  subclaim_type_desc varchar(255),
-  fraud_subject_code varchar(10)default null,
-  insert_by decimal(19,0) default null,
-  insert_time datetime default null,
-  update_by decimal(19,0) default null,
-  update_time datetime default null,
- constraint [pk_t_clm_subclaim_type] primary key clustered 
+  SUBCLAIM_TYPE_CODE VARCHAR(30) NOT NULL,
+  PRODUCT_LINE_CODE VARCHAR(30) NOT NULL,
+  SUBCLAIM_TYPE_NAME VARCHAR(200) NOT NULL,
+  IS_UNIQUE CHAR(1) NULL,
+  IS_INSURED_OBJECT CHAR(1) NULL,
+  SUBCLAIM_TYPE_DESC VARCHAR(255),
+  FRAUD_SUBJECT_CODE VARCHAR(10)DEFAULT NULL,
+  INSERT_BY DECIMAL(19,0) DEFAULT NULL,
+  INSERT_TIME DATETIME DEFAULT NULL,
+  UPDATE_BY DECIMAL(19,0) DEFAULT NULL,
+  UPDATE_TIME DATETIME DEFAULT NULL,
+  CONSTRAINT [pk_t_clm_subclaim_type] PRIMARY KEY CLUSTERED 
 	(
-		[subclaim_type_code] asc
+		[SUBCLAIM_TYPE_CODE] ASC
 	)
 );
