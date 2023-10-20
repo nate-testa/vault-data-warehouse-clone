@@ -12,6 +12,7 @@ GO
 ---------------------------------------------------------------------------------------------------
 -- 06/20/23		Architha Gudimalla				1. Created this procedure 
 -- 10/13/23		Architha Gudimalla				2. Added risk state
+-- 10/20/23		Architha Gudimalla				3. Removed source_system_sk
 -- ================================================================================================= 
 
 create or ALTER PROCEDURE [edw_core].[sp_tbroker_summary]
@@ -107,8 +108,7 @@ BEGIN
 				(
 					 SELECT summ.broker_sk, --policy_sk, 
 							summ.customer_sk,
-							summ.product_sk, 
-							summ.source_system_sk,
+							summ.product_sk,  
 							st.state_sk,
 							sum(summ.inforce_ct) inforce_ct,  
 							sum(summ.inforce_premium_amt) inforce_premium_amt, 
@@ -127,16 +127,14 @@ BEGIN
 					 and pol.risk_state_cd = st.state_cd
 					 group by summ.broker_sk, --policy_sk, 
 							summ.customer_sk,
-							summ.product_sk,
-							summ.source_system_sk,
+							summ.product_sk, 
 							st.state_sk
 				), 
 				clm_summ as
 				( 
 					select  cs.broker_sk, --policy_sk, 
 							cs.customer_sk,
-							cs.product_sk, 
-							cs.source_system_sk,
+							cs.product_sk,  
 							st.state_sk,
 							sum(case when datediff(d,c.loss_dt,getdate()) between 0 and 365 then 1 else 0 end) one_year_claim_ct, 
 							sum(case when datediff(d,c.loss_dt,getdate()) between 0 and 365 then [itd_total_incurred_amt] else 0 end) one_year_loss_incurred_amt, 
@@ -152,8 +150,7 @@ BEGIN
 					and 	cs.policy_sk = pol.policy_sk
 					 and pol.risk_state_cd = st.state_cd
 					group by cs.broker_sk, --policy_sk, 
-							cs.customer_sk,
-							cs.source_system_sk,
+							cs.customer_sk, 
 							cs.product_sk,
 							st.state_sk
 				) 
@@ -190,8 +187,7 @@ BEGIN
 						three_year_claim_ct, 
 						three_year_loss_incurred_amt,
 						three_year_non_cat_claim_ct, 
-						three_year_non_cat_loss_incurred_amt,
-						source_system_sk,
+						three_year_non_cat_loss_incurred_amt, 
 						update_ts,
 						etl_audit_sk
 					)
@@ -225,21 +221,18 @@ BEGIN
 						sum(isnull(cs.three_year_claim_ct,0)), 
 						sum(isnull(cs.three_year_loss_incurred_amt,0)),
 						sum(isnull(cs.three_year_non_cat_claim_ct,0)), 
-						sum(isnull(cs.three_year_non_cat_loss_incurred_amt,0)),
-						isnull(ps.source_system_sk, cs.source_system_sk),  
+						sum(isnull(cs.three_year_non_cat_loss_incurred_amt,0)), 
 						getdate(), @etl_audit_sk
 				from pol_summ ps
 				full join clm_summ cs 
 				on ps.broker_sk = cs.broker_sk 
 				and ps.customer_sk = cs.customer_sk  
-				and ps.product_sk = cs.product_sk 
-				and ps.source_system_sk = cs.source_system_sk
+				and ps.product_sk = cs.product_sk  
 				and ps.state_sk = cs.state_sk 
 				--where  isnull(xpsr_rein.ee,0) <> 0
 				group by isnull(ps.customer_sk, cs.customer_sk),
 						isnull(ps.broker_sk, cs.broker_sk),
-						isnull(ps.product_sk, cs.product_sk),
-						isnull(ps.source_system_sk, cs.source_system_sk),
+						isnull(ps.product_sk, cs.product_sk), 
 						isnull(ps.state_sk, cs.state_sk)
 				;
        
