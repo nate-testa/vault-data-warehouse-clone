@@ -29,8 +29,7 @@ BEGIN
 		FROM edw_core.tdate
 		WHERE
 			actual_dt >= CAST(@last_source_extract_ts AS DATE)
-			-- and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
-			and actual_dt <= CAST(@current_date AS DATE)
+			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
 		GROUP BY yearmonth
 		ORDER BY yearmonth
 		
