@@ -29,10 +29,11 @@ BEGIN
 		FROM edw_core.tdate
 		WHERE
 			actual_dt >= CAST(@last_source_extract_ts AS DATE)
-			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
+			-- and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
+			and actual_dt <= CAST(@current_date AS DATE)
 		GROUP BY yearmonth
 		ORDER BY yearmonth
-
+		
 		OPEN cur_main
 		FETCH NEXT FROM cur_main INTO @year_month
 
@@ -85,16 +86,31 @@ BEGIN
 			FROM
 				edw_core.tpolicy_transaction tpt
 				INNER JOIN edw_core.tpolicy tp on tp.policy_sk=tpt.policy_sk
-				LEFT JOIN edw_core.tinternal_coverage tic ON tic.internal_coverage_sk=tpt.internal_coverage_sk
+				INNER JOIN edw_core.tinternal_coverage tic ON tic.internal_coverage_sk=tpt.internal_coverage_sk
 				INNER JOIN edw_core.tdate tdeff on tdeff.date_sk=tpt.transaction_effective_dt_sk
 				INNER JOIN edw_core.tdate tdpro on tdpro.date_sk=tpt.transaction_dt_sk
 				INNER JOIN edw_core.tpolicy_transaction_type tptt on tptt.policy_transaction_type_sk=tpt.policy_transaction_type_sk
 				INNER JOIN edw_core.tbroker tb on tb.broker_sk=tpt.broker_sk
 			WHERE
 				tpt.accouting_month_sk=@acounting_date_sk
-				AND tp.product_cd!='AU'
-			UNION
+			) AS temp
+			GROUP BY
+				accounting_date,policy_image_id,policy_number,product,transaction_sequence,company,transaction_date,
+				effective_date,expiration_date,transaction_type,producer_code,agency_name,insured_name,
+				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
+				aslob
+			),
+			policy_workday_written_premium_feed_commission_temp AS
+			(
 			SELECT
+				accounting_date,policy_image_id,NULL AS policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
+				effective_date,expiration_date,transaction_type,producer_code,agency_name,NULL AS number_of_installments,insured_name,
+				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
+				aslob,SUM(premium_amt) AS amount,NULL AS deleteddate,NULL AS contribcutoffdate,
+				GETDATE() AS extraction_time,GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk as etl_audit_sk
+			FROM
+			(
+				SELECT
 				@last_day_month AS [accounting_date],
 				tp.policy_sk AS policy_image_id,
 				tp.policy_no AS [policy_number],
@@ -124,27 +140,29 @@ BEGIN
 				as subcategory,
 				1 as financial_category_id,
 				'Commission Amount' AS [financial_category_name],
-				tic.aslob_cd AS [aslob],
-				tpt.commission_amt	
-			FROM
+				CASE tp.product_cd
+				WHEN 'HO' THEN '040'
+				WHEN 'AU' THEN '192'
+				WHEN 'PEL' THEN '171'
+				WHEN 'LUX' THEN '090'
+				END AS [aslob],
+				tpt.commission_amt AS premium_amt
+				FROM
 				edw_core.tpolicy_transaction tpt
 				inner join edw_core.tpolicy tp on tp.policy_sk=tpt.policy_sk
-				LEFT JOIN edw_core.tinternal_coverage tic ON tic.internal_coverage_sk=tpt.internal_coverage_sk
 				INNER JOIN edw_core.tdate tdeff on tdeff.date_sk=tpt.transaction_effective_dt_sk
 				INNER JOIN edw_core.tdate tdpro on tdpro.date_sk=tpt.transaction_dt_sk
 				INNER JOIN edw_core.tpolicy_transaction_type tptt on tptt.policy_transaction_type_sk=tpt.policy_transaction_type_sk
 				INNER JOIN edw_core.tbroker tb on tb.broker_sk=tpt.broker_sk
-			WHERE
+				WHERE
 				tpt.accouting_month_sk=@acounting_date_sk
 				and tpt.commission_amt!=0
-				AND tp.product_cd!='AU'
-			) AS temp
-			GROUP BY
+				) as temp
+				GROUP BY
 				accounting_date,policy_image_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob
-
 			)
 			INSERT INTO edw_integration.policy_workday_written_premium_feed
 			(
@@ -160,6 +178,15 @@ BEGIN
 				aslob,amount,null as deleteddate,null contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
 			FROM
 				policy_workday_written_premium_feed_temp
+			UNION
+			SELECT
+				accounting_date,policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
+				effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
+				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
+				aslob,amount,null as deleteddate,null contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
+			FROM
+			policy_workday_written_premium_feed_commission_temp
+
 			SET @rows_affected=@@ROWCOUNT;
 
 			-- Update control table
