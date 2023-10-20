@@ -29,7 +29,7 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.tclaim_feature_temp1
 
 		SELECT
-		tcl.claim_sk,tcase.claim_no,c.SUBCLAIM_TYPE AS subclaim_type_nm, c.seq_no AS subclaim_seq_no,
+		tcl.claim_sk,tcase.claim_no,sct.subclaim_type_name AS subclaim_type_nm, c.seq_no AS subclaim_seq_no,
 		e.coverage_code AS claim_coverage_cd,e.coverage_name AS claim_coverage_desc,c.claimant_name AS claimant_nm,
 		CASE
 			WHEN c.damage_severity=1 THEN 'Small'
@@ -55,6 +55,7 @@ BEGIN
 		INNER JOIN edw_stage.t_clm_object AS c ON c.case_id = tcase.CASE_ID
 		INNER JOIN edw_stage.t_clm_item AS e ON c.[object_id] = e.[object_id]
 		LEFT JOIN edw_stage.t_clm_pol_insured tcpi2 ON c.insured_id=tcpi2.insured_id
+		LEFT JOIN edw_stage.t_clm_subclaim_type sct ON c.subclaim_type = sct.subclaim_type_code
 		LEFT JOIN edw_stage.t_pub_user g ON c.OWNER_ID = g.[USER_ID]
 		LEFT JOIN edw_core.tproduct prd ON prd.product_cd=tcase.product_code
 		-- LEFT JOIN edw_core.taslob asl ON TRIM(asl.coverage_cd)=TRIM(e.coverage_name) AND 
@@ -68,12 +69,11 @@ BEGIN
 			END =e.product_code
 		LEFT JOIN edw_core.tclaim_feature tcf ON tcf.claim_no=tcase.claim_no AND 
 		tcf.subclaim_seq_no=c.seq_no AND tcf.claim_coverage_cd=e.coverage_code
-		WHERE
-			tcf.claim_feature_sk IS NULL
 
 	MERGE edw_core.tclaim_feature  AS Target
 	USING edw_temp.tclaim_feature_temp1 AS Source
 	ON Source.claim_no=Target.claim_no
+	AND Target.subclaim_seq_no=Source.subclaim_seq_no AND Target.claim_coverage_cd=Source.claim_coverage_cd
 	-- For Inserts
 	WHEN NOT MATCHED BY Target THEN
 	INSERT (
@@ -112,16 +112,15 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		-- commented as we are not doing incremental insert
-		-- SET @new_last_source_extract_ts=COALESCE((SELECT MAX(IssuedDate) FROM edw_temp.tclaim_temp1),@last_source_extract_ts)
-		-- EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
+		SET @new_last_source_extract_ts = '2017-01-01'
+		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 		
 		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tclaim_temp1
+		DROP TABLE IF EXISTS edw_temp.tclaim_feature_temp1
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
