@@ -30,7 +30,7 @@ BEGIN
 		SELECT
 			tbrk.broker_id,tbrk.broker_sk,prd.[Name] AS product_nm,
 			brkctm.[State] AS state_cd,brkctm.ProgramType AS program_type,
-			brkctm.TeamMemberType AS team_member_type,null as team_member_nm,
+			brkctm.TeamMemberType AS team_member_type,u.name as team_member_nm,
 			brkctm.CreatedDate,brkctm.UpdatedDate
 		INTO edw_temp.tbroker_vault_team_temp
 		FROM
@@ -38,6 +38,7 @@ BEGIN
 			inner join edw_core.tbroker tbrk on brk.ProducerId=tbrk.broker_id
 			inner join edw_stage.BrokerageCompanyTeamMember brkctm on brk.Id=brkctm.BrokerageId
 			left join edw_stage.Product prd on brkctm.ProductId=prd.Id
+			left join edw_stage.[User] u on brkctm.UserId=u.id
 		WHERE
 			GREATEST(brkctm.CreatedDate,brkctm.UpdatedDate) > @last_source_extract_ts
 
