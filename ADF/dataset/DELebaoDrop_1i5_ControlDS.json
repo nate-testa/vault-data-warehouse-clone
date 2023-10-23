@@ -1,0 +1,19 @@
+{
+	"name": "DELebaoDrop_1i5_ControlDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_PREPROD",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "DELebaoDrop_1i5_20231023"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edw_stage",
+			"table": "ControlLoadTable"
+		}
+	}
+}
