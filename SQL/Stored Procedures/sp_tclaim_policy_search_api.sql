@@ -39,7 +39,7 @@ BEGIN
 				pr.product_nm,
 				ptt.policy_transaction_type_nm as transaction_type,
 				CASE 
-					WHEN p.product_cd in ('PEL','LUX') THEN CONCAT(p.mailing_address_line1,'-',p.mailing_address_line2,'-',p.mailing_address_unit_no,'-',p.mailing_address_city_nm,'-',p.mailing_address_state_cd,'-',p.mailing_address_zip_cd)
+					WHEN p.product_cd in ('PEL','LUX') THEN CONCAT(pl.address_line_1,'-',pl.address_line_2,'-',pl.unit_no,'-',pl.city_nm,'-',pl.state_cd,'-',pl.zip_cd)
 					WHEN p.product_cd = 'HO' THEN CONCAT(hl.address_line_1,'-',hl.address_line_2,'-',hl.unit_no,'-',hl.city_nm,'-',hl.state_cd,'-',hl.zip_cd)
 					WHEN p.product_cd = 'AU' THEN av.vehicle_vin
 					ELSE '***!Pending!***'
@@ -48,7 +48,8 @@ BEGIN
 				pt.create_ts as policy_transaction_create_ts
 		INTO [edw_temp].[tclaim_policy_search_api_temp1] 
 		FROM (
-				SELECT DISTINCT pt.policy_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk, pt.item_sk, pt.vehicle_coverage_sk, pt.create_ts
+				SELECT 
+					DISTINCT pt.policy_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk, pt.item_sk, pt.vehicle_coverage_sk, pt.create_ts
 				FROM edw_core.tpolicy_transaction as pt
 				INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
 				LEFT JOIN edw_core.tauto_vehicle_coverage AS avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
@@ -65,6 +66,7 @@ BEGIN
 		LEFT JOIN edw_core.tsource_system AS ss ON pt.source_system_sk = ss.source_system_sk
 		LEFT JOIN edw_core.thome_location AS hl ON pt.item_sk = hl.home_location_sk
 		LEFT JOIN edw_core.tauto_vehicle AS av ON pt.item_sk = av.auto_vehicle_sk
+		LEFT JOIN edw_core.tpel_location AS pl ON p.policy_no = pl.policy_no AND p.effective_dt = pl.effective_dt AND pt.transaction_seq_no = pl.transaction_seq_no
 
 
 		-- Start Insert process
