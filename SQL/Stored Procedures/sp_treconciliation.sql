@@ -5,6 +5,7 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 07/24/23		Architha Gudimalla				1. Created this procedure 
+-- 10/23/23		Architha Gudimalla				2. Updated the proc to run for 30 days
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_treconciliation]
@@ -30,7 +31,7 @@ BEGIN
 	
 		if @last_source_extract_ts = '01-jan-1999'
 		begin
-			SELECT @last_source_extract_ts = min(cast(IssuedDate as date)) from edw_stage.[AccountTransaction] where IssuedDate >= '01-jul-2023';
+			SELECT @last_source_extract_ts = min(cast(IssuedDate as date)) from edw_stage.[AccountTransaction];
 		end
 	
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200));
@@ -43,7 +44,7 @@ BEGIN
 			WHERE acct.State ='ISSUED' --- Review BOUND transactions
 			and	acct.PolicyNumber is not null 
 			and pr.ProductLine = 'PersonalLines'  
-			AND cast(acct.IssuedDate as date) between DATEADD(day, -30, @last_source_extract_ts) and @last_source_extract_ts
+			AND cast(acct.IssuedDate as date) between @last_source_extract_ts and GETDATE()
 			group by cast(acct.IssuedDate as date)
 		),
 		src_edw as
@@ -52,7 +53,7 @@ BEGIN
 			from edw_core.tpolicy_transaction tr, edw_core.tpolicy pol , edw_core.tdate td
 			where pol.policy_sk = tr.policy_sk
 			and td.date_sk = tr.transaction_dt_sk 
-			and td.actual_dt  between DATEADD(day, -30, @last_source_extract_ts) and @last_source_extract_ts
+			and td.actual_dt  between @last_source_extract_ts and GETDATE()
 			group by td.actual_dt
 		) 
 		MERGE edw_core.treconciliation AS Target
@@ -107,7 +108,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=cast(getdate() as date);
+		SET @new_last_source_extract_ts=cast(DATEADD(day, -30, getdate())  as date);
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
