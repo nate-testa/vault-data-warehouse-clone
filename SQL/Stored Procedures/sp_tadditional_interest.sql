@@ -1,4 +1,11 @@
-﻿-- =============================================
+﻿/****** Object:  StoredProcedure [edw_core].[sp_tadditional_interest]    Script Date: 20/10/2023 1:30:18 p. m. ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- =============================================
 -- Author:		Hernando Gonzalez Garcia
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert and update info related to Additional Interest
@@ -35,6 +42,7 @@ BEGIN
 			--,4 as [source_system_sk] --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
+			,product_cd
 		INTO [edw_temp].[tadditional_interest_temp1]
 		FROM
 			(
@@ -47,6 +55,7 @@ BEGIN
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
 				 end as [source_system_sk] --20230717 added
+				 ,ProductCode as product_cd
 			FROM
 				(SELECT
 					*
@@ -102,6 +111,7 @@ BEGIN
       ,[create_ts]
       ,[update_ts]
       ,[etl_audit_sk]
+	  ,[product_cd]
 		)
 		SELECT [PolicyNumber]
       ,[EffectiveDate]
@@ -129,7 +139,8 @@ BEGIN
       ,[source_system_sk]
       ,getdate()
       ,getdate()
-		   ,@etl_audit_sk
+	  ,@etl_audit_sk
+	  ,[product_cd]
 		FROM 
 			[edw_temp].[tadditional_interest_temp1]
 
@@ -162,4 +173,4 @@ BEGIN
 
 	END CATCH
 END
-
+GO
