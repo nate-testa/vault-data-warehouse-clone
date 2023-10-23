@@ -13,6 +13,7 @@
 -- 10/16/23		Architha Gudimalla				6. Updated logic for original effective dtlatest_term_in
 -- 10/17/23		Architha Gudimalla				7. Added logic for prior_term_policy_no
 -- 10/18/23		Architha Gudimalla				8. Updated Insured name logic
+-- 10/23/23		Architha Gudimalla				9. Added billingaccount_sk
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy]
@@ -152,17 +153,20 @@ BEGIN
 				,acc_prior.PolicyNumber  prior_policy_no
 				,'No' as non_renewal_in
 				, acc.renewalofpolicynumber
+				, tb.billingaccount_sk
 				--select *
 			FROM 
 				edw_temp.tpolicy_temp1 tmp1
 				INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = tmp1.Id
 				inner join edw_stage.Account acc on tmp1.AccountId = acc.Id 
 				left join edw_stage.Account acc_prior on acc.copyofAccountId = acc_prior.Id 
+				inner join edw_stage.BillingAccount ba on ba.id = acc.BillingAccountId
+				inner join edw_core.tbillingaccount tb on tb.billingaccount_no = ba.ReferenceCode
 				left join edw_stage.Brokerage br on acctv.BrokerageId = br.id
 				left join edw_stage.Insured ins on acctv.PrimaryInsuredId = ins.Id
 				left join edw_stage.Product pr on tmp1.ProductId = pr.id
 				left join edw_temp.tpolicy_temp2 tmp2 on tmp2.AccountTransactionId = tmp1.Id
-				where pr.productline <> 'CommercialLines' --and tmp1.policynumber = 'CO100023657' 
+				where pr.productline <> 'CommercialLines' --and tmp1.policynumber = 'CO100023657'  
 		) AS Source
 		ON Source.PolicyNumber = Target.policy_no and cast(Source.EffectiveDate as date) = cast(Target.effective_dt as date)
 		-- For Inserts
@@ -195,6 +199,7 @@ BEGIN
            ,non_renewal_in
 		   ,prior_term_policy_no
            ,source_system_sk
+		   ,billingaccount_sk
            ,create_ts
            ,update_ts
            ,etl_audit_sk
@@ -222,7 +227,8 @@ BEGIN
 				source.prior_policy_no,
 				source.non_renewal_in,
 				source.renewalofpolicynumber,
-				Source.source_system_sk, 
+				Source.source_system_sk
+		   		,Source.billingaccount_sk, 
 				getdate(), getdate(), @etl_audit_sk)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -247,6 +253,7 @@ BEGIN
 		Target.mailing_address_country_nm	= Source.MailingAddressCountry, 
 		Target.prior_policy_no				= source.prior_policy_no, 
 		Target.prior_term_policy_no			= source.renewalofpolicynumber, 
+		Target.billingaccount_sk			= source.billingaccount_sk, 
         Target.update_ts 					= getdate()
 		;
 
