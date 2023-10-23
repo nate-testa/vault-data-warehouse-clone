@@ -160,8 +160,8 @@ BEGIN
 				INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = tmp1.Id
 				inner join edw_stage.Account acc on tmp1.AccountId = acc.Id 
 				left join edw_stage.Account acc_prior on acc.copyofAccountId = acc_prior.Id 
-				inner join edw_stage.BillingAccount ba on ba.id = acc.BillingAccountId
-				inner join edw_core.tbillingaccount tb on tb.billingaccount_no = ba.ReferenceCode
+				left join edw_stage.BillingAccount ba on ba.id = acc.BillingAccountId
+				left join edw_core.tbillingaccount tb on tb.billingaccount_no = ba.ReferenceCode
 				left join edw_stage.Brokerage br on acctv.BrokerageId = br.id
 				left join edw_stage.Insured ins on acctv.PrimaryInsuredId = ins.Id
 				left join edw_stage.Product pr on tmp1.ProductId = pr.id
