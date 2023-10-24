@@ -32,7 +32,8 @@ BEGIN
 			DomesticEmployeeCount,IncludeEmploymentPracticesLiability,DONotForProfitLimit,DOContinuityDate,DOContinuityDateOverride,CustomerHasPublicProfile,
 			LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
 			HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
-			PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript
+			PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
+			CriminalTrafficViolationField,YouthfulOperatorCount,AdultOperatorCount
 			into edw_temp.tpel_coverage_temp1
 		from
 		(
@@ -69,7 +70,8 @@ BEGIN
 					'DomesticEmployeeCount','IncludeEmploymentPracticesLiability','DONotForProfitLimit','DOContinuityDate','DOContinuityDateOverride',
 					'CustomerHasPublicProfile','LevelOfAttention','LibelSlanderExclusion','PoliticalExclusion','AnimalRelatedLiabilityExclusion',
 					'HigherUnderlyingLimitsEndorsement','AILimitedLiability','MinimumEarnedPremiumEndorsement','MinimumEarnedPremiumEndorsementLimit',
-					'PremisesLiabilityLimitation','DeletionofCosmeticMarringExclusion','Manuscript'
+					'PremisesLiabilityLimitation','DeletionofCosmeticMarringExclusion','Manuscript','ProfileAdjustment','CriminalTrafficViolation',
+					'CriminalTrafficViolationField','YouthfulOperatorCount','AdultOperatorCount'
 				)
 				and act.IssuedDate>@last_source_extract_ts
 			) as t
@@ -82,7 +84,8 @@ BEGIN
 				DomesticEmployeeCount,IncludeEmploymentPracticesLiability,DONotForProfitLimit,DOContinuityDate,DOContinuityDateOverride,CustomerHasPublicProfile,
 				LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
 				HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
-				PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript
+				PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
+				CriminalTrafficViolationField,YouthfulOperatorCount,AdultOperatorCount
 				)
 		) as pivottable
 
@@ -94,7 +97,9 @@ BEGIN
 			do_continuity_override_dt,public_profile_in,level_of_attention,libel_slander_exclusion_in,political_exclusion_in,
 			animal_related_liability_exclusion_in,higher_underlying_limits_endorsement_in,addl_insured_limited_liability_in,
 			minimum_earned_premium_endorsement_in,minimum_earned_premium_endorsement_limit_pc,premises_liability_limitation_in,
-			deletion_of_cosmetic_marring_exclusion_in,manuscript_in,source_system_sk,create_ts,update_ts,etl_audit_sk
+			deletion_of_cosmetic_marring_exclusion_in,manuscript_in,profile_adjustment,criminal_traffic_violation_in,
+			criminal_traffic_violation_desc,youthful_drivers_ct,adult_drivers_ct,
+			source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
@@ -114,6 +119,10 @@ BEGIN
 			MinimumEarnedPremiumEndorsementLimit AS minimum_earned_premium_endorsement_limit_pc,
 			PremisesLiabilityLimitation AS premises_liability_limitation_in,
 			DeletionofCosmeticMarringExclusion AS deletion_of_cosmetic_marring_exclusion_in,Manuscript AS manuscript_in,
+			ProfileAdjustment AS profile_adjustment,CriminalTrafficViolation AS criminal_traffic_violation_in,
+			CriminalTrafficViolationField AS criminal_traffic_violation_desc,
+			YouthfulOperatorCount AS youthful_drivers_ct,
+			AdultOperatorCount AS adult_drivers_ct,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM
 			edw_temp.tpel_coverage_temp1 AS ttlc
