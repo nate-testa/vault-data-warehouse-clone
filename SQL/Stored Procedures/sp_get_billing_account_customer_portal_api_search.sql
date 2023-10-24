@@ -1,8 +1,10 @@
-﻿SET ANSI_NULLS ON
+﻿/****** Object:  StoredProcedure [edw_integration].[sp_get_billing_account_customer_portal_api_search]    Script Date: 24/10/2023 10:35:23 a. m. ******/
+SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
 GO
+
 
 -- =================================================================================================
 -- Author:		Hernando Gonzalez Garcia
@@ -11,7 +13,7 @@ GO
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_billing_account_customer_portal_api_search]
 (
-  @billingaccount_no varchar(255)
+  @billingEmailId varchar(255)
 )
 AS
 BEGIN
@@ -21,26 +23,11 @@ BEGIN
 
 	SELECT
 	[billingaccount_no]
-      ,[first_nm]
-      ,[last_nm]
-      ,[mailing_address_line_1]
-      ,[mailing_address_line_2]
-      ,[mailing_city_nm]
-      ,[mailing_state_cd]
-      ,[mailing_zip_cd]
       ,[email]
       ,[auto_pay_in]
-      ,[birth_dt]
-      ,[effective_dt]
-      ,[expiration_dt]
-      ,[payor_nm]
-      ,[phone_no]
-      ,[create_ts]
-      ,[update_ts]
-      ,[etl_audit_sk]
 	FROM
 	[edw_integration].[billing_account_customer_portal_api]
 	WHERE  
-		[billingaccount_no]=@billingaccount_no
+		[email]=@billingEmailId
 END
 GO
