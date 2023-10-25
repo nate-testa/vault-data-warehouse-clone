@@ -1,4 +1,3 @@
-/****** Object:  StoredProcedure [edw_core].[sp_policy_ivans_home]    Script Date: 13/10/2023 3:54:51 p. m. ******/
 SET ANSI_NULLS ON
 GO
 
@@ -447,7 +446,7 @@ BEGIN
 		/* */
 		'PolicyDownload' as [001_MsgTypeCd]
 		,CASE 
-			WHEN ptt.policy_transaction_type_nm = 'New Business' THEN 'NBS'
+			WHEN ptt.policy_transaction_type_nm = 'New' THEN 'NBS'
 		    WHEN ptt.policy_transaction_type_nm = 'Cancellation' THEN 'XLC'
 			WHEN ptt.policy_transaction_type_nm = 'Reinstatement' THEN 'REI'
 			WHEN ptt.policy_transaction_type_nm = 'Renewal' THEN 'RW'
@@ -487,8 +486,8 @@ BEGIN
             END as [025_PhoneTypeCd]
 		,COALESCE(c.home_phone_no, c.mobile_phone_no, '') as [026_PhoneNumber]
 		,c.email as [027_EmailAddr]
-		,CASE WHEN poi.primary_insured_in = 'Y' then 'Primary' ELSE 'Secondary' END as [028_InsuredOrPrincipalRoleCd]
-		,CASE WHEN poi.primary_insured_in = 'Y' then 'Primary' ELSE 'Secondary' END as [029_InsuredOrPrincipalRoleDesc]
+		,CASE WHEN poi.primary_insured_in = 'Yes' then 'Primary' ELSE 'Secondary' END as [028_InsuredOrPrincipalRoleCd]
+		,CASE WHEN poi.primary_insured_in = 'Yes' then 'Primary' ELSE 'Secondary' END as [029_InsuredOrPrincipalRoleDesc]
 		,p.policy_no as [030_PolicyNumber]
 		,'P' as [031_BroadLOBCd]
 		, pr.product_nm as [032_LOBCd] -- pr.product_nm edw_core.tproduct ON p.product_cd = pr.product_cd
