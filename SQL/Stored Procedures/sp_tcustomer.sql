@@ -9,6 +9,7 @@
 -- 07/09/23		Mohammed Yunus					3. Mailing address column names updated
 -- 09/29/23     Sandeep Gundreddy				4. Added ins.ReferenceCode!=0 to exclude secondary customers
 -- 09/29/23     Architha Gudimalla				5. Updated vip_in logic from 1/0 to Yes/No
+-- 10/25/23     Mohammed Yunus					6. Update Merge statement condition
 -- ============================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcustomer]
@@ -35,7 +36,7 @@ BEGIN
 
         -- Create temp table with name as sp_tcustomer_temp1 and use it in 
         DROP TABLE IF EXISTS edw_temp.[tcustomer_temp1]
-        SELECT 	ins.referencecode,
+        SELECT 	CAST(ins.referencecode AS VARCHAR(255)) AS referencecode,
 				NULLIF(TRIM(ins.NamedInsured),'') NamedInsured, 
 				NULLIF(TRIM(ins.FirstName),'') FirstName, 
 				NULLIF(TRIM(ins.MiddleName),'') MiddleName, 

@@ -28,7 +28,7 @@ BEGIN
 		drop table if exists edw_temp.tpel_vehicle_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,policy_history_sk,source_system_sk,
-			IssuedDate,[Index],VehicleType,Model,Vin,[Year],Make
+			IssuedDate,[Index],VehicleType,Model,Vin,[ModelYear],Make
 			into edw_temp.tpel_vehicle_temp1
 		from
 		(
@@ -68,7 +68,7 @@ BEGIN
 		) as t
 		pivot 
 		(
-			max([Value]) FOR Field IN (VehicleType,Model,Vin,[Year],Make)
+			max([Value]) FOR Field IN (VehicleType,Model,Vin,[ModelYear],Make)
 		) as pivottable
 
 		INSERT INTO [edw_core].[tpel_vehicle]
@@ -80,7 +80,7 @@ BEGIN
 		SELECT
 			PolicyNumber AS policy_no,EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
 			ExpirationDate AS expiration_dt,TransactionDate AS transaction_dt,transaction_seq_no AS transaction_seq_no,policy_history_sk,
-			[Index] AS [vehicle_no], VehicleType AS [vehicle_type], [Year] AS vehicle_year,Make AS vehicle_make,
+			[Index] AS [vehicle_no], VehicleType AS [vehicle_type], [ModelYear] AS vehicle_year,Make AS vehicle_make,
 			Model AS vehicle_model,Vin AS vehicle_vin,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM
