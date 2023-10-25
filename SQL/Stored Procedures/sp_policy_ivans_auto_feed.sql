@@ -43,7 +43,7 @@ BEGIN
             FROM edw_core.tpolicy_transaction as pt
             INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
             WHERE 1=1
-                AND pr.product_nm = 'AU'
+                AND pr.product_cd = 'AU'
                 AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
             GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
         ),

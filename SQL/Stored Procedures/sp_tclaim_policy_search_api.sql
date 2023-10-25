@@ -39,9 +39,10 @@ BEGIN
 				pr.product_nm,
 				ptt.policy_transaction_type_nm as transaction_type,
 				CASE 
-					WHEN p.product_cd in ('PEL','LUX') THEN CONCAT(pl.address_line_1,'-',pl.address_line_2,'-',pl.unit_no,'-',pl.city_nm,'-',pl.state_cd,'-',pl.zip_cd)
-					WHEN p.product_cd = 'HO' THEN CONCAT(hl.address_line_1,'-',hl.address_line_2,'-',hl.unit_no,'-',hl.city_nm,'-',hl.state_cd,'-',hl.zip_cd)
-					WHEN p.product_cd = 'AU' THEN av.vehicle_vin
+					WHEN p.product_cd = 'PEL' THEN CONCAT(pl.address_line_1,'-',pl.address_line_2,'-',pl.unit_no,'-',pl.city_nm,'-',pl.state_cd,'-',pl.zip_cd)
+					WHEN p.product_cd = 'LUX' THEN CONCAT(p.mailing_address_line1,'-',p.mailing_address_line2,'-',p.mailing_address_unit_no,'-',p.mailing_address_city_nm,'-',p.mailing_address_state_cd,'-',p.mailing_address_zip_cd)
+					WHEN p.product_cd = 'HO'  THEN CONCAT(hl.address_line_1,'-',hl.address_line_2,'-',hl.unit_no,'-',hl.city_nm,'-',hl.state_cd,'-',hl.zip_cd)
+					WHEN p.product_cd = 'AU'  THEN av.vehicle_vin
 					ELSE '***!Pending!***'
 				END as risk_item,
 				ss.source_system_nm,
