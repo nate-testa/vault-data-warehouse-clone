@@ -37,7 +37,7 @@ BEGIN
             SELECT
                 ROW_NUMBER() OVER (PARTITION BY PolicyNumber, EffectiveDate, [Index] ORDER BY policychangenumber DESC) AS RN, 
                 PolicyNumber, EffectiveDate, [Index] as vehicle_no, IssuedDate,
-                [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],
+                [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage],
                 source_system_sk
             
             FROM
@@ -55,7 +55,7 @@ BEGIN
                         FROM [edw_stage].[AccountTransaction]
                         WHERE
                             [State] = 'ISSUED'
-                            AND IssuedDate > @last_source_extract_ts
+                            -- AND IssuedDate > @last_source_extract_ts
                         ) acct
                     INNER JOIN [edw_stage].[Product] p ON p.Id = acct.ProductId
                     INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
@@ -70,7 +70,7 @@ BEGIN
                 (
                     MAX([Value]) FOR [Field] IN 
                     (
-                        [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate]
+                        [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage]
                     )
                 ) pivottable
 
@@ -101,6 +101,8 @@ BEGIN
                 t1.EngineType as vehicle_engine_type,
                 t1.HighPerformanceVehicle as high_performance_vehicle_in,
                 t1.PurchaseDate as purchase_dt,
+                t1.VinIsInvalid as vehicle_vin_invalid_in,
+                t1.VinInvalidMessage as vehicle_vin_invalid_message,
                 t1.source_system_sk
 			FROM 
 				[edw_temp].[tauto_vehicle_temp1] AS t1
@@ -130,7 +132,9 @@ BEGIN
             source_system_sk,
             create_ts,
             update_ts,
-            etl_audit_sk
+            etl_audit_sk,
+            vehicle_vin_invalid_in,
+            vehicle_vin_invalid_message
 			)
 		VALUES (
             src.policy_no,
@@ -152,7 +156,9 @@ BEGIN
             src.source_system_sk,
             getdate(), 
             getdate(), 
-            @etl_audit_sk
+            @etl_audit_sk,
+            src.vehicle_vin_invalid_in,
+            src.vehicle_vin_invalid_message
             )
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -170,6 +176,8 @@ BEGIN
             trg.vehicle_engine_type = src.vehicle_engine_type,
             trg.high_performance_vehicle_in = src.high_performance_vehicle_in,
             trg.purchase_dt = src.purchase_dt,
+            trg.vehicle_vin_invalid_in = src.vehicle_vin_invalid_in,
+            trg.vehicle_vin_invalid_message = src.vehicle_vin_invalid_message,
             trg.update_ts = getdate()
         ;
 
