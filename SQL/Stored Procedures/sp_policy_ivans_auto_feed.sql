@@ -117,6 +117,7 @@ BEGIN
                         FOR JSON PATH
                 ) AS AU_Coverages
                 FROM policy_transaction as ptf
+                GROUP BY ptf.policy_sk, ptf.effective_dt_sk ,ptf.transaction_seq_no
         ),
         json_au_vehicles_sub_coverages AS (
             SELECT 
@@ -312,6 +313,7 @@ BEGIN
                     FOR JSON PATH
                 ) as AU_Garaging_Locations
             FROM edw_core.tauto_garage_location as aglf
+            GROUP BY aglf.policy_no, aglf.effective_dt, aglf.transaction_seq_no
         )
 
 
