@@ -1,10 +1,8 @@
-﻿/****** Object:  StoredProcedure [edw_integration].[sp_get_billing_account_customer_portal_api_search]    Script Date: 24/10/2023 10:35:23 a. m. ******/
-SET ANSI_NULLS ON
+﻿SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
 GO
-
 
 -- =================================================================================================
 -- Author:		Hernando Gonzalez Garcia
@@ -23,6 +21,9 @@ BEGIN
 
 	SELECT
 	[billingaccount_no]
+      ,[first_nm]
+      ,[last_nm]
+      ,[mailing_zip_cd]
       ,[email]
       ,[auto_pay_in]
 	FROM
