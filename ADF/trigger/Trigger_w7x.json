@@ -1,0 +1,24 @@
+{
+	"name": "Trigger_w7x",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DELbaoDrop_w7x_TopLevel",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 24,
+				"startTime": "2023-10-26T02:47:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}
