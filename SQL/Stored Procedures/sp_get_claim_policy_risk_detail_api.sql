@@ -4,12 +4,11 @@ SET QUOTED_IDENTIFIER ON
 GO
 -- =================================================================================================
 -- Author:		Mohammed Yunus
--- Description: This proceudre return policy detail for claim
+-- Description: This proceudre return policy risk item detail for claim
 ---------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 08/18/23		Mohammed Yunus				1. Created this procedure 
--- 10/26/23		Mohammed Yunus				2. updated columns list returned
+-- 10/26/23		Mohammed Yunus				1. Created this procedure 
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_claim_policy_search_api]
 (
@@ -21,11 +20,8 @@ BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
     -- interfering with SELECT statements.
     SET NOCOUNT ON
-
 	SELECT
-	DISTINCT policy_no,transaction_type,expiration_dt,effective_dt,
-			product_nm,insured_type,insured_nm,policy_status,
-			REPLACE(uw_company_nm,'E & S','E&S') company
+	DISTINCT 0 as policy_object_id, policy_no,risk_item
 	FROM
 	[edw_integration].[claim_policy_search_api] cosi
 	WHERE  
@@ -49,5 +45,5 @@ BEGIN
 				AND ( @dateOfLoss BETWEEN CAST(effective_dt AS DATE) AND CAST(expiration_dt AS DATE) ) 
 			 ) 
 		)
-END
+	END
 GO
