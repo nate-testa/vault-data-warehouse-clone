@@ -7,6 +7,7 @@
 -- 06/02/23		Mohammed Yunus					1. Created this procedure 
 -- 06/29/23		Architha Gudimalla				2. Made changes to fix the errors on first run
 -- 08/29/23		Mohammed Yunus					3. Procedure updated for new columns
+-- 10/26/23		Mohammed Yunus					4. Procedure updated to fix customer_id error
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker]
