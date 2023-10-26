@@ -1,0 +1,26 @@
+{
+	"name": "DELbaoDrop_w7x_SourceDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_eBao_uat_aws_us_uat_vault",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"cw_tableName": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "DELbaoDrop_w7x_20231025"
+		},
+		"annotations": [],
+		"type": "MySqlTable",
+		"schema": [],
+		"typeProperties": {
+			"tableName": {
+				"value": "@dataset().cw_tableName",
+				"type": "Expression"
+			}
+		}
+	}
+}
