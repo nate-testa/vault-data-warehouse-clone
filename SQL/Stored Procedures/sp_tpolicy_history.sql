@@ -11,6 +11,7 @@
 -- 10/10/23		Architha Gudimalla				5. Updated logic for transaction_type - renewals
 -- 10/17/23		Architha Gudimalla				6. Updated logic for transaction_desc
 -- 10/17/23		Architha Gudimalla				7. Updated logic for producer_nm
+-- 10/26/23		Yunus Mohammed					7. Made changes to fix error on customer_id and broker_id
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -42,9 +43,9 @@ BEGIN
 			acct.EffectiveDate,
 			acct.ExpirationDate, 
 			--acct.AccountId,
-			brk.producerid as BrokerId,
-			nullif(trim(isnull(br.firstname,'') + ' ' + isnull(br.LastName,'')),'') as producer_nm,
-			ins.ReferenceCode as customer_id,
+			CAST(brk.producerid AS VARCHAR(255)) as BrokerId,
+			nullif(trim(isnull(br.firstname,'') + ' ' + isnull(br.LastName,'')),'') as producer_nm,			
+			CAST(ins.ReferenceCode AS VARCHAR(255)) as customer_id,
 			ins.id as MasterInsuredId,
 			acct.PolicyChangeNumber,
 			DENSE_RANK()OVER(PARTITION BY acct.PolicyNumber,CAST(acct.EffectiveDate AS DATE) ORDER BY acct.policychangenumber DESC) AS rnk, 
