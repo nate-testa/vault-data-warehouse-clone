@@ -52,12 +52,14 @@ BEGIN
             ph.create_ts as policy_history_create_ts
 		INTO [edw_temp].[tclaim_symbility_api_temp1] 
 		FROM edw_core.tpolicy_history AS ph
+        INNER JOIN edw_core.tproduct AS pr ON ph.product_sk = pr.product_sk
         LEFT JOIN edw_core.thome_coverage AS hc ON ph.policy_history_sk = hc.policy_history_sk
         LEFT JOIN edw_core.tpolicy_insured AS pi ON ph.policy_history_sk = pi.policy_history_sk AND ph.transaction_effective_dt = pi.transaction_effective_dt AND pi.primary_insured_in = 'Yes'
         LEFT JOIN edw_core.tsource_system AS ss ON ph.source_system_sk = ss.source_system_sk
         LEFT JOIN edw_core.thome_location AS hl ON hc.home_location_sk = hl.home_location_sk
         WHERE 
-            cast(ph.create_ts as datetime2(7)) > @last_source_extract_ts;
+            pr.product_cd = 'HO'
+            AND cast(ph.create_ts as datetime2(7)) > @last_source_extract_ts;
 
 
 		-- Start Insert process
