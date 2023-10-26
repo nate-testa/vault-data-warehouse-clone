@@ -116,7 +116,7 @@ BEGIN
 		-- Insert and Update tuser table
 		MERGE [edw_core].[tbroker] AS Target
 		USING edw_temp.tbroker_temp1 AS Source
-		ON Source.[broker_id] = Target.[broker_id]
+		ON CAST(Source.[broker_id] AS VARCHAR(255)) = Target.[broker_id]
 		-- For Inserts
 		-- location_address_same_as_primary_in 
 		WHEN NOT MATCHED BY Target THEN

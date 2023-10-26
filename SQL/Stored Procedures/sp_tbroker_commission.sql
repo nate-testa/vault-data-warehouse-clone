@@ -40,7 +40,7 @@ BEGIN
 		INTO edw_temp.tbroker_commission_temp
 		FROM
 			edw_stage.Brokerage as brk
-			inner join edw_core.tbroker tbrk on brk.ProducerId=tbrk.broker_id
+			inner join edw_core.tbroker tbrk on CAST(brk.ProducerId AS VARCHAR(255))=tbrk.broker_id
 			inner join edw_stage.BrokerageCommission brkc on brk.Id=brkc.BrokerageId
 			left join edw_stage.Product prd on brkc.ProductId=prd.Id
 			left join [edw_stage].[Coverage] cov on brkc.CoverageId=cov.Id
