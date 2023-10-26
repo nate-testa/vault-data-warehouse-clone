@@ -1,0 +1,33 @@
+{
+	"name": "DELbaoDrop_w7x_DestinationDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase_edw_dev",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"cw_schema": {
+				"type": "String"
+			},
+			"cw_table": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "DELbaoDrop_w7x_20231025"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().cw_schema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().cw_table",
+				"type": "Expression"
+			}
+		}
+	}
+}
