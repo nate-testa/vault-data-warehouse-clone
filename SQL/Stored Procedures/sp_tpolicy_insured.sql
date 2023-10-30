@@ -7,6 +7,7 @@
 -- 07/31/23		Architha Gudimalla				1. Created this procedure  
 -- 09/07/23		Architha Gudimalla				2. Updated the proc to refeect changes made by 
 --													sandeep in the model 
+-- 10/26/23		Architha Gudimalla				3. Used insuredname for LLC
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_insured]
@@ -119,8 +120,10 @@ BEGIN
 				source_system_sk, create_ts, update_ts, etl_audit_sk 
 			)
 		select 	t1.PolicyNumber, t1.EffectiveDate, t1.TransactionEffectiveDate, t1.PolicyChangeNumber, t1.IssuedDate, ph.policy_history_sk, 
-				nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') 
-				+ isnull(t2.LastName + ' ','') + isnull(t2.MiddleName + ' ','') + isnull(t2.Suffix,'')),'') as  NamedInsured, 
+				case when nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') 
+				+ isnull(t2.LastName + ' ','') + isnull(t2.MiddleName + ' ','') + isnull(t2.Suffix,'')),'') is null
+				then NamedInsured else nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') 
+				+ isnull(t2.LastName + ' ','') + isnull(t2.MiddleName + ' ','') + isnull(t2.Suffix,'')),'') end as  NamedInsured, 
 				t2.DBA, t2.FirstName, t2.MiddleName, t2.LastName, t2.InsuredType,t2.IsPrimaryInsured, 
 				t2.IsCoInsured, t2.Birthdate, t2.HomePhone, t2.MobilePhone, t2.Title, t2.Prefix, t2.Suffix, 
 				t2.MailingAddressLine1, t2.MailingAddressLine2, t2.UnitFloor, t2.MailingAddressCity, 

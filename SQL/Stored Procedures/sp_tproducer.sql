@@ -5,6 +5,7 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 10/12/23		Mohammed Yunus					1. Created this procedure 
+-- 10/27/23		Architha Gudimalla				2. Added cast on broker_id
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tproducer]
@@ -46,7 +47,7 @@ BEGIN
 		FROM
 			edw_stage.[Broker] br
 			INNER JOIN edw_stage.Brokerage brk on brk.id=br.BrokerageId
-			INNER JOIN edw_core.tbroker tbr on tbr.broker_id=brk.ProducerId
+			INNER JOIN edw_core.tbroker tbr on tbr.broker_id=cast(brk.ProducerId as varchar)
 		WHERE
 				GREATEST(br.CreatedDate,br.UpdatedDate)>@last_source_extract_ts
 		
@@ -67,7 +68,7 @@ BEGIN
 		FROM
 			edw_temp.tproducer_temp1
 
-		SET @rows_affected=@@ROWCOUNT;
+		SET @rows_affected=@@ROWCOUNT;	
 
 		-- Update control table
 		SET @new_last_source_extract_ts = '2017-01-01'

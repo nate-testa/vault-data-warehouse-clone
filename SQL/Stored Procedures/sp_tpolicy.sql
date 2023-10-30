@@ -14,6 +14,7 @@
 -- 10/17/23		Architha Gudimalla				7. Added logic for prior_term_policy_no
 -- 10/18/23		Architha Gudimalla				8. Updated Insured name logic
 -- 10/23/23		Architha Gudimalla				9. Added billingaccount_sk
+-- 10/23/23		Architha Gudimalla				10. Added source_system_sk in merge update
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy]
@@ -254,6 +255,7 @@ BEGIN
 		Target.prior_policy_no				= source.prior_policy_no, 
 		Target.prior_term_policy_no			= source.renewalofpolicynumber, 
 		Target.billingaccount_sk			= source.billingaccount_sk, 
+		Target.source_system_sk			= source.source_system_sk, 
         Target.update_ts 					= getdate()
 		;
 
