@@ -9,6 +9,8 @@
 -- 10/05/23		Architha Gudimalla				3. Fixed division by 0 error for EP calculation 
 -- 10/16/23		Architha Gudimalla				4. Used source_system_sk from tpolicy instead of tpolicy_transaction in prm subquery 
 -- 10/17/23		Architha Gudimalla				5. Used source_system_sk, customer_sk, broker-sk, prudct_sk from max_tr
+-- 10/24/23		Architha Gudimalla				6. Fixed division by 0 error for EP calculation 
+-- 10/27/23		Architha Gudimalla				7. Added TIV and ceded columns 
 -- ==================================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_titem_summary]
@@ -218,7 +220,7 @@ BEGIN
 				),
 				prm as
 				(
-				 SELECT tr.policy_sk, tr.item_sk, --tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk,
+				 SELECT tr.policy_sk, tr.item_sk, tr.product_sk, --tr.customer_sk, tr.broker_sk, pol.source_system_sk,
 				 		max(tr.transaction_seq_no) transaction_seq_no,
 						max(tr.coverage_sk)  coverage_sk,
 						max(tr.vehicle_coverage_sk)  vehicle_coverage_sk,
@@ -231,7 +233,7 @@ BEGIN
 		 				sum(case when calendar_month_sk between @year_begin_sk 		AND @month_end_dt_sk THEN tr.commission_amt ELSE 0 END) ytd_commission_amt,
 		 				sum(case when calendar_month_sk between @year_begin_sk 		AND @month_end_dt_sk THEN tr.tax_fee_surcharge_amt ELSE 0 END) ytd_tax_fee_surcharge_amt,
 		 				sum(case when calendar_month_sk between @year_begin_sk 		AND @month_end_dt_sk THEN tr.premium_amt - tr.tax_fee_surcharge_amt ELSE 0 END) ytd_net_premium_amt,
-		 				sum(tr.premium_amt) itd_premium_amt,
+		 				sum(tr.premium_amt) itd_premium_amt, sum(tr.ceded_premium_amt) ceded_premium_amt,
 		 				sum(tr.commission_amt) itd_commission_amt,
 		 				sum(tr.tax_fee_surcharge_amt) itd_tax_fee_surcharge_amt,
 		 				sum(tr.premium_amt - tr.tax_fee_surcharge_amt) itd_net_premium_amt,
@@ -260,6 +262,26 @@ BEGIN
 								end
 						   ) total_ep,
 		 				sum(
+							case when (tr.expiration_dt_sk-tr.transaction_effective_dt_sk) > 0
+							then
+								(1+(iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+								-
+								iif(tr.transaction_effective_dt_sk >= @month_begin_dt_sk, tr.transaction_effective_dt_sk, @month_begin_dt_sk))) 
+								* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-tr.effective_dt_sk)
+							else 0
+							end
+						   ) mtd_net_ep,
+		 				sum(
+							case when (tr.expiration_dt_sk-tr.transaction_effective_dt_sk) > 0
+							then
+								(1+iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+								-
+								tr.transaction_effective_dt_sk) 
+								* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-tr.transaction_effective_dt_sk)
+							else 0
+							end
+						   ) total_net_ep/*
+		 				sum(
 							(1+(iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
 							-
 							iif(tr.transaction_effective_dt_sk >= @month_begin_dt_sk, tr.transaction_effective_dt_sk, @month_begin_dt_sk))) 
@@ -270,14 +292,14 @@ BEGIN
 							-
 							tr.transaction_effective_dt_sk) 
 							* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-tr.effective_dt_sk)
-						   ) total_net_ep
+						   ) total_net_ep*/
 				 FROM edw_core.tpolicy_transaction tr, edw_core.tpolicy pol 
 				 where tr.policy_sk = pol.policy_sk
 				 and   effective_dt_sk <= @end_dt_sk
 				 and   transaction_effective_dt_sk <= @end_dt_sk
 				 and   transaction_dt_sk <= @end_dt_sk
 				 and   expiration_dt > @month_begin_dt
-				 group by tr.policy_sk, tr.item_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk
+				 group by tr.policy_sk, tr.item_sk, tr.product_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk
 				),
 				max_tr as
 				(
@@ -299,7 +321,11 @@ BEGIN
 						annual_premium_amt, 
 						earned_premium_amt, unearned_premium_amt, 
 						earned_net_premium_amt, unearned_net_premium_amt, 
-						written_exposure, earned_exposure, update_ts, etl_audit_sk
+						written_exposure, earned_exposure, update_ts, etl_audit_sk,
+						inforce_total_insured_value_amt,
+						earned_total_insured_value_amt,
+						written_total_insured_vaule_amt,
+						ceded_premium_amt					
 					)
 				select 	@month_end_dt_sk, prm.policy_sk, prm.item_sk,
 						case when inf.coverage_sk is not null then inf.coverage_sk else prm.coverage_sk end coverage_sk, 
@@ -318,7 +344,13 @@ BEGIN
 						written_exposure,
 						isnull(xpsr_new.ee,0) + isnull(xpsr_exp.ee,0) + isnull(xpsr_cancel.ee,0) + isnull(xpsr_rein.ee,0) 
 						earned_exposure, 
-						getdate(), @etl_audit_sk
+						getdate(), @etl_audit_sk,
+						isnull(hcov.dwelling_limit_amt,0)+isnull(hcov.other_structures_limit_amt,0)+isnull(hcov.contents_limit_amt,0) TIV,
+						(isnull(xpsr_new.ee,0) + isnull(xpsr_exp.ee,0) + isnull(xpsr_cancel.ee,0) + isnull(xpsr_rein.ee,0)) *
+						(isnull(hcov.dwelling_limit_amt,0)+isnull(hcov.other_structures_limit_amt,0)+isnull(hcov.contents_limit_amt,0)) EE_TIV,
+						(isnull(xpsr_new.we,0) + isnull(xpsr_exp.we,0) + isnull(xpsr_cancel.we,0) + isnull(xpsr_rein.we,0)) *
+						(isnull(hcov.dwelling_limit_amt,0)+isnull(hcov.other_structures_limit_amt,0)+isnull(hcov.contents_limit_amt,0)) WE_TIV,
+						isnull(prm.ceded_premium_amt,0) 
 				from prm
 				inner join max_tr on prm.policy_sk = max_tr.policy_sk and prm.transaction_seq_no = max_tr.transaction_seq_no
 				left join inf on prm.policy_sk = inf.policy_sk and prm.item_sk = inf.item_sk
@@ -326,6 +358,7 @@ BEGIN
 				left join xpsr_exp on prm.policy_sk = xpsr_exp.policy_sk and prm.item_sk = xpsr_exp.item_sk
 				left join xpsr_cancel on prm.policy_sk = xpsr_cancel.policy_sk and prm.item_sk = xpsr_cancel.item_sk
 				left join xpsr_rein on prm.policy_sk = xpsr_rein.policy_sk and prm.item_sk = xpsr_rein.item_sk
+				left join edw_core.thome_coverage hcov on hcov.home_coverage_sk = prm.coverage_sk and prm.product_sk = 1
 				where prm.mtd_premium_amt <> 0
 				   or prm.mtd_commission_amt <> 0
 				   or prm.mtd_tax_fee_surcharge_amt <> 0
