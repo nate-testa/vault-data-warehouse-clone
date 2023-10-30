@@ -85,6 +85,7 @@
 													},
 													"sink": {
 														"type": "AzureSqlSink",
+														"writeBatchTimeout": "08:00:00",
 														"preCopyScript": {
 															"value": "@{json(item().CopySinkSettings).preCopyScript}",
 															"type": "Expression"
@@ -108,7 +109,9 @@
 														"disableMetricsCollection": true
 													},
 													"enableStaging": false,
+													"parallelCopies": 32,
 													"validateDataConsistency": false,
+													"dataIntegrationUnits": 32,
 													"translator": {
 														"value": "@json(item().CopyActivitySettings).translator",
 														"type": "Expression"
@@ -260,6 +263,7 @@
 													},
 													"sink": {
 														"type": "AzureSqlSink",
+														"writeBatchTimeout": "08:00:00",
 														"preCopyScript": {
 															"value": "@{json(item().CopySinkSettings).preCopyScript}",
 															"type": "Expression"
@@ -283,6 +287,7 @@
 														"disableMetricsCollection": true
 													},
 													"enableStaging": false,
+													"parallelCopies": 32,
 													"validateDataConsistency": false,
 													"dataIntegrationUnits": 32,
 													"translator": {
