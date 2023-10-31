@@ -104,7 +104,7 @@ BEGIN
                                 FROM edw_core.tpolicy_transaction as pt
                                 INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
                                 WHERE 1=1
-                                    AND pr.product_nm = 'AU'
+                                    AND pr.product_cd = 'AU'
                                 AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
                                 GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk
                             ) as pt 
@@ -149,7 +149,7 @@ BEGIN
                     FROM edw_core.tpolicy_transaction as pt
                     INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
                     WHERE 1=1
-                        AND pr.product_nm = 'AU'
+                        AND pr.product_cd = 'AU'
                     AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
                     GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, vehicle_coverage_sk, internal_coverage_sk
                 ) as pt 
