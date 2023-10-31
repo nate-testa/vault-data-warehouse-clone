@@ -40,7 +40,7 @@ BEGIN
 				d2.actual_dt as transaction_effective_dt,
 				pt.transaction_seq_no,
 				p.policy_status,
-				ISNULL(pi.first_nm, '') + ' ' + ISNULL(pi.last_nm, '') + ' ' + ISNULL(pi.suffix, '') as insured_nm,
+				TRIM(ISNULL(pi.first_nm, '') + ' ' + ISNULL(pi.last_nm, '') + ' ' + ISNULL(pi.suffix, '')) as insured_nm,
 				c.Insured_type,
 				p.uw_company_nm,
 				pr.product_nm,
