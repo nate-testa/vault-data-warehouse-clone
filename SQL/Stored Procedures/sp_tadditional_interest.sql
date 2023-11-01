@@ -1,5 +1,4 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_tadditional_interest]    Script Date: 20/10/2023 1:30:18 p. m. ******/
-SET ANSI_NULLS ON
+﻿SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
@@ -39,6 +38,7 @@ BEGIN
 			,policy_history_sk
 			,[index] as additional_interest_seq_no
 			,InterestType, EntityType, EntityName, DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew
+			,[Name]
 			--,4 as [source_system_sk] --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
@@ -78,7 +78,7 @@ BEGIN
 		PIVOT 
 			(
 				MAX([Value]) FOR [Field] IN (
-					InterestType, EntityType, EntityName, DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew
+					InterestType, EntityType, EntityName, DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew, [Name]
 					)
 			) pivottable
 			
@@ -123,7 +123,7 @@ BEGIN
       ,[additional_interest_seq_no]
       ,[InterestType]
       ,[EntityType]
-      ,[EntityName]
+      ,COALESCE([EntityName], [Name]) as EntityName
       ,[DescriptionOfProperty]
       ,[FirstName]
       ,[LastName]
