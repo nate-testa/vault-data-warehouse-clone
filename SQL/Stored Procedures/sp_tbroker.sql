@@ -7,7 +7,8 @@
 -- 06/02/23		Mohammed Yunus					1. Created this procedure 
 -- 06/29/23		Architha Gudimalla				2. Made changes to fix the errors on first run
 -- 08/29/23		Mohammed Yunus					3. Procedure updated for new columns
--- 10/26/23		Mohammed Yunus					4. Procedure updated to fix customer_id error
+-- 10/26/23		Mohammed Yunus					4. Made changes to fix error
+-- 10/31/23		Mohammed Yunus					5. Added CommissionStatementEmail
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker]
@@ -103,7 +104,8 @@ BEGIN
 			NULLIF(brkbd.AccountNumber,'') AS account_no,
 			NULLIF(brkbd.TypeOfAccount,'') AS accounting_type,
 			NULLIF(brkbd.TokenId,'') AS token_id,
-			NULL as commission_statement_email,
+			NULLIF((select string_agg(brkemail.Email,';') from edw_stage.BrokerageBankingDetailCommissionStatementEmail brkemail 
+			where brkemail.BrokerageId = brk.Id ),'') as commission_statement_email,
 			brk.CreatedDate,
 			brk.UpdatedDate
 		INTO edw_temp.tbroker_temp1
