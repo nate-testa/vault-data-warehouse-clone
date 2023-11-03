@@ -20,6 +20,7 @@ GO
 --												   Removed pel loc join
 --												   Corrected ceded premium
 -- 10/13/23		Architha Gudimalla				10. corrected transaction_type_sk logic
+-- 10/31/23		Architha Gudimalla				11. Added tfs_sk to the insert
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -147,7 +148,7 @@ BEGIN
            ,internal_coverage_sk -- not sure
            ,source_system_sk -- not sure ¿From Policy?
            ,policy_status_sk -- from policy_status ¿?
-           --,tax_fee_surcharge_sk
+           ,tax_fee_surcharge_sk
 			,ceded_annual_premium_amt
 			,ceded_premium_amt
 		   ,user_sk -- not sure
@@ -182,7 +183,7 @@ BEGIN
 			isnull(ic.internal_coverage_sk,0), 
 			source.ssk, 
 			case when isnull(tt.policy_transaction_type_sk,0) = 5 then 2 else 1 end pol_status,
-			--isnull(ttfs.tax_fee_surcharge_sk,0), 
+			isnull(tfs.internal_coverage_sk,0) , 
 			ceded_annual_premium_amt,
 		    ceded_premium_amt,
 			0 user_sk, 
@@ -206,6 +207,7 @@ BEGIN
 		LEFT JOIN edw_core.tbroker br on pol.broker_id = br.broker_id
 		LEFT JOIN edw_core.tcustomer cust on pol.customer_id = cust.customer_id
 		LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) and pr.product_cd = ic.product_cd  
+		LEFT JOIN edw_core.tinternal_coverage tfs on tfs.internal_coverage_desc = source.coverage and source.typ <> 'prm' and pr.product_cd = tfs.product_cd  
 		--LEFT JOIN edw_core.ttax_fee_surcharge ttfs on ttfs.tax_fee_surcharge_desc = source.coverage 
 		LEFT JOIN edw_core.tpolicy_transaction_type tt on tt.policy_transaction_type_cd = source.stage 
 
