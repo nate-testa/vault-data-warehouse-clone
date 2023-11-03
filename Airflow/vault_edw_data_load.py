@@ -420,7 +420,7 @@ with DAG(
 
     with TaskGroup("claim_group") as claim_group:
 
-        claim_group_items = ['sp_tclaim','sp_tclaim_feature','sp_tclaim_payment','sp_tclaim_transaction','sp_update_tclaim','sp_update_tclaim_feature']
+        claim_group_items = ['sp_tclaim','sp_tclaim_feature','sp_tclaim_payment','sp_tclaim_transaction','sp_update_tclaim','sp_update_tclaim_feature','sp_tcatastrophe','sp_tsub_cause_of_loss']
 
         sp_tclaim = MsSqlOperator(
             task_id='sp_tclaim',
@@ -470,6 +470,22 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tcatastrophe = MsSqlOperator(
+            task_id='sp_tcatastrophe',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tcatastrophe",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tsub_cause_of_loss = MsSqlOperator(
+            task_id='sp_tsub_cause_of_loss',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tsub_cause_of_loss",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_claim_email = EmailOperator(
             task_id='send_claim_email',
             to=to_email,
@@ -477,7 +493,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(claim_group_items, 'All stored procedures executed successfully for all the Claim tables'),
         )
 
-        sp_tclaim >> sp_tclaim_feature >> sp_tclaim_payment >> sp_tclaim_transaction >> sp_update_tclaim >> sp_update_tclaim_feature >> send_claim_email
+        sp_tclaim >> sp_tclaim_feature >> sp_tclaim_payment >> sp_tclaim_transaction >> sp_update_tclaim >> sp_update_tclaim_feature >> sp_tcatastrophe >> sp_tsub_cause_of_loss >> send_claim_email
 
 
     with TaskGroup("datamart_group") as datamart_group:
