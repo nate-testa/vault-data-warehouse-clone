@@ -56,7 +56,7 @@ BEGIN
                 policy_no, effective_dt, transaction_seq_no
         ),
         original_policy AS (
-            SELECT original_policy_no, min(effective_dt) as min_effective_dt, min(expiration_dt) as min_expiration_dt 
+            SELECT original_policy_no, min(effective_dt) as min_effective_dt, min(expiration_dt) as min_expiration_dt, min(original_policy_effective_dt) as min_original_policy_effective_dt
                 FROM edw_core.tpolicy 
             GROUP BY original_policy_no                
         ),
@@ -67,12 +67,12 @@ BEGIN
                         CASE 
                             WHEN apc.limit_type = 'Combined' AND ic.internal_coverage_cd='Underinsured Motorist'    THEN 'umCSLPrem'
                             WHEN apc.limit_type = 'Combined' AND ic.internal_coverage_cd='Uninsured Motorist'    THEN 'umCSLPrem'
-                            ELSE ic.internal_coverage_cd
+                            ELSE ic.primary_coverage_cd
                         END AS coverageCd,
                         CASE 
                             WHEN apc.limit_type = 'Combined' AND ic.internal_coverage_cd='Underinsured Motorist'    THEN 'umCSLPrem'
                             WHEN apc.limit_type = 'Combined' AND ic.internal_coverage_cd='Uninsured Motorist'    THEN 'umCSLPrem'
-                            ELSE ic.internal_coverage_cd
+                            ELSE ic.internal_coverage_desc
                         END AS coverageDesc,
                         CASE 
                             WHEN apc.limit_type = 'Combined' then apc.combined_single_limit_amt
@@ -127,7 +127,7 @@ BEGIN
                 avc.vehicle_no,
                 CASE 
                     WHEN ic.internal_coverage_desc IN ('Underinsured Motorist','Uninsured Motorist') THEN 'um_uim_Prem'
-                    ELSE ic.internal_coverage_desc
+                    ELSE ic.primary_coverage_Cd
                 END AS coverageCd,
                 CASE 
                     WHEN ic.internal_coverage_desc = 'Collision' THEN avc.collision_deductible
@@ -250,7 +250,10 @@ BEGIN
                         ad.birth_dt as birthDt,
                         '' as country,
                         ad.last_nm as surName,
-                        ad.gender as genderCd,
+                        CASE ad.gender 
+                            WHEN 'Female' THEN 'F' 
+                            WHEN 'Male' THEN 'M' 
+                        END as genderCd,
                         '' as latitude,
                         ad.license_country_nm as countryCd,
                         ad.first_nm as givenName,
@@ -381,7 +384,7 @@ BEGIN
             pt.premium_amt as [Amt_040],
             pt.premium_amt as [Amt_041],
             'en' as [LanguageCd_042],
-            op.min_effective_dt as [OriginalPolicyInceptionDt_043],
+            op.min_original_policy_effective_dt as [OriginalPolicyInceptionDt_043],
             '' as [Dummy_044],
             '' as [Dummy_045],
             '' as [Dummy_046],
