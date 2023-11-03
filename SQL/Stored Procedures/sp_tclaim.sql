@@ -192,6 +192,10 @@ BEGIN
 		Target.contact_phone=Source.contact_phone,
 		Target.contact_person_email=Source.contact_person_email,
 		Target.policy_history_sk=Source.policy_history_sk,
+		Target.claim_first_closed_dt=Source.claim_first_closed_dt,
+		Target.claim_first_reopen_dt=Source.claim_first_reopen_dt,
+		Target.claim_created_ts=Source.claim_created_ts,
+		Target.claim_created_by_nm=Source.claim_created_by_nm,
 		Target.update_ts=@current_date,
 		Target.sub_cause_of_loss_sk=Source.sub_cause_of_loss_sk;
 
