@@ -9,6 +9,7 @@
 -- 07/25/23		Architha Gudimalla				3. Added TFS to internal coverages
 -- 09/20/23     Sandeep Gundreddy				4. Added PersonalLines Filter & modified ASLOB code
 -- 10/12/23     Sandeep Gundreddy				5. Added logic for primary_coverage_cd
+-- 10/30/23     Architha Gudimalla				6. Removed the replace on the label
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tinternal_coverage]
@@ -54,7 +55,7 @@ BEGIN
 		and		GREATEST(atcp.CreatedDate,c.UpdatedDate)>@last_source_extract_ts 
 		GROUP BY atcp.label, p.ProductCode, atcp.label, c.Aslob, nullif(trim(atcp.coverage) ,'') 
 		union all
-		SELECT	nullif(trim(replace(accttf.name, '  ',' ')),'') as tax_fee_surcharge_name, 
+		SELECT	nullif(trim(accttf.name),'') as tax_fee_surcharge_name, 
 				pr.ProductCode  as product_cd, 
 				case when pr.ProductCode = 'LUX' then '090'
 					 when pr.ProductCode = 'HO' then '040'
@@ -71,7 +72,7 @@ BEGIN
 		WHERE	GREATEST(acct.CreatedDate,acct.UpdatedDate)>@last_source_extract_ts 
 		and		nullif(trim(replace(accttf.name, '  ',' ')),'') is not null
 		and pr.ProductLine='PersonalLines'
-		group by trim(replace(accttf.name, '  ',' ')) , pr.ProductCode;
+		group by trim(accttf.name), pr.ProductCode;
 			
 		-- Insert and Update tinternal_coverage table
 		MERGE edw_core.tinternal_coverage AS Target

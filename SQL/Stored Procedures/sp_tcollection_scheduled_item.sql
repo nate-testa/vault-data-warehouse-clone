@@ -9,6 +9,7 @@
 -- 10/09/23		Sandeep  Gundreddy				3. Added Homeowners to product filter
 -- 10/13/23		Architha Gudimalla				4. Added item no
 -- 10/13/23		Architha Gudimalla				5. Updated the parentid join to get the correct class type
+-- 11/02/23		Architha Gudimalla				6. Updated left joins to inner
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_scheduled_item]
@@ -73,10 +74,10 @@ BEGIN
 					AND GREATEST(acct.IssuedDate)>@last_source_extract_ts --20230717 added
 				) acc
 				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
-				LEFT JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] pid ON pid.versionobjectid = acct.parentobjectid and pid.Field = 'ClassType'
+				INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
+				INNER JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
+				INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
+				INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] pid ON pid.versionobjectid = acct.parentobjectid and pid.Field = 'ClassType'
 				LEFT JOIN [edw_core].[tpolicy_history] his ON his.policy_no = acc.PolicyNumber and his.effective_dt = acc.EffectiveDate and his.transaction_seq_no = acc.policychangenumber
 				LEFT JOIN [edw_core].[tcollection_class_type] ct on ct.policy_no = acc.PolicyNumber and ct.effective_dt = acc.EffectiveDate and ct.transaction_seq_no = acc.policychangenumber and pid.value = ct.class_type 
 			WHERE
@@ -113,7 +114,7 @@ BEGIN
            ,[etl_audit_sk]
 			)
 		SELECT 
-			[PolicyNumber],[EffectiveDate],[IssuedDate],[ExpirationDate],[transaction_dt],[PolicyChangeNumber]
+			[PolicyNumber],[EffectiveDate],[transaction_dt],[ExpirationDate],[IssuedDate],[PolicyChangeNumber]
 			,[policy_history_sk],[collection_class_type_sk],[scheduled_item_no]
 			,[Description],[CoverageLimit],[SeeScheduleOnFileWithTheCompany],[AppraisalDate],[CollectorCar]
 			,[source_system_sk],getdate(),getdate(), @etl_audit_sk

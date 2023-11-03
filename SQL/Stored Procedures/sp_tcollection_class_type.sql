@@ -8,6 +8,7 @@
 -- 10/09/23		Architha Gudimalla				2. Made changes after sandeep renamed the coll tables
 -- 10/09/23		Sandeep  Gundreddy				3. Added Homeowners to product filter
 -- 10/13/23		Architha Gudimalla				4. Correction the location table join
+-- 11/02/23		Architha Gudimalla				5. Updated left joins to inner
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_class_type]
@@ -63,9 +64,9 @@ BEGIN
 					AND GREATEST(acct.IssuedDate)>@last_source_extract_ts --20230717 added
 				) acc
 				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
-				LEFT JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
+				INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
+				INNER JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
+				INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
 				LEFT JOIN [edw_core].[tcollection_location] loc ON loc.policy_no = acc.PolicyNumber and loc.effective_dt = acc.EffectiveDate
 				LEFT JOIN [edw_core].[tcollection_coverage] cov on cov.policy_no = acc.PolicyNumber and cov.effective_dt = acc.EffectiveDate and cov.transaction_seq_no = acc.policychangenumber
 				LEFT JOIN [edw_core].[thome_coverage] hcov on hcov.policy_no = acc.PolicyNumber and hcov.effective_dt = acc.EffectiveDate and hcov.transaction_seq_no = acc.policychangenumber
@@ -108,9 +109,9 @@ BEGIN
 		)
 		SELECT [PolicyNumber]
            ,[EffectiveDate]
-           ,[IssuedDate]
-           ,[ExpirationDate]
            ,[transaction_dt]
+           ,[ExpirationDate]
+           ,[IssuedDate]
            ,[PolicyChangeNumber]
            ,[collection_location_sk]
            ,[policy_history_sk]

@@ -11,6 +11,7 @@
 -- 10/17/23		Architha Gudimalla				5. Used source_system_sk, customer_sk, broker-sk, prudct_sk from max_tr
 -- 10/24/23		Architha Gudimalla				6. Fixed division by 0 error for EP calculation 
 -- 10/27/23		Architha Gudimalla				7. Added TIV and ceded columns 
+-- 11/01/23		Architha Gudimalla				8. Corrected written TIV col name
 -- ==================================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_titem_summary]
@@ -324,7 +325,7 @@ BEGIN
 						written_exposure, earned_exposure, update_ts, etl_audit_sk,
 						inforce_total_insured_value_amt,
 						earned_total_insured_value_amt,
-						written_total_insured_vaule_amt,
+						written_total_insured_value_amt,
 						ceded_premium_amt					
 					)
 				select 	@month_end_dt_sk, prm.policy_sk, prm.item_sk,
