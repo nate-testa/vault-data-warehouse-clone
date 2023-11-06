@@ -3,11 +3,15 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =============================================
+-- ====================================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2023-09-11
 -- Description: This stored procedure insert and update info related to tauto_vehicle.
--- =============================================
+---------------------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------------------------------------------
+-- 11/06/23		Alberto Almario					1. change to use UniqueId instead of Index and change name from vehicle_no to vehicle_unique_id
+-- ====================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle]
 AS
 BEGIN
@@ -36,7 +40,7 @@ BEGIN
 		WITH FinalTable AS (
             SELECT
                 ROW_NUMBER() OVER (PARTITION BY PolicyNumber, EffectiveDate, [Index] ORDER BY policychangenumber DESC) AS RN, 
-                PolicyNumber, EffectiveDate, [Index] as vehicle_no, IssuedDate,
+                PolicyNumber, EffectiveDate, [Index] as vehicle_no, [UniqueId] as vehicle_unique_id, IssuedDate,
                 [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage],
                 source_system_sk
             
@@ -44,7 +48,7 @@ BEGIN
                 (
                     SELECT
                         acct.PolicyNumber, acct.EffectiveDate, acct.IssuedDate, acct.policychangenumber,
-                        acctvo.[Index], acctvof.[Field], acctvof.[Value],
+                        acctvo.[Index], acctvo.[UniqueId], acctvof.[Field], acctvof.[Value],
                         CASE 
                             WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
                             ELSE 4 --(Metal)
@@ -55,7 +59,7 @@ BEGIN
                         FROM [edw_stage].[AccountTransaction]
                         WHERE
                             [State] = 'ISSUED'
-                            -- AND IssuedDate > @last_source_extract_ts
+                            AND IssuedDate > @last_source_extract_ts
                         ) acct
                     INNER JOIN [edw_stage].[Product] p ON p.Id = acct.ProductId
                     INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
@@ -87,6 +91,7 @@ BEGIN
 	        SELECT 
                 t1.PolicyNumber as policy_no,
                 t1.EffectiveDate as effective_dt,
+                t1.vehicle_unique_id,
                 t1.vehicle_no,
                 t1.VehicleType as vehicle_type,
                 t1.CollectorCarType as collector_car_type,
@@ -109,7 +114,7 @@ BEGIN
 		) AS src
 		ON src.policy_no = trg.policy_no
         AND src.effective_dt = trg.effective_dt
-        AND src.vehicle_no = trg.vehicle_no
+        AND src.vehicle_unique_id = trg.vehicle_unique_id
 		-- For Inserts
 		WHEN NOT MATCHED BY TARGET THEN
 		INSERT (
@@ -134,7 +139,8 @@ BEGIN
             update_ts,
             etl_audit_sk,
             vehicle_vin_invalid_in,
-            vehicle_vin_invalid_message
+            vehicle_vin_invalid_message,
+            vehicle_unique_id
 			)
 		VALUES (
             src.policy_no,
@@ -158,7 +164,8 @@ BEGIN
             getdate(), 
             @etl_audit_sk,
             src.vehicle_vin_invalid_in,
-            src.vehicle_vin_invalid_message
+            src.vehicle_vin_invalid_message,
+            src.vehicle_unique_id
             )
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -178,7 +185,8 @@ BEGIN
             trg.purchase_dt = src.purchase_dt,
             trg.vehicle_vin_invalid_in = src.vehicle_vin_invalid_in,
             trg.vehicle_vin_invalid_message = src.vehicle_vin_invalid_message,
-            trg.update_ts = getdate()
+            trg.update_ts = getdate(),
+            trg.vehicle_no = src.vehicle_no
         ;
 
         --************End************

@@ -105,7 +105,7 @@ BEGIN
                                 WHEN ic.internal_coverage_cd = 'UM Liability'       THEN pc.uninsured_underinsured_liability_amt 
                                 WHEN ic.internal_coverage_cd = 'UM Motorist'        THEN pc.uninsured_underinsured_motorist_liability_amt 
                                 WHEN ic.internal_coverage_cd = 'EPL Coverage'       THEN pc.employment_practices_liability_amt 
-                                WHEN ic.internal_coverage_cd = 'Excess Liability'   THEN pc.pel_limit_amt 
+                                WHEN ic.internal_coverage_cd = 'Excess Liability'   THEN cast(pc.pel_limit_amt as varchar(255)) 
                             END AS limits,
                             '' AS deductibles, 
                             pt.annual_premium_amt AS currentTermAmt,
