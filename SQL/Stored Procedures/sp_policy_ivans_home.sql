@@ -53,7 +53,7 @@ BEGIN
 				SELECT * FROM (
 					SELECT
 						hc.policy_no as policyNumber,
-						ic.internal_coverage_cd as coverageCd,
+						ic.primary_coverage_cd as coverageCd,
 						ic.internal_coverage_desc as coverageDesc,
 						--ic.internal_coverage_cd as IVANS_coverage_cd,
 						--ic.internal_coverage_desc as IVANS_coverage_desc,
@@ -523,11 +523,18 @@ BEGIN
 		,op.min_effective_dt as [057_EffectiveDt]
         ,op.min_expiration_dt as [058_ExpirationDt]
 		,'' as [059_MethodPaymentCd]
-		,ba.payment_plan as [060_PaymentPlanCd]
-		,CASE WHEN ba.payment_plan = 'Full Pay' THEN 'Y' WHEN ba.payment_plan = 'NULL' OR ba.payment_plan = '' THEN '' ELSE 'N' END AS [061_PaidInFullInd]
+		,CASE 
+                WHEN ba.payment_plan = '1P' THEN 'Full Pay'
+                ELSE replace(ba.payment_plan, 'P', ' Pay')
+            END AS [060_PaymentPlanCd]
+		,CASE 
+                WHEN ba.payment_plan = '1P' THEN 'Y'
+                WHEN ba.payment_plan is null OR ba.payment_method = '' THEN ''
+                ELSE 'N'
+            END AS [061_PaidInFullInd]
 		,p.policy_sk as [062_id]
 		,c.customer_id as [063_InsurerId]
-		,p.mailing_address_line1 as [064_Addr1]
+		,hl.address_line_1 as [064_Addr1]
 		,hl.city_nm as [065_City]
 		,hl.state_cd as [066_StateProvCd]
 		,hl.zip_cd as [067_PostalCode]
@@ -614,7 +621,7 @@ BEGIN
 		,'' as [122_OtherImprovementDesc]
 		,'' as [123_OtherImprovementCd]
 		,'' as [124_OtherImprovementDt]
-		,'' as [125_CommercialName]
+		,c.customer_nm as [125_CommercialName]
 		,'' as [126_Addr1]
 		,'' as [127_City]
 		,'' as [128_StateProvCd]
