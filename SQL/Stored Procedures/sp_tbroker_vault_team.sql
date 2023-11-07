@@ -1,4 +1,10 @@
-﻿-- =================================================================================================
+﻿SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- =================================================================================================
 -- Author:		Mohammed Yunus
 -- Description: This procedures insert broker vault team data 
 ---------------------------------------------------------------------------------------------------
@@ -28,16 +34,18 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.tbroker_vault_team_temp
 
 		SELECT
-			tbrk.broker_id,tbrk.broker_sk,prd.[Name] AS product_nm,
+			tbrk.broker_id,tbrk.broker_sk,tpr.product_nm AS product_nm,
 			brkctm.[State] AS state_cd,brkctm.ProgramType AS program_type,
 			brkctm.TeamMemberType AS team_member_type,u.name as team_member_nm,
 			brkctm.CreatedDate,brkctm.UpdatedDate
+			,tpr.product_sk
 		INTO edw_temp.tbroker_vault_team_temp
 		FROM
 			edw_stage.Brokerage as brk
-			inner join edw_core.tbroker tbrk on CAST(brk.ProducerId AS VARCHAR(255))=tbrk.broker_id
+			inner join edw_core.tbroker tbrk on CAST(brk.ProducerId AS VARCHAR(255)) = tbrk.broker_id
 			inner join edw_stage.BrokerageCompanyTeamMember brkctm on brk.Id=brkctm.BrokerageId
 			left join edw_stage.Product prd on brkctm.ProductId=prd.Id
+			left join edw_core.tproduct tpr on tpr.product_cd=prd.ProductCode
 			left join edw_stage.[User] u on brkctm.UserId=u.id
 		WHERE
 			GREATEST(brkctm.CreatedDate,brkctm.UpdatedDate) > @last_source_extract_ts
@@ -51,11 +59,11 @@ BEGIN
 		INSERT INTO edw_core.tbroker_vault_team
 		(			
 			broker_id,broker_sk,state_cd,product_nm,program_type,team_member_type,
-			team_member_nm,create_ts,update_ts,etl_audit_sk
+			team_member_nm,create_ts,update_ts,etl_audit_sk,product_sk
 		)
 		SELECT
 			broker_id,broker_sk,state_cd,product_nm,program_type,team_member_type,
-			team_member_nm,@current_date AS create_ts,@current_date AS update_ts,@etl_audit_sk
+			team_member_nm,@current_date AS create_ts,@current_date AS update_ts,@etl_audit_sk,product_sk
 		FROM
 			edw_temp.tbroker_vault_team_temp
 
@@ -86,3 +94,4 @@ BEGIN
 	END CATCH
 END
 
+GO
