@@ -4,7 +4,6 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-
 -- =============================================
 -- Author:		Hernando Gonzalez Garcia
 -- Create Date: 2023-10-05
@@ -33,7 +32,7 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) --20230717 added
 
 		MERGE [edw_integration].[policy_customer_portal_api] as TARGET
-		USING (SELECT
+		USING (SELECT DISTINCT
 		tp.[policy_no]
         ,tb.[billingaccount_no]
         ,tprod.[product_nm]
