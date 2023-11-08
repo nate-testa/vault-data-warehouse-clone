@@ -11,8 +11,9 @@ GO
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 11/06/23		Alberto Almario					1. change to use UniqueId instead of Index and change name from vehicle_no to vehicle_unique_id
+-- 11/07/23     Sandeep Gundreddy               2. replaced index with uniqueid in the partition by clause
 -- ====================================================================================================================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_tauto_vehicle]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -39,7 +40,7 @@ BEGIN
 
 		WITH FinalTable AS (
             SELECT
-                ROW_NUMBER() OVER (PARTITION BY PolicyNumber, EffectiveDate, [Index] ORDER BY policychangenumber DESC) AS RN, 
+                ROW_NUMBER() OVER (PARTITION BY PolicyNumber, EffectiveDate, [UniqueId] ORDER BY policychangenumber DESC) AS RN, 
                 PolicyNumber, EffectiveDate, [Index] as vehicle_no, [UniqueId] as vehicle_unique_id, IssuedDate,
                 [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage],
                 source_system_sk
@@ -219,3 +220,4 @@ BEGIN
 	
     END CATCH
 END
+GO
