@@ -67,7 +67,7 @@ BEGIN
                         CASE 
                             WHEN apc.limit_type = 'Combined' AND ic.internal_coverage_cd='Underinsured Motorist'    THEN 'umCSLPrem'
                             WHEN apc.limit_type = 'Combined' AND ic.internal_coverage_cd='Uninsured Motorist'    THEN 'umCSLPrem'
-                            ELSE ic.primary_coverage_cd
+                            ELSE ic.internal_coverage_cd
                         END AS coverageCd,
                         CASE 
                             WHEN apc.limit_type = 'Combined' AND ic.internal_coverage_cd='Underinsured Motorist'    THEN 'umCSLPrem'
@@ -127,7 +127,7 @@ BEGIN
                 avc.vehicle_no,
                 CASE 
                     WHEN ic.internal_coverage_desc IN ('Underinsured Motorist','Uninsured Motorist') THEN 'um_uim_Prem'
-                    ELSE ic.primary_coverage_Cd
+                    ELSE ic.internal_coverage_cd
                 END AS coverageCd,
                 CASE 
                     WHEN ic.internal_coverage_desc = 'Collision' THEN avc.collision_deductible
