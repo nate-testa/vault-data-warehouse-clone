@@ -11,6 +11,7 @@ GO
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 11/06/23		Alberto Almario					1. change to use UniqueId instead of Index and change name from vehicle_no to vehicle_unique_id
+-- 11/07/23     Sandeep Gundreddy               2. Added logic to get max auto_garage_location_sk
 -- ====================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
 AS
@@ -82,7 +83,8 @@ BEGIN
                     ON av.policy_no = acct.PolicyNumber
                     AND av.effective_dt = acct.EffectiveDate
                     AND av.vehicle_unique_id = acctvo.[UniqueId]
-                LEFT JOIN [edw_core].[tauto_garage_location] AS agl
+                LEFT JOIN (select policy_no,[effective_dt],transaction_seq_no,max(auto_garage_location_sk) as auto_garage_location_sk from [edw_core].[tauto_garage_location] 
+                group by policy_no,[effective_dt],transaction_seq_no) AS agl
                     ON agl.policy_no = acct.PolicyNumber
                     AND agl.effective_dt = acct.EffectiveDate
                     --AND agl.garage_location_no = av. --**Pending
@@ -325,3 +327,4 @@ BEGIN
 	
     END CATCH
 END
+GO
