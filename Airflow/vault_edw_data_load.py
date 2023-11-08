@@ -422,7 +422,7 @@ with DAG(
 
         claim_group_items = [
             'sp_tcatastrophe',
-            'sp_cause_of_loss',
+            'sp_tcause_of_loss',
             'sp_tsub_cause_of_loss',
             'sp_tclaim',
             'sp_tclaim_feature',
@@ -442,10 +442,10 @@ with DAG(
             autocommit=True,
         )
 
-        sp_cause_of_loss = MsSqlOperator(
-            task_id='sp_cause_of_loss',
+        sp_tcause_of_loss = MsSqlOperator(
+            task_id='sp_tcause_of_loss',
             mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_cause_of_loss",
+            sql="EXEC edw_core.sp_tcause_of_loss",
             database="vault_edw",
             autocommit=True,
         )
@@ -529,7 +529,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(claim_group_items, 'All stored procedures executed successfully for all the Claim tables'),
         )
 
-        sp_tcatastrophe >> sp_cause_of_loss >> sp_tsub_cause_of_loss >> sp_tclaim >> sp_tclaim_feature >> sp_tclaim_payment >> sp_tclaim_transaction >> sp_tclaim_note >> sp_tclaim_diary >> sp_update_tclaim >> sp_update_tclaim_feature >> send_claim_email
+        sp_tcatastrophe >> sp_tcause_of_loss >> sp_tsub_cause_of_loss >> sp_tclaim >> sp_tclaim_feature >> sp_tclaim_payment >> sp_tclaim_transaction >> sp_tclaim_note >> sp_tclaim_diary >> sp_update_tclaim >> sp_update_tclaim_feature >> send_claim_email
 
 
     with TaskGroup("datamart_group") as datamart_group:
@@ -924,9 +924,9 @@ with DAG(
         integration_group_items = [
             'sp_tclaim_policy_search_api',
             'sp_tclaim_symbility_api', 
-            'sp_tpolicy_hsb_hsp_feed', 
-            'sp_tpolicy_hsb_cyber_feed', 
-            'sp_tpolicy_hsb_slc_feed', 
+            # 'sp_tpolicy_hsb_hsp_feed', 
+            # 'sp_tpolicy_hsb_cyber_feed', 
+            # 'sp_tpolicy_hsb_slc_feed', 
             'sp_billing_account_customer_portal_api', 
             'sp_policy_customer_portal_api',
             'sp_policy_ivans_auto_feed',
@@ -950,29 +950,29 @@ with DAG(
             autocommit=True,
         )
 
-        sp_tpolicy_hsb_hsp_feed = MsSqlOperator(
-            task_id='sp_tpolicy_hsb_hsp_feed',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tpolicy_hsb_hsp_feed",
-            database="vault_edw",
-            autocommit=True,
-        )
+        # sp_tpolicy_hsb_hsp_feed = MsSqlOperator(
+        #     task_id='sp_tpolicy_hsb_hsp_feed',
+        #     mssql_conn_id='Vault_EDW',
+        #     sql="EXEC edw_core.sp_tpolicy_hsb_hsp_feed",
+        #     database="vault_edw",
+        #     autocommit=True,
+        # )
 
-        sp_tpolicy_hsb_cyber_feed = MsSqlOperator(
-            task_id='sp_tpolicy_hsb_cyber_feed',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tpolicy_hsb_cyber_feed",
-            database="vault_edw",
-            autocommit=True,
-        )
+        # sp_tpolicy_hsb_cyber_feed = MsSqlOperator(
+        #     task_id='sp_tpolicy_hsb_cyber_feed',
+        #     mssql_conn_id='Vault_EDW',
+        #     sql="EXEC edw_core.sp_tpolicy_hsb_cyber_feed",
+        #     database="vault_edw",
+        #     autocommit=True,
+        # )
 
-        sp_tpolicy_hsb_slc_feed = MsSqlOperator(
-            task_id='sp_tpolicy_hsb_slc_feed',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tpolicy_hsb_slc_feed",
-            database="vault_edw",
-            autocommit=True,
-        )
+        # sp_tpolicy_hsb_slc_feed = MsSqlOperator(
+        #     task_id='sp_tpolicy_hsb_slc_feed',
+        #     mssql_conn_id='Vault_EDW',
+        #     sql="EXEC edw_core.sp_tpolicy_hsb_slc_feed",
+        #     database="vault_edw",
+        #     autocommit=True,
+        # )
 
         sp_billing_account_customer_portal_api = MsSqlOperator(
             task_id='sp_billing_account_customer_portal_api',
@@ -1021,7 +1021,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
         )
 
-        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_tpolicy_hsb_hsp_feed >> sp_tpolicy_hsb_cyber_feed >> sp_tpolicy_hsb_slc_feed >> sp_billing_account_customer_portal_api >> sp_policy_customer_portal_api >> sp_policy_ivans_auto_feed >> sp_policy_ivans_home >> sp_policy_ivans_pel_feed >> send_integration_email
+        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_billing_account_customer_portal_api >> sp_policy_customer_portal_api >> sp_policy_ivans_auto_feed >> sp_policy_ivans_home >> sp_policy_ivans_pel_feed >> send_integration_email
 
 
     end = DummyOperator(
