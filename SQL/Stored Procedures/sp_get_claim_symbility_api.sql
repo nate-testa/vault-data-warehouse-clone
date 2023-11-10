@@ -36,7 +36,13 @@ BEGIN
 		email,
 		aop_deductible,
 		dwelling_limit_amt,
-		built_year
+		built_year,
+		risk_address_line1,
+		risk_address_line2,
+		risk_address_city_nm,
+		risk_address_state_cd,
+		risk_address_zip_cd,
+		policy_type
 	FROM [edw_integration].[claim_symbility_api] csa
 	WHERE policy_no=@policy_number
 	AND (

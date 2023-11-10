@@ -20,6 +20,8 @@ GO
 --												   Removed pel loc join
 --												   Corrected ceded premium
 -- 10/13/23		Architha Gudimalla				10. corrected transaction_type_sk logic
+-- 10/31/23		Architha Gudimalla				11. Added tfs_sk to the insert
+-- 11/06/23		Alberto Almario					12. change to use UniqueId instead of Index and change name from vehicle_no to vehicle_unique_id
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -64,7 +66,7 @@ BEGIN
         DROP TABLE IF EXISTS edw_temp.tpolicy_transaction_temp2
         SELECT 
 			tmp1.PolicyNumber,
-			case when tmp1.productcode = 'AU' then acctrvo.[index] else null end as vehicle_no,
+			case when tmp1.productcode = 'AU' then acctrvo.[UniqueId] else null end as vehicle_unique_id,
 			tmp1.ProductId,
 			tmp1.EffectiveDate,
 			tmp1.ExpirationDate, 
@@ -95,7 +97,7 @@ BEGIN
 		union all
 		SELECT 
 			tmp1.PolicyNumber,
-			null vehicle_no,
+			null vehicle_unique_id,
 			tmp1.ProductId,
 			tmp1.EffectiveDate,
 			tmp1.ExpirationDate, 
@@ -147,7 +149,7 @@ BEGIN
            ,internal_coverage_sk -- not sure
            ,source_system_sk -- not sure ¿From Policy?
            ,policy_status_sk -- from policy_status ¿?
-           --,tax_fee_surcharge_sk
+           ,tax_fee_surcharge_sk
 			,ceded_annual_premium_amt
 			,ceded_premium_amt
 		   ,user_sk -- not sure
@@ -182,7 +184,7 @@ BEGIN
 			isnull(ic.internal_coverage_sk,0), 
 			source.ssk, 
 			case when isnull(tt.policy_transaction_type_sk,0) = 5 then 2 else 1 end pol_status,
-			--isnull(ttfs.tax_fee_surcharge_sk,0), 
+			isnull(tfs.internal_coverage_sk,0) , 
 			ceded_annual_premium_amt,
 		    ceded_premium_amt,
 			0 user_sk, 
@@ -199,13 +201,14 @@ BEGIN
 		LEFT JOIN edw_core.tcollection_coverage coll on source.PolicyNumber = coll.policy_no and cast(source.EffectiveDate as date) = coll.effective_dt and source.PolicyChangeNumber = coll.transaction_seq_no
 		LEFT JOIN edw_core.tpel_coverage pel_cov on source.PolicyNumber = pel_cov.policy_no and cast(source.EffectiveDate as date) = pel_cov.effective_dt and source.PolicyChangeNumber = pel_cov.transaction_seq_no
 		--LEFT JOIN edw_core.tpel_location pel_loc on source.PolicyNumber = pel_loc.policy_no and cast(source.EffectiveDate as date) = pel_loc.effective_dt and source.PolicyChangeNumber = pel_loc.transaction_seq_no
-		LEFT JOIN edw_core.tauto_vehicle au_veh on source.PolicyNumber = au_veh.policy_no and cast(source.EffectiveDate as date) = au_veh.effective_dt and source.vehicle_no = au_veh.vehicle_no
+		LEFT JOIN edw_core.tauto_vehicle au_veh on source.PolicyNumber = au_veh.policy_no and cast(source.EffectiveDate as date) = au_veh.effective_dt and source.vehicle_unique_id = au_veh.vehicle_unique_id
 		LEFT JOIN edw_core.tauto_policy_coverage au_pol_cov on source.PolicyNumber = au_pol_cov.policy_no and cast(source.EffectiveDate as date) = au_pol_cov.effective_dt and source.PolicyChangeNumber = au_pol_cov.transaction_seq_no
-		LEFT JOIN edw_core.tauto_vehicle_coverage au_veh_cov on source.PolicyNumber = au_veh_cov.policy_no and cast(source.EffectiveDate as date) = au_veh_cov.effective_dt and source.PolicyChangeNumber = au_veh_cov.transaction_seq_no and source.vehicle_no = au_veh_cov.vehicle_no
+		LEFT JOIN edw_core.tauto_vehicle_coverage au_veh_cov on source.PolicyNumber = au_veh_cov.policy_no and cast(source.EffectiveDate as date) = au_veh_cov.effective_dt and source.PolicyChangeNumber = au_veh_cov.transaction_seq_no and source.vehicle_unique_id = au_veh_cov.vehicle_unique_id
 		LEFT JOIN edw_core.tproduct pr on pr.product_cd = pol.product_cd
 		LEFT JOIN edw_core.tbroker br on pol.broker_id = br.broker_id
 		LEFT JOIN edw_core.tcustomer cust on pol.customer_id = cust.customer_id
 		LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) and pr.product_cd = ic.product_cd  
+		LEFT JOIN edw_core.tinternal_coverage tfs on tfs.internal_coverage_desc = source.coverage and source.typ <> 'prm' and pr.product_cd = tfs.product_cd  
 		--LEFT JOIN edw_core.ttax_fee_surcharge ttfs on ttfs.tax_fee_surcharge_desc = source.coverage 
 		LEFT JOIN edw_core.tpolicy_transaction_type tt on tt.policy_transaction_type_cd = source.stage 
 

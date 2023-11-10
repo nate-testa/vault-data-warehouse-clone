@@ -105,7 +105,7 @@ BEGIN
                                 WHEN ic.internal_coverage_cd = 'UM Liability'       THEN pc.uninsured_underinsured_liability_amt 
                                 WHEN ic.internal_coverage_cd = 'UM Motorist'        THEN pc.uninsured_underinsured_motorist_liability_amt 
                                 WHEN ic.internal_coverage_cd = 'EPL Coverage'       THEN pc.employment_practices_liability_amt 
-                                WHEN ic.internal_coverage_cd = 'Excess Liability'   THEN pc.pel_limit_amt 
+                                WHEN ic.internal_coverage_cd = 'Excess Liability'   THEN cast(pc.pel_limit_amt as varchar(255)) 
                             END AS limits,
                             '' AS deductibles, 
                             pt.annual_premium_amt AS currentTermAmt,
@@ -330,8 +330,8 @@ BEGIN
             '' as [MaritalStatusCd_028],
             pi.birth_dt as [BirthDt_029],
             c.occupation_desc as [OccupationDesc_030],
-            pi.primary_insured_in as [InsuredOrPrincipalRoleCd_031],
-            pi.primary_insured_in as [InsuredOrPrincipalRoleDesc_032],
+            CASE WHEN pi.primary_insured_in in ('Yes', 'No') THEN 'IN' ELSE '' END AS [InsuredOrPrincipalRoleCd_031],
+            CASE WHEN pi.primary_insured_in in ('Yes', 'No') THEN 'Insured' ELSE '' END as [InsuredOrPrincipalRoleDesc_032],
             p.policy_no as [PolicyNumber_033],
             '' as [BillingAccountNumber_034],
             'P' as [BroadLOBCd_035],

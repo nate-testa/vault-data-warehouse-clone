@@ -1,9 +1,16 @@
-﻿-- =============================================
--- Author:		Alberto Almario Valbuena
--- Create Date: 2023-08-01
+﻿SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =================================================================================================
 -- Description: This procedures insert and update info related to Claim Policy Search API
--- =============================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_policy_search_api]
+---------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 08/01/23		Alberto Almario Valbuena		1. Created this procedure 
+-- 10/30/23		Architha Gudimalla				2. Replaced middle name with last name 
+-- ================================================================================================= 
+create or ALTER   PROCEDURE [edw_core].[sp_tclaim_policy_search_api]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -33,15 +40,16 @@ BEGIN
 				d2.actual_dt as transaction_effective_dt,
 				pt.transaction_seq_no,
 				p.policy_status,
-				p.insured_nm,
+				TRIM(ISNULL(pi.first_nm, '') + ' ' + ISNULL(pi.last_nm, '') + ' ' + ISNULL(pi.suffix, '')) as insured_nm,
 				c.Insured_type,
 				p.uw_company_nm,
 				pr.product_nm,
 				ptt.policy_transaction_type_nm as transaction_type,
 				CASE 
-					WHEN p.product_cd in ('PEL','LUX') THEN CONCAT(pl.address_line_1,'-',pl.address_line_2,'-',pl.unit_no,'-',pl.city_nm,'-',pl.state_cd,'-',pl.zip_cd)
-					WHEN p.product_cd = 'HO' THEN CONCAT(hl.address_line_1,'-',hl.address_line_2,'-',hl.unit_no,'-',hl.city_nm,'-',hl.state_cd,'-',hl.zip_cd)
-					WHEN p.product_cd = 'AU' THEN av.vehicle_vin
+					WHEN p.product_cd = 'PEL' THEN CONCAT(pl.address_line_1,'-',pl.address_line_2,'-',pl.unit_no,'-',pl.city_nm,'-',pl.state_cd,'-',pl.zip_cd)
+					WHEN p.product_cd = 'LUX' THEN CONCAT(p.mailing_address_line1,'-',p.mailing_address_line2,'-',p.mailing_address_unit_no,'-',p.mailing_address_city_nm,'-',p.mailing_address_state_cd,'-',p.mailing_address_zip_cd)
+					WHEN p.product_cd = 'HO'  THEN CONCAT(hl.address_line_1,'-',hl.address_line_2,'-',hl.unit_no,'-',hl.city_nm,'-',hl.state_cd,'-',hl.zip_cd)
+					WHEN p.product_cd = 'AU' and  av.vehicle_vin is not null THEN av.vehicle_vin
 					ELSE '***!Pending!***'
 				END as risk_item,
 				ss.source_system_nm,
@@ -67,6 +75,7 @@ BEGIN
 		LEFT JOIN edw_core.thome_location AS hl ON pt.item_sk = hl.home_location_sk
 		LEFT JOIN edw_core.tauto_vehicle AS av ON pt.item_sk = av.auto_vehicle_sk
 		LEFT JOIN edw_core.tpel_location AS pl ON p.policy_no = pl.policy_no AND p.effective_dt = pl.effective_dt AND pt.transaction_seq_no = pl.transaction_seq_no
+		LEFT JOIN edw_core.tpolicy_insured AS pi ON p.policy_no = pi.policy_no AND p.effective_dt = pi.effective_dt AND pt.transaction_seq_no = pi.transaction_seq_no AND pi.primary_insured_in = 'Yes'
 
 
 		-- Start Insert process

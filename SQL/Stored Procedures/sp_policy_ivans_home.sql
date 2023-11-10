@@ -1,4 +1,3 @@
-/****** Object:  StoredProcedure [edw_core].[sp_policy_ivans_home]    Script Date: 13/10/2023 3:54:51 p. m. ******/
 SET ANSI_NULLS ON
 GO
 
@@ -54,9 +53,9 @@ BEGIN
 				SELECT * FROM (
 					SELECT
 						hc.policy_no as policyNumber,
+						--ic.primary_coverage_cd as coverageCd,
 						ic.internal_coverage_cd as coverageCd,
 						ic.internal_coverage_desc as coverageDesc,
-						--ic.internal_coverage_cd as IVANS_coverage_cd,
 						--ic.internal_coverage_desc as IVANS_coverage_desc,
 						pt.premium_amt AS changeAmount,
 						pt.annual_premium_amt AS currentAmount,
@@ -447,7 +446,7 @@ BEGIN
 		/* */
 		'PolicyDownload' as [001_MsgTypeCd]
 		,CASE 
-			WHEN ptt.policy_transaction_type_nm = 'New Business' THEN 'NBS'
+			WHEN ptt.policy_transaction_type_nm = 'New' THEN 'NBS'
 		    WHEN ptt.policy_transaction_type_nm = 'Cancellation' THEN 'XLC'
 			WHEN ptt.policy_transaction_type_nm = 'Reinstatement' THEN 'REI'
 			WHEN ptt.policy_transaction_type_nm = 'Renewal' THEN 'RW'
@@ -487,8 +486,8 @@ BEGIN
             END as [025_PhoneTypeCd]
 		,COALESCE(c.home_phone_no, c.mobile_phone_no, '') as [026_PhoneNumber]
 		,c.email as [027_EmailAddr]
-		,CASE WHEN poi.primary_insured_in = 'Y' then 'Primary' ELSE 'Secondary' END as [028_InsuredOrPrincipalRoleCd]
-		,CASE WHEN poi.primary_insured_in = 'Y' then 'Primary' ELSE 'Secondary' END as [029_InsuredOrPrincipalRoleDesc]
+		,CASE WHEN poi.primary_insured_in = 'Yes' then 'Primary' ELSE 'Secondary' END as [028_InsuredOrPrincipalRoleCd]
+		,CASE WHEN poi.primary_insured_in = 'Yes' then 'Primary' ELSE 'Secondary' END as [029_InsuredOrPrincipalRoleDesc]
 		,p.policy_no as [030_PolicyNumber]
 		,'P' as [031_BroadLOBCd]
 		, pr.product_nm as [032_LOBCd] -- pr.product_nm edw_core.tproduct ON p.product_cd = pr.product_cd
@@ -524,11 +523,18 @@ BEGIN
 		,op.min_effective_dt as [057_EffectiveDt]
         ,op.min_expiration_dt as [058_ExpirationDt]
 		,'' as [059_MethodPaymentCd]
-		,ba.payment_plan as [060_PaymentPlanCd]
-		,CASE WHEN ba.payment_plan = 'Full Pay' THEN 'Y' WHEN ba.payment_plan = 'NULL' OR ba.payment_plan = '' THEN '' ELSE 'N' END AS [061_PaidInFullInd]
+		,CASE 
+                WHEN ba.payment_plan = '1P' THEN 'Full Pay'
+                ELSE replace(ba.payment_plan, 'P', ' Pay')
+            END AS [060_PaymentPlanCd]
+		,CASE 
+                WHEN ba.payment_plan = '1P' THEN 'Y'
+                WHEN ba.payment_plan is null OR ba.payment_method = '' THEN ''
+                ELSE 'N'
+            END AS [061_PaidInFullInd]
 		,p.policy_sk as [062_id]
 		,c.customer_id as [063_InsurerId]
-		,p.mailing_address_line1 as [064_Addr1]
+		,hl.address_line_1 as [064_Addr1]
 		,hl.city_nm as [065_City]
 		,hl.state_cd as [066_StateProvCd]
 		,hl.zip_cd as [067_PostalCode]
@@ -615,7 +621,7 @@ BEGIN
 		,'' as [122_OtherImprovementDesc]
 		,'' as [123_OtherImprovementCd]
 		,'' as [124_OtherImprovementDt]
-		,'' as [125_CommercialName]
+		,c.customer_nm as [125_CommercialName]
 		,'' as [126_Addr1]
 		,'' as [127_City]
 		,'' as [128_StateProvCd]

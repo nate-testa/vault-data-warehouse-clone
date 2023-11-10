@@ -43,7 +43,7 @@ BEGIN
             FROM edw_core.tpolicy_transaction as pt
             INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
             WHERE 1=1
-                AND pr.product_nm = 'AU'
+                AND pr.product_cd = 'AU'
                 AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
             GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
         ),
@@ -56,7 +56,7 @@ BEGIN
                 policy_no, effective_dt, transaction_seq_no
         ),
         original_policy AS (
-            SELECT original_policy_no, min(effective_dt) as min_effective_dt, min(expiration_dt) as min_expiration_dt 
+            SELECT original_policy_no, min(effective_dt) as min_effective_dt, min(expiration_dt) as min_expiration_dt, min(original_policy_effective_dt) as min_original_policy_effective_dt
                 FROM edw_core.tpolicy 
             GROUP BY original_policy_no                
         ),
@@ -72,7 +72,7 @@ BEGIN
                         CASE 
                             WHEN apc.limit_type = 'Combined' AND ic.internal_coverage_cd='Underinsured Motorist'    THEN 'umCSLPrem'
                             WHEN apc.limit_type = 'Combined' AND ic.internal_coverage_cd='Uninsured Motorist'    THEN 'umCSLPrem'
-                            ELSE ic.internal_coverage_cd
+                            ELSE ic.internal_coverage_desc
                         END AS coverageDesc,
                         CASE 
                             WHEN apc.limit_type = 'Combined' then apc.combined_single_limit_amt
@@ -104,7 +104,7 @@ BEGIN
                                 FROM edw_core.tpolicy_transaction as pt
                                 INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
                                 WHERE 1=1
-                                    AND pr.product_nm = 'AU'
+                                    AND pr.product_cd = 'AU'
                                 AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
                                 GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk
                             ) as pt 
@@ -117,6 +117,7 @@ BEGIN
                         FOR JSON PATH
                 ) AS AU_Coverages
                 FROM policy_transaction as ptf
+                GROUP BY ptf.policy_sk, ptf.effective_dt_sk ,ptf.transaction_seq_no
         ),
         json_au_vehicles_sub_coverages AS (
             SELECT 
@@ -126,7 +127,7 @@ BEGIN
                 avc.vehicle_no,
                 CASE 
                     WHEN ic.internal_coverage_desc IN ('Underinsured Motorist','Uninsured Motorist') THEN 'um_uim_Prem'
-                    ELSE ic.internal_coverage_desc
+                    ELSE ic.internal_coverage_cd
                 END AS coverageCd,
                 CASE 
                     WHEN ic.internal_coverage_desc = 'Collision' THEN avc.collision_deductible
@@ -148,7 +149,7 @@ BEGIN
                     FROM edw_core.tpolicy_transaction as pt
                     INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
                     WHERE 1=1
-                        AND pr.product_nm = 'AU'
+                        AND pr.product_cd = 'AU'
                     AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
                     GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, vehicle_coverage_sk, internal_coverage_sk
                 ) as pt 
@@ -249,7 +250,10 @@ BEGIN
                         ad.birth_dt as birthDt,
                         '' as country,
                         ad.last_nm as surName,
-                        ad.gender as genderCd,
+                        CASE ad.gender 
+                            WHEN 'Female' THEN 'F' 
+                            WHEN 'Male' THEN 'M' 
+                        END as genderCd,
                         '' as latitude,
                         ad.license_country_nm as countryCd,
                         ad.first_nm as givenName,
@@ -312,6 +316,7 @@ BEGIN
                     FOR JSON PATH
                 ) as AU_Garaging_Locations
             FROM edw_core.tauto_garage_location as aglf
+            GROUP BY aglf.policy_no, aglf.effective_dt, aglf.transaction_seq_no
         )
 
 
@@ -379,7 +384,7 @@ BEGIN
             pt.premium_amt as [Amt_040],
             pt.premium_amt as [Amt_041],
             'en' as [LanguageCd_042],
-            op.min_effective_dt as [OriginalPolicyInceptionDt_043],
+            op.min_original_policy_effective_dt as [OriginalPolicyInceptionDt_043],
             '' as [Dummy_044],
             '' as [Dummy_045],
             '' as [Dummy_046],

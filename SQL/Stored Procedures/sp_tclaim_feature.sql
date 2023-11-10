@@ -46,8 +46,31 @@ BEGIN
 		END AS damage_type	
 		,c.is_subrogation AS possible_subrogation_in,c.is_salvage AS possible_salvage_in,
 		c.total_loss_flag AS total_loss_in,c.litigation_flag AS litigation_in,prd.product_sk,
-		e.loss_status AS claim_feature_status,tic.internal_coverage_sk as aslob_sk, g.real_name AS claim_adjuster_nm,tcpi2.insured_name AS risk_item,
-		3 AS source_system_sk
+		e.loss_status AS claim_feature_status,
+		asl.aslob_sk, 
+		g.real_name AS claim_adjuster_nm,tcpi2.insured_name AS risk_item,
+		3 AS source_system_sk,
+		CASE
+			prd.product_cd
+			WHEN 'HO' THEN thcov.home_coverage_sk
+			WHEN 'LUX' THEN tccov.collection_coverage_sk
+			WHEN 'PEL' THEN tpcov.pel_coverage_sk
+			WHEN 'AU' THEN tacov.auto_policy_coverage_sk
+		END AS coverage_sk ,
+		CASE
+			prd.product_cd
+			WHEN 'HO' THEN thcov.home_location_sk
+			WHEN 'LUX' THEN tccov.collection_location_sk
+			WHEN 'PEL' THEN NULL
+			WHEN 'AU' THEN taveh.auto_vehicle_sk
+		END AS item_sk,
+		CASE
+			prd.product_cd
+			WHEN 'HO' THEN NULL
+			WHEN 'LUX' THEN NULL
+			WHEN 'PEL' THEN NULL
+			WHEN 'AU' THEN tavc.auto_vehicle_coverage_sk
+		END AS vehicle_coverage_sk
 		INTO edw_temp.tclaim_feature_temp1
 		FROM
 		edw_stage.t_clm_case tcase
@@ -56,19 +79,92 @@ BEGIN
 		INNER JOIN edw_stage.t_clm_item AS e ON c.[object_id] = e.[object_id]
 		LEFT JOIN edw_stage.t_clm_pol_insured tcpi2 ON c.insured_id=tcpi2.insured_id
 		LEFT JOIN edw_stage.t_clm_subclaim_type sct ON c.subclaim_type = sct.subclaim_type_code
-		LEFT JOIN edw_stage.t_pub_user g ON c.OWNER_ID = g.[USER_ID]
-		LEFT JOIN edw_core.tproduct prd ON prd.product_cd=tcase.product_code
-		-- LEFT JOIN edw_core.taslob asl ON TRIM(asl.coverage_cd)=TRIM(e.coverage_name) AND 
-		LEFT  JOIN edw_core.tinternal_coverage tic on tic.aslob_cd =TRIM(CAST( e.coverage_name AS VARCHAR(MAX)))
-			and
-			CASE 
-			WHEN tic.product_cd='AU' THEN '2020201'
-			WHEN tic.product_cd='LUX' THEN '2020101'
-			WHEN tic.product_cd='PEL Liability' THEN '2020301'
-			WHEN tic.product_cd='HO' THEN '2020001'
-			END =e.product_code
+		LEFT JOIN edw_stage.t_pub_user g ON c.OWNER_ID = g.[USER_ID]		
+		LEFT JOIN edw_core.tproduct prd ON prd.product_sk=tcl.product_sk
+
+		LEFT JOIN edw_core.taslob asl ON TRIM(asl.coverage_cd)=CAST(e.coverage_name AS VARCHAR(MAX))
+										AND CASE asl.product_cd
+					WHEN 'Homeowners' THEN 'HO'
+					WHEN 'Excess Liability' THEN 'PEL'
+					WHEN 'Auto' THEN 'AU'
+					WHEN 'Collections' THEN 'LUX'
+					ELSE asl.product_cd
+					END
+			= prd.product_cd
+		-- Home Coverage
+        LEFT JOIN edw_core.thome_coverage thcov ON
+		thcov.home_coverage_sk = (
+                                SELECT TOP 1 home_coverage_sk
+                                FROM
+                                    edw_core.thome_coverage tcov1
+                                WHERE
+                                    tcov1.policy_no = tcl.policy_no
+                                    AND tcl.loss_dt >= tcov1.transaction_effective_dt
+								ORDER BY transaction_seq_no DESC
+                              )
+		-- Collection Coverage
+		LEFT JOIN edw_core.tcollection_coverage tccov ON
+		tccov.collection_coverage_sk= (
+                                SELECT TOP 1 collection_coverage_sk
+                                FROM
+                                    edw_core.tcollection_coverage tccov1
+                                WHERE
+                                    tccov1.policy_no = tcl.policy_no
+                                    AND tcl.loss_dt > =tccov1.transaction_effective_dt
+								ORDER BY transaction_seq_no DESC
+                              )
+		-- PEL Coverage
+		LEFT JOIN edw_core.tpel_coverage tpcov ON
+		tpcov.pel_coverage_sk = (
+                                SELECT TOP 1 pel_coverage_sk
+                                FROM
+                                    edw_core.tpel_coverage tpcov1
+                                WHERE
+                                    tpcov1.policy_no = tcl.policy_no
+                                    AND tcl.loss_dt > =tpcov1.transaction_effective_dt
+								ORDER BY transaction_seq_no DESC
+                              )
+		-- Auto Coverage
+		LEFT JOIN edw_core.tauto_policy_coverage tacov ON
+		tacov.auto_policy_coverage_sk = (
+                                SELECT TOP 1 auto_policy_coverage_sk
+                                FROM
+                                    edw_core.tauto_policy_coverage tacov1
+                                WHERE
+                                    tacov1.policy_no = tcl.policy_no
+                                    AND tcl.loss_dt >= tacov1.transaction_effective_dt
+								ORDER BY transaction_seq_no DESC
+                              )
+		-- Auto Vehicle
+		LEFT JOIN edw_core.tauto_vehicle taveh ON 
+		taveh.policy_no = tcl.policy_no AND taveh.vehicle_vin = CAST(tcpi2.insured_name AS VARCHAR(MAX))	AND
+		taveh.auto_vehicle_sk = (
+									SELECT TOP 1 auto_vehicle_sk
+									FROM
+										edw_core.tauto_vehicle aveh1
+									WHERE
+										aveh1.policy_no = taveh.policy_no
+										AND aveh1.vehicle_vin =  CAST(tcpi2.insured_name AS VARCHAR(MAX))
+										AND tcl.loss_dt > = aveh1.effective_dt
+									ORDER BY aveh1.effective_dt DESC
+								)
+		-- Auto Vehicle Coverage
+		LEFT JOIN edw_core.tauto_vehicle_coverage tavc ON tavc.policy_no = tcl.policy_no and tavc.vehicle_no = taveh.vehicle_no
+		AND
+		tavc.auto_vehicle_coverage_sk= (
+										SELECT TOP 1 auto_vehicle_coverage_sk
+										FROM
+										edw_core.tauto_vehicle_coverage tavc1
+										WHERE
+											tavc1.policy_no = tcl.policy_no
+											AND tavc1.vehicle_no = taveh.vehicle_no
+											AND tcl.loss_dt > = tavc1.transaction_effective_dt
+										ORDER BY tavc1.transaction_seq_no DESC
+									)
 		LEFT JOIN edw_core.tclaim_feature tcf ON tcf.claim_no=tcase.claim_no AND 
 		tcf.subclaim_seq_no=c.seq_no AND tcf.claim_coverage_cd=e.coverage_code
+
+
 
 	MERGE edw_core.tclaim_feature  AS Target
 	USING edw_temp.tclaim_feature_temp1 AS Source
@@ -80,6 +176,7 @@ BEGIN
 			claim_sk,claim_no,subclaim_type_nm,subclaim_seq_no,claim_coverage_cd,claim_coverage_desc,
 			claimant_nm,damage_severity,damage_type,possible_subrogation_in,possible_salvage_in,total_loss_in,
 			litigation_in,product_sk,claim_feature_status,aslob_sk,claim_adjuster_nm,risk_item,
+			coverage_sk,item_sk,vehicle_coverage_sk,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -87,6 +184,7 @@ BEGIN
 		claim_sk,claim_no,subclaim_type_nm,subclaim_seq_no,claim_coverage_cd,claim_coverage_desc,
 		claimant_nm,damage_severity,damage_type,possible_subrogation_in,possible_salvage_in,total_loss_in,
 		litigation_in,product_sk,claim_feature_status,aslob_sk,claim_adjuster_nm,risk_item,
+		coverage_sk,item_sk,vehicle_coverage_sk,
 		3,@current_date,@current_date,@etl_audit_sk
 		)
 	-- For Updates
@@ -105,6 +203,9 @@ BEGIN
 		Target.product_sk=Source.product_sk,
 		Target.claim_feature_status=Source.claim_feature_status,
 		Target.aslob_sk=Source.aslob_sk,
+		Target.item_sk=Source.item_sk,
+		Target.coverage_sk=Source.coverage_sk,
+		Target.vehicle_coverage_sk=Source.vehicle_coverage_sk,
 		Target.claim_adjuster_nm=Source.claim_adjuster_nm,
 		Target.risk_item=Source.risk_item,
 		Target.update_ts=@current_date;
@@ -121,6 +222,7 @@ BEGIN
 		
 		-- Drop temp table
 		DROP TABLE IF EXISTS edw_temp.tclaim_feature_temp1
+
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)

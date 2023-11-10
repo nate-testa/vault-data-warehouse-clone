@@ -43,16 +43,23 @@ BEGIN
             hc.dwelling_limit_amt,
             hc.built_year,
             ss.source_system_nm,
-            --pr.product_nm,
+            hl.address_line_1 as risk_address_line1,
+            hl.address_line_2 as risk_address_line2,
+            hl.city_nm as risk_address_city_nm,
+            hl.state_cd as risk_address_state_cd,
+            hl.zip_cd as risk_address_zip_cd,
+            'Home' as policy_type,
             ph.create_ts as policy_history_create_ts
 		INTO [edw_temp].[tclaim_symbility_api_temp1] 
 		FROM edw_core.tpolicy_history AS ph
+        INNER JOIN edw_core.tproduct AS pr ON ph.product_sk = pr.product_sk
         LEFT JOIN edw_core.thome_coverage AS hc ON ph.policy_history_sk = hc.policy_history_sk
         LEFT JOIN edw_core.tpolicy_insured AS pi ON ph.policy_history_sk = pi.policy_history_sk AND ph.transaction_effective_dt = pi.transaction_effective_dt AND pi.primary_insured_in = 'Yes'
         LEFT JOIN edw_core.tsource_system AS ss ON ph.source_system_sk = ss.source_system_sk
-        --LEFT JOIN edw_core.tpolicy AS p ON ph.policy_sk = p.policy_sk AND ph.effective_dt = p.effective_dt
-		--LEFT JOIN edw_core.tproduct AS pr ON p.product_cd = pr.product_cd
-        WHERE cast(ph.create_ts as datetime2(7)) > @last_source_extract_ts;
+        LEFT JOIN edw_core.thome_location AS hl ON hc.home_location_sk = hl.home_location_sk
+        WHERE 
+            pr.product_cd = 'HO'
+            AND cast(ph.create_ts as datetime2(7)) > @last_source_extract_ts;
 
 
 		-- Start Insert process
@@ -75,7 +82,13 @@ BEGIN
             source_system_nm,
             create_ts,
             update_ts,
-            etl_audit_sk
+            etl_audit_sk,
+            risk_address_line1,
+            risk_address_line2,
+            risk_address_city_nm,
+            risk_address_state_cd,
+            risk_address_zip_cd,
+            policy_type
 		)
 		SELECT policy_no,
             effective_dt,
@@ -95,7 +108,13 @@ BEGIN
             source_system_nm,
 			getdate(),
 			getdate(),
-		    @etl_audit_sk
+		    @etl_audit_sk,
+            risk_address_line1,
+            risk_address_line2,
+            risk_address_city_nm,
+            risk_address_state_cd,
+            risk_address_zip_cd,
+            policy_type
 		FROM [edw_temp].[tclaim_symbility_api_temp1];
 
 		SET @rows_affected=@@ROWCOUNT;

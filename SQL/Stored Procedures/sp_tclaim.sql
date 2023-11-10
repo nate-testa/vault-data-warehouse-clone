@@ -14,7 +14,7 @@ BEGIN
     SET NOCOUNT ON
 
 	BEGIN TRY
-		DECLARE @last_source_extract_ts DATETIME2(7)
+	DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
 		DECLARE @rows_affected INT
@@ -26,13 +26,37 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 
-		DROP TABLE IF exists edw_temp.tclaim_temp1
-
+		DROP TABLE IF exists edw_temp.tclaim_temp1;
+		WITH first_close_dt AS 
+		(
+			SELECT DISTINCT c.claim_no
+			,MIN(ch.insert_time) AS claim_first_closed_dt
+			FROM
+				edw_stage.t_clm_case_his ch
+				INNER JOIN edw_stage.t_clm_case c ON ch.case_id = c.case_id
+			WHERE
+				ch.claim_type = 'LOS'
+				AND ch.new_status = 'CLOSED'
+			GROUP BY c.claim_no
+		)
+		, first_reopen as 
+		(
+			SELECT DISTINCT c.claim_no
+			,MIN(ch.insert_time) as claim_first_reopen_dt
+			FROM
+				edw_stage.t_clm_case_his ch
+				INNER JOIN edw_stage.t_clm_case c ON ch.case_id = c.case_id
+			WHERE
+				ch.claim_type = 'LOS'
+				and ch.new_status = 'REOPEN'
+			GROUP BY c.claim_no
+		)
 		SELECT
 		claim_no, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS policy_effective_dt, 
 		policy_sk,cause_of_loss_sk,loss_desc, source_claim_status,claim_status, catastrophe_sk, product_sk,
 		loss_address ,loss_city_nm ,loss_state_cd ,loss_zip_cd,loss_country_nm,broker_sk,customer_sk,underwriting_company_nm,
-		contact_nm,contact_type,contact_phone,contact_person_email,
+		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
+		claim_created_ts,claim_created_by_nm,policy_history_sk,
 		3 AS source_system_sk,sub_cause_of_loss_sk,update_time
 		INTO edw_temp.tclaim_temp1
 		FROM
@@ -81,11 +105,24 @@ BEGIN
 			tcase.contact_type
 			END AS contact_type,tcase.contact_phone,
 			CASE WHEN TRIM(tcase.contact_person_email)='' THEN NULL ELSE tcase.contact_person_email END AS contact_person_email,
-			scl.sub_cause_of_loss_sk,tcase.update_time
+			scl.sub_cause_of_loss_sk,tcase.update_time,
+			fcd.claim_first_closed_dt,
+			fro.claim_first_reopen_dt,
+			tcase.insert_time AS claim_created_ts,
+			tpu.REAL_NAME AS claim_created_by_nm,
+			tph.policy_history_sk
 		FROM
 			edw_stage.t_clm_case tcase
 			LEFT JOIN edw_core.tpolicy_history tph ON TRIM(tcase.policy_no) = tph.policy_no
-			AND CAST(tph.transaction_effective_dt AS DATE) <= CAST(tcase.accident_time AS DATE)
+			AND tph.policy_history_sk = (
+                                SELECT TOP 1 policy_history_sk
+                                FROM
+                                    edw_core.tpolicy_history tph1
+                                WHERE
+                                    tph1.policy_no = tcase.policy_no
+                                    AND CAST(tph1.transaction_effective_dt AS DATE) <= CAST(tcase.accident_time AS DATE)
+								ORDER BY transaction_seq_no DESC
+                              )			
 			LEFT JOIN edw_stage.t_clm_case_status tcasestat ON tcase.CASE_STATUS = tcasestat.STATUS_CODE
 			LEFT JOIN edw_core.tcustomer c ON c.customer_sk=tph.customer_sk
 			LEFT JOIN edw_core.tcatastrophe cat ON TRIM(tcase.accident_code)=TRIM(cat.catastrophe_cd)
@@ -95,14 +132,17 @@ BEGIN
 			LEFT JOIN edw_stage.t_int_address tia ON tia.source_id=tcase.case_id
 			LEFT JOIN edw_stage.t_pub_address tpa ON tia.T_ADDRESS_ID=tpa.ADDRESS_ID
 			LEFT JOIN edw_stage.t_clm_policy tcp ON tcase.case_id=tcp.case_id
-			LEFT JOIN edw_core.tsub_cause_of_loss scl ON tcase.sub_cause_of_loss_code=scl.sub_cause_of_loss_cd 
+			LEFT JOIN edw_core.tsub_cause_of_loss scl ON tcase.sub_cause_of_loss_code=scl.sub_cause_of_loss_cd
+			LEFT JOIN first_close_dt fcd ON fcd.claim_no = tcase.claim_no
+			LEFT JOIN first_reopen fro ON fro.claim_no = tcase.claim_no
+			LEFT JOIN edw_stage.t_pub_user tpu ON tpu.[USER_ID] = tcase.INSERT_BY
 		WHERE
 			tcase.update_time>@last_source_extract_ts
 	) AS t
 	WHERE
 		rn=1
-
-	MERGE edw_core.tclaim  AS Target
+		
+	MERGE edw_core.tclaim AS Target
 	USING edw_temp.tclaim_temp1 AS Source
 	ON Source.claim_no=Target.claim_no
 	-- For Inserts
@@ -112,7 +152,9 @@ BEGIN
 			,policy_effective_dt,policy_sk,cause_of_loss_sk,sub_cause_of_loss_sk,loss_desc,claim_status
 			,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,loss_address,loss_city_nm
 			,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_id,contact_nm,contact_type
-			,contact_phone,contact_person_email,source_system_sk,create_ts,update_ts,etl_audit_sk
+			,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
+			claim_created_ts,claim_created_by_nm,policy_history_sk,
+			source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
 		(
@@ -120,7 +162,9 @@ BEGIN
 		,policy_effective_dt,policy_sk,cause_of_loss_sk,sub_cause_of_loss_sk,loss_desc,claim_status
 		,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,loss_address,loss_city_nm
 		,loss_state_cd,loss_zip_cd,loss_country_nm,broker_sk,customer_sk,contact_nm,contact_type
-		,contact_phone,contact_person_email,source_system_sk,@current_date,@current_date,@etl_audit_sk
+		,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,claim_created_ts ,claim_created_by_nm,
+		policy_history_sk,
+		source_system_sk,@current_date,@current_date,@etl_audit_sk
 		)
 	-- For Updates
 	WHEN MATCHED THEN UPDATE 
@@ -147,6 +191,11 @@ BEGIN
 		Target.contact_type=Source.contact_type,
 		Target.contact_phone=Source.contact_phone,
 		Target.contact_person_email=Source.contact_person_email,
+		Target.policy_history_sk=Source.policy_history_sk,
+		Target.claim_first_closed_dt=Source.claim_first_closed_dt,
+		Target.claim_first_reopen_dt=Source.claim_first_reopen_dt,
+		Target.claim_created_ts=Source.claim_created_ts,
+		Target.claim_created_by_nm=Source.claim_created_by_nm,
 		Target.update_ts=@current_date,
 		Target.sub_cause_of_loss_sk=Source.sub_cause_of_loss_sk;
 

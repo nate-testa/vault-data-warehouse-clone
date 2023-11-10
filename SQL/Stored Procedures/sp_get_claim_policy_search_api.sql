@@ -9,6 +9,7 @@ GO
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 08/18/23		Mohammed Yunus				1. Created this procedure 
+-- 10/26/23		Mohammed Yunus				2. updated columns list returned
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_claim_policy_search_api]
 (
@@ -22,10 +23,9 @@ BEGIN
     SET NOCOUNT ON
 
 	SELECT
-	DISTINCT policy_no,effective_dt,expiration_dt,
-			product_nm,policy_status,transaction_type,
-			insured_type,insured_nm,REPLACE(uw_company_nm,'E & S','E&S') company,
-			risk_item
+	DISTINCT policy_no,transaction_type,expiration_dt,effective_dt,
+			product_nm,insured_type,insured_nm,policy_status,
+			REPLACE(uw_company_nm,'E & S','E&S') company
 	FROM
 	[edw_integration].[claim_policy_search_api] cosi
 	WHERE  

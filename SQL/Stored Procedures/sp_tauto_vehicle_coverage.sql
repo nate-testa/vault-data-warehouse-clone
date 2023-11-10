@@ -3,11 +3,16 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =============================================
+-- ====================================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2023-09-11
 -- Description: This stored procedure insert and update info related to tauto_vehicle_coverage.
--- =============================================
+---------------------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------------------------------------------
+-- 11/06/23		Alberto Almario					1. change to use UniqueId instead of Index and change name from vehicle_no to vehicle_unique_id
+-- 11/07/23     Sandeep Gundreddy               2. Added logic to get max auto_garage_location_sk
+-- ====================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
 AS
 BEGIN
@@ -34,7 +39,7 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[tauto_vehicle_coverage_temp1];
 
 		SELECT 
-			IssuedDate, policy_no, effective_dt, vehicle_no, transaction_effective_dt, expiration_dt, transaction_dt, transaction_seq_no, policy_history_sk, auto_vehicle_sk, auto_garage_location_sk,
+			IssuedDate, policy_no, effective_dt, vehicle_no, vehicle_unique_id, transaction_effective_dt, expiration_dt, transaction_dt, transaction_seq_no, policy_history_sk, auto_vehicle_sk, auto_garage_location_sk,
             [PrimaryParkingLocation], [DrivewaySecurity], [VehicleUsage], [DistanceToWork], [AnnualMiles], [LPMPFilingDate], [Ownership], [RegistrationStatus], [RegistrationDate], 
             [ExpirationDate], [RegisteredOwner], [RegisteredOwnerName], [ListedDriverName], [NonDriverName], [CompanyOtherEntityName], [RegistrationState], [RegistrationAddressLine1], 
             [RegistrationAddressLine2], /*[*pending*-registration_address_unit_no],*/ [RegistrationAddressCity], [RegistrationAddressZipCode], [RegistrationAddressState], [SymbolBIPD], [SymbolPIPMED], 
@@ -51,7 +56,7 @@ BEGIN
         FROM
 			(
                 SELECT
-                    acct.IssuedDate, acct.PolicyNumber as policy_no, acct.EffectiveDate as effective_dt, acctvo.[Index] as vehicle_no, acct.TransactionEffectiveDate as transaction_effective_dt, 
+                    acct.IssuedDate, acct.PolicyNumber as policy_no, acct.EffectiveDate as effective_dt, acctvo.[Index] as vehicle_no, [UniqueId] as vehicle_unique_id, acct.TransactionEffectiveDate as transaction_effective_dt, 
                     acct.ExpirationDate as expiration_dt, acct.IssuedDate as transaction_dt, acct.PolicyChangeNumber as transaction_seq_no,
                     ph.policy_history_sk, av.auto_vehicle_sk, agl.auto_garage_location_sk, acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
                     acctvof.[Field], acctvof.[Value],
@@ -77,8 +82,9 @@ BEGIN
                 LEFT JOIN [edw_core].[tauto_vehicle] AS av
                     ON av.policy_no = acct.PolicyNumber
                     AND av.effective_dt = acct.EffectiveDate
-                    AND av.vehicle_no = acctvo.[Index]
-                LEFT JOIN [edw_core].[tauto_garage_location] AS agl
+                    AND av.vehicle_unique_id = acctvo.[UniqueId]
+                LEFT JOIN (select policy_no,[effective_dt],transaction_seq_no,max(auto_garage_location_sk) as auto_garage_location_sk from [edw_core].[tauto_garage_location] 
+                group by policy_no,[effective_dt],transaction_seq_no) AS agl
                     ON agl.policy_no = acct.PolicyNumber
                     AND agl.effective_dt = acct.EffectiveDate
                     --AND agl.garage_location_no = av. --**Pending
@@ -194,7 +200,8 @@ BEGIN
             create_ts,
             update_ts,
             etl_audit_sk,
-            vehicle_deleted_in
+            vehicle_deleted_in,
+            vehicle_unique_id
 		)
         SELECT 
             t1.policy_no,
@@ -284,7 +291,8 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
-            CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in
+            CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in,
+            t1.vehicle_unique_id
         FROM 
             [edw_temp].[tauto_vehicle_coverage_temp1] AS t1
         ;
@@ -319,3 +327,4 @@ BEGIN
 	
     END CATCH
 END
+GO

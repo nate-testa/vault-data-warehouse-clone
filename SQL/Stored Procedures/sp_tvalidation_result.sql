@@ -5,6 +5,7 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 08/15/23		Architha Gudimalla				1. Created this procedure 
+-- 11/03/23		Architha Gudimalla				2. Added date filter for inforce
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tvalidation_result]
@@ -55,7 +56,10 @@ BEGIN
 				SET @process_run_start_ts = getdate(); 
 
 				set @source_sql = replace(@source_sql , 'select count(*)','SELECT @source_ct=count(*)') 
-				set @target_sql = replace(@target_sql , 'select count(*)','SELECT @target_ct=count(*)')  
+				set @target_sql = replace(@target_sql , 'select count(*)','SELECT @target_ct=count(*)') 
+
+				set @source_sql = replace(@source_sql , 'var_actual_dt',@last_source_extract_ts) 
+				set @target_sql = replace(@target_sql , 'var_actual_dt',@last_source_extract_ts)  
 
 				EXECUTE sp_executesql @source_sql, N'@source_ct NVARCHAR(10) OUTPUT', @source_ct=@out1 OUTPUT
 				EXECUTE sp_executesql @target_sql, N'@target_ct NVARCHAR(10) OUTPUT', @target_ct=@out2 OUTPUT 
@@ -83,7 +87,7 @@ BEGIN
 				SET @rows_affected=@@ROWCOUNT;
 		
 				--Update control table
-				SET @new_last_source_extract_ts = COALESCE(getdate(),@last_source_extract_ts);  
+				SET @new_last_source_extract_ts = COALESCE(dateadd(day,-1,cast(getdate() as date)),@last_source_extract_ts);  
 				EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		
 				-- Update audit table
