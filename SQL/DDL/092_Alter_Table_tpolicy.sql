@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tpolicy ADD migrated_in varchar(255);
