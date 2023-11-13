@@ -112,7 +112,7 @@ with DAG(
     
     with TaskGroup("quote_home_group") as quote_home_group:
 
-        quote_home_group_items = ['sp_tquote_home_location','sp_tquote_home_coverage','sp_tquote_home_additional_coverage']
+        quote_home_group_items = ['sp_tquote_home_location','sp_tquote_home_coverage','sp_tquote_home_coverage_update','sp_tquote_home_additional_coverage']
 
         sp_tquote_home_location = MsSqlOperator(
             task_id='sp_tquote_home_location',
@@ -126,6 +126,14 @@ with DAG(
             task_id='sp_tquote_home_coverage',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_home_coverage",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_home_coverage_update = MsSqlOperator(
+            task_id='sp_tquote_home_coverage_update',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_home_coverage_update",
             database="vault_edw",
             autocommit=True,
         )
@@ -145,7 +153,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(quote_home_group_items, 'All stored procedures executed successfully for all the Quote Home tables'),
         )
 
-        sp_tquote_home_location >> sp_tquote_home_coverage >> sp_tquote_home_additional_coverage >> send_quote_home_email
+        sp_tquote_home_location >> sp_tquote_home_coverage >> sp_tquote_home_coverage_update >> sp_tquote_home_additional_coverage >> send_quote_home_email
 
 
     with TaskGroup("quote_collection_group") as quote_collection_group:
