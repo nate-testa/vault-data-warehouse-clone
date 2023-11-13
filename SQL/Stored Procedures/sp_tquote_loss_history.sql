@@ -35,7 +35,7 @@ BEGIN
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tquote_loss_history_temp1];
 		SELECT 
-			PolicyNumber as quote_no, EffectiveDate, ExpirationDate, PolicyChangeNumber
+			PolicyNumber as quote_no, EffectiveDate, ExpirationDate, Number
 			,quote_history_sk
 			,[index] as loss_seq_no
 			,PropertyOrLiability, [Source] as source_nm, ClaimStatus, Claimant, FileNumber, LossDate, LossIdentifier, LossType, 
@@ -49,7 +49,7 @@ BEGIN
 		FROM
 			(
 			SELECT
-				acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, acc.PolicyChangeNumber
+				acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, acc.Number
 				,tqh.quote_history_sk as [quote_history_sk]
 				,acct.[Index]
 				,accto.[Field], NULLIF(accto.[Value], '') as [Value]
@@ -62,9 +62,8 @@ BEGIN
 					*
 				FROM [edw_stage].[AccountTransaction]
 				WHERE
-					[Stage] IN ('QUOTE','POLICY')
-					--AND GREATEST(acct.CreatedDate)>@last_source_extract_ts --20230717 removed
-					AND GREATEST(IssuedDate)>@last_source_extract_ts --20230717 added
+					[Stage] IN ('QUOTE','POLICY')	
+					AND CreatedDate>@last_source_extract_ts --20230717 added
 				) acc
 				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
 				LEFT JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
@@ -72,7 +71,7 @@ BEGIN
 				LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
 				LEFT JOIN edw_core.tquote_history tqh on tqh.quote_no=acc.PolicyNumber
 						and tqh.effective_dt=acc.EffectiveDate
-						and tqh.transaction_seq_no = acc.policychangenumber
+						and tqh.transaction_seq_no = acc.number
 			WHERE
 				--p.[Name]='Collections'
 				acct.ObjectType = 'LossHistory'
@@ -128,7 +127,7 @@ BEGIN
 		SELECT [quote_no]
       ,[EffectiveDate]
       ,[ExpirationDate]
-      ,[PolicyChangeNumber]
+      ,[Number]
       ,[quote_history_sk]
       ,[loss_seq_no]
       ,[PropertyOrLiability]
@@ -165,7 +164,7 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.create_ts) FROM edw_temp.[tquote_loss_history_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.createddate) FROM edw_temp.[tquote_loss_history_temp1] t1),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS edw_temp.[tquote_loss_history_temp1];
 		

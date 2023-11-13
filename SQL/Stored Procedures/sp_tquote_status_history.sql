@@ -45,35 +45,30 @@ BEGIN
 			,transaction_type, transaction_status, transaction_ts
 			,user_nm
 			,[source_system_sk]
-			--,CreatedDate, UpdatedDate
+			,CreatedDate
 		INTO [edw_temp].[tquote_status_history_temp1]
 		FROM
 			(
 			SELECT DISTINCT
-				acct.PolicyNumber, acct.EffectiveDate
+				ac.PolicyNumber, ac.EffectiveDate
 				,tq.quote_sk
 				,tusr.user_sk
 				,CONCAT(tusr.first_nm, ' ', tusr.last_nm) as user_nm
 				,ash.Stage as transaction_type, ash.[State] as transaction_status, ash.CreatedDate as transaction_ts
-				--,acct.CreatedDate, acct.UpdatedDate
-				,case when acct.ExternalSourceId is not NULL then 2--(AV2) 
+				,ash.CreatedDate
+                --, acct.UpdatedDate
+				,case when ash.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
 				 end as [source_system_sk] --20230717 added
 			FROM
-				(SELECT
-					*
-				FROM [edw_stage].[AccountTransaction]
+				(select * from edw_stage.AccountStatusHistory
 				WHERE
-					[Stage] IN ('QUOTE','POLICY')
-					AND GREATEST(CreatedDate)>@last_source_extract_ts --20230717 added
-				) acct
-				/*LEFT JOIN edw_core.tquote_history tqh on tqh.quote_no=acct.PolicyNumber
-						and tqh.effective_dt=acct.EffectiveDate
-						and tqh.transaction_seq_no = acct.policychangenumber*/
-				INNER JOIN edw_core.tquote tq on tq.quote_no=acct.PolicyNumber and tq.effective_dt=acct.EffectiveDate
-				LEFT JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id 
-				LEFT JOIN edw_core.[tuser] tusr on tusr.[user_id] = acctv.UnderwriterUserId 
-				LEFT JOIN edw_stage.AccountStatusHistory ash ON ash.[AccountId] = acct.AccountId AND ash.UserId = tusr.[user_id]
+					CreatedDate>@last_source_extract_ts 
+				) ash
+                INNER JOIN edw_stage.Account ac ON ash.AccountId=ac.id
+				INNER JOIN edw_core.tquote tq on tq.quote_no=ac.PolicyNumber 
+				LEFT JOIN edw_core.[tuser] tusr on tusr.[user_id] = ash.UserId 
+				
 		) as f
 			
 		-- Start Insert process
@@ -108,7 +103,7 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.[create_ts]) FROM edw_temp.[tquote_status_history_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.[CreatedDate]) FROM edw_temp.[tquote_status_history_temp1] t1),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS edw_temp.[tquote_status_history_temp1];
 		

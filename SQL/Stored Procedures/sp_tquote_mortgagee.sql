@@ -34,21 +34,17 @@ BEGIN
 
 		drop table if exists edw_temp.tquote_mortgagee_temp1
 		select 
-			PolicyNumber as quote_no,EffectiveDate,ExpirationDate,transaction_seq_no,quote_history_sk,source_system_sk,
+			PolicyNumber as quote_no,EffectiveDate,ExpirationDate,transaction_seq_no,createdDate,quote_history_sk,source_system_sk,
 			NumberOfMortgagees,[Name],MortgageeType,BillMortgagee,Email,Fax,Phone,
 			IsaoAtima,IsaoAtimaOther,LoanNumber,AddressLine1,AddressLine2,AddressCity,AddressState,
 			AddressZipCode,AddressCounty,AddressCountry
 			into edw_temp.tquote_mortgagee_temp1
 		from
 		(
-		select * 
-		from
-			(
-			 
-			select DENSE_RANK()OVER(PARTITION BY act.PolicyNumber,cast(act.EffectiveDate as date) ORDER BY act.policychangenumber DESC) AS policy_txn_order,
+		select 
 			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
 			tqh.quote_history_sk,
-			act.policychangenumber AS transaction_seq_no,
+			act.number AS transaction_seq_no,act.createdDate,
 			CASE WHEN act.ExternalSourceId IS NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value]
 			from
 				edw_stage.AccountTransaction act
@@ -58,7 +54,7 @@ BEGIN
 				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
 				LEFT JOIN edw_core.tquote_history tqh on tqh.quote_no=act.PolicyNumber
 						and tqh.effective_dt=act.EffectiveDate
-						and tqh.transaction_seq_no = act.policychangenumber
+						and tqh.transaction_seq_no = act.number
 				left join edw_stage.Product pr on act.ProductId = pr.id
 			where
 				act.PolicyNumber is not null
@@ -68,9 +64,7 @@ BEGIN
 				and atvof.Field IN ('NumberOfMortgagees','Name','MortgageeType','BillMortgagee','Email','Fax','Phone',
 					'IsaoAtima','IsaoAtimaOther','LoanNumber','AddressLine1','AddressLine2','AddressCity',
 					'AddressState','AddressZipCode','AddressCounty','AddressCountry')
-				and act.IssuedDate > @last_source_extract_ts
-			) as t
-			where policy_txn_order=1
+				and act.createdDate > @last_source_extract_ts
 		) as t
 		pivot 
 		(
@@ -100,7 +94,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(IssuedDate) FROM edw_temp.tquote_mortgagee_temp1),@last_source_extract_ts);	
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(createdDate) FROM edw_temp.tquote_mortgagee_temp1),@last_source_extract_ts);	
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
