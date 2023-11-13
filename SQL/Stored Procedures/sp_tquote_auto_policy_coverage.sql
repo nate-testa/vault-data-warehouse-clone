@@ -46,7 +46,7 @@ BEGIN
             [AutoLockCoverageEnhancementEndorsement], [SparePartsEnhancementEndorsement], [CoverageforAccidentalDeployAirbagEnhancementEndorsement], [IsthisOneYearPolicy], [Tier], 
             [NumberofTotalVehiclesonPolicy], [TotalNumberofPPAs], [TotalOwnedPPAs], [NumberofPPAwithPhysDam], [NumberofCollectorCars], [TotalInsuredLocations], [HOClaims], [NumberofDriversonPolicy], 
             [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
-            [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary],
+            [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied],
 			source_system_sk
 		
         INTO [edw_temp].[tquote_auto_policy_coverage_temp1]
@@ -80,7 +80,7 @@ BEGIN
                 WHERE
                     p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'
-                    AND acctvof.[Group] in ('Coverages','Additional Coverages','Coverage Limitations')
+                    AND acctvof.[Group] in ('Coverages','Additional Coverages','Coverage Limitations','Policy Discount')
 			) t
 		PIVOT 
 			(
@@ -97,7 +97,7 @@ BEGIN
                     [AutoLockCoverageEnhancementEndorsement], [SparePartsEnhancementEndorsement], [CoverageforAccidentalDeployAirbagEnhancementEndorsement], [IsthisOneYearPolicy], [Tier], 
                     [NumberofTotalVehiclesonPolicy], [TotalNumberofPPAs], [TotalOwnedPPAs], [NumberofPPAwithPhysDam], [NumberofCollectorCars], [TotalInsuredLocations], [HOClaims], [NumberofDriversonPolicy], 
                     [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
-                    [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary]
+                    [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied]
                 )
 			) pivottable
 
@@ -202,7 +202,8 @@ BEGIN
             create_ts,
             update_ts,
             etl_audit_sk,
-            change_in_terms_summary_in
+            change_in_terms_summary_in,
+            year_clean_discount_applied
 		)
         SELECT 
             t1.quote_no,
@@ -303,7 +304,8 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
-            t1.[IncludeChangeInTermsSummary] as change_in_terms_summary_in
+            t1.[IncludeChangeInTermsSummary] as change_in_terms_summary_in,
+            t1.[YearCleanDiscountApplied] as year_clean_discount_applied
         FROM 
             [edw_temp].[tquote_auto_policy_coverage_temp1] AS t1
         ;
