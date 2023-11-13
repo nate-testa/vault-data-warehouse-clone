@@ -73,7 +73,7 @@ BEGIN
                 LEFT JOIN [edw_core].[tquote_history] AS qh 
                     ON qh.quote_no = acct.PolicyNumber
                     AND qh.effective_dt = acct.EffectiveDate
-                    AND qh.transaction_seq_no = acct.policychangenumber
+                    AND qh.transaction_seq_no = acct.number
                 LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                     ON qav.quote_no = acct.PolicyNumber
                     AND qav.effective_dt = acct.EffectiveDate
@@ -81,7 +81,7 @@ BEGIN
                 LEFT JOIN [edw_core].[tquote_auto_garage_location] AS qagl
                     ON qagl.quote_no = acct.PolicyNumber
                     AND qagl.effective_dt = acct.EffectiveDate
-                    AND qagl.transaction_seq_no = acct.PolicyChangeNumber
+                    AND qagl.transaction_seq_no = acct.number
                 WHERE
                     p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'

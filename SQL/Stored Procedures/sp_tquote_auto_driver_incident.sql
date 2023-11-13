@@ -34,7 +34,7 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[tquote_auto_driver_incident_temp1];
 
 		SELECT 
-			CreatedDate, quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_auto_driver_sk, driver_no, incident_no,
+			CreatedDate, quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_history_sk, quote_auto_driver_sk, driver_no, incident_no,
             [IncidentSource], [IncidentDate], [IncidentType], [IncidentDescription], [TotalPayout], [IsDisputed], [IncludeInRate], [IncidentCode], [IncidentStatus], [BodilyInjuryPayment], 
             [CollisionPayment], [ComprehensivePayment], [GlassPayment], [MedicalExpensePayment], [MedicalPaymentPayment], [OtherPayment], [PropertyDamagePayment], [PersonalInjuryProtectionPayment], 
             [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment],
@@ -67,11 +67,11 @@ BEGIN
                 LEFT JOIN [edw_core].[tquote_history] AS qh 
                     ON qh.quote_no = acct.PolicyNumber
                     AND qh.effective_dt = acct.EffectiveDate
-                    AND qh.transaction_seq_no = acct.policychangenumber
+                    AND qh.transaction_seq_no = acct.Number
                 LEFT JOIN [edw_core].[tquote_auto_driver] AS qad
                     ON qad.quote_no = acct.PolicyNumber
                     AND qad.effective_dt = acct.EffectiveDate
-                    AND qad.transaction_seq_no = acct.policychangenumber
+                    AND qad.transaction_seq_no = acct.Number
                 WHERE
                     p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'
@@ -196,3 +196,4 @@ BEGIN
 	
     END CATCH
 END
+GO

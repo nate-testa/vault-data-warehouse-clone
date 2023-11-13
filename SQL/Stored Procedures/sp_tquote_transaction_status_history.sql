@@ -3,11 +3,14 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =============================================
--- Author:		Alberto Almario
--- Create Date: 2023-11-10
+-- =====================================================================================================================
 -- Description: This stored procedure insert and update info related to tquote_transaction_status_history.
--- =============================================
+-------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+-------------------------------------------------------------------------------------------------------------------------
+-- 11/10/23		Alberto Almario					1. Created this procedure 
+-- 11/11/23		Sandeep Gundreddy				2. modified source query logic and user logic
+-- =====================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction_status_history]
 AS
 BEGIN
@@ -34,33 +37,20 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[tquote_transaction_status_history_temp1];
 
         SELECT DISTINCT
-            acct.PolicyNumber as quote_no, acct.EffectiveDate as effective_dt, acct.Number as transaction_seq_no,
-            qh.quote_history_sk, qh.quote_sk, u.user_sk, CONCAT(u.first_nm, ' ', u.last_nm) as user_nm, acctsh.Stage as transaction_type, acctsh.State as transaction_status,
-            acct.CreatedDate as transaction_ts,
-            CASE 
-                WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
-                ELSE 4 --(Metal)
-            END as [source_system_sk]
-        
-        INTO [edw_temp].[tquote_transaction_status_history_temp1]
-
-        FROM
-            (SELECT
-                *
-            FROM [edw_stage].[AccountTransaction]
-            WHERE Stage in ('QUOTE','POLICY')
-                AND CreatedDate > @last_source_extract_ts
-            ) acct
-        INNER JOIN [edw_stage].[AccountTransactionStatusHistory] AS acctsh 
-            ON acctsh.AccountTransactionId = acct.Id
-        INNER JOIN [edw_stage].[AccountTransactionVersion] AS acctv 
-            ON acctv.AccountTransactionId = acct.Id
-        LEFT JOIN [edw_core].[tuser] as u 
-            ON u.user_id = acctv.UnderwriterUserId
-        LEFT JOIN [edw_core].[tquote_history] AS qh 
-            ON qh.quote_no = acct.PolicyNumber
-            AND qh.effective_dt = acct.EffectiveDate
-            AND qh.transaction_seq_no = acct.PolicyChangeNumber
+				acct.PolicyNumber as quote_no, acct.EffectiveDate as effective_dt, acct.Number as transaction_seq_no,
+				qh.quote_history_sk, qh.quote_sk, u.user_sk, CONCAT(u.first_nm, ' ', u.last_nm) as user_nm, acctsh.Stage as transaction_type, acctsh.State as transaction_status,
+				acctsh.CreatedDate as transaction_ts,
+				CASE 
+					WHEN acctsh.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
+					ELSE 4 --(Metal)
+				END as [source_system_sk] 
+        INTO [edw_temp].[tquote_transaction_status_history_temp1] 
+        FROM [edw_stage].[AccountTransactionStatusHistory] acctsh 
+        INNER JOIN [edw_stage].[AccountTransaction] acct  ON acctsh.AccountTransactionId = acct.Id
+        LEFT JOIN [edw_core].[tuser] as u ON acctsh.UserId = u.user_id
+        LEFT JOIN [edw_core].[tquote_history] AS qh   ON qh.quote_no = acct.PolicyNumber AND qh.effective_dt = acct.EffectiveDate AND qh.transaction_seq_no = acct.number
+		where acctsh.CreatedDate > @last_source_extract_ts 
+		  and acctsh.Stage in ('QUOTE','POLICY')
 
 		-- Start Insert process
 		INSERT INTO [edw_core].[tquote_transaction_status_history]
@@ -129,3 +119,4 @@ BEGIN
 	
     END CATCH
 END
+GO

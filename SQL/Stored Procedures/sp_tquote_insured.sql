@@ -1,7 +1,12 @@
-﻿-- =================================================================================================
+﻿SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =================================================================================================
 -- Author:		Alberto Almario
--- Create Date: 2023-11-10
 -- Description: This procedures inserts quote insured data
+
+-- 11/11/23		Sandeep Gundreddy		        2. modified source query and transaction_seq_no logic
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_insured]
@@ -38,9 +43,9 @@ BEGIN
 		FROM edw_stage.AccountTransaction acctr
 		left join edw_stage.Product pr on acctr.ProductId = pr.id
 		WHERE PolicyNumber is not null 
-		  and acctr.State ='ISSUED' --- Review BOUND transactions
+		  and acctr.[Stage] IN ('QUOTE','POLICY')	
 		  and pr.ProductLine='PersonalLines'
-		  AND acctr.IssuedDate>@last_source_extract_ts
+		  AND acctr.createdDate>@last_source_extract_ts
 
 		-- Pivot Table
 		DROP TABLE IF EXISTS edw_temp.tquote_insured_temp2; 
@@ -103,7 +108,7 @@ BEGIN
 
 		INSERT into edw_core.tquote_insured
 			(
-				quote_no, effective_dt, transaction_effective_dt, transaction_seq_no, quote_history_sk, 
+				quote_no, effective_dt, transaction_seq_no, quote_history_sk, 
 				insured_nm, dba_nm, first_nm, middle_nm, last_nm, insured_type, primary_insured_in, 
 				coinsured_in, birth_dt, home_phone_no, mobile_phone_no, title, prefix, suffix, 
 				mailing_address_line_1, mailing_address_line_2, mailing_address_unit_no, 
@@ -113,7 +118,7 @@ BEGIN
 				insurance_score_cd3, insurance_score_desc3, insurance_score_cd4, insurance_score_desc4, subscriber_contribution_end_dt,
 				source_system_sk, create_ts, update_ts, etl_audit_sk 
 			)
-		select 	t1.PolicyNumber, t1.EffectiveDate, t1.TransactionEffectiveDate, t1.PolicyChangeNumber, qh.quote_history_sk, 
+		select 	t1.PolicyNumber, t1.EffectiveDate, t1.Number, qh.quote_history_sk, 
 				case when nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') 
 				+ isnull(t2.LastName + ' ','') + isnull(t2.MiddleName + ' ','') + isnull(t2.Suffix,'')),'') is null
 				then NamedInsured else nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') 
@@ -127,14 +132,13 @@ BEGIN
 				t2.SubscriberContributionEndDate, t1.ssk, getdate(), getdate(), @etl_audit_sk
 		FROM 	edw_temp.tquote_insured_temp1 t1
 		INNER JOIN edw_temp.tquote_insured_temp2 t2 on t1.id = t2.AccountTransactionId
-		LEFT JOIN edw_core.tquote quo on t1.PolicyNumber = quo.quote_no and cast(t1.EffectiveDate as date) = quo.effective_dt
-		LEFT JOIN edw_core.tquote_history qh on qh.quote_no = quo.quote_no and qh.effective_dt = quo.effective_dt and qh.transaction_seq_no = t1.PolicyChangeNumber 
+		LEFT JOIN edw_core.tquote_history qh on qh.quote_no = t1.PolicyNumber and qh.effective_dt = t1.EffectiveDate and qh.transaction_seq_no = t1.Number 
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX((t1.IssuedDate)) FROM edw_temp.tquote_insured_temp1 t1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX((t1.createdDate)) FROM edw_temp.tquote_insured_temp1 t1),@last_source_extract_ts)
 
         DROP TABLE IF EXISTS edw_temp.tquote_insured_temp1
 		
@@ -160,3 +164,4 @@ BEGIN
 	END CATCH
 END
 
+GO

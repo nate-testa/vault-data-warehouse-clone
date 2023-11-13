@@ -76,7 +76,7 @@ BEGIN
                 LEFT JOIN [edw_core].[tquote_history] AS qh 
                     ON qh.quote_no = acct.PolicyNumber
                     AND qh.effective_dt = acct.EffectiveDate
-                    AND qh.transaction_seq_no = acct.policychangenumber
+                    AND qh.transaction_seq_no = acct.Number
                 WHERE
                     p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'
