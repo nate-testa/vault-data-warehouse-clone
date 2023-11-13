@@ -323,14 +323,15 @@ with DAG(
         quote_group_items = [
             'sp_tquote',
             'sp_tquote_history',
-            'sp_tquote_tadditional_interest',
+            'sp_tquote_additional_interest',
             'sp_tquote_mortgagee',
             'sp_tquote_loss_history',
             'sp_tquote_status_history',
             'sp_tquote_transaction_status_history',
             'sp_tquote_insured',
             'sp_tquote_transaction',
-            'sp_tquote_history_update'
+            'sp_tquote_history_update',
+            'sp_tquote_update'
             ]
 
         sp_tquote = MsSqlOperator(
@@ -349,10 +350,10 @@ with DAG(
             autocommit=True,
         )
 
-        sp_tquote_tadditional_interest = MsSqlOperator(
-            task_id='sp_tquote_tadditional_interest',
+        sp_tquote_additional_interest = MsSqlOperator(
+            task_id='sp_tquote_additional_interest',
             mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tquote_tadditional_interest",
+            sql="EXEC edw_core.sp_tquote_additional_interest",
             database="vault_edw",
             autocommit=True,
         )
@@ -413,6 +414,14 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_update = MsSqlOperator(
+            task_id='sp_tquote_update',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_update",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_quote_email = EmailOperator(
             task_id='send_quote_policy_email',
             to=to_email,
@@ -420,8 +429,30 @@ with DAG(
             html_content=get_sp_success_data_HTML(quote_group_items, 'All stored procedures executed successfully for all the Quote Policy tables'),
         )
 
-        sp_tquote >> sp_tquote_history >> sp_tquote_tadditional_interest >> sp_tquote_mortgagee >> sp_tquote_loss_history >> sp_tquote_status_history >> sp_tquote_transaction_status_history >> sp_tquote_insured >> sp_tquote_transaction >> sp_tquote_history_update >> send_quote_email
+        sp_tquote >> sp_tquote_history >> sp_tquote_additional_interest >> sp_tquote_mortgagee >> sp_tquote_loss_history >> sp_tquote_status_history >> sp_tquote_transaction_status_history >> sp_tquote_insured >> sp_tquote_transaction >> sp_tquote_history_update >> sp_tquote_update >> send_quote_email
 
+    with TaskGroup("quote_transaction_group") as quote_transaction_group:
+
+        quote_group_items = [
+            'sp_tquote_transaction'
+            ]
+
+        sp_tquote_transaction = MsSqlOperator(
+            task_id='sp_tquote_transaction',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_transaction",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        send_quote_email = EmailOperator(
+            task_id='send_quote_transaction_email',
+            to=to_email,
+            subject='Airflow - Quote transaction tables loaded successfully',
+            html_content=get_sp_success_data_HTML(quote_group_items, 'All stored procedures executed successfully for all the Quote transaction tables'),
+        )
+
+        sp_tquote_transaction >> send_quote_email
 
 
     end = DummyOperator(
@@ -429,4 +460,4 @@ with DAG(
     )
 
 
-start >> quote_group >> [quote_home_group , quote_PEL_group, quote_auto_group] >> quote_collection_group >> end
+start >> quote_group >> [quote_home_group , quote_PEL_group, quote_auto_group] >> quote_collection_group >> quote_transaction_group >> end
