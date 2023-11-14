@@ -10,9 +10,10 @@
 -- 09/20/23     Sandeep Gundreddy				4. Added PersonalLines Filter & modified ASLOB code
 -- 10/12/23     Sandeep Gundreddy				5. Added logic for primary_coverage_cd
 -- 10/30/23     Architha Gudimalla				6. Removed the replace on the label
+-- 11/08/23     Architha Gudimalla				7. Updated logic for primary_coverage_cd for taxes
 -- ================================================================================================= 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tinternal_coverage]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_tinternal_coverage]
 
 AS
 BEGIN
@@ -63,7 +64,8 @@ BEGIN
 					 when pr.ProductCode = 'PEL' then '171'
 					 else null
 				end aslob,
-				max(nullif(trim(accttf.Type),'')) as tax_fee_surcharge_type,null,
+				max(nullif(trim(accttf.Type),'')) as tax_fee_surcharge_type,
+				max(nullif(trim(accttf.Type),'')) as coverage,
 				max(acct.CreatedDate)  as CreatedDate,
 				max(acct.UpdatedDate) as  UpdatedDate 
 		FROM edw_stage.AccountTransaction acct 

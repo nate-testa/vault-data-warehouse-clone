@@ -7,10 +7,12 @@
 -- 06/20/23		Architha Gudimalla				1. Created this procedure 
 -- 10/05/23		Architha Gudimalla				2. Fixed division by 0 error for EP calculation 
 -- 10/16/23		Architha Gudimalla				3. Used source_system_sk from tpolicy instead of tpolicy_transaction in prm subquery 
--- 10/24/23		Architha Gudimalla				4. Fixed division by 0 error for EP calculation 
+-- 10/24/23		Architha Gudimalla				4. Fixed division by 0 error for EP calculation  
+-- 11/10/23		Architha Gudimalla				5. Corrected net ep code 
+--												   Corrected ee for canels
 -- ======================================================================================================================================== 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_summary]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_summary]
 @in_end_dt date = null
 AS 
 BEGIN
@@ -207,7 +209,7 @@ BEGIN
 							case 
 								--cancel is effective in past or current month
 								when tr.transaction_effective_dt_sk <=  @month_begin_dt_sk 
-									then 1.0*((tr.transaction_effective_dt_sk-(select date_sk from edw_core.tdate where actual_dt = pol.expiration_dt))-1)/datediff(dd,pol.effective_dt,pol.expiration_dt )
+									then 1.0*(tr.transaction_effective_dt_sk-@month_begin_dt_sk)/datediff(dd,pol.effective_dt,pol.expiration_dt )
 								--cancel is effective in future
 								else 0
 							end 
@@ -315,33 +317,38 @@ BEGIN
 							-
 							tr.transaction_effective_dt_sk) 
 							* tr.premium_amt/(tr.expiration_dt_sk-tr.transaction_effective_dt_sk)
-						   ) total_ep,*/
+						   ) total_ep,
+						   (tr.premium_amt - tr.tax_fee_surcharge_amt)
+						   */
 		 				sum(
-							case when (tr.expiration_dt_sk-tr.transaction_effective_dt_sk) > 0
-							then
-								(1+(iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
-								-
-								iif(tr.transaction_effective_dt_sk >= @month_begin_dt_sk, tr.transaction_effective_dt_sk, @month_begin_dt_sk))) 
-								* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-tr.effective_dt_sk)
-							else 0
-							end
+		 					(--for transactions issued in the month, eff in the month or later
+								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) > 0
+								then
+									(1+(iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+									-
+									iif(greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk) >= @month_begin_dt_sk, 
+										greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk), @month_begin_dt_sk))) 
+									* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+								else 0
+								end
+							)
 						   ) mtd_net_ep,
-		 				sum(
-							case when (tr.expiration_dt_sk-tr.transaction_effective_dt_sk) > 0
-							then
-								(1+iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
-								-
-								tr.transaction_effective_dt_sk) 
-								* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-tr.transaction_effective_dt_sk)
-							else 0
-							end
-						   ) total_net_ep
+						sum(
+								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) > 0
+								then
+									(1+iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+									-
+									greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) 
+									* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+								else 0
+								end
+							) total_net_ep
 				 FROM edw_core.tpolicy_transaction tr, edw_core.tpolicy pol 
 				 where tr.policy_sk = pol.policy_sk
 				 and   tr.effective_dt_sk <= @end_dt_sk
 				 and   tr.transaction_effective_dt_sk <= @end_dt_sk
 				 and   tr.transaction_dt_sk <= @end_dt_sk
-				 and   pol.expiration_dt > @month_begin_dt
+				 and   pol.expiration_dt > dateadd(month,-2,@month_begin_dt)
 				 group by tr.policy_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk
 				),
 				max_tr as
