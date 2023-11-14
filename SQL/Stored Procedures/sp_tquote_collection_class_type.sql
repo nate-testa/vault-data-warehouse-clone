@@ -1,8 +1,4 @@
-SET ANSI_NULLS ON
-GO
 
-SET QUOTED_IDENTIFIER ON
-GO
 
 -- ========================================================================================================
 -- Author:		Hernando Gonzalez Garcia
@@ -11,9 +7,10 @@ GO
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 23/10/23		Hernando Gonzalez Garcia		1. Created this procedure 
+-- 11/13/23		Architha Gudimalla				2. added tran seq no in the joins
 -- ======================================================================================================== 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_class_type]
+CREATE or alter  PROCEDURE [edw_core].[sp_tquote_collection_class_type]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -75,11 +72,11 @@ BEGIN
 						and tqh.effective_dt=acc.EffectiveDate
 						and tqh.transaction_seq_no = acc.number
 				LEFT JOIN edw_core.tquote_collection_location tqcl on tqcl.quote_no=acc.PolicyNumber
-						and tqcl.effective_dt=acc.EffectiveDate
+						and tqcl.effective_dt=acc.EffectiveDate  
 				LEFT JOIN edw_core.tquote_collection_coverage tqcc on tqcc.quote_no=acc.PolicyNumber
-						and tqcc.effective_dt=acc.EffectiveDate
+						and tqcc.effective_dt=acc.EffectiveDate and tqcc.transaction_seq_no = acc.number
 				LEFT JOIN edw_core.tquote_home_coverage tqhc on tqhc.quote_no=acc.PolicyNumber
-						and tqhc.effective_dt=acc.EffectiveDate
+						and tqhc.effective_dt=acc.EffectiveDate and tqhc.transaction_seq_no = acc.number
 				
 				
 			WHERE
@@ -169,4 +166,3 @@ BEGIN
 	END CATCH
 END
 
-GO
