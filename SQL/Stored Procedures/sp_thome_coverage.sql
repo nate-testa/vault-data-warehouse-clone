@@ -1,9 +1,4 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_thome_coverage]    Script Date: 10/2/2023 7:04:14 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
--- ===========================================================================================================================
+﻿-- ===========================================================================================================================
 -- Author:		Yunus Mohammed 
 -- Description: This procedures loads home coverage data
 ------------------------------------------------------------------------------------------------------------------------------
@@ -15,7 +10,7 @@ GO
 -- 10/05/23		Architha Gudimalla				4. Removed TIV update and moved to separate proc
 -- 10/13/23		Architha Gudimalla				5. Updated residence type
 -- =========================================================================================================================== 
-CREATE or ALTER PROCEDURE [edw_core].[sp_thome_coverage]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
 
 AS
 BEGIN
@@ -66,6 +61,7 @@ BEGIN
 		drop table if exists edw_temp.thome_coverage_temp1
 		SET @sql ='select PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transactiondate,transaction_seq_no,source_system_sk,
 		IssuedDate,policy_history_sk,home_location_sk,product_name,
+		FactorMethod, Factor, Retention, Reason,
 		'+ @ColumnsToPivot +' into edw_temp.thome_coverage_temp1
 			from
 			(
@@ -73,13 +69,16 @@ BEGIN
 			act.PolicyNumber ,act.EffectiveDate ,act.ExpirationDate ,act.TransactionEffectiveDate ,
 			tph.policy_history_sk,thl.home_location_sk,
 			act.policychangenumber as transaction_seq_no, act.IssuedDate as transactiondate,act.IssuedDate, pr.name product_name,
-			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value]
+			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value],
+			atvpf.FactorMethod, atvpf.Factor, atvpf.Retention, atvpf.Reason
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
+				inner join edw_stage.AccountTransactionVersionPremium atvp on atv.Id=atvp.AccountTransactionVersionId
+				inner join edw_stage.AccountTransactionVersionPremiumfactor atvpf on atvp.Id=atvpf.AccountTransactionVersionPremiumId
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
-				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
+				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId 
 				left join edw_core.tpolicy_history tph on tph.policy_no=act.PolicyNumber
 						and tph.effective_dt=act.EffectiveDate
 						and tph.transaction_seq_no = act.policychangenumber
@@ -129,6 +128,9 @@ BEGIN
 				--earthquake_damage_limt_amt,earthquake_shake,
 				hurricane_or_named_storm_deductible,named_storm_deductible,tornado_or_hailstorm_deductible,
 				wind_or_hailstorm_deductible,
+				premium_adjustment_method, premium_adjustment_factor, premium_adjustment_retention, premium_adjustment_retention_reason,
+				reinsurance_designation, reinsurance_layered_program_in, reinsurance_attachment_limit_amt, reinsurance_total_tiv_amt,
+				wildfire_threat, wildfire_hazard_severity,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
@@ -233,6 +235,9 @@ BEGIN
 				tthc.NamedStormDeductible AS named_storm_deductible,
 				tthc.TornadoorHailstormDeductible AS tornado_or_hailstorm_deductible,
 				tthc.WindStormOrHailDeductible AS wind_or_hailstorm_deductible,
+				tthc.FactorMethod, tthc.Factor, tthc.Retention, tthc.Reason,
+				tthc.ReinsuranceDesignation, tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit, tthc.ReinsuranceTotalTIV, 
+				tthc.wildfire_threat, tthc.wildfire_hazard_severity,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_coverage_temp1 AS tthc

@@ -15,9 +15,10 @@
 -- 10/18/23		Architha Gudimalla				8. Updated Insured name logic
 -- 10/23/23		Architha Gudimalla				9. Added billingaccount_sk
 -- 10/23/23		Architha Gudimalla				10. Added source_system_sk in merge update
+-- 11/13/23		Architha Gudimalla				11. Added migrated_in
 -- ===================================================================================================================== 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy]
 
 AS 
 BEGIN
@@ -155,6 +156,7 @@ BEGIN
 				,'No' as non_renewal_in
 				, acc.renewalofpolicynumber
 				, tb.billingaccount_sk
+				,acc.externalsourceid
 				--select *
 			FROM 
 				edw_temp.tpolicy_temp1 tmp1
@@ -201,6 +203,7 @@ BEGIN
 		   ,prior_term_policy_no
            ,source_system_sk
 		   ,billingaccount_sk
+		   ,migrated_in
            ,create_ts
            ,update_ts
            ,etl_audit_sk
@@ -230,6 +233,7 @@ BEGIN
 				source.renewalofpolicynumber,
 				Source.source_system_sk
 		   		,Source.billingaccount_sk, 
+				case when Source.externalsourceid is not null then 'Yes' else 'No' end,
 				getdate(), getdate(), @etl_audit_sk)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 

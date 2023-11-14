@@ -1,13 +1,9 @@
-﻿SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
--- ====================================================================================================================================
+﻿-- ===================================================================================================================================================
 -- Author:		Hernando Gonzalez Garcia  
 -- Description: This procedures inserts into TPolicy_Transaction  
----------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------
 -- 06/02/23		Hernando Gonzalez Garcia		1. Created this procedure
 -- 06/28/23		Architha Gudimalla				2. Made changes to fix the errors on first run
 -- 06/29/23		Architha Gudimalla				3. Updated to add the premiums at coverage level
@@ -22,9 +18,10 @@ GO
 -- 10/13/23		Architha Gudimalla				10. corrected transaction_type_sk logic
 -- 10/31/23		Architha Gudimalla				11. Added tfs_sk to the insert
 -- 11/06/23		Alberto Almario					12. change to use UniqueId instead of Index and change name from vehicle_no to vehicle_unique_id
--- ==================================================================================================================================== 
+-- 11/10/23		Architha Gudimalla				13. Corrected cal_mn for tfs temp table
+-- ====================================================================================================================================================== 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_transaction]
 
 AS
 BEGIN
@@ -109,7 +106,7 @@ BEGIN
 			tmp1.IssuedDate,
 			tmp1.CancellationReason,
 			tmp1.CreatedDate,
-			iif(tmp1.TransactionEffectiveDate > tmp1.CreatedDate, tmp1.TransactionEffectiveDate, tmp1.CreatedDate) cal_mn,
+			iif(tmp1.TransactionEffectiveDate > tmp1.IssuedDate, tmp1.TransactionEffectiveDate, tmp1.IssuedDate) cal_mn,
 			tmp1.UpdatedDate,
 			iif(acct.isrenewal=1,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage, 
 			--ROW_NUMBER() OVER (PARTITION BY tmp1.PolicyNumber, tmp1.EffectiveDate, tmp1.PolicyChangeNumber ORDER BY tmp1.CreatedDate DESC) AS PolicyNumber_Rank,
@@ -241,4 +238,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-GO

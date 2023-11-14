@@ -9,10 +9,11 @@
 -- 10/05/23		Architha Gudimalla				3. Fixed division by 0 error for EP calculation
 -- 10/16/23		Architha Gudimalla				4. Used source_system_sk from tpolicy instead of tpolicy_transaction in prm subquery  
 -- 10/17/23		Architha Gudimalla				5. Used source_system_sk, customer_sk, broker-sk, prudct_sk from max_tr
--- 10/24/23		Architha Gudimalla				6. Fixed division by 0 error for EP calculation 
+-- 10/24/23		Architha Gudimalla				6. Fixed division by 0 error for EP calculation  
+-- 11/10/23		Architha Gudimalla				7. Corrected net ep code
 -- ========================================================================================================================================= 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tinternal_coverage_summary]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_tinternal_coverage_summary]
 @in_month_end_dt date = null
 AS 
 BEGIN
@@ -279,25 +280,28 @@ BEGIN
 								end
 						   ) total_ep,
 		 				sum(
-							case when (tr.expiration_dt_sk-tr.transaction_effective_dt_sk) > 0
-							then
-								(1+(iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
-								-
-								iif(tr.transaction_effective_dt_sk >= @month_begin_dt_sk, tr.transaction_effective_dt_sk, @month_begin_dt_sk))) 
-								* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-tr.effective_dt_sk)
-							else 0
-							end
+		 					(--for transactions issued in the month, eff in the month or later
+								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) > 0
+								then
+									(1+(iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+									-
+									iif(greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk) >= @month_begin_dt_sk, 
+										greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk), @month_begin_dt_sk))) 
+									* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+								else 0
+								end
+							)
 						   ) mtd_net_ep,
-		 				sum(
-							case when (tr.expiration_dt_sk-tr.transaction_effective_dt_sk) > 0
-							then
-								(1+iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
-								-
-								tr.transaction_effective_dt_sk) 
-								* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-tr.transaction_effective_dt_sk)
-							else 0
-							end
-						   ) total_net_ep/*
+						sum(
+								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) > 0
+								then
+									(1+iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+									-
+									greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) 
+									* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+								else 0
+								end
+							) total_net_ep/*
 		 				sum(
 							(1+(iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
 							-
