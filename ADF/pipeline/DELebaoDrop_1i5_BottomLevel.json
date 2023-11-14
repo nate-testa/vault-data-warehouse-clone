@@ -264,7 +264,7 @@
 													}
 												},
 												"linkedServiceName": {
-													"referenceName": "LS_EDW_PREPROD",
+													"referenceName": "LS_EDW_PROD",
 													"type": "LinkedServiceReference"
 												}
 											}

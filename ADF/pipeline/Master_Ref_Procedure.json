@@ -18,7 +18,7 @@
 					"storedProcedureName": "[edw_core].[sp_tbroker]"
 				},
 				"linkedServiceName": {
-					"referenceName": "LS_EDW_PREPROD",
+					"referenceName": "LS_EDW_PROD",
 					"type": "LinkedServiceReference"
 				}
 			},
@@ -38,7 +38,7 @@
 					"storedProcedureName": "[edw_core].[sp_tcustomer]"
 				},
 				"linkedServiceName": {
-					"referenceName": "LS_EDW_PREPROD",
+					"referenceName": "LS_EDW_PROD",
 					"type": "LinkedServiceReference"
 				}
 			},
@@ -58,7 +58,7 @@
 					"storedProcedureName": "[edw_core].[sp_tinternal_coverage]"
 				},
 				"linkedServiceName": {
-					"referenceName": "LS_EDW_PREPROD",
+					"referenceName": "LS_EDW_PROD",
 					"type": "LinkedServiceReference"
 				}
 			}
