@@ -1,7 +1,3 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 
 -- =====================================================================================================================
 -- Description: This stored procedure insert and update info related to tquote_transaction_status_history.
@@ -10,8 +6,9 @@ GO
 -------------------------------------------------------------------------------------------------------------------------
 -- 11/10/23		Alberto Almario					1. Created this procedure 
 -- 11/11/23		Sandeep Gundreddy				2. modified source query logic and user logic
+-- 11/13/23		Architha Gudimalla				3. Added filter for personal lines
 -- =====================================================================================================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction_status_history]
+CREATE   or alter   PROCEDURE [edw_core].[sp_tquote_transaction_status_history]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -49,8 +46,11 @@ BEGIN
         INNER JOIN [edw_stage].[AccountTransaction] acct  ON acctsh.AccountTransactionId = acct.Id
         LEFT JOIN [edw_core].[tuser] as u ON acctsh.UserId = u.user_id
         LEFT JOIN [edw_core].[tquote_history] AS qh   ON qh.quote_no = acct.PolicyNumber AND qh.effective_dt = acct.EffectiveDate AND qh.transaction_seq_no = acct.number
+        left join edw_stage.Account acc on acc.id = acctsh.accountid
+		left join edw_stage.Product pr on acc.ProductId = pr.id
 		where acctsh.CreatedDate > @last_source_extract_ts 
 		  and acctsh.Stage in ('QUOTE','POLICY')
+          and pr.ProductLine = 'PersonalLines'
 
 		-- Start Insert process
 		INSERT INTO [edw_core].[tquote_transaction_status_history]
@@ -86,7 +86,7 @@ BEGIN
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk
         FROM 
-            [edw_temp].[tquote_transaction_status_history_temp1] AS t1
+         [edw_temp].[tquote_transaction_status_history_temp1] AS t1
         ;
 
         --************End************
@@ -119,4 +119,3 @@ BEGIN
 	
     END CATCH
 END
-GO
