@@ -10,4 +10,3 @@ ALTER TABLE edw_integration.claim_renewal_rating_auto_pel_api ADD GrpUninsuredMo
 ALTER TABLE edw_integration.claim_renewal_rating_auto_pel_api ADD GrpUnderinsuredMotoristPayment decimal(15,2);
 ALTER TABLE edw_integration.claim_renewal_rating_auto_pel_api ADD GrpExcessLiabilityDOPayment decimal(15,2);
 ALTER TABLE edw_integration.claim_renewal_rating_auto_pel_api ADD GrpEmploymentPracticesLiabilityPayment decimal(15,2);
-ALTER TABLE edw_integration.claim_renewal_rating_auto_pel_api ADD GrpExcessLiabilityDOPayment decimal(15,2);
