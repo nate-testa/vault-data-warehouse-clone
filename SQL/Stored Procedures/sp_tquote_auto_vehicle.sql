@@ -7,6 +7,7 @@ GO
 -- Author:		Alberto Almario
 -- Create Date: 2023-10-23
 -- Description: This stored procedure insert and update info related to tquote_auto_vehicle.
+--11/14/2023  Sandeep Gundreddy  2. Removed effectivedtae from partition by clause
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle]
 AS
@@ -35,7 +36,7 @@ BEGIN
 
 		WITH FinalTable AS (
             SELECT
-                ROW_NUMBER() OVER (PARTITION BY PolicyNumber, EffectiveDate, [Index] ORDER BY policychangenumber DESC) AS RN, 
+                ROW_NUMBER() OVER (PARTITION BY PolicyNumber, [Index] ORDER BY policychangenumber DESC) AS RN, 
                 PolicyNumber, EffectiveDate, [Index] as vehicle_no, CreatedDate,
                 [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],
                 source_system_sk
@@ -106,7 +107,6 @@ BEGIN
 				[edw_temp].[tquote_auto_vehicle_temp1] AS t1
 		) AS src
 		ON src.quote_no = trg.quote_no
-        AND src.effective_dt = trg.effective_dt
         AND src.vehicle_no = trg.vehicle_no
 		-- For Inserts
 		WHEN NOT MATCHED BY TARGET THEN
