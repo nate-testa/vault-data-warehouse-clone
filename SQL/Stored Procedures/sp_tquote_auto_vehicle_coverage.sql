@@ -7,6 +7,7 @@ GO
 -- Author:		Alberto Almario
 -- Create Date: 2023-10-23
 -- Description: This stored procedure insert and update info related to tquote_auto_vehicle_coverage.
+-- 11/14/2023  Sandeep Gundreddy 2.modified tquote_auto_vehicle join
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
 AS
@@ -76,7 +77,6 @@ BEGIN
                     AND qh.transaction_seq_no = acct.number
                 LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                     ON qav.quote_no = acct.PolicyNumber
-                    AND qav.effective_dt = acct.EffectiveDate
                     AND qav.vehicle_no = acctvo.[Index]
                 LEFT JOIN [edw_core].[tquote_auto_garage_location] AS qagl
                     ON qagl.quote_no = acct.PolicyNumber
