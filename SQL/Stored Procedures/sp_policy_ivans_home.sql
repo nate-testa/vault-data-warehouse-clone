@@ -53,9 +53,9 @@ BEGIN
 				SELECT * FROM (
 					SELECT
 						hc.policy_no as policyNumber,
-						--ic.primary_coverage_cd as coverageCd,
-						ic.internal_coverage_cd as coverageCd,
+						ic.primary_coverage_cd as coverageCd,
 						ic.internal_coverage_desc as coverageDesc,
+						--ic.internal_coverage_cd as IVANS_coverage_cd,
 						--ic.internal_coverage_desc as IVANS_coverage_desc,
 						pt.premium_amt AS changeAmount,
 						pt.annual_premium_amt AS currentAmount,
@@ -515,7 +515,7 @@ BEGIN
 		,'' as [050_TotalPaidLossAmt]
 		,lh.loss_seq_no as [051_NumLosses]
 		--,'numberLosses' as [051_NumLosses]
-		,CASE WHEN p.prior_policy_no IS NOT NULL AND p.prior_policy_no <> p.policy_no THEN 'Prior' ELSE '' END as [052_PolicyCd]
+		,CASE WHEN p.prior_term_policy_no IS NOT NULL AND p.prior_term_policy_no <> p.policy_no THEN 'Prior' ELSE '' END as [052_PolicyCd]
 		,p.original_policy_no as [053_PolicyNumber]
 		,pr.product_nm as [054_LOBCd]
 		,CASE WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '16186' WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '16237' ELSE '' END AS [055_NAICCd]
