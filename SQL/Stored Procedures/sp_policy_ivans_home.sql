@@ -53,8 +53,10 @@ BEGIN
 				SELECT * FROM (
 					SELECT
 						hc.policy_no as policyNumber,
-						ic.primary_coverage_cd as coverageCd,
+						--ic.primary_coverage_cd as coverageCd,
+						ic.internal_coverage_cd as coverageCd,
 						ic.internal_coverage_desc as coverageDesc,
+						--ic.internal_coverage_desc as IVANS_coverage_desc,
 						pt.premium_amt AS changeAmount,
 						pt.annual_premium_amt AS currentAmount,
 						CASE
