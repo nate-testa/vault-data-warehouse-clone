@@ -4,9 +4,10 @@
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
+-- 11/14/23		Sandeep Gundreddy				2. fixed quote_term mapping
 -- ===================================================================================================================== 
 
-CREATE   or alter  PROCEDURE [edw_core].[sp_tquote]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote]
 
 AS 
 BEGIN
@@ -226,8 +227,8 @@ BEGIN
            ,mailing_address_county_nm
            ,mailing_address_country_nm
            ,prior_policy_no 
-		   ,prior_term_policy_no
 		   ,quote_term
+		   ,prior_term_policy_no
            ,source_system_sk
 		   ,billingaccount_sk
            ,quote_create_ts

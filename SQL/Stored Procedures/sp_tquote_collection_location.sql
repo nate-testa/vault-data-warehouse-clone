@@ -1,8 +1,8 @@
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
+
 
 -- ========================================================================================================
 -- Author:		Hernando Gonzalez Garcia
@@ -10,7 +10,8 @@ GO
 -----------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 23/10/23		Hernando Gonzalez Garcia		1. Created this procedure 
+-- 11/10/23		Hernando Gonzalez Garcia		1. Created this procedure 
+-- 11/14/23		Sandeep Gundreddy       		2. Remove effective date partition by clause
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_location]
@@ -53,7 +54,7 @@ BEGIN
 			FROM
 				(SELECT
 					acct.*
-					,ROW_NUMBER() OVER (PARTITION BY acct.PolicyNumber, acct.EffectiveDate ORDER BY acct.number DESC) AS AccountTransaction_Rank
+					,ROW_NUMBER() OVER (PARTITION BY acct.PolicyNumber ORDER BY acct.number DESC) AS AccountTransaction_Rank
 				FROM [edw_stage].[AccountTransaction] acct
 				WHERE
 					acct.[Stage] IN ('QUOTE','POLICY')
@@ -98,7 +99,7 @@ BEGIN
 				FROM 
 					[edw_temp].[tquote_collection_location_temp1] t1
 		) AS Source
-		ON Source.[quote_no] = Target.[quote_no] and cast(Source.EffectiveDate as date) = Target.effective_Dt
+		ON Source.[quote_no] = Target.[quote_no] 
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (

@@ -8,9 +8,10 @@
 -----------------------------------------------------------------------------------------------------------
 -- 23/10/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 11/13/23		Architha Gudimalla				2. added tran seq no in the joins
+-- 11/14/23		Sandeep Gundreddy				3. modified quote_collection_location_sk join
 -- ======================================================================================================== 
 
-CREATE or alter  PROCEDURE [edw_core].[sp_tquote_collection_class_type]
+CREATE or ALTER PROCEDURE [edw_core].[sp_tquote_collection_class_type]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -71,8 +72,7 @@ BEGIN
 				LEFT JOIN edw_core.tquote_history tqh on tqh.quote_no=acc.PolicyNumber
 						and tqh.effective_dt=acc.EffectiveDate
 						and tqh.transaction_seq_no = acc.number
-				LEFT JOIN edw_core.tquote_collection_location tqcl on tqcl.quote_no=acc.PolicyNumber
-						and tqcl.effective_dt=acc.EffectiveDate  
+				LEFT JOIN edw_core.tquote_collection_location tqcl on tqcl.quote_no=acc.PolicyNumber			
 				LEFT JOIN edw_core.tquote_collection_coverage tqcc on tqcc.quote_no=acc.PolicyNumber
 						and tqcc.effective_dt=acc.EffectiveDate and tqcc.transaction_seq_no = acc.number
 				LEFT JOIN edw_core.tquote_home_coverage tqhc on tqhc.quote_no=acc.PolicyNumber

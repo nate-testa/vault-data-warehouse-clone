@@ -4,9 +4,10 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 06/02/23		Architha Gudimalla		1. Created this procedure
+-- 11/14/23		Sandeep Gundreddy		2. modified quote_auto_vehicle join
 -- ==================================================================================================================================== 
 
-create  or alter   PROCEDURE [edw_core].[sp_tquote_transaction]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction]
 
 AS
 BEGIN
@@ -174,7 +175,7 @@ BEGIN
 		LEFT JOIN edw_core.tquote_home_coverage ho on source.PolicyNumber = ho.quote_no and cast(source.EffectiveDate as date) = ho.effective_dt and source.number = ho.transaction_seq_no
 		LEFT JOIN edw_core.tquote_collection_coverage coll on source.PolicyNumber = coll.quote_no and cast(source.EffectiveDate as date) = coll.effective_dt and source.number = coll.transaction_seq_no
 		LEFT JOIN edw_core.tquote_pel_coverage pel_cov on source.PolicyNumber = pel_cov.quote_no and cast(source.EffectiveDate as date) = pel_cov.effective_dt and source.number = pel_cov.transaction_seq_no
-		LEFT JOIN edw_core.tquote_auto_vehicle au_veh on source.PolicyNumber = au_veh.quote_no and cast(source.EffectiveDate as date) = au_veh.effective_dt and source.vehicle_no = au_veh.vehicle_no
+		LEFT JOIN edw_core.tquote_auto_vehicle au_veh on source.PolicyNumber = au_veh.quote_no and source.vehicle_no = au_veh.vehicle_no
 		LEFT JOIN edw_core.tquote_auto_policy_coverage au_pol_cov on source.PolicyNumber = au_pol_cov.quote_no and cast(source.EffectiveDate as date) = au_pol_cov.effective_dt and source.number = au_pol_cov.transaction_seq_no
 		LEFT JOIN edw_core.tquote_auto_vehicle_coverage au_veh_cov on source.PolicyNumber = au_veh_cov.quote_no and cast(source.EffectiveDate as date) = au_veh_cov.effective_dt and source.number = au_veh_cov.transaction_seq_no and source.vehicle_no = au_veh_cov.vehicle_no
 		LEFT JOIN edw_core.tproduct pr on pr.product_cd = q.product_cd

@@ -11,6 +11,7 @@ GO
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 23/10/23		Hernando Gonzalez Garcia		1. Created this procedure 
+-- 11/14/23		Sandeep Gundreddy			    2. modified  quote_collection_class_type_sk logic
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_scheduled_item]
@@ -86,6 +87,7 @@ BEGIN
 				LEFT JOIN edw_core.tquote_collection_class_type tqcct 
 						on tqcct.quote_no=acc.PolicyNumber
 						and tqcct.effective_dt=acc.EffectiveDate
+						and tqcct.transaction_seq_no = acc.number and pid.value = tqcct.class_type 
 			WHERE
 				p.[Name] in ('Collections','Homeowners')
 				AND acct.ObjectType = 'CollectionClassScheduleItem'
