@@ -1,12 +1,17 @@
-﻿-- =======================================================================================================================================================
+﻿SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =======================================================================================================================================================
 -- Description: This procedures updates tquote
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 09/08/23		Architha Gudimalla			1. Created this procedure  
+-- 11/14/23		Sandeep Gundreddy			2. modified procedure  
 -- ======================================================================================================================================================= 
 
-CREATE or alter  PROCEDURE [edw_core].[sp_tquote_history_update]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_history_update]
 
 AS 
 BEGIN
@@ -30,30 +35,27 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))  
 
 		update a
-		set created_by_nm 	= b.crename,
-			referred_by_nm  = b.refname,
-			reviewed_by_nm	= b.revname,
-			approval_note 	= case when (b.ApproveNote) = '' then null else ApproveNote end,
-			deny_note 		= case when (b.DenyNote) = '' then null else DenyNote end,
-			bind_dt 		= b.binddate
+		set created_by_nm 			= b.crename,
+			referred_by_nm  		= b.refname,
+			reviewed_by_nm			= b.revname,
+			approval_note 			= case when (b.ApproveNote) = '' then null else ApproveNote end,
+			deny_note 				= case when (b.DenyNote) = '' then null else DenyNote end,
+			bind_dt 				= b.binddate,
+			not_taken_reason_desc	= case when (b.nottakenreason) = '' then null else b.nottakenreason end,
+			transaction_updated_ts	= b.UpdatedDate,
+			transaction_status      = upper(substring(b.state,1,1)) + lower(substring(b.state, 2, len(b.state)-1))
 		from edw_core.tquote_history a
-		inner join ( select policynumber, effectivedate, [number], ApproveNote, DenyNote, 
-							ReferredByUserId, rfu.name as refname, 
+		inner join ( select acc.policynumber, acc.effectivedate, acc.[number], acc.ApproveNote, acc.DenyNote, 
+							acc.ReferredByUserId, rfu.name as refname, 
 							--SubmitById, su.name subname, 
-							CreatedById, cu.name crename, 
-							ReviewedById, rvu.name revname, binddate
+							acc.CreatedById, cu.name crename, 
+							acc.ReviewedById, rvu.name revname, binddate, nottakenreason, acc.UpdatedDate,acc.[State]
 					from edw_stage.accounttransaction acc
 					left join edw_stage.[user] cu on cu.id = acc.CreatedById
 					left join edw_stage.[user] rvu on rvu.id = acc.ReviewedById 
 					left join edw_stage.[user] rfu on rfu.id = acc.ReferredByUserId 
-					where	acc.UpdatedDate 
-							> @last_source_extract_ts
+					where	acc.UpdatedDate  > @last_source_extract_ts
 					) b on	 a.quote_no = b.policynumber and a.effective_dt = b.effectivedate and a.transaction_seq_no = b.[number];  
-
-		update a
-		set policy_sk 	= b.policy_sk
-		from edw_core.tquote a
-		inner join edw_core.tpolicy b on	a.quote_no = b.policy_no and a.effective_dt = b.effective_dt;
 
 		SET @rows_affected=@@ROWCOUNT;   
 	
@@ -82,3 +84,4 @@ BEGIN
 	END CATCH
 END
 
+GO

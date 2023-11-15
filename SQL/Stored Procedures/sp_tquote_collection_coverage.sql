@@ -11,6 +11,7 @@ GO
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 23/10/23		Hernando Gonzalez Garcia		1. Created this procedure 
+-- 11/14/23		Sandeep Gundreddy       		2. Modified quote_collection_location_sk join
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_coverage]
@@ -91,8 +92,7 @@ BEGIN
 					LEFT JOIN edw_core.tquote_history tqh on tqh.quote_no=acc.PolicyNumber
 						and tqh.effective_dt=acc.EffectiveDate
 						and tqh.transaction_seq_no = acc.number
-					LEFT JOIN edw_core.tquote_collection_location tqcl on tqcl.quote_no=acc.PolicyNumber
-						and tqcl.effective_dt=acc.EffectiveDate
+					LEFT JOIN edw_core.tquote_collection_location tqcl on tqcl.quote_no=acc.PolicyNumber						
 				WHERE
 					p.Name=''Collections''
 					and acct.ObjectType = ''Collection''

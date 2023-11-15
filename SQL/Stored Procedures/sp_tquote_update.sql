@@ -1,12 +1,17 @@
+﻿SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 -- =======================================================================================================================================================
 -- Description: This procedures updates tquote
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 09/08/23		Architha Gudimalla			1. Created this procedure  
+-- 11/14/23		Sandeep Gundreddy			1. Modify logic  
 -- ======================================================================================================================================================= 
 
-CREATE  or alter PROCEDURE [edw_core].[sp_tquote_update]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_update]
 
 AS 
 BEGIN
@@ -48,47 +53,55 @@ BEGIN
 									case when upper(qtsh.transaction_status) = 'OFFERED' then 1 else 0 end tr_status_offered, 
 									case when qtsh.transaction_status = 'REFERRED' then 1 else 0 end tr_status_referred 
 							from 	edw_stage.account acc
-							left join edw_core.tquote_transaction_status_history  qtsh on acc.policynumber = qtsh.quote_no and qtsh.effective_dt = acc.effectivedate
+							left join edw_core.tquote_transaction_status_history  qtsh on acc.policynumber = qtsh.quote_no 
 							where	acc.UpdatedDate 
 									> @last_source_extract_ts
 						) aa
 						group by policynumber, effectivedate , state, tr_status
-					) b on	 a.quote_no = b.policynumber and a.effective_dt = b.effectivedate ; 
+					) b on	 a.quote_no = b.policynumber and ISNULL(a.quote_status,'xx')!='Issued'; 
 
-		update a
-		set first_offered_quote_ts 	= b.min_create_ts
-		from edw_core.tquote a
-		inner join ( select quote_no, min(create_ts) min_create_ts
+  update a
+		set a.first_offered_quote_ts 	=transaction_ts,
+            first_offered_quote_history_sk=quote_history_sk
+  from edw_core.tquote a,
+        (select * from 
+            (
+             select quote_no, transaction_ts, quote_history_sk, dense_rank() OVER (PARTITION BY quote_no ORDER BY transaction_ts ASC) AS policy_txn_order
 					from edw_core.tquote_transaction_status_history  
-					WHERE upper(transaction_status) = 'OFFERED'
-					group by quote_no 
-					) b on	a.quote_no = b.quote_no
-					;
+					WHERE upper(transaction_status) = 'OFFERED')tqtsh
+                    where policy_txn_order=1
+            )b
+             where a.quote_no=b.quote_no and a.first_offered_quote_ts is null;
+		
+        --AV2 Issued quotes which don't exist in tquote_transaction_status_history
+        update a
+		set a.first_offered_quote_ts 	= a.quote_create_ts
+		from edw_core.tquote a
+        where a.quote_status='Issued' and migrated_in='Yes' and a.first_offered_quote_ts is null;
 
 		update a
 		set first_offered_quote_history_sk 	= b.quote_history_sk
 		from edw_core.tquote a
 		inner join (
-						select *
-						FROM
-						(
-							select quote_no, transaction_created_ts,quote_history_sk, 
-									RANK() OVER (PARTITION BY quote_no,Effective_dt ORDER BY transaction_created_ts ) AS rnk
-							from 	edw_core.tquote_history   
-
-						) aa 
-						where	rnk = 1
-					) b on	a.quote_no = b.quote_no 
+   						select quote_no,max(quote_history_sk) quote_history_sk
+							from 	edw_core.tquote_history  
+							WHERE upper(transaction_status) = 'ISSUED' and source_system_sk=2 
+						group by quote_no
+                   )b on a.quote_no = b.quote_no  and a.quote_status='Issued' and migrated_in='Yes' and first_offered_quote_history_sk is null;
 
 		update a
-		set policy_sk 	= b.policy_sk
+		set policy_sk = b.policy_sk
 		from edw_core.tquote a
-		inner join edw_core.tpolicy b on	a.quote_no = b.policy_no and a.effective_dt = b.effective_dt;
+		inner join edw_core.tpolicy b 
+        on a.quote_no = b.policy_no and a.effective_dt = b.effective_dt where a.policy_sk is null; 
 
-		--max bind date
-		--QUOTE CREATE TS
-		--PRIOR TERM POL SK
+		update a
+		set a.bind_dt = b.max_bind_dt
+		from edw_core.tquote a
+		inner join (select quote_no,max(bind_dt) max_bind_dt from edw_core.tquote_history where bind_dt is not null group by quote_no) b 
+        on a.quote_no = b.quote_no; 
 
+      
 		SET @rows_affected=@@ROWCOUNT;   
 	
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(UpdatedDate) FROM edw_stage.account),@last_source_extract_ts); 
@@ -116,3 +129,4 @@ BEGIN
 	END CATCH
 END
 
+GO
