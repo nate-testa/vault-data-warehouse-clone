@@ -1,0 +1,20 @@
+﻿-- =============================================
+-- Author:		Yunus Mohammed
+-- Create Date: <Create Date, , >
+-- Description: This procedures return 
+-- =============================================
+CREATE OR ALTER PROCEDURE [edw_core].[sp_ins_tetl_audit]
+@process_nm varchar(255),
+@process_start_ts datetime,
+@etl_audit_sk int OUTPUT
+AS
+BEGIN
+    -- SET NOCOUNT ON added to prevent extra result sets from
+    -- interfering with SELECT statements.
+    SET NOCOUNT ON
+	INSERT INTO edw_core.tetl_audit(process_nm,process_start_ts)
+	SELECT @process_nm AS process_nm,@process_start_ts AS process_start_ts
+	SET @etl_audit_sk = SCOPE_IDENTITY()
+	RETURN
+END
+

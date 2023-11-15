@@ -1,0 +1,10 @@
+{
+	"name": "AzureSqlDatabase871",
+	"properties": {
+		"privateLinkResourceId": "/subscriptions/61591278-f31e-4706-ac18-ebb142d84d24/resourceGroups/DefaultResourceGroup-EUS2/providers/Microsoft.Sql/servers/azr-vault-data-sit-001",
+		"groupId": "sqlServer",
+		"fqdns": [
+			"azr-vault-data-sit-001.database.windows.net"
+		]
+	}
+}

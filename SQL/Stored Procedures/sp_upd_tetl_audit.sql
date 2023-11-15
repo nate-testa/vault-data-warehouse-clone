@@ -1,0 +1,26 @@
+﻿-- =============================================
+-- Author:		Yunus Mohammed
+-- Create Date: <Create Date, , >
+-- Description: This procedures updates audit table
+-- Changes:
+-- 07/12/23 --> 1. @parameter_desc new param added
+
+-- =============================================
+CREATE OR ALTER PROCEDURE [edw_core].[sp_upd_tetl_audit]
+@etl_audit_sk int,
+@record_ct int,
+@parameter_desc varchar(255)=NULL
+AS
+BEGIN
+    -- SET NOCOUNT ON added to prevent extra result sets from
+    -- interfering with SELECT statements.
+    SET NOCOUNT ON
+	UPDATE [edw_core].[tetl_audit]
+	SET
+		record_ct=@record_ct,
+		status_desc='Success',
+		process_end_ts=GETDATE(),
+		parameter_desc=@parameter_desc
+	WHERE etl_audit_sk=@etl_audit_sk
+END
+

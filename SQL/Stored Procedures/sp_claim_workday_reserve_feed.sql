@@ -1,0 +1,149 @@
+-- =================================================================================================
+-- Author:		Yunus Mohammed
+-- Create Date: 07/28/2023
+-- Description: This procedures inserts workday reserve data
+
+CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_reserve_feed]
+
+AS
+BEGIN
+	DECLARE @ProcedureName NVARCHAR(120)
+    SET @ProcedureName = OBJECT_NAME(@@PROCID)
+
+	BEGIN TRY
+		DECLARE @last_source_extract_ts DATETIME2(7)
+		DECLARE @etl_audit_sk INT
+		DECLARE @new_last_source_extract_ts DATETIME2(7)
+		DECLARE @rows_affected INT
+		DECLARE @process_nm VARCHAR(255)=@ProcedureName
+		DECLARE @current_date DATETIME=GETDATE()
+		DECLARE @parameter_desc VARCHAR(255)
+
+		-- Get last source extract date
+		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+
+		DECLARE @year_month INT,@begin_dt DATE,@end_dt DATE,@begin_sk INT,@end_sk INT
+
+		DECLARE cur_main CURSOR FOR
+		SELECT yearmonth,MIN(actual_dt) AS begin_dt,MAX(actual_dt) AS end_dt,MIN(date_sk) AS begin_sk,MAX(date_sk) AS end_sk
+		FROM edw_core.tdate
+		WHERE
+			actual_dt >= CAST(@last_source_extract_ts AS DATE)
+			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
+		GROUP BY yearmonth
+		ORDER BY yearmonth
+
+		OPEN cur_main
+		FETCH NEXT FROM cur_main INTO @year_month,@begin_dt,@end_dt,@begin_sk,@end_sk
+		WHILE @@FETCH_STATUS = 0
+		BEGIN
+			EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;  
+	
+			SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+						
+			DELETE FROM edw_integration.claim_workday_reserve_feed WHERE transaction_date BETWEEN @begin_dt AND @end_dt;
+
+			WITH claim_reserve_feed_temp AS
+			(
+				SELECT
+				DISTINCT
+				CASE
+					WHEN tc.underwriting_company_nm='VRE' THEN 'Vault Reciprocal Exchange'
+					WHEN tc.underwriting_company_nm='VES' THEN 'Vault E&S Insurance Company'
+					ELSE tc.underwriting_company_nm
+				END AS company,
+				tc.claim_no AS claim_no,
+				tc.policy_no AS policy_no,
+				CAST(tcr.transaction_ts AS DATE) AS transaction_date,
+				tc.policy_effective_dt AS policyeffectivedate,
+				tc.loss_dt AS claimlossdate,
+				tc.report_dt AS claimreporteddate,
+				tc.loss_address AS [address],
+				tc.loss_city_nm AS city,
+				tc.loss_state_cd AS [state],
+				tc.loss_zip_cd AS zip,
+				tcl.cause_of_loss_desc AS causeofloss,
+				tcat.catastrophe_cd AS catastrophecode,
+				tcat.catastrophe_nm AS catastrophename,
+				tprd.product_nm AS product,
+				tcf.claim_coverage_desc AS policycoveragetype,
+				CASE
+					WHEN tcr.loss_reserve_amt!=0 THEN 'Loss (Indemnity)'
+					WHEN tcr.expense_reserve_amt!=0 THEN 'Loss (Expense - A&O)'
+					WHEN tcr.adjusting_other_reserve_amt!=0 THEN 'ALAE'
+					WHEN tcr.subro_reserve_amt!=0 THEN 'Subrogation'
+					WHEN tcr.salvage_reserve_amt!=0 THEN 'Salvage'
+					WHEN tcr.salvage_expense_reserve_amt!=0 THEN 'Salvage Expenses' 
+					WHEN tcr.subro_expense_reserve_amt!=0 THEN 'Subrogation Expense'
+				END AS reserve_type,
+				(
+					tcr.loss_reserve_amt+tcr.expense_reserve_amt+tcr.adjusting_other_reserve_amt+
+					tcr.subro_reserve_amt+tcr.salvage_reserve_amt+tcr.salvage_expense_reserve_amt+tcr.subro_expense_reserve_amt
+				) AS reserve_amount,
+				YEAR(tc.loss_dt) AS accident_year,
+				COALESCE(st.state_nm,tp.risk_state_cd) AS risk_state,
+				tasl.aslob_desc AS aslob,
+				tcr.claim_transaction_sk AS transaction_id,
+				@end_dt AS monthend,
+				tp.insured_nm AS insuredname,
+				tscl.sub_cause_of_loss_desc AS sub_cause_of_loss_code,
+				tscl.sub_cause_of_loss_desc AS sub_cause_of_loss_name,
+				tc.claim_status AS claim_status,
+				tcf.claim_feature_status AS loss_status
+				FROM
+					edw_core.tclaim tc
+					LEFT JOIN edw_core.tcause_of_loss tcl ON tcl.cause_of_loss_sk=tc.cause_of_loss_sk
+					LEFT JOIN edw_core.tcatastrophe tcat ON tcat.catastrophe_sk=tc.catastrophe_sk
+					LEFT JOIN edw_core.tsub_cause_of_loss tscl ON tscl.sub_cause_of_loss_sk=tc.sub_cause_of_loss_sk
+					INNER JOIN edw_core.tclaim_feature tcf ON tc.claim_sk=tcf.claim_sk
+					LEFT JOIN edw_core.taslob tasl ON tasl.aslob_sk=tcf.aslob_sk
+					INNER JOIN edw_core.tproduct tprd ON tprd.product_sk=tc.product_sk
+					INNER JOIN edw_core.tclaim_transaction tcr ON tcr.claim_feature_sk=tcf.claim_feature_sk
+					LEFT JOIN edw_core.tclaim_payment tpay ON tpay.claim_feature_sk=tcf.claim_feature_sk  AND tcr.claim_payment_sk=tpay.claim_payment_sk
+					LEFT JOIN edw_core.tpolicy tp on tp.policy_no=tc.policy_no
+					LEFT JOIN edw_core.tstate st on st.state_cd=tp.risk_state_cd
+				WHERE
+					tcr.claim_transaction_sk BETWEEN @begin_sk AND @end_sk
+			)
+			INSERT INTO edw_integration.claim_workday_reserve_feed
+			(
+			company,claim_no,policy_no,transaction_date,policyeffectivedate,claimlossdate,claimreporteddate,[address],city,[state],
+			zip,causeofloss,catastrophecode,catastrophename,product,policycoveragetype,reserve_type,reserve_amount,accident_year,
+			risk_state,aslob,transaction_id,monthend,insuredname,sub_cause_of_loss_code,sub_cause_of_loss_name,claim_status,
+			loss_status,create_ts,update_ts,etl_audit_sk
+			)
+			SELECT
+				company,claim_no,policy_no,transaction_date,policyeffectivedate,claimlossdate,claimreporteddate,[address],city,[state],
+				zip,causeofloss,catastrophecode,catastrophename,product,policycoveragetype,reserve_type,reserve_amount,accident_year,
+				risk_state,aslob,transaction_id,monthend,insuredname,sub_cause_of_loss_code,sub_cause_of_loss_name,claim_status,
+				loss_status,GETDATE() AS create_ts,GETDATE() AS update_ts, @etl_audit_sk AS etl_audit_sk
+			FROM
+				claim_reserve_feed_temp
+
+			SET @rows_affected=@@ROWCOUNT;
+
+			-- Update control table
+			SET @new_last_source_extract_ts=COALESCE(@end_dt,@last_source_extract_ts);
+			EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
+
+			-- Update audit table
+			SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+			EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;		
+
+			SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+			FETCH NEXT FROM cur_main INTO @year_month,@begin_dt,@end_dt,@begin_sk,@end_sk
+		END
+		
+		CLOSE cur_main;
+
+		DEALLOCATE cur_main;
+	END TRY
+	BEGIN CATCH
+		DECLARE @error_message nvarchar(4000)
+		SET @error_message = 'Error Number:' + CAST(ERROR_NUMBER() AS NVARCHAR(100)) + ' Error State:' + CAST(ERROR_STATE() AS NVARCHAR(100))
+							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
+							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
+							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+	END CATCH
+END

@@ -1,0 +1,6 @@
+{
+	"name": "AWS-UAT",
+	"properties": {
+		"type": "SelfHosted"
+	}
+}

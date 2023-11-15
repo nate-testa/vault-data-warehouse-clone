@@ -1,0 +1,344 @@
+﻿-- =============================================
+-- Author:		Yunus Mohammed
+-- Create Date: <Create Date, , >
+-- Description: This procedures insert homeowners additional coverage data
+-- =============================================
+CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
+
+AS
+BEGIN
+    -- SET NOCOUNT ON added to prevent extra result sets from 
+    -- interfering with SELECT statements.
+    SET NOCOUNT ON
+
+	BEGIN TRY
+		DECLARE @last_source_extract_ts DATETIME2(7)
+		DECLARE @etl_audit_sk INT
+		DECLARE @new_last_source_extract_ts DATETIME2(7)
+		DECLARE @rows_affected INT
+		DECLARE @process_nm VARCHAR(255)=OBJECT_NAME(@@PROCID)
+		DECLARE @current_date DATETIME=GETDATE()
+		DECLARE @parameter_desc VARCHAR(255)
+		-- Get last source extract date
+		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
+		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+		-- Get column names to pivot
+		DECLARE @ColumnsToPivot NVARCHAR(MAX)=''
+
+		SELECT
+				@ColumnsToPivot+=QUOTENAME(Field) + ','
+		FROM
+		(
+			SELECT DISTINCT
+			pd.[Name],pdo.ObjectType,pdof.Field,pdof.[Group]
+			FROM
+			edw_stage.Product pd
+			INNER JOIN edw_stage.[ProductObject] pdo on pd.Id=pdo.ProductId
+			INNER JOIN edw_stage.[ProductObjectField] pdof on pdo.Id=pdof.ProductObjectId
+			WHERE
+			pd.[Name]='Homeowners'
+			AND pdo.ObjectType='Homeowner'
+		) AS temp
+
+		-- remove last comma
+		SET @ColumnsToPivot = LEFT(@ColumnsToPivot, LEN(@ColumnsToPivot) - 1);
+	
+		declare @sql nvarchar(max)
+		drop table if exists edw_temp.thome_additional_coverage_temp1
+		SET @sql ='select PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transactiondate,transaction_seq_no,
+		IssuedDate,policy_history_sk,home_location_sk,home_coverage_sk,source_system_sk,
+		'+ @ColumnsToPivot +' into edw_temp.thome_additional_coverage_temp1
+			from
+			(
+			select
+			acT.PolicyNumber ,act.EffectiveDate ,act.ExpirationDate ,act.TransactionEffectiveDate ,
+			tph.policy_history_sk,thl.home_location_sk,thc.home_coverage_sk,
+			act.policychangenumber as transaction_seq_no, act.IssuedDate as transactiondate,act.IssuedDate,
+			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value]
+			from
+				edw_stage.AccountTransaction act
+				inner join edw_stage.Product p on p.Id=act.ProductId
+				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
+				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
+				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
+				left join edw_core.tpolicy_history tph on tph.policy_no=act.PolicyNumber
+						and tph.effective_dt=act.EffectiveDate
+						and tph.transaction_seq_no = act.policychangenumber
+				left join edw_core.thome_location thl on thl.policy_no=act.PolicyNumber
+						and thl.effective_dt=act.EffectiveDate
+				left join edw_core.thome_coverage thc on thc.policy_no=act.PolicyNumber
+						and thc.effective_dt=act.EffectiveDate and thc.transaction_seq_no=act.policychangenumber
+				left join edw_stage.Product pr on act.ProductId = pr.id
+			where
+				act.PolicyNumber is not null 
+				and act.[State] =''ISSUED''
+				and atvo.ObjectType in (''Homeowner'',''Condo'')
+				and pr.ProductLine = ''PersonalLines''
+				and act.IssuedDate > @last_source_extract_ts
+				-- )
+
+			) as t
+			pivot 
+			(
+				max(Value) FOR Field IN ('+ @ColumnsToPivot +')
+			) as pivottable
+			'
+			EXECUTE sp_executesql @sql, N'@last_source_extract_ts DATETIME2(7)', @last_source_extract_ts = @last_source_extract_ts
+
+			INSERT INTO edw_core.thome_additional_coverage
+			(
+			policy_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no
+			,home_location_sk,home_coverage_sk,policy_history_sk,central_reporting_fire_alarm_in
+			,central_reporting_burglar_alarm_in,twentyfour_hour_doorman_in,lobby_surveillance_camera_in
+			,locked_or_manned_elevators_in,twentyfour_hour_signal_continuity_in,guard_gated_community_in
+			,guard_community_patrol_service_in,home_safe_in,fulltime_live_in_caretaker_in,gas_leak_detector_in
+			,lightning_protection_in,low_temperature_monitoring_device_in,backup_generator_in
+			,external_perimeter_gate_in,external_perimeter_security,water_leak_detection_system
+			,residential_sprinkler_system_in,business_property_increase_in,business_property_increase_limit_amt
+			,deductible_waiver_large_losses_in,deductible_waiver_large_losses_limit_amt,earthquake_coverage_extension_in
+			,earthquake_coverage_extension_deductible,earthquake_coverage_extension_loss_assessment_in
+			,earthquake_coverage_extension_loss_assessment_limit_amt,fungi_bacteria_increase_in,fungi_bacteria_increase_limit
+			,fungi_bacteria_liability_extension_in,home_systems_protection_in,home_systems_protection_limit_amt
+			,increased_incidental_business_threshold_in,increased_incidental_business_threshold_limit_amt
+			,landscaping_coverage_increased_limits_in,
+			landscaping_coverage_increased_plant_limit_amt
+			,landscaping_coverage_increased_aggregate_limit,landscaping_coverage_sleet_and_weight_of_ice_and_snow_coverage_limit_amt
+			,landscaping_coverage_wind_and_hail_coverage_limit_amt,law_ordinance_coverage_increase_in
+			,law_ordinance_coverage_increased_limit,loss_assessment_increase_in,loss_assessment_increase_limit_amt
+			,serviceline_protection_in,thoroughbred_horse_liability_extension_in,no_of_horses,home_cyber_protection_coverage_in
+			,home_cyber_protection_coverage_deductible,home_cyber_protection_coverage_limit_amt
+			,offpremises_other_permanent_structures_extension_in,offpremises_other_permanent_structures_extension_desc
+			,agreed_value_in
+			,backup_of_sewers_limit_in,contents_extended_replacement_cost_in
+			,coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_in
+			,coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_limit_amt
+			,damage_to_property_of_others_increased_limit_amt,debris_removal_broadaned_tree_removal_in
+			,earthquake_endorsement_in,earthquake_endorsement_deductible
+			,escaped_liquid_fuel_liability_limit_amt
+			,escaped_liquid_fuel_remediation_coverage_in,escaped_liquid_fuel_remediation_liability_limit_amt
+			,escaped_liquid_fuel_remediation_risk_class_no,
+			fortified_roof_upgrade_in,home_daycare_coverage_in
+			,identity_theft_in
+			,pollutants_or_contimination_extension_in,
+			 pollutants_or_contimination_tankage,pollutants_or_contimination_tank_construction
+			,pollutants_or_contimination_tank_location,pollutants_or_contimination_tank_type
+			,residence_held_in_trust_in,sinkhole_collapse_in,sinkhole_coverage_extension_in
+			,supplemental_loss_assessment_coverage_in,supplemental_loss_assessment_coverage_additional_locations
+			,supplemental_loss_assessment_coverage_premises
+			,workercompensation_liability_in
+			,workercompensation_liability_fulltime_employees_ct,workercompensation_liability_occurance_limit_amt
+			,workercompensation_liability_parttime_employees_ct,
+			guaranteed_replacement_cost_in
+			,replacement_cost_coverage_in,roof_covering_full_reconstruction_cost_coverage_in
+			,additional_replacement_cost_coverage_in,additional_replacement_cost_coverage_with_wildfire_in
+			,dwelling_reconstruction_cost_coverage_in,extended_replacement_cost_coverage_with_additional_wildfire_in
+			,extended_replacement_cost_coverage_with_wildfire_in,extended_replacement_cost_coverage_in
+			,extended_replacement_cost_coverage_option,mine_subsidence_coverage_in
+			,mine_subsidence_coverage_limit_amt,minimum_earned_premium_endorsement_in
+			,minimum_earned_premium_endorsement_limit_pct,contents_off_premises_loss_exclusion_in
+			,premises_liability_limitation_in,manuscript_in
+			,amended_settlement_basis_in,additions_and_alterations_extended_replacement_cost_in
+			,deletion_of_cosmetic_marring_exclusion_in
+			,exclude_wind_in,wind_hail_exclusion_in,roof_exclusion_in,waterdamage_exclusion_in
+			,waterdamage_limitation_endorsement_in,waterdamage_limitation_endorsement_limit_amt
+			,waterdamage_sublimit,waterdamage_sublimit_amt,underground_resources_exclusion_in
+			,named_structures_exclusion_in,named_structures_exclusion_desc,animal_related_liability_exclusion_in
+			,libel_slander_exclusion_in,political_activities_exclusion_in
+			,equine_related_liability_exclusion_in,canine_liability_exclusion_in
+			,named_structures_property_and_liability_exclusion_in,named_structures_property_and_liability_exclusion_desc
+			,other_structures_away_from_the_residence_premises_in,other_structures_away_from_the_residence_premises_desc
+			,other_structures_on_the_residence_premises_increased_limit_in
+			,other_structures_on_the_residence_premises_increased_limit_amt
+			,other_structures_on_the_residence_premises_increased_limit_desc,extended_liability_in
+			,animal_related_liability_exclusion_desc,change_in_terms_summary_in,
+			extended_replacement_cost_coverage_with_additional_wildfire_plus_twentyfive_pc_in,
+			home_daycare_coverage_limit_amt,home_daycare_coverage_no_of_children,
+			increased_incidental_business_property_in,increased_incidental_business_property_limit_amt,
+			loss_assessment_increase_desc,sinkhole_territory,specific_named_structures_property_and_liability_exclusion_in,
+			specific_named_structures_property_and_liability_exclusion_desc,underground_water_supplyline_exclusion_in,
+			earthquake_score,earthquake_earthmovement_exclusion_ind,
+			source_system_sk,create_ts,update_ts,etl_audit_sk
+			)
+			SELECT 
+			PolicyNumber AS policy_no
+           ,EffectiveDate AS effective_dt
+           ,TransactionEffectiveDate AS transaction_effective_dt
+           ,ExpirationDate AS expiration_dt
+           ,transactiondate AS transaction_dt
+           ,transaction_seq_no AS transaction_seq_no
+           ,home_location_sk
+           ,home_coverage_sk AS home_coverage_sk
+           ,policy_history_sk
+           ,CentralReportingFireAlarm AS central_reporting_fire_alarm_in
+           ,CentralReportingBurglarAlarm AS central_reporting_burglar_alarm_in
+           ,HourDoorman AS twentyfour_hour_doorman_in
+           ,LobbySurveillanceCamera AS lobby_surveillance_camera_in
+           ,LockedOrMannedElevators AS locked_or_manned_elevators_in
+           ,SignalContinuity AS twentyfour_hour_signal_continuity_in
+           ,GuardGatedCommunity AS guard_gated_community_in
+           ,GuardCommunityPatrolService AS guard_community_patrol_service_in
+           ,HomeSafe AS home_safe_in
+           ,FulltimeLiveInCaretaker AS fulltime_live_in_caretaker_in
+           ,GasLeakDetector AS gas_leak_detector_in
+           ,LightningProtection AS lightning_protection_in
+           ,LowTemperatureMonitoringDevice AS low_temperature_monitoring_device_in
+           ,BackupGenerator AS backup_generator_in
+           ,ExternalPerimeterGate AS external_perimeter_gate_in
+           ,ExternalPerimeterSecurity AS external_perimeter_landscaping_coverage_increased_limits_insecurity
+           ,WaterLeakDetectionSystem AS water_leak_detection_system
+           ,ResidentialSprinklerSystem as residential_sprinkler_system_in
+           ,BusinessPropertyIncrease as business_property_increase_in
+           ,BusinessPropertyIncreaseLimit AS business_property_increase_limit_amt
+           ,DeductibleWaiverLargeLosses AS deductible_waiver_large_losses_in
+           ,DeductibleWaiverLargeLossesLimit AS deductible_waiver_large_losses_limit_amt
+           ,EarthquakeCoverageExtension AS earthquake_coverage_extension_in
+           ,EarthquakeCoverageExtensionDeductible AS earthquake_coverage_extension_deductible
+           ,EarthquakeCoverageExtensionLossAssessment AS earthquake_coverage_extension_loss_assessment_in
+           ,EarthquakeCoverageExtensionLossAssessmentLimit AS earthquake_coverage_extension_loss_assessment_limit_amt
+           ,FungiBacteriaIncrease AS fungi_bacteria_increase_in
+           ,FungiBacteriaIncreaseLimit AS fungi_bacteria_increase_limit
+           ,FungiBacteriaLiabilityExtension AS fungi_bacteria_liability_extension_in
+           ,HomeSystemsProtection AS home_systems_protection_in
+           ,HomeSystemsProtectionLimit AS home_systems_protection_limit_amt
+           ,IncreasedIncidentalBusinessThreshold AS increased_incidental_business_threshold_in
+           ,IncreasedIncidentalBusinessThresholdLimit AS increased_incidental_business_threshold_limit_amt
+           ,LandscapingCoverageIncreasedLimits AS landscaping_coverage_increased_limits_in
+          ,LandscapingCoverageIncreasedPlantLimit AS landscaping_coverage_increased_plant_limit_amt
+           ,LandscapingCoverageIncreasedAggregateLimit AS landscaping_coverage_increased_aggregate_limit
+           ,LandscapingCoverageSleetAndWeightofIceAndSnowCoverage AS landscaping_coverage_sleet_and_weight_of_ice_and_snow_coverage_limit_amt
+           ,LandscapingCoverageWindAndHailCoverage AS landscaping_coverage_wind_and_hail_coverage_limit_amt
+           ,LawOrdinanceCoverageIncrease AS law_ordinance_coverage_increase_in
+           ,LawOrdinanceCoverageIncreasedLimit AS law_ordinance_coverage_increased_limit
+           ,LossAssessmentIncrease AS loss_assessment_increase_in
+           ,LossAssessmentIncreaseLimit AS loss_assessment_increase_limit_amt
+           ,ServiceLineProtection AS serviceline_protection_in
+           ,ThoroughbredHorseLiabilityExtension AS thoroughbred_horse_liability_extension_in
+           ,NumberOfHorses AS no_of_horses
+           ,HomeCyberProtectionCoverage AS home_cyber_protection_coverage_in
+           ,HomeCyberProtectionCoverageDeductible AS home_cyber_protection_coverage_deductible
+           ,HomeCyberProtectionCoverageLimit AS home_cyber_protection_coverage_limit_amt
+           ,OffPremisesOtherPermanentStructuresExtension AS offpremises_other_permanent_structures_extension_in
+           ,OffPremisesOtherPermanentStructuresExtensionDescription AS offpremises_other_permanent_structures_extension_desc
+           ,AgreedValue AS agreed_value_in
+			,BackUpOfSewersLimit AS backup_of_sewers_limit_in
+           ,ContentsExtendedReplacementCost AS contents_extended_replacement_cost_in
+           ,CoverageForPiersWharvesAndDocksDueToWeightOfIceOrSnow AS coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_in
+           ,CoverageForPiersWharvesAndDocksDueToWeightOfIceOrSnowLimit AS coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_limit_amt
+           ,NULL AS damage_to_property_of_others_increased_limit_amt
+           ,DebrisRemovalBroadanedTreeRemoval AS debris_removal_broadaned_tree_removal_in
+           ,EarthquakeEndorsement AS earthquake_endorsement_in
+           ,EarthquakeEndorsementDeductible AS earthquake_endorsement_deductible
+          ,EscapedLiquidFuelLimitOfLiability AS escaped_liquid_fuel_liability_limit_amt
+           ,EscapedLiquidFuelRemediationCoverage AS escaped_liquid_fuel_remediation_coverage_in
+           ,EscapedLiquidFuelRemediationLimitOfLiability AS escaped_liquid_fuel_remediation_liability_limit_amt
+           ,EscapedLiquidFuelRemediationRiskClassNumber AS escaped_liquid_fuel_remediation_risk_class_no
+           ,FortifiedRoofUpgrade AS fortified_roof_upgrade_in
+           ,HomeDayCareCoverage AS home_daycare_coverage_in
+           ,IdentityTheft AS identity_theft_in
+           ,PollutantsOrContiminationExtension AS pollutants_or_contimination_extension_in
+           ,PollutantsOrContiminationTankAge AS pollutants_or_contimination_tankage
+           ,PollutantsOrContiminationTankConstruction AS pollutants_or_contimination_tank_construction
+           ,PollutantsOrContiminationTankLocation AS pollutants_or_contimination_tank_location
+           ,PollutantsOrContiminationTankType AS pollutants_or_contimination_tank_type
+            ,ResidenceHeldInTrust AS residence_held_in_trust_in
+           ,SinkholeCollapse AS sinkhole_collapse_in
+           ,SinkholeCoverageExtension AS sinkhole_coverage_extension_in
+           ,SupplementalLossAssessmentCoverage AS supplemental_loss_assessment_coverage_in
+           ,SupplementalLossAssessmentCoverageAdditionalLocations AS supplemental_loss_assessment_coverage_additional_locations
+           ,SupplementalLossAssessmentCoveragePremises AS supplemental_loss_assessment_coverage_premises
+          ,WorkerCompensationLiability AS workercompensation_liability_in
+           ,WorkerCompensationLiabilityFullTimeEmployees AS workercompensation_liability_fulltime_employees_ct
+           ,WorkerCompensationLiabilityOccuranceLimit AS workercompensation_liability_occurance_limit_amt
+           ,WorkerCompensationLiabilityPartTimeEmployees AS workercompensation_liability_parttime_employees_ct
+           ,GuaranteedReplacementCost AS guaranteed_replacement_cost_in
+           ,ReplacementCostCoverage AS replacement_cost_coverage_in
+           ,RoofCoveringFullReconstructionCostCoverage AS roof_covering_full_reconstruction_cost_coverage_in
+           ,AdditionalReplacementCostCoverage AS additional_replacement_cost_coverage_in
+           ,AdditionalReplacementCostCoverageWithWildfire AS additional_replacement_cost_coverage_with_wildfire_in
+           ,DwellingReconstructionCostCoverage AS dwelling_reconstruction_cost_coverage_in
+           ,ExtendedReplacementCostCoverageWithAdditionalWildfire AS extended_replacement_cost_coverage_with_additional_wildfire_in
+           ,ExtendedReplacementCostCoverageWithWildfire AS extended_replacement_cost_coverage_with_wildfire_in
+           ,ExtendedReplacementCostCoverage AS extended_replacement_cost_coverage_in
+           ,ExtendedReplacementCostCoverageOption AS extended_replacement_cost_coverage_option
+           ,MineSubsidenceCoverage AS mine_subsidence_coverage_in
+           ,MineSubsidenceCoverageLimit AS mine_subsidence_coverage_limit_amt
+           ,MinimumEarnedPremiumEndorsement AS minimum_earned_premium_endorsement_in
+           ,MinimumEarnedPremiumEndorsementLimit AS minimum_earned_premium_endorsement_limit_pct
+           ,ContentsOffPremisesLossExclusion AS contents_off_premises_loss_exclusion_in
+           ,PremisesLiabilityLimitation AS premises_liability_limitation_in
+           ,IncludeManuscript AS manuscript_in
+           ,AmendedSettlementBasis AS amended_settlement_basis_in
+           ,AdditionsAndAlterationsExtendedReplacementCost AS additions_and_alterations_extended_replacement_cost_in     
+           ,DeletionofCosmeticMarringExclusion AS deletion_of_cosmetic_marring_exclusion_in
+           ,ExcludeWind AS exclude_wind_in
+           ,WindHailExclusion AS wind_hail_exclusion_in
+           ,RoofExclusion AS roof_exclusion_in
+           ,WaterDamageExclusion AS waterdamage_exclusion_in
+           ,WaterDamageLimitationEndorsement AS waterdamage_limitation_endorsement_in
+           ,WaterDamageLimitationEndorsementLimit AS waterdamage_limitation_endorsement_limit_amt
+           ,WaterDamageSubLimit AS waterdamage_sublimit
+           ,WaterDamageSubLimitAmount AS waterdamage_sublimit_amt
+           ,UndergroundResourcesExclusion AS underground_resources_exclusion_in
+           ,NamedStructuresExclusion AS named_structures_exclusion_in
+           ,NamedStructuresExclusionDescription AS named_structures_exclusion_desc
+           ,AnimalRelatedLiabilityExclusion AS animal_related_liability_exclusion_in
+           ,LibelSlanderExclusion AS libel_slander_exclusion_in
+           ,PoliticalActivitiesExclusion AS political_activities_exclusion_in
+           ,EquineRelatedLiabilityExclusion AS equine_related_liability_exclusion_in
+           ,CanineLiabilityExclusion AS canine_liability_exclusion_in
+           ,NamedStructuresPropertyAndLiabilityExclusion AS named_structures_property_and_liability_exclusion_in
+           ,NamedStructuresPropertyAndLiabilityExclusionDescription AS named_structures_property_and_liability_exclusion_desc
+           ,OtherStructuresAwayFromTheResidencePremises AS other_structures_away_from_the_residence_premises_in
+           ,OtherStructuresAwayFromTheResidencePremisesDescription AS other_structures_away_from_the_residence_premises_desc
+           ,OtherStructuresOnTheResidencePremisesIncreasedLimit AS other_structures_on_the_residence_premises_increased_limit_in
+           ,OtherStructuresOnTheResidencePremisesIncreasedLimitAmount AS other_structures_on_the_residence_premises_increased_limit_amt
+           ,OtherStructuresOnTheResidencePremisesIncreasedLimitDescription AS other_structures_on_the_residence_premises_increased_limit_desc
+           ,ExtendedLiability AS extended_liability_in
+		   ,AnimalRelatedLiabilityExclusion AS animal_related_liability_exclusion_desc
+		   ,AddChangeInTermsSummary AS change_in_terms_summary_in
+		   ,ExtendedReplacementCostCoverageWithAdditionalWildfirePlusTwentyFivePercent AS extended_replacement_cost_coverage_with_additional_wildfire_plus_twentyfive_pc_in
+           ,HomeDayCareCoverageLimit AS home_daycare_coverage_limit_amt
+		   ,HomeDayCareCoverage AS home_daycare_coverage_no_of_children
+		   ,IncreasedIncidentalBusinessProperty AS increased_incidental_business_property_in
+		   ,IncreasedIncidentalBusinessPropertyLimit AS increased_incidental_business_property_limit_amt
+		   ,LossAssessmentIncrease AS loss_assessment_increase_desc,sinkholeterritory sinkhole_territory
+		   ,SpecificNamedStructuresPropertyandLiabilityExclusion AS specific_named_structures_property_and_liability_exclusion_in
+		   ,SpecificNamedStructuresPropertyandLiabilityExclusionDescription AS specific_named_structures_property_and_liability_exclusion_desc
+		   ,UndergroundResourcesExclusion AS underground_water_supplyline_exclusion_in
+		   ,EarthquakeScore AS earthquake_score
+		   ,EarthquakeandEarthMovementExclusion AS earthquake_earthmovement_exclusion_ind 
+		   ,source_system_sk
+           ,GETDATE() AS create_ts
+           ,GETDATE() AS update_ts
+           ,@etl_audit_sk AS etl_audit_sk
+			FROM
+				edw_temp.thome_additional_coverage_temp1
+
+			SET @rows_affected=@@ROWCOUNT;
+
+			-- Update control table
+			SET @new_last_source_extract_ts=COALESCE((SELECT MAX(IssuedDate) FROM edw_temp.thome_additional_coverage_temp1),@last_source_extract_ts);	
+			EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
+
+
+			-- Update audit table
+			SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+			EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
+
+			-- Drop temp table
+			DROP TABLE IF EXISTS edw_temp.thome_additional_coverage_temp1
+	END TRY
+	BEGIN CATCH
+		DECLARE @error_message nvarchar(4000)
+		SET @error_message = 'Error Number:' + ISNULL(CAST(ERROR_NUMBER() AS NVARCHAR(100)),'') + 
+						' Error State:' + ISNULL(CAST(ERROR_STATE() AS NVARCHAR(100)),'')
+							+ ' Error Severity:' + ISNULL(CAST(ERROR_SEVERITY() AS NVARCHAR(100)),'') +
+							CHAR(13) + 'Error Procedure:' + ISNULL(ERROR_PROCEDURE(),'') + ' Error Line:' + ISNULL(CAST(ERROR_LINE() AS NVARCHAR(100)),'') +
+							CHAR(13) + 'Error Message:' + ISNULL(ERROR_MESSAGE(),'')
+	
+		EXEC [edw_core].[sp_upd_error_tetl_audit] @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
+	END CATCH
+END
+

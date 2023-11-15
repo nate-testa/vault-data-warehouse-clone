@@ -1,0 +1,20 @@
+﻿-- =============================================
+-- Author:		Yunus Mohammed
+-- Create Date: <Create Date, , >
+-- Description: This procedures updates audit table
+-- =============================================
+CREATE OR ALTER PROCEDURE [edw_core].[sp_upd_error_tetl_audit]
+@etl_audit_sk int,
+@error_message_desc nvarchar(4000)
+AS
+BEGIN
+    -- SET NOCOUNT ON added to prevent extra result sets from
+    -- interfering with SELECT statements.
+    SET NOCOUNT ON
+	UPDATE [edw_core].[tetl_audit]
+	SET
+		error_message_desc=@error_message_desc,
+		status_desc='Failure'
+	WHERE etl_audit_sk=@etl_audit_sk
+END
+
