@@ -13,6 +13,10 @@ GO
 -- 09/12/23		Architha Gudimalla				2. Added additional columns after discussing with Olivia 
 -- 10/02/23		Architha Gudimalla				3. Corrected code afrer testing table
 -- 10/18/23		Architha Gudimalla				4. Used source_system_sk from tpolicy instead of tpolicy_transaction in prm subquery 
+-- 11/14/23		Architha Gudimalla				5. Added transaction dt filter to prm qubquery
+--												   Updated premiums to use net prm
+-- 11/15/23		Architha Gudimalla				6. Added logic for cancel rewrites
+-- 11/15/23		Architha Gudimalla				7. Added uw_company_cd
 -- ==================================================================================================================================== 
 
 create or ALTER   PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -123,31 +127,54 @@ BEGIN
 				with exp_pols as
 				--pols expiration in current month
 				(
-				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no
+				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no,
+						replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd
 				 FROM	edw_core.tpolicy
-				 where	expiration_dt between @begin_dt and @end_dt
-				 --where	concat(datepart(yyyy,expiration_dt),iif(datepart(mm,expiration_dt) < 10,'0','') ,datepart(mm,expiration_dt) ) = @yearmonth
-				), 
+				 where	expiration_dt between @begin_dt and @end_dt 
+				),
+				--pols renewing all in current month
+				ren_pols_all as
+				(
+				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no,
+						replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd, 
+						 case when prior_policy_no is null  then original_policy_no
+								  when CHARINDEX('-',prior_policy_no) = 0 then prior_policy_no 
+								  else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
+						end prior_policy_no,
+						rank() over (partition by case when prior_policy_no is null  then original_policy_no
+												 	   when CHARINDEX('-',prior_policy_no) = 0 then prior_policy_no 
+								  					   else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
+												  end order by policy_sk) rnk
+				 FROM	edw_core.tpolicy
+				 where	effective_dt between @begin_dt and @end_dt 
+				),
+				--pols renewing distinct in current month
 				ren_pols as
+				(
+				 SELECT *
+				 FROM	ren_pols_all
+				 where rnk = 1
+				),
+				/*ren_pols as
 				--pols renewing in current month
 				(
-				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no
+				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no, 
+						 case when CHARINDEX('-',prior_policy_no) = 0 then prior_policy_no else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) end prior_policy_no
 				 FROM	edw_core.tpolicy
-				 where	effective_dt between @begin_dt and @end_dt
-				 --where	concat(datepart(yyyy,effective_dt),iif(datepart(mm,effective_dt) < 10,'0','') ,datepart(mm,effective_dt) ) = @yearmonth
-				), 
+				 where	effective_dt between @begin_dt and @end_dt 
+				), */
 				prm as
 				(
 				 SELECT tr.policy_sk, 
 				 		--tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk, 
 				 		max(tr.transaction_seq_no) transaction_seq_no,
-		 				sum(tr.premium_amt) premium_amt,
+		 				sum(tr.premium_amt - tr.tax_fee_surcharge_amt) premium_amt,
 						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk and tt.policy_transaction_type_nm in ('New','Renewal') --'Renewal','New Business' 
-								then tr.premium_amt * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
+								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
 								else 0 
 								end) as initial_written_prem,
 						sum(CASE WHEN transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk  < 61 
-								then tr.premium_amt * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
+								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
 								else 0 
 								end) as effective_date_60_day_prem,
 						sum(CASE WHEN transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk  < 61 
@@ -157,11 +184,11 @@ BEGIN
 						sum(CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
 								  and transaction_effective_dt_sk <> expiration_dt_sk and tt.policy_transaction_type_nm in ('Cancellation') --('Cancellation', 'Reinstatement')
 								  and  (transaction_effective_dt_sk - effective_dt_sk  > 60 or transaction_dt_sk - effective_dt_sk  > 60)
-								then tr.premium_amt * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
+								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
 								else 0 
 								end) as mid_term_cancel_amount, 
 						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk  
-								then tr.premium_amt * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
+								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
 								else 0 
 								end) as expiring_premium_amount,
 						sum(distinct CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
@@ -228,6 +255,7 @@ BEGIN
 				 where	max_pol_tr.rnk = 1
 				 and sixty_day_pol_tr.rnk = 1
 				 and effective_dt_sk <= @end_dt_sk
+				 and	transaction_dt_sk <= @end_dt_sk
 				 and	transaction_effective_dt_sk <= @end_dt_sk
 				 and transaction_dt_sk - expiration_dt_sk <= 60
 				 and   (pol.expiration_dt between @begin_dt and @end_dt or
@@ -277,6 +305,7 @@ BEGIN
 						renewal_accepted_price_sqft, 
 						update_ts,
 						etl_audit_sk
+						,uw_company_cd
 					)
 				select 	@month_end_dt_sk, 
 						exp_pols_prm.policy_sk, 
@@ -304,7 +333,7 @@ BEGIN
 						case when exp_pols_prm.cancel_ind <> 0 and exp_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end midterm_cancel_ind,  
 						case when exp_pols_prm.cancel_ind = 0 then 1 else 0 end expiring_ind,   
 						case when exp_pols_prm.non_renewal_in = 'Yes' then 1 else 0 end as nonrenewal_ind, 
-						case when ren_pols.policy_sk is not null then ren_pols.policy_sk else null end renewalcount,
+						case when ren_pols.policy_sk is not null then ren_pols.policy_sk else null end renewal_sk,
 						case when ren_pols.policy_sk is not null then 1 else 0 end renewalcount,
 						case when ren_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end non_flatcancel_renewal_ind,
 						case when ren_pols.policy_sk is not null then ren_pols_prm.initial_written_prem else null end initial_written_renewal_prem,
@@ -317,11 +346,15 @@ BEGIN
 							 else null 
 						end renewal_accepted_price_sqft, 
 						getdate(), @etl_audit_sk 
+						,case when ren_pols.uw_company_cd is null then exp_pols.uw_company_cd
+							 when exp_pols.uw_company_cd = ren_pols.uw_company_cd then ren_pols.uw_company_cd
+								else exp_pols.uw_company_cd + ' to ' + ren_pols.uw_company_cd 
+						end
 				from exp_pols
 				-- join to get prms for expiring policies
 				inner join prm exp_pols_prm on exp_pols_prm.policy_sk = exp_pols.policy_sk 
 				-- join to get renewals for expiring policies
-				left join ren_pols on ren_pols.original_policy_no = exp_pols.policy_no and ren_pols.effective_dt = exp_pols.expiration_dt 
+				left join ren_pols on ren_pols.prior_policy_no = exp_pols.original_policy_no and ren_pols.effective_dt = exp_pols.expiration_dt 
 				-- join to get prm for renewals 
 				left join prm ren_pols_prm on ren_pols_prm.policy_sk = ren_pols.policy_sk 
 				inner join max_tr on exp_pols_prm.policy_sk = max_tr.policy_sk and exp_pols_prm.transaction_seq_no = max_tr.transaction_seq_no
