@@ -9,6 +9,7 @@
 -- 10/02/23		Architha Gudimalla				3. Added replace to remove , from sq footage
 -- 10/05/23		Architha Gudimalla				4. Removed TIV update and moved to separate proc
 -- 10/13/23		Architha Gudimalla				5. Updated residence type
+-- 11/16/23		Architha Gudimalla				6. Fixed wild file
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
 
@@ -237,7 +238,7 @@ BEGIN
 				tthc.WindStormOrHailDeductible AS wind_or_hailstorm_deductible,
 				tthc.FactorMethod, tthc.Factor, tthc.Retention, tthc.Reason,
 				tthc.ReinsuranceDesignation, tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit, tthc.ReinsuranceTotalTIV, 
-				tthc.wildfire_threat, tthc.wildfire_hazard_severity,
+				tthc.wildfirethreat, tthc.wildfirehazardseverity,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_coverage_temp1 AS tthc
