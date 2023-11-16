@@ -515,7 +515,7 @@ BEGIN
 		,'' as [050_TotalPaidLossAmt]
 		,lh.loss_seq_no as [051_NumLosses]
 		--,'numberLosses' as [051_NumLosses]
-		,CASE WHEN p.prior_policy_no IS NOT NULL AND p.prior_policy_no <> p.policy_no THEN 'Prior' ELSE '' END as [052_PolicyCd]
+		,CASE WHEN p.prior_term_policy_no IS NOT NULL AND p.prior_term_policy_no <> p.policy_no THEN 'Prior' ELSE '' END as [052_PolicyCd]
 		,p.original_policy_no as [053_PolicyNumber]
 		,pr.product_nm as [054_LOBCd]
 		,CASE WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '16186' WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '16237' ELSE '' END AS [055_NAICCd]
