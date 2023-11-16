@@ -1,3 +1,7 @@
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 
 
 -- ========================================================================================================
@@ -9,9 +13,10 @@
 -- 23/10/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 11/13/23		Architha Gudimalla				2. added tran seq no in the joins
 -- 11/14/23		Sandeep Gundreddy				3. modified quote_collection_location_sk join
+-- 11/15/23		Sandeep Gundreddy				4. modified LEFT joins to INNER joins
 -- ======================================================================================================== 
 
-CREATE or ALTER PROCEDURE [edw_core].[sp_tquote_collection_class_type]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_class_type]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -66,9 +71,9 @@ BEGIN
 					AND GREATEST(acct.CreatedDate)>@last_source_extract_ts --20230717 added
 				) acc
 				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
-				LEFT JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
+				INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
+				INNER JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
+				INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
 				LEFT JOIN edw_core.tquote_history tqh on tqh.quote_no=acc.PolicyNumber
 						and tqh.effective_dt=acc.EffectiveDate
 						and tqh.transaction_seq_no = acc.number
@@ -166,3 +171,4 @@ BEGIN
 	END CATCH
 END
 
+GO
