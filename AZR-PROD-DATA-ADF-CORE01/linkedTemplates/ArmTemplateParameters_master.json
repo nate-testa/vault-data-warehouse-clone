@@ -1,0 +1,58 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "AZR-PROD-DATA-ADF-CORE01"
+		},
+		"LS_EDW_PROD_connectionString": {
+			"value": ""
+		},
+		"LS_METALDB_PROD_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_aws_us_prod_address_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_aws_us_prod_diary_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_aws_us_prod_pub_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_aws_us_prod_unicorn_insurepay_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_aws_us_prod_vault_connectionString": {
+			"value": ""
+		},
+		"azr_prod_data_core01_pep01_properties_privateLinkResourceId": {
+			"value": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PROD-DATA-DB-RG/providers/Microsoft.Sql/servers/azr-prod-data-db-core01"
+		},
+		"azr_prod_data_core01_pep01_properties_groupId": {
+			"value": "sqlServer"
+		},
+		"azr_prod_data_core01_pep01_properties_fqdns": {
+			"value": [
+				"azr-prod-data-db-core01.database.windows.net"
+			]
+		},
+		"azr_prod_metal_core01_pep01_properties_privateLinkResourceId": {
+			"value": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PROD-METAL-DB-RG/providers/Microsoft.Sql/servers/azr-prod-metal-db-core01"
+		},
+		"azr_prod_metal_core01_pep01_properties_groupId": {
+			"value": "sqlServer"
+		},
+		"azr_prod_metal_core01_pep01_properties_fqdns": {
+			"value": [
+				"azr-prod-metal-db-core01.database.windows.net"
+			]
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}

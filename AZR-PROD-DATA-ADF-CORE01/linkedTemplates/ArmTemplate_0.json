@@ -1,0 +1,728 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "AZR-PROD-DATA-ADF-CORE01"
+		},
+		"LS_eBao_aws_us_prod_address_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_address'"
+		},
+		"LS_eBao_aws_us_prod_diary_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_diary'"
+		},
+		"LS_eBao_aws_us_prod_pub_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_pub'"
+		},
+		"LS_eBao_aws_us_prod_unicorn_insurepay_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_unicorn_insurepay'"
+		},
+		"LS_eBao_aws_us_prod_vault_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_vault'"
+		},
+		"LS_EDW_PROD_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_EDW_PROD'"
+		},
+		"LS_METALDB_PROD_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_METALDB_PROD'"
+		},
+		"azr_prod_data_core01_pep01_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PROD-DATA-DB-RG/providers/Microsoft.Sql/servers/azr-prod-data-db-core01"
+		},
+		"azr_prod_data_core01_pep01_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr_prod_data_core01_pep01_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-prod-data-db-core01.database.windows.net"
+			]
+		},
+		"azr_prod_metal_core01_pep01_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PROD-METAL-DB-RG/providers/Microsoft.Sql/servers/azr-prod-metal-db-core01"
+		},
+		"azr_prod_metal_core01_pep01_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr_prod_metal_core01_pep01_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-prod-metal-db-core01.database.windows.net"
+			]
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/Trigger_1i5')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Hour",
+						"interval": 24,
+						"startTime": "2023-10-23T19:32:00Z",
+						"timeZone": "UTC"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AWS-PROD')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "SelfHosted",
+				"description": "Integration Runtime via AWS PROD eBao VM -->10.81.240.218",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks",
+			"apiVersion": "2018-06-01",
+			"properties": {},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_eBao_aws_us_prod_address')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Linked Services with eBao PROD",
+				"annotations": [],
+				"type": "MySql",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_eBao_aws_us_prod_address_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AWS-PROD",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-PROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_eBao_aws_us_prod_diary')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "MySql",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_eBao_aws_us_prod_diary_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AWS-PROD",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-PROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_eBao_aws_us_prod_pub')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "MySql",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_eBao_aws_us_prod_pub_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AWS-PROD",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-PROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_eBao_aws_us_prod_unicorn_insurepay')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Integration Runtime with AWS eBao VM -->10.81.240.218 for this DB aws_us_prod_unicorn_insurepay\n",
+				"annotations": [],
+				"type": "MySql",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_eBao_aws_us_prod_unicorn_insurepay_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AWS-PROD",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-PROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_eBao_aws_us_prod_vault')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Integration Runtime with AWS PROD --> 10.81.240.218 with eBao DB --> aws_us_prod_vault",
+				"annotations": [],
+				"type": "MySql",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_eBao_aws_us_prod_vault_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AWS-PROD",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-PROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Data-ADF-IR-via-VNet')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "Managed",
+				"description": "Used to comm privately with SQL server DATA-CORE01",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "East US",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 10,
+							"cleanup": false,
+							"customProperties": []
+						},
+						"pipelineExternalComputeScaleProperties": {
+							"timeToLive": 60,
+							"numberOfPipelineNodes": 1,
+							"numberOfExternalNodes": 1
+						}
+					}
+				},
+				"managedVirtualNetwork": {
+					"type": "ManagedVirtualNetworkReference",
+					"referenceName": "default"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/azr_prod_data_core01_pep01')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('azr_prod_data_core01_pep01_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('azr_prod_data_core01_pep01_properties_groupId')]",
+				"fqdns": "[parameters('azr_prod_data_core01_pep01_properties_fqdns')]"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/azr_prod_metal_core01_pep01')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('azr_prod_metal_core01_pep01_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('azr_prod_metal_core01_pep01_properties_groupId')]",
+				"fqdns": "[parameters('azr_prod_metal_core01_pep01_properties_fqdns')]"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_SourceDS')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_aws_us_prod_vault",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"cw_tableName": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": {
+						"value": "@dataset().cw_tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_aws_us_prod_vault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_SourceDS_t_pub_address')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_aws_us_prod_address",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"cw_tableName": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_address"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": {
+						"value": "@dataset().cw_tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_aws_us_prod_address')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_SourceDS_t_pub_diary')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_aws_us_prod_address",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"cw_tableName": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_diary"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": {
+						"value": "@dataset().cw_tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_aws_us_prod_address')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_SourceDS_MySQL')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_aws_us_prod_vault",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"cw_tableName": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "MetadataDrivenCopy_eBao_to_Edw_stage"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": {
+						"value": "@dataset().cw_tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_aws_us_prod_vault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_EDW_PROD')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_EDW_PROD_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "Data-ADF-IR-via-VNet",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/Data-ADF-IR-via-VNet')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_METALDB_PROD')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_METALDB_PROD_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "Data-ADF-IR-via-VNet",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/Data-ADF-IR-via-VNet')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Master_Collections_Procedure')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "sp_tcollections_location",
+						"type": "SqlServerStoredProcedure",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Succeeded",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_tcollection_location]"
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_EDW_PROD",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_tcollections_coverage",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_tcollections_location",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_tcollection_coverage]"
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_EDW_PROD",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_tcollection_additional_coverage",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_tcollections_coverage",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_tcollection_additional_coverage]"
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_EDW_PROD",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_tcollection_scheduled_item_detail",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_tcollection_additional_coverage",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_tcollection_scheduled_item_detail]"
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_EDW_PROD",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "StoredProcedure EXEC"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-07-11T13:42:22Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_PROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Master_Home_Procedure')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "sp_thome_location",
+						"type": "SqlServerStoredProcedure",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Succeeded",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_thome_location]"
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_EDW_PROD",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_thome_coverage",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_thome_location",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_thome_coverage]"
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_EDW_PROD",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_thome_additional_coverage",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_thome_coverage",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_thome_additional_coverage]"
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_EDW_PROD",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "StoredProcedure EXEC"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-07-11T13:42:22Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_PROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Master_Ref_Procedure')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "sp_tbroker",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_tbroker]"
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_EDW_PROD",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_tcustomer",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_tcustomer]"
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_EDW_PROD",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_tinternal_coverage",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_tinternal_coverage]"
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_EDW_PROD",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "StoredProcedure EXEC"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-07-11T13:42:22Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_PROD')]"
+			]
+		}
+	]
+}

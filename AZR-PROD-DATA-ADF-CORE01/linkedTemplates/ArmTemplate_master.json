@@ -1,0 +1,177 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "AZR-PROD-DATA-ADF-CORE01"
+		},
+		"LS_EDW_PROD_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_EDW_PROD'"
+		},
+		"LS_METALDB_PROD_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_METALDB_PROD'"
+		},
+		"LS_eBao_aws_us_prod_address_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_address'"
+		},
+		"LS_eBao_aws_us_prod_diary_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_diary'"
+		},
+		"LS_eBao_aws_us_prod_pub_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_pub'"
+		},
+		"LS_eBao_aws_us_prod_unicorn_insurepay_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_unicorn_insurepay'"
+		},
+		"LS_eBao_aws_us_prod_vault_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_vault'"
+		},
+		"azr_prod_data_core01_pep01_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PROD-DATA-DB-RG/providers/Microsoft.Sql/servers/azr-prod-data-db-core01"
+		},
+		"azr_prod_data_core01_pep01_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr_prod_data_core01_pep01_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-prod-data-db-core01.database.windows.net"
+			]
+		},
+		"azr_prod_metal_core01_pep01_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PROD-METAL-DB-RG/providers/Microsoft.Sql/servers/azr-prod-metal-db-core01"
+		},
+		"azr_prod_metal_core01_pep01_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr_prod_metal_core01_pep01_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-prod-metal-db-core01.database.windows.net"
+			]
+		},
+		"containerUri": {
+			"type": "string",
+			"metadata": "URI to storage account containing linked ARM templates"
+		},
+		"containerSasToken": {
+			"type": "string",
+			"metadata": "Sas token to storage account containing linked ARM templates"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "AZR-PROD-DATA-ADF-CORE01_ArmTemplate_0",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"LS_eBao_aws_us_prod_address_connectionString": {
+						"value": "[parameters('LS_eBao_aws_us_prod_address_connectionString')]"
+					},
+					"LS_eBao_aws_us_prod_diary_connectionString": {
+						"value": "[parameters('LS_eBao_aws_us_prod_diary_connectionString')]"
+					},
+					"LS_eBao_aws_us_prod_pub_connectionString": {
+						"value": "[parameters('LS_eBao_aws_us_prod_pub_connectionString')]"
+					},
+					"LS_eBao_aws_us_prod_unicorn_insurepay_connectionString": {
+						"value": "[parameters('LS_eBao_aws_us_prod_unicorn_insurepay_connectionString')]"
+					},
+					"LS_eBao_aws_us_prod_vault_connectionString": {
+						"value": "[parameters('LS_eBao_aws_us_prod_vault_connectionString')]"
+					},
+					"LS_EDW_PROD_connectionString": {
+						"value": "[parameters('LS_EDW_PROD_connectionString')]"
+					},
+					"LS_METALDB_PROD_connectionString": {
+						"value": "[parameters('LS_METALDB_PROD_connectionString')]"
+					},
+					"azr_prod_data_core01_pep01_properties_privateLinkResourceId": {
+						"value": "[parameters('azr_prod_data_core01_pep01_properties_privateLinkResourceId')]"
+					},
+					"azr_prod_data_core01_pep01_properties_groupId": {
+						"value": "[parameters('azr_prod_data_core01_pep01_properties_groupId')]"
+					},
+					"azr_prod_data_core01_pep01_properties_fqdns": {
+						"value": "[parameters('azr_prod_data_core01_pep01_properties_fqdns')]"
+					},
+					"azr_prod_metal_core01_pep01_properties_privateLinkResourceId": {
+						"value": "[parameters('azr_prod_metal_core01_pep01_properties_privateLinkResourceId')]"
+					},
+					"azr_prod_metal_core01_pep01_properties_groupId": {
+						"value": "[parameters('azr_prod_metal_core01_pep01_properties_groupId')]"
+					},
+					"azr_prod_metal_core01_pep01_properties_fqdns": {
+						"value": "[parameters('azr_prod_metal_core01_pep01_properties_fqdns')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "AZR-PROD-DATA-ADF-CORE01_ArmTemplate_1",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_1.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Resources/deployments', 'AZR-PROD-DATA-ADF-CORE01_ArmTemplate_0')]"
+			]
+		},
+		{
+			"name": "AZR-PROD-DATA-ADF-CORE01_ArmTemplate_2",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_2.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Resources/deployments', 'AZR-PROD-DATA-ADF-CORE01_ArmTemplate_1')]"
+			]
+		}
+	]
+}
