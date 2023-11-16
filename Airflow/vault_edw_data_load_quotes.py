@@ -337,7 +337,6 @@ with DAG(
             'sp_tquote_status_history',
             'sp_tquote_transaction_status_history',
             'sp_tquote_insured',
-            'sp_tquote_transaction',
             'sp_tquote_history_update',
             'sp_tquote_update'
             ]
@@ -406,14 +405,6 @@ with DAG(
             autocommit=True,
         )
 
-        sp_tquote_transaction = MsSqlOperator(
-            task_id='sp_tquote_transaction',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tquote_transaction",
-            database="vault_edw",
-            autocommit=True,
-        )
-
         sp_tquote_history_update = MsSqlOperator(
             task_id='sp_tquote_history_update',
             mssql_conn_id='Vault_EDW',
@@ -437,7 +428,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(quote_group_items, 'All stored procedures executed successfully for all the Quote Policy tables'),
         )
 
-        sp_tquote >> sp_tquote_history >> sp_tquote_additional_interest >> sp_tquote_mortgagee >> sp_tquote_loss_history >> sp_tquote_status_history >> sp_tquote_transaction_status_history >> sp_tquote_insured >> sp_tquote_transaction >> sp_tquote_history_update >> sp_tquote_update >> send_quote_email
+        sp_tquote >> sp_tquote_history >> sp_tquote_additional_interest >> sp_tquote_mortgagee >> sp_tquote_loss_history >> sp_tquote_status_history >> sp_tquote_transaction_status_history >> sp_tquote_insured >> sp_tquote_history_update >> sp_tquote_update >> send_quote_email
 
     with TaskGroup("quote_transaction_group") as quote_transaction_group:
 
