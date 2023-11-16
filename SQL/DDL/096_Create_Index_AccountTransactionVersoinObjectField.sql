@@ -1,0 +1,1 @@
+CREATE INDEX [IX_AccountTransactionVersionObjectField_Field] ON [edw_stage].[AccountTransactionVersionObjectField] (field);
