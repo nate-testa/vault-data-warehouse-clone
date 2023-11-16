@@ -2,11 +2,16 @@
 -- Author:		Yunus Mohammed
 -- Create Date: 09/13/2023
 -- Description: This procedures inserts written premium data
+---------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 11/16/23		Yunus Mohammed				1. Update logic for category, subcategory columns. Removed extra space in company 
+-- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
 AS
 BEGIN
-	DECLARE @ProcedureName NVARCHAR(120)
+DECLARE @ProcedureName NVARCHAR(120)
     SET @ProcedureName = OBJECT_NAME(@@PROCID)
 
 	BEGIN TRY
@@ -49,7 +54,7 @@ BEGIN
 			WITH policy_workday_written_premium_feed_temp AS
 			(
 			SELECT 
-				accounting_date,policy_image_id,NULL AS policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
+				accounting_date,NULL AS policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,NULL AS number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,SUM(premium_amt) AS amount,NULL AS deleteddate,NULL AS contribcutoffdate,
@@ -58,11 +63,12 @@ BEGIN
 			(
 			SELECT
 				@last_day_month AS [accounting_date],
-				tp.policy_sk AS policy_image_id,
+				tp.policy_sk AS policy_image_identifier_id,
 				tp.policy_no AS [policy_number],
-				tp.product_cd as [product],
-				tpt.transaction_seq_no as [transaction_sequence],
-				tp.uw_company_nm AS [company],
+				tprd.product_nm AS [product],
+				tpt.transaction_seq_no AS [transaction_sequence],
+				CASE WHEN tp.uw_company_nm='Vault E & S Insurance Company' THEN 'Vault E&S Insurance Company' 
+				ELSE tp.uw_company_nm END AS [company],
 				GREATEST(tdeff.actual_dt,tdpro.actual_dt) AS [transaction_date],
 				tp.effective_dt AS [effective_date],
 				tp.expiration_dt AS [expiration_date],
@@ -73,11 +79,15 @@ BEGIN
 				tp.mailing_address_line1 AS [address],
 				tp.mailing_address_county_nm AS [county],
 				tp.mailing_address_city_nm AS [city],
-				tp.risk_state_cd AS [RISK_STATE],
+				tp.risk_state_cd AS [risk_state],
 				tp.mailing_address_zip_cd AS [zip],
 				NULL AS fire_protection,
 				tic.internal_coverage_category_nm  AS [category],
-				null as subcategory,
+				CASE
+				WHEN tic.internal_coverage_cd in ('Cyber Protection','Service Line','Systems Protection') THEN 'Premium-Reinsured'
+				WHEN internal_coverage_category_nm='Premium' THEN internal_coverage_category_nm
+				WHEN internal_coverage_category_nm!='Premium' THEN internal_coverage_desc
+				END AS subcategory,
 				tic.internal_coverage_sk as financial_category_id,
 				tic.internal_coverage_desc AS [financial_category_name],
 				tic.aslob_cd AS [aslob],
@@ -90,11 +100,15 @@ BEGIN
 				INNER JOIN edw_core.tdate tdpro on tdpro.date_sk=tpt.transaction_dt_sk
 				INNER JOIN edw_core.tpolicy_transaction_type tptt on tptt.policy_transaction_type_sk=tpt.policy_transaction_type_sk
 				INNER JOIN edw_core.tbroker tb on tb.broker_sk=tpt.broker_sk
+				INNER JOIN edw_core.tdate tdacc on tdacc.date_sk=tpt.accouting_month_sk
+				INNER JOIN edw_core.tproduct tprd on tprd.product_sk = tpt.product_sk
 			WHERE
 				tpt.accouting_month_sk=@acounting_date_sk
+				AND GREATEST(tpt.transaction_dt_sk,tpt.transaction_effective_dt_sk)<=@acounting_date_sk
+				AND tpt.premium_amt != 0
 			) AS temp
 			GROUP BY
-				accounting_date,policy_image_id,policy_number,product,transaction_sequence,company,transaction_date,
+				accounting_date,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob
@@ -102,7 +116,7 @@ BEGIN
 			policy_workday_written_premium_feed_commission_temp AS
 			(
 			SELECT
-				accounting_date,policy_image_id,NULL AS policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
+				accounting_date,NULL AS policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,NULL AS number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,SUM(premium_amt) AS amount,NULL AS deleteddate,NULL AS contribcutoffdate,
@@ -111,9 +125,9 @@ BEGIN
 			(
 				SELECT
 				@last_day_month AS [accounting_date],
-				tp.policy_sk AS policy_image_id,
+				tp.policy_sk AS policy_image_identifier_id,
 				tp.policy_no AS [policy_number],
-				tp.product_cd as [product],
+				tprd.product_nm as [product],
 				tpt.transaction_seq_no as [transaction_sequence],
 				tp.uw_company_nm AS [company],
 				GREATEST(tdeff.actual_dt,tdpro.actual_dt) AS [transaction_date],
@@ -137,7 +151,7 @@ BEGIN
 				WHEN 'LUX' THEN 'LUX Commission'
 				END
 				as subcategory,
-				1 as financial_category_id,
+				-1 as financial_category_id,
 				'Commission Amount' AS [financial_category_name],
 				CASE tp.product_cd
 				WHEN 'HO' THEN '040'
@@ -153,16 +167,18 @@ BEGIN
 				INNER JOIN edw_core.tdate tdpro on tdpro.date_sk=tpt.transaction_dt_sk
 				INNER JOIN edw_core.tpolicy_transaction_type tptt on tptt.policy_transaction_type_sk=tpt.policy_transaction_type_sk
 				INNER JOIN edw_core.tbroker tb on tb.broker_sk=tpt.broker_sk
+				INNER JOIN edw_core.tproduct tprd on tprd.product_sk = tpt.product_sk
 				WHERE
 				tpt.accouting_month_sk=@acounting_date_sk
 				and tpt.commission_amt!=0
 				) as temp
 				GROUP BY
-				accounting_date,policy_image_id,policy_number,product,transaction_sequence,company,transaction_date,
+				accounting_date,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob
 			)
+			
 			INSERT INTO edw_integration.policy_workday_written_premium_feed
 			(
 			accounting_date,policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
@@ -207,11 +223,12 @@ BEGIN
 		
 	END TRY
 	BEGIN CATCH
+	print @acounting_date_sk
 		DECLARE @error_message nvarchar(4000)
 		SET @error_message = 'Error Number:' + CAST(ERROR_NUMBER() AS NVARCHAR(100)) + ' Error State:' + CAST(ERROR_STATE() AS NVARCHAR(100))
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
 		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
-	END CATCH
+	END CATCH	
 END

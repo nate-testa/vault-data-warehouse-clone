@@ -2,6 +2,11 @@
 -- Author:		Yunus Mohammed
 -- Create Date: 09/13/2023
 -- Description: This procedures inserts unearned premium data
+---------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 11/15/23		Yunus Mohammed				1. Updated logic for cancelled and expired policies  
+-- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
 AS
@@ -99,6 +104,9 @@ BEGIN
 			WHERE
 				tpts.month_sk=@acounting_date_sk
 				AND (tic.internal_coverage_category_nm = 'Premium' OR tic.internal_coverage_desc like 'Subscriber Contribution%')
+				AND tpts.transaction_effective_dt_sk < = @acounting_date_sk
+				AND tpts.expiration_dt_sk > @acounting_date_sk
+				AND (tp.policy_status !='Cancelled' OR tp.cancellation_effective_dt > @last_day_month)
 			) AS t
 			GROUP BY
 				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
