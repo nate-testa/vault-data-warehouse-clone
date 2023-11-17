@@ -11,6 +11,8 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.providers.microsoft.azure.operators.data_factory import AzureDataFactoryRunPipelineOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
+from livevox_csv_generation import SFTPUploadLiveVoxOperator, generate_livevox_csv_file
+from ivans_api import call_ivans_api
 
 to_email = "sandeep.gundreddy@vault.insurance, architha.gudimalla@vault.insurance, yunus.mohammed@vault.insurance, tuba.mohsin@vault.insurance, rushin.shah@vault.insurance, hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
 # to_email = "hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
@@ -97,7 +99,7 @@ with DAG(
     max_active_runs=1,
     default_args=args,
     start_date=pendulum.datetime(2023, 8, 7, tz="America/New_York"),
-    schedule_interval='0 5 * * 1-5', # At 05:00 every day
+    schedule_interval='30 0 * * *', # At 12:30 every day
     # schedule_interval=None, 
     # schedule_interval=datetime.timedelta(hours=6), # Every 6 hours
     tags=["master dag", "vault"],
@@ -941,6 +943,7 @@ with DAG(
             'sp_policy_ivans_auto_feed',
             'sp_policy_ivans_home',
             'sp_policy_ivans_pel_feed',
+            'sp_customer_broker_livevox_feed',
             ]
 
         sp_tclaim_policy_search_api = MsSqlOperator(
@@ -1023,6 +1026,33 @@ with DAG(
             autocommit=True,
         )
 
+        ivans_api_call = PythonOperator(
+            task_id='ivans_api_call',
+            python_callable=call_ivans_api,
+            provide_context=True,
+            dag=dag,
+        )
+
+        sp_customer_broker_livevox_feed = MsSqlOperator(
+            task_id='sp_customer_broker_livevox_feed',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_customer_broker_livevox_feed",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        generate_livevox_file = PythonOperator(
+            task_id='generate_livevox_file',
+            python_callable=generate_livevox_csv_file,
+            dag=dag,
+        )
+
+        upload_livevox_file_to_sftp = SFTPUploadLiveVoxOperator(
+            task_id='upload_livevox_file_to_sftp',
+            sftp_conn_id='Vault_livevox_sftp',
+            dag=dag,
+        )
+
         send_integration_email = EmailOperator(
             task_id='send_integration_email',
             to=to_email,
@@ -1030,7 +1060,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
         )
 
-        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_billing_account_customer_portal_api >> sp_policy_customer_portal_api >> sp_policy_ivans_auto_feed >> sp_policy_ivans_home >> sp_policy_ivans_pel_feed >> send_integration_email
+        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_billing_account_customer_portal_api >> sp_policy_customer_portal_api >> sp_policy_ivans_auto_feed >> sp_policy_ivans_home >> sp_policy_ivans_pel_feed >> ivans_api_call >> sp_customer_broker_livevox_feed >> generate_livevox_file >> upload_livevox_file_to_sftp >> send_integration_email
 
 
     end = DummyOperator(
