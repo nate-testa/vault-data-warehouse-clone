@@ -8,7 +8,7 @@
 -- 11/15/2023		Mohammed Yunus				1. Created this procedure 
 -- ================================================================================================= 
 
-CREATE OR ALTER PROCEDURE PROCEDURE [edw_core].[sp_claim_renewal_rating_auto_pel_api]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_auto_pel_api]
 
 AS
 BEGIN
