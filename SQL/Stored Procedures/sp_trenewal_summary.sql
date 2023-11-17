@@ -1,4 +1,4 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_trenewal_summary]    Script Date: 10/2/2023 8:51:09 PM ******/
+﻿/****** Object:  StoredProcedure [edw_core].[sp_trenewal_summary]    Script Date: 11/16/2023 11:51:43 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -17,9 +17,10 @@ GO
 --												   Updated premiums to use net prm
 -- 11/15/23		Architha Gudimalla				6. Added logic for cancel rewrites
 -- 11/15/23		Architha Gudimalla				7. Added uw_company_cd
+--
 -- ==================================================================================================================================== 
 
-create or ALTER   PROCEDURE [edw_core].[sp_trenewal_summary]
+create or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
 @in_yearmonth int = null
 AS 
 BEGIN
@@ -170,25 +171,25 @@ BEGIN
 				 		max(tr.transaction_seq_no) transaction_seq_no,
 		 				sum(tr.premium_amt - tr.tax_fee_surcharge_amt) premium_amt,
 						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk and tt.policy_transaction_type_nm in ('New','Renewal') --'Renewal','New Business' 
-								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
+								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - transaction_effective_dt_sk)),5) 
 								else 0 
 								end) as initial_written_prem,
 						sum(CASE WHEN transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk  < 61 
-								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
+								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - transaction_effective_dt_sk)),5) 
 								else 0 
 								end) as effective_date_60_day_prem,
-						sum(CASE WHEN transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk  < 61 
-								then tr.commission_amt  * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
+						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk and transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk  < 61 
+								then tr.commission_amt  * round((365.0*1/(expiration_dt_sk - transaction_effective_dt_sk)),5) 
 								else 0 
 								end) as effective_date_60_day_comm,  
-						sum(CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
+						sum(CASE WHEN tr.transaction_seq_no = max_pol_tr.transaction_seq_no
 								  and transaction_effective_dt_sk <> expiration_dt_sk and tt.policy_transaction_type_nm in ('Cancellation') --('Cancellation', 'Reinstatement')
 								  and  (transaction_effective_dt_sk - effective_dt_sk  > 60 or transaction_dt_sk - effective_dt_sk  > 60)
-								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
+								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - transaction_effective_dt_sk)),5) 
 								else 0 
 								end) as mid_term_cancel_amount, 
 						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk  
-								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - effective_dt_sk)),5) 
+								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - transaction_effective_dt_sk)),5) 
 								else 0 
 								end) as expiring_premium_amount,
 						sum(distinct CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
@@ -235,28 +236,30 @@ BEGIN
 				 inner join (
 								 SELECT policy_sk, max(policy_transaction_sk) over (partition by policy_sk 
 																		order by transaction_seq_no desc, policy_transaction_sk desc) policy_transaction_sk, 
+												max(transaction_seq_no) over (partition by policy_sk 
+																		order by transaction_seq_no desc, policy_transaction_sk desc) transaction_seq_no, 
 												   rank() over (partition by policy_sk 
 																		order by transaction_seq_no desc, policy_transaction_sk desc) rnk
 								 FROM	edw_core.tpolicy_transaction
 								 where	effective_dt_sk <= @end_dt_sk
-								 and	transaction_effective_dt_sk <= @end_dt_sk 
+								 --and	transaction_effective_dt_sk <= @end_dt_sk 
 							) max_pol_tr on tr.policy_sk = max_pol_tr.policy_sk
-				 inner join (
+				 left join (
 								 SELECT policy_sk, max(policy_transaction_sk) over (partition by policy_sk 
 																		order by transaction_seq_no desc, policy_transaction_sk desc) policy_transaction_sk, 
 												   rank() over (partition by policy_sk 
 																		order by transaction_seq_no desc, policy_transaction_sk desc) rnk
 								 FROM	edw_core.tpolicy_transaction
 								 where	effective_dt_sk <= @end_dt_sk
-								 and	transaction_effective_dt_sk <= @end_dt_sk
+								 --and	transaction_effective_dt_sk <= @end_dt_sk
 								 and 	(transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk < 61) 
 							) sixty_day_pol_tr on tr.policy_sk = sixty_day_pol_tr.policy_sk
 				 left join edw_core.thome_coverage hoc on hoc.home_coverage_sk = tr.coverage_sk
 				 where	max_pol_tr.rnk = 1
-				 and sixty_day_pol_tr.rnk = 1
+				 and (sixty_day_pol_tr.rnk = 1 or sixty_day_pol_tr.rnk is null)
 				 and effective_dt_sk <= @end_dt_sk
-				 and	transaction_dt_sk <= @end_dt_sk
-				 and	transaction_effective_dt_sk <= @end_dt_sk
+				 --and	transaction_dt_sk <= @end_dt_sk
+				 --and	transaction_effective_dt_sk <= @end_dt_sk
 				 and transaction_dt_sk - expiration_dt_sk <= 60
 				 and   (pol.expiration_dt between @begin_dt and @end_dt or
 						pol.effective_dt between @begin_dt and @end_dt)
@@ -267,8 +270,8 @@ BEGIN
 					select policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 					from edw_core.tpolicy_transaction 
 					where effective_dt_sk <= @end_dt_sk
-					and   transaction_effective_dt_sk <= @end_dt_sk
-					and   transaction_dt_sk <= @end_dt_sk 
+					--and   transaction_effective_dt_sk <= @end_dt_sk
+					--and   transaction_dt_sk <= @end_dt_sk 
 					group by policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 				)
 				INSERT INTO --select * from  
@@ -314,7 +317,8 @@ BEGIN
 						exp_pols_prm.effective_date_60_day_prem, 
 						exp_pols_prm.effective_date_60_day_comm, 
 						exp_pols_prm.mid_term_cancel_amount, 
-						case when exp_pols_prm.cancel_ind = 0 then exp_pols_prm.expiring_premium_amount else 0 end expiring_premium_amount, 
+						case when exp_pols_prm.cancel_ind = 0 then exp_pols_prm.expiring_premium_amount else 0 end 
+						expiring_premium_amount, 
 						exp_pols_prm.expiring_premium_amount * (case when ren_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end) as expiringpremiumrenewalaccepted,
 						exp_pols_prm.expiring_premium_amount * (case when exp_pols_prm.non_renewal_in = 'Yes' then -1 else 0 end) as non_renewal_expiring_premium_amount,
 						exp_pols_prm.totalsquarefeet,  

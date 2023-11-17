@@ -1,3 +1,4 @@
+/****** Object:  StoredProcedure [edw_core].[sp_tquote_home_coverage]    Script Date: 11/16/2023 11:50:29 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -12,7 +13,7 @@ GO
 -- 11/11/23		Sandeep Gundreddy		            2. modified  logic
 -- 11/13/23		Sandeep Gundreddy		            3. modified quote_home_location_sk logic
 -- =========================================================================================================================== 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_coverage]
+create or ALTER   PROCEDURE [edw_core].[sp_tquote_home_coverage]
 
 AS
 BEGIN
@@ -63,6 +64,7 @@ BEGIN
 		drop table if exists edw_temp.tquote_home_coverage_temp1
 		SET @sql ='select quote_no,EffectiveDate,ExpirationDate,transaction_seq_no,source_system_sk,
 		quote_history_sk,quote_home_location_sk,product_name,CreatedDate,
+		FactorMethod, Factor, Retention, Reason,
 		'+ @ColumnsToPivot +' into edw_temp.tquote_home_coverage_temp1
 			from
 			(
@@ -70,12 +72,15 @@ BEGIN
 			act.PolicyNumber as quote_no,act.EffectiveDate ,act.ExpirationDate ,act.TransactionEffectiveDate ,
 			tqh.quote_history_sk,thql.quote_home_location_sk,
 			act.[Number] as transaction_seq_no,act.CreatedDate, pr.name product_name,
-			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value]
+			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value],
+			atvpf.FactorMethod, atvpf.Factor, atvpf.Retention, atvpf.Reason
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
+				inner join edw_stage.AccountTransactionVersionPremium atvp on atv.Id=atvp.AccountTransactionVersionId
+				left join edw_stage.AccountTransactionVersionPremiumfactor atvpf on atvp.Id=atvpf.AccountTransactionVersionPremiumId and atvpf.coverage = ''Homeowners''
 				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
 				left join edw_core.tquote_history tqh on tqh.quote_no=act.PolicyNumber
 						and tqh.effective_dt=act.EffectiveDate
@@ -131,6 +136,9 @@ BEGIN
 				--earthquake_damage_limt_amt,earthquake_shake,
 				hurricane_or_named_storm_deductible,named_storm_deductible,tornado_or_hailstorm_deductible,
 				wind_or_hailstorm_deductible,
+				premium_adjustment_method, premium_adjustment_factor, premium_adjustment_retention, premium_adjustment_retention_reason,
+				reinsurance_designation, reinsurance_layered_program_in, reinsurance_attachment_limit_amt, reinsurance_total_tiv_amt,
+				wildfire_threat, wildfire_hazard_severity,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			OUTPUT inserted.quote_home_coverage_sk INTO edw_temp.tquote_home_coverage_temp2
@@ -234,10 +242,15 @@ BEGIN
 				tthc.HurricaneOrNamedStormDeductible AS hurricane_or_named_storm_deductible,
 				tthc.NamedStormDeductible AS named_storm_deductible,
 				tthc.TornadoorHailstormDeductible AS tornado_or_hailstorm_deductible,
-				tthc.WindStormOrHailDeductible AS wind_or_hailstorm_deductible,
+				tthc.WindStormOrHailDeductible AS wind_or_hailstorm_deductible, 
+				tthc.FactorMethod, tthc.Factor, tthc.Retention, tthc.Reason,
+				tthc.ReinsuranceDesignation, tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit, tthc.ReinsuranceTotalTIV, 
+				tthc.WildfireThreat, tthc.WildfireHazardSeverity,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.tquote_home_coverage_temp1 AS tthc
+
+				/*
 			
 			UPDATE [edw_core].[tquote_home_coverage]
 			SET total_insured_value_amt = 	ISNULL(dwelling_limit_amt,0) + ISNULL(other_structures_limit_amt,0) + ISNULL(contents_limit_amt,0) +
@@ -249,6 +262,7 @@ BEGIN
 											end
 			WHERE
 				quote_home_coverage_sk IN(SELECT quote_home_coverage_sk FROM edw_temp.tquote_home_coverage_temp2)
+				*/
 		
 			SET @rows_affected=@@ROWCOUNT;  
 
@@ -276,4 +290,3 @@ BEGIN
 	END CATCH
 END
 
-GO

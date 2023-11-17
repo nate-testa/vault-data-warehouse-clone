@@ -1,5 +1,10 @@
-﻿-- ===========================================================================================================================
--- Author:		Yunus Mohammed 
+﻿/****** Object:  StoredProcedure [edw_core].[sp_thome_coverage]    Script Date: 11/16/2023 11:56:11 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- ===========================================================================================================================
 -- Description: This procedures loads home coverage data
 ------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
@@ -9,9 +14,11 @@
 -- 10/02/23		Architha Gudimalla				3. Added replace to remove , from sq footage
 -- 10/05/23		Architha Gudimalla				4. Removed TIV update and moved to separate proc
 -- 10/13/23		Architha Gudimalla				5. Updated residence type
--- 11/16/23		Architha Gudimalla				6. Fixed wild file
+-- 11/16/23		Architha Gudimalla				6. Added wildfire columns
+-- 11/16/23		Architha Gudimalla				7. updated the join for AccountTransactionVersionPremiumfactor
 -- =========================================================================================================================== 
-CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
+
+create or ALTER    PROCEDURE [edw_core].[sp_thome_coverage]
 
 AS
 BEGIN
@@ -77,7 +84,7 @@ BEGIN
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
 				inner join edw_stage.AccountTransactionVersionPremium atvp on atv.Id=atvp.AccountTransactionVersionId
-				inner join edw_stage.AccountTransactionVersionPremiumfactor atvpf on atvp.Id=atvpf.AccountTransactionVersionPremiumId
+				left join edw_stage.AccountTransactionVersionPremiumfactor atvpf on atvp.Id=atvpf.AccountTransactionVersionPremiumId and atvpf.coverage = ''Homeowners''
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
 				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId 
 				left join edw_core.tpolicy_history tph on tph.policy_no=act.PolicyNumber
@@ -238,7 +245,7 @@ BEGIN
 				tthc.WindStormOrHailDeductible AS wind_or_hailstorm_deductible,
 				tthc.FactorMethod, tthc.Factor, tthc.Retention, tthc.Reason,
 				tthc.ReinsuranceDesignation, tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit, tthc.ReinsuranceTotalTIV, 
-				tthc.wildfirethreat, tthc.wildfirehazardseverity,
+				tthc.WildfireThreat, tthc.WildfireHazardSeverity,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_coverage_temp1 AS tthc
