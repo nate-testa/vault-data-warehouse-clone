@@ -320,7 +320,7 @@ BEGIN
 				 and   effective_dt_sk <= @end_dt_sk
 				 and   transaction_effective_dt_sk <= @end_dt_sk
 				 and   transaction_dt_sk <= @end_dt_sk
-				 and   expiration_dt > @month_begin_dt
+				 and   expiration_dt > @month_begin_dt --dateadd(month,-2,@month_begin_dt)
 				 group by tr.policy_sk, tr.item_sk, tr.internal_coverage_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk
 				),
 				max_tr as
