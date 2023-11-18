@@ -14,6 +14,7 @@
 -- 11/01/23		Architha Gudimalla				8. Corrected written TIV col name 
 -- 11/10/23		Architha Gudimalla				9. Corrected net ep code
 --												   Corrected ee for canels
+-- 11/16/23		Architha Gudimalla				10. Updated TIV calc
 -- ==================================================================================================================================================== 
 
 CREATE  OR ALTER PROCEDURE [edw_core].[sp_titem_summary]
@@ -304,7 +305,7 @@ BEGIN
 				 and   tr.effective_dt_sk <= @end_dt_sk
 				 and   tr.transaction_effective_dt_sk <= @end_dt_sk
 				 and   tr.transaction_dt_sk <= @end_dt_sk
-				 and   pol.expiration_dt > dateadd(month,-2,@month_begin_dt)
+				 and   pol.expiration_dt > @month_begin_dt --dateadd(month,-2,@month_begin_dt)
 				 group by tr.policy_sk, tr.item_sk, tr.product_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk
 				),
 				max_tr as
@@ -351,11 +352,17 @@ BEGIN
 						isnull(xpsr_new.ee,0) + isnull(xpsr_exp.ee,0) + isnull(xpsr_cancel.ee,0) + isnull(xpsr_rein.ee,0) 
 						earned_exposure, 
 						getdate(), @etl_audit_sk,
-						isnull(hcov.dwelling_limit_amt,0)+isnull(hcov.other_structures_limit_amt,0)+isnull(hcov.contents_limit_amt,0) TIV,
+						isnull(hcov.dwelling_limit_amt,0) + isnull(hcov.other_structures_limit_amt,0) + isnull(hcov.contents_limit_amt,0) +
+						round(cast(hcov.loss_of_use_derived_pc as float) 
+						* cast(iif(hcov.residence_type = 'Homeowners', hcov.dwelling_limit_amt, hcov.contents_limit_amt) as int),0) TIV, 
 						(isnull(xpsr_new.ee,0) + isnull(xpsr_exp.ee,0) + isnull(xpsr_cancel.ee,0) + isnull(xpsr_rein.ee,0)) *
-						(isnull(hcov.dwelling_limit_amt,0)+isnull(hcov.other_structures_limit_amt,0)+isnull(hcov.contents_limit_amt,0)) EE_TIV,
+						(isnull(hcov.dwelling_limit_amt,0) + isnull(hcov.other_structures_limit_amt,0) + isnull(hcov.contents_limit_amt,0) +
+						round(cast(hcov.loss_of_use_derived_pc as float) 
+						* cast(iif(hcov.residence_type = 'Homeowners', hcov.dwelling_limit_amt, hcov.contents_limit_amt) as int),0)) EE_TIV,
 						(isnull(xpsr_new.we,0) + isnull(xpsr_exp.we,0) + isnull(xpsr_cancel.we,0) + isnull(xpsr_rein.we,0)) *
-						(isnull(hcov.dwelling_limit_amt,0)+isnull(hcov.other_structures_limit_amt,0)+isnull(hcov.contents_limit_amt,0)) WE_TIV,
+						(isnull(hcov.dwelling_limit_amt,0) + isnull(hcov.other_structures_limit_amt,0) + isnull(hcov.contents_limit_amt,0) +
+						round(cast(hcov.loss_of_use_derived_pc as float) 
+						* cast(iif(hcov.residence_type = 'Homeowners', hcov.dwelling_limit_amt, hcov.contents_limit_amt) as int),0)) WE_TIV,
 						isnull(prm.ceded_premium_amt,0) 
 				from prm
 				inner join max_tr on prm.policy_sk = max_tr.policy_sk and prm.transaction_seq_no = max_tr.transaction_seq_no

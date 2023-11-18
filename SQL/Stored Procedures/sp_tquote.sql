@@ -1,13 +1,18 @@
-﻿-- =====================================================================================================================
+﻿/****** Object:  StoredProcedure [edw_core].[sp_tquote]    Script Date: 11/16/2023 11:49:52 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =====================================================================================================================
 -- Description: This procedures inserts and updates tquote 
 -----------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
--- 11/14/23		Sandeep Gundreddy				2. fixed quote_term mapping
+-- 11/16/23		Architha Gudimalla				2. Updated the prior policy logic
 -- ===================================================================================================================== 
 
-CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote]
+create or ALTER      PROCEDURE [edw_core].[sp_tquote]
 
 AS 
 BEGIN
@@ -198,7 +203,7 @@ BEGIN
 				left join edw_stage.Insured ins on tmp1.PrimaryInsuredId = ins.Id
 				left join edw_stage.Product pr on tmp1.ProductId = pr.id
 				left join edw_temp.tquote_temp2 tmp2 on tmp2.id = tmp1.Id
-				left join edw_core.tpolicy prior_pol on tmp1.policynumber = prior_pol.policy_no and cast(tmp1.effectivedate as date) = prior_pol.expiration_dt
+				left join edw_core.tpolicy prior_pol on  tmp1.renewalofpolicynumber = prior_pol.policy_no and cast(tmp1.effectivedate as date) = prior_pol.expiration_dt
 				where pr.productline <> 'CommercialLines' --and tmp1.policynumber = 'CO100023657'
 		) AS Source
 		ON Source.PolicyNumber = Target.quote_no --and cast(Source.EffectiveDate as date) = cast(Target.effective_dt as date)

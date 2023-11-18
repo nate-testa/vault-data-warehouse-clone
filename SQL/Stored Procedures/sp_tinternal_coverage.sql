@@ -1,9 +1,15 @@
-﻿ -- =================================================================================================
+﻿/****** Object:  StoredProcedure [edw_core].[sp_tinternal_coverage]    Script Date: 11/16/2023 11:55:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- ========================================================================================================================================
 -- Author:		
 -- Description: This procedures loads inforce at item level 
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------
 -- 06/02/23										1. Created this procedure 
 -- 06/28/23		Architha Gudimalla				2. Modified after first run errors
 -- 07/25/23		Architha Gudimalla				3. Added TFS to internal coverages
@@ -11,9 +17,10 @@
 -- 10/12/23     Sandeep Gundreddy				5. Added logic for primary_coverage_cd
 -- 10/30/23     Architha Gudimalla				6. Removed the replace on the label
 -- 11/08/23     Architha Gudimalla				7. Updated logic for primary_coverage_cd for taxes
--- ================================================================================================= 
+-- 11/16/23     Architha Gudimalla				8. Added update statement becuase of dupe issue for optional coverages
+-- ======================================================================================================================================== 
 
-CREATE OR ALTER  PROCEDURE [edw_core].[sp_tinternal_coverage]
+create or ALTER    PROCEDURE [edw_core].[sp_tinternal_coverage]
 
 AS
 BEGIN
@@ -35,6 +42,19 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm); 
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+
+		--added updates becuase of dupe issue
+		update edw_stage.AccountTransactionCoveragePremium
+        set coverage='Optional Coverages'
+        where  label='Service Line' and coverage='Service Line';
+ 
+        update edw_stage.AccountTransactionCoveragePremium
+        set coverage='Optional Coverages'
+        where  label in ('Systems Protection','System Protection') and coverage='Systems Protection';
+ 
+        update edw_stage.AccountTransactionCoveragePremium
+        set coverage='Optional Coverages'
+        where  label='Cyber Protection' and coverage='Cyber';
 
 		-- Create temp table with name as tinternal_coverage_temp1
 		DROP TABLE IF EXISTS edw_temp.tinternal_coverage_temp1 ;

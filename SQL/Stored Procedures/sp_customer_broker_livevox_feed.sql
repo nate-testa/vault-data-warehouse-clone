@@ -133,7 +133,9 @@ BEGIN
                 mp.product,
                 p.broker_id,
                 b.broker_nm,
-                p.customer_id 
+                p.customer_id,
+                h.transaction_seq_no, 
+                ROW_NUMBER() OVER (partition by p.policy_no  order by h.transaction_seq_no  desc ) as rownum
             FROM vault_edw.edw_core.tpolicy AS p 
             LEFT JOIN vault_edw.edw_core.tpel_location AS h ON p.policy_no = h.policy_no 
             LEFT JOIN max_prem_policy AS mp ON p.policy_no = mp.policy_no
@@ -141,6 +143,10 @@ BEGIN
             WHERE mp.rownum = 1
             and mp.product = 'PEL'
             and h.location_no =1
+        ),
+        PEL_top AS (
+            SELECT * FROM PEL_policy_details
+            WHERE rownum = 1
         ),
         LUX_policy_details AS (
             SELECT 
@@ -170,13 +176,19 @@ BEGIN
                 mp.product,
                 p.broker_id,
                 b.broker_nm,
-                p.customer_id 
+                p.customer_id,
+                h.transaction_seq_no,
+                ROW_NUMBER() OVER (partition by p.policy_no  order by h.transaction_seq_no  desc ) as rownum
             FROM vault_edw.edw_core.tpolicy AS p 
             LEFT JOIN vault_edw.edw_core.tauto_garage_location AS h ON p.policy_no = h.policy_no 
             INNER JOIN max_prem_policy AS mp ON p.policy_no = mp.policy_no
             LEFT JOIN vault_edw.edw_core.tbroker AS b ON p.broker_id = b.broker_id 
             WHERE mp.rownum = 1
             and mp.product = 'AU'
+        ),
+        AU_top AS (
+            SELECT * FROM AU_policy_details
+            WHERE rownum = 1
         ),
         combined_pol_details AS (
             SELECT DISTINCT 
@@ -211,9 +223,9 @@ BEGIN
                 lpd.broker_nm as Legal_Entity_Name_4
             FROM max_prem_policy AS mp
             LEFT JOIN Home_policy_details AS hpd ON mp.customer_id = hpd.customer_id
-            LEFT JOIN PEL_policy_details AS ppd ON mp.customer_id = ppd.customer_id
+            LEFT JOIN PEL_top AS ppd ON mp.customer_id = ppd.customer_id
             LEFT JOIN LUX_policy_details AS lpd ON hpd.customer_id = lpd.customer_id
-            LEFT JOIN AU_policy_details AS apd ON hpd.customer_id = apd.customer_id
+            LEFT JOIN AU_top AS apd ON hpd.customer_id = apd.customer_id
         ),
         final_query AS (
             SELECT DISTINCT 
@@ -392,6 +404,8 @@ BEGIN
                 NULL as [Legal_Entity_Name_4],
                 'Agency User' as [Contact_Type]
             FROM vault_edw.edw_core.tproducer AS p
+            INNER JOIN (SELECT broker_id, email, max(producer_sk) as max_producer_sk FROM vault_edw.edw_core.tproducer GROUP BY broker_id, email) AS mp
+            ON p.producer_sk = mp.max_producer_sk
             LEFT JOIN vault_edw.edw_core.tbroker AS c ON p.broker_id = c.broker_id 
         )
 
@@ -411,7 +425,7 @@ BEGIN
             [Address_2],
             [City],
             [State],
-            [Zip_Code],
+            [Zip_Code], 
             [Do_Not_Contact],
             [Email_Address],
             [First_Name],
@@ -530,7 +544,7 @@ BEGIN
 
 		
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT getdate() FROM edw_temp.[customer_broker_livevox_feed_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT TOP 1 getdate() FROM edw_temp.[customer_broker_livevox_feed_temp1]),@last_source_extract_ts);
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

@@ -1,15 +1,21 @@
+/****** Object:  StoredProcedure [edw_core].[sp_tquote_auto_vehicle_coverage]    Script Date: 11/16/2023 11:57:22 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =============================================
--- Author:		Alberto Almario
--- Create Date: 2023-10-23
--- Description: This stored procedure insert and update info related to tquote_auto_vehicle_coverage.
--- 11/14/2023  Sandeep Gundreddy 2.modified tquote_auto_vehicle join
--- =============================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
+-- =====================================================================================================================
+-- Description: This procedures  insert and update info related to tquote_auto_vehicle_coverage.
+-----------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+-----------------------------------------------------------------------------------------------------------------------
+-- 10/23/23		Alberto Almario				    1. Created this procedure 
+-- 11/14/23		Sandeep Gundreddy			    2. modified tquote_auto_vehicle join
+-- 11/16/23		Architha Gudimalla			    3. modified garage join
+-- 11/16/23     Architha Gudimalla              2. Updated logic for auto_garage_location_sk
+-- ===================================================================================================================== 
+
+create or ALTER   PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -35,8 +41,9 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[tquote_auto_vehicle_coverage_temp1];
 
 		SELECT 
-			CreatedDate, quote_no, effective_dt, vehicle_no, expiration_dt, transaction_seq_no, quote_history_sk, quote_auto_vehicle_sk, quote_auto_garage_location_sk,
-            [PrimaryParkingLocation], [DrivewaySecurity], [VehicleUsage], [DistanceToWork], [AnnualMiles], [LPMPFilingDate], [Ownership], [RegistrationStatus], [RegistrationDate], 
+			CreatedDate, quote_no, effective_dt, vehicle_no, expiration_dt, transaction_seq_no, quote_history_sk, quote_auto_vehicle_sk, 
+            --quote_auto_garage_location_sk,
+            [GaragingLocationId], [PrimaryParkingLocation], [DrivewaySecurity], [VehicleUsage], [DistanceToWork], [AnnualMiles], [LPMPFilingDate], [Ownership], [RegistrationStatus], [RegistrationDate], 
             [ExpirationDate], [RegisteredOwner], [RegisteredOwnerName], [ListedDriverName], [NonDriverName], [CompanyOtherEntityName], [RegistrationState], [RegistrationAddressLine1], 
             [RegistrationAddressLine2], /*[*pending*-registration_address_unit_no],*/ [RegistrationAddressCity], [RegistrationAddressZipCode], [RegistrationAddressState], [SymbolBIPD], [SymbolPIPMED], 
             [SymbolOTC], [SymbolColl], [SymbolCostNewValue], [CostNew], [SymbolCostNew_ISO], [SymbolColl_ISO], [SymbolOTC_ISO], [SymbolBIPD_ISO], [SymbolPIPMED_ISO], 
@@ -54,7 +61,8 @@ BEGIN
                 SELECT
                     acct.CreatedDate, acct.PolicyNumber as quote_no, acct.EffectiveDate as effective_dt, acctvo.[Index] as vehicle_no, 
                     acct.ExpirationDate as expiration_dt, acct.Number as transaction_seq_no,
-                    qh.quote_history_sk, qav.quote_auto_vehicle_sk, qagl.quote_auto_garage_location_sk, acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
+                    qh.quote_history_sk, qav.quote_auto_vehicle_sk, --qagl.quote_auto_garage_location_sk, 
+                    acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
                     acctvof.[Field], acctvof.[Value],
                     CASE 
                         WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
@@ -77,11 +85,11 @@ BEGIN
                     AND qh.transaction_seq_no = acct.number
                 LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                     ON qav.quote_no = acct.PolicyNumber
-                    AND qav.vehicle_no = acctvo.[Index]
+                    AND qav.vehicle_no = acctvo.[Index]/*
                 LEFT JOIN [edw_core].[tquote_auto_garage_location] AS qagl
                     ON qagl.quote_no = acct.PolicyNumber
                     AND qagl.effective_dt = acct.EffectiveDate
-                    AND qagl.transaction_seq_no = acct.number
+                    AND qagl.transaction_seq_no = acct.number*/
                 WHERE
                     p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'
@@ -91,7 +99,7 @@ BEGIN
 			(
 				MAX([Value]) FOR [Field] IN 
                 (
-                    [PrimaryParkingLocation], [DrivewaySecurity], [VehicleUsage], [DistanceToWork], [AnnualMiles], [LPMPFilingDate], [Ownership], [RegistrationStatus], [RegistrationDate], 
+                    [GaragingLocationId], [PrimaryParkingLocation], [DrivewaySecurity], [VehicleUsage], [DistanceToWork], [AnnualMiles], [LPMPFilingDate], [Ownership], [RegistrationStatus], [RegistrationDate], 
                     [ExpirationDate], [RegisteredOwner], [RegisteredOwnerName], [ListedDriverName], [NonDriverName], [CompanyOtherEntityName], [RegistrationState], [RegistrationAddressLine1], 
                     [RegistrationAddressLine2], /*[*pending*-registration_address_unit_no],*/ [RegistrationAddressCity], [RegistrationAddressZipCode], [RegistrationAddressState], [SymbolBIPD], [SymbolPIPMED], 
                     [SymbolOTC], [SymbolColl], [SymbolCostNewValue], [CostNew], [SymbolCostNew_ISO], [SymbolColl_ISO], [SymbolOTC_ISO], [SymbolBIPD_ISO], [SymbolPIPMED_ISO], 
@@ -201,7 +209,7 @@ BEGIN
             t1.transaction_seq_no,
             t1.quote_history_sk,
             t1.quote_auto_vehicle_sk,
-            t1.quote_auto_garage_location_sk,
+            coalesce(gar.quote_auto_garage_location_sk,gar1.quote_auto_garage_location_sk),
             t1.[PrimaryParkingLocation] as primary_parking_location,
             t1.[DrivewaySecurity] as driveway_security,
             t1.[VehicleUsage] as vehicle_usage,
@@ -279,9 +287,15 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
-            CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in
+            CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in 
         FROM 
             [edw_temp].[tquote_auto_vehicle_coverage_temp1] AS t1
+        left join [edw_stage].[AccountTransactionVersionObject] AS atvo ON atvo.id = t1.GaragingLocationId
+        left join[edw_core].[tquote_auto_garage_location] AS gar 
+					ON gar.quote_no = t1.quote_no and gar.effective_dt = t1.effective_dt and gar.transaction_seq_no = t1.transaction_seq_no and gar.garage_location_no = atvo.[Index]
+        left join ( select rank() over (partition by quote_no, effective_dt, transaction_seq_no order by quote_no, effective_dt, transaction_seq_no,garage_location_no) rnk, *
+				from [edw_core].[tquote_auto_garage_location] 
+		) gar1 on gar1.rnk = 1 and  gar1.quote_no = t1.quote_no and gar1.effective_dt = t1.effective_dt and t1.transaction_seq_no = gar1.transaction_seq_no
         ;
 
         --************End************
