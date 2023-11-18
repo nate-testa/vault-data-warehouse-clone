@@ -1,4 +1,4 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_trenewal_summary]    Script Date: 11/16/2023 11:51:43 PM ******/
+﻿/****** Object:  StoredProcedure [edw_core].[sp_trenewal_summary]    Script Date: 11/16/2023 10:55:23 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -17,10 +17,10 @@ GO
 --												   Updated premiums to use net prm
 -- 11/15/23		Architha Gudimalla				6. Added logic for cancel rewrites
 -- 11/15/23		Architha Gudimalla				7. Added uw_company_cd
---
+-- 11/17/23		Architha Gudimalla				8. Fixed divide by 0 error
 -- ==================================================================================================================================== 
 
-create or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
+ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
 @in_yearmonth int = null
 AS 
 BEGIN
@@ -174,7 +174,7 @@ BEGIN
 								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - transaction_effective_dt_sk)),5) 
 								else 0 
 								end) as initial_written_prem,
-						sum(CASE WHEN transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk  < 61 
+						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk and transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk  < 61 
 								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - transaction_effective_dt_sk)),5) 
 								else 0 
 								end) as effective_date_60_day_prem,
