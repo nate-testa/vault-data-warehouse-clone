@@ -2,7 +2,12 @@
 -- Author:		Yunus Mohammed
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert homeowners additional coverage data
--- =============================================
+------------------------------------------------------------------------------------------------------------------------------
+-- Change date			|Author						|	Change Description
+------------------------------------------------------------------------------------------------------------------------------
+--						Yunus Mohammed				1. Created this procedure 
+-- 11/17/23				Yunus Mohammed				2. Added new columns
+-- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
 
 AS
@@ -158,6 +163,9 @@ BEGIN
 			loss_assessment_increase_desc,sinkhole_territory,specific_named_structures_property_and_liability_exclusion_in,
 			specific_named_structures_property_and_liability_exclusion_desc,underground_water_supplyline_exclusion_in,
 			earthquake_score,earthquake_earthmovement_exclusion_ind,
+			leed_certification_discount_in,mortgage_free_discount_in,annual_brush_removal_contract_in,
+			firewise_community_credit_in,monitored_heat_sensors_in,builders_defect_exclusion_in,
+			gated_community_patrol_service,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT 
@@ -307,7 +315,14 @@ BEGIN
 		   ,SpecificNamedStructuresPropertyandLiabilityExclusionDescription AS specific_named_structures_property_and_liability_exclusion_desc
 		   ,UndergroundResourcesExclusion AS underground_water_supplyline_exclusion_in
 		   ,EarthquakeScore AS earthquake_score
-		   ,EarthquakeandEarthMovementExclusion AS earthquake_earthmovement_exclusion_ind 
+		   ,EarthquakeandEarthMovementExclusion AS earthquake_earthmovement_exclusion_ind
+		   ,LEEDCertificationDiscount AS leed_certification_discount_in
+		   ,MortgageFreeDiscount AS mortgage_free_discount_in 
+		   ,AnnualBrushRemovalContract AS annual_brush_removal_contract_in
+		   ,FirewiseCommunityCredit AS firewise_community_credit_in
+		   ,MonitoredHeatSensors AS monitored_heat_sensors_in
+		   ,BuildersDefectExclusion AS builders_defect_exclusion_in
+		   ,GatedCommunityPatrolService AS gated_community_patrol_service
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts
