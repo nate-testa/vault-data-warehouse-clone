@@ -35,7 +35,7 @@ BEGIN
 		drop table if exists edw_temp.tquote_mortgagee_temp1
 		select 
 			PolicyNumber as quote_no,EffectiveDate,ExpirationDate,transaction_seq_no,createdDate,quote_history_sk,source_system_sk,
-			NumberOfMortgagees,[Name],MortgageeType,BillMortgagee,Email,Fax,Phone,
+			mortgagee_no,NumberOfMortgagees,[Name],MortgageeType,BillMortgagee,Email,Fax,Phone,
 			IsaoAtima,IsaoAtimaOther,LoanNumber,AddressLine1,AddressLine2,AddressCity,AddressState,
 			AddressZipCode,AddressCounty,AddressCountry
 			into edw_temp.tquote_mortgagee_temp1
@@ -43,7 +43,7 @@ BEGIN
 		(
 		select 
 			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
-			tqh.quote_history_sk,
+			tqh.quote_history_sk,atvo.[index] mortgagee_no,
 			act.number AS transaction_seq_no,act.createdDate,
 			CASE WHEN act.ExternalSourceId IS NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value]
 			from
@@ -59,7 +59,7 @@ BEGIN
 			where
 				act.PolicyNumber is not null
 				and act.[Stage] IN ('QUOTE','POLICY')
-				and atvo.ObjectType IN ('Homeowner','Condo','Mortgagee')
+				and atvo.ObjectType IN ('Mortgagee')
 				and pr.ProductLine = 'PersonalLines'
 				and atvof.Field IN ('NumberOfMortgagees','Name','MortgageeType','BillMortgagee','Email','Fax','Phone',
 					'IsaoAtima','IsaoAtimaOther','LoanNumber','AddressLine1','AddressLine2','AddressCity',
@@ -83,7 +83,7 @@ BEGIN
 		SELECT
 			ttlc.quote_no AS policy_no,ttlc.EffectiveDate AS effective_dt,
 			ExpirationDate AS expiration_dt,transaction_seq_no AS transaction_seq_no,quote_history_sk,
-			NumberOfMortgagees AS mortgagee_no,	[Name] AS mortgagee_nm,MortgageeType AS mortgagee_type,BillMortgagee bill_mortgagee_in,
+			mortgagee_no,	[Name] AS mortgagee_nm,MortgageeType AS mortgagee_type,BillMortgagee bill_mortgagee_in,
 			Email AS email,Fax AS fax,Phone AS phone_no,IsaoAtima AS isao_atima,IsaoAtimaOther isao_atima_other,
 			LoanNumber AS loan_no,AddressLine1 AS address_line_1,AddressLine2 AS address_line_2,AddressCity AS city_nm,
 			AddressState AS state_cd,AddressZipCode AS zip_cd,AddressCounty AS country_nm,AddressCountry AS country_nm,
