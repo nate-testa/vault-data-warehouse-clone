@@ -1,7 +1,13 @@
-﻿-- =================================================================================================
+﻿SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =================================================================================================
 -- Author:		Yunus Mohammed
 -- Create Date: 07/7/2023
 -- Description: This procedures inserts and updates claim cause of loss
+-- 11/18/2023  Sandeep Gundreddy  modified logic to use edw_stage.t_clm_losscause
+-- ==================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcause_of_loss]
 
@@ -27,11 +33,11 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.tcause_of_loss_temp1 
 		SELECT
 		DISTINCT
-			cause_of_loss_cd,
-			cause_of_loss_desc
+            loss_cause_code as cause_of_loss_cd,
+			loss_cause_name as cause_of_loss_desc
 		INTO edw_temp.tcause_of_loss_temp1
 		FROM 
-		edw_stage.tcause_of_loss
+		edw_stage.t_clm_losscause
 
 		-- Insert and Update tcause_of_loss table
 		MERGE edw_core.tcause_of_loss  AS Target
@@ -72,3 +78,4 @@ BEGIN
 	END CATCH
 END
 
+GO

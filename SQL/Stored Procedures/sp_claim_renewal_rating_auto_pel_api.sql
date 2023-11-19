@@ -1,3 +1,7 @@
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 -- =================================================================================================
 -- Author:		Yunus Mohammed
 -- Create Date: 11/15/2023
@@ -151,3 +155,4 @@ BEGIN
 		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
 	END CATCH
 END
+GO

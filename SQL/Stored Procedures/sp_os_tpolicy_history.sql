@@ -119,12 +119,13 @@ BEGIN
 		LEFT JOIN edw_core.tcustomer tcust ON tcust.customer_id=trx.customer_id
 		LEFT JOIN edw_core.tpolicy tp ON tp.policy_no=trx.policy_trx_policy_number
 		LEFT JOIN edw_core.tproduct tprd ON tprd.product_cd = tp.product_cd
+		INNER JOIN edw_core.tpolicy tph on tph.policy_no = trx.policy_trx_policy_number and tph.source_system_sk = 1
 		WHERE
 			trx.policy_trx_process_date IS NOT NULL
 			and trx.policy_trx_policy_number IS NOT NULL
 			AND tbrk.broker_id IS NOT NULL
 			AND trx.policy_trx_risk_state IS NOT NULL
-			AND trx.policy_trx_processed_tf = '1'
+			AND trx.policy_trx_processed_tf = '1'			
 		)
 		-- trx.policy_trx_policy_number ORDER BY trx.policy_trx_seq_num desc
 		SELECT DISTINCT
@@ -135,7 +136,7 @@ BEGIN
 			policy_sk,broker_sk,customer_sk,broker_id,customer_id,transaction_type,transaction_ts,transaction_desc,
 			cancelltion_reason_desc,premium_amt,net_premium_amt,tax_fee_surcharge_amt,commission_amt,
 			null as annual_premium_amt,null as transaction_initiated_by,null as transaction_issued_by,
-			underwriter_nm,producer_nm,null as product_sk,null as policy_change_summary,null as commission_pc,
+			underwriter_nm,producer_nm,product_sk,null as policy_change_summary,null as commission_pc,
 			null as override_commission_pc,null as commission_retention
 		INTO edw_temp.os_tpolicy_history_temp1
 		FROM
@@ -157,7 +158,7 @@ BEGIN
 			customer_sk,broker_id,customer_id,transaction_type,transaction_ts,transaction_desc,
 			cancelltion_reason_desc,premium_amt,net_premium_amt,tax_fee_surcharge_amt,commission_amt,
 			null as annual_premium_amt,null as transaction_initiated_by,null as transaction_issued_by,
-			underwriter_nm,producer_nm,null as product_sk,null as policy_change_summary,null as commission_pc,
+			underwriter_nm,producer_nm,product_sk,null as policy_change_summary,null as commission_pc,
 			null as override_commission_pc,null as commission_retention,
 			1 AS source_system_sk,GETDATE() AS create_ts,GETDATE() update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM

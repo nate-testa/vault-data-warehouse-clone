@@ -2,7 +2,8 @@
 -- Author:		Yunus Mohammed
 -- Create Date: 10/20/2023
 -- Description: This procedures insert OneShied policy into tpolicy table
--- =============================================
+-----------------------------------------------------------------------------------
+
 CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tpolicy]
 
 AS
@@ -94,12 +95,14 @@ BEGIN
 			LEFT JOIN edw_stage.dragon_billingaccount ba on ba.billingaccount_id = f.billing_account_id
 			LEFT JOIN edw_core.tbroker tbrk on tbrk.broker_id=cast(trx.policy_trx_partner_id as varchar(255))
 			LEFT JOIN edw_core.tcustomer tcust on tcust.customer_id=cast(trx.customer_id as varchar(255))
+			LEFT JOIN edw_core.tpolicy tph on tph.policy_no = trx.policy_trx_policy_number				
 		-- where p.policy_id=89852196836
 		WHERE 
 			trx.policy_trx_process_date IS NOT NULL
 			AND trx.policy_trx_policy_number IS NOT NULL
 			AND tbrk.broker_id IS NOT NULL
 			AND trx.policy_trx_risk_state IS NOT NULL
+			AND tph.policy_sk is null
 		) a
 		WHERE rn=1
 
@@ -125,6 +128,23 @@ BEGIN
 			
 		SET @rows_affected=@@ROWCOUNT;
 
+		
+		update tp
+		SET
+			tp.product_cd = 'AU'
+		FROM
+		edw_core.tpolicy tp
+		inner join 
+		(
+			select product,policy_number
+			from edw_stage.OneShieldPolicy 
+			where
+			product='Auto'
+			group by product,policy_number
+		) as osp on osp.policy_number = tp.policy_no
+		where
+		tp.source_system_sk = 1
+		
 		-- Update control table
 		SET @new_last_source_extract_ts= '2017-01-01'
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts
