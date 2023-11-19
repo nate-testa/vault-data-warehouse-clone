@@ -38,9 +38,9 @@ BEGIN
 		pt.policy_trx_premium_chg AS premium_amt,
 		f.premium_amount AS net_premium_amt,
 		fc.premium_amount AS commission_amt,
-		NULL as annual_premium_amt,
+		0 as annual_premium_amt,
 		fm.premium_amount AS tax_fee_surcharge_amt,
-		NULL as item_sk,NULL AS coverage_sk,NULL AS vehicle_coverage_sk,
+		0 as item_sk,0 AS coverage_sk,0 AS vehicle_coverage_sk,
 		td.date_sk AS transaction_dt_sk,
 		tdac.date_sk AS calendar_month_sk,
 		tdac.date_sk AS accouting_month_sk,
@@ -53,6 +53,7 @@ BEGIN
 		FROM
 		edw_stage.dragon_policy p
 		inner join edw_stage.dragon_policy_trx pt ON p.policy_id=pt.policy_id
+		inner JOIN edw_core.tpolicy tph on tph.policy_no = pt.policy_trx_policy_number and tph.source_system_sk = 1
 		left join edw_core.tpolicy tp on  tp.policy_no = pt.policy_trx_policy_number  -- tp.policy_no=p.policy_number
 		left join edw_core.tproduct tprd on tprd.product_cd=tp.product_cd
 		INNER JOIN edw_core.tbroker tb ON tb.broker_id=pt.policy_trx_partner_id
@@ -126,7 +127,7 @@ BEGIN
 			END
 		WHERE
 			tp.policy_sk IS NOT NULL
-			AND pt.policy_trx_process_date IS NOT NULL
+			AND pt.policy_trx_process_date IS NOT NULL			
 		
 		INSERT INTO edw_core.tpolicy_transaction
 		(
