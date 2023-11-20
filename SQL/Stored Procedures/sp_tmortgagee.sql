@@ -28,7 +28,7 @@ BEGIN
 		drop table if exists edw_temp.tmortgagee_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,policy_history_sk,source_system_sk,
-			IssuedDate,NumberOfMortgagees,[Name],MortgageeType,BillMortgagee,Email,Fax,Phone,
+			IssuedDate,mortgagee_no, NumberOfMortgagees,[Name],MortgageeType,BillMortgagee,Email,Fax,Phone,
 			IsaoAtima,IsaoAtimaOther,LoanNumber,AddressLine1,AddressLine2,AddressCity,AddressState,
 			AddressZipCode,AddressCounty,AddressCountry
 			into edw_temp.tmortgagee_temp1
@@ -39,7 +39,7 @@ BEGIN
 			(
 			 
 			select DENSE_RANK()OVER(PARTITION BY act.PolicyNumber,cast(act.EffectiveDate as date) ORDER BY act.policychangenumber DESC) AS policy_txn_order,
-			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
+			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,atvo.[index] mortgagee_no,
 			CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.policy_history_sk,
 			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,act.IssuedDate,
 			CASE WHEN act.ExternalSourceId IS NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value]
@@ -56,7 +56,7 @@ BEGIN
 			where
 				act.PolicyNumber is not null
 				and act.[State] ='ISSUED'
-				and atvo.ObjectType IN ('Homeowner','Condo','Mortgagee')
+				and atvo.ObjectType IN ('Mortgagee')
 				and pr.ProductLine = 'PersonalLines'
 				and atvof.Field IN ('NumberOfMortgagees','Name','MortgageeType','BillMortgagee','Email','Fax','Phone',
 					'IsaoAtima','IsaoAtimaOther','LoanNumber','AddressLine1','AddressLine2','AddressCity',
@@ -82,7 +82,7 @@ BEGIN
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
 			ExpirationDate AS expiration_dt,TransactionDate AS transaction_dt,transaction_seq_no AS transaction_seq_no,policy_history_sk,
-			NumberOfMortgagees AS mortgagee_no,	[Name] AS mortgagee_nm,MortgageeType AS mortgagee_type,BillMortgagee bill_mortgagee_in,
+			mortgagee_no,	[Name] AS mortgagee_nm,MortgageeType AS mortgagee_type,BillMortgagee bill_mortgagee_in,
 			Email AS email,Fax AS fax,Phone AS phone_no,IsaoAtima AS isao_atima,IsaoAtimaOther isao_atima_other,
 			LoanNumber AS loan_no,AddressLine1 AS address_line_1,AddressLine2 AS address_line_2,AddressCity AS city_nm,
 			AddressState AS state_cd,AddressZipCode AS zip_cd,AddressCounty AS country_nm,AddressCountry AS country_nm,
