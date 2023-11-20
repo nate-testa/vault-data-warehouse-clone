@@ -1,8 +1,12 @@
 ﻿ -- =================================================================================================
 -- Author:		Yunus Mohammed
--- Create Date: 07/7/2023
 -- Description: This procedures inserts and updates claim catastrophe code
-
+---------------------------------------------------------------------------------------------------
+-- Change date 		|Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 07/07/23			Yunus Mohammed				1. Made changes to fix the errors on first run 
+-- 11/20/23			Yunus Mohammed				2. Added Throw statement 
+-- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcatastrophe]
 
 AS
@@ -69,7 +73,8 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
 

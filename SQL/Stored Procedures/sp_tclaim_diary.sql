@@ -1,11 +1,11 @@
 -- =================================================================================================
 -- Author:		Yunus Mohammed
--- Create Date: 07/28/2023
 -- Description: This procedures inserts and updates claim diary data
 -----------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 11/03/23		Yunus Mohammd				1. Created this procedure
+-- 11/20/23		Yunus Mohammd				2. Added Throw
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_diary]
 
@@ -112,7 +112,8 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
 
