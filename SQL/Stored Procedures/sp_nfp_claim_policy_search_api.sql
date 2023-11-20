@@ -44,16 +44,18 @@ BEGIN
 		FROM
 			edw_stage.nfp_policy
 		WHERE
-			insured_cert_no is not null and
-			update_ts > @last_source_extract_ts
-		) as temp
+			insured_cert_no is not null
 			
+		) as temp
+		WHERE
+			update_ts > @last_source_extract_ts
+
 		INSERT INTO edw_integration.claim_policy_search_api
 		(
 			policy_no,effective_dt,expiration_dt,transaction_effective_dt,transaction_seq_no,policy_status,
 			insured_nm,insured_type,uw_company_nm,product_nm,transaction_type,risk_item,source_system_nm,
 			create_ts,update_ts,etl_audit_sk
-		)
+		)		
 		SELECT policy_no,effective_dt,expiration_dt,transaction_effective_dt,transaction_seq_no,policy_status,
 		insured_nm,insured_type,uw_company_nm,product_nm,transaction_type,risk_item,source_system_nm,
 		GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk AS etl_audit_sk
@@ -63,11 +65,11 @@ BEGIN
 			rn =1
 
 		SET @rows_affected=@@ROWCOUNT;
-
+		
 		-- Update control table
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(update_ts) FROM edw_temp.nfp_claim_policy_search_api_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-
+		
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
