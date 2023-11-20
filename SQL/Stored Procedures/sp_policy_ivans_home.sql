@@ -359,7 +359,8 @@ BEGIN
 						on thc.home_coverage_sk = tcct.home_coverage_sk
 						LEFT JOIN edw_core.tinternal_coverage as ic
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
-						WHERE coalesce(pt.premium_amt, 0) + coalesce(tcct.scheduled_limit_amt, 0) + coalesce(tcct.scheduled_highest_value_limit_amt, 0) <> 0 
+						WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+						and coalesce(pt.premium_amt, 0) + coalesce(tcct.scheduled_limit_amt, 0) + coalesce(tcct.scheduled_highest_value_limit_amt, 0) <> 0 
 						and ic.aslob_cd ='090' and ic.product_cd = 'HO' and ic.internal_coverage_category_nm = 'Premium' and ic.internal_coverage_cd like '%chedule%'
 						--
 						UNION ALL
@@ -423,7 +424,8 @@ BEGIN
 						on thc.home_coverage_sk = tcct.home_coverage_sk
 						LEFT JOIN edw_core.tinternal_coverage as ic
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
-						WHERE coalesce(pt.premium_amt, 0) + coalesce(tcct.blanket_limit_amt, 0) + coalesce(tcct.blanket_single_article_limit_amt, 0) + coalesce(tcct.blanket_highest_value_limit_amt, 0) <> 0 
+						WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+						and coalesce(pt.premium_amt, 0) + coalesce(tcct.blanket_limit_amt, 0) + coalesce(tcct.blanket_single_article_limit_amt, 0) + coalesce(tcct.blanket_highest_value_limit_amt, 0) <> 0 
 						and ic.aslob_cd ='090' and ic.product_cd = 'HO' and ic.internal_coverage_category_nm = 'Premium' and ic.internal_coverage_cd like '%lanket%'
 					) ud
 						WHERE  ud.policy_sk = ptf.policy_sk
