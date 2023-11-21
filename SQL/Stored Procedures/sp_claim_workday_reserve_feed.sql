@@ -103,7 +103,7 @@ BEGIN
 					LEFT JOIN edw_core.tpolicy tp on tp.policy_no=tc.policy_no
 					LEFT JOIN edw_core.tstate st on st.state_cd=tp.risk_state_cd
 				WHERE
-					tcr.claim_transaction_sk BETWEEN @begin_sk AND @end_sk
+					tcr.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
 			)
 			INSERT INTO edw_integration.claim_workday_reserve_feed
 			(
