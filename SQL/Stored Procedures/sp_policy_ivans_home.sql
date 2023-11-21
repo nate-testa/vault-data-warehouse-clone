@@ -32,22 +32,23 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200));
 
 		-- Step1 limit amount of rows.
-		--DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp2];
 
-        WITH 
-        policy_transaction AS (
-            SELECT 
-                policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
-                MAX(create_ts) as create_ts, 
-                SUM(premium_amt) as premium_amt,
-                SUM(annual_premium_amt) as annual_premium_amt
-				,coverage_sk
-            FROM edw_core.tpolicy_transaction as pt
-            WHERE product_sk = 1 -- Home
-                AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-            GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
+        SELECT 
+            policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
+            MAX(create_ts) as create_ts, 
+            SUM(premium_amt) as premium_amt,
+            SUM(annual_premium_amt) as annual_premium_amt
 			,coverage_sk
-        ),
+		INTO [edw_temp].[policy_ivans_home_temp1]
+        FROM edw_core.tpolicy_transaction as pt
+        WHERE product_sk = 1 -- Home
+            AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+        GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
+		,coverage_sk;
+
+		WITH
 		json_home_coverage AS (
 			SELECT ptf.policy_sk, ptf.effective_dt_sk ,ptf.transaction_seq_no, (
 				SELECT * FROM (
@@ -110,7 +111,7 @@ BEGIN
 						,0.0 as currentAmount
 						,CAST(hc.dwelling_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
-					FROM policy_transaction as pt 
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					WHERE  pt.policy_sk = ptf.policy_sk
@@ -126,7 +127,7 @@ BEGIN
 						,0.0 as currentAmountcurrentAmount
 						,CAST(hc.other_structures_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
-					FROM policy_transaction as pt 
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					WHERE  pt.policy_sk = ptf.policy_sk
@@ -142,7 +143,7 @@ BEGIN
 						,0.0 as currentAmount
 						,CAST(hc.contents_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
-					FROM policy_transaction as pt 
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					WHERE  pt.policy_sk = ptf.policy_sk
@@ -158,7 +159,7 @@ BEGIN
 						,0.0 as currentAmount
 						,CAST(hc.loss_of_use_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
-					FROM policy_transaction as pt 
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					WHERE  pt.policy_sk = ptf.policy_sk
@@ -174,7 +175,7 @@ BEGIN
 						,0.0 as currentAmount
 						,CAST(hc.personal_liability_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
-					FROM policy_transaction as pt 
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					WHERE  pt.policy_sk = ptf.policy_sk
@@ -190,7 +191,7 @@ BEGIN
 						,0.0 as currentAmount
 						,CAST(hc.medical_payments_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
-					FROM policy_transaction as pt 
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					WHERE  pt.policy_sk = ptf.policy_sk
@@ -199,7 +200,7 @@ BEGIN
 					--
 				) jd FOR JSON PATH, INCLUDE_NULL_VALUES
 			) AS Home_Coverages
-			FROM policy_transaction as ptf
+			FROM [edw_temp].[policy_ivans_home_temp1] as ptf
 		),
 		json_Additional_Interests AS (
 			SELECT
@@ -433,7 +434,7 @@ BEGIN
                        AND ud.transaction_seq_no = ptf.transaction_seq_no
 					FOR JSON PATH, INCLUDE_NULL_VALUES 
 				) Home_Collection_Coverages
-			FROM policy_transaction as ptf
+			FROM [edw_temp].[policy_ivans_home_temp1] as ptf
         ),
 		loss_history AS (
             SELECT 
@@ -443,203 +444,139 @@ BEGIN
             GROUP BY 
                 policy_no, effective_dt, transaction_seq_no
         )
-		,temp_ivans_home AS (
-			SELECT 
-			/* */
-			'PolicyDownload' as [001_MsgTypeCd]
-			,CASE 
-				WHEN ptt.policy_transaction_type_nm = 'New' THEN 'NBS'
-				WHEN ptt.policy_transaction_type_nm = 'Cancellation' THEN 'XLC'
-				WHEN ptt.policy_transaction_type_nm = 'Reinstatement' THEN 'REI'
-				WHEN ptt.policy_transaction_type_nm = 'Renewal' THEN 'RW'
-				WHEN ptt.policy_transaction_type_nm = 'Rescind Non-Renewal' THEN 'RNR'
-				WHEN ptt.policy_transaction_type_nm = 'Endorsement' THEN 'PCH'
-				WHEN ptt.policy_transaction_type_nm = 'Non-Renewal' THEN 'NR'
-				WHEN ptt.policy_transaction_type_nm = 'Rollback' THEN 'RBK'
-				ELSE 'OTH'
-			END AS [002_BusinessPurposeTypeCd]
-			,d2.actual_dt as [003_TransactionRequestDt]
-			,d1.actual_dt as [004_TransactionEffectiveDt]
-			,'USD' as [005_CurCd]
-			,'P' as [006_BroadLOBCd]
-			,'' as [007_IVANSXMLVersionCd]
-			,'EDW' as [008_SourceSystem]
-			,p.broker_id as [009_ContractNumber]
-			,'' as [010_ProducerSubCode]
-			,c.customer_id as [011_InsurerId]
-			,c.last_nm AS [012_Surname]
-			,c.first_nm AS [013_GivenName]
-			,c.middle_nm as [014_OtherGivenName]
-			,CASE WHEN c.Insured_type = 'Trust/LLC'  THEN 'Entity' END as [182_CommercialName]
-			,c.prefix AS [015_Prefix]
-			,CASE WHEN c.mailing_Address_line1 IS NOT NULL THEN 'MailingAddress' ELSE 'LocationAddress' END as [016_AddrTypeCd]
-			,c.mailing_address_line1 as [017_Addr1]
-			,c.mailing_address_city_nm as [018_City]
-			,c.mailing_address_state_cd as [019_StateProvCd]
-			,c.mailing_address_zip_cd as [020_PostalCode]
-			,c.mailing_address_country_nm as [021_Country]
-			,hl.latitude as [022_Latitude]
-			,hl.longitude as [023_Longitude]
-			,c.mailing_address_county_nm as [024_County]
-			,CASE
-					WHEN c.home_phone_no is not null THEN 'Home'
-					WHEN c.mobile_phone_no is not null THEN 'Mobile'
-					ELSE ''
-				END as [025_PhoneTypeCd]
-			,COALESCE(c.home_phone_no, c.mobile_phone_no, '') as [026_PhoneNumber]
-			,c.email as [027_EmailAddr]
-			,CASE WHEN poi.primary_insured_in = 'Yes' then 'Primary' ELSE 'Secondary' END as [028_InsuredOrPrincipalRoleCd]
-			,CASE WHEN poi.primary_insured_in = 'Yes' then 'Primary' ELSE 'Secondary' END as [029_InsuredOrPrincipalRoleDesc]
-			,p.policy_no as [030_PolicyNumber]
-			,'P' as [031_BroadLOBCd]
-			, pr.product_nm as [032_LOBCd] -- pr.product_nm edw_core.tproduct ON p.product_cd = pr.product_cd
-			,CASE 
-					WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '16186' 
-					WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '16237' 
-					ELSE '' 
-				END as [033_NAICCd]
-			,p.effective_dt as [034_EffectiveDt]
-			,p.expiration_dt as [035_ExpirationDt]
-			,'' as [036_BillingAccountNumber]
-			,'' as [037_ControllingStateProvCd]
-			,'****Pending****' as [038_BillingMethodCd]
-			,COALESCE(pt.premium_amt, 0) as [039_Amt] -- Need to validate this
-			,COALESCE(pt.premium_amt, 0)  as [040_Amt]
-			,'en' as [041_LanguageCd]
-			,p.original_policy_effective_dt as [042_OriginalPolicyInceptionDt]
-			,'' as [043_PayorCd] 
-			,'' as [044_RenewalBillingMethodCd]
-			,'' as [045_RenewalPayorCd]
-			,'' as [046_FormNumber]
-			,'' as [047_FormName]
-			,'' as [048_EditionDt]
-			,'' as [049_IterationNumber]
-			,'' as [050_TotalPaidLossAmt]
-			,lh.loss_seq_no as [051_NumLosses]
-			--,'numberLosses' as [051_NumLosses]
-			,CASE WHEN p.prior_term_policy_no IS NOT NULL AND p.prior_term_policy_no <> p.policy_no THEN 'Prior' ELSE '' END as [052_PolicyCd]
-			,p.original_policy_no as [053_PolicyNumber]
-			,pr.product_nm as [054_LOBCd]
-			,CASE WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '16186' WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '16237' ELSE '' END AS [055_NAICCd]
-			,poi.insured_nm as [056_InsurerName]
-			,op.min_effective_dt as [057_EffectiveDt]
-			,op.min_expiration_dt as [058_ExpirationDt]
-			,'' as [059_MethodPaymentCd]
-			,CASE 
-					WHEN ba.payment_plan = '1P' THEN 'Full Pay'
-					ELSE replace(ba.payment_plan, 'P', ' Pay')
-				END AS [060_PaymentPlanCd]
-			,CASE 
-					WHEN ba.payment_plan = '1P' THEN 'Y'
-					WHEN ba.payment_plan is null OR ba.payment_method = '' THEN ''
-					ELSE 'N'
-				END AS [061_PaidInFullInd]
-			,p.policy_sk as [062_id]
-			,c.customer_id as [063_InsurerId]
-			,hl.address_line_1 as [064_Addr1]
-			,hl.city_nm as [065_City]
-			,hl.state_cd as [066_StateProvCd]
-			,hl.zip_cd as [067_PostalCode]
-			,hl.latitude as [068_Latitude]
-			,hl.longitude as [069_Longitude]
-			,hl.county_nm as [070_County]
-			,'' as [081_FireDistrict]
-			,hc.distance_to_fire_station_miles as [082_FireStation]
-			,'' as [083_RiskLocationCd]
-			,pr.product_nm as [084_LOBCd]
-			,CASE WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '16186' WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '16237' ELSE '' END AS [085_NAICCd]
-			,'' as [086_CoverageCd]
-			,'' as [087_CoverageDesc]
-			,'' as [088_Amt]
-			,'' as [089_Amt] 
-			,'DWEL' as [090_RiskType]
-			,'' as [091_PrincipalUnitAtRiskInd]
-			,CASE
-				WHEN LOWER(hc.residence_type) = 'tenant' THEN '04'
-				WHEN LOWER(hc.residence_type) = 'homeowners' THEN '05'
-				WHEN LOWER(hc.residence_type) IN (
-					'condominium', 'condminium', 'condo'
-				) THEN '06'
-				ELSE 'NA'
-				END as [092_PolicyTypeCd]
-			,'' as [093_PurchaseDt]
-			,NULL as [094_Amt]
-			,'' as [095_TerritoryCd]
-			,'' as [096_WiringTypeCd]
-			,hc.fire_protection as [097_FireProtectionClassCd]
-			,hc.distance_to_fire_station_miles as [098_DistanceToFireStation]
-			,hc.distance_to_fire_hydrant_feet as [099_DistanceToHydrant]
-			,CASE
-				WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '),  '\r', ' ')) = 'Tenant' THEN 'Tenant' 
-				WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) = 'Rented to Others' THEN 'Rented to Others' 
-				WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) = 'Partially Rented to Others' THEN 'Partially Rented to Others' 
-				WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) = 'Vacant' THEN 'Vacant'
-				WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' '))
-					IN (
-						'Primary', 'Seasonal', 'Seasonal with Water Leak Detection (No Alarm) or Low Temperature Monitoring Device', 
-						'Seasonal/Secondary', 'Seasonal without Primary', 
-						'Seasonal w/ Water Leak Detection/Shut off (No Alarm) or Temperature Monitoring Device', 
-						'Seasonal with Full Time Live in Care Taker or Water Leak Detection/Shut off (Alarm)', 
-						'Seasonal with Water Leak Detection/Shut off (No Alarm) or Temperature Monitoring Device', 
-						'Seasonal Full Time Live In Care Taker or Water Leak Detection (Alarm)', 
-						'Seasonal with Primary Insured by Vault', 
-						'Seasonal with primary residence insured by Vault', 
-						'Seasonal (with Vault Primary Residence)', 
-						'Seasonal with Full Time Live In Care Taker', 
-						'Seasonal (with no Vault Primary Residence)', 
-						'Seasonal with Water Leak Detection/Shut off (No Alarm) or Low Temperature Monitoring Device', 
-						'Seasonal w Water Leak(Alarm) or Full Time Live In Care Taker', 
-						'Seasonal with Full Time Live In Care Taker or Water Leak Detection/Shut off (Alarm)', 
-						'Seasonal with no primary residence insured by Vault', 
-						'Seasonal with Full Time Live In Care Taker or Water Leak Detection (Alarm)', 
-						'Seasonal w Water Leak (No Alarm) or Low Temperature Monitoring Device', 
-						'Seasonal with Full Time Live in Care Taker or  Water Leak Detection Shut off (Alarm)', 
-						'Seasonal w Water Leak(Alarm) or Full Time Live In Care Taker'
-					)
-				THEN 'Owner'
-				ELSE 'NA'
-			END as [100_OccupancyTypeCd]
-			,''  as [101_FireExtinguiserInd]
-			,COALESCE(hac.central_reporting_burglar_alarm_in, 'no')  as [102_ProtectionDeviceBurglarCd] --
-			,COALESCE(hac.central_reporting_fire_alarm_in, 'no') as [103_ProtectionDeviceFireCd]
-			,hc.construction_type as [104_ConstructionCd]
-			,hc.built_year as [105_YearBuilt]
-			,'' as [106_FoundationCd]
-			,'' as [107_BldgCodeEffectivenessGradeCd]
-			,'' as [108_BldgEffectivenessGradeTypeCd]
-			,hc.no_of_stories as [109_NumStories]
-			,'' as [110_BasementArea]
-			,CASE WHEN hc.basement_type IN ('Unknown', 'No Basement') THEN 0 ELSE 1 END as [111_NumBasements]
-			,hc.roof_covering as [112_RoofingMaterialCd]
-			,'' as [113_ConstructionPct]
-			,c.family_account_in as [114_NumFamilies]
-			,'' as [115_HeatSourcePrimaryCd]
-			,'' as [116_HeatSourceSupplementalCd]
-			,hc.occupancy_type as [117_OccupancyCd]
-			,hc.total_finished_square_feet as [118_NumUnits]
-			,'' as [119_RoofingImprovementCd]
-			,hc.roof_updated_year as [120_RoofingImprovementYear]
-			,hc.electrical_updated_year as [121_WiringImprovementYear]
-			,'' as [122_OtherImprovementDesc]
-			,'' as [123_OtherImprovementCd]
-			,'' as [124_OtherImprovementDt]
-			,c.customer_nm as [125_CommercialName]
-			,'' as [126_Addr1]
-			,'' as [127_City]
-			,'' as [128_StateProvCd]
-			,'' as [129_PostalCode]
-			,'' as [130_Country]
-			,'' as [131_Latitude]
-			,'' as [132_Longitude]
-			,'' as [133_ResidenceTypeCd]
-			,hc.built_year as [134_YearBuilt]
-			,TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) as [135_DwellUseCd]
-			,CASE
-				WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) = 'Tenant' THEN 'Tenant' 
-				WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) = 'Rented to Others' THEN 'Rented to Others'
-				WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '),'\r', ' ')) = 'Partially Rented to Others' THEN 'Partially Rented to Others'
-				WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) = 'Vacant' THEN 'Vacant'
-				WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) IN (
+
+		SELECT 
+		/* */
+		'PolicyDownload' as [001_MsgTypeCd]
+		,CASE 
+			WHEN ptt.policy_transaction_type_nm = 'New' THEN 'NBS'
+		    WHEN ptt.policy_transaction_type_nm = 'Cancellation' THEN 'XLC'
+			WHEN ptt.policy_transaction_type_nm = 'Reinstatement' THEN 'REI'
+			WHEN ptt.policy_transaction_type_nm = 'Renewal' THEN 'RW'
+			WHEN ptt.policy_transaction_type_nm = 'Rescind Non-Renewal' THEN 'RNR'
+			WHEN ptt.policy_transaction_type_nm = 'Endorsement' THEN 'PCH'
+			WHEN ptt.policy_transaction_type_nm = 'Non-Renewal' THEN 'NR'
+			WHEN ptt.policy_transaction_type_nm = 'Rollback' THEN 'RBK'
+			ELSE 'OTH'
+		END AS [002_BusinessPurposeTypeCd]
+		,d2.actual_dt as [003_TransactionRequestDt]
+        ,d1.actual_dt as [004_TransactionEffectiveDt]
+		,'USD' as [005_CurCd]
+		,'P' as [006_BroadLOBCd]
+		,'' as [007_IVANSXMLVersionCd]
+		,'EDW' as [008_SourceSystem]
+		,p.broker_id as [009_ContractNumber]
+		,'' as [010_ProducerSubCode]
+		,c.customer_id as [011_InsurerId]
+		,c.last_nm AS [012_Surname]
+		,c.first_nm AS [013_GivenName]
+		,c.middle_nm as [014_OtherGivenName]
+		,CASE WHEN c.Insured_type = 'Trust/LLC'  THEN 'Entity' END as [182_CommercialName]
+		,c.prefix AS [015_Prefix]
+		,CASE WHEN c.mailing_Address_line1 IS NOT NULL THEN 'MailingAddress' ELSE 'LocationAddress' END as [016_AddrTypeCd]
+		,c.mailing_address_line1 as [017_Addr1]
+		,c.mailing_address_city_nm as [018_City]
+		,c.mailing_address_state_cd as [019_StateProvCd]
+		,c.mailing_address_zip_cd as [020_PostalCode]
+		,c.mailing_address_country_nm as [021_Country]
+		,hl.latitude as [022_Latitude]
+		,hl.longitude as [023_Longitude]
+		,c.mailing_address_county_nm as [024_County]
+		,CASE
+                WHEN c.home_phone_no is not null THEN 'Home'
+                WHEN c.mobile_phone_no is not null THEN 'Mobile'
+                ELSE ''
+            END as [025_PhoneTypeCd]
+		,COALESCE(c.home_phone_no, c.mobile_phone_no, '') as [026_PhoneNumber]
+		,c.email as [027_EmailAddr]
+		,CASE WHEN poi.primary_insured_in = 'Yes' then 'Primary' ELSE 'Secondary' END as [028_InsuredOrPrincipalRoleCd]
+		,CASE WHEN poi.primary_insured_in = 'Yes' then 'Primary' ELSE 'Secondary' END as [029_InsuredOrPrincipalRoleDesc]
+		,p.policy_no as [030_PolicyNumber]
+		,'P' as [031_BroadLOBCd]
+		, pr.product_nm as [032_LOBCd] -- pr.product_nm edw_core.tproduct ON p.product_cd = pr.product_cd
+		,CASE 
+                WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '16186' 
+                WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '16237' 
+                ELSE '' 
+            END as [033_NAICCd]
+		,p.effective_dt as [034_EffectiveDt]
+		,p.expiration_dt as [035_ExpirationDt]
+		,'' as [036_BillingAccountNumber]
+		,'' as [037_ControllingStateProvCd]
+		,'****Pending****' as [038_BillingMethodCd]
+		,COALESCE(pt.premium_amt, 0) as [039_Amt] -- Need to validate this
+		,COALESCE(pt.premium_amt, 0)  as [040_Amt]
+		,'en' as [041_LanguageCd]
+		,p.original_policy_effective_dt as [042_OriginalPolicyInceptionDt]
+		,'' as [043_PayorCd] 
+		,'' as [044_RenewalBillingMethodCd]
+		,'' as [045_RenewalPayorCd]
+		,'' as [046_FormNumber]
+		,'' as [047_FormName]
+		,'' as [048_EditionDt]
+		,'' as [049_IterationNumber]
+		,'' as [050_TotalPaidLossAmt]
+		,lh.loss_seq_no as [051_NumLosses]
+		--,'numberLosses' as [051_NumLosses]
+		,CASE WHEN p.prior_term_policy_no IS NOT NULL AND p.prior_term_policy_no <> p.policy_no THEN 'Prior' ELSE '' END as [052_PolicyCd]
+		,p.original_policy_no as [053_PolicyNumber]
+		,pr.product_nm as [054_LOBCd]
+		,CASE WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '16186' WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '16237' ELSE '' END AS [055_NAICCd]
+		,poi.insured_nm as [056_InsurerName]
+		,op.min_effective_dt as [057_EffectiveDt]
+        ,op.min_expiration_dt as [058_ExpirationDt]
+		,'' as [059_MethodPaymentCd]
+		,CASE 
+                WHEN ba.payment_plan = '1P' THEN 'Full Pay'
+                ELSE replace(ba.payment_plan, 'P', ' Pay')
+            END AS [060_PaymentPlanCd]
+		,CASE 
+                WHEN ba.payment_plan = '1P' THEN 'Y'
+                WHEN ba.payment_plan is null OR ba.payment_method = '' THEN ''
+                ELSE 'N'
+            END AS [061_PaidInFullInd]
+		,p.policy_sk as [062_id]
+		,c.customer_id as [063_InsurerId]
+		,hl.address_line_1 as [064_Addr1]
+		,hl.city_nm as [065_City]
+		,hl.state_cd as [066_StateProvCd]
+		,hl.zip_cd as [067_PostalCode]
+		,hl.latitude as [068_Latitude]
+		,hl.longitude as [069_Longitude]
+		,hl.county_nm as [070_County]
+		,'' as [081_FireDistrict]
+		,hc.distance_to_fire_station_miles as [082_FireStation]
+		,'' as [083_RiskLocationCd]
+		,pr.product_nm as [084_LOBCd]
+		,CASE WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '16186' WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '16237' ELSE '' END AS [085_NAICCd]
+		,'' as [086_CoverageCd]
+		,'' as [087_CoverageDesc]
+		,'' as [088_Amt]
+		,'' as [089_Amt] 
+		,'DWEL' as [090_RiskType]
+		,'' as [091_PrincipalUnitAtRiskInd]
+		,CASE
+			WHEN LOWER(hc.residence_type) = 'tenant' THEN '04'
+			WHEN LOWER(hc.residence_type) = 'homeowners' THEN '05'
+			WHEN LOWER(hc.residence_type) IN (
+				'condominium', 'condminium', 'condo'
+			) THEN '06'
+			ELSE 'NA'
+			END as [092_PolicyTypeCd]
+		,'' as [093_PurchaseDt]
+		,NULL as [094_Amt]
+		,'' as [095_TerritoryCd]
+		,'' as [096_WiringTypeCd]
+		,hc.fire_protection as [097_FireProtectionClassCd]
+		,hc.distance_to_fire_station_miles as [098_DistanceToFireStation]
+		,hc.distance_to_fire_hydrant_feet as [099_DistanceToHydrant]
+		,CASE
+			WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '),  '\r', ' ')) = 'Tenant' THEN 'Tenant' 
+			WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) = 'Rented to Others' THEN 'Rented to Others' 
+			WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) = 'Partially Rented to Others' THEN 'Partially Rented to Others' 
+			WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) = 'Vacant' THEN 'Vacant'
+			WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' '))
+				IN (
 					'Primary', 'Seasonal', 'Seasonal with Water Leak Detection (No Alarm) or Low Temperature Monitoring Device', 
 					'Seasonal/Secondary', 'Seasonal without Primary', 
 					'Seasonal w/ Water Leak Detection/Shut off (No Alarm) or Temperature Monitoring Device', 
@@ -659,117 +596,180 @@ BEGIN
 					'Seasonal w Water Leak (No Alarm) or Low Temperature Monitoring Device', 
 					'Seasonal with Full Time Live in Care Taker or  Water Leak Detection Shut off (Alarm)', 
 					'Seasonal w Water Leak(Alarm) or Full Time Live In Care Taker'
-				) THEN 'Owner'
-				ELSE 'NA'
-			END as [136_OccupancyTypeCd]
-			,'' as [137_BldgEffectivenessGradeTypeCd]
-			,hc.no_of_stories as [138_NumStories]
-			,'' as [139_BasementArea]
-			,CASE WHEN hc.basement_type IN ('Unknown', 'No Basement') THEN 0 ELSE 1 END as [140_NumBasements]
-			,hac.sinkhole_collapse_in as [141_TerritoryCd]
-			,'' as [142_SeacoastOrOtherBodyWaterProximityCd]
-			,hc.distance_to_coast as [143_NumUnits]
-			,hc.windspeed_of_design as [144_WindPlanInd]
-			,hc.dwelling_limit_amt + hc.other_Structures_limit_amt + hc.contents_limit_amt as [145_Amt] -- neds to sum?
-			,hc.hvac_updated_year as [146_HeatingImprovementCd]
-			,'' as [147_HeatingImprovementYear]
-			,hc.plumbing_updated_year as [148_PlumbingImprovementCd]
-			,'' as [149_PlumbingImprovementYear]
-			,'' as [150_RoofingImprovementCd]
-			,hc.roof_updated_year as [151_RoofingImprovementYear]
-			,hc.electrical_updated_year as [152_WiringImprovementYear]
-			,'' as [153_OtherImprovementDesc]
-			,'' as [154_OtherImprovementCd]
-			,'' as [155_OtherImprovementDt]
-			,'' as [156_NumUnits]
-			,'' as [157_AboveGroundInd]
-			,'' as [158_ApprovedFenceInd]
-			,'' as [159_DivingBoardInd]
-			,'' as [160_SlideInd]
-			,'' as [161_ModelYear]
-			,'' as [162_Manufacturer]
-			,'' as [163_Model]
-			,'' as [164_SerialIdNumber]
-			,'' as [165_PurchaseDt]
-			,'' as [166_PurchasedNewInd]
-			,'' as [167_Amt]
-			,'' as [168_NumUnits]
-			,'' as [169_NumUnits]
-			,'' as [170_MobileHomeInParkInd]
-			,'' as [171_PermanentConnectionToElectricInd]
-			,'' as [172_PermanentConnectionToWaterInd]
-			,'' as [173_PermanentConnectionToSewerInd]
-			,'' as [174_DoublewideMobileHomeTrailerInd]
-			,'' as [175_NumBedrooms]
-			,'' as [176_MobileHomeAdditionsExtensionsInd]
-			,'' as [177_AnchoringSystemCd]
-			,'' as [178_AnimalTypeCd]
-			,hac.canine_liability_exclusion_in as [179_BreedCd]
-			,'' as [180_NumUnits]
-			,hac.animal_related_liability_exclusion_in as [181_BiteHistoryInd]
-			/* */
-			,jhc.Home_Coverages
-			,jhcc.Home_Collection_Coverages
-			,jai.Additional_Interests
-			,jsi.Scheduled_Items
-			,pt.transaction_seq_no as [transaction_seq_no]
-			--
-			,pt.create_ts as policy_transaction_create_ts
-			--
-			--INTO [edw_temp].[policy_ivans_home_temp1]
-			--
-			FROM policy_transaction pt
-			INNER JOIN edw_core.tpolicy p
-			ON pt.policy_sk = p.policy_sk
-			LEFT JOIN edw_core.tproduct pr
-			ON p.product_cd = pr.product_cd
-			LEFT JOIN edw_core.tpolicy_insured as poi
-			ON p.policy_no = poi.policy_no
-			AND p.effective_dt = poi.effective_dt
-			AND pt.transaction_seq_no = poi.transaction_seq_no
-			AND poi.primary_insured_in = 'Yes'
-			LEFT JOIN edw_core.tdate AS d1
-			ON pt.transaction_effective_dt_sk = d1.date_sk
-			LEFT JOIN edw_core.tdate AS d2
-			ON pt.transaction_dt_sk = d2.date_sk
-			LEFT JOIN [edw_core].[tpolicy_transaction_type] ptt
-			on pt.policy_transaction_type_sk = ptt.policy_transaction_type_sk
-			LEFT JOIN [edw_core].[tbillingaccount] ba
-			on p.billingaccount_sk = ba.billingaccount_sk
-			LEFT JOIN edw_core.tcustomer AS c
-			ON pt.customer_sk = c.customer_sk
-			LEFT JOIN [edw_core].[thome_coverage] hc
-			on p.policy_no = hc.policy_no
-			AND p.effective_dt = hc.effective_dt
-			AND pt.transaction_seq_no = hc.transaction_seq_no
-			LEFT JOIN [edw_core].[thome_additional_coverage] hac
-			on hc.home_coverage_sk = hac.home_coverage_sk
-			LEFT JOIN [edw_core].[thome_location] hl
-			on hc.home_location_sk = hl.home_location_sk
-			LEFT JOIN loss_history lh
-			on p.policy_no = lh.policy_no
-			AND p.effective_dt = lh.effective_dt
-			AND pt.transaction_seq_no = lh.transaction_seq_no
-			LEFT JOIN original_policy AS op
-			ON p.original_policy_no = op.original_policy_no
-			LEFT JOIN json_home_coverage jhc
-			on pt.policy_sk = jhc.policy_sk
-			AND pt.effective_dt_sk = jhc.effective_dt_sk
-			AND pt.transaction_seq_no = jhc.transaction_seq_no
-			LEFT JOIN json_Home_Collection_Coverages jhcc
-			on pt.policy_sk = jhcc.policy_sk
-			AND pt.effective_dt_sk = jhcc.effective_dt_sk
-			AND pt.transaction_seq_no = jhcc.transaction_seq_no
-			LEFT JOIN json_Additional_Interests jai
-			on p.policy_no = jai.policy_no
-			AND p.effective_dt = jai.effective_dt
-			AND pt.transaction_seq_no = jai.transaction_seq_no
-			LEFT JOIN json_Scheduled_Items jsi
-			on p.policy_no = jsi.policy_no
-			AND p.effective_dt = jsi.effective_dt
-			AND pt.transaction_seq_no = jsi.transaction_seq_no
-			WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-		)
+				)
+			THEN 'Owner'
+			ELSE 'NA'
+		END as [100_OccupancyTypeCd]
+		,''  as [101_FireExtinguiserInd]
+		,COALESCE(hac.central_reporting_burglar_alarm_in, 'no')  as [102_ProtectionDeviceBurglarCd] --
+		,COALESCE(hac.central_reporting_fire_alarm_in, 'no') as [103_ProtectionDeviceFireCd]
+		,hc.construction_type as [104_ConstructionCd]
+		,hc.built_year as [105_YearBuilt]
+		,'' as [106_FoundationCd]
+		,'' as [107_BldgCodeEffectivenessGradeCd]
+		,'' as [108_BldgEffectivenessGradeTypeCd]
+		,hc.no_of_stories as [109_NumStories]
+		,'' as [110_BasementArea]
+		,CASE WHEN hc.basement_type IN ('Unknown', 'No Basement') THEN 0 ELSE 1 END as [111_NumBasements]
+		,hc.roof_covering as [112_RoofingMaterialCd]
+		,'' as [113_ConstructionPct]
+		,c.family_account_in as [114_NumFamilies]
+		,'' as [115_HeatSourcePrimaryCd]
+		,'' as [116_HeatSourceSupplementalCd]
+		,hc.occupancy_type as [117_OccupancyCd]
+		,hc.total_finished_square_feet as [118_NumUnits]
+		,'' as [119_RoofingImprovementCd]
+		,hc.roof_updated_year as [120_RoofingImprovementYear]
+		,hc.electrical_updated_year as [121_WiringImprovementYear]
+		,'' as [122_OtherImprovementDesc]
+		,'' as [123_OtherImprovementCd]
+		,'' as [124_OtherImprovementDt]
+		,c.customer_nm as [125_CommercialName]
+		,'' as [126_Addr1]
+		,'' as [127_City]
+		,'' as [128_StateProvCd]
+		,'' as [129_PostalCode]
+		,'' as [130_Country]
+		,'' as [131_Latitude]
+		,'' as [132_Longitude]
+		,'' as [133_ResidenceTypeCd]
+		,hc.built_year as [134_YearBuilt]
+		,TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) as [135_DwellUseCd]
+		,CASE
+			WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) = 'Tenant' THEN 'Tenant' 
+			WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) = 'Rented to Others' THEN 'Rented to Others'
+			WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '),'\r', ' ')) = 'Partially Rented to Others' THEN 'Partially Rented to Others'
+			WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) = 'Vacant' THEN 'Vacant'
+			WHEN TRIM(REPLACE(REPLACE(hc.occupancy_type, '\n', ' '), '\r', ' ')) IN (
+				'Primary', 'Seasonal', 'Seasonal with Water Leak Detection (No Alarm) or Low Temperature Monitoring Device', 
+				'Seasonal/Secondary', 'Seasonal without Primary', 
+				'Seasonal w/ Water Leak Detection/Shut off (No Alarm) or Temperature Monitoring Device', 
+				'Seasonal with Full Time Live in Care Taker or Water Leak Detection/Shut off (Alarm)', 
+				'Seasonal with Water Leak Detection/Shut off (No Alarm) or Temperature Monitoring Device', 
+				'Seasonal Full Time Live In Care Taker or Water Leak Detection (Alarm)', 
+				'Seasonal with Primary Insured by Vault', 
+				'Seasonal with primary residence insured by Vault', 
+				'Seasonal (with Vault Primary Residence)', 
+				'Seasonal with Full Time Live In Care Taker', 
+				'Seasonal (with no Vault Primary Residence)', 
+				'Seasonal with Water Leak Detection/Shut off (No Alarm) or Low Temperature Monitoring Device', 
+				'Seasonal w Water Leak(Alarm) or Full Time Live In Care Taker', 
+				'Seasonal with Full Time Live In Care Taker or Water Leak Detection/Shut off (Alarm)', 
+				'Seasonal with no primary residence insured by Vault', 
+				'Seasonal with Full Time Live In Care Taker or Water Leak Detection (Alarm)', 
+				'Seasonal w Water Leak (No Alarm) or Low Temperature Monitoring Device', 
+				'Seasonal with Full Time Live in Care Taker or  Water Leak Detection Shut off (Alarm)', 
+				'Seasonal w Water Leak(Alarm) or Full Time Live In Care Taker'
+			) THEN 'Owner'
+			ELSE 'NA'
+		END as [136_OccupancyTypeCd]
+		,'' as [137_BldgEffectivenessGradeTypeCd]
+		,hc.no_of_stories as [138_NumStories]
+		,'' as [139_BasementArea]
+		,CASE WHEN hc.basement_type IN ('Unknown', 'No Basement') THEN 0 ELSE 1 END as [140_NumBasements]
+		,hac.sinkhole_collapse_in as [141_TerritoryCd]
+		,'' as [142_SeacoastOrOtherBodyWaterProximityCd]
+		,hc.distance_to_coast as [143_NumUnits]
+		,hc.windspeed_of_design as [144_WindPlanInd]
+		,hc.dwelling_limit_amt + hc.other_Structures_limit_amt + hc.contents_limit_amt as [145_Amt] -- neds to sum?
+		,hc.hvac_updated_year as [146_HeatingImprovementCd]
+		,'' as [147_HeatingImprovementYear]
+		,hc.plumbing_updated_year as [148_PlumbingImprovementCd]
+		,'' as [149_PlumbingImprovementYear]
+		,'' as [150_RoofingImprovementCd]
+		,hc.roof_updated_year as [151_RoofingImprovementYear]
+		,hc.electrical_updated_year as [152_WiringImprovementYear]
+		,'' as [153_OtherImprovementDesc]
+		,'' as [154_OtherImprovementCd]
+		,'' as [155_OtherImprovementDt]
+		,'' as [156_NumUnits]
+		,'' as [157_AboveGroundInd]
+		,'' as [158_ApprovedFenceInd]
+		,'' as [159_DivingBoardInd]
+		,'' as [160_SlideInd]
+		,'' as [161_ModelYear]
+		,'' as [162_Manufacturer]
+		,'' as [163_Model]
+		,'' as [164_SerialIdNumber]
+		,'' as [165_PurchaseDt]
+		,'' as [166_PurchasedNewInd]
+		,'' as [167_Amt]
+		,'' as [168_NumUnits]
+		,'' as [169_NumUnits]
+		,'' as [170_MobileHomeInParkInd]
+		,'' as [171_PermanentConnectionToElectricInd]
+		,'' as [172_PermanentConnectionToWaterInd]
+		,'' as [173_PermanentConnectionToSewerInd]
+		,'' as [174_DoublewideMobileHomeTrailerInd]
+		,'' as [175_NumBedrooms]
+		,'' as [176_MobileHomeAdditionsExtensionsInd]
+		,'' as [177_AnchoringSystemCd]
+		,'' as [178_AnimalTypeCd]
+		,hac.canine_liability_exclusion_in as [179_BreedCd]
+		,'' as [180_NumUnits]
+		,hac.animal_related_liability_exclusion_in as [181_BiteHistoryInd]
+		/* */
+		,jhc.Home_Coverages
+		,jhcc.Home_Collection_Coverages
+		,jai.Additional_Interests
+		,jsi.Scheduled_Items
+		,pt.transaction_seq_no as [transaction_seq_no]
+		--
+		,pt.create_ts as policy_transaction_create_ts
+		--
+		INTO [edw_temp].[policy_ivans_home_temp2]
+		--
+		FROM [edw_temp].[policy_ivans_home_temp1] pt
+		INNER JOIN edw_core.tpolicy p
+		ON pt.policy_sk = p.policy_sk
+		LEFT JOIN edw_core.tproduct pr
+		ON p.product_cd = pr.product_cd
+		LEFT JOIN edw_core.tpolicy_insured as poi
+		ON p.policy_no = poi.policy_no
+		AND p.effective_dt = poi.effective_dt
+		AND pt.transaction_seq_no = poi.transaction_seq_no
+		AND poi.primary_insured_in = 'Yes'
+		LEFT JOIN edw_core.tdate AS d1
+		ON pt.transaction_effective_dt_sk = d1.date_sk
+        LEFT JOIN edw_core.tdate AS d2
+		ON pt.transaction_dt_sk = d2.date_sk
+		LEFT JOIN [edw_core].[tpolicy_transaction_type] ptt
+		on pt.policy_transaction_type_sk = ptt.policy_transaction_type_sk
+		LEFT JOIN [edw_core].[tbillingaccount] ba
+		on p.billingaccount_sk = ba.billingaccount_sk
+		LEFT JOIN edw_core.tcustomer AS c
+		ON pt.customer_sk = c.customer_sk
+		LEFT JOIN [edw_core].[thome_coverage] hc
+		on p.policy_no = hc.policy_no
+		AND p.effective_dt = hc.effective_dt
+		AND pt.transaction_seq_no = hc.transaction_seq_no
+		LEFT JOIN [edw_core].[thome_additional_coverage] hac
+		on hc.home_coverage_sk = hac.home_coverage_sk
+		LEFT JOIN [edw_core].[thome_location] hl
+		on hc.home_location_sk = hl.home_location_sk
+		LEFT JOIN loss_history lh
+		on p.policy_no = lh.policy_no
+		AND p.effective_dt = lh.effective_dt
+		AND pt.transaction_seq_no = lh.transaction_seq_no
+		LEFT JOIN original_policy AS op
+		ON p.original_policy_no = op.original_policy_no
+		LEFT JOIN json_home_coverage jhc
+		on pt.policy_sk = jhc.policy_sk
+           AND pt.effective_dt_sk = jhc.effective_dt_sk
+           AND pt.transaction_seq_no = jhc.transaction_seq_no
+		LEFT JOIN json_Home_Collection_Coverages jhcc
+		on pt.policy_sk = jhcc.policy_sk
+           AND pt.effective_dt_sk = jhcc.effective_dt_sk
+           AND pt.transaction_seq_no = jhcc.transaction_seq_no
+		LEFT JOIN json_Additional_Interests jai
+		on p.policy_no = jai.policy_no
+           AND p.effective_dt = jai.effective_dt
+           AND pt.transaction_seq_no = jai.transaction_seq_no
+		LEFT JOIN json_Scheduled_Items jsi
+		on p.policy_no = jsi.policy_no
+           AND p.effective_dt = jsi.effective_dt
+           AND pt.transaction_seq_no = jsi.transaction_seq_no
+		WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
 
 		-- Start Insert process
 		INSERT INTO [edw_integration].[policy_ivans_home_feed](
@@ -1153,14 +1153,15 @@ BEGIN
 			,getdate()
 			,getdate()
 		    ,@etl_audit_sk
-		FROM temp_ivans_home
+		FROM [edw_temp].[policy_ivans_home_temp2]
 		WHERE [053_PolicyNumber] IS NOT NULL;
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.create_ts) FROM [edw_integration].[policy_ivans_home_feed] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_transaction_create_ts) FROM [edw_temp].[policy_ivans_home_temp2] t1),@last_source_extract_ts);
 
-        --DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp2];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
