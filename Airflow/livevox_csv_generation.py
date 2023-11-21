@@ -133,8 +133,8 @@ class SFTPUploadLiveVoxOperator(BaseOperator):
 
     def execute(self, context):
         if ENVIRONMENT == 'PRODUCTION':
-            local_filepath = context['ti'].xcom_pull(task_ids='generate_livevox_file', key='csv_local_livevox_file_name')
-            remote_filepath = context['ti'].xcom_pull(task_ids='generate_livevox_file', key='csv_remote_livevox_file_name')
+            local_filepath = context['ti'].xcom_pull(task_ids='integration_group.generate_livevox_file', key='csv_local_livevox_file_name')
+            remote_filepath = context['ti'].xcom_pull(task_ids='integration_group.generate_livevox_file', key='csv_remote_livevox_file_name')
             
             hook = SFTPHook(ftp_conn_id=self.sftp_conn_id)
             self.log.info(f"**** Starting to transfer {local_filepath} to {remote_filepath}")
