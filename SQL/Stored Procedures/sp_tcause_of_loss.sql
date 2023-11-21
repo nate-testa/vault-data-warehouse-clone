@@ -6,8 +6,12 @@ GO
 -- Author:		Yunus Mohammed
 -- Create Date: 07/7/2023
 -- Description: This procedures inserts and updates claim cause of loss
--- 11/18/2023  Sandeep Gundreddy  modified logic to use edw_stage.t_clm_losscause
--- ==================================================================================================
+---------------------------------------------------------------------------------------------------
+-- Change date 		|Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 07/07/23			Yunus Mohammed				1. Created procedure
+-- 11/18/23			Sandeep Gundreddy			2. Modified logic to use edw_stage.t_clm_losscause
+-- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcause_of_loss]
 
@@ -74,7 +78,8 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
 

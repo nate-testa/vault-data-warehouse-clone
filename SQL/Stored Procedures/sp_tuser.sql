@@ -5,7 +5,8 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 06/02/23		Yunus Mohammed					1. Created this procedure
--- 06/28/23		Architha Gudimalla				2. Made changes to fix the errors on first run 
+-- 06/28/23		Architha Gudimalla				2. Made changes to fix the errors on first run
+-- 11/20/2023	Yunus Mohammed					3. Removed Insert statement and put Merge statement
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tuser]
@@ -15,8 +16,7 @@ BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
     -- interfering with SELECT statements.
     SET NOCOUNT ON
-
-	BEGIN TRY
+		BEGIN TRY
 		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
@@ -47,15 +47,6 @@ BEGIN
 		FROM edw_stage.[user] usr
 		WHERE greatest(CreatedDate,UpdatedDate) > @last_source_extract_ts
 
-		INSERT into edw_core.tuser
-		(
-				[user_id], [first_nm], [last_nm], [email], [phone_no],    
-				[create_ts], [update_ts], [etl_audit_sk]
-			)
-		select  id, FirstName, LastName, Email, MobilePhone, getdate(), getdate(), @etl_audit_sk
-		from edw_temp.tuser_temp;
-			
-		/*
 		-- Insert and Update tuser table
 		MERGE [edw_core].[tuser] AS Target
 		USING edw_temp.tuser_temp AS Source
@@ -74,8 +65,9 @@ BEGIN
         Target.[first_nm]	= Source.FirstName,
         Target.[last_nm]	= Source.LastName,
 		Target.[email]	= Source.Email,
-		Target.[phone_no]	= Source.MobilePhone;
-		*/
+		Target.[phone_no]	= Source.MobilePhone,
+		Target.[update_ts] = GETDATE();
+		
 	
 		SET @rows_affected=@@ROWCOUNT;
 
@@ -96,8 +88,8 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC [edw_core].[sp_upd_error_tetl_audit] @etl_audit_sk,@error_message
+		EXEC [edw_core].[sp_upd_error_tetl_audit] @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
-
 END
 
