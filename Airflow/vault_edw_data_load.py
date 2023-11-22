@@ -823,82 +823,82 @@ with DAG(
         sp_tpolicy >> sp_tpolicy_update_non_renwal_billing >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tloss_history >> sp_tadditional_interest >> send_policy_email
 
 
-    with TaskGroup("vendor_report_group") as vendor_report_group:
+    # with TaskGroup("vendor_report_group") as vendor_report_group:
 
-        vendor_report_group_items = ['sp_tvendor_report']
+    #     vendor_report_group_items = ['sp_tvendor_report']
 
-        sp_tvendor_report_CarfaxVin = MsSqlOperator(
-            task_id='sp_tvendor_report_CarfaxVin',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tvendor_report 'CarfaxVin'",
-            database="vault_edw",
-            autocommit=True,
-        )
+    #     sp_tvendor_report_CarfaxVin = MsSqlOperator(
+    #         task_id='sp_tvendor_report_CarfaxVin',
+    #         mssql_conn_id='Vault_EDW',
+    #         sql="EXEC edw_core.sp_tvendor_report 'CarfaxVin'",
+    #         database="vault_edw",
+    #         autocommit=True,
+    #     )
 
-        sp_tvendor_report_ClueProperty = MsSqlOperator(
-            task_id='sp_tvendor_report_ClueProperty',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tvendor_report 'Clue Property'",
-            database="vault_edw",
-            autocommit=True,
-        )
+    #     sp_tvendor_report_ClueProperty = MsSqlOperator(
+    #         task_id='sp_tvendor_report_ClueProperty',
+    #         mssql_conn_id='Vault_EDW',
+    #         sql="EXEC edw_core.sp_tvendor_report 'Clue Property'",
+    #         database="vault_edw",
+    #         autocommit=True,
+    #     )
 
-        sp_tvendor_report_GuyCarpenter = MsSqlOperator(
-            task_id='sp_tvendor_report_GuyCarpenter',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tvendor_report 'GuyCarpenter'",
-            database="vault_edw",
-            autocommit=True,
-        )
+    #     sp_tvendor_report_GuyCarpenter = MsSqlOperator(
+    #         task_id='sp_tvendor_report_GuyCarpenter',
+    #         mssql_conn_id='Vault_EDW',
+    #         sql="EXEC edw_core.sp_tvendor_report 'GuyCarpenter'",
+    #         database="vault_edw",
+    #         autocommit=True,
+    #     )
 
-        sp_tvendor_report_IsoVin = MsSqlOperator(
-            task_id='sp_tvendor_report_IsoVin',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tvendor_report 'IsoVin'",
-            database="vault_edw",
-            autocommit=True,
-        )
+    #     sp_tvendor_report_IsoVin = MsSqlOperator(
+    #         task_id='sp_tvendor_report_IsoVin',
+    #         mssql_conn_id='Vault_EDW',
+    #         sql="EXEC edw_core.sp_tvendor_report 'IsoVin'",
+    #         database="vault_edw",
+    #         autocommit=True,
+    #     )
 
-        sp_tvendor_report_LC360 = MsSqlOperator(
-            task_id='sp_tvendor_report_LC360',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tvendor_report 'LC360'",
-            database="vault_edw",
-            autocommit=True,
-        )
+    #     sp_tvendor_report_LC360 = MsSqlOperator(
+    #         task_id='sp_tvendor_report_LC360',
+    #         mssql_conn_id='Vault_EDW',
+    #         sql="EXEC edw_core.sp_tvendor_report 'LC360'",
+    #         database="vault_edw",
+    #         autocommit=True,
+    #     )
 
-        sp_tvendor_report_SAQ = MsSqlOperator(
-            task_id='sp_tvendor_report_SAQ',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tvendor_report 'SAQ'",
-            database="vault_edw",
-            autocommit=True,
-        )
+    #     sp_tvendor_report_SAQ = MsSqlOperator(
+    #         task_id='sp_tvendor_report_SAQ',
+    #         mssql_conn_id='Vault_EDW',
+    #         sql="EXEC edw_core.sp_tvendor_report 'SAQ'",
+    #         database="vault_edw",
+    #         autocommit=True,
+    #     )
 
-        sp_tvendor_report_TransUnion = MsSqlOperator(
-            task_id='sp_tvendor_report_TransUnion',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tvendor_report 'TransUnion'",
-            database="vault_edw",
-            autocommit=True,
-        )
+    #     sp_tvendor_report_TransUnion = MsSqlOperator(
+    #         task_id='sp_tvendor_report_TransUnion',
+    #         mssql_conn_id='Vault_EDW',
+    #         sql="EXEC edw_core.sp_tvendor_report 'TransUnion'",
+    #         database="vault_edw",
+    #         autocommit=True,
+    #     )
 
-        sp_tvendor_report_IsoProperty = MsSqlOperator(
-            task_id='sp_tvendor_report_IsoProperty',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tvendor_report 'IsoProperty'",
-            database="vault_edw",
-            autocommit=True,
-        )
+    #     sp_tvendor_report_IsoProperty = MsSqlOperator(
+    #         task_id='sp_tvendor_report_IsoProperty',
+    #         mssql_conn_id='Vault_EDW',
+    #         sql="EXEC edw_core.sp_tvendor_report 'IsoProperty'",
+    #         database="vault_edw",
+    #         autocommit=True,
+    #     )
 
-        send_vendor_report_email = EmailOperator(
-            task_id='send_vendor_report_email',
-            to=to_email,
-            subject='Airflow - Vendor report stored procedure executions finalized successfully',
-            html_content=get_sp_success_data_HTML(vendor_report_group_items, 'All executions of stored procedure vendor report executed successfully'),
-        )
+    #     send_vendor_report_email = EmailOperator(
+    #         task_id='send_vendor_report_email',
+    #         to=to_email,
+    #         subject='Airflow - Vendor report stored procedure executions finalized successfully',
+    #         html_content=get_sp_success_data_HTML(vendor_report_group_items, 'All executions of stored procedure vendor report executed successfully'),
+    #     )
 
-        sp_tvendor_report_CarfaxVin >> sp_tvendor_report_ClueProperty >> sp_tvendor_report_GuyCarpenter >> sp_tvendor_report_IsoVin >> sp_tvendor_report_LC360 >> sp_tvendor_report_SAQ >> sp_tvendor_report_TransUnion >> sp_tvendor_report_IsoProperty >> send_vendor_report_email
+    #     sp_tvendor_report_CarfaxVin >> sp_tvendor_report_ClueProperty >> sp_tvendor_report_GuyCarpenter >> sp_tvendor_report_IsoVin >> sp_tvendor_report_LC360 >> sp_tvendor_report_SAQ >> sp_tvendor_report_TransUnion >> sp_tvendor_report_IsoProperty >> send_vendor_report_email
 
 
     with TaskGroup("validation_result_group") as validation_result_group:
@@ -944,6 +944,8 @@ with DAG(
             'sp_policy_ivans_home',
             'sp_policy_ivans_pel_feed',
             'sp_customer_broker_livevox_feed',
+            'sp_claim_renewal_rating_home_collection_api',
+            'sp_claim_renewal_rating_auto_pel_api'
             ]
 
         sp_tclaim_policy_search_api = MsSqlOperator(
@@ -1053,6 +1055,22 @@ with DAG(
             dag=dag,
         )
 
+        sp_claim_renewal_rating_home_collection_api = MsSqlOperator(
+            task_id='sp_claim_renewal_rating_home_collection_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_claim_renewal_rating_home_collection_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_claim_renewal_rating_auto_pel_api = MsSqlOperator(
+            task_id='sp_claim_renewal_rating_auto_pel_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_claim_renewal_rating_auto_pel_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_integration_email = EmailOperator(
             task_id='send_integration_email',
             to=to_email,
@@ -1060,7 +1078,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
         )
 
-        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_billing_account_customer_portal_api >> sp_policy_customer_portal_api >> sp_policy_ivans_auto_feed >> sp_policy_ivans_home >> sp_policy_ivans_pel_feed >> ivans_api_call >> sp_customer_broker_livevox_feed >> generate_livevox_file >> upload_livevox_file_to_sftp >> send_integration_email
+        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_billing_account_customer_portal_api >> sp_policy_customer_portal_api >> sp_policy_ivans_auto_feed >> sp_policy_ivans_home >> sp_policy_ivans_pel_feed >> ivans_api_call >> sp_customer_broker_livevox_feed >> generate_livevox_file >> upload_livevox_file_to_sftp >> sp_claim_renewal_rating_home_collection_api >> sp_claim_renewal_rating_auto_pel_api >> send_integration_email
 
 
     end = DummyOperator(
@@ -1068,4 +1086,4 @@ with DAG(
     )
 
 
-start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group] >> collection_group >> policy_transaction_group >> claim_group >> datamart_group >> vendor_report_group >> validation_result_group >> integration_group >> end
+start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group] >> collection_group >> policy_transaction_group >> claim_group >> datamart_group >> validation_result_group >> integration_group >> end
