@@ -27,6 +27,8 @@ BEGIN
 
 		DECLARE @firstDay DATE,@last_day_month DATE;
 
+		WITH claim_reserve_itd_feed_temp AS
+		(
 		SELECT
 			DISTINCT
 			CASE
@@ -66,13 +68,12 @@ BEGIN
 			COALESCE(st.state_nm,tp.risk_state_cd) AS risk_state,
 			tasl.aslob_desc AS aslob,
 			tcr.claim_transaction_sk AS transaction_id,
-			@last_day_month AS monthend,
+			tdld.actual_dt AS monthend,
 			tp.insured_nm AS insuredname,
 			tscl.sub_cause_of_loss_desc AS sub_cause_of_loss_code,
 			tscl.sub_cause_of_loss_desc AS sub_cause_of_loss_name,
 			tc.claim_status AS claim_status,
-			tcf.claim_feature_status AS loss_status
-			INTO edw_temp.claim_workday_reserve_feed_itd_temp1
+			tcf.claim_feature_status AS loss_status			
 			FROM
 				edw_core.tclaim tc
 				LEFT JOIN edw_core.tcause_of_loss tcl ON tcl.cause_of_loss_sk=tc.cause_of_loss_sk
@@ -83,9 +84,12 @@ BEGIN
 				INNER JOIN edw_core.tproduct tprd ON tprd.product_sk=tc.product_sk
 				INNER JOIN edw_core.tclaim_transaction tcr ON tcr.claim_feature_sk=tcf.claim_feature_sk
 				LEFT JOIN edw_core.tclaim_payment tpay ON tpay.claim_feature_sk=tcf.claim_feature_sk  AND tcr.claim_payment_sk=tpay.claim_payment_sk
-				LEFT JOIN edw_core.tpolicy tp on tp.policy_no=tc.policy_no
-				LEFT JOIN edw_core.tstate st on st.state_cd=tp.risk_state_cd
-
+				LEFT JOIN edw_core.tpolicy tp ON tp.policy_no=tc.policy_no
+				LEFT JOIN edw_core.tstate st ON st.state_cd=tp.risk_state_cd
+				LEFT JOIN edw_core.tdate td ON td.date_sk = tcr.transaction_dt_sk
+				LEFT JOIN edw_core.tdate tdld ON tdld.yearmonth = td.yearmonth and tdld.month_end_in='Y'
+		)
+		
 		INSERT INTO edw_integration.claim_workday_itd_reserve_feed
 		(
 		company,claim_no,policy_no,transaction_date,policyeffectivedate,claimlossdate,claimreporteddate,[address],city,[state],
@@ -99,7 +103,9 @@ BEGIN
 			risk_state,aslob,transaction_id,monthend,insuredname,sub_cause_of_loss_code,sub_cause_of_loss_name,claim_status,
 			loss_status,GETDATE() AS create_ts,GETDATE() AS update_ts, @etl_audit_sk AS etl_audit_sk
 		FROM
-			edw_temp.claim_workday_reserve_feed_itd_temp1
+			claim_reserve_itd_feed_temp
+		WHERE
+			reserve_amount != 0
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
@@ -122,5 +128,6 @@ BEGIN
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
 		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+
 	END CATCH
 END
