@@ -6,6 +6,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 11/03/23		Yunus Mohammd				1. Created this procedure
 -- 11/20/23		Yunus Mohammd				2. Added Throw
+-- 11/22/23		Yunus Mohammd				3. Merge statement where clause updated
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_diary]
 
@@ -65,8 +66,7 @@ BEGIN
 		
 	MERGE edw_core.tclaim_diary AS Target
 	USING edw_temp.tclaim_diary_temp1 AS Source
-	ON Target.claim_no=Source.claim_no AND
-		ISNULL(Target.subclaim_seq_no,-111) = ISNULL(Source.subclaim_seq_no,-111)			
+	ON Target.claim_no=Source.claim_no AND Target.diary_created_ts = Source.diary_created_ts
 	-- For Inserts
 	WHEN NOT MATCHED BY Target THEN
 	INSERT (
@@ -116,4 +116,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-
