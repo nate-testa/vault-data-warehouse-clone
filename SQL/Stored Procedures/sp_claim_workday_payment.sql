@@ -110,6 +110,16 @@ BEGIN
 								claim_feature_sk,claim_payment_sk,SUM(expense_paid_amt+adjusting_other_paid_amt+refund_expense_paid_amt) AS amt, 'Loss Expense A&O' AS cat_name
 							FROM edw_core.tclaim_transaction t
 							WHERE t.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
+							AND t.defense_cost_in = 'N'
+							GROUP BY claim_feature_sk,claim_payment_sk
+
+							UNION
+							
+							SELECT
+								claim_feature_sk,claim_payment_sk,SUM(expense_paid_amt+adjusting_other_paid_amt+refund_expense_paid_amt) AS amt, 'Loss (Expense - DCC)' AS cat_name
+							FROM edw_core.tclaim_transaction t
+							WHERE t.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
+							AND t.defense_cost_in = 'Y'
 							GROUP BY claim_feature_sk,claim_payment_sk
 							
 							UNION

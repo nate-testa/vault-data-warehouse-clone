@@ -80,7 +80,10 @@ with DAG(
             'sp_os_tpolicy',
             'sp_os_tpolicy_history',
             'sp_os_tpolicy_transaction',
+            'sp_os_tcatastrophe',
+            'sp_os_tcause_of_loss',
             'sp_os_tclaim',
+            'sp_os_tclaim_update',
             'sp_os_tclaim_feature',
             'sp_os_tclaim_transaction',
             'sp_os_claim_policy_search_api'
@@ -126,10 +129,34 @@ with DAG(
             autocommit=True,
         )
 
+        sp_os_tcatastrophe = MsSqlOperator(
+            task_id='sp_os_tcatastrophe',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_os_tcatastrophe",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_os_tcause_of_loss = MsSqlOperator(
+            task_id='sp_os_tcause_of_loss',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_os_tcause_of_loss",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_os_tclaim = MsSqlOperator(
             task_id='sp_os_tclaim',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_os_tclaim",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_os_tclaim_update = MsSqlOperator(
+            task_id='sp_os_tclaim_update',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_os_tclaim_update",
             database="vault_edw",
             autocommit=True,
         )
@@ -165,7 +192,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(oneshield_onetime_load_group_items, 'All stored procedures executed successfully for all the Oneshield tables'),
         )
 
-        sp_os_broker >> sp_os_customer >> sp_os_tpolicy >> sp_os_tpolicy_history >> sp_os_tpolicy_transaction >> sp_os_tclaim >> sp_os_tclaim_feature >> sp_os_tclaim_transaction >> sp_os_claim_policy_search_api >> send_oneshield_email
+        sp_os_broker >> sp_os_customer >> sp_os_tpolicy >> sp_os_tpolicy_history >> sp_os_tpolicy_transaction >> sp_os_tcatastrophe >> sp_os_tcause_of_loss >> sp_os_tclaim >> sp_os_tclaim_update >> sp_os_tclaim_feature >> sp_os_tclaim_transaction >> sp_os_claim_policy_search_api >> send_oneshield_email
 
 
 

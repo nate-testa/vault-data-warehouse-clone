@@ -29,25 +29,26 @@ BEGIN
 		-- Get last source extract date
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;
-		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200));
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp2];
 
-        WITH 
-        policy_transaction AS (
-            SELECT 
-                policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
-                MAX(create_ts) as create_ts, 
-                SUM(premium_amt) as premium_amt,
-                SUM(annual_premium_amt) as annual_premium_amt
-				,coverage_sk
-            FROM edw_core.tpolicy_transaction as pt
-            WHERE product_sk = 1 -- Home
-                AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-            GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
+        SELECT 
+            policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
+            MAX(create_ts) as create_ts, 
+            SUM(premium_amt) as premium_amt,
+            SUM(annual_premium_amt) as annual_premium_amt
 			,coverage_sk
-        ),
+		INTO [edw_temp].[policy_ivans_home_temp1]
+        FROM edw_core.tpolicy_transaction as pt
+        WHERE product_sk = 1 -- Home
+            AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+        GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
+		,coverage_sk;
+
+		WITH
 		json_home_coverage AS (
 			SELECT ptf.policy_sk, ptf.effective_dt_sk ,ptf.transaction_seq_no, (
 				SELECT * FROM (
@@ -110,7 +111,7 @@ BEGIN
 						,0.0 as currentAmount
 						,CAST(hc.dwelling_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
-					FROM policy_transaction as pt 
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					WHERE  pt.policy_sk = ptf.policy_sk
@@ -126,7 +127,7 @@ BEGIN
 						,0.0 as currentAmountcurrentAmount
 						,CAST(hc.other_structures_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
-					FROM policy_transaction as pt 
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					WHERE  pt.policy_sk = ptf.policy_sk
@@ -142,7 +143,7 @@ BEGIN
 						,0.0 as currentAmount
 						,CAST(hc.contents_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
-					FROM policy_transaction as pt 
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					WHERE  pt.policy_sk = ptf.policy_sk
@@ -158,7 +159,7 @@ BEGIN
 						,0.0 as currentAmount
 						,CAST(hc.loss_of_use_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
-					FROM policy_transaction as pt 
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					WHERE  pt.policy_sk = ptf.policy_sk
@@ -174,7 +175,7 @@ BEGIN
 						,0.0 as currentAmount
 						,CAST(hc.personal_liability_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
-					FROM policy_transaction as pt 
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					WHERE  pt.policy_sk = ptf.policy_sk
@@ -190,7 +191,7 @@ BEGIN
 						,0.0 as currentAmount
 						,CAST(hc.medical_payments_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
-					FROM policy_transaction as pt 
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
 					INNER JOIN edw_core.thome_coverage as hc
 					ON pt.coverage_sk = hc.home_coverage_sk
 					WHERE  pt.policy_sk = ptf.policy_sk
@@ -199,7 +200,7 @@ BEGIN
 					--
 				) jd FOR JSON PATH, INCLUDE_NULL_VALUES
 			) AS Home_Coverages
-			FROM policy_transaction as ptf
+			FROM [edw_temp].[policy_ivans_home_temp1] as ptf
 		),
 		json_Additional_Interests AS (
 			SELECT
@@ -433,7 +434,7 @@ BEGIN
                        AND ud.transaction_seq_no = ptf.transaction_seq_no
 					FOR JSON PATH, INCLUDE_NULL_VALUES 
 				) Home_Collection_Coverages
-			FROM policy_transaction as ptf
+			FROM [edw_temp].[policy_ivans_home_temp1] as ptf
         ),
 		loss_history AS (
             SELECT 
@@ -716,9 +717,9 @@ BEGIN
 		--
 		,pt.create_ts as policy_transaction_create_ts
 		--
-		INTO [edw_temp].[policy_ivans_home_temp1]
+		INTO [edw_temp].[policy_ivans_home_temp2]
 		--
-		FROM policy_transaction pt
+		FROM [edw_temp].[policy_ivans_home_temp1] pt
 		INNER JOIN edw_core.tpolicy p
 		ON pt.policy_sk = p.policy_sk
 		LEFT JOIN edw_core.tproduct pr
@@ -1152,13 +1153,15 @@ BEGIN
 			,getdate()
 			,getdate()
 		    ,@etl_audit_sk
-		FROM [edw_temp].[policy_ivans_home_temp1];
+		FROM [edw_temp].[policy_ivans_home_temp2]
+		WHERE [053_PolicyNumber] IS NOT NULL;
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_transaction_create_ts) FROM [edw_temp].[policy_ivans_home_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_transaction_create_ts) FROM [edw_temp].[policy_ivans_home_temp2] t1),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp2];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
