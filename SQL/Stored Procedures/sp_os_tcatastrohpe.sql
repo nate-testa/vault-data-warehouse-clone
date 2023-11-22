@@ -47,11 +47,6 @@ BEGIN
 
 		INSERT INTO edw_core.tcatastrophe
 		(catastrophe_cd, catastrophe_nm, catastrophe_desc, source_system_sk, create_ts, update_ts, etl_audit_sk)
-		VALUES('2076', 'Tropical Storm Eta (11/08/2020 - 11/12/2020)', 'DATES: November 8, 2020 To November 11, 2020. ---- EXTENDED TO INCLUDE: November 11, 2020 To November 12, 2020. ---- STATES: Florida, and Possibly Other Areas. ---- PERILS: Flooding, Hurricane, Tropical Storm, Wind. ---- STORM FAMILY: Tropical Storm Eta', 1, 
-		getdate(), getdate(), @etl_audit_sk);
-
-		INSERT INTO edw_core.tcatastrophe
-		(catastrophe_cd, catastrophe_nm, catastrophe_desc, source_system_sk, create_ts, update_ts, etl_audit_sk)
 		VALUES('MAJ-19', 'COVID (03.11.20 - 02.28.21)', 'DATES: March 11, 2020 To February 28, 2021 ---- STATES: All ---- PERILS: NA ---- STORM FAMILY: NA', 1, 
 		getdate(), getdate(), @etl_audit_sk);
 		-- Update audit table
