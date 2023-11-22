@@ -119,6 +119,8 @@ BEGIN
 				loss_status,GETDATE() AS create_ts,GETDATE() AS update_ts, @etl_audit_sk AS etl_audit_sk
 			FROM
 				claim_reserve_feed_temp
+			WHERE
+				reserve_amount != 0
 
 			SET @rows_affected=@@ROWCOUNT;
 
