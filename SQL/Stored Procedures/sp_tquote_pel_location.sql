@@ -8,6 +8,7 @@
 ------------------------------------------------------------------------------------------------------------------------------
 -- 10/24/2023 			Yunus Mohammed					1. Created this procedure
 -- 11/11/23		        Sandeep Gundreddy		        2. modified quote_history_sk 
+-- 11/24/23				Yunus Mohammed					3. Removed bug. Only one pel location was showing for a policy.
 -- =========================================================================================================================== 
 CREATE or alter  PROCEDURE [edw_core].[sp_tquote_pel_location]
 
@@ -16,7 +17,6 @@ BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
     -- interfering with SELECT statements.
     SET NOCOUNT ON
-
 	BEGIN TRY
 		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
@@ -33,7 +33,8 @@ BEGIN
 
 		drop table if exists edw_temp.tquote_pel_location_temp1
 		select 
-			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,source_system_sk,quote_history_sk,[index],
+			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,source_system_sk,quote_history_sk,
+			rownum as [index],
 			CreatedDate,AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,
 			NumberOfSwimmingPools,MultiFamilyDwelling,VacantOrUnoccupied,ForSale
 			into edw_temp.tquote_pel_location_temp1
@@ -42,13 +43,16 @@ BEGIN
 		select * 
 		from
 			(
-			 
+			-- We are generating rownum becase atvo.[index] is 1 for every row of a policy and we are using it as location_no but we should 
+			-- have different location_no for different location of a policy number.
+			-- This rownum is used as location no
 			select
+			DENSE_RANK()OVER(PARTITION BY act.PolicyNumber, CAST(act.EffectiveDate AS DATE), act.policychangenumber ORDER BY atvo.Id) as rownum,
 			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
 			CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.quote_history_sk,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			act.[Number] AS transaction_seq_no, atvo.[index],
-			act.CreatedDate,atvof.Field,atvof.[Value]
+			act.CreatedDate,atvof.Field,atvof.[Value] -- ,atvo.Id
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
