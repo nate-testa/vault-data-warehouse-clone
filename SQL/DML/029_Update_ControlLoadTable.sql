@@ -7,14 +7,12 @@ set DataLoadingBehaviorSettings = '{
 	"watermarkColumnStartValue": null
 }'
 ,CopySinkSettings = '{
-	"preCopyScript": null,
+	"preCopyScript": "TRUNCATE TABLE edw_stage.Broker",
 	"tableOption": null,
 	"writeBehavior": "insert",
 	"sqlWriterUseTableLock": true,
 	"disableMetricsCollection": false,
-	"upsertSettings": {
-		"useTempDB": true
-	}
+	"upsertSettings": null
 }'
 where JSON_value(SourceObjectSettings,'$.table') = 'Broker';
 
@@ -27,14 +25,12 @@ set DataLoadingBehaviorSettings = '{
 	"watermarkColumnStartValue": null
 }'
 ,CopySinkSettings = '{
-	"preCopyScript": null,
+	"preCopyScript": "TRUNCATE TABLE edw_stage.BrokerageLicense",
 	"tableOption": null,
 	"writeBehavior": "insert",
 	"sqlWriterUseTableLock": true,
 	"disableMetricsCollection": false,
-	"upsertSettings": {
-		"useTempDB": true
-	}
+	"upsertSettings": null
 }'
 where JSON_value(SourceObjectSettings,'$.table') = 'BrokerageLicense';
 
@@ -47,14 +43,12 @@ set DataLoadingBehaviorSettings = '{
 	"watermarkColumnStartValue": null
 }'
 ,CopySinkSettings = '{
-	"preCopyScript": null,
+	"preCopyScript": "TRUNCATE TABLE edw_stage.BrokerageCommission",
 	"tableOption": null,
 	"writeBehavior": "insert",
 	"sqlWriterUseTableLock": true,
 	"disableMetricsCollection": false,
-	"upsertSettings": {
-		"useTempDB": true
-	}
+	"upsertSettings": null
 }'
 where JSON_value(SourceObjectSettings,'$.table') = 'BrokerageCommission';
 
@@ -67,13 +61,11 @@ set DataLoadingBehaviorSettings = '{
 	"watermarkColumnStartValue": null
 }'
 ,CopySinkSettings = '{
-	"preCopyScript": null,
+	"preCopyScript": "TRUNCATE TABLE edw_stage.BrokerageCompanyTeamMember",
 	"tableOption": null,
 	"writeBehavior": "insert",
 	"sqlWriterUseTableLock": true,
 	"disableMetricsCollection": false,
-	"upsertSettings": {
-		"useTempDB": true
-	}
+	"upsertSettings": null
 }'
 where JSON_value(SourceObjectSettings,'$.table') = 'BrokerageCompanyTeamMember';
