@@ -8,7 +8,8 @@ GO
 -- Change date |Author						|	Change Description
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 09/08/23		Architha Gudimalla			1. Created this procedure  
--- 11/14/23		Sandeep Gundreddy			1. Modify logic  
+-- 11/14/23		Sandeep Gundreddy			2. Modify logic  
+-- 11/22/23     Sandeep Gundreddy           3. Modified logic to fix quote_status for Issued quotes
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_update]
@@ -33,6 +34,13 @@ BEGIN
 	
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))   
+
+        -- Updating quote status to Issued for all Issued quotes 
+
+        update a 
+        set a.quote_status='Issued'
+        from edw_core.tquote a
+		where exists (select * from edw_core.tquote_history  b where upper(transaction_status) = 'ISSUED' and a.quote_no=b.quote_no) and ISNULL(a.quote_status,'xx')!='Issued';
 
 		update a
 		set a.quote_status = case when b.state = 'WIP' and tr_status = 'No Trans' then 'In Progress'
@@ -74,6 +82,7 @@ BEGIN
              where a.quote_no=b.quote_no and a.first_offered_quote_ts is null;
 		
         --AV2 Issued quotes which don't exist in tquote_transaction_status_history
+        	         
         update a
 		set a.first_offered_quote_ts 	= a.quote_create_ts
 		from edw_core.tquote a

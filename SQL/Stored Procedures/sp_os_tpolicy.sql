@@ -49,10 +49,14 @@ BEGIN
 			WHEN trx.POLICY_TRX_LOB_NAME IN ('Vault Lux Collections','Collections') then 'LUX'
 			WHEN trx.POLICY_TRX_LOB_NAME IN ('Vault Lux Collections','Excess Liability') then 'PEL'
 			ELSE trx.policy_trx_lob_name END as product_cd,
-			trx.policy_trx_risk_state as risk_state_cd,
+			CASE
+				WHEN tst.state_cd IS NOT NULL THEN tst.state_cd
+				WHEN trx.policy_trx_risk_state='Washington, D.C.' THEN 'DC'
+				ELSE trx.policy_trx_risk_state
+			END as risk_state_cd,
 			trx.policy_trx_insured_name as insured_nm,
 			null as insured_type,
-		   trx.policy_trx_type_name as policy_term, -- some transformation may require
+			trx.policy_trx_type_name as policy_term, -- some transformation may require
 			case
 				when p.writing_company_name='Vault Reciprocal Exchange' then 'Vault Reciprocal Exchange'
 				when p.writing_company_name='Vault E&S Insurance Company' then 'Vault E & S Insurance Company'
@@ -84,7 +88,7 @@ BEGIN
 		ba.address_zip_code as mailing_address_zip_cd,
 		null as mailing_address_county_nm,
 		ba.address_country as mailing_address_country_nm,
-		trx.policy_renewal_hold_indicator as non_renewal_in,
+		CASE WHEN trx.policy_renewal_hold_indicator='T' then 'Yes' Else 'No' END AS non_renewal_in,
 		null as prior_policy_no,
 		ba.billingaccount_id
 		FROM
@@ -95,8 +99,8 @@ BEGIN
 			LEFT JOIN edw_stage.dragon_billingaccount ba on ba.billingaccount_id = f.billing_account_id
 			LEFT JOIN edw_core.tbroker tbrk on tbrk.broker_id=cast(trx.policy_trx_partner_id as varchar(255))
 			LEFT JOIN edw_core.tcustomer tcust on tcust.customer_id=cast(trx.customer_id as varchar(255))
-			LEFT JOIN edw_core.tpolicy tph on tph.policy_no = trx.policy_trx_policy_number				
-		-- where p.policy_id=89852196836
+			LEFT JOIN edw_core.tpolicy tph on tph.policy_no = trx.policy_trx_policy_number
+			LEFT JOIN edw_core.tstate tst on tst.state_nm = trx.policy_trx_risk_state
 		WHERE 
 			trx.policy_trx_process_date IS NOT NULL
 			AND trx.policy_trx_policy_number IS NOT NULL
@@ -105,8 +109,6 @@ BEGIN
 			AND tph.policy_sk is null
 		) a
 		WHERE rn=1
-
-		-- SELECT * FROM edw_temp.os_tpolicy_temp1
 		
 		INSERT INTO [edw_core].[tpolicy]
 		(
