@@ -32,21 +32,25 @@ BEGIN
 
  		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_auto_feed_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[policy_ivans_auto_feed_temp2];
+
+        SELECT 
+            policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
+            MAX(create_ts) as create_ts, 
+            SUM(premium_amt) as premium_amt,
+            SUM(annual_premium_amt) as annual_premium_amt
+        INTO [edw_temp].[policy_ivans_auto_feed_temp2]
+        FROM edw_core.tpolicy_transaction as pt
+        INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
+        WHERE 1=1
+            AND pr.product_cd = 'AU'
+            AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+        GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
+        ;
+
+
 
         WITH 
-        policy_transaction AS (
-            SELECT 
-                policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
-                MAX(create_ts) as create_ts, 
-                SUM(premium_amt) as premium_amt,
-                SUM(annual_premium_amt) as annual_premium_amt
-            FROM edw_core.tpolicy_transaction as pt
-            INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
-            WHERE 1=1
-                AND pr.product_cd = 'AU'
-                AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-            GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
-        ),
         loss_history AS (
             SELECT 
                 policy_no, effective_dt, transaction_seq_no, max(loss_seq_no) as loss_seq_no 
@@ -116,7 +120,7 @@ BEGIN
                             AND pt.transaction_seq_no = ptf.transaction_seq_no
                         FOR JSON PATH
                 ) AS AU_Coverages
-                FROM policy_transaction as ptf
+                FROM [edw_temp].[policy_ivans_auto_feed_temp2] as ptf
                 GROUP BY ptf.policy_sk, ptf.effective_dt_sk ,ptf.transaction_seq_no
         ),
         json_au_vehicles_sub_coverages AS (
@@ -430,7 +434,7 @@ BEGIN
             @etl_audit_sk as etl_audit_sk,
             pt.create_ts as policy_transaction_create_ts
         INTO [edw_temp].[policy_ivans_auto_feed_temp1] 
-        FROM policy_transaction AS pt
+        FROM [edw_temp].[policy_ivans_auto_feed_temp2] AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
         LEFT JOIN edw_core.tpolicy_insured as pi ON p.policy_no = pi.policy_no AND p.effective_dt = pi.effective_dt AND pt.transaction_seq_no = pi.transaction_seq_no AND pi.primary_insured_in = 'Yes'
 		LEFT JOIN edw_core.tdate AS d1 ON pt.transaction_effective_dt_sk = d1.date_sk
@@ -608,7 +612,8 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
         -- Drop temp table
-        DROP TABLE IF EXISTS edw_temp.[policy_ivans_auto_feed_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[policy_ivans_auto_feed_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[policy_ivans_auto_feed_temp2];
 
 	END TRY
 	BEGIN CATCH
