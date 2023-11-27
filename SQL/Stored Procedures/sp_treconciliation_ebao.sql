@@ -5,6 +5,7 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 11/08/23		Yunus Mohammed				1. Created this procedure 
+-- 11/27/23		Yunus Mohammed				2. Updated Merge Statement
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_treconciliation_ebao]
@@ -13,7 +14,7 @@ BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
     -- interfering with SELECT statements. 
     SET NOCOUNT ON
-    BEGIN TRY
+	    BEGIN TRY
 		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
@@ -65,18 +66,15 @@ BEGIN
             WHERE (CAST(transaction_ts AS DATE) BETWEEN CAST(@last_source_extract_ts AS DATE) AND CAST(GETDATE() AS DATE)) AND source_system_sk=3
             GROUP BY CAST(transaction_ts AS DATE)
             ) AS target ON source.post_date=target.transaction_ts
-        ) AS source
-        LEFT JOIN edw_core.treconciliation trec ON 
-        trec.transaction_start_dt=source.transaction_start_dt
-        AND trec.transaction_end_dt=source.transaction_end_dt
-        WHERE
-            source.datamart_nm='Claim' AND source.source_system_nm='eBao';
+        ) AS source        
 
 		-- Insert and Update treconciliation table
 		MERGE [edw_core].[treconciliation] AS Target
 		USING edw_temp.treconciliation_ebao_temp1 AS Source
 		ON Target.transaction_start_dt = Source.transaction_start_dt
 	    AND Target.transaction_end_dt = Source.transaction_end_dt
+		AND Target.datamart_nm = Source.datamart_nm
+		AND Target.source_system_nm= Source.source_system_nm
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
