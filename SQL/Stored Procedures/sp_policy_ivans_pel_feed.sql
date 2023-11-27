@@ -32,14 +32,14 @@ BEGIN
 
  		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_pel_feed_temp1];
-        DROP TABLE IF EXISTS [edw_temp].[policy_transaction_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[policy_ivans_pel_feed_temp2];
 
         SELECT 
             pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.transaction_dt_sk, pt.customer_sk, p.customer_id, pt.policy_transaction_type_sk, pt.source_system_sk, p.policy_no, p.effective_dt,
             MAX(pt.create_ts) as create_ts, 
             SUM(pt.premium_amt) as premium_amt,
             SUM(pt.annual_premium_amt) as annual_premium_amt
-        INTO [edw_temp].[policy_transaction_temp1]
+        INTO [edw_temp].[policy_ivans_pel_feed_temp2]
         FROM edw_core.tpolicy_transaction as pt
         INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
         INNER JOIN edw_core.tpolicy as p ON pt.policy_sk = p.policy_sk
@@ -151,7 +151,7 @@ BEGIN
                     ) AS coverages
                     FOR JSON PATH
                 ) AS PEL_Coverages
-            FROM [edw_temp].[policy_transaction_temp1] as ptf
+            FROM [edw_temp].[policy_ivans_pel_feed_temp2] as ptf
         ),
         json_pel_drivers AS (
             SELECT 
@@ -275,7 +275,7 @@ BEGIN
                     AND p.customer_id = ptf.customer_id
                     FOR JSON PATH, INCLUDE_NULL_VALUES
                 ) AS PEL_Underly_Policies
-            FROM [edw_temp].[policy_transaction_temp1] AS ptf
+            FROM [edw_temp].[policy_ivans_pel_feed_temp2] AS ptf
         )
 
 
@@ -416,7 +416,7 @@ BEGIN
             '****pending****' as [NIPRid_200],
             pt.create_ts as policy_transaction_create_ts
         INTO [edw_temp].[policy_ivans_pel_feed_temp1] 
-        FROM [edw_temp].[policy_transaction_temp1] AS pt
+        FROM [edw_temp].[policy_ivans_pel_feed_temp2] AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
         LEFT JOIN edw_core.tpolicy_insured as pi ON p.policy_no = pi.policy_no AND p.effective_dt = pi.effective_dt AND pt.transaction_seq_no = pi.transaction_seq_no AND pi.primary_insured_in = 'Yes'
 		LEFT JOIN edw_core.tdate AS d1 ON pt.transaction_effective_dt_sk = d1.date_sk
@@ -634,7 +634,7 @@ BEGIN
 
         -- Drop temp table
         DROP TABLE IF EXISTS [edw_temp].[policy_ivans_pel_feed_temp1];
-        DROP TABLE IF EXISTS [edw_temp].[policy_transaction_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[policy_ivans_pel_feed_temp2];
 
 	END TRY
 	BEGIN CATCH
