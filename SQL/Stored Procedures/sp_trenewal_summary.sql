@@ -18,6 +18,7 @@ GO
 -- 11/15/23		Architha Gudimalla				6. Added logic for cancel rewrites
 -- 11/15/23		Architha Gudimalla				7. Added uw_company_cd
 -- 11/17/23		Architha Gudimalla				8. Fixed divide by 0 error
+-- 11/27/23		Architha Gudimalla				9. Corrected the logic for residence type and TIV
 -- ==================================================================================================================================== 
 
 ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -254,7 +255,7 @@ BEGIN
 								 --and	transaction_effective_dt_sk <= @end_dt_sk
 								 and 	(transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk < 61) 
 							) sixty_day_pol_tr on tr.policy_sk = sixty_day_pol_tr.policy_sk
-				 left join edw_core.thome_coverage hoc on hoc.home_coverage_sk = tr.coverage_sk
+				 left join edw_core.thome_coverage hoc on hoc.home_coverage_sk = tr.coverage_sk and tr.product_sk in (1,5)
 				 where	max_pol_tr.rnk = 1
 				 and (sixty_day_pol_tr.rnk = 1 or sixty_day_pol_tr.rnk is null)
 				 and effective_dt_sk <= @end_dt_sk
@@ -322,8 +323,9 @@ BEGIN
 						exp_pols_prm.expiring_premium_amount * (case when ren_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end) as expiringpremiumrenewalaccepted,
 						exp_pols_prm.expiring_premium_amount * (case when exp_pols_prm.non_renewal_in = 'Yes' then -1 else 0 end) as non_renewal_expiring_premium_amount,
 						exp_pols_prm.totalsquarefeet,  
-						(CASE when exp_pols_prm.product_cd = 'HO'  and exp_pols_prm.max_tr_residencetype =  'Homeowners' then 'Homeowners'
-								 when exp_pols_prm.product_cd = 'HO'  and exp_pols_prm.max_tr_residencetype <> 'Homeowners' then 'Condo/Tenant' 
+						(CASE when exp_pols_prm.product_cd  in ('HO','CO')  and exp_pols_prm.max_tr_residencetype =  'Homeowners' then 'Homeowners'
+							  when exp_pols_prm.product_cd in ('HO','CO')  and exp_pols_prm.max_tr_residencetype <> 'Homeowners' then 'Condo/Tenant'
+							  when exp_pols_prm.product_cd in ('HO','CO')  then 'Homeowners'
 						else 'Non-Home Product'
 						end) as residencetype,
 						exp_pols_prm.sixty_day_TIV, 
