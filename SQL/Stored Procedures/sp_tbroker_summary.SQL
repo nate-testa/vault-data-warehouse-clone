@@ -14,9 +14,11 @@ GO
 -- 10/13/23		Architha Gudimalla				2. Added risk state
 -- 10/20/23		Architha Gudimalla				3. Removed source_system_sk
 -- 10/31/23		Architha Gudimalla				4. Added addtional columns
+-- 11/21/23		Architha Gudimalla				5. Added quotes logic
+-- 11/27/23		Architha Gudimalla				6. Added temp table
 -- ================================================================================================= 
 
-create or ALTER PROCEDURE [edw_core].[sp_tbroker_summary]
+create or ALTER PROCEDURE [edw_core].[sp_tbroker_summary] 
 @in_end_dt date = null
 AS 
 BEGIN
@@ -40,7 +42,8 @@ BEGIN
 		DECLARE @three_year_prior_month_end_dt_sk INT
 		DECLARE @year_begin_month_end_dt_sk INT 
 		DECLARE @month_end_dt_sk INT  
-		DECLARE @end_dt DATETIME 
+		DECLARE @end_dt DATETIME  
+		DECLARE @begin_end_dt DATETIME 
 		DECLARE @year INT 
 		DECLARE @yearmonth INT   
 		
@@ -72,6 +75,7 @@ BEGIN
 
 				select 	@month_end_dt_sk = max(datE_sk),  
 						@end_dt = max(actual_dt),
+						@begin_end_dt = min(actual_dt),
 						@year = max(calendar_year)
 				from edw_core.tdate
 				where yearmonth = @yearmonth;
@@ -95,15 +99,13 @@ BEGIN
 						where yearmonth = @yearmonth and actual_dt < cast(getdate() as date); 
 				END  
 
-				delete from edw_core.tbroker_summary
-				where month_sk = @month_end_dt_sk; 
-
+				DROP TABLE IF EXISTS edw_temp.tbroker_summary_temp;
 				with pol_summ as
 				(
 					 SELECT summ.broker_sk, --policy_sk, 
 							summ.customer_sk,
 							summ.product_sk,  
-							--st.state_sk,
+							st.state_sk,
 							sum(case when summ.month_sk = @month_end_dt_sk then summ.inforce_ct else 0 end) inforce_ct,  
 							sum(case when summ.month_sk = @month_end_dt_sk then summ.inforce_premium_amt else 0 end) inforce_premium_amt, 
 							sum(case when summ.month_sk = @month_end_dt_sk then summ.inforce_net_premium_amt else 0 end) inforce_net_premium_amt,
@@ -132,14 +134,14 @@ BEGIN
 					 group by summ.broker_sk, --policy_sk, 
 							summ.customer_sk,
 							summ.product_sk
-							--,st.state_sk
+							,st.state_sk
 				), 
 				clm_summ as
 				( 
 					select  cs.broker_sk, --policy_sk, 
 							cs.customer_sk,
 							cs.product_sk,  
-							--st.state_sk,
+							st.state_sk,
 							sum(case when datediff(d,c.loss_dt,getdate()) between 0 and 365 then 1 else 0 end) one_year_claim_ct, 
 							sum(case when datediff(d,c.loss_dt,getdate()) between 0 and 365 then [itd_total_incurred_amt] else 0 end) one_year_loss_incurred_amt, 
 							sum(case when datediff(d,c.loss_dt,getdate()) between 0 and 365 
@@ -178,16 +180,156 @@ BEGIN
 					group by cs.broker_sk, --policy_sk, 
 							cs.customer_sk, 
 							cs.product_sk
-							--,st.state_sk
+							,st.state_sk
+				) , 
+				quotes as
+				(   
+					select br.broker_sk, cust.customer_sk, pr.product_sk
+							,st.state_sk, 
+							sum(case when q.first_offered_quote_ts between @begin_end_dt and @end_dt then 1 else 0 end) quote_ct, 
+							max(q.first_offered_quote_ts) max_quoted_dt, 
+							max(q.bind_dt) max_bind_dt
+					from edw_core.tquote q, edw_core.tcustomer cust, edw_core.tbroker br, edw_core.tproduct pr, edw_core.tstate st
+					where q.customer_id = cust.customer_id
+					and q.broker_id = br.broker_id
+					and q.product_cd = pr.product_cd 
+					and q.risk_state_cd = st.state_cd
+					group by br.broker_sk, cust.customer_sk, pr.product_sk
+							,st.state_sk
 				) 
+				select 	@month_end_dt_sk month_sk, 
+						COALESCE(ps.customer_sk, cs.customer_sk, q.customer_sk) customer_sk,
+						COALESCE(ps.broker_sk, cs.broker_sk, q.broker_sk) broker_sk,
+						COALESCE(ps.product_sk, cs.product_sk, q.product_sk) product_sk
+						,COALESCE(ps.state_sk, cs.state_sk, q.state_sk) state_sk,
+						sum(isnull(q.quote_ct,0)) quote_ct,
+						--count(distinct isnull(ps.customer_sk, cs.customer_sk)) customer_ct,
+						-- avg lines per account - can be calculated
+						max(cast(case when q.max_quoted_dt is not null then q.max_quoted_dt end as date)) last_quote_dt,
+						max(case when q.max_bind_dt is not null then q.max_bind_dt end) last_bound_dt,
+						sum(isnull(ps.ytd_new_business_ct,0)) new_business_ct, 
+						sum(isnull(ps.ytd_new_business_premium_amt,0)) new_business_premium_amt,  
+						sum(isnull(ps.ytd_new_business_net_premium_amt,0)) new_business_net_premium_amt, 
+						sum(isnull(ps.inforce_ct,0)) inforce_ct, 
+						sum(isnull(ps.inforce_premium_amt,0)) inforce_premium_amt,
+						sum(isnull(ps.inforce_net_premium_amt,0)) inforce_net_premium_amt,
+						sum(isnull(ps.ves_inforce_ct,0)) ves_inforce_ct,  
+						sum(isnull(ps.ves_inforce_net_premium_amt,0)) ves_inforce_net_premium_amt,
+						sum(isnull(ps.vre_inforce_ct,0)) vre_inforce_ct,  
+						sum(isnull(ps.vre_inforce_net_premium_amt,0)) vre_inforce_net_premium_amt,
+						sum(isnull(ps.mtd_commission_amt,0)) mtd_commission_amt,
+						sum(isnull(ps.mtd_tax_fee_surcharge_amt,0)) mtd_tax_fee_surcharge_amt,
+						sum(isnull(ps.mtd_premium_amt,0)) mtd_premium_amt, 
+						sum(isnull(ps.mtd_net_premium_amt,0)) mtd_net_premium_amt,  
+						sum(isnull(ps.ytd_premium_amt,0)) ytd_premium_amt, 
+						sum(isnull(ps.ytd_net_premium_amt,0)) ytd_net_premium_amt,  
+						sum(isnull(ps.one_year_earned_net_premium_amt,0)) one_year_earned_net_premium_amt, 
+						sum(isnull(ps.three_year_earned_net_premium_amt,0)) three_year_earned_net_premium_amt, 
+						sum(isnull(ps.one_year_earned_exposure,0)) one_year_earned_exposure, 
+						sum(isnull(ps.three_year_earned_exposure,0)) three_year_earned_exposure, 
+						sum(isnull(cs.one_year_claim_ct,0)) one_year_claim_ct, 
+						sum(isnull(cs.one_year_loss_incurred_amt,0)) one_year_loss_incurred_amt,
+						sum(isnull(cs.one_year_loss_incurred_capped_amt,0)) one_year_loss_incurred_capped_amt,
+						sum(isnull(cs.one_year_non_cat_claim_ct,0)) one_year_non_cat_claim_ct, 
+						sum(isnull(cs.one_year_non_cat_loss_incurred_amt,0)) one_year_non_cat_loss_incurred_amt,
+						sum(isnull(cs.one_year_non_cat_loss_incurred_capped_amt,0)) one_year_non_cat_loss_incurred_capped_amt,
+						sum(isnull(cs.three_year_claim_ct,0)) three_year_claim_ct, 
+						sum(isnull(cs.three_year_loss_incurred_amt,0)) three_year_loss_incurred_amt,
+						sum(isnull(cs.three_year_loss_incurred_capped_amt,0)) three_year_loss_incurred_capped_amt,
+						sum(isnull(cs.three_year_non_cat_claim_ct,0)) three_year_non_cat_claim_ct, 
+						sum(isnull(cs.three_year_non_cat_loss_incurred_amt,0)) three_year_non_cat_loss_incurred_amt, 
+						sum(isnull(cs.three_year_non_cat_loss_incurred_capped_amt,0)) three_year_non_cat_loss_incurred_capped_amt, 
+						getdate() update_ts, @etl_audit_sk etl_audit_sk
+				into edw_temp.tbroker_summary_temp
+				from pol_summ ps
+				full join clm_summ cs  on ps.broker_sk = cs.broker_sk  and ps.customer_sk = cs.customer_sk  and ps.product_sk = cs.product_sk and ps.state_sk = cs.state_sk
+				full join quotes q  on ps.broker_sk = q.broker_sk  and ps.customer_sk = q.customer_sk  and ps.product_sk = q.product_sk and ps.state_sk = q.state_sk 
+				--where  isnull(xpsr_rein.ee,0) <> 0
+				group by COALESCE(ps.customer_sk, cs.customer_sk, q.customer_sk),
+						COALESCE(ps.broker_sk, cs.broker_sk, q.broker_sk),
+						COALESCE(ps.product_sk, cs.product_sk, q.product_sk)
+						,COALESCE(ps.state_sk, cs.state_sk, q.state_sk)
+				;
+
+				/*delete from edw_core.tbroker_risk_state_summary
+				where month_sk = @month_end_dt_sk; 
+
+				INSERT INTO edw_core.tbroker_risk_state_summary
+					( 
+						month_sk,
+						broker_sk,
+						risk_state_sk, 
+						product_sk,
+						customer_sk,
+						quote_ct,
+						--customer_ct,
+						-- avg lines per account - can be calculated
+						last_quote_dt,
+						last_bound_dt,
+						ytd_new_business_ct, 
+						ytd_new_business_premium_amt,
+						ytd_new_business_net_premium_amt, 
+						inforce_ct, 
+						inforce_premium_amt,
+						inforce_net_premium_amt,
+						non_admitted_inforce_ct,  
+						non_admitted_inforce_net_premium_amt,
+						admitted_inforce_ct,  
+						admitted_inforce_net_premium_amt,
+						mtd_commission_amt,
+						mtd_tax_fee_surcharge_amt,
+						mtd_premium_amt, 
+						mtd_net_premium_amt,  
+						ytd_premium_amt, 
+						ytd_net_premium_amt,  
+						one_year_earned_net_premium_amt, 
+						three_year_earned_net_premium_amt, 
+						one_year_earned_exposure, 
+						three_year_earned_exposure, 
+						one_year_claim_ct, 
+						one_year_loss_incurred_amt,
+						one_year_loss_incurred_capped_amt,
+						one_year_non_cat_claim_ct, 
+						one_year_non_cat_loss_incurred_amt,
+						one_year_non_cat_loss_incurred_capped_amt,
+						three_year_claim_ct, 
+						three_year_loss_incurred_amt,
+						three_year_loss_incurred_capped_amt,
+						three_year_non_cat_claim_ct, 
+						three_year_non_cat_loss_incurred_amt, 
+						three_year_non_cat_loss_incurred_capped_amt,
+						update_ts,
+						etl_audit_sk
+					)
+				select month_sk, broker_sk, state_sk, product_sk, customer_sk,  
+						sum(quote_ct), 
+						--count(distinct customer_sk) customer_ct, 
+						max(last_quote_dt), max(last_bound_dt), 
+						sum(new_business_ct), sum(new_business_premium_amt), sum(new_business_net_premium_amt), 
+						sum(inforce_ct), sum(inforce_premium_amt), sum(inforce_net_premium_amt), 
+						sum(ves_inforce_ct), sum(ves_inforce_net_premium_amt), sum(vre_inforce_ct), sum(vre_inforce_net_premium_amt), 
+						sum(mtd_commission_amt), sum(mtd_tax_fee_surcharge_amt), sum(mtd_premium_amt), sum(mtd_net_premium_amt), 
+						sum( ytd_premium_amt), sum(ytd_net_premium_amt), 
+						sum(one_year_earned_net_premium_amt), sum(three_year_earned_net_premium_amt), sum(one_year_earned_exposure), sum(three_year_earned_exposure), 
+						sum(one_year_claim_ct), sum(one_year_loss_incurred_amt), sum(one_year_loss_incurred_capped_amt), 
+						sum(one_year_non_cat_claim_ct), sum(one_year_non_cat_loss_incurred_amt), sum(one_year_non_cat_loss_incurred_capped_amt),
+						sum(three_year_claim_ct), sum(three_year_loss_incurred_amt), sum(three_year_loss_incurred_capped_amt),
+						sum(three_year_non_cat_claim_ct), sum(three_year_non_cat_loss_incurred_amt), sum( three_year_non_cat_loss_incurred_capped_amt),
+						max(update_ts), max(etl_audit_sk)
+				from edw_temp.tbroker_summary_temp
+				group by month_sk, broker_sk, state_sk, product_sk, customer_sk;
+
+				*/
+				
+				delete from edw_core.tbroker_summary
+				where month_sk = @month_end_dt_sk; 
+
 				INSERT INTO edw_core.tbroker_summary
 					( 
 						month_sk,
-						--policy_sk,
 						broker_sk,
-						customer_sk,
 						product_sk,
-						--risk_state_sk, 
+						customer_sk,
 						quote_ct,
 						customer_ct,
 						-- avg lines per account - can be calculated
@@ -228,61 +370,23 @@ BEGIN
 						update_ts,
 						etl_audit_sk
 					)
-				select 	@month_end_dt_sk, 
-						isnull(ps.broker_sk, cs.broker_sk),
-						isnull(ps.customer_sk, cs.customer_sk),
-						isnull(ps.product_sk, cs.product_sk),
-						--isnull(ps.state_sk, cs.state_sk), 
-						0 quote_ct,
-						count(distinct isnull(ps.customer_sk, cs.customer_sk)) customer_ct,
-						-- avg lines per account - can be calculated
-						null last_quote_dt,
-						null last_bound_dt,
-						sum(ps.ytd_new_business_ct) new_business_ct, 
-						sum(ps.ytd_new_business_premium_amt) new_business_premium_amt,  
-						sum(ps.ytd_new_business_net_premium_amt) new_business_net_premium_amt, 
-						sum(ps.inforce_ct), 
-						sum(ps.inforce_premium_amt),
-						sum(ps.inforce_net_premium_amt),
-						sum(ps.ves_inforce_ct),  
-						sum(ps.ves_inforce_net_premium_amt),
-						sum(ps.vre_inforce_ct),  
-						sum(ps.vre_inforce_net_premium_amt),
-						sum(ps.mtd_commission_amt),
-						sum(ps.mtd_tax_fee_surcharge_amt),
-						sum(ps.mtd_premium_amt), 
-						sum(ps.mtd_net_premium_amt),  
-						sum(ps.ytd_premium_amt), 
-						sum(ps.ytd_net_premium_amt),  
-						sum(ps.one_year_earned_net_premium_amt), 
-						sum(ps.three_year_earned_net_premium_amt), 
-						sum(ps.one_year_earned_exposure), 
-						sum(ps.three_year_earned_exposure), 
-						sum(isnull(cs.one_year_claim_ct,0)), 
-						sum(isnull(cs.one_year_loss_incurred_amt,0)),
-						sum(isnull(cs.one_year_loss_incurred_capped_amt,0)),
-						sum(isnull(cs.one_year_non_cat_claim_ct,0)), 
-						sum(isnull(cs.one_year_non_cat_loss_incurred_amt,0)),
-						sum(isnull(cs.one_year_non_cat_loss_incurred_capped_amt,0)),
-						sum(isnull(cs.three_year_claim_ct,0)), 
-						sum(isnull(cs.three_year_loss_incurred_amt,0)),
-						sum(isnull(cs.three_year_loss_incurred_capped_amt,0)),
-						sum(isnull(cs.three_year_non_cat_claim_ct,0)), 
-						sum(isnull(cs.three_year_non_cat_loss_incurred_amt,0)), 
-						sum(isnull(cs.three_year_non_cat_loss_incurred_capped_amt,0)), 
-						getdate(), @etl_audit_sk
-				from pol_summ ps
-				full join clm_summ cs 
-				on ps.broker_sk = cs.broker_sk 
-				and ps.customer_sk = cs.customer_sk  
-				and ps.product_sk = cs.product_sk  
-				--and ps.state_sk = cs.state_sk 
-				--where  isnull(xpsr_rein.ee,0) <> 0
-				group by isnull(ps.customer_sk, cs.customer_sk),
-						isnull(ps.broker_sk, cs.broker_sk),
-						isnull(ps.product_sk, cs.product_sk)
-						--,isnull(ps.state_sk, cs.state_sk)
-				;
+				select month_sk, broker_sk, product_sk, customer_sk,  
+						sum(quote_ct), 
+						count(distinct customer_sk) customer_ct, 
+						max(last_quote_dt), max(last_bound_dt), 
+						sum(new_business_ct), sum(new_business_premium_amt), sum(new_business_net_premium_amt), 
+						sum(inforce_ct), sum(inforce_premium_amt), sum(inforce_net_premium_amt), 
+						sum(ves_inforce_ct), sum(ves_inforce_net_premium_amt), sum(vre_inforce_ct), sum(vre_inforce_net_premium_amt), 
+						sum(mtd_commission_amt), sum(mtd_tax_fee_surcharge_amt), sum(mtd_premium_amt), sum(mtd_net_premium_amt), 
+						sum(ytd_premium_amt), sum(ytd_net_premium_amt), 
+						sum(one_year_earned_net_premium_amt), sum(three_year_earned_net_premium_amt), sum(one_year_earned_exposure), sum(three_year_earned_exposure), 
+						sum(one_year_claim_ct), sum(one_year_loss_incurred_amt), sum(one_year_loss_incurred_capped_amt), 
+						sum(one_year_non_cat_claim_ct), sum(one_year_non_cat_loss_incurred_amt), sum(one_year_non_cat_loss_incurred_capped_amt),
+						sum(three_year_claim_ct), sum(three_year_loss_incurred_amt), sum(three_year_loss_incurred_capped_amt),
+						sum(three_year_non_cat_claim_ct), sum(three_year_non_cat_loss_incurred_amt), sum( three_year_non_cat_loss_incurred_capped_amt),
+						max(update_ts), max(etl_audit_sk)
+				from edw_temp.tbroker_summary_temp
+				group by month_sk, broker_sk, product_sk, customer_sk;
        
 				SET @rows_affected=@@ROWCOUNT;
 
@@ -293,6 +397,8 @@ BEGIN
 				-- Update audit table
 				SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 				EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc; 
+
+				drop table edw_temp.tbroker_summary_temp;
 				 
 				FETCH NEXT FROM c1_rec INTO @yearmonth, @year;
 			END; 

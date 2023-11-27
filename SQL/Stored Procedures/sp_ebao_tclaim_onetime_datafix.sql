@@ -1,8 +1,12 @@
 -- =============================================
 -- Author:		Yunus Mohammed
--- Create Date: 11/23/2023
 -- Description: This procedures update ebao claims into tclaim table (company and loss state cd)
--- =============================================
+---------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 11/23/23		Yunus Mohammed				1. Created this procedure 
+-- 11/27/23		Yunus Mohammed				2. Added update stmt to update company nm
+-- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_ebao_tclaim_onetime_datafix]
 
 AS
@@ -37,6 +41,17 @@ BEGIN
 		Update edw_core.tclaim set underwriting_company_nm='Vault Reciprocal Exchange' where claim_no='C21AUA00226'
 		Update edw_core.tclaim set underwriting_company_nm='Vault Reciprocal Exchange' where claim_no='C21HOA00416'
 
+		UPDATE edw_core.tclaim
+		SET
+		underwriting_company_nm = CASE underwriting_company_nm
+									WHEN 'Vault Reciprocal Exchange' THEN 'VES'
+									WHEN 'Vault E&S Insurance Company' THEN 'VRE'
+									ELSE
+										underwriting_company_nm
+									END
+		WHERE
+		source_system_sk=3
+
 		UPDATE tc set tc.loss_state_cd= src.state_cd
 		-- select tc.claim_sk,tc.claim_no,tc.loss_state_cd,src.state_cd
 		from
@@ -64,9 +79,11 @@ BEGIN
 				when 'TAMPA' then 'FL'
 				when '33609' then 'FL'
 				when 'Austin' then 'TX'
+				when 'HOBOKEN' then 'NJ'
 				when '75068' then 'TX'
 				when 'DE/PA' then 'DE'
 				when ', FL' then 'FL'
+				when ', TX' then 'TX'
 			end 
 			end as loss_state_cd
 		from

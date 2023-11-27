@@ -6,6 +6,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 07/24/23		Architha Gudimalla				1. Created this procedure 
 -- 10/23/23		Architha Gudimalla				2. Updated the proc to run for 30 days
+-- 11/27/23		Architha Gudimalla				3. Add source_system_sk and datamart
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_treconciliation]
@@ -38,35 +39,48 @@ BEGIN
 		
 		with src_metal as
 		(
-			select cast(acct.IssuedDate as date) iss_dt, count(*) cnt, sum(coalesce(totalpremiumdeltaprorated, totalpremium)) prm 
+			select cast(acct.IssuedDate as date) iss_dt, count(*) cnt, 
+					sum(coalesce(totalpremiumdeltaprorated, totalpremium)) prm ,
+					case when acct.ExternalSourceId is not NULL 
+					 then 2 --(AV2) 
+					 Else 4 --(Metal)
+					end ssk
 			from edw_stage.[AccountTransaction] acct  
 			left join edw_stage.Product pr on acct.ProductId = pr.id
 			WHERE acct.State ='ISSUED' --- Review BOUND transactions
 			and	acct.PolicyNumber is not null 
 			and pr.ProductLine = 'PersonalLines'  
-			AND cast(acct.IssuedDate as date) between @last_source_extract_ts and GETDATE()
-			group by cast(acct.IssuedDate as date)
+			AND cast(acct.IssuedDate as date) >= @last_source_extract_ts
+			group by cast(acct.IssuedDate as date),
+					case when acct.ExternalSourceId is not NULL 
+					 then 2 --(AV2) 
+					 Else 4 --(Metal)
+					end
 		),
 		src_edw as
 		(
-			select td.actual_dt iss_dt, count(distinct pol.policy_sk+transaction_seq_no) cnt, sum(premium_amt) prm 
+			select td.actual_dt iss_dt, count(distinct pol.policy_sk+transaction_seq_no) cnt, 
+					sum(premium_amt) prm , tr.source_system_sk ssk
 			from edw_core.tpolicy_transaction tr, edw_core.tpolicy pol , edw_core.tdate td
 			where pol.policy_sk = tr.policy_sk
 			and td.date_sk = tr.transaction_dt_sk 
-			and td.actual_dt  between @last_source_extract_ts and GETDATE()
-			group by td.actual_dt
+			and tr.source_system_sk!=1
+			and td.actual_dt >= @last_source_extract_ts
+			group by td.actual_dt, tr.source_system_sk
 		) 
 		MERGE edw_core.treconciliation AS Target
 		USING 
 		( 
-			select 	isnull(a.iss_dt, b.iss_dt) iss_dt, 
+			select 	'Policy' datamart_nm, isnull(a.iss_dt, b.iss_dt) iss_dt, 
 					isnull(a.cnt,0) metal_ct, isnull(a.prm,0) metal_prm, 
-					isnull(b.cnt,0) edw_ct, isnull(b.prm,0) edw_prm
-			from 	src_metal a
-			full join src_edw b on a.iss_dt = b.iss_dt
-			
+					isnull(b.cnt,0) edw_ct, isnull(b.prm,0) edw_prm,
+					case when COALESCE(a.ssk,b.ssk) = 2 then 'AV2' when COALESCE(a.ssk,b.ssk) = 4 then 'Metal' end source_system_nm
+			from 	src_metal a 
+			full join src_edw b on a.iss_dt = b.iss_dt and a.ssk = b.ssk 
 		) AS Source
 		ON Target.transaction_start_dt = Source.iss_dt and Target.transaction_end_dt = Source.iss_dt 
+		and Target.datamart_nm = Source.datamart_nm 
+		and Target.source_system_nm = Source.source_system_nm 
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
@@ -88,9 +102,9 @@ BEGIN
 				Source.metal_prm, 
 				Source.edw_ct,
 				Source.edw_prm,
-				'Policy',
+				source.datamart_nm,
 				CASE WHEN source.metal_prm=source.edw_prm THEN 'Success' ELSE 'Failure' END,
-				'Metal',
+				source.source_system_nm,
 				getdate(),
 				getdate())
 		-- For Updates
