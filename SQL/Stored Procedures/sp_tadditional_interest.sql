@@ -37,7 +37,9 @@ BEGIN
 			PolicyNumber, EffectiveDate, IssuedDate, ExpirationDate, transaction_dt, PolicyChangeNumber
 			,policy_history_sk
 			,[index] as additional_interest_seq_no
-			,InterestType, EntityType, EntityName, DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew
+			,InterestType, EntityType
+			,coalesce([EntityName], concat(FirstName, ' ', LastName)) as EntityName
+			,DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew
 			,[Name]
 			--,4 as [source_system_sk] --20230717 removed
 			,source_system_sk --20230717 added
@@ -123,7 +125,7 @@ BEGIN
       ,[additional_interest_seq_no]
       ,[InterestType]
       ,[EntityType]
-      ,COALESCE([EntityName], [Name]) as EntityName
+      ,COALESCE([Name], [EntityName]) as EntityName
       ,[DescriptionOfProperty]
       ,[FirstName]
       ,[LastName]
