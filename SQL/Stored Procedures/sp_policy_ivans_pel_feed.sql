@@ -249,7 +249,7 @@ BEGIN
                                         LEFT(policy_no, CASE WHEN CHARINDEX('-', policy_no) > 0 THEN CHARINDEX('-', policy_no) - 1 ELSE LEN(policy_no) END) AS base_policy_no,
                                         CAST(CASE WHEN CHARINDEX('-', policy_no) > 0 THEN RIGHT(policy_no, LEN(policy_no) - CHARINDEX('-', policy_no)) ELSE 0 END AS INT) AS policy_seq,
                                         effective_dt, transaction_seq_no
-                                    FROM policy_transaction
+                                    FROM [edw_temp].[policy_ivans_pel_feed_temp2]
                                 ) AS a
                             WHERE a.policy_seq > 0 --Filter policy that has prior policy
                         ) as p
