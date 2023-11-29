@@ -16,6 +16,7 @@
 -- 10/23/23		Architha Gudimalla				9. Added billingaccount_sk
 -- 10/23/23		Architha Gudimalla				10. Added source_system_sk in merge update
 -- 11/13/23		Architha Gudimalla				11. Added migrated_in
+-- 11/29/23		Architha Gudimalla		        12. Updated primary insuread logic
 -- ===================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy]
@@ -86,20 +87,20 @@ BEGIN
 		INTO edw_temp.tpolicy_temp2
 		FROM
 			(
-				SELECT  acctv.AccountTransactionId, --acctvof.Field, acctvof.Value 
-						case when pin.id is not null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then acctvof.Field 
+				SELECT  acctv.AccountTransactionId, acctvof.Field, acctvof.Value 
+						/*case when pin.id is not null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then acctvof.Field 
 							 when pin.id is  null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then null 
 							 else acctvof.Field
 						end as Field, 
 						case when pin.id is not null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then acctvof.Value 
 							 when pin.id is  null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then null 
 							 else acctvof.Value
-						end as Value
+						end as Value*/
 				FROM edw_temp.tpolicy_temp1 acc
 					INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acc.Id --acctv.AccountTransactionId = acc.Id
 					INNER JOIN edw_stage.AccountTransactionVersionObject acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
 					INNER JOIN edw_stage.AccountTransactionVersionObjectField acctvof ON acctvof.VersionObjectId = acctvo.id
-					left join edw_stage.AccountTransactionVersionObjectField pin on pin.versionobjectid = acctvo.id and pin.field = 'IsPrimaryInsured' and pin.Value = 'True'
+					--left join edw_stage.AccountTransactionVersionObjectField pin on pin.versionobjectid = acctvo.id and pin.field = 'IsPrimaryInsured' and pin.Value in ('True','Yes')
 				WHERE COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') != '''' --and acc.policynumber = 'HO100024581' 
 			) t
 		PIVOT 
@@ -121,8 +122,7 @@ BEGIN
 				ins.ReferenceCode as customer_id,
 				nullif(trim(pr.ProductCode),'') product_cd,
 				nullif(trim(COALESCE(acctv.RiskStateCode, 'DNA')),'') as RiskStateCode, --review
-				nullif(trim(isnull(tmp2.Prefix + ' ','') + isnull(tmp2.FirstName + ' ','') 
-				+ isnull(tmp2.LastName + ' ','') + isnull(tmp2.MiddleName + ' ','') + isnull(tmp2.Suffix,'')),'') as insured_nm,
+				nullif(trim(Ins.NamedInsured),'') as insured_nm,
 				tmp2.InsuredType as insured_type,
 				case when acc.IsRenewal = 1 then 'Renewal' else 'New' end as policy_term,
 				case when trim(pr.ProductCode) = 'AU' then 'Vault Reciprocal Exchange' 
