@@ -124,10 +124,10 @@ BEGIN
 				source_system_sk, create_ts, update_ts, etl_audit_sk 
 			)
 		select 	t1.PolicyNumber, t1.EffectiveDate, t1.Number, qh.quote_history_sk, 
-				case when nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') 
-				+ isnull(t2.LastName + ' ','') + isnull(t2.MiddleName + ' ','') + isnull(t2.Suffix,'')),'') is null
-				then NamedInsured else nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') 
-				+ isnull(t2.LastName + ' ','') + isnull(t2.MiddleName + ' ','') + isnull(t2.Suffix,'')),'') end as  NamedInsured, 
+				case when nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') + isnull(t2.MiddleName + ' ','') 
+				+ isnull(t2.LastName + ' ','') + isnull(t2.Suffix,'')),'') is null
+				then NamedInsured else nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') + isnull(t2.MiddleName + ' ','') 
+				+ isnull(t2.LastName + ' ','') + isnull(t2.Suffix,'')),'') end as  NamedInsured, 
 				t2.DBA, t2.FirstName, t2.MiddleName, t2.LastName, t2.InsuredType,t2.IsPrimaryInsured, 
 				case when t2.IsCoInsured in ('Yes','true') then 'Yes' else 'No' end IsCoInsured, 
 				t2.Birthdate, t2.HomePhone, t2.MobilePhone, t2.Title, t2.Prefix, t2.Suffix, 
