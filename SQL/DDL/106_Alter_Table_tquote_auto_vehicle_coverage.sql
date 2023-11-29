@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote_auto_vehicle_coverage ALTER COLUMN [quote_auto_garage_location_sk] int NULL;
