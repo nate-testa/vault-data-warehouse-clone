@@ -97,9 +97,8 @@ with DAG(
     max_active_runs=1,
     default_args=args,
     start_date=pendulum.datetime(2023, 10, 25, tz="America/New_York"),
-    # schedule_interval='0 5 * * 1-5', # At 05:00 every day
-    schedule_interval=None, 
-    # schedule_interval=datetime.timedelta(hours=6), # Every 6 hours
+    # schedule_interval='0 4 * * *', # At 04:00 every day
+    schedule_interval=None,
     tags=["master dag quote", "vault"],
 ) as dag:
     
