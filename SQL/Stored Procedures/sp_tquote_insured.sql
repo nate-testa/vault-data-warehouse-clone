@@ -3,10 +3,14 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 -- =================================================================================================
--- Author:		Alberto Almario
--- Description: This procedures inserts quote insured data
-
+-- Description: This procedures inserts quote insured data 
+-----------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+-----------------------------------------------------------------------------------------------------------------------
+-- 11/11/23		Alberto Almario			        1. Created the proc
 -- 11/11/23		Sandeep Gundreddy		        2. modified source query and transaction_seq_no logic
+-- 11/29/23		Architha Gudimalla		        3. Updated coinsured logic
+-- 11/29/23		Architha Gudimalla		        4. Updated insurance score  logic
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_insured]
@@ -93,7 +97,7 @@ BEGIN
 				INNER JOIN edw_stage.AccountTransactionVersionObject acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
 				INNER JOIN edw_stage.AccountTransactionVersionObjectField acctvof ON acctvof.VersionObjectId = acctvo.id
 				WHERE COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') != '''' --and acc.policynumber = 'HO100024581' 
-				and acctvo.objecttype='Insured' 
+				and (acctvo.objecttype = 'Insured' or acctvof.Field like 'InsuranceScore%')
 			) t
 		PIVOT 
 			(
@@ -124,7 +128,8 @@ BEGIN
 				then NamedInsured else nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') 
 				+ isnull(t2.LastName + ' ','') + isnull(t2.MiddleName + ' ','') + isnull(t2.Suffix,'')),'') end as  NamedInsured, 
 				t2.DBA, t2.FirstName, t2.MiddleName, t2.LastName, t2.InsuredType,t2.IsPrimaryInsured, 
-				t2.IsCoInsured, t2.Birthdate, t2.HomePhone, t2.MobilePhone, t2.Title, t2.Prefix, t2.Suffix, 
+				case when t2.IsCoInsured in ('Yes','true') then 'Yes' else 'No' end IsCoInsured, 
+				t2.Birthdate, t2.HomePhone, t2.MobilePhone, t2.Title, t2.Prefix, t2.Suffix, 
 				t2.MailingAddressLine1, t2.MailingAddressLine2, t2.UnitFloor, t2.MailingAddressCity, 
 				t2.MailingAddressState, t2.MailingAddressZipCode, t2.MailingAddressCounty, t2.MailingAddressCountry, 
 				t2.IncludeOnDec, t2.Email, t2.Employer, t2.InsuranceScore,
