@@ -97,7 +97,8 @@ BEGIN
 				INNER JOIN edw_stage.AccountTransactionVersionObject acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
 				INNER JOIN edw_stage.AccountTransactionVersionObjectField acctvof ON acctvof.VersionObjectId = acctvo.id
 				WHERE COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') != '''' --and acc.policynumber = 'HO100024581' 
-				and (acctvo.objecttype = 'Insured' or acctvof.Field like 'InsuranceScore%')
+				and (acctvo.objecttype = 'Insured' --or acctvof.Field like 'InsuranceScore%'
+				)
 			) t
 		PIVOT 
 			(

@@ -96,7 +96,8 @@ BEGIN
 				INNER JOIN edw_stage.AccountTransactionVersionObject acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
 				INNER JOIN edw_stage.AccountTransactionVersionObjectField acctvof ON acctvof.VersionObjectId = acctvo.id
 				WHERE COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') != '''' --and acc.policynumber = 'HO100024581' 
-				and (acctvo.objecttype = 'Insured' or acctvof.Field like 'InsuranceScore%')
+				and (acctvo.objecttype = 'Insured' --or acctvof.Field like 'InsuranceScore%'
+				)
 			) t
 		PIVOT 
 			(
@@ -122,10 +123,10 @@ BEGIN
 				source_system_sk, create_ts, update_ts, etl_audit_sk 
 			)
 		select 	t1.PolicyNumber, t1.EffectiveDate, t1.TransactionEffectiveDate, t1.PolicyChangeNumber, t1.IssuedDate, ph.policy_history_sk, 
-				case when nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') 
-				+ isnull(t2.LastName + ' ','') + isnull(t2.MiddleName + ' ','') + isnull(t2.Suffix,'')),'') is null
-				then NamedInsured else nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') 
-				+ isnull(t2.LastName + ' ','') + isnull(t2.MiddleName + ' ','') + isnull(t2.Suffix,'')),'') end as  NamedInsured, 
+				case when nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') + isnull(t2.MiddleName + ' ','') 
+				+ isnull(t2.LastName + ' ','') + isnull(t2.Suffix,'')),'') is null
+				then NamedInsured else nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') + isnull(t2.MiddleName + ' ','') 
+				+ isnull(t2.LastName + ' ','') + isnull(t2.Suffix,'')),'') end as  NamedInsured, 
 				t2.DBA, t2.FirstName, t2.MiddleName, t2.LastName, t2.InsuredType,t2.IsPrimaryInsured, 
 				case when t2.IsCoInsured in ('Yes','true') then 'Yes' else 'No' end IsCoInsured, 
 				t2.Birthdate, t2.HomePhone, t2.MobilePhone, t2.Title, t2.Prefix, t2.Suffix, 
