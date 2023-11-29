@@ -9,6 +9,7 @@ from airflow.operators.mssql_operator import MsSqlOperator
 from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from airflow.providers.microsoft.azure.operators.data_factory import AzureDataFactoryRunPipelineOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
 from livevox_csv_generation import SFTPUploadLiveVoxOperator, generate_livevox_csv_file
@@ -427,6 +428,7 @@ with DAG(
             'sp_tcause_of_loss',
             'sp_tsub_cause_of_loss',
             'sp_tclaim',
+            'sp_ebao_tclaim_onetime_datafix',
             'sp_tclaim_feature',
             'sp_tclaim_payment',
             'sp_tclaim_transaction',
@@ -465,6 +467,14 @@ with DAG(
             task_id='sp_tclaim',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tclaim",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_ebao_tclaim_onetime_datafix = MsSqlOperator(
+            task_id='sp_ebao_tclaim_onetime_datafix',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_ebao_tclaim_onetime_datafix",
             database="vault_edw",
             autocommit=True,
         )
@@ -540,7 +550,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(claim_group_items, 'All stored procedures executed successfully for all the Claim tables'),
         )
 
-        sp_tcatastrophe >> sp_tcause_of_loss >> sp_tsub_cause_of_loss >> sp_tclaim >> sp_tclaim_feature >> sp_tclaim_payment >> sp_tclaim_transaction >> sp_tclaim_note >> sp_tclaim_diary >> sp_update_tclaim >> sp_update_tclaim_feature >> sp_treconciliation_ebao >> send_claim_email
+        sp_tcatastrophe >> sp_tcause_of_loss >> sp_tsub_cause_of_loss >> sp_tclaim >> sp_ebao_tclaim_onetime_datafix >> sp_tclaim_feature >> sp_tclaim_payment >> sp_tclaim_transaction >> sp_tclaim_note >> sp_tclaim_diary >> sp_update_tclaim >> sp_update_tclaim_feature >> sp_treconciliation_ebao >> send_claim_email
 
 
     with TaskGroup("datamart_group") as datamart_group:
@@ -1080,10 +1090,15 @@ with DAG(
 
         sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_billing_account_customer_portal_api >> sp_policy_customer_portal_api >> sp_policy_ivans_auto_feed >> sp_policy_ivans_home >> sp_policy_ivans_pel_feed >> ivans_api_call >> sp_customer_broker_livevox_feed >> generate_livevox_file >> upload_livevox_file_to_sftp >> sp_claim_renewal_rating_home_collection_api >> sp_claim_renewal_rating_auto_pel_api >> send_integration_email
 
+    exec_vault_edw_data_load_quotes = TriggerDagRunOperator(
+        task_id="exec_vault_edw_data_load_quotes",
+        trigger_dag_id="vault_edw_data_load_quotes",
+        dag=dag,
+    )
 
     end = DummyOperator(
         task_id='end',
     )
 
 
-start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group] >> collection_group >> policy_transaction_group >> claim_group >> datamart_group >> validation_result_group >> integration_group >> end
+start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group] >> collection_group >> policy_transaction_group >> claim_group >> datamart_group >> validation_result_group >> integration_group >> exec_vault_edw_data_load_quotes >> end
