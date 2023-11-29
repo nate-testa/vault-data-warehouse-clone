@@ -37,6 +37,7 @@ BEGIN
         max_prem_policy AS (
             SELECT 
                 p.policy_no,
+                p.effective_dt,
                 p.product_cd as product,
                 p.customer_id,
                 p.latest_term_in,
@@ -47,6 +48,7 @@ BEGIN
             WHERE p.product_cd LIKE 'HO'
             GROUP BY
                 p.policy_no,
+                p.effective_dt,
                 p.product_cd,
                 p.customer_id,
                 p.latest_term_in
@@ -55,6 +57,7 @@ BEGIN
 
             SELECT 
                 p.policy_no,
+                p.effective_dt,
                 p.product_cd as product,
                 p.customer_id,
                 p.latest_term_in,
@@ -65,6 +68,7 @@ BEGIN
             WHERE p.product_cd LIKE 'PEL'
             GROUP BY
                 p.policy_no,
+                p.effective_dt,
                 p.product_cd,
                 p.customer_id,
                 p.latest_term_in
@@ -73,6 +77,7 @@ BEGIN
 
             SELECT 
                 p.policy_no,
+                p.effective_dt,
                 p.product_cd as product,
                 p.customer_id,
                 p.latest_term_in,
@@ -83,6 +88,7 @@ BEGIN
             WHERE p.product_cd LIKE 'AU'
             GROUP BY
                 p.policy_no,
+                p.effective_dt,
                 p.product_cd,
                 p.customer_id,
                 p.latest_term_in
@@ -91,6 +97,7 @@ BEGIN
 
             SELECT 
                 p.policy_no as policy_no,
+                p.effective_dt,
                 p.product_cd as product,
                 p.customer_id,
                 p.latest_term_in,
@@ -101,6 +108,7 @@ BEGIN
             WHERE p.product_cd LIKE 'LUX'
             GROUP BY
                 p.policy_no,
+                p.effective_dt,
                 p.product_cd,
                 p.customer_id,
                 p.latest_term_in
@@ -117,8 +125,8 @@ BEGIN
                 b.broker_nm,
                 p.customer_id 
             FROM vault_edw.edw_core.tpolicy AS p 
-            LEFT JOIN vault_edw.edw_core.thome_location AS h ON p.policy_no = h.policy_no 
-            LEFT JOIN max_prem_policy AS mp ON p.policy_no = mp.policy_no
+            LEFT JOIN vault_edw.edw_core.thome_location AS h ON p.policy_no = h.policy_no AND p.effective_dt = h.effective_dt
+            LEFT JOIN max_prem_policy AS mp ON p.policy_no = mp.policy_no AND p.effective_dt = mp.effective_dt
             LEFT JOIN vault_edw.edw_core.tbroker AS b ON p.broker_id = b.broker_id 
             WHERE mp.rownum = 1
             and mp.product = 'HO'
