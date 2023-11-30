@@ -7,7 +7,7 @@
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- ===================================================================================================================== 
 
-CREATE   PROCEDURE [edw_core].[sp_tquote_history]
+CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history]
 
 AS
 BEGIN
