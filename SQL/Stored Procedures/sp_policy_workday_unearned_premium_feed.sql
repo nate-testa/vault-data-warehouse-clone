@@ -53,7 +53,9 @@ BEGIN
 			WITH policy_workday_unearned_premium_feed_temp AS
 			(
 				SELECT
-				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
+				accounting_date,policy_image_id,policy_number,product,
+				CASE WHEN company='Vault E & S Insurance Company' THEN 'Vault E&S Insurance Company' 
+				ELSE company END AS company,transaction_date,transaction_sequence,effective_date,
 				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,sum(amount) as amount,sum(unearned) as unearned,contribcutoffdate,
@@ -68,7 +70,11 @@ BEGIN
 				@last_day_month AS [accounting_date],
 				tp.policy_sk AS policy_image_id,
 				tp.policy_no AS [policy_number],
-				tp.product_cd AS [product],
+				CASE
+					WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
+					WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
+					ELSE tprd.product_nm
+				END AS [product],
 				tp.uw_company_nm AS [company],
 				GREATEST(tdeff.actual_dt,tdpro.actual_dt) AS [transaction_date],
 				tpts.transaction_seq_no AS transaction_sequence,
@@ -86,7 +92,11 @@ BEGIN
 				tp.mailing_address_zip_cd AS zip,
 				NULL AS fire_protection,
 				tic.internal_coverage_category_nm  AS [category],
-				null as subcategory,
+				CASE
+				WHEN tic.internal_coverage_cd in ('Cyber Protection','Service Line','Systems Protection') THEN 'Premium-Reinsured'
+				WHEN internal_coverage_category_nm='Premium' THEN internal_coverage_category_nm
+				WHEN internal_coverage_category_nm!='Premium' THEN internal_coverage_desc
+				END AS subcategory,
 				tic.internal_coverage_sk as financial_category_id,
 				tic.internal_coverage_desc AS [financial_category_name],
 				tic.aslob_cd AS [aslob],
@@ -96,6 +106,7 @@ BEGIN
 			FROM
 			edw_core.tpolicy_transaction_summary tpts
 			INNER JOIN edw_core.tpolicy tp on tp.policy_sk=tpts.policy_sk
+			INNER JOIN edw_core.tproduct tprd on tprd.product_cd = tp.product_cd
 			INNER JOIN edw_core.tdate tdeff on tdeff.date_sk=tpts.transaction_effective_dt_sk
 			INNER JOIN edw_core.tdate tdpro on tdpro.date_sk=tpts.transaction_dt_sk
 			INNER JOIN edw_core.tpolicy_transaction_type tptt on tptt.policy_transaction_type_sk=tpts.policy_transaction_type_sk
@@ -156,4 +167,5 @@ BEGIN
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
 		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
 	END CATCH
+
 END

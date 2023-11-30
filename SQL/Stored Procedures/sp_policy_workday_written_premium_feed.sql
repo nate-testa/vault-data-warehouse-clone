@@ -13,8 +13,7 @@ AS
 BEGIN
 DECLARE @ProcedureName NVARCHAR(120)
     SET @ProcedureName = OBJECT_NAME(@@PROCID)
-
-	BEGIN TRY
+		BEGIN TRY
 		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
@@ -50,11 +49,10 @@ DECLARE @ProcedureName NVARCHAR(120)
 			SELECT @acounting_date_sk=date_sk, @last_day_month=actual_dt from edw_core.tdate where yearmonth=@year_month and month_end_in='Y'
 		
 			DELETE FROM edw_integration.policy_workday_written_premium_feed WHERE accounting_date=@last_day_month;
-
 			WITH policy_workday_written_premium_feed_temp AS
 			(
 			SELECT 
-				accounting_date,NULL AS policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
+				accounting_date,NULL AS policy_image_id,transaction_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,NULL AS number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,SUM(premium_amt) AS amount,NULL AS deleteddate,NULL AS contribcutoffdate,
@@ -63,7 +61,7 @@ DECLARE @ProcedureName NVARCHAR(120)
 			(
 			SELECT
 				@last_day_month AS [accounting_date],
-				tp.policy_sk AS policy_image_identifier_id,
+				tp.policy_sk AS transaction_id,
 				tp.policy_no AS [policy_number],
 				tprd.product_nm AS [product],
 				tpt.transaction_seq_no AS [transaction_sequence],
@@ -108,7 +106,7 @@ DECLARE @ProcedureName NVARCHAR(120)
 				AND tpt.premium_amt != 0
 			) AS temp
 			GROUP BY
-				accounting_date,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
+				accounting_date,transaction_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob
@@ -116,7 +114,12 @@ DECLARE @ProcedureName NVARCHAR(120)
 			policy_workday_written_premium_feed_commission_temp AS
 			(
 			SELECT
-				accounting_date,NULL AS policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
+				accounting_date,NULL AS policy_image_id,transaction_id,policy_number,
+				CASE
+					WHEN product = 'Auto' THEN 'Automobile'
+					WHEN product = 'Condo' THEN 'Homeowners'
+					ELSE product END AS product,
+				transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,NULL AS number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,SUM(premium_amt) AS amount,NULL AS deleteddate,NULL AS contribcutoffdate,
@@ -125,7 +128,7 @@ DECLARE @ProcedureName NVARCHAR(120)
 			(
 				SELECT
 				@last_day_month AS [accounting_date],
-				tp.policy_sk AS policy_image_identifier_id,
+				tp.policy_sk AS transaction_id,
 				tp.policy_no AS [policy_number],
 				tprd.product_nm as [product],
 				tpt.transaction_seq_no as [transaction_sequence],
@@ -173,7 +176,7 @@ DECLARE @ProcedureName NVARCHAR(120)
 				and tpt.commission_amt!=0
 				) as temp
 				GROUP BY
-				accounting_date,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
+				accounting_date,transaction_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob
@@ -187,7 +190,7 @@ DECLARE @ProcedureName NVARCHAR(120)
 			aslob,amount,deleteddate,contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
-				accounting_date,policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
+				accounting_date,policy_image_id,transaction_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,amount,null as deleteddate,null contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
@@ -195,7 +198,7 @@ DECLARE @ProcedureName NVARCHAR(120)
 				policy_workday_written_premium_feed_temp
 			UNION
 			SELECT
-				accounting_date,policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
+				accounting_date,policy_image_id,transaction_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,amount,null as deleteddate,null contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
@@ -230,5 +233,5 @@ DECLARE @ProcedureName NVARCHAR(120)
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
 		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
-	END CATCH	
+	END CATCH
 END
