@@ -118,7 +118,16 @@ BEGIN
 				nullif(trim(PriorResidenceAddressZipCode),'') PriorResidenceAddressZipCode, 
 				nullif(trim(PriorResidenceAddressCounty),'') PriorResidenceAddressCounty, 
 				nullif(trim(PriorResidenceAddressCountry),'') PriorResidenceAddressCountry,
-				ResidenceHasPrior
+				ResidenceHasPrior,
+				InsuranceScore,
+				InsuranceScoreCode1,
+				InsuranceScoreCode1Description,
+				InsuranceScoreCode2,
+				InsuranceScoreCode2Description,
+				InsuranceScoreCode3,
+				InsuranceScoreCode3Description,
+				InsuranceScoreCode4,
+				InsuranceScoreCode4Description
 		INTO edw_temp.tpolicy_history_temp2
 		FROM
 			(
@@ -136,7 +145,9 @@ BEGIN
 			(
 				MAX(Value) FOR Field IN (CompanionCreditHomeowner, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
 										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
-										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior)
+										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
+										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
+										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description)
 			) pivottable 
 
 		-- Start Inserting records
@@ -177,6 +188,15 @@ BEGIN
 		   ,product_sk
 		   ,policy_change_summary
 		   ,commission_pc,override_commission_pc,commission_retention
+		   ,insurance_score
+		   ,insurance_score_cd1
+		   ,insurance_score_desc1
+		   ,insurance_score_cd2
+		   ,insurance_score_desc2
+		   ,insurance_score_cd3
+		   ,insurance_score_desc3
+		   ,insurance_score_cd4
+		   ,insurance_score_desc4
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.PolicyChangeNumber, 
 				pol.policy_sk, br.broker_sk, cust.customer_sk, br.Broker_Id, Source.customer_id, 
@@ -198,6 +218,15 @@ BEGIN
 				,source.CommissionPercent
 				,source.CommissionPercentOverride
 				,source.CommissionPercentOverrideRetention
+				,source.InsuranceScore
+				,source.InsuranceScoreCode1
+				,source.InsuranceScoreCode1Description
+				,source.InsuranceScoreCode2
+				,source.InsuranceScoreCode2Description
+				,source.InsuranceScoreCode3
+				,source.InsuranceScoreCode3Description
+				,source.InsuranceScoreCode4
+				,source.InsuranceScoreCode4Description
 		FROM edw_temp.tpolicy_history_temp1 source
 		LEFT JOIN edw_temp.tpolicy_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tpolicy_history_temp2 source1 on source.id = source1.AccountTransactionId
