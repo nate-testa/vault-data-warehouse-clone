@@ -5,6 +5,7 @@
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 06/02/23		Architha Gudimalla		1. Created this procedure
 -- 11/14/23		Sandeep Gundreddy		2. modified quote_auto_vehicle join
+-- 11/29/23		Architha Gudimalla		2. modified @new_last_source_extract_ts
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction]
@@ -186,8 +187,8 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT; 
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.IssuedDate) FROM edw_temp.TQuote_transaction_temp1 t1),@last_source_extract_ts);
-
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.CreatedDate) FROM edw_temp.TQuote_transaction_temp1 t1),@last_source_extract_ts);
+		
         DROP TABLE IF EXISTS edw_temp.TQuote_transaction_temp1
 		DROP TABLE IF EXISTS edw_temp.TQuote_transaction_temp2
 		

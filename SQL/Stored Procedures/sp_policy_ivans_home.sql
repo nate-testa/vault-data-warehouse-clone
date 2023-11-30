@@ -487,7 +487,8 @@ BEGIN
                 WHEN c.mobile_phone_no is not null THEN 'Mobile'
                 ELSE ''
             END as [025_PhoneTypeCd]
-		,COALESCE(c.home_phone_no, c.mobile_phone_no, '') as [026_PhoneNumber]
+		,RIGHT(REPLACE(TRANSLATE(c.home_phone_no, '+-/()#', '      '), ' ', ''), 10) as [026_HomePhoneNumber]
+		,RIGHT(REPLACE(TRANSLATE(c.mobile_phone_no, '+-/()#', '      '), ' ', ''), 10) as [026_MobilePhoneNumber]
 		,c.email as [027_EmailAddr]
 		,CASE WHEN poi.primary_insured_in = 'Yes' then 'Primary' ELSE 'Secondary' END as [028_InsuredOrPrincipalRoleCd]
 		,CASE WHEN poi.primary_insured_in = 'Yes' then 'Primary' ELSE 'Secondary' END as [029_InsuredOrPrincipalRoleDesc]
@@ -988,7 +989,17 @@ BEGIN
 			,[023_Longitude]
 			,[024_County]
 			,[025_PhoneTypeCd]
-			,[026_PhoneNumber]
+			,CASE
+				WHEN [026_HomePhoneNumber] IS NOT NULL
+					AND LEN([026_HomePhoneNumber]) = 10
+					AND LEFT([026_HomePhoneNumber], 1) NOT IN ('0', '1')
+					THEN [026_HomePhoneNumber]
+				WHEN [026_MobilePhoneNumber] IS NOT NULL
+					AND LEN([026_MobilePhoneNumber]) = 10
+					AND LEFT([026_MobilePhoneNumber], 1) NOT IN ('0', '1')
+					THEN [026_MobilePhoneNumber]
+				ELSE ''
+			END AS [PhoneNumber_026]
 			,[027_EmailAddr]
 			,[028_InsuredOrPrincipalRoleCd]
 			,[029_InsuredOrPrincipalRoleDesc]

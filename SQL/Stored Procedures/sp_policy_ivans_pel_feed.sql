@@ -322,11 +322,7 @@ BEGIN
                 WHEN pi.mobile_phone_no is not null THEN 'Mobile'
                 ELSE ''
             END as [PhoneTypeCd_024],
-            CASE 
-                WHEN pi.home_phone_no is not null THEN pi.home_phone_no
-                WHEN pi.mobile_phone_no is not null THEN pi.mobile_phone_no
-                ELSE ''
-            END as [PhoneNumber_025],
+            RIGHT(REPLACE(TRANSLATE(COALESCE(pi.home_phone_no, pi.mobile_phone_no, ''), '+-/()#', '      '), ' ', ''), 10) as [PhoneNumber_025],
             pi.email as [EmailAddr_026],
             '' as [GenderCd_027],
             '' as [MaritalStatusCd_028],

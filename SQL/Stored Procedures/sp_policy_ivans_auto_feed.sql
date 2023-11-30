@@ -368,7 +368,7 @@ BEGIN
                 WHEN pi.mobile_phone_no is not null THEN 'Mobile'
                 ELSE ''
             END as [PhoneTypeCd_026],
-            COALESCE(pi.home_phone_no, pi.mobile_phone_no, '') as [PhoneNumber_027],
+            RIGHT(REPLACE(TRANSLATE(COALESCE(pi.home_phone_no, pi.mobile_phone_no, ''), '+-/()#', '      '), ' ', ''), 10) as [PhoneNumber_027],
             pi.email as [EmailAddr_028],
             'Primary' as [InsuredOrPrincipalRoleCd_029],
             'Primary' as [InsuredOrPrincipalRoleDesc_030],

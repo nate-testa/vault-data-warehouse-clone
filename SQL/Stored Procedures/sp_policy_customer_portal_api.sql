@@ -32,24 +32,23 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) --20230717 added
 
 		MERGE [edw_integration].[policy_customer_portal_api] as TARGET
-		USING (SELECT DISTINCT
-		tp.[policy_no]
-        ,tb.[billingaccount_no]
-        ,tprod.[product_nm]
-        ,tp.[insured_nm]
-        ,tp.[create_ts]
-        ,tp.[update_ts]
-        ,tp.[etl_audit_sk]
-		FROM [edw_core].[tpolicy] tp
-		LEFT JOIN [edw_core].[tbillingaccount] tb
-		ON tp.billingaccount_sk = tb.billingaccount_sk
-		LEFT JOIN [edw_core].[tproduct] tprod
-		ON tp.product_cd = tprod.product_cd
-		WHERE
-			GREATEST(tp.[update_ts])>@last_source_extract_ts --20230717 added
-			AND tb.[billingaccount_no] is not null
+		USING (
+			SELECT DISTINCT
+				tp.[policy_no]
+				,tb.[billingaccount_no]
+				,tprod.[product_nm]
+				,tp.[insured_nm]
+				FROM [edw_core].[tpolicy] tp
+				LEFT JOIN [edw_core].[tbillingaccount] tb
+				ON tp.billingaccount_sk = tb.billingaccount_sk
+				LEFT JOIN [edw_core].[tproduct] tprod
+				ON tp.product_cd = tprod.product_cd
+				WHERE
+					GREATEST(tp.[update_ts])>@last_source_extract_ts
+					AND tb.[billingaccount_no] is not null
 		) as SOURCE
 		ON Source.[policy_no] = Target.[policy_no]
+		AND Source.[billingaccount_no] = Target.[billingaccount_no]
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
@@ -61,16 +60,14 @@ BEGIN
             ,[update_ts]
             ,[etl_audit_sk]
 			)
-		VALUES (Source.[policy_no],Source.[billingaccount_no],Source.[product_nm],Source.[insured_nm],Source.[create_ts],Source.[update_ts],Source.[etl_audit_sk])
+		VALUES (Source.[policy_no],Source.[billingaccount_no],Source.[product_nm],Source.[insured_nm],getdate(),getdate(),@etl_audit_sk)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-		Target.[billingaccount_no] = Source.[billingaccount_no],
 		Target.[product_nm] = Source.[product_nm],
 		Target.[insured_nm] = Source.[insured_nm],
-		--Target.[create_ts] = Source.[create_ts],
-		Target.[update_ts] = Source.[update_ts],
-		Target.[etl_audit_sk] = Source.[etl_audit_sk];
+		Target.[update_ts] = getdate(),
+		Target.[etl_audit_sk] = @etl_audit_sk;
 
 		SET @rows_affected=@@ROWCOUNT;
 

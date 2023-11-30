@@ -1,5 +1,4 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_tinternal_coverage]    Script Date: 11/16/2023 11:55:22 PM ******/
-SET ANSI_NULLS ON
+﻿SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
@@ -18,9 +17,10 @@ GO
 -- 10/30/23     Architha Gudimalla				6. Removed the replace on the label
 -- 11/08/23     Architha Gudimalla				7. Updated logic for primary_coverage_cd for taxes
 -- 11/16/23     Architha Gudimalla				8. Added update statement becuase of dupe issue for optional coverages
+-- 11/30/23     Sandeep Gundreddy				9. Added Aslob logic for Condo- CO
 -- ======================================================================================================================================== 
 
-create or ALTER    PROCEDURE [edw_core].[sp_tinternal_coverage]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_tinternal_coverage]
 
 AS
 BEGIN
@@ -79,7 +79,7 @@ BEGIN
 		SELECT	nullif(trim(accttf.name),'') as tax_fee_surcharge_name, 
 				pr.ProductCode  as product_cd, 
 				case when pr.ProductCode = 'LUX' then '090'
-					 when pr.ProductCode = 'HO' then '040'
+					 when pr.ProductCode in ('HO','CO') then '040'
 					 when pr.ProductCode = 'AU' then '211'
 					 when pr.ProductCode = 'PEL' then '171'
 					 else null
@@ -157,3 +157,4 @@ BEGIN
 	END CATCH
 END;
 
+GO
