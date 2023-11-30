@@ -1,7 +1,7 @@
-IF OBJECT_ID('[dbo].[tbroker_summary]', 'U') IS NOT NULL
-DROP TABLE [dbo].[tbroker_summary]
+IF OBJECT_ID('[edw_core].[tbroker_summary]', 'U') IS NOT NULL
+DROP TABLE [edw_core].[tbroker_summary]
 GO
- 
+
 CREATE TABLE edw_core.tbroker_summary
 (
     month_sk int NOT NULL,
