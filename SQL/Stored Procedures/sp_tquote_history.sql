@@ -132,8 +132,10 @@ BEGIN
 					INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acc.Id --acctv.AccountTransactionId = acc.Id
 					INNER JOIN edw_stage.AccountTransactionVersionObject acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
 					INNER JOIN edw_stage.AccountTransactionVersionObjectField acctvof ON acctvof.VersionObjectId = acctvo.id
-				WHERE COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') like '%comp%credit%'
-				   or COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') like '%prior%' 
+				WHERE (COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') like '%comp%credit%'
+				   or COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') like '%prior%'
+				   or COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') like '%InsuranceScore%')
+				AND acctvo.Insured NOT IN ('Insured')
 			) t
 		PIVOT 
 			(
