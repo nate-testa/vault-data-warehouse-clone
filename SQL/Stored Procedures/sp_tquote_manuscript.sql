@@ -1,7 +1,7 @@
 ﻿-- =============================================
 -- Author:		Hernando Gonzalez Garcia
 -- Create Date: <Create Date, , >
--- Description: This procedures insert and update info related to Loss History
+-- Description: This procedures insert and update info related to Quote Manuscript
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_manuscript]
 AS
