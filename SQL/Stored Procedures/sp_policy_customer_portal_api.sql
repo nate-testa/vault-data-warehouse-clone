@@ -46,10 +46,12 @@ BEGIN
 		LEFT JOIN [edw_core].[tproduct] tprod
 		ON tp.product_cd = tprod.product_cd
 		WHERE
-			GREATEST(tp.[update_ts])>@last_source_extract_ts --20230717 added
+			GREATEST(tp.[update_ts])>@last_source_extract_ts
 			AND tb.[billingaccount_no] is not null
 		) as SOURCE
 		ON Source.[policy_no] = Target.[policy_no]
+		AND Source.[create_ts] = Target.[create_ts]
+		AND Source.[billingaccount_no] = Target.[billingaccount_no]
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
