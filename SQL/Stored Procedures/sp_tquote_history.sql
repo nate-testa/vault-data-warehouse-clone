@@ -135,7 +135,7 @@ BEGIN
 				WHERE (COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') like '%comp%credit%'
 				   or COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') like '%prior%'
 				   or COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') like '%InsuranceScore%')
-				AND acctvo.Insured NOT IN ('Insured')
+				AND acctvo.ObjectType NOT IN ('Insured')
 			) t
 		PIVOT 
 			(
