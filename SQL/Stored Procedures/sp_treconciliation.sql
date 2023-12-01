@@ -47,7 +47,7 @@ BEGIN
 					 Else 4 --(Metal)
 					end ssk
 			from dbo.[AccountTransaction] acct  
-			left join dbo.Product pr on acct.ProductId = pr.id
+			left join edw_stage.Product pr on acct.ProductId = pr.id
 			WHERE acct.State ='ISSUED' --- Review BOUND transactions
 			and	acct.PolicyNumber is not null 
 			and pr.ProductLine = 'PersonalLines'  
