@@ -75,7 +75,11 @@ BEGIN
 				tcl.cause_of_loss_desc AS causeofloss,
 				tcat.catastrophe_cd AS catastrophecode,
 				tcat.catastrophe_nm AS catastrophename,
-				tprd.product_nm AS product,
+				CASE WHEN tc.policy_no LIKE 'NFP%' THEN 'Group Umbrella'
+				WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
+				WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
+				WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
+				ELSE tprd.product_nm END AS product,
 				tcf.claim_coverage_desc AS policycoveragetype,
 				CASE
 					WHEN tcr.loss_reserve_amt!=0 THEN 'Loss (Indemnity)'
