@@ -14,7 +14,7 @@ AS
 BEGIN
 	DECLARE @ProcedureName NVARCHAR(120)
     SET @ProcedureName = OBJECT_NAME(@@PROCID)
-	BEGIN TRY
+		BEGIN TRY
 		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
@@ -78,9 +78,10 @@ BEGIN
 			tcl.cause_of_loss_desc AS causeofloss,
 			tcat.catastrophe_cd AS catastrophecode,
 			tcat.catastrophe_nm AS catastrophename,
-			CASE WHEN tc.policy_no LIKE 'NFP%' THEN 'Group Embrella'
-			WHEN tprd.product_cd = 'AU' THEN 'Automobile'
-			WHEN tprd.product_cd = 'PEL' THEN 'Excess_Liability'
+			CASE WHEN tc.policy_no LIKE 'NFP%' THEN 'Group Umbrella'
+				WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
+				WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
+				WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
 			ELSE tprd.product_nm END AS product,
 			tcf.claim_coverage_desc AS policycoveragetype,
 			ttr.cat_name AS paymenttype,

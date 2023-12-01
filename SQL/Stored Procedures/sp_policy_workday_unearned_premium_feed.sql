@@ -5,7 +5,8 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 11/15/23		Yunus Mohammed				1. Updated logic for cancelled and expired policies  
+-- 11/15/23		Yunus Mohammed				1. Updated logic for cancelled and expired policies
+-- 12/01/23		Yunus Mohammed				2. Updated  product name and company name
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -13,7 +14,7 @@ AS
 BEGIN
 	DECLARE @ProcedureName NVARCHAR(120)
     SET @ProcedureName = OBJECT_NAME(@@PROCID)
-	BEGIN TRY
+		BEGIN TRY
 		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
@@ -54,8 +55,7 @@ BEGIN
 			(
 				SELECT
 				accounting_date,policy_image_id,policy_number,product,
-				CASE WHEN company='Vault E & S Insurance Company' THEN 'Vault E&S Insurance Company' 
-				ELSE company END AS company,transaction_date,transaction_sequence,effective_date,
+				company,transaction_date,transaction_sequence,effective_date,
 				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,sum(amount) as amount,sum(unearned) as unearned,contribcutoffdate,
@@ -71,11 +71,13 @@ BEGIN
 				tp.policy_sk AS policy_image_id,
 				tp.policy_no AS [policy_number],
 				CASE
+					WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
 					WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
 					WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
 					ELSE tprd.product_nm
 				END AS [product],
-				tp.uw_company_nm AS [company],
+				CASE WHEN tp.uw_company_nm='Vault E & S Insurance Company' THEN 'Vault E&S Insurance Company' 
+				ELSE tp.uw_company_nm END AS [company],
 				GREATEST(tdeff.actual_dt,tdpro.actual_dt) AS [transaction_date],
 				tpts.transaction_seq_no AS transaction_sequence,
 				tp.effective_dt AS [effective_date],
@@ -167,5 +169,4 @@ BEGIN
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
 		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
 	END CATCH
-
 END

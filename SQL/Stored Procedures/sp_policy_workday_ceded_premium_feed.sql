@@ -2,6 +2,12 @@
 -- Author:		Yunus Mohammed
 -- Create Date: 09/13/2023
 -- Description: This procedures inserts ceded premium data
+---------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 09/13/23		Yunus Mohammed				1. Created the procedure
+-- 11/15/23		Yunus Mohammed				2. Updated logic for cancelled and expired policies  
+-- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_ceded_premium_feed]
 AS
@@ -25,7 +31,8 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		
 		DECLARE @year_month INT
-		DECLARE @acounting_date_sk int,@last_day_month date
+		DECLARE @accounting_date_end_sk int,@last_end_day_month date
+		DECLARE @accounting_date_begin_sk int,@last_begin_day_month date
 
 		DECLARE cur_main CURSOR FOR
 		SELECT yearmonth
@@ -45,8 +52,11 @@ BEGIN
 	
 			SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-			SELECT @acounting_date_sk=date_sk, @last_day_month=actual_dt from edw_core.tdate where yearmonth=@year_month and month_end_in='Y'
-			DELETE FROM edw_integration.policy_workday_ceded_premium_feed WHERE accounting_date=@last_day_month;
+			SELECT @accounting_date_end_sk=date_sk, @last_end_day_month=actual_dt FROM edw_core.tdate WHERE yearmonth=@year_month AND month_end_in='Y'
+			SELECT @accounting_date_begin_sk=date_sk,@last_begin_day_month=actual_dt FROM edw_core.tdate 
+			WHERE actual_dt = dateadd(year,-1,@last_end_day_month) and month_end_in='Y'
+			
+			DELETE FROM edw_integration.policy_workday_ceded_premium_feed WHERE accounting_date BETWEEN @last_begin_day_month AND @last_end_day_month;
 			
 			WITH policy_workday_ceded_premium_feed_temp AS
 			(
@@ -58,12 +68,18 @@ BEGIN
 				FROM
 				(
 				SELECT
-					@last_day_month AS [accounting_date],
+					@last_end_day_month AS [accounting_date],
 					tp.policy_sk AS policy_image_id,
 					tp.policy_no AS [policy_number],
-					tp.product_cd as [product],
+					CASE
+					WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
+					WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
+					WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
+					ELSE tprd.product_nm
+					END AS [product],
 					tpt.transaction_seq_no as [transaction_sequence],
-					tp.uw_company_nm AS [company],
+					CASE WHEN tp.uw_company_nm='Vault E & S Insurance Company' THEN 'Vault E&S Insurance Company' 
+					ELSE tp.uw_company_nm END AS [company],
 					GREATEST(tdeff.actual_dt,tdpro.actual_dt) AS [transaction_date],
 					tp.effective_dt AS [effective_date],
 					tp.expiration_dt AS [expiration_date],
@@ -83,16 +99,17 @@ BEGIN
 				FROM
 					edw_core.tpolicy_transaction tpt
 					INNER JOIN edw_core.tpolicy tp on tp.policy_sk=tpt.policy_sk
+					INNER JOIN edw_core.tproduct tprd on tprd.product_cd = tp.product_cd
 					INNER JOIN edw_core.tinternal_coverage tic ON tic.internal_coverage_sk=tpt.internal_coverage_sk
 					INNER JOIN edw_core.tdate tdeff on tdeff.date_sk=tpt.transaction_effective_dt_sk
 					INNER JOIN edw_core.tdate tdpro on tdpro.date_sk=tpt.transaction_dt_sk
 					INNER JOIN edw_core.tpolicy_transaction_type tptt on tptt.policy_transaction_type_sk=tpt.policy_transaction_type_sk
 					INNER JOIN edw_core.tbroker tb on tb.broker_sk=tpt.broker_sk
 				WHERE
-					tpt.accouting_month_sk=@acounting_date_sk
+					tpt.accouting_month_sk BETWEEN @accounting_date_begin_sk AND @accounting_date_end_sk
 					AND tp.product_cd='HO'
 					AND ISNULL(tpt.ceded_premium_amt,0) ! = 0
-					AND tic.internal_coverage_cd in ('Cyber Protection','Service Line','Systems Protection')
+					AND tic.internal_coverage_cd in ('Cyber Protection','Service Line','System Protection','Systems Protection')
 				) AS temp
 				GROUP BY
 					accounting_date,policy_image_id,policy_number,product,transaction_sequence,company,transaction_date,
@@ -118,7 +135,7 @@ BEGIN
 			SET @rows_affected=@@ROWCOUNT;
 
 			-- Update control table
-			SET @new_last_source_extract_ts=COALESCE(@last_day_month,@last_source_extract_ts); 	
+			SET @new_last_source_extract_ts=COALESCE(@last_end_day_month,@last_source_extract_ts); 	
 			EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 			-- Update audit table

@@ -6,14 +6,15 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 11/16/23		Yunus Mohammed				1. Update logic for category, subcategory columns. Removed extra space in company 
+-- 12/01/23		Yunus Mohammed				2. Updated  product name and company name 
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
 AS
 BEGIN
-DECLARE @ProcedureName NVARCHAR(120)
+	DECLARE @ProcedureName NVARCHAR(120)
     SET @ProcedureName = OBJECT_NAME(@@PROCID)
-		BEGIN TRY
+	BEGIN TRY
 		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
@@ -51,8 +52,15 @@ DECLARE @ProcedureName NVARCHAR(120)
 			DELETE FROM edw_integration.policy_workday_written_premium_feed WHERE accounting_date=@last_day_month;
 			WITH policy_workday_written_premium_feed_temp AS
 			(
-			SELECT 
-				accounting_date,NULL AS policy_image_id,transaction_id,policy_number,product,transaction_sequence,company,transaction_date,
+			SELECT
+				accounting_date,NULL AS policy_image_id,transaction_id,policy_number,
+				CASE
+					WHEN product = 'Excess Liability' THEN 'Excess_Liability'
+					WHEN product = 'Auto' THEN 'Automobile'
+					WHEN product = 'Condo' THEN 'Homeowners'
+					ELSE product
+				END AS product,
+				transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,NULL AS number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,SUM(premium_amt) AS amount,NULL AS deleteddate,NULL AS contribcutoffdate,
@@ -116,9 +124,11 @@ DECLARE @ProcedureName NVARCHAR(120)
 			SELECT
 				accounting_date,NULL AS policy_image_id,transaction_id,policy_number,
 				CASE
+					WHEN product = 'Excess Liability' THEN 'Excess_Liability'
 					WHEN product = 'Auto' THEN 'Automobile'
 					WHEN product = 'Condo' THEN 'Homeowners'
-					ELSE product END AS product,
+					ELSE product
+				END AS product,
 				transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,NULL AS number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
@@ -132,7 +142,8 @@ DECLARE @ProcedureName NVARCHAR(120)
 				tp.policy_no AS [policy_number],
 				tprd.product_nm as [product],
 				tpt.transaction_seq_no as [transaction_sequence],
-				tp.uw_company_nm AS [company],
+				CASE WHEN tp.uw_company_nm='Vault E & S Insurance Company' THEN 'Vault E&S Insurance Company' 
+				ELSE tp.uw_company_nm END AS [company],
 				GREATEST(tdeff.actual_dt,tdpro.actual_dt) AS [transaction_date],
 				tp.effective_dt AS [effective_date],
 				tp.expiration_dt AS [expiration_date],
@@ -157,7 +168,7 @@ DECLARE @ProcedureName NVARCHAR(120)
 				-1 as financial_category_id,
 				'Commission Amount' AS [financial_category_name],
 				CASE tp.product_cd
-				WHEN 'HO' THEN '040'
+				WHEN 'HO' THEN '40'
 				WHEN 'AU' THEN '192'
 				WHEN 'PEL' THEN '171'
 				WHEN 'LUX' THEN '090'
