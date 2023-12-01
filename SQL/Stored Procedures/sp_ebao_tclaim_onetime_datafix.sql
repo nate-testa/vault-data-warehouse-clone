@@ -52,8 +52,8 @@ BEGIN
 		WHERE
 		source_system_sk=3
 
-		UPDATE tc set tc.loss_state_cd= src.state_cd
-		-- select tc.claim_sk,tc.claim_no,tc.loss_state_cd,src.state_cd
+		UPDATE tc set tc.loss_state_cd= src.loss_state_cd
+		-- select tc.claim_sk,tc.claim_no,tc.loss_state_cd,src.loss_state_cd
 		from
 		edw_core.tclaim tc
 		inner join 
@@ -96,7 +96,7 @@ BEGIN
 		on st.state_nm=ts.loss_state_cd
 		) as src on tc.claim_sk = src.claim_sk
 		where
-		src.state_cd is not null
+		src.loss_state_cd is not null
 
 		SET @rows_affected=@@ROWCOUNT;	
 
