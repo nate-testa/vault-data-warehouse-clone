@@ -7,6 +7,7 @@
 -- 07/24/23		Architha Gudimalla				1. Created this procedure 
 -- 10/23/23		Architha Gudimalla				2. Updated the proc to run for 30 days
 -- 11/27/23		Architha Gudimalla				3. Add source_system_sk and datamart
+-- 12/01/23		Architha Gudimalla				4. Using dbo for metal tables
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_treconciliation]
@@ -32,7 +33,7 @@ BEGIN
 	
 		if @last_source_extract_ts = '01-jan-1999'
 		begin
-			SELECT @last_source_extract_ts = min(cast(IssuedDate as date)) from edw_stage.[AccountTransaction];
+			SELECT @last_source_extract_ts = min(cast(IssuedDate as date)) from dbo.[AccountTransaction];
 		end
 	
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200));
@@ -45,7 +46,7 @@ BEGIN
 					 then 2 --(AV2) 
 					 Else 4 --(Metal)
 					end ssk
-			from edw_stage.[AccountTransaction] acct  
+			from dbo.[AccountTransaction] acct  
 			left join edw_stage.Product pr on acct.ProductId = pr.id
 			WHERE acct.State ='ISSUED' --- Review BOUND transactions
 			and	acct.PolicyNumber is not null 

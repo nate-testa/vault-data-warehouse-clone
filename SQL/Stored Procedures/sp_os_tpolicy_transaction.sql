@@ -60,8 +60,8 @@ BEGIN
 		LEFT JOIN edw_core.tcustomer tcust on tcust.customer_id=pt.customer_id
 		left join edw_core.tdate tdeff on tdeff.actual_dt=cast(pt.policy_trx_image_eff_date as date)
 		left join edw_core.tdate tdexp on tdexp.actual_dt=cast(pt.policy_trx_image_exp_date as date)
-		left join edw_core.tdate tdtrxexp on tdtrxexp.actual_dt=cast(pt.policy_trx_eff_date as date)
-		left join edw_core.tdate td on td.actual_dt=cast(pt.policy_trx_process_date as date)
+		left join edw_core.tdate tdtrxexp on tdtrxexp.actual_dt=cast(pt.policy_trx_eff_date as date)		
+		left join edw_core.tdate td on td.actual_dt= GREATEST(cast(pt.policy_trx_process_date as date),cast(pt.policy_trx_eff_date as date))
 		left join edw_core.tdate tdac on tdac.yearmonth=td.yearmonth and tdac.month_end_in='Y'
 		left join edw_core.tpolicy_status tps on tps.policy_status_cd = 
 		CASE
