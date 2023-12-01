@@ -1,4 +1,10 @@
-﻿-- =====================================================================================================================
+﻿/****** Object:  StoredProcedure [edw_core].[sp_tpolicy]    Script Date: 12/1/2023 1:52:57 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+			-- =====================================================================================================================
 -- Author:		Hernando Gonzalez Garcia
 -- Description: This procedures inserts and updates TPolicy 
 -----------------------------------------------------------------------------------------------------------------------
@@ -17,9 +23,11 @@
 -- 10/23/23		Architha Gudimalla				10. Added source_system_sk in merge update
 -- 11/13/23		Architha Gudimalla				11. Added migrated_in
 -- 11/29/23		Architha Gudimalla		        12. Updated primary insuread logic
+-- 11/29/23		Architha Gudimalla		        13. updated insured_nm logic to use isprimaryinsured
+-- 12/01/23		Architha Gudimalla		        14. updated program to use from account table
 -- ===================================================================================================================== 
 
-CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy]
+CREATE or ALTER   PROCEDURE [edw_core].[sp_tpolicy]
 
 AS 
 BEGIN
@@ -82,31 +90,32 @@ BEGIN
 				nullif(trim(MailingAddressState),'') MailingAddressState, 
 				nullif(trim(MailingAddressZipCode),'') MailingAddressZipCode, 
 				nullif(trim(MailingAddressCounty),'') MailingAddressCounty, 
-				nullif(trim(MailingAddressCountry),'') MailingAddressCountry, 
-				nullif(trim(Program),'') Program
+				nullif(trim(MailingAddressCountry),'') MailingAddressCountry 
+				--,nullif(trim(Program),'') Program --commented to use it from account instead
 		INTO edw_temp.tpolicy_temp2
 		FROM
 			(
-				SELECT  acctv.AccountTransactionId, acctvof.Field, acctvof.Value 
-						/*case when pin.id is not null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then acctvof.Field 
-							 when pin.id is  null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then null 
+				SELECT  acctv.AccountTransactionId, acctvof.Field, acctvof.Value/* 
+						case when pin.id is not null and acctvof.Field in  ('FirstName','LastName','MiddleName','NamedInsured')  then acctvof.Field 
+							 when pin.id is  null and acctvof.Field in  ('FirstName','LastName','MiddleName','NamedInsured')  then null 
 							 else acctvof.Field
 						end as Field, 
-						case when pin.id is not null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then acctvof.Value 
-							 when pin.id is  null and acctvof.Field in  ('FirstName','LastName','MiddleName')  then null 
+						case when pin.id is not null and acctvof.Field in  ('FirstName','LastName','MiddleName','NamedInsured')  then acctvof.Value 
+							 when pin.id is  null and acctvof.Field in  ('FirstName','LastName','MiddleName','NamedInsured')  then null 
 							 else acctvof.Value
 						end as Value*/
 				FROM edw_temp.tpolicy_temp1 acc
 					INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acc.Id --acctv.AccountTransactionId = acc.Id
-					INNER JOIN edw_stage.AccountTransactionVersionObject acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
+					INNER JOIN edw_stage.AccountTransactionVersionObject acctvo ON acctvo.AccountTransactionVersionId = acctv.Id and acctvo.ObjectType='insured'
 					INNER JOIN edw_stage.AccountTransactionVersionObjectField acctvof ON acctvof.VersionObjectId = acctvo.id
-					--left join edw_stage.AccountTransactionVersionObjectField pin on pin.versionobjectid = acctvo.id and pin.field = 'IsPrimaryInsured' and pin.Value in ('True','Yes')
+					INNER JOIN edw_stage.AccountTransactionVersionObjectField pin on pin.versionobjectid = acctvo.id and pin.field = 'IsPrimaryInsured' and pin.Value in ('True','Yes')
 				WHERE COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') != '''' --and acc.policynumber = 'HO100024581' 
 			) t
 		PIVOT 
 			(
 				MAX(Value) FOR Field IN (InsuredType, NamedInsured, FirstName, LastName, MiddleName, Prefix, Suffix, CompanyName, MailingAddressLine1, MailingAddressLine2, MailingAddressLineUnit, 
-				MailingAddressCity, MailingAddressState, MailingAddressZipCode, MailingAddressCounty, MailingAddressCountry, Program)
+				MailingAddressCity, MailingAddressState, MailingAddressZipCode, MailingAddressCounty, MailingAddressCountry--, Program
+				)
 			) pivottable
 
 			
@@ -122,17 +131,25 @@ BEGIN
 				ins.ReferenceCode as customer_id,
 				nullif(trim(pr.ProductCode),'') product_cd,
 				nullif(trim(COALESCE(acctv.RiskStateCode, 'DNA')),'') as RiskStateCode, --review
-				nullif(trim(Ins.NamedInsured),'') as insured_nm,
+				--nullif(trim(Ins.NamedInsured),'') as insured_nm, 
+				case when nullif(trim(isnull(tmp2.Prefix + ' ','') + isnull(tmp2.FirstName + ' ','') + isnull(tmp2.MiddleName + ' ','') 
+						  + isnull(tmp2.LastName + ' ','') + isnull(tmp2.Suffix,'')),'') 
+					 is not null
+				then nullif(trim(isnull(tmp2.Prefix + ' ','') + isnull(tmp2.FirstName + ' ','') + isnull(tmp2.MiddleName + ' ','') 
+					 + isnull(tmp2.LastName + ' ','') + isnull(tmp2.Suffix,'')),'') 
+				when tmp2.NamedInsured is not null then tmp2.NamedInsured
+				else ins.NamedInsured 
+				end as  insured_nm, 
 				tmp2.InsuredType as insured_type,
 				case when acc.IsRenewal = 1 then 'Renewal' else 'New' end as policy_term,
 				case when trim(pr.ProductCode) = 'AU' then 'Vault Reciprocal Exchange' 
-				     when tmp2.program = 'Admitted' then 'Vault Reciprocal Exchange' 
-				     when tmp2.program = 'Non-Admitted' then 'Vault E & S Insurance Company' 
+				     when acc.program = 'Admitted' then 'Vault Reciprocal Exchange' 
+				     when acc.program = 'Non-Admitted' then 'Vault E & S Insurance Company' 
 				     else null
 				end as uw_company_nm,
 				--tmp2.CompanyName as uw_company_nm,
 				case when trim(pr.ProductCode) = 'AU' then 'Admitted' 
-				     else tmp2.program
+				     else acc.program
 				end as program,
 				tmp1.State,
 				tmp1.TransactionEffectiveDate,
