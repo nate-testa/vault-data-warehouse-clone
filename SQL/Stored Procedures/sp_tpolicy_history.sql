@@ -220,15 +220,15 @@ BEGIN
 				,source.CommissionPercent
 				,source.CommissionPercentOverride
 				,source.CommissionPercentOverrideRetention
-				,source.InsuranceScore
-				,source.InsuranceScoreCode1
-				,source.InsuranceScoreCode1Description
-				,source.InsuranceScoreCode2
-				,source.InsuranceScoreCode2Description
-				,source.InsuranceScoreCode3
-				,source.InsuranceScoreCode3Description
-				,source.InsuranceScoreCode4
-				,source.InsuranceScoreCode4Description
+				,source1.InsuranceScore
+				,source1.InsuranceScoreCode1
+				,source1.InsuranceScoreCode1Description
+				,source1.InsuranceScoreCode2
+				,source1.InsuranceScoreCode2Description
+				,source1.InsuranceScoreCode3
+				,source1.InsuranceScoreCode3Description
+				,source1.InsuranceScoreCode4
+				,source1.InsuranceScoreCode4Description
 		FROM edw_temp.tpolicy_history_temp1 source
 		LEFT JOIN edw_temp.tpolicy_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tpolicy_history_temp2 source1 on source.id = source1.AccountTransactionId
