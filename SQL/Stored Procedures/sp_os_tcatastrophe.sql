@@ -2,8 +2,13 @@
 -- Author:		Yunus Mohammed
 -- Create Date: 11/08/2023
 -- Description: This procedures insert OneShield catastrophe
--- =============================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tcatastrohpe]
+---------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 11/08/23		Mohammed Yunus				1. Created this procedure 
+-- 12/04/2023	Mohammed Yunus				2. Renamed this procedure
+-- ================================================================================================= 
+CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tcatastrophe]
 
 AS
 BEGIN
