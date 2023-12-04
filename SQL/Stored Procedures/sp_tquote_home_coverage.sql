@@ -1,8 +1,3 @@
-/****** Object:  StoredProcedure [edw_core].[sp_tquote_home_coverage]    Script Date: 11/16/2023 11:50:29 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 -- ===========================================================================================================================
 -- Author:		Yunus Mohammed 
 -- Description: This procedures loads home quote coverage data
@@ -10,10 +5,11 @@ GO
 -- Change date			|Author						|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
 -- 10/23/2023 			Yunus Mohammed				1. Created this procedure 
--- 11/11/23		Sandeep Gundreddy		            2. modified  logic
--- 11/13/23		Sandeep Gundreddy		            3. modified quote_home_location_sk logic
+-- 11/11/23				Sandeep Gundreddy		    2. modified  logic
+-- 11/13/23				Sandeep Gundreddy		    3. modified quote_home_location_sk logic
+-- 11/30/23				Yunus Mohammed		        3. added new columns
 -- =========================================================================================================================== 
-create or ALTER   PROCEDURE [edw_core].[sp_tquote_home_coverage]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage]
 
 AS
 BEGIN
@@ -139,6 +135,7 @@ BEGIN
 				premium_adjustment_method, premium_adjustment_factor, premium_adjustment_retention, premium_adjustment_retention_reason,
 				reinsurance_designation, reinsurance_layered_program_in, reinsurance_attachment_limit_amt, reinsurance_total_tiv_amt,
 				wildfire_threat, wildfire_hazard_severity,
+				aop_deductible_manual,water_deductible_manual,wildfire_deductible_manual,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			OUTPUT inserted.quote_home_coverage_sk INTO edw_temp.tquote_home_coverage_temp2
@@ -246,6 +243,7 @@ BEGIN
 				tthc.FactorMethod, tthc.Factor, tthc.Retention, tthc.Reason,
 				tthc.ReinsuranceDesignation, tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit, tthc.ReinsuranceTotalTIV, 
 				tthc.WildfireThreat, tthc.WildfireHazardSeverity,
+				tthc.AOPDeductiblemanual, tthc.Waterdeductiblemanual,tthc.wildfiredeductiblemanual,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.tquote_home_coverage_temp1 AS tthc
@@ -289,4 +287,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-

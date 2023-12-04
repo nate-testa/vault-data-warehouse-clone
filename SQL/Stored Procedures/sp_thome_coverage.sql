@@ -1,10 +1,4 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_thome_coverage]    Script Date: 11/16/2023 11:56:11 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- ===========================================================================================================================
+﻿-- ===========================================================================================================================
 -- Description: This procedures loads home coverage data
 ------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
@@ -16,9 +10,10 @@ GO
 -- 10/13/23		Architha Gudimalla				5. Updated residence type
 -- 11/16/23		Architha Gudimalla				6. Added wildfire columns
 -- 11/16/23		Architha Gudimalla				7. updated the join for AccountTransactionVersionPremiumfactor
+-- 11/30/23		Yunus Mohammed					8. Added new fields
 -- =========================================================================================================================== 
 
-create or ALTER    PROCEDURE [edw_core].[sp_thome_coverage]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
 
 AS
 BEGIN
@@ -138,7 +133,7 @@ BEGIN
 				wind_or_hailstorm_deductible,
 				premium_adjustment_method, premium_adjustment_factor, premium_adjustment_retention, premium_adjustment_retention_reason,
 				reinsurance_designation, reinsurance_layered_program_in, reinsurance_attachment_limit_amt, reinsurance_total_tiv_amt,
-				wildfire_threat, wildfire_hazard_severity,
+				wildfire_threat, wildfire_hazard_severity,aop_deductible_manual,water_deductible_manual,wildfire_deductible_manual,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
@@ -246,6 +241,7 @@ BEGIN
 				tthc.FactorMethod, tthc.Factor, tthc.Retention, tthc.Reason,
 				tthc.ReinsuranceDesignation, tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit, tthc.ReinsuranceTotalTIV, 
 				tthc.WildfireThreat, tthc.WildfireHazardSeverity,
+				tthc.AOPDeductiblemanual, tthc.Waterdeductiblemanual,tthc.wildfiredeductiblemanual,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_coverage_temp1 AS tthc
@@ -274,4 +270,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-
