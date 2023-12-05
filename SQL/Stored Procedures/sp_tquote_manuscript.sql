@@ -28,7 +28,7 @@ BEGIN
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tquote_manuscript_temp1];
 		SELECT 
-			PolicyNumber as quote_no, EffectiveDate, ExpirationDate, PolicyChangeNumber as transaction_seq_no
+			PolicyNumber as quote_no, EffectiveDate, ExpirationDate, [Number] as transaction_seq_no
 			,quote_history_sk
 			,ManuscriptTitle, ManuscriptNumber, ManuscriptDescription
 			,source_system_sk --20230717 added
@@ -38,7 +38,7 @@ BEGIN
 		FROM
 			(
 			SELECT
-				acc.PolicyNumber, acc.EffectiveDate, acc.ExpirationDate, acc.PolicyChangeNumber
+				acc.PolicyNumber, acc.EffectiveDate, acc.ExpirationDate, acc.[Number]
 				,tqh.[quote_history_sk]
 				,accto.[Field], NULLIF(accto.[Value], '') as [Value]
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
