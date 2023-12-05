@@ -33,6 +33,7 @@ BEGIN
 			,ManuscriptTitle, ManuscriptNumber, ManuscriptDescription
 			,source_system_sk --20230717 added
 			,CreatedDate
+			,[Index] as manuscript_seq_no
 		INTO [edw_temp].[tquote_manuscript_temp1]
 		FROM
 			(
@@ -44,6 +45,7 @@ BEGIN
 					  Else 4 --(Metal)
 				 end as [source_system_sk] --20230717 added
 				,acc.CreatedDate
+				,acct.[Index]
 			FROM
 				(SELECT
 					*
@@ -81,6 +83,7 @@ BEGIN
 			,[create_ts]
 			,[update_ts]
 			,[etl_audit_sk]
+			,[manuscript_seq_no]
 		)
 		SELECT [quote_no]
       		,[EffectiveDate]
@@ -94,6 +97,7 @@ BEGIN
       		,getdate()
       		,getdate()
 		   ,@etl_audit_sk
+		   ,[manuscript_seq_no]
 		FROM 
 			[edw_temp].[tquote_manuscript_temp1]
 
