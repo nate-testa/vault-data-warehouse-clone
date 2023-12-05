@@ -8,6 +8,7 @@
 -- 10/23/23		Architha Gudimalla				2. Updated the proc to run for 30 days
 -- 11/27/23		Architha Gudimalla				3. Add source_system_sk and datamart
 -- 12/01/23		Architha Gudimalla				4. Using dbo for metal tables
+-- 12/04/23		Architha Gudimalla				5. Updated the proc to run for 7 days
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_treconciliation]
@@ -123,7 +124,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=cast(DATEADD(day, -30, getdate())  as date);
+		SET @new_last_source_extract_ts=cast(DATEADD(day, -7, getdate())  as date);
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
