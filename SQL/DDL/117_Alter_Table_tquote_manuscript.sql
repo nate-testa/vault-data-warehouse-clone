@@ -1,0 +1,7 @@
+ALTER TABLE edw_core.tquote_manuscript ADD
+manuscript_seq_no  int
+;
+
+ALTER TABLE edw_core.tquote_manuscript DROP CONSTRAINT uidx_tquote_manuscript_quote_no_effdt_transeq_manuscript_no;
+
+CREATE UNIQUE INDEX uidx_tquote_manuscript_polno_effdt_transeq_manuscript_seq_no ON edw_core.tquote_manuscript(quote_no,effective_dt,transaction_seq_no,manuscript_seq_no);
