@@ -432,6 +432,7 @@ BEGIN
             getdate() as create_ts,
             getdate() as update_ts,
             @etl_audit_sk as etl_audit_sk,
+            tprc.national_producer_no as NIPRid_200,
             pt.create_ts as policy_transaction_create_ts
         INTO [edw_temp].[policy_ivans_auto_feed_temp1] 
         FROM [edw_temp].[policy_ivans_auto_feed_temp2] AS pt
@@ -453,6 +454,13 @@ BEGIN
             ON p.policy_no = jagl.policy_no AND p.effective_dt = jagl.effective_dt AND pt.transaction_seq_no = jagl.transaction_seq_no
         LEFT JOIN json_au_drivers AS jad
             ON p.policy_no = jad.policy_no AND p.effective_dt = jad.effective_dt AND pt.transaction_seq_no = jad.transaction_seq_no
+        LEFT JOIN (
+				select broker_sk, broker_id, national_producer_no
+				    ,ROW_NUMBER() OVER (PARTITION BY broker_id ORDER BY broker_sk DESC) AS rn
+				from edw_core.tproducer
+			) tprc
+		ON p.broker_id = tprc.broker_id
+		AND tprc.rn = 1
         ;
 
         -- Start Insert process
@@ -525,7 +533,8 @@ BEGIN
             [transaction_seq_no],
             [create_ts],
             [update_ts],
-            [etl_audit_sk]
+            [etl_audit_sk],
+            [NIPRid_200]
         )
         SELECT 
             [MsgTypeCd_001],
@@ -596,7 +605,8 @@ BEGIN
             [transaction_seq_no],
             [create_ts],
             [update_ts],
-            [etl_audit_sk]
+            [etl_audit_sk],
+            [NIPRid_200]
         FROM [edw_temp].[policy_ivans_auto_feed_temp1];
 
         --************End************

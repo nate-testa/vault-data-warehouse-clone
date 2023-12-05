@@ -718,6 +718,7 @@ BEGIN
 		--
 		,pt.create_ts as policy_transaction_create_ts
 		--
+		,tprc.national_producer_no
 		INTO [edw_temp].[policy_ivans_home_temp2]
 		--
 		FROM [edw_temp].[policy_ivans_home_temp1] pt
@@ -770,6 +771,13 @@ BEGIN
 		on p.policy_no = jsi.policy_no
            AND p.effective_dt = jsi.effective_dt
            AND pt.transaction_seq_no = jsi.transaction_seq_no
+		LEFT JOIN (
+				select broker_sk, broker_id, national_producer_no
+				,ROW_NUMBER() OVER (PARTITION BY broker_id ORDER BY broker_sk DESC) AS rn
+				from edw_core.tproducer
+			) tprc
+		ON p.broker_id = tprc.broker_id
+		AND tprc.rn = 1
 		WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
 
 		-- Start Insert process
@@ -962,6 +970,7 @@ BEGIN
 			,[create_ts]
 			,[update_ts]
 			,[etl_audit_sk]
+			,[NIPRid_200]
 		)
 		SELECT [001_MsgTypeCd]
 			,[002_BusinessPurposeTypeCd]
@@ -1164,6 +1173,7 @@ BEGIN
 			,getdate()
 			,getdate()
 		    ,@etl_audit_sk
+			,[national_producer_no]
 		FROM [edw_temp].[policy_ivans_home_temp2]
 		WHERE [053_PolicyNumber] IS NOT NULL;
 
