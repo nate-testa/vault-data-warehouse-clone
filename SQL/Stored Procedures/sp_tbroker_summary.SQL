@@ -145,7 +145,9 @@ BEGIN
 							sum(case when summ.month_sk = @prior_year_month_end_dt_sk then summ.inforce_ct else 0 end) prior_inforce_ct,  
 							sum(case when summ.month_sk = @prior_year_month_end_dt_sk then summ.inforce_net_premium_amt else 0 end) prior_inforce_net_premium_amt,
 							--
-							
+							sum(case when summ.month_sk between @prior_year_begin_dt_sk and @prior_year_month_end_dt_sk then summ.mtd_net_premium_amt else 0 end) prior_ytd_net_premium_amt,   
+							sum(case when summ.month_sk between @year_begin_dt_sk and @month_end_dt_sk then summ.mtd_net_premium_amt else 0 end) ytd_net_premium_amt,   
+							--
 							sum(case when summ.month_sk = @month_end_dt_sk and summ.product_sk = 3 then summ.inforce_ct else 0 end) au_inforce_ct,  
 							sum(case when summ.month_sk = @month_end_dt_sk and summ.product_sk = 3 then summ.inforce_net_premium_amt else 0 end) au_inforce_net_premium_amt,
 							sum(case when summ.month_sk = @month_end_dt_sk and summ.product_sk = 5 then summ.inforce_ct else 0 end) co_inforce_ct,  
@@ -309,6 +311,9 @@ BEGIN
 						sum(isnull(ps.ytd_new_business_ct,0)) ytd_new_business_ct, 
 						sum(isnull(ps.ytd_new_business_net_premium_amt,0)) ytd_new_business_net_premium_amt, 
 						--
+						sum(isnull(ps.prior_ytd_net_premium_amt,0)) prior_ytd_net_premium_amt, 
+						sum(isnull(ps.ytd_net_premium_amt,0)) ytd_net_premium_amt, 
+						--
 						sum(isnull(ps.prior_inforce_ct,0)) prior_inforce_ct, 
 						sum(isnull(ps.prior_inforce_net_premium_amt,0)) prior_inforce_net_premium_amt,
 						sum(isnull(ps.inforce_ct,0)) inforce_ct, 
@@ -404,6 +409,8 @@ BEGIN
 						prior_ytd_new_business_net_premium_amt, 
 						ytd_new_business_ct, 
 						ytd_new_business_net_premium_amt, 
+						prior_ytd_net_premium_amt, 
+						ytd_net_premium_amt,
 						prior_inforce_ct, 
 						prior_inforce_net_premium_amt,
 						inforce_ct, 
@@ -459,7 +466,8 @@ BEGIN
 						sum(total_line_ct),
 						max(last_quote_dt), max(last_bound_dt), 
 						sum(prior_ytd_new_business_ct), sum(prior_ytd_new_business_net_premium_amt), 
-						sum(ytd_new_business_ct), sum(ytd_new_business_net_premium_amt), 
+						sum(ytd_new_business_ct), sum(ytd_new_business_net_premium_amt),  
+						sum(prior_ytd_net_premium_amt), sum(ytd_net_premium_amt),
 						sum(prior_inforce_ct), sum(prior_inforce_net_premium_amt),  
 						sum(inforce_ct), sum(inforce_net_premium_amt),  
 						sum(au_inforce_ct), sum(au_inforce_net_premium_amt),  
