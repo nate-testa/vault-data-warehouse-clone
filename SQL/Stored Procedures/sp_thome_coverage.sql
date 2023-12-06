@@ -11,6 +11,7 @@
 -- 11/16/23		Architha Gudimalla				6. Added wildfire columns
 -- 11/16/23		Architha Gudimalla				7. updated the join for AccountTransactionVersionPremiumfactor
 -- 11/30/23		Yunus Mohammed					8. Added new fields
+-- 12/06/23		Alberto Almario					9. Added new field WindstormOrHailDeductibleManual
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -133,7 +134,7 @@ BEGIN
 				wind_or_hailstorm_deductible,
 				premium_adjustment_method, premium_adjustment_factor, premium_adjustment_retention, premium_adjustment_retention_reason,
 				reinsurance_designation, reinsurance_layered_program_in, reinsurance_attachment_limit_amt, reinsurance_total_tiv_amt,
-				wildfire_threat, wildfire_hazard_severity,aop_deductible_manual,water_deductible_manual,wildfire_deductible_manual,
+				wildfire_threat, wildfire_hazard_severity,aop_deductible_manual,water_deductible_manual,wildfire_deductible_manual,wind_or_hailstorm_deductible_manual,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
@@ -241,7 +242,7 @@ BEGIN
 				tthc.FactorMethod, tthc.Factor, tthc.Retention, tthc.Reason,
 				tthc.ReinsuranceDesignation, tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit, tthc.ReinsuranceTotalTIV, 
 				tthc.WildfireThreat, tthc.WildfireHazardSeverity,
-				tthc.AOPDeductiblemanual, tthc.Waterdeductiblemanual,tthc.wildfiredeductiblemanual,
+				tthc.AOPDeductiblemanual, tthc.Waterdeductiblemanual,tthc.wildfiredeductiblemanual, tthc.WindstormOrHailDeductibleManual,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_coverage_temp1 AS tthc
