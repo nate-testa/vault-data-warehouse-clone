@@ -28,22 +28,24 @@ BEGIN
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tquote_manuscript_temp1];
 		SELECT 
-			PolicyNumber as quote_no, EffectiveDate, ExpirationDate, PolicyChangeNumber as transaction_seq_no
+			PolicyNumber as quote_no, EffectiveDate, ExpirationDate, [Number] as transaction_seq_no
 			,quote_history_sk
 			,ManuscriptTitle, ManuscriptNumber, ManuscriptDescription
 			,source_system_sk --20230717 added
 			,CreatedDate
+			,[Index] as manuscript_seq_no
 		INTO [edw_temp].[tquote_manuscript_temp1]
 		FROM
 			(
 			SELECT
-				acc.PolicyNumber, acc.EffectiveDate, acc.ExpirationDate, acc.PolicyChangeNumber
+				acc.PolicyNumber, acc.EffectiveDate, acc.ExpirationDate, acc.[Number]
 				,tqh.[quote_history_sk]
 				,accto.[Field], NULLIF(accto.[Value], '') as [Value]
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
 				 end as [source_system_sk] --20230717 added
 				,acc.CreatedDate
+				,acct.[Index]
 			FROM
 				(SELECT
 					*
@@ -81,6 +83,7 @@ BEGIN
 			,[create_ts]
 			,[update_ts]
 			,[etl_audit_sk]
+			,[manuscript_seq_no]
 		)
 		SELECT [quote_no]
       		,[EffectiveDate]
@@ -94,6 +97,7 @@ BEGIN
       		,getdate()
       		,getdate()
 		   ,@etl_audit_sk
+		   ,[manuscript_seq_no]
 		FROM 
 			[edw_temp].[tquote_manuscript_temp1]
 
