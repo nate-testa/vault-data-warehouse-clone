@@ -7,6 +7,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 11/15/23		Yunus Mohammed				1. Updated logic for cancelled and expired policies
 -- 12/01/23		Yunus Mohammed				2. Updated  product name and company name
+-- 12/05/23		Yunus Mohammed				3. Removed distinct and added contribcutoffdate date
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -136,12 +137,21 @@ BEGIN
 				aslob,amount,unearned,contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
-				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
-				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
-				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
-				aslob,amount,unearned,NULL AS contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
+				uep.accounting_date,uep.policy_image_id,uep.policy_number,uep.product,uep.company,uep.transaction_date,uep.transaction_sequence,uep.effective_date,
+				uep.expiration_date,uep.transaction_type,uep.producer_code,uep.agency_name,uep.number_of_installments,uep.insured_name,
+				uep.[address],uep.county,uep.city,uep.risk_state,uep.zip,uep.fire_protection,uep.category,uep.subcategory,uep.financial_category_id,uep.financial_category_name,
+				uep.aslob,uep.amount,uep.unearned,d.subscriber_contribution_end_dt AS contribcutoffdate,uep.extraction_time,uep.create_ts,uep.update_ts,uep.etl_audit_sk
 			FROM
-				policy_workday_unearned_premium_feed_temp
+				policy_workday_unearned_premium_feed_temp uep
+				left join
+				(
+				select
+				policy_no,effective_dt,transaction_seq_no,max(subscriber_contribution_end_dt) as subscriber_contribution_end_dt
+				from
+				edw_core.tpolicy_insured where subscriber_contribution_end_dt is not null
+				group by policy_no,effective_dt,transaction_seq_no
+				) as d on uep.policy_number = d.policy_no and uep.effective_date = d.effective_dt
+				and uep.transaction_sequence = d.transaction_seq_no
 
 			SET @rows_affected=@@ROWCOUNT;
 

@@ -6,7 +6,8 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 11/16/23		Yunus Mohammed				1. Update logic for category, subcategory columns. Removed extra space in company 
--- 12/01/23		Yunus Mohammed				2. Updated  product name and company name 
+-- 12/01/23		Yunus Mohammed				2. Updated  product name and company name
+-- 12/05/23		Yunus Mohammed				3. Removed distinct and added contribcutoffdate date
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
@@ -200,6 +201,15 @@ BEGIN
 			[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 			aslob,amount,deleteddate,contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
 			)
+
+			SELECT
+				wp.accounting_date,wp.policy_image_id,wp.transaction_id,wp.policy_number,wp.product,wp.transaction_sequence,wp.company,wp.transaction_date,
+				wp.effective_date,wp.expiration_date,wp.transaction_type,wp.producer_code,wp.agency_name,wp.number_of_installments,wp.insured_name,
+				wp.[address],wp.county,wp.city,wp.risk_state,wp.zip,wp.fire_protection,category,wp.subcategory,wp.financial_category_id,wp.financial_category_name,
+				wp.aslob,wp.amount,wp.deleteddate,d.subscriber_contribution_end_dt AS contribcutoffdate,wp.extraction_time,
+				wp.create_ts,wp.update_ts,wp.etl_audit_sk
+			FROM
+			(
 			SELECT
 				accounting_date,policy_image_id,transaction_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
@@ -215,6 +225,16 @@ BEGIN
 				aslob,amount,null as deleteddate,null contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
 			FROM
 			policy_workday_written_premium_feed_commission_temp
+			) as wp
+			left join
+			(
+			select
+			policy_no,effective_dt,transaction_seq_no,max(subscriber_contribution_end_dt) as subscriber_contribution_end_dt
+			from
+			edw_core.tpolicy_insured where subscriber_contribution_end_dt is not null
+			group by policy_no,effective_dt,transaction_seq_no
+			) as d on wp.policy_number = d.policy_no and wp.effective_date = d.effective_dt
+			and wp.transaction_sequence = d.transaction_seq_no
 
 			SET @rows_affected=@@ROWCOUNT;
 
