@@ -40,7 +40,10 @@ BEGIN
 				d2.actual_dt as transaction_effective_dt,
 				pt.transaction_seq_no,
 				p.policy_status,
-				TRIM(ISNULL(pi.first_nm, '') + ' ' + ISNULL(pi.last_nm, '') + ' ' + ISNULL(pi.suffix, '')) as insured_nm,
+				CASE 
+					WHEN pi.insured_type = 'Entity' THEN pi.insured_nm
+					ELSE TRIM(ISNULL(pi.first_nm, '') + ' ' + ISNULL(pi.last_nm, '') + ' ' + ISNULL(pi.suffix, '')) 
+				END AS insured_nm,
 				c.Insured_type,
 				p.uw_company_nm,
 				pr.product_nm,
