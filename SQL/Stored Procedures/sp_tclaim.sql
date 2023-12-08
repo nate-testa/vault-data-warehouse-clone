@@ -59,7 +59,7 @@ BEGIN
 		SELECT
 		claim_no, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS policy_effective_dt, 
 		policy_sk,cause_of_loss_sk,loss_desc, source_claim_status,claim_status, catastrophe_sk, product_sk,
-		loss_address ,loss_city_nm ,loss_state_cd ,loss_zip_cd,loss_country_nm,broker_sk,customer_sk,underwriting_company_nm,
+		loss_address ,loss_city_nm ,loss_state_cd ,loss_zip_cd,loss_country_nm,broker_id,customer_sk,underwriting_company_nm,
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
 		claim_created_ts,claim_created_by_nm,policy_history_sk,
 		3 AS source_system_sk,sub_cause_of_loss_sk,update_time
@@ -69,7 +69,7 @@ BEGIN
 		SELECT
 			ROW_NUMBER() OVER(PARTITION BY tcase.claim_no,tph.policy_no ORDER BY tph.transaction_seq_no DESC) AS rn,
 			CASE WHEN tph.effective_dt IS NULL THEN CAST(tcp.EFF_DATE AS DATE) ELSE CAST(tph.effective_dt AS DATE) END AS effective_dt,
-			tph.broker_sk,
+			tbrk.broker_id,
 			c.customer_sk,
 			tcase.claim_no, tcase.accident_time AS loss_dt, tcase.notice_time AS report_dt, 
 			CASE WHEN TRIM(tcase.policy_no) IS NULL THEN tcp.policy_no ELSE TRIM(tcase.policy_no) END AS policy_no,
@@ -127,7 +127,8 @@ BEGIN
                                     tph1.policy_no = tcase.policy_no
                                     AND CAST(tph1.transaction_effective_dt AS DATE) <= CAST(tcase.accident_time AS DATE)
 								ORDER BY transaction_seq_no DESC
-                              )			
+                              )
+			LEFT JOIN edw_core.tbroker tbrk ON tbrk.broker_sk = tph.broker_sk	
 			LEFT JOIN edw_stage.t_clm_case_status tcasestat ON tcase.CASE_STATUS = tcasestat.STATUS_CODE
 			LEFT JOIN edw_core.tcustomer c ON c.customer_sk=tph.customer_sk
 			LEFT JOIN edw_core.tcatastrophe cat ON TRIM(tcase.accident_code)=TRIM(cat.catastrophe_cd)
@@ -166,7 +167,7 @@ BEGIN
 		claim_no,loss_dt,report_dt,policy_no
 		,policy_effective_dt,policy_sk,cause_of_loss_sk,sub_cause_of_loss_sk,loss_desc,claim_status
 		,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,loss_address,loss_city_nm
-		,loss_state_cd,loss_zip_cd,loss_country_nm,broker_sk,customer_sk,contact_nm,contact_type
+		,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_sk,contact_nm,contact_type
 		,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,claim_created_ts ,claim_created_by_nm,
 		policy_history_sk,
 		source_system_sk,@current_date,@current_date,@etl_audit_sk
@@ -190,7 +191,7 @@ BEGIN
 		Target.loss_state_cd=Source.loss_state_cd,
 		Target.loss_zip_cd=Source.loss_zip_cd, 
 		Target.loss_country_nm=Source.loss_country_nm, 
-		Target.broker_id=Source.broker_sk,
+		Target.broker_id=Source.broker_id,
 		Target.underwriting_company_nm=Source.underwriting_company_nm,
 		Target.contact_nm=Source.contact_nm,
 		Target.contact_type=Source.contact_type,

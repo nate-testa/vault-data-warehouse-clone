@@ -34,7 +34,7 @@ BEGIN
 		DROP TABLE IF exists edw_temp.tclaim_transaction_temp1
 
 		SELECT
-		tc.claim_sk,tcf.claim_feature_sk,
+		tc.claim_sk,tcf.claim_feature_sk,tc.policy_sk,tbrk.broker_sk,tcust.customer_sk
 		 -- Transact.settlement_id, 
 		Transact.dcc_in AS defense_cost_in,td.date_sk,Transact.post_date AS transaction_ts,
 		tc.product_sk,tcp.claim_payment_sk,
@@ -64,6 +64,8 @@ BEGIN
 		INNER JOIN edw_core.tclaim tc ON tc.claim_no=tcase.claim_no
 		INNER JOIN edw_core.tclaim_feature tcf ON tcf.claim_no=tc.claim_no
 			AND tcf.subclaim_seq_no=obj.seq_no AND tcf.claim_coverage_cd=e.coverage_code
+		INNER JOIN edw_core.tbroker tbrk ON tbrk.broker_id = tc.broker_id	
+		INNER JOIN edw_core.tcustomer tcust ON tcust.customer_id = [tc].customer_id
 		INNER JOIN
 		(
 			SELECT
@@ -124,14 +126,14 @@ BEGIN
 		
 		INSERT INTO edw_core.tclaim_transaction
 		(
-			claim_sk,claim_feature_sk,product_sk,defense_cost_in,transaction_dt_sk,transaction_ts,claim_payment_sk,
+			claim_sk,claim_feature_sk,product_sk,policy_sk,broker_sk,customer_sk,defense_cost_in,transaction_dt_sk,transaction_ts,claim_payment_sk,
 			claim_transaction_type_sk,feature_status_sk,loss_reserve_amt,expense_reserve_amt,adjusting_other_reserve_amt,subro_reserve_amt,
 			salvage_reserve_amt,salvage_expense_reserve_amt,subro_expense_reserve_amt,loss_paid_amt,expense_paid_amt,adjusting_other_paid_amt,
 			subro_recovery_amt,salvage_recovery_amt,salvage_expense_paid_amt,subro_expense_paid_amt,refund_indemnity_paid_amt,refund_expense_paid_amt,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 		SELECT
-			claim_sk,claim_feature_sk,product_sk,defense_cost_in,date_sk,transaction_ts,claim_payment_sk,
+			claim_sk,claim_feature_sk,product_sk,policy_sk,broker_sk,customer_sk,defense_cost_in,date_sk,transaction_ts,claim_payment_sk,
 		claim_transaction_type_sk,feature_status_sk,loss_reserve_amt,expense_reserve_amt,adjusting_other_reserve_amt, 
 		subro_reserve_amt,salvage_reserve_amt,salvage_expense_reserve_amt,subro_expense_reserve_amt,loss_paid_amt, 
 		expense_paid_amt,adjusting_other_paid_amt,subro_recovery_amt,salvage_recovery_amt,salvage_expense_paid_amt,subro_expense_paid_amt,
