@@ -344,10 +344,7 @@ BEGIN
             DATEDIFF(MONTH,p.effective_dt, p.expiration_dt) as [NumUnits_040],
             P.policy_term as [Description_041],
             '' as [ControllingStateProvCd_042],
-            CASE 
-                WHEN ba.payment_plan = '1P' THEN 'Full Pay'
-                ELSE replace(ba.payment_plan, 'P', ' Pay')
-            END as [BillingMethodCd_043],
+            CASE WHEN ba.bill_type = 'Insured' THEN 'Direct' ELSE 'Not Direct' END AS [BillingMethodCd_043],
             pt.annual_premium_amt as [Amt_044],
             pt.annual_premium_amt as [Amt_045],
             op.min_effective_dt as [OriginalPolicyInceptionDt_046],
