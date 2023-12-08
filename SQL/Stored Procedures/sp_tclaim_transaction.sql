@@ -34,7 +34,7 @@ BEGIN
 		DROP TABLE IF exists edw_temp.tclaim_transaction_temp1
 
 		SELECT
-		tc.claim_sk,tcf.claim_feature_sk,tc.policy_sk,tbrk.broker_sk,tcust.customer_sk
+		tc.claim_sk,tcf.claim_feature_sk,tc.policy_sk,tbrk.broker_sk,tcust.customer_sk,
 		 -- Transact.settlement_id, 
 		Transact.dcc_in AS defense_cost_in,td.date_sk,Transact.post_date AS transaction_ts,
 		tc.product_sk,tcp.claim_payment_sk,
