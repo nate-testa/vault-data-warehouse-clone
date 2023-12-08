@@ -38,7 +38,10 @@ BEGIN
 			,policy_history_sk
 			,[index] as additional_interest_seq_no
 			,InterestType, EntityType
-			,coalesce([EntityName], concat(FirstName, ' ', LastName)) as EntityName
+			,CASE
+  				WHEN EntityName IS NOT NULL AND EntityName <> '' THEN EntityName
+  				ELSE CONCAT(FirstName, ' ', LastName)
+			END AS EntityName
 			,DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew
 			,[Name]
 			--,4 as [source_system_sk] --20230717 removed
@@ -65,7 +68,7 @@ BEGIN
 				WHERE
 					[State] ='ISSUED' --- Review BOUND transactions
 					--AND GREATEST(acct.CreatedDate)>@last_source_extract_ts --20230717 removed
-					AND GREATEST(IssuedDate)>@last_source_extract_ts --20230717 added
+					--AND GREATEST(IssuedDate)>@last_source_extract_ts --20230717 added
 				) acc
 				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
 				LEFT JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
