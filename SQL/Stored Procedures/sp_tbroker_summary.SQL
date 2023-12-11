@@ -19,7 +19,7 @@ GO
 -- 12/11/23		Architha Gudimalla				7. Added quote prm cols
 -- ================================================================================================= 
 
-ALTER   PROCEDURE [edw_core].[sp_tbroker_summary] 
+CREATE or ALTER   PROCEDURE [edw_core].[sp_tbroker_summary] 
 @in_end_dt date = null
 AS 
 BEGIN
