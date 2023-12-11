@@ -1,3 +1,4 @@
+/****** Object:  StoredProcedure [edw_core].[sp_tbroker_summary]    Script Date: 12/11/2023 2:31:39 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -15,9 +16,10 @@ GO
 -- 10/31/23		Architha Gudimalla				4. Added addtional columns
 -- 11/21/23		Architha Gudimalla				5. Added quotes logic
 -- 11/27/23		Architha Gudimalla				6. Added temp table
+-- 12/11/23		Architha Gudimalla				7. Added quote prm cols
 -- ================================================================================================= 
 
-create OR ALTER PROCEDURE [edw_core].[sp_tbroker_summary] 
+ALTER   PROCEDURE [edw_core].[sp_tbroker_summary] 
 @in_end_dt date = null
 AS 
 BEGIN
@@ -119,16 +121,16 @@ BEGIN
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_quotes;
 				select br.broker_sk, --cust.customer_sk, 
 						--pr.product_sk, --st.state_sk, 
-						sum(case when q.first_offered_quote_ts between @prior_year_begin_dt and @prior_year_month_end_dt then 1 else 0 end) prior_ytd_quote_ct, 
-						sum(case when q.first_offered_quote_ts between @year_begin_dt       and @end_dt then 1 else 0 end) ytd_quote_ct, 
+						count(distinct case when q.first_offered_quote_ts between @prior_year_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_ytd_quote_ct, 
+						count(distinct case when q.first_offered_quote_ts between @year_begin_dt       and @end_dt then q.quote_sk end) ytd_quote_ct, 
+						sum(case when q.first_offered_quote_ts between @prior_year_begin_dt and @prior_year_month_end_dt then qtr.net_premium_amt end) prior_ytd_quote_premium_amt, 
+						sum(case when q.first_offered_quote_ts between @year_begin_dt       and @end_dt then qtr.net_premium_amt end) ytd_quote_premium_amt, 
 						max(q.first_offered_quote_ts) max_quoted_dt, 
 						max(q.bind_dt) max_bind_dt
 				into edw_temp.tbroker_summ_quotes
-				from edw_core.tquote q, edw_core.tcustomer cust, edw_core.tbroker br, edw_core.tproduct pr, edw_core.tstate st
-				where q.customer_id = cust.customer_id
-				and q.broker_id = br.broker_id
-				and q.product_cd = pr.product_cd 
-				and q.risk_state_cd = st.state_cd
+				from edw_core.tquote q, edw_core.tquote_transaction qtr, edw_core.tbroker br 
+				where  q.broker_id = br.broker_id 
+				and q.quote_sk = qtr.quote_sk 
 				and (q.first_offered_quote_ts is not null or q.bind_dt is not null)
 				--and quote_create_ts <= @end_dt
 				group by br.broker_sk--, cust.customer_sk
@@ -296,6 +298,8 @@ BEGIN
 						--,COALESCE(ps.state_sk, cs.state_sk, q.state_sk) state_sk, 
 						sum(isnull(q.prior_ytd_quote_ct,0)) prior_ytd_quote_ct,
 						sum(isnull(q.ytd_quote_ct,0)) ytd_quote_ct,
+						sum(isnull(q.prior_ytd_quote_premium_amt,0)) prior_ytd_quote_premium_amt,
+						sum(isnull(q.ytd_quote_premium_amt,0)) ytd_quote_premium_amt,  
 						--count(distinct isnull(ps.customer_sk, cs.customer_sk)) customer_ct,
 						-- avg lines per account - can be calculated
 						max(cast(case when q.max_quoted_dt is not null then q.max_quoted_dt end as date)) last_quote_dt,
@@ -398,6 +402,8 @@ BEGIN
 						broker_sk, 
 						prior_ytd_quote_ct,
 						ytd_quote_ct,
+						prior_ytd_quote_premium_amt,
+						ytd_quote_premium_amt,
 						prior_customer_ct,
 						customer_ct,
 						prior_total_line_ct,
@@ -460,6 +466,8 @@ BEGIN
 				select month_sk, broker_sk,  
 						sum(prior_ytd_quote_ct), 
 						sum(ytd_quote_ct), 
+						sum(prior_ytd_quote_premium_amt), 
+						sum(ytd_quote_premium_amt),  
 						sum(prior_customer_ct) prior_customer_ct, 
 						sum(customer_ct) customer_ct, 
 						sum(prior_total_line_ct),
@@ -534,4 +542,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-GO
