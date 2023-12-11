@@ -6,6 +6,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 08/15/23		Architha Gudimalla				1. Created this procedure 
 -- 11/03/23		Architha Gudimalla				2. Added date filter for inforce
+-- 12/07/23		Architha Gudimalla				2. Updated var_actual_dt
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tvalidation_result]
@@ -53,13 +54,19 @@ BEGIN
 		WHILE @@FETCH_STATUS = 0
 			BEGIN   
 
+				SET @out1 = 0; 
+				SET @out2 = 0; 
+
 				SET @process_run_start_ts = getdate(); 
 
-				set @source_sql = replace(@source_sql , 'select count(*)','SELECT @source_ct=count(*)') 
-				set @target_sql = replace(@target_sql , 'select count(*)','SELECT @target_ct=count(*)') 
+				set @source_sql = replace(@source_sql , 'select count(','SELECT @source_ct=count(') 
+				set @target_sql = replace(@target_sql , 'select count(','SELECT @target_ct=count(')  
 
-				set @source_sql = replace(@source_sql , 'var_actual_dt',@last_source_extract_ts) 
-				set @target_sql = replace(@target_sql , 'var_actual_dt',@last_source_extract_ts)  
+				set @source_sql = replace(@source_sql , 'var_actual_dt',cast(getdate() as date)) 
+				set @target_sql = replace(@target_sql , 'var_actual_dt',cast(getdate() as date)) 
+
+				--set @source_sql = replace(@source_sql , 'var_actual_dt',@last_source_extract_ts) 
+				--set @target_sql = replace(@target_sql , 'var_actual_dt',@last_source_extract_ts)  
 
 				EXECUTE sp_executesql @source_sql, N'@source_ct NVARCHAR(10) OUTPUT', @source_ct=@out1 OUTPUT
 				EXECUTE sp_executesql @target_sql, N'@target_ct NVARCHAR(10) OUTPUT', @target_ct=@out2 OUTPUT 
