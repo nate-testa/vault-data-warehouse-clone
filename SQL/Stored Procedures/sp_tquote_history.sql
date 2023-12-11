@@ -7,7 +7,7 @@
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- ===================================================================================================================== 
 
-CREATE   PROCEDURE [edw_core].[sp_tquote_history]
+CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history]
 
 AS
 BEGIN
@@ -112,7 +112,16 @@ BEGIN
 				nullif(trim(PriorResidenceAddressZipCode),'') PriorResidenceAddressZipCode, 
 				nullif(trim(PriorResidenceAddressCounty),'') PriorResidenceAddressCounty, 
 				nullif(trim(PriorResidenceAddressCountry),'') PriorResidenceAddressCountry,
-				ResidenceHasPrior
+				ResidenceHasPrior,
+				InsuranceScore,
+				InsuranceScoreCode1,
+				InsuranceScoreCode1Description,
+				InsuranceScoreCode2,
+				InsuranceScoreCode2Description,
+				InsuranceScoreCode3,
+				InsuranceScoreCode3Description,
+				InsuranceScoreCode4,
+				InsuranceScoreCode4Description
 		INTO edw_temp.tquote_history_temp2
 		FROM
 			(
@@ -123,14 +132,18 @@ BEGIN
 					INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acc.Id --acctv.AccountTransactionId = acc.Id
 					INNER JOIN edw_stage.AccountTransactionVersionObject acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
 					INNER JOIN edw_stage.AccountTransactionVersionObjectField acctvof ON acctvof.VersionObjectId = acctvo.id
-				WHERE COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') like '%comp%credit%'
-				   or COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') like '%prior%' 
+				WHERE (COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') like '%comp%credit%'
+				   or COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') like '%prior%'
+				   or COALESCE(LTRIM(RTRIM(acctvof.Field)), '''') like '%InsuranceScore%')
+				AND acctvo.ObjectType NOT IN ('Insured')
 			) t
 		PIVOT 
 			(
 				MAX(Value) FOR Field IN (CompanionCreditHomeowner, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
 										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
-										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior)
+										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
+										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
+										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description)
 			) pivottable 
 
 		-- Start Inserting records
@@ -174,6 +187,15 @@ BEGIN
 		   ,[created_by_nm], [referred_by_nm], [reviewed_by_nm]
 		   ,bind_dt
            --,[created_by_nm],[referred_by_nm],[reviewed_by_nm],[approval_note],[deny_note] --updated using seprate update proc
+		   ,insurance_score
+		   ,insurance_score_cd1
+		   ,insurance_score_desc1
+		   ,insurance_score_cd2
+		   ,insurance_score_desc2
+		   ,insurance_score_cd3
+		   ,insurance_score_desc3
+		   ,insurance_score_cd4
+		   ,insurance_score_desc4
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, 
 				Source.TransactionEffectiveDate, Source.Number, 
@@ -204,6 +226,15 @@ BEGIN
 				,source.CommissionPercentOverrideRetention, source.nottakenreason
 				, rfu.name as refname, cu.name crename, rvu.name revname
 				,source.BindDate
+				,source1.InsuranceScore
+				,source1.InsuranceScoreCode1
+				,source1.InsuranceScoreCode1Description
+				,source1.InsuranceScoreCode2
+				,source1.InsuranceScoreCode2Description
+				,source1.InsuranceScoreCode3
+				,source1.InsuranceScoreCode3Description
+				,source1.InsuranceScoreCode4
+				,source1.InsuranceScoreCode4Description
 		FROM edw_temp.tquote_history_temp1 source
 		LEFT JOIN edw_temp.tquote_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tquote_history_temp2 source1 on source.id = source1.AccountTransactionId 

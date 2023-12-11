@@ -384,7 +384,7 @@ BEGIN
             p.expiration_dt as [ExpirationDt_036],
             '' as [Dummy_037],
             '' as [Dummy_038],
-            '****Pending****' as [BillingMethodCd_039],
+            CASE WHEN ba.bill_type = 'Insured' THEN 'Direct' ELSE 'Not Direct' END AS [BillingMethodCd_039],
             pt.premium_amt as [Amt_040],
             pt.premium_amt as [Amt_041],
             'en' as [LanguageCd_042],

@@ -504,7 +504,7 @@ BEGIN
 		,p.expiration_dt as [035_ExpirationDt]
 		,'' as [036_BillingAccountNumber]
 		,'' as [037_ControllingStateProvCd]
-		,'****Pending****' as [038_BillingMethodCd]
+		,CASE WHEN ba.bill_type = 'Insured' THEN 'Direct' ELSE 'Not Direct' END AS [038_BillingMethodCd]
 		,COALESCE(pt.premium_amt, 0) as [039_Amt] -- Need to validate this
 		,COALESCE(pt.premium_amt, 0)  as [040_Amt]
 		,'en' as [041_LanguageCd]

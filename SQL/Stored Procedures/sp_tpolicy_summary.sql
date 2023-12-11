@@ -1,4 +1,9 @@
-﻿-- ========================================================================================================================================
+﻿/****** Object:  StoredProcedure [edw_core].[sp_tpolicy_summary]    Script Date: 12/5/2023 12:59:55 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- ========================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the policy data for each month
 -----------------------------------------------------------------------------------------------------------------------------------------
@@ -10,14 +15,16 @@
 -- 10/24/23		Architha Gudimalla				4. Fixed division by 0 error for EP calculation  
 -- 11/10/23		Architha Gudimalla				5. Corrected net ep code 
 --												   Corrected ee for canels
+-- 12/06/23		Architha Gudimalla				6. Fixed exposure calculation
 -- ======================================================================================================================================== 
 
-CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_summary]
+CREATE or ALTER    PROCEDURE [edw_core].[sp_tpolicy_summary]
 @in_end_dt date = null
 AS 
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
-    -- interfering with SELECT statements. 
+    -- interfering with SELECT statements.  
+	SET ANSI_WARNINGS OFF
     SET NOCOUNT ON
 
 	BEGIN TRY
@@ -68,6 +75,7 @@ BEGIN
 			BEGIN
 
 				SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+				set @current_date =GETDATE() ;  
 				EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;  
 	
 				SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
@@ -91,7 +99,7 @@ BEGIN
 								@begin_dt = min(actual_dt), 
 								@end_dt = max(actual_dt) 
 						from edw_core.tdate
-						where yearmonth = @yearmonth and actual_dt < cast(getdate() as date); 
+						where yearmonth = @yearmonth and actual_dt <= cast(getdate() as date); 
 				END 
 
 				select 	@prev_month_end_dt_sk = max(datE_sk) 
@@ -103,34 +111,88 @@ BEGIN
 				where calendar_year = @year;
 
 				delete from edw_core.tpolicy_summary
-				where month_sk = @month_end_dt_sk;
+				where month_sk = @month_end_dt_sk; 
 
+				DROP TABLE IF EXISTS edw_temp.tpolicy_summary_can_rein_temp1;
+				--insert cancels
+				 SELECT policy_sk, policy_transaction_type_sk , transaction_seq_no 
+				 into edw_temp.tpolicy_summary_can_rein_temp1
+				 FROM	edw_core.tpolicy_transaction
+				 where	policy_transaction_type_sk = 5
+				 and   transaction_effective_dt_sk <> expiration_dt_sk
+				 and	calendar_month_sk = @month_end_dt_sk 
+				and   expiration_dt_sk > @month_begin_dt_sk
+				 group by policy_sk, policy_transaction_type_sk, transaction_seq_no 
+				 union all
+				 SELECT policy_sk, policy_transaction_type_sk , transaction_seq_no 
+				 FROM	edw_core.tpolicy_transaction
+				 where	policy_transaction_type_sk = 6
+				 and   transaction_effective_dt_sk <> expiration_dt_sk
+				 and	calendar_month_sk = @month_end_dt_sk 
+				and   expiration_dt_sk > @month_begin_dt_sk
+				 group by policy_sk, policy_transaction_type_sk, transaction_seq_no ; 
+				DROP TABLE IF EXISTS edw_temp.tpolicy_summary_max_tr;
+				
+				--remove the policy if its issued and cancelled in the same month, no need to adjust exposures
+				delete a
+				from edw_temp.tpolicy_summary_can_rein_temp1 a
+				inner join ( select policy_sk, 
+									sum(case when policy_transaction_type_sk = 5 then 1 else 0 end) cancel_ct, 
+									sum(case when policy_transaction_type_sk = 6 then 1 else 0 end) rein_ct
+							from edw_temp.tpolicy_summary_can_rein_temp1
+							group by policy_sk) b on a.policy_sk = b.policy_sk
+				where b.cancel_ct = b.rein_ct;	
+
+				 
+				DROP TABLE IF EXISTS edw_temp.tpolicy_summary_max_tr;
+				select policy_sk, max(transaction_seq_no) transaction_seq_no
+				into edw_temp.tpolicy_summary_max_tr
+				from edw_core.tpolicy_transaction 
+				where effective_dt_sk <= @end_dt_sk
+				and   transaction_effective_dt_sk <= @end_dt_sk
+				and   transaction_dt_sk <= @end_dt_sk 
+				and   expiration_dt_sk > @month_begin_dt_sk
+				group by policy_sk;
+
+				--remove the policy if the policy is issued and cancelled multiple times and the last seq no is not a rein or cancel, no need to adjust exposures
+				delete  
+				from a
+				from edw_temp.tpolicy_summary_can_rein_temp1 a
+				inner join (select policy_sk 
+							from edw_temp.tpolicy_summary_can_rein_temp1 
+				            group by policy_sk
+							having count(distinct policy_transaction_type_sk) > 1) c on a.policy_sk = c.policy_sk
+				where not exists (select * from edw_temp.tpolicy_summary_max_tr b where a.policy_sk = b.policy_sk and a.transaction_seq_no = b.transaction_seq_no);
+				 
+				DROP TABLE IF EXISTS edw_temp.tpolicy_summary_max_tr;
+ 
+				
 				with inf as
 				(
 				 SELECT policy_sk, premium_amt inforce_premium_amt
 				 FROM	edw_core.tdaily_inforce_policy
 				 where	inforce_dt_sk = @end_dt_sk
 				),
-				cancels as
+				max_tr as
 				(
-				 SELECT policy_sk 
-				 FROM	edw_core.tpolicy_transaction
-				 where	policy_transaction_type_sk = 5
-				 and	calendar_month_sk = @month_end_dt_sk
-				 and	transaction_effective_dt_sk <= @end_dt_sk
-				 and	transaction_dt_sk <= @end_dt_sk
-				 group by policy_sk
-				),
-				rein as
+					select policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
+					from edw_core.tpolicy_transaction 
+					where effective_dt_sk <= @end_dt_sk
+					and   transaction_effective_dt_sk <= @end_dt_sk
+					and   transaction_dt_sk <= @end_dt_sk 
+					group by policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
+				),  
+				min_tr as
 				(
-				 SELECT policy_sk 
-				 FROM	edw_core.tpolicy_transaction
-				 where	policy_transaction_type_sk = 6
-				 and	calendar_month_sk = @month_end_dt_sk
-				 and	transaction_effective_dt_sk <= @end_dt_sk
-				 and	transaction_dt_sk <= @end_dt_sk
-				 group by policy_sk
-				),
+					select distinct policy_sk,  
+							min(calendar_month_sk) over (partition by policy_sk --order by transaction_seq_no
+								) calendar_month_sk,
+							max(transaction_seq_no) over (partition by policy_sk) max_tr_seq_no
+					from edw_core.tpolicy_transaction 
+					where effective_dt_sk <= @end_dt_sk
+					and   transaction_effective_dt_sk <= @end_dt_sk
+					and   transaction_dt_sk <= @end_dt_sk  
+				),  
 				xpsr_new as
 				( 
 				 SELECT tr.policy_sk,
@@ -146,23 +208,27 @@ BEGIN
 							end
 						) we,
 						(
-							case
-									 -- new issued in the month and effective when ever
-								when  (tr.transaction_dt_sk between @month_begin_dt_sk AND @end_dt_sk and tr.transaction_effective_dt_sk <= @end_dt_sk)
-									 or
-									 -- new issued in the past and effective in the month
-									 (tr.transaction_dt_sk < @month_begin_dt_sk and tr.transaction_effective_dt_sk between @month_begin_dt_sk AND @end_dt_sk)
-								THEN 1.0*((case when tr.expiration_dt_sk > @end_dt_sk then @end_dt_sk else tr.expiration_dt_sk end
-									  -
-									  tr.transaction_effective_dt_sk
-									  )+1)/datediff(dd,pol.effective_dt,pol.expiration_dt ) 
-									 -- issued in the past and effective in the past
-								when (tr.transaction_dt_sk < @month_begin_dt_sk and tr.transaction_effective_dt_sk < @month_begin_dt_sk and inf.policy_sk is not null) 
-								THEN 1.0*((case when tr.expiration_dt_sk > @end_dt_sk then @end_dt_sk else tr.expiration_dt_sk end
-									  - 
-									  @month_begin_dt_sk
-									  )+1)/datediff(dd,pol.effective_dt,pol.expiration_dt ) 
-								else 1.0*0
+							case when inf.policy_sk is not null  
+							then 
+								case
+										 -- new issued in the month and effective when ever
+									when  (tr.transaction_dt_sk between @month_begin_dt_sk AND @end_dt_sk and tr.transaction_effective_dt_sk <= @end_dt_sk)
+										 or
+										 -- new issued in the past and effective in the month
+										 (tr.transaction_dt_sk < @month_begin_dt_sk and tr.transaction_effective_dt_sk between @month_begin_dt_sk AND @end_dt_sk)
+									THEN 1.0*((case when tr.expiration_dt_sk > @end_dt_sk then @end_dt_sk else tr.expiration_dt_sk end
+										  -
+										  tr.transaction_effective_dt_sk
+										  )+1)/datediff(dd,pol.effective_dt,pol.expiration_dt ) 
+										 -- issued in the past and effective in the past
+									when (tr.transaction_dt_sk < @month_begin_dt_sk and tr.transaction_effective_dt_sk < @month_begin_dt_sk and inf.policy_sk is not null) 
+									THEN 1.0*((case when tr.expiration_dt_sk > @end_dt_sk then @end_dt_sk else tr.expiration_dt_sk end
+										  - 
+										  @month_begin_dt_sk
+										  )+1)/datediff(dd,pol.effective_dt,pol.expiration_dt ) 
+									else 1.0*0
+								end
+							else  1.0*0
 							end
 						) as ee
 				 FROM edw_core.tpolicy_transaction tr
@@ -186,145 +252,169 @@ BEGIN
 				 where inf.policy_sk = pol.policy_sk 
 				   and inf.inforce_dt_sk = @prev_month_end_dt_sk
 				   and pol.expiration_dt between  @month_begin_dt AND @month_end_dt
+				   and not exists (select policy_sk from edw_temp.tpolicy_summary_can_rein_temp1 c where pol.policy_sk = c.policy_sk and c.policy_transaction_type_sk = 5)
 				),
 				xpsr_cancel as
 				( 
-				 SELECT tr.policy_sk,/*
-		 				(   --if policy is issued in the month but effective before, then we for before month beginning
-							case when tr.transaction_effective_dt_sk <  @month_begin_dt_sk
-							then (@month_begin_dt_sk - tr.transaction_effective_dt_sk)/datediff(dd,pol.effective_dt,pol.expiration_dt )
-							else 0
-							end
-							+
-							(
-								(case when tr.expiration_dt_sk >  @@end_dt_sk then @@end_dt_sk else tr.expiration_dt_sk end
-								-
-								case when tr.transaction_effective_dt_sk <=  @month_begin_dt_sk then @month_begin_dt_sk else tr.transaction_effective_dt_sk end)
-							)/datediff(dd,pol.effective_dt,pol.expiration_dt )  
-						) we*/
-		 				(
-							1.0*((tr.transaction_effective_dt_sk-(select date_sk from edw_core.tdate where actual_dt = pol.expiration_dt))-1)/datediff(dd,pol.effective_dt,pol.expiration_dt )  
-						) we,
-		 				(	
-							case 
-								--cancel is effective in past or current month
-								when tr.transaction_effective_dt_sk <=  @month_begin_dt_sk 
-									then 1.0*(tr.transaction_effective_dt_sk-@month_begin_dt_sk)/datediff(dd,pol.effective_dt,pol.expiration_dt )
-								--cancel is effective in future
-								else 0
-							end 
-						) ee 
-				 FROM edw_core.tpolicy_transaction tr, edw_core.tpolicy pol 
-				 where tr.policy_sk = pol.policy_sk 
-				 and   exists (select policy_sk from cancels c where tr.policy_sk = c.policy_sk) 
-				 and   tr.transaction_seq_no = (select max(tr1.transaction_seq_no) from edw_core.tpolicy_transaction tr1 
-				 								where tr1.policy_sk = tr.policy_sk
-												 and   tr1.transaction_effective_dt_sk <= @end_dt_sk
-												 and   tr1.transaction_dt_sk <= @end_dt_sk
-												 )
-				 and   tr.policy_transaction_sk = (select max(tr2.policy_transaction_sk) from edw_core.tpolicy_transaction tr2 
-				 									where tr2.policy_sk = tr.policy_sk 
-				 									and tr2.transaction_seq_no = tr.transaction_seq_no
-												 	and tr2.transaction_effective_dt_sk <= @end_dt_sk
-												 	and tr2.transaction_dt_sk <= @end_dt_sk
-												 	)
+					 select policy_sk , sum(we) we, sum(ee) ee
+					 from
+					 (
+						 SELECT distinct tr.policy_sk, tr.transaction_seq_no,
+		 						(
+									1.0*((tr.transaction_effective_dt_sk-(select date_sk from edw_core.tdate where actual_dt = pol.expiration_dt)))/datediff(dd,pol.effective_dt,pol.expiration_dt )  
+								) we,
+		 						(	
+									case 
+										--cancellation on an expired policy
+										when (tr.expiration_dt_sk <=  @month_begin_dt_sk)  
+											then 1.0*(tr.transaction_effective_dt_sk-expiration_dt_sk)/datediff(dd,pol.effective_dt,pol.expiration_dt )
+										--cancel is effective in past or current month
+										when tr.transaction_effective_dt_sk <=  @month_begin_dt_sk   and  min_tr.calendar_month_sk <> @month_end_dt_sk
+											then 1.0*(tr.transaction_effective_dt_sk-@month_begin_dt_sk)/datediff(dd,pol.effective_dt,pol.expiration_dt )
+										--cancel is effective in current month but pol also started in curr month
+											when tr.transaction_effective_dt_sk between  @month_begin_dt_sk  and  @month_end_dt_sk  and tr.effective_dt_sk between  @month_begin_dt_sk  and  @month_end_dt_sk   
+												then 1.0*(tr.transaction_effective_dt_sk -  tr.effective_dt_sk)/datediff(dd,pol.effective_dt,pol.expiration_dt )
+										--cancel is effective in the current month, calculate the missing ee
+										when tr.transaction_effective_dt_sk >  @month_begin_dt_sk and tr.transaction_effective_dt_sk <=  @month_end_dt_sk 
+											and  min_tr.calendar_month_sk not between  @month_begin_dt_sk  and  @month_end_dt_sk   
+											then 1.0*(tr.transaction_effective_dt_sk-@month_begin_dt_sk)/datediff(dd,pol.effective_dt,pol.expiration_dt ) 
+										--cancel is effective in past but policy started this month
+										when tr.transaction_effective_dt_sk <=  @month_end_dt_sk 
+											and  tr.transaction_effective_dt_sk <> tr.effective_dt_sk  
+											and  min_tr.calendar_month_sk between  @month_begin_dt_sk  and  @month_end_dt_sk   
+											then 1.0*(tr.transaction_effective_dt_sk-tr.effective_dt_sk)/datediff(dd,pol.effective_dt,pol.expiration_dt )  
+										--cancel is effective in future
+										else 0
+									end 
+								) ee 
+						 FROM edw_core.tpolicy_transaction tr
+						 inner join edw_core.tpolicy pol on tr.policy_sk = pol.policy_sk
+						 left join min_tr on min_tr.policy_sk = pol.policy_sk  
+						 --inner join min_tr max_tr on max_tr.policy_sk = tr.policy_sk and max_tr.max_tr_seq_no = tr.transaction_seq_no  
+						 where exists (select policy_sk from edw_temp.tpolicy_summary_can_rein_temp1 c where tr.policy_sk = c.policy_sk and tr.transaction_seq_no = c.transaction_seq_no and c.policy_transaction_type_sk = 5)
+						 and	tr.policy_transaction_type_sk = 5   
+						 and tr.calendar_month_sk = @month_end_dt_sk
+					) aa
+					group by policy_sk
 												 	
 				),
 				xpsr_rein as
 				( 
-				 SELECT tr.policy_sk, 
-		 				(
-							1.0*(((select date_sk from edw_core.tdate where actual_dt = pol.expiration_dt) - tr.transaction_effective_dt_sk)+1)/datediff(dd,pol.effective_dt,pol.expiration_dt )  
-						) we,
-						0 ee
-				 FROM edw_core.tpolicy_transaction tr, edw_core.tpolicy pol 
-				 where tr.policy_sk = pol.policy_sk 
-				 and   exists (select policy_sk from rein r where tr.policy_sk = r.policy_sk)
-				 and   tr.transaction_seq_no = (select max(tr1.transaction_seq_no) from edw_core.tpolicy_transaction tr1 
-				 								where tr1.policy_sk = tr.policy_sk
-												 and   tr1.transaction_effective_dt_sk <= @end_dt_sk
-												 and   tr1.transaction_dt_sk <= @end_dt_sk
-												 )
-				 and   tr.policy_transaction_sk = (select max(tr2.policy_transaction_sk) from edw_core.tpolicy_transaction tr2 
-				 									where tr2.policy_sk = tr.policy_sk 
-				 									and tr2.transaction_seq_no = tr.transaction_seq_no
-												 	and tr2.transaction_effective_dt_sk <= @end_dt_sk
-												 	and tr2.transaction_dt_sk <= @end_dt_sk
-												 	)
+					 select policy_sk , sum(we) we, sum(ee) ee
+					 from
+					 (
+						 SELECT distinct tr.policy_sk, transaction_seq_no,
+		 						(
+									1.0*(((select date_sk from edw_core.tdate where actual_dt = pol.expiration_dt) - tr.transaction_effective_dt_sk))/datediff(dd,pol.effective_dt,pol.expiration_dt )  
+								) we,
+								case when inf.policy_sk is not null  
+								then	
+										case 
+											--cancel is effective in past 
+											when tr.transaction_effective_dt_sk <=  @month_begin_dt_sk --removed +1
+												then 1.0*(@month_begin_dt_sk-tr.transaction_effective_dt_sk)/datediff(dd,pol.effective_dt,pol.expiration_dt )
+											--cancel is effective in the current month--removed +1
+											when tr.transaction_effective_dt_sk >  @month_begin_dt_sk and tr.transaction_effective_dt_sk <=  @month_end_dt_sk 
+												then 1.0*(@month_end_dt_sk-tr.transaction_effective_dt_sk)/datediff(dd,pol.effective_dt,pol.expiration_dt )  
+											--cancel is effective in future
+											else 0
+										end  
+									 when inf.policy_sk is null and tr.expiration_dt_sk between @month_begin_dt_sk and @month_end_dt_sk 
+									 then  1.0*(tr.expiration_dt_sk-tr.transaction_effective_dt_sk)/datediff(dd,pol.effective_dt,pol.expiration_dt )
+								else 0
+								end ee
+						 FROM edw_core.tpolicy_transaction tr
+						 inner join edw_core.tpolicy pol on tr.policy_sk = pol.policy_sk
+						 left join edw_core.tdaily_inforce_policy inf on inf.policy_sk = pol.policy_sk and inf.inforce_dt_sk = @end_dt_sk
+						 --inner join min_tr max_tr on max_tr.policy_sk = tr.policy_sk and max_tr.max_tr_seq_no = tr.transaction_seq_no 
+						 where exists (select policy_sk from edw_temp.tpolicy_summary_can_rein_temp1 r where tr.policy_sk = r.policy_sk and tr.transaction_seq_no = r.transaction_seq_no and r.policy_transaction_type_sk = 6)
+						 and	tr.policy_transaction_type_sk = 6
+						 and tr.calendar_month_sk = @month_end_dt_sk 
+					) aa
+					group by policy_sk
 				),
 				prm as
 				(
 				 SELECT tr.policy_sk, --tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk,
 				 		max(tr.transaction_seq_no) transaction_seq_no,
-		 				sum(case when calendar_month_sk between @month_begin_dt_sk AND @month_end_dt_sk THEN tr.premium_amt ELSE 0 END) mtd_premium_amt,
-		 				sum(case when calendar_month_sk between @month_begin_dt_sk AND @month_end_dt_sk THEN tr.commission_amt ELSE 0 END) mtd_commission_amt,
-		 				sum(case when calendar_month_sk between @month_begin_dt_sk AND @month_end_dt_sk THEN tr.tax_fee_surcharge_amt ELSE 0 END) mtd_tax_fee_surcharge_amt,
-		 				sum(case when calendar_month_sk between @month_begin_dt_sk AND @month_end_dt_sk THEN tr.premium_amt - tr.tax_fee_surcharge_amt ELSE 0 END) mtd_net_premium_amt,
-		 				sum(case when calendar_month_sk between @year_begin_sk AND @month_end_dt_sk THEN tr.premium_amt ELSE 0 END) ytd_premium_amt,
-		 				sum(case when calendar_month_sk between @year_begin_sk AND @month_end_dt_sk THEN tr.commission_amt ELSE 0 END) ytd_commission_amt,
-		 				sum(case when calendar_month_sk between @year_begin_sk AND @month_end_dt_sk THEN tr.tax_fee_surcharge_amt ELSE 0 END) ytd_tax_fee_surcharge_amt,
-		 				sum(case when calendar_month_sk between @year_begin_sk AND @month_end_dt_sk THEN tr.premium_amt - tr.tax_fee_surcharge_amt ELSE 0 END) ytd_net_premium_amt,
+		 				sum(case when tr.calendar_month_sk = @month_end_dt_sk THEN tr.premium_amt ELSE 0 END) mtd_premium_amt,
+		 				sum(case when tr.calendar_month_sk = @month_end_dt_sk THEN tr.commission_amt ELSE 0 END) mtd_commission_amt,
+		 				sum(case when tr.calendar_month_sk = @month_end_dt_sk THEN tr.tax_fee_surcharge_amt ELSE 0 END) mtd_tax_fee_surcharge_amt,
+		 				sum(case when tr.calendar_month_sk = @month_end_dt_sk THEN tr.premium_amt - tr.tax_fee_surcharge_amt ELSE 0 END) mtd_net_premium_amt,
+		 				sum(case when tr.calendar_month_sk between @year_begin_sk AND @month_end_dt_sk THEN tr.premium_amt ELSE 0 END) ytd_premium_amt,
+		 				sum(case when tr.calendar_month_sk between @year_begin_sk AND @month_end_dt_sk THEN tr.commission_amt ELSE 0 END) ytd_commission_amt,
+		 				sum(case when tr.calendar_month_sk between @year_begin_sk AND @month_end_dt_sk THEN tr.tax_fee_surcharge_amt ELSE 0 END) ytd_tax_fee_surcharge_amt,
+		 				sum(case when tr.calendar_month_sk between @year_begin_sk AND @month_end_dt_sk THEN tr.premium_amt - tr.tax_fee_surcharge_amt ELSE 0 END) ytd_net_premium_amt,
 		 				sum(tr.premium_amt) itd_premium_amt,
 		 				sum(tr.commission_amt) itd_commission_amt,
 		 				sum(tr.tax_fee_surcharge_amt) itd_tax_fee_surcharge_amt,
 		 				sum(tr.premium_amt - tr.tax_fee_surcharge_amt) itd_net_premium_amt,
-						sum(case when expiration_dt_sk > @month_end_dt_sk THEN annual_premium_amt else 0 end) annual_premium_amt,
+						sum(annual_premium_amt) annual_premium_amt,
 		 				sum(
-		 					(--for transactions issued in the month, eff in the month or later
-								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) > 0
-								then
-									(1+(iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
-									-
-									iif(greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk) >= @month_begin_dt_sk, 
-										greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk), @month_begin_dt_sk))) 
-									* tr.premium_amt/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
-								else 0
-								end
-							)
+		 						(--for transactions issued in the month, eff in the month or later
+									case when tr.expiration_dt_sk > @month_begin_dt_sk and 
+											(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
+									then
+										(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+										-
+										iif(greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk) >= @month_begin_dt_sk, 
+											greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk), @month_begin_dt_sk))) 
+										* tr.premium_amt/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+									 when tr.calendar_month_sk  = @month_end_dt_sk
+									  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
+									 then tr.premium_amt
+									else 0
+									end
+								) 
 						   ) mtd_ep,
 						sum(
-								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) > 0
+								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
 								then
-									(1+iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+									(1+iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
 									-
 									greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) 
 									* tr.premium_amt/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+								 when tr.calendar_month_sk  = @month_end_dt_sk
+								  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
+								 then tr.premium_amt
 								else 0
 								end
-							) total_ep,/*
+							) total_ep,
 		 				sum(
-		 					(--for transactions issued in the month, eff in the month or later
-							 	(1+(iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
-								-
-								iif(tr.transaction_effective_dt_sk >= @month_begin_dt_sk, tr.transaction_effective_dt_sk, @month_begin_dt_sk))) 
-								* tr.premium_amt/(tr.expiration_dt_sk-tr.transaction_effective_dt_sk)
-							)
-							+
-							(--for transactions issued in the month, eff in the past
-								case when tr.transaction_dt_sk between @month_begin_dt_sk and @end_dt_sk
-								and tr.transaction_effective_dt_sk <  @month_begin_dt_sk
-								then 
-									(1+@month_begin_dt_sk
-									-
-									tr.transaction_effective_dt_sk) 
-									* tr.premium_amt/(tr.expiration_dt_sk-tr.transaction_effective_dt_sk)
-								else 0
-								end
-							)
-						   ) mtd_ep,
+		 						(--for transactions issued in the month, eff in the month or later
+									case when tr.expiration_dt_sk > @month_begin_dt_sk and 
+											(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
+									then
+										(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+										-
+										iif(greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk) >= @month_begin_dt_sk, 
+											greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk), @month_begin_dt_sk))) 
+										* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+									 when tr.calendar_month_sk  between @month_begin_dt_sk  and @month_end_dt_sk
+									  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
+									 then (tr.premium_amt - tr.tax_fee_surcharge_amt)
+									else 0
+									end
+								) 
+						   ) mtd_net_ep,
 						sum(
-							(1+iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
-							-
-							tr.transaction_effective_dt_sk) 
-							* tr.premium_amt/(tr.expiration_dt_sk-tr.transaction_effective_dt_sk)
-						   ) total_ep,
-						   (tr.premium_amt - tr.tax_fee_surcharge_amt)
-						   */
+								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
+								then
+									(1+iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+									-
+									greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) 
+									* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+								 when tr.calendar_month_sk  between @month_begin_dt_sk  and @month_end_dt_sk
+								  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
+								 then (tr.premium_amt - tr.tax_fee_surcharge_amt)
+								else 0
+								end
+							) total_net_ep/*, 
 		 				sum(
 		 					(--for transactions issued in the month, eff in the month or later
-								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) > 0
+								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
 								then
-									(1+(iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+									(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
 									-
 									iif(greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk) >= @month_begin_dt_sk, 
 										greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk), @month_begin_dt_sk))) 
@@ -334,31 +424,24 @@ BEGIN
 							)
 						   ) mtd_net_ep,
 						sum(
-								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) > 0
+								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
 								then
-									(1+iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+									(1+iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
 									-
 									greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) 
 									* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
 								else 0
 								end
-							) total_net_ep
+							) total_net_ep*/
 				 FROM edw_core.tpolicy_transaction tr, edw_core.tpolicy pol 
-				 where tr.policy_sk = pol.policy_sk
+				 where tr.policy_sk = pol.policy_sk --and pol.policy_sk in (107033)
 				 and   tr.effective_dt_sk <= @end_dt_sk
 				 and   tr.transaction_effective_dt_sk <= @end_dt_sk
 				 and   tr.transaction_dt_sk <= @end_dt_sk
-				 and   pol.expiration_dt > @month_begin_dt --dateadd(month,-2,@month_begin_dt)
+				 and   tr.transaction_effective_dt_sk <> tr.expiration_dt_sk
+				 and   (pol.expiration_dt > @month_begin_dt --or (tr.transaction_dt_sk - tr.expiration_dt_sk) <= 60
+						) --dateadd(month,-2,@month_begin_dt)
 				 group by tr.policy_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk
-				),
-				max_tr as
-				(
-					select policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
-					from edw_core.tpolicy_transaction 
-					where effective_dt_sk <= @end_dt_sk
-					and   transaction_effective_dt_sk <= @end_dt_sk
-					and   transaction_dt_sk <= @end_dt_sk 
-					group by policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 				)
 				INSERT INTO edw_core.tpolicy_summary
 					( 
@@ -430,6 +513,8 @@ BEGIN
 					set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_end_dt AS VARCHAR(200))
 				end 
 				EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc; 
+
+				DROP TABLE IF EXISTS edw_temp.tpolicy_summary_can_rein_temp1;
 				 
 				FETCH NEXT FROM c1_rec INTO @yearmonth, @year;
 			END; 
@@ -445,7 +530,12 @@ BEGIN
 					      'Error Procedure:' + ISNULL(ERROR_PROCEDURE(),'') + 
 						      ' Error Line:' + ISNULL(CAST(ERROR_LINE() AS NVARCHAR(100)),'') + CHAR(13) + 
 						    'Error Message:' + ISNULL(ERROR_MESSAGE(),'')
-	
+
+	    IF CURSOR_STATUS('global','c1_rec')>=-1
+		BEGIN
+		 DEALLOCATE c1_rec
+		END
+
 		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
