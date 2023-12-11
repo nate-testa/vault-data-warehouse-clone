@@ -7,6 +7,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 07/28/23		Yunus Mohammd				1. Created this procedure
 -- 11/20/23		Yunus Mohammd				2. Added Throw
+-- 12/08/2023	Yunus Mohammed				3. Updated broker_id and customer_id
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim]
 
@@ -17,8 +18,7 @@ BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
     -- interfering with SELECT statements.
     SET NOCOUNT ON
-
-	BEGIN TRY
+		BEGIN TRY
 	DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
@@ -59,7 +59,7 @@ BEGIN
 		SELECT
 		claim_no, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS policy_effective_dt, 
 		policy_sk,cause_of_loss_sk,loss_desc, source_claim_status,claim_status, catastrophe_sk, product_sk,
-		loss_address ,loss_city_nm ,loss_state_cd ,loss_zip_cd,loss_country_nm,broker_id,customer_sk,underwriting_company_nm,
+		loss_address ,loss_city_nm ,loss_state_cd ,loss_zip_cd,loss_country_nm,broker_id,customer_id,underwriting_company_nm,
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
 		claim_created_ts,claim_created_by_nm,policy_history_sk,
 		3 AS source_system_sk,sub_cause_of_loss_sk,update_time
@@ -70,7 +70,7 @@ BEGIN
 			ROW_NUMBER() OVER(PARTITION BY tcase.claim_no,tph.policy_no ORDER BY tph.transaction_seq_no DESC) AS rn,
 			CASE WHEN tph.effective_dt IS NULL THEN CAST(tcp.EFF_DATE AS DATE) ELSE CAST(tph.effective_dt AS DATE) END AS effective_dt,
 			tbrk.broker_id,
-			c.customer_sk,
+			c.customer_id,
 			tcase.claim_no, tcase.accident_time AS loss_dt, tcase.notice_time AS report_dt, 
 			CASE WHEN TRIM(tcase.policy_no) IS NULL THEN tcp.policy_no ELSE TRIM(tcase.policy_no) END AS policy_no,
 			tph.policy_sk,
@@ -167,7 +167,7 @@ BEGIN
 		claim_no,loss_dt,report_dt,policy_no
 		,policy_effective_dt,policy_sk,cause_of_loss_sk,sub_cause_of_loss_sk,loss_desc,claim_status
 		,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,loss_address,loss_city_nm
-		,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_sk,contact_nm,contact_type
+		,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_id,contact_nm,contact_type
 		,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,claim_created_ts ,claim_created_by_nm,
 		policy_history_sk,
 		source_system_sk,@current_date,@current_date,@etl_audit_sk
@@ -192,6 +192,7 @@ BEGIN
 		Target.loss_zip_cd=Source.loss_zip_cd, 
 		Target.loss_country_nm=Source.loss_country_nm, 
 		Target.broker_id=Source.broker_id,
+		Target.customer_id=Source.customer_id,
 		Target.underwriting_company_nm=Source.underwriting_company_nm,
 		Target.contact_nm=Source.contact_nm,
 		Target.contact_type=Source.contact_type,
@@ -226,7 +227,7 @@ BEGIN
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
 		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
-		THROW 99001,'Error occured: see tetl_audit table for more info', 1;		
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
 

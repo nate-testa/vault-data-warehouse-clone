@@ -6,6 +6,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 08/03/23		Yunus Mohammd				1. Created this procedure
 -- 11/20/23		Yunus Mohammd				2. Added Throw
+-- 12/08/23		Yunus Mohammd				3. Added policy_sk, broker_sk and customer_sk
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction]
@@ -17,8 +18,7 @@ BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
     -- interfering with SELECT statements.
     SET NOCOUNT ON
-
-	BEGIN TRY
+		BEGIN TRY
 		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
@@ -64,8 +64,8 @@ BEGIN
 		INNER JOIN edw_core.tclaim tc ON tc.claim_no=tcase.claim_no
 		INNER JOIN edw_core.tclaim_feature tcf ON tcf.claim_no=tc.claim_no
 			AND tcf.subclaim_seq_no=obj.seq_no AND tcf.claim_coverage_cd=e.coverage_code
-		INNER JOIN edw_core.tbroker tbrk ON tbrk.broker_id = tc.broker_id	
-		INNER JOIN edw_core.tcustomer tcust ON tcust.customer_id = [tc].customer_id
+		LEFT JOIN edw_core.tbroker tbrk ON tbrk.broker_id = tc.broker_id	
+		LEFT JOIN edw_core.tcustomer tcust ON tcust.customer_id = [tc].customer_id
 		INNER JOIN
 		(
 			SELECT

@@ -32,8 +32,8 @@ BEGIN
 		FROM
 			edw_core.tclaim [tc]
 			INNER JOIN edw_core.tclaim_transaction [tctxn] ON [tc].claim_sk = [tctxn].claim_sk
-			INNER JOIN edw_core.tbroker tbrk ON tbrk.broker_id = tc.broker_id
-			INNER JOIN edw_core.tcustomer tcust ON tcust.customer_id = [tc].customer_id
+			LEFT JOIN edw_core.tbroker tbrk ON tbrk.broker_id = tc.broker_id
+			LEFT JOIN edw_core.tcustomer tcust ON tcust.customer_id = [tc].customer_id
 
 		UPDATE [target]
 		SET

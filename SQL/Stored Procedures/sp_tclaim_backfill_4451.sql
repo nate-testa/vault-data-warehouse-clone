@@ -31,20 +31,21 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.tclaim_backfill_4451
 
 		SELECT
-			[target].claim_no,[source].broker_id
+			[target].claim_no,[source].broker_id, [source].customer_id
 		INTO edw_temp.tclaim_backfill_4451
 		FROM
 		edw_core.tclaim [target]
 		INNER JOIN 
 		(
 			SELECT
-			claim_no, broker_id
+			claim_no, broker_id, customer_id
 			FROM
 			(
 			SELECT
 				ROW_NUMBER() OVER(PARTITION BY tcase.claim_no,tph.policy_no ORDER BY tph.transaction_seq_no DESC) AS rn,
 				tbrk.broker_id,
-				tcase.claim_no
+				tcase.claim_no,
+				tcust.customer_id
 			FROM
 				edw_stage.t_clm_case tcase
 				LEFT JOIN edw_core.tpolicy_history tph ON TRIM(tcase.policy_no) = tph.policy_no
@@ -58,6 +59,7 @@ BEGIN
 									ORDER BY transaction_seq_no DESC
 									)
 				LEFT JOIN edw_core.tbroker tbrk ON tbrk.broker_sk = tph.broker_sk
+				LEFT JOIN edw_core.tcustomer tcust ON tcust.customer_sk = tph.customer_sk
 			WHERE tcase.update_time>@last_source_extract_ts
 			) AS t
 		WHERE
@@ -66,7 +68,8 @@ BEGIN
 
         UPDATE [target]
 		SET
-			[target].broker_id = [source].broker_id
+			[target].broker_id = [source].broker_id,
+			[target].customer_id = [source].customer_id
 		FROM
 		edw_core.tclaim [target]
 		INNER JOIN edw_temp.tclaim_backfill_4451 [source] ON [target].claim_no = [source].claim_no
