@@ -5,6 +5,7 @@
 ---------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
+-- 12/11/23		Architha Gudimalla				2. Commented out stage in forst temp table
 -- ===================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history]
@@ -59,7 +60,7 @@ BEGIN
 			coalesce(acctvp.CommissionPercentOverride, 0) CommissionPercentOverride, 
 			CommissionPercentOverrideRetention, nottakenreason,
 			nullif(trim(acct.policychangenotes),'') policychangenotes, 
-			iif(acc.isrenewal=1,iif(acct.stage='POLICY','RENEWAL',acct.stage),acct.stage) stage,
+			--iif(acc.isrenewal=1,iif(acct.stage='POLICY','RENEWAL',acct.stage),acct.stage) stage,
 			acct.reviewedbyid, acct.createdbyid,
 				case when acct.ExternalSourceId is not NULL 
 					 then 2 --(AV2) 
