@@ -149,7 +149,7 @@ BEGIN
 				--+ isnull(tmp2.LastName + ' ','') + isnull(tmp2.MiddleName + ' ','') + isnull(tmp2.Suffix,'')),'') 
 				ins.NamedInsured as insured_nm,
 				tmp2.InsuredType as insured_type,
-				case when tmp1.IsRenewal = 1 then 'Renewal' else 'New' end as policy_term,
+				case when tmp1.RenewalIndex = 0 then 'New' else 'Renewal' end as policy_term,
 				case when trim(pr.ProductCode) = 'AU' then 'Vault Reciprocal Exchange' 
 				     when tmp2.program = 'Admitted' then 'Vault Reciprocal Exchange' 
 				     when tmp2.program = 'Non-Admitted' then 'Vault E & S Insurance Company' 

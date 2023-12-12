@@ -66,7 +66,7 @@ BEGIN
 			coalesce(acctvp.CommissionPercentOverride, 0) CommissionPercentOverride, 
 			CommissionPercentOverrideRetention, 
 			nullif(trim(acct.policychangenotes),'') policychangenotes, 
-			iif(acc.isrenewal=1,iif(acct.stage='POLICY','RENEWAL',acct.stage),acct.stage) stage,
+			iif(acc.RenewalIndex<>0,iif(acct.stage='POLICY','RENEWAL',acct.stage),acct.stage) stage,
 			acct.reviewedbyid, acct.createdbyid,
 				case when acct.ExternalSourceId is not NULL 
 					 then 2 --(AV2) 

@@ -19,6 +19,7 @@
 -- 10/31/23		Architha Gudimalla				11. Added tfs_sk to the insert
 -- 11/06/23		Alberto Almario					12. change to use UniqueId instead of Index and change name from vehicle_no to vehicle_unique_id
 -- 11/10/23		Architha Gudimalla				13. Corrected cal_mn for tfs temp table
+-- 12/11/23		Architha Gudimalla				14. Updated logic for source.stage (used as transaction type)
 -- ====================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -77,7 +78,7 @@ BEGIN
 			tmp1.CreatedDate,
 			iif(tmp1.TransactionEffectiveDate > tmp1.IssuedDate, tmp1.TransactionEffectiveDate, tmp1.IssuedDate) cal_mn,
 			tmp1.UpdatedDate,
-			iif(acct.isrenewal=1,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage,
+			iif(acct.RenewalIndex<>0,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage, 
 			acctrcp.Coverage ,acctrcp.label,
 			COALESCE (acctrcp.PremiumDeltaProRated ,premium) as wp, 
 			COALESCE (acctrcp.Premiumdelta ,premium) as ap,
@@ -108,7 +109,7 @@ BEGIN
 			tmp1.CreatedDate,
 			iif(tmp1.TransactionEffectiveDate > tmp1.IssuedDate, tmp1.TransactionEffectiveDate, tmp1.IssuedDate) cal_mn,
 			tmp1.UpdatedDate,
-			iif(acct.isrenewal=1,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage, 
+			iif(acct.RenewalIndex<>0,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage,  
 			--ROW_NUMBER() OVER (PARTITION BY tmp1.PolicyNumber, tmp1.EffectiveDate, tmp1.PolicyChangeNumber ORDER BY tmp1.CreatedDate DESC) AS PolicyNumber_Rank,
 			acctrtf.Name, '',
 			COALESCE (acctrtf.AmountDeltaProRated ,acctrtf.Amount) as wp, 

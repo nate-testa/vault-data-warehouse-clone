@@ -5,7 +5,8 @@
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 06/02/23		Architha Gudimalla		1. Created this procedure
 -- 11/14/23		Sandeep Gundreddy		2. modified quote_auto_vehicle join
--- 11/29/23		Architha Gudimalla		2. modified @new_last_source_extract_ts
+-- 11/29/23		Architha Gudimalla		3. modified @new_last_source_extract_ts
+-- 12/11/23		Architha Gudimalla		4. modified logic for stage pol term
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction]
@@ -64,7 +65,7 @@ BEGIN
 			tmp1.CreatedDate,
 			iif(tmp1.TransactionEffectiveDate > tmp1.IssuedDate, tmp1.TransactionEffectiveDate, tmp1.IssuedDate) cal_mn,
 			tmp1.UpdatedDate,
-			iif(acct.isrenewal=1,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage,
+			iif(acct.RenewalIndex<>0,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage,
 			acctrcp.Coverage ,acctrcp.label,
 			COALESCE (acctrcp.PremiumDeltaProRated ,premium) as wp, 
 			COALESCE (acctrcp.Premiumdelta ,premium) as ap,
@@ -95,7 +96,7 @@ BEGIN
 			tmp1.CreatedDate,
 			iif(tmp1.TransactionEffectiveDate > tmp1.CreatedDate, tmp1.TransactionEffectiveDate, tmp1.CreatedDate) cal_mn,
 			tmp1.UpdatedDate,
-			iif(acct.isrenewal=1,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage, 
+			iif(acct.RenewalIndex<>0,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage, 
 			--ROW_NUMBER() OVER (PARTITION BY tmp1.PolicyNumber, tmp1.EffectiveDate, tmp1.PolicyChangeNumber ORDER BY tmp1.CreatedDate DESC) AS PolicyNumber_Rank,
 			acctrtf.Name, '',
 			COALESCE (acctrtf.AmountDeltaProRated ,acctrtf.Amount) as wp, 
