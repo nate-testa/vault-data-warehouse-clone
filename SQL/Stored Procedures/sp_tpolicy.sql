@@ -1,15 +1,13 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_tpolicy]    Script Date: 12/5/2023 3:27:24 PM ******/
-SET ANSI_NULLS ON
+﻿SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =========================================================================================================================
--- Author:		Hernando Gonzalez Garcia
+-- ========================================================================================================================================
 -- Description: This procedures inserts and updates TPolicy 
------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------
 -- 06/20/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 06/20/23		Architha Gudimalla				2. Modified for errors after first run 
 -- 09/08/23		Architha Gudimalla				3. Modifed to reflect model changes
@@ -26,7 +24,8 @@ GO
 -- 11/29/23		Architha Gudimalla		        13. updated insured_nm logic to use isprimaryinsured
 -- 12/01/23		Architha Gudimalla		        14. updated program to use from account table
 -- 12/04/23		Architha Gudimalla		        15. updated program to use from AccountTransactionVersionObjectField table
--- ========================================================================================================================= 
+-- 12/11/23		Architha Gudimalla		        16. Updated policy_term
+-- ======================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tpolicy]
 
@@ -141,7 +140,7 @@ BEGIN
 				else ins.NamedInsured 
 				end as  insured_nm, 
 				tmp2.InsuredType as insured_type,
-				case when acc.IsRenewal = 1 then 'Renewal' else 'New' end as policy_term,
+				case when acc.RenewalIndex = 0 then 'New' else 'Renewal' end as policy_term, 
 				case when trim(pr.ProductCode) = 'AU' then 'Vault Reciprocal Exchange' 
 				     when tmp2.program = 'Admitted' then 'Vault Reciprocal Exchange' 
 				     when tmp2.program = 'Non-Admitted' then 'Vault E & S Insurance Company' 
