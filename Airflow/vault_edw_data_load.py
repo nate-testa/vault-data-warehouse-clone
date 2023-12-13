@@ -566,9 +566,7 @@ with DAG(
             'sp_tinternal_coverage_summary',
             'sp_tclaim_feature_summary',
             'sp_tclaim_summary',
-            'sp_trenewal_summary',
-            'sp_tbroker_summary',
-            'sp_tbroker_risk_state_summary'
+            'sp_trenewal_summary'
             ]
 
         sp_tdaily_inforce_policy = MsSqlOperator(
@@ -659,22 +657,6 @@ with DAG(
             autocommit=True,
         )
 
-        sp_tbroker_summary = MsSqlOperator(
-            task_id='sp_tbroker_summary',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tbroker_summary",
-            database="vault_edw",
-            autocommit=True,
-        )
-
-        sp_tbroker_risk_state_summary = MsSqlOperator(
-            task_id='sp_tbroker_risk_state_summary',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tbroker_risk_state_summary",
-            database="vault_edw",
-            autocommit=True,
-        )
-
         send_datamart_email = EmailOperator(
             task_id='send_datamart_email',
             to=to_email,
@@ -682,7 +664,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(datamart_group_items, 'All stored procedures executed successfully for all the Datamart tables'),
         )
 
-        sp_tdaily_inforce_policy >> sp_tpolicy_summary >> sp_tpolicy_transaction_summary >> sp_tcustomer_summary >> sp_titem_inforce >> sp_titem_summary >> sp_tinternal_coverage_inforce >> sp_tinternal_coverage_summary >> sp_tclaim_feature_summary >> sp_tclaim_summary >> sp_trenewal_summary >> sp_tbroker_summary >> sp_tbroker_risk_state_summary >> send_datamart_email
+        sp_tdaily_inforce_policy >> sp_tpolicy_summary >> sp_tpolicy_transaction_summary >> sp_tcustomer_summary >> sp_titem_inforce >> sp_titem_summary >> sp_tinternal_coverage_inforce >> sp_tinternal_coverage_summary >> sp_tclaim_feature_summary >> sp_tclaim_summary >> sp_trenewal_summary >> send_datamart_email
 
 
     with TaskGroup("reference_group") as reference_group:
