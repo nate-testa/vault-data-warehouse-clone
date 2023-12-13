@@ -17,6 +17,7 @@ GO
 -- 11/21/23		Architha Gudimalla				5. Added quotes logic
 -- 11/27/23		Architha Gudimalla				6. Added temp table
 -- 12/11/23		Architha Gudimalla				7. Added quote prm cols
+-- 12/13/23		Architha Gudimalla				8. Added retention and submissions
 -- ================================================================================================= 
 
 CREATE or ALTER   PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -119,8 +120,9 @@ BEGIN
 				END  
 
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_quotes;
-				select br.broker_sk, --cust.customer_sk, 
-						--pr.product_sk, --st.state_sk, 
+				select br.broker_sk, 
+						count(distinct case when q.quote_create_ts between @prior_year_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_ytd_submission_ct, 
+						count(distinct case when q.quote_create_ts between @year_begin_dt       and @end_dt then q.quote_sk end) ytd_submission_ct, 
 						count(distinct case when q.first_offered_quote_ts between @prior_year_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_ytd_quote_ct, 
 						count(distinct case when q.first_offered_quote_ts between @year_begin_dt       and @end_dt then q.quote_sk end) ytd_quote_ct, 
 						sum(case when q.first_offered_quote_ts between @prior_year_begin_dt and @prior_year_month_end_dt then qtr.net_premium_amt end) prior_ytd_quote_premium_amt, 
@@ -131,16 +133,34 @@ BEGIN
 				from edw_core.tquote q, edw_core.tquote_transaction qtr, edw_core.tbroker br 
 				where  q.broker_id = br.broker_id 
 				and q.quote_sk = qtr.quote_sk 
-				and (q.first_offered_quote_ts is not null or q.bind_dt is not null)
+				--and (q.first_offered_quote_ts is not null or q.bind_dt is not null)
 				--and quote_create_ts <= @end_dt
-				group by br.broker_sk--, cust.customer_sk
-						--, pr.product_sk-- ,st.state_sk 
+				group by br.broker_sk; 
+
+				DROP TABLE IF EXISTS edw_temp.tbroker_summ_retention;
+				with ren AS
+				(
+					select 	month_sk,
+							broker_sk, 
+						   	sum(renewal_non_flat_cancelled_ct) renewal_ct, sum(non_flat_cancelled_ct-mid_term_cancelled_ct-non_renewal_ct) expiring_ct,
+							sum(isnull(renewal_sixty_day_written_premium_amt,0)) renewal_prm, 
+							sum(isnull(expiring_sixty_day_written_premium_amt,0) + isnull(expiring_mid_term_cancelled_premium_amt,0) + isnull(expiring_non_renewal_written_premium_amt,0)) expiring_prm
+					from edw_core.trenewal_summary  
+					where  month_sk between @year_begin_dt_sk and @month_end_dt_sk  
+					group by month_sk, broker_sk
+				)
+				select broker_sk, 
+						--  
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_ct else 0 end) renewal_ct,   
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_ct else 0 end) expiring_ct,
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_prm else 0 end) renewal_prm,   
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_prm else 0 end) expiring_prm  
+				into edw_temp.tbroker_summ_retention
+				from ren
+				group by broker_sk;
 				
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_pols;
-				SELECT summ.broker_sk, --policy_sk, 
-							--summ.customer_sk,
-							--summ.product_sk,  
-							--st.state_sk, 
+				SELECT summ.broker_sk,   
 							--
 							sum(case when summ.month_sk = @month_end_dt_sk then summ.inforce_ct else 0 end) inforce_ct,  
 							sum(case when summ.month_sk = @month_end_dt_sk then summ.inforce_net_premium_amt else 0 end) inforce_net_premium_amt,
@@ -290,17 +310,15 @@ BEGIN
 				(   
 					select *
 					from edw_temp.tbroker_summ_quotes
-				) 
-				select 	@month_end_dt_sk month_sk, 
-						--COALESCE(ps.customer_sk, cs.customer_sk, q.customer_sk) customer_sk,
-						COALESCE(ps.broker_sk, cs.broker_sk, q.broker_sk) broker_sk,
-						--COALESCE(ps.product_sk, cs.product_sk, q.product_sk) product_sk
-						--,COALESCE(ps.state_sk, cs.state_sk, q.state_sk) state_sk, 
+				)   
+				select 	COALESCE(ps.broker_sk, cs.broker_sk, q.broker_sk) broker_sk,
+						--
+						sum(isnull(q.prior_ytd_submission_ct,0)) prior_ytd_submission_ct,
+						sum(isnull(q.ytd_submission_ct,0)) ytd_submission_ct,
 						sum(isnull(q.prior_ytd_quote_ct,0)) prior_ytd_quote_ct,
 						sum(isnull(q.ytd_quote_ct,0)) ytd_quote_ct,
 						sum(isnull(q.prior_ytd_quote_premium_amt,0)) prior_ytd_quote_premium_amt,
 						sum(isnull(q.ytd_quote_premium_amt,0)) ytd_quote_premium_amt,  
-						--count(distinct isnull(ps.customer_sk, cs.customer_sk)) customer_ct,
 						-- avg lines per account - can be calculated
 						max(cast(case when q.max_quoted_dt is not null then q.max_quoted_dt end as date)) last_quote_dt,
 						max(case when q.max_bind_dt is not null then q.max_bind_dt end) last_bound_dt,
@@ -322,20 +340,7 @@ BEGIN
 						sum(isnull(ps.prior_inforce_net_premium_amt,0)) prior_inforce_net_premium_amt,
 						sum(isnull(ps.inforce_ct,0)) inforce_ct, 
 						sum(isnull(ps.inforce_net_premium_amt,0)) inforce_net_premium_amt,
-						--
-						/*
-						sum(isnull(case when ps.product_sk = 3 then ps.inforce_ct else 0 end,0)) au_inforce_ct, 
-						sum(isnull(case when ps.product_sk = 3 then ps.inforce_net_premium_amt else 0 end,0)) au_inforce_net_premium_amt,
-						sum(isnull(case when ps.product_sk = 5 then ps.inforce_ct else 0 end,0)) co_inforce_ct, 
-						sum(isnull(case when ps.product_sk = 5 then ps.inforce_net_premium_amt else 0 end,0)) co_inforce_net_premium_amt,
-						sum(isnull(case when ps.product_sk = 1 then ps.inforce_ct else 0 end,0)) ho_inforce_ct, 
-						sum(isnull(case when ps.product_sk = 1 then ps.inforce_net_premium_amt else 0 end,0)) ho_inforce_net_premium_amt,
-						sum(isnull(case when ps.product_sk = 2 then ps.inforce_ct else 0 end,0)) lux_inforce_ct, 
-						sum(isnull(case when ps.product_sk = 2 then ps.inforce_net_premium_amt else 0 end,0)) lux_inforce_net_premium_amt,
-						sum(isnull(case when ps.product_sk = 4 then ps.inforce_ct else 0 end,0)) pel_inforce_ct, 
-						sum(isnull(case when ps.product_sk = 4 then ps.inforce_net_premium_amt else 0 end,0)) pel_inforce_net_premium_amt, 
-						*/
-						
+						--  
 						sum(isnull(ps.au_inforce_ct,0)) au_inforce_ct, 
 						sum(isnull(ps.au_inforce_net_premium_amt,0)) au_inforce_net_premium_amt,
 						sum(isnull(ps.co_inforce_ct,0)) co_inforce_ct, 
@@ -346,7 +351,6 @@ BEGIN
 						sum(isnull(ps.lux_inforce_net_premium_amt,0)) lux_inforce_net_premium_amt,
 						sum(isnull(ps.pel_inforce_ct,0)) pel_inforce_ct, 
 						sum(isnull(ps.pel_inforce_net_premium_amt,0)) pel_inforce_net_premium_amt, 
-						
 						--
 						sum(isnull(ps.ves_inforce_ct,0)) ves_inforce_ct,  
 						sum(isnull(ps.ves_inforce_net_premium_amt,0)) ves_inforce_net_premium_amt,
@@ -383,16 +387,10 @@ BEGIN
 						getdate() update_ts, @etl_audit_sk etl_audit_sk
 				into edw_temp.tbroker_summary_temp
 				from pol_summ ps
-				full join clm_summ cs  
-						  on ps.broker_sk = cs.broker_sk  --and ps.product_sk = cs.product_sk  and ps.customer_sk = cs.customer_sk-- and ps.state_sk = cs.state_sk 
-				full join quotes q  
-						  on ps.broker_sk = q.broker_sk  --and ps.product_sk = q.product_sk  and ps.customer_sk = q.customer_sk-- and ps.state_sk = q.state_sk   
-				--where  isnull(xpsr_rein.ee,0) <> 0
-				group by --COALESCE(ps.customer_sk, cs.customer_sk, q.customer_sk),
-						COALESCE(ps.broker_sk, cs.broker_sk, q.broker_sk)--,
-						--COALESCE(ps.product_sk, cs.product_sk, q.product_sk)
-						--,COALESCE(ps.state_sk, cs.state_sk, q.state_sk)
-				; 
+				full join clm_summ cs on ps.broker_sk = cs.broker_sk  --and ps.product_sk = cs.product_sk  and ps.customer_sk = cs.customer_sk-- and ps.state_sk = cs.state_sk 
+				full join quotes q    on ps.broker_sk = q.broker_sk  
+				group by  COALESCE(ps.broker_sk, cs.broker_sk, q.broker_sk);
+
 				delete from edw_core.tbroker_summary
 				where month_sk = @month_end_dt_sk; 
 
@@ -400,6 +398,8 @@ BEGIN
 					( 
 						month_sk,
 						broker_sk, 
+						prior_ytd_submission_ct,
+						ytd_submission_ct,
 						prior_ytd_quote_ct,
 						ytd_quote_ct,
 						prior_ytd_quote_premium_amt,
@@ -461,9 +461,13 @@ BEGIN
     					ho_three_year_earned_exposure,
 						--source_system_sk,
 						update_ts,
-						etl_audit_sk
+						etl_audit_sk,
+						policy_retention_rate,
+						premium_retention_rate
 					)
-				select month_sk, broker_sk,  
+				select @month_end_dt_sk, coalesce(summ.broker_sk, r.broker_sk),  
+						sum(prior_ytd_submission_ct), 
+						sum(ytd_submission_ct), 
 						sum(prior_ytd_quote_ct), 
 						sum(ytd_quote_ct), 
 						sum(prior_ytd_quote_premium_amt), 
@@ -504,9 +508,12 @@ BEGIN
 						sum(ho_three_year_earned_net_premium_amt),  
 						sum(ho_three_year_earned_exposure), 
 						--max(source_system_sk),
-						max(update_ts), max(etl_audit_sk)
+						max(update_ts), max(etl_audit_sk),
+						CASE WHEN sum(expiring_ct) > 0 THEN sum(renewal_ct)/ sum(expiring_ct) ELSE 0 END,
+						CASE WHEN sum(expiring_prm) > 0 THEN sum(renewal_prm)/ sum(expiring_prm) ELSE 0 END
 				from edw_temp.tbroker_summary_temp summ
-				group by month_sk, broker_sk;
+				LEFT join edw_temp.tbroker_summ_retention r on summ.broker_sk = r.broker_sk  
+				group by coalesce(summ.broker_sk, r.broker_sk);
        
 				SET @rows_affected=@@ROWCOUNT;
 
@@ -538,6 +545,7 @@ BEGIN
 						      ' Error Line:' + ISNULL(CAST(ERROR_LINE() AS NVARCHAR(100)),'') + CHAR(13) + 
 						    'Error Message:' + ISNULL(ERROR_MESSAGE(),'')
 	
+		DEALLOCATE c2_rec; 
 		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
