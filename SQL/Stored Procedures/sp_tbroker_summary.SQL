@@ -509,8 +509,8 @@ BEGIN
 						sum(ho_three_year_earned_exposure), 
 						--max(source_system_sk),
 						max(update_ts), max(etl_audit_sk),
-						CASE WHEN sum(expiring_ct) > 0 THEN sum(renewal_ct)/ sum(expiring_ct) ELSE 0 END,
-						CASE WHEN sum(expiring_prm) > 0 THEN sum(renewal_prm)/ sum(expiring_prm) ELSE 0 END
+						CASE WHEN sum(expiring_ct) > 0 THEN 100.0*sum(renewal_ct)/ sum(expiring_ct) ELSE 0 END,
+						CASE WHEN sum(expiring_prm) > 0 THEN 100.0*sum(renewal_prm)/ sum(expiring_prm) ELSE 0 END
 				from edw_temp.tbroker_summary_temp summ
 				LEFT join edw_temp.tbroker_summ_retention r on summ.broker_sk = r.broker_sk  
 				group by coalesce(summ.broker_sk, r.broker_sk);
