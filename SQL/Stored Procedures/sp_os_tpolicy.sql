@@ -2,7 +2,12 @@
 -- Author:		Yunus Mohammed
 -- Create Date: 10/20/2023
 -- Description: This procedures insert OneShied policy into tpolicy table
------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+-- Change date 		|Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 10/20/23			Mohammed Yunus					1. Created this procedure
+-- 12/15/23			Mohammed Yunus					2. Updated program_type logic
+-- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tpolicy]
 
@@ -65,7 +70,11 @@ BEGIN
 			   else
 				p.writing_company_name
 			end as uw_company_nm,
-			trx.policy_trx_policy_program as program_type,
+			-- trx.policy_trx_policy_program as program_type,
+			case
+			when p.writing_company_name='Vault Reciprocal Exchange' then 'Admitted'
+			when p.writing_company_name='Vault E&S Insurance Company' then 'Non-Admitted'
+			end as program_type,
 		ptrm.policy_term_pas_status as policy_status,
 		case when trx.policy_trx_type_name='cancellation' then trx.policy_trx_image_eff_date else null end as cancellation_effective_dt,
 		(
