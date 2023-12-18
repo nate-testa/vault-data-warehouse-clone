@@ -505,7 +505,7 @@ BEGIN
 		,'' as [036_BillingAccountNumber]
 		,'' as [037_ControllingStateProvCd]
 		,CASE WHEN ba.bill_type = 'Insured' THEN 'Direct' ELSE 'Not Direct' END AS [038_BillingMethodCd]
-		,COALESCE(pt.premium_amt, 0) as [039_Amt] -- Need to validate this
+		,COALESCE(pt.annual_premium_amt, 0) as [039_Amt] -- Need to validate this
 		,COALESCE(pt.premium_amt, 0)  as [040_Amt]
 		,'en' as [041_LanguageCd]
 		,p.original_policy_effective_dt as [042_OriginalPolicyInceptionDt]
