@@ -163,11 +163,11 @@ BEGIN
 				tthc.WaterDeductible AS water_deductible,
 				tthc.WildfireDeductible AS wildfire_deductible,
 				CASE
-					WHEN ISNULL(tthc.HurricaneDeductible,'') !='' THEN REPLACE(TRANSLATE(tthc.HurricaneDeductible, '%', ' '), ' ', '')
-					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') !='' THEN REPLACE(TRANSLATE(tthc.HurricaneOrNamedStormDeductible, '%', ' '), ' ', '')
-					WHEN ISNULL(tthc.NamedStormDeductible,'') !='' THEN REPLACE(TRANSLATE(tthc.NamedStormDeductible, '%', ' '), ' ', '')
-					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') !='' THEN REPLACE(TRANSLATE(tthc.TornadoorHailstormDeductible, '%', ' '), ' ', '')
-					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') !='' THEN REPLACE(TRANSLATE(tthc.WindStormOrHailDeductible, '%', ' '), ' ', '')
+					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' THEN HurricaneDeductible
+					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' THEN HurricaneOrNamedStormDeductible
+					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' THEN NamedStormDeductible
+					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' THEN TornadoorHailstormDeductible
+					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') != '' THEN WindStormOrHailDeductible
 				END AS wind_derived_deductible,
 				tthc.NumberOfMortgagees AS no_of_mortgagees,
 				tthc.PriorClaims AS prior_claim_last5yr_in,tthc.PriorNonWaterClaims AS prior_nonwater_claim_ct,
