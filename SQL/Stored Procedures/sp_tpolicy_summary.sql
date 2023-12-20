@@ -16,6 +16,7 @@ GO
 -- 11/10/23		Architha Gudimalla				5. Corrected net ep code 
 --												   Corrected ee for canels
 -- 12/06/23		Architha Gudimalla				6. Fixed exposure calculation
+-- 12/20/23		Architha Gudimalla				7. Added annual_net_premium_amt
 -- ======================================================================================================================================== 
 
 CREATE or ALTER    PROCEDURE [edw_core].[sp_tpolicy_summary]
@@ -350,6 +351,7 @@ BEGIN
 		 				sum(tr.tax_fee_surcharge_amt) itd_tax_fee_surcharge_amt,
 		 				sum(tr.premium_amt - tr.tax_fee_surcharge_amt) itd_net_premium_amt,
 						sum(annual_premium_amt) annual_premium_amt,
+						sum(case when tr.tax_fee_surcharge_sk = 0 then annual_premium_amt else 0 end) annual_net_premium_amt,
 		 				sum(
 		 						(--for transactions issued in the month, eff in the month or later
 									case when tr.expiration_dt_sk > @month_begin_dt_sk and 
@@ -450,7 +452,7 @@ BEGIN
 						mtd_premium_amt, mtd_commission_amt, mtd_tax_fee_surcharge_amt, mtd_net_premium_amt, 
 						ytd_premium_amt, ytd_commission_amt, ytd_tax_fee_surcharge_amt, ytd_net_premium_amt, 
 						itd_premium_amt, itd_commission_amt, itd_tax_fee_surcharge_amt, itd_net_premium_amt,
-						annual_premium_amt, 
+						annual_premium_amt, annual_net_premium_amt,
 						earned_premium_amt, unearned_premium_amt, 
 						earned_net_premium_amt, unearned_net_premium_amt, 
 						written_exposure, earned_exposure, update_ts, etl_audit_sk
@@ -462,7 +464,7 @@ BEGIN
 						prm.mtd_premium_amt, prm.mtd_commission_amt, prm.mtd_tax_fee_surcharge_amt, prm.mtd_net_premium_amt, 
 						prm.ytd_premium_amt, prm.ytd_commission_amt, prm.ytd_tax_fee_surcharge_amt, prm.ytd_net_premium_amt, 
 						prm.itd_premium_amt, prm.itd_commission_amt, prm.itd_tax_fee_surcharge_amt, prm.itd_net_premium_amt,
-						prm.annual_premium_amt, 
+						prm.annual_premium_amt, prm.annual_net_premium_amt,
 						prm.mtd_ep earned_premium_amt, (1.0000 * prm.itd_premium_amt)-total_ep unearned_premium_amt, 
 						prm.mtd_net_ep earned_net_premium_amt, (1.0000 * prm.itd_net_premium_amt)-total_net_ep unearned_net_premium_amt, 
 						isnull(xpsr_new.we,0) + isnull(xpsr_exp.we,0) + isnull(xpsr_cancel.we,0) + isnull(xpsr_rein.we,0) 
