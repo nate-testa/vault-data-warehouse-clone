@@ -139,7 +139,7 @@ BEGIN
             t1.[IncidentDate] as incident_dt, 
             t1.[IncidentType] as incident_type, 
             t1.[IncidentDescription] as incident_description, 
-            t1.[TotalPayout] as total_payout_amt, 
+            NULLIF(t1.[TotalPayout],'') as total_payout_amt,
             t1.[IsDisputed] as is_disputed_in, 
             t1.[IncludeInRate] as include_in_rate_in, 
             t1.[IncidentCode] as violation_point_class, 
