@@ -7,6 +7,7 @@
 -- 08/03/23		Yunus Mohammd				1. Created this procedure
 -- 11/20/23		Yunus Mohammd				2. Added Throw
 -- 12/08/23		Yunus Mohammd				3. Added policy_sk, broker_sk and customer_sk
+-- 12/19/23		Yunus Mohammd				4. Update logic calculation logic for expense_reserve_amt and refund_expense_paid_amt
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction]
@@ -74,7 +75,7 @@ BEGIN
 			cast(t1.post_date as date) AS transaction_dt,
 			t1.business_instance_id AS settlement_id,t1.NEW_STATUS,
 			SUM(CASE WHEN t1.reserve_type='RC_01' THEN outstanding_changed ELSE 0 END) AS loss_reserve_amt,
-			SUM(CASE WHEN t1.reserve_type='RC_02' THEN outstanding_changed ELSE 0 END) AS expense_reserve_amt,
+			SUM(CASE WHEN t1.reserve_type='RC_02' AND t1.claim_type not in('LOS,SAL,SUB') THEN outstanding_changed ELSE 0 END) AS expense_reserve_amt,
 			SUM(CASE WHEN t1.reserve_type='RC_03' THEN outstanding_changed ELSE 0 END) AS adjusting_other_reserve_amt,
 			SUM(CASE WHEN t1.reserve_type='RC_04' THEN outstanding_changed ELSE 0 END) AS subro_reserve_amt,
 			SUM(CASE WHEN t1.reserve_type='RC_05' THEN outstanding_changed ELSE 0 END) AS salvage_reserve_amt,
@@ -89,7 +90,7 @@ BEGIN
 			SUM(CASE WHEN t1.reserve_type='RC_06' THEN settle_changed ELSE 0 END) AS salvage_expense_paid_amt,
 			SUM(CASE WHEN t1.reserve_type='RC_07' THEN settle_changed ELSE 0 END) AS subro_expense_paid_amt,
 			SUM(CASE WHEN t1.reserve_type='RC_01' AND t1.claim_type='LOS' AND settle_changed < 0 THEN settle_changed WHEN t1.reserve_type ='RC_01' AND t1.claim_type LIKE '%SAL%' AND CAST(t1.payee_name AS VARCHAR(MAX)) NOT IN ('Copart') THEN settle_changed ELSE 0 END) AS refund_indemnity_paid_amt,
-			SUM(CASE WHEN t1.reserve_type='RC_02' AND t1.claim_type='LOS' AND settle_changed < 0 THEN settle_changed ELSE 0 END) AS refund_expense_paid_amt,
+			SUM(CASE WHEN t1.reserve_type='RC_02' AND t1.claim_type like '%LOS%' AND settle_changed < 0 THEN settle_changed ELSE 0 END) AS refund_expense_paid_amt,
 			MAX(CASE WHEN t1.ROLE_NAME = 'Lawyer' OR t1.ROLE_NAME  = 'Legal Firm' THEN 'Y' ELSE 'N' END) AS dcc_in
 			FROM
 			(
