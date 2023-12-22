@@ -38,10 +38,7 @@ BEGIN
 			,policy_history_sk
 			,[index] as additional_interest_seq_no
 			,InterestType, EntityType
-			,CASE
-  				WHEN EntityName IS NOT NULL AND EntityName <> '' THEN EntityName
-  				ELSE CONCAT(FirstName, ' ', LastName)
-			END AS EntityName
+			,[EntityName] as EntityName
 			,DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew
 			,[Name]
 			--,4 as [source_system_sk] --20230717 removed
@@ -68,7 +65,7 @@ BEGIN
 				WHERE
 					[State] ='ISSUED' --- Review BOUND transactions
 					--AND GREATEST(acct.CreatedDate)>@last_source_extract_ts --20230717 removed
-					--AND GREATEST(IssuedDate)>@last_source_extract_ts --20230717 added
+					AND GREATEST(IssuedDate)>@last_source_extract_ts --20230717 added
 				) acc
 				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
 				LEFT JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
@@ -103,6 +100,8 @@ BEGIN
       ,[property_desc]
       ,[first_nm]
       ,[last_nm]
+	  ,[loss_payee_nm]
+	  ,[additional_interest_nm]	  
       ,[address_line_1]
       ,[address_line_2]
       ,[city_nm]
@@ -128,10 +127,12 @@ BEGIN
       ,[additional_interest_seq_no]
       ,[InterestType]
       ,[EntityType]
-      ,COALESCE([Name], [EntityName]) as EntityName
+      ,[EntityName]
       ,[DescriptionOfProperty]
       ,[FirstName]
       ,[LastName]
+	  ,CASE WHEN [InterestType] = 'Loss Payee' THEN [Name] ELSE NULL END AS [loss_payee_nm]
+	  ,CASE WHEN [InterestType] = 'Additional Interest' THEN [Name] ELSE NULL END AS [additional_interest_nm]
       ,[AddressLine1]
       ,[AddressLine2]
       ,[AddressCity]
