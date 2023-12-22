@@ -33,7 +33,7 @@ BEGIN
 			LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
 			HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
 			PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
-			CriminalTrafficViolationField,YouthfulOperatorCount,AdultOperatorCount
+			CriminalTrafficViolationField
 			into edw_temp.tpel_coverage_temp1
 		from
 		(
@@ -71,7 +71,7 @@ BEGIN
 					'CustomerHasPublicProfile','LevelOfAttention','LibelSlanderExclusion','PoliticalExclusion','AnimalRelatedLiabilityExclusion',
 					'HigherUnderlyingLimitsEndorsement','AILimitedLiability','MinimumEarnedPremiumEndorsement','MinimumEarnedPremiumEndorsementLimit',
 					'PremisesLiabilityLimitation','DeletionofCosmeticMarringExclusion','Manuscript','ProfileAdjustment','CriminalTrafficViolation',
-					'CriminalTrafficViolationField','YouthfulOperatorCount','AdultOperatorCount'
+					'CriminalTrafficViolationField'
 				)
 				and act.IssuedDate>@last_source_extract_ts
 			) as t
@@ -87,7 +87,33 @@ BEGIN
 				PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
 				CriminalTrafficViolationField,YouthfulOperatorCount,AdultOperatorCount
 				)
-		) as pivottable
+		) as pivottable;
+
+
+		
+		WITH driver_age AS
+		(
+			select
+				policy_no, effective_dt, transaction_seq_no,
+				sum(case driver when 'Youthful' then 1 else 0 end) as youthful_drivers_ct,
+				sum(case driver when 'Adult' then 1 else 0 end) as adult_drivers_ct
+			from
+			(
+			select
+			tp.policy_no,tp.effective_dt, tph.transaction_seq_no,
+			CASE
+					WHEN risk_state_cd in ( 'AZ', 'CO', 'GA', 'LA')  AND ((CONVERT(int,CONVERT(char(8),getdate(),112))-CONVERT(char(8),cast(birth_dt as date),112))/10000) < = 24 THEN 'Youthful'
+					WHEN risk_state_cd = 'MA' and (license_year - year(getdate())) < = 4 THEN 'Youthful'
+					WHEN ((CONVERT(int,CONVERT(char(8),getdate(),112))-CONVERT(char(8),cast(birth_dt as date),112))/10000) < = 25 THEN 'Youthful'
+					ELSE 'Adult'
+				END AS driver
+			from
+			edw_core.tpolicy tp
+			inner join edw_core.tpolicy_history tph on tph.policy_sk = tp.policy_sk
+			INNER JOIN edw_core.tpel_driver peld on peld.policy_history_sk = tph.policy_history_sk 
+			) as a
+			group by policy_no, effective_dt, transaction_seq_no
+		)
 
 		INSERT INTO [edw_core].[tpel_coverage]
 		(
@@ -121,11 +147,13 @@ BEGIN
 			DeletionofCosmeticMarringExclusion AS deletion_of_cosmetic_marring_exclusion_in,Manuscript AS manuscript_in,
 			ProfileAdjustment AS profile_adjustment,CriminalTrafficViolation AS criminal_traffic_violation_in,
 			CriminalTrafficViolationField AS criminal_traffic_violation_desc,
-			YouthfulOperatorCount AS youthful_drivers_ct,
-			AdultOperatorCount AS adult_drivers_ct,
+			drv.youthful_drivers_ct,
+			drv.adult_drivers_ct,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM
 			edw_temp.tpel_coverage_temp1 AS ttlc
+			LEFT JOIN driver_age drv ON drv.policy_no = ttlc.policy_no and drv.effective_dt = ttlc.effective_dt
+				 and drv.transaction_seq_no = ttlc.transaction_seq_no
 
 		SET @rows_affected=@@ROWCOUNT;
 
