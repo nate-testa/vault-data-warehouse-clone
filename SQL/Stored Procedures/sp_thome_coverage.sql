@@ -157,15 +157,20 @@ BEGIN
 				tthc.CoverageE AS personal_liability_limit_amt,
 				REPLACE(REPLACE(tthc.CoverageF,'$',''),',','') AS medical_payments_limit_amt,
 				tthc.ExcludeInflationFactor AS exclude_inflation_factor_in,tthc.AopDeductible AS aop_deductible,
-				CASE WHEN tthc.HurricaneDeductible like '%N/A%' THEN NULL ELSE tthc.HurricaneDeductible END AS hurricane_deductible,
+				tthc.HurricaneDeductible AS hurricane_deductible,
 				tthc.WaterDeductible AS water_deductible,
 				tthc.WildfireDeductible AS wildfire_deductible,
 				CASE
 					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' AND tthc.HurricaneDeductible like '%Exclude Wind%' THEN 'Exclude'
+						WHEN ISNULL(tthc.HurricaneDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
 					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' AND tthc.HurricaneOrNamedStormDeductible like '%Exclude Wind%' THEN 'Exclude'
+						WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' AND (tthc.HurricaneOrNamedStormDeductible like '%aop applies%' or tthc.HurricaneOrNamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
 					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' AND tthc.NamedStormDeductible like '%Exclude Wind%' THEN 'Exclude'
+						WHEN ISNULL(tthc.NamedStormDeductible,'') != '' AND (tthc.NamedStormDeductible like '%aop applies%' or tthc.NamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
 					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND tthc.TornadoorHailstormDeductible like '%Exclude Wind%' THEN 'Exclude'
+						WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND (tthc.TornadoorHailstormDeductible like '%aop applies%' or tthc.TornadoorHailstormDeductible like '%aopApplies%') THEN 'AOP Applies'
 					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') != '' AND tthc.WindStormOrHailDeductible like '%Exclude Wind%' THEN 'Exclude'
+						WHEN ISNULL(tthc.WindStormOrHailDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
 					--
 					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' THEN HurricaneDeductible
 					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' THEN HurricaneOrNamedStormDeductible
@@ -243,14 +248,10 @@ BEGIN
 				--tthc.EarthquakeShake AS earthquake_shake,
 				tthc.HurricaneOrNamedStormDeductible AS hurricane_or_named_storm_deductible,
 				tthc.NamedStormDeductible AS named_storm_deductible,
-				tthc.TornadoorHailstormDeductible AS tornado_or_hailstorm_deductible,
-				CASE 
-					WHEN tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%' THEN 'AOP Applies'
-					WHEN tthc.WindStormOrHailDeductible like '%Exclude Wind%' THEN 'Exclude'
-					ELSE tthc.WindStormOrHailDeductible
-				END AS wind_or_hailstorm_deductible,
+				tthc.TornadoorHailstormDeductible AS tornado_or_hailstorm_deductible
+				,tthc.WindStormOrHailDeductible AS wind_or_hailstorm_deductible,
 				tthc.FactorMethod, tthc.Factor, tthc.Retention, tthc.Reason
-				,CASE WHEN tthc.ReinsuranceDesignation like 'N/A' THEN NULL ELSE tthc.ReinsuranceDesignation END AS ReinsuranceDesignation
+				,tthc.ReinsuranceDesignation AS ReinsuranceDesignation
 				,tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit, tthc.ReinsuranceTotalTIV, 
 				tthc.WildfireThreat, tthc.WildfireHazardSeverity,
 				tthc.AOPDeductiblemanual, tthc.Waterdeductiblemanual,tthc.wildfiredeductiblemanual, tthc.WindstormOrHailDeductibleManual,
