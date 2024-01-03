@@ -6,6 +6,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 11/23/23		Yunus Mohammed				1. Created this procedure 
 -- 11/27/23		Yunus Mohammed				2. Added update stmt to update company nm
+-- 01/03/24		Yunus Mohammed				3. Updated VRE and VES in update statement
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_ebao_tclaim_onetime_datafix]
 
@@ -44,8 +45,8 @@ BEGIN
 		UPDATE edw_core.tclaim
 		SET
 		underwriting_company_nm = CASE underwriting_company_nm
-									WHEN 'Vault Reciprocal Exchange' THEN 'VES'
-									WHEN 'Vault E&S Insurance Company' THEN 'VRE'
+									WHEN 'Vault Reciprocal Exchange' THEN 'VRE'
+									WHEN 'Vault E&S Insurance Company' THEN 'VES'
 									ELSE
 										underwriting_company_nm
 									END
