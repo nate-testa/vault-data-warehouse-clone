@@ -85,7 +85,7 @@ BEGIN
 				LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
 				HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
 				PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
-				CriminalTrafficViolationField,YouthfulOperatorCount,AdultOperatorCount
+				CriminalTrafficViolationField
 				)
 		) as pivottable;
 
@@ -129,7 +129,7 @@ BEGIN
 		)
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
-			ExpirationDate AS expiration_dt,TransactionDate AS transaction_dt,transaction_seq_no AS transaction_seq_no,policy_history_sk,
+			ExpirationDate AS expiration_dt,TransactionDate AS transaction_dt,ttlc.transaction_seq_no AS transaction_seq_no,policy_history_sk,
 			CoverageLimit AS pel_limit_amt,UnderinsuredMotoristLiability AS uninsured_underinsured_motorist_liability_amt,
 			UnderinsuredLiability AS uninsured_underinsured_liability_amt,
 			EmploymentPracticesLiabilityLimit AS employment_practices_liability_amt,
@@ -152,7 +152,7 @@ BEGIN
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM
 			edw_temp.tpel_coverage_temp1 AS ttlc
-			LEFT JOIN driver_age drv ON drv.policy_no = ttlc.policy_no and drv.effective_dt = ttlc.effective_dt
+			LEFT JOIN driver_age drv ON drv.policy_no = ttlc.PolicyNumber and drv.effective_dt = cast(ttlc.EffectiveDate as date)
 				 and drv.transaction_seq_no = ttlc.transaction_seq_no
 
 		SET @rows_affected=@@ROWCOUNT;
@@ -178,7 +178,6 @@ BEGIN
 	
 		EXEC [edw_core].[sp_upd_error_tetl_audit] @etl_audit_sk,@error_message;
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
-
 	END CATCH
 END
 
