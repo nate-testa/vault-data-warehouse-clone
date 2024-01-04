@@ -161,6 +161,17 @@ BEGIN
 				tthc.WaterDeductible AS water_deductible,
 				tthc.WildfireDeductible AS wildfire_deductible,
 				CASE
+					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' AND tthc.HurricaneDeductible like '%Exclude Wind%' THEN 'Exclude'
+						WHEN ISNULL(tthc.HurricaneDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' AND tthc.HurricaneOrNamedStormDeductible like '%Exclude Wind%' THEN 'Exclude'
+						WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' AND (tthc.HurricaneOrNamedStormDeductible like '%aop applies%' or tthc.HurricaneOrNamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' AND tthc.NamedStormDeductible like '%Exclude Wind%' THEN 'Exclude'
+						WHEN ISNULL(tthc.NamedStormDeductible,'') != '' AND (tthc.NamedStormDeductible like '%aop applies%' or tthc.NamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND tthc.TornadoorHailstormDeductible like '%Exclude Wind%' THEN 'Exclude'
+						WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND (tthc.TornadoorHailstormDeductible like '%aop applies%' or tthc.TornadoorHailstormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') != '' AND tthc.WindStormOrHailDeductible like '%Exclude Wind%' THEN 'Exclude'
+						WHEN ISNULL(tthc.WindStormOrHailDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
+					--
 					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' THEN HurricaneDeductible
 					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' THEN HurricaneOrNamedStormDeductible
 					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' THEN NamedStormDeductible
@@ -237,10 +248,11 @@ BEGIN
 				--tthc.EarthquakeShake AS earthquake_shake,
 				tthc.HurricaneOrNamedStormDeductible AS hurricane_or_named_storm_deductible,
 				tthc.NamedStormDeductible AS named_storm_deductible,
-				tthc.TornadoorHailstormDeductible AS tornado_or_hailstorm_deductible,
-				tthc.WindStormOrHailDeductible AS wind_or_hailstorm_deductible,
-				tthc.FactorMethod, tthc.Factor, tthc.Retention, tthc.Reason,
-				tthc.ReinsuranceDesignation, tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit, tthc.ReinsuranceTotalTIV, 
+				tthc.TornadoorHailstormDeductible AS tornado_or_hailstorm_deductible
+				,tthc.WindStormOrHailDeductible AS wind_or_hailstorm_deductible,
+				tthc.FactorMethod, tthc.Factor, tthc.Retention, tthc.Reason
+				,tthc.ReinsuranceDesignation AS ReinsuranceDesignation
+				,tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit, tthc.ReinsuranceTotalTIV, 
 				tthc.WildfireThreat, tthc.WildfireHazardSeverity,
 				tthc.AOPDeductiblemanual, tthc.Waterdeductiblemanual,tthc.wildfiredeductiblemanual, tthc.WindstormOrHailDeductibleManual,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
