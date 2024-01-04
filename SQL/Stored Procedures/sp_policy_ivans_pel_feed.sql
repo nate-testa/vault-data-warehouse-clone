@@ -322,7 +322,8 @@ BEGIN
                 WHEN pi.mobile_phone_no is not null THEN 'Mobile'
                 ELSE ''
             END as [PhoneTypeCd_024],
-            RIGHT(REPLACE(TRANSLATE(COALESCE(pi.home_phone_no, pi.mobile_phone_no, ''), '+-/()#', '      '), ' ', ''), 10) as [PhoneNumber_025],
+            RIGHT(REPLACE(TRANSLATE(pi.home_phone_no, '+-/()#', '      '), ' ', ''), 10) as [HomePhoneNumber_025],
+		    RIGHT(REPLACE(TRANSLATE(pi.mobile_phone_no, '+-/()#', '      '), ' ', ''), 10) as [MobilePhoneNumber_025],
             pi.email as [EmailAddr_026],
             '' as [GenderCd_027],
             '' as [MaritalStatusCd_028],
@@ -555,7 +556,17 @@ BEGIN
                 [Country_022],
                 [County_023],
                 [PhoneTypeCd_024],
-                [PhoneNumber_025],
+                CASE
+                    WHEN [HomePhoneNumber_025] IS NOT NULL
+                        AND LEN([HomePhoneNumber_025]) = 10
+                        AND LEFT([HomePhoneNumber_025], 1) NOT IN ('0', '1')
+                        THEN [HomePhoneNumber_025]
+                    WHEN [MobilePhoneNumber_025] IS NOT NULL
+                        AND LEN([MobilePhoneNumber_025]) = 10
+                        AND LEFT([MobilePhoneNumber_025], 1) NOT IN ('0', '1')
+                        THEN [MobilePhoneNumber_025]
+                    ELSE ''
+                END AS [PhoneNumber_025],
                 [EmailAddr_026],
                 [GenderCd_027],
                 [MaritalStatusCd_028],
