@@ -368,7 +368,8 @@ BEGIN
                 WHEN pi.mobile_phone_no is not null THEN 'Mobile'
                 ELSE ''
             END as [PhoneTypeCd_026],
-            RIGHT(REPLACE(TRANSLATE(COALESCE(pi.home_phone_no, pi.mobile_phone_no, ''), '+-/()#', '      '), ' ', ''), 10) as [PhoneNumber_027],
+            RIGHT(REPLACE(TRANSLATE(pi.home_phone_no, '+-/()#', '      '), ' ', ''), 10) as [HomePhoneNumber_027],
+		    RIGHT(REPLACE(TRANSLATE(pi.mobile_phone_no, '+-/()#', '      '), ' ', ''), 10) as [MobilePhoneNumber_027],
             pi.email as [EmailAddr_028],
             'Primary' as [InsuredOrPrincipalRoleCd_029],
             'Primary' as [InsuredOrPrincipalRoleDesc_030],
@@ -563,7 +564,17 @@ BEGIN
             [Longitude_024],
             [County_025],
             [PhoneTypeCd_026],
-            [PhoneNumber_027],
+            CASE
+				WHEN [HomePhoneNumber_027] IS NOT NULL
+					AND LEN([HomePhoneNumber_027]) = 10
+					AND LEFT([HomePhoneNumber_027], 1) NOT IN ('0', '1')
+					THEN [HomePhoneNumber_027]
+				WHEN [MobilePhoneNumber_027] IS NOT NULL
+					AND LEN([MobilePhoneNumber_027]) = 10
+					AND LEFT([MobilePhoneNumber_027], 1) NOT IN ('0', '1')
+					THEN [MobilePhoneNumber_027]
+				ELSE ''
+			END AS [PhoneNumber_027],
             [EmailAddr_028],
             [InsuredOrPrincipalRoleCd_029],
             [InsuredOrPrincipalRoleDesc_030],

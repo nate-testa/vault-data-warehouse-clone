@@ -46,7 +46,7 @@ BEGIN
             c.mailing_address_city_nm as dwelling_city,
             c.mailing_address_state_cd as dwelling_state,
             c.mailing_address_zip_cd as dwelling_zip_cd,
-            NULL as hsp_net_premium_amt,
+            ROUND(pt.ceded_premium_amt,0) as hsp_net_premium_amt,
             hac.home_systems_protection_limit_amt as hsp_limit_amt,
             '' as hsp_deductible_amt,
             NULL as base_homeowner_premium,
@@ -119,7 +119,7 @@ BEGIN
         LEFT JOIN
             (
                 select 
-                    pt.policy_sk, d.actual_dt as effective_dt, SUM(pt.net_premium_amt) as net_premium_amt
+                    pt.policy_sk, d.actual_dt as effective_dt, SUM(pt.net_premium_amt) as net_premium_amt, SUM(pt.ceded_premium_amt) as ceded_premium_amt
                 from edw_core.tpolicy_transaction as pt
                 inner join edw_core.tdate d on pt.effective_dt_sk = d.date_sk
                 group by pt.policy_sk, d.actual_dt

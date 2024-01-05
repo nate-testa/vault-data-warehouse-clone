@@ -18,6 +18,7 @@ GO
 -- 12/11/23		Architha Gudimalla				7. Added quote prm cols
 -- 12/13/23		Architha Gudimalla				8. Added retention and submissions
 -- 12/13/23		Architha Gudimalla				9. Changed grain of broker summary
+-- 01/05/24		Architha Gudimalla				10. Corrected prior year gross new prm
 -- ================================================================================================= 
 
 CREATE or ALTER   PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -276,8 +277,8 @@ BEGIN
 							sum(           case when pol.policy_term = 'New' and td.actual_dt between @prior_year_month_begin_dt and @prior_year_month_end_dt then summ.mtd_net_premium_amt else 0 end) prior_mtd_new_business_net_premium_amt ,   
 							sum(           case when pol.policy_term = 'New' and td.actual_dt between 	  	   @month_begin_dt and 				 	@end_dt then summ.mtd_net_premium_amt else 0 end) 	     mtd_new_business_net_premium_amt ,  
 							--
-							sum(           case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 then ph.net_premium_amt else 0 end) prior_mtd_gross_new_business_net_premium_amt,   
-							sum(           case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	   @month_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 then ph.net_premium_amt else 0 end) 	  mtd_gross_new_business_net_premium_amt,   
+							--sum(           case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 then ph.net_premium_amt else 0 end) prior_mtd_gross_new_business_net_premium_amt,   
+							--sum(           case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	   @month_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 then ph.net_premium_amt else 0 end) 	  mtd_gross_new_business_net_premium_amt,   
 							--
 							sum(case when summ.month_sk between @prior_year_month_begin_dt_sk and @prior_year_month_end_dt_sk then summ.mtd_premium_amt else 0 end) prior_mtd_written_premium_amt,   
 							sum(case when summ.month_sk between 	  	   @month_begin_dt_sk and 	  		 @month_end_dt_sk then summ.mtd_premium_amt else 0 end) 	  mtd_written_premium_amt,   
@@ -288,7 +289,7 @@ BEGIN
 							sum(case when  summ.month_sk >= @prior_year_three_month_end_dt_sk 	then summ.earned_exposure else 0 end) three_year_earned_exposure
 							--
 				 into edw_temp.tbroker_summ_pols
-				 FROM	edw_core.tpolicy_summary summ, edw_core.tpolicy pol, edw_core.tstate st,  edw_core.tdate td, 
+				 FROM	edw_core.tpolicy_summary summ, edw_core.tpolicy pol, edw_core.tstate st,  edw_core.tdate td,
 				 		edw_core.tpolicy_history ph,
 				 		(select policy_sk, min(transaction_seq_no) transaction_seq_no
 							from edw_core.tpolicy_history
@@ -301,6 +302,27 @@ BEGIN
 					 and 	ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
 					 group by summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
+				
+				--inforce and ytd prm data
+				DROP TABLE IF EXISTS edw_temp.tbroker_summ_pols1;
+				SELECT ph.broker_sk, ph.product_sk, ph.customer_sk, st.state_sk,
+							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco,   
+							--
+							sum(case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and prior_inf.policy_sk is not null then ph.net_premium_amt else 0 end) prior_mtd_gross_new_business_net_premium_amt,   
+							sum(case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	    @month_begin_dt and 			 	 @end_dt and curr_inf.policy_sk is not null then ph.net_premium_amt else 0 end) 	  mtd_gross_new_business_net_premium_amt 
+							--
+				into edw_temp.tbroker_summ_pols1
+				FROM	edw_core.tpolicy pol
+				inner join  edw_core.tpolicy_history ph on pol.policy_sk = ph.policy_sk
+				inner join (select policy_sk, min(transaction_seq_no) transaction_seq_no
+							from edw_core.tpolicy_history
+							where greatest(cast(transaction_ts as date), transaction_effective_dt) <= @end_dt 
+							group by policy_sk ) min_ph on ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
+				inner join edw_core.tstate st on pol.risk_state_cd = st.state_cd
+				left join edw_core.tdaily_inforce_policy prior_inf on pol.policy_sk = prior_inf.policy_sk and prior_inf.inforce_dt_sk = @prior_year_month_end_dt_sk 
+				left join edw_core.tdaily_inforce_policy curr_inf  on pol.policy_sk =  curr_inf.policy_sk and  curr_inf.inforce_dt_sk = 		   @month_end_dt_sk 
+				group by ph.broker_sk, ph.product_sk, ph.customer_sk, st.state_sk,
+						replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				
 				--claims date
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_claims;
@@ -351,6 +373,11 @@ BEGIN
 					select * 
 					from  edw_temp.tbroker_summ_pols
 					 
+				), pol_summ1 as
+				(
+					select * 
+					from  edw_temp.tbroker_summ_pols1
+					 
 				), 
 				clm_summ as
 				( 
@@ -362,11 +389,11 @@ BEGIN
 					select *
 					from edw_temp.tbroker_summ_quotes
 				)   
-				select 	COALESCE(ps.broker_sk, cs.broker_sk, q.broker_sk) broker_sk,
-						COALESCE(ps.product_sk, cs.product_sk, q.product_sk) product_sk,
-						COALESCE(ps.customer_sk, cs.customer_sk, q.customer_sk) customer_sk,
-						COALESCE(ps.state_sk, cs.state_sk, q.state_sk) state_sk,
-						COALESCE(ps.uwco, cs.uwco, q.uwco) uwco,
+				select 	COALESCE(ps.broker_sk, ps1.broker_sk, cs.broker_sk, q.broker_sk) broker_sk,
+						COALESCE(ps.product_sk, ps1.product_sk, cs.product_sk, q.product_sk) product_sk,
+						COALESCE(ps.customer_sk, ps1.customer_sk, cs.customer_sk, q.customer_sk) customer_sk,
+						COALESCE(ps.state_sk, ps1.state_sk, cs.state_sk, q.state_sk) state_sk,
+						COALESCE(ps.uwco, ps1.uwco, cs.uwco, q.uwco) uwco,
 						--
 						sum(isnull(q.prior_ytd_submission_ct,0)) prior_ytd_submission_ct,
 						sum(isnull(q.ytd_submission_ct,0)) ytd_submission_ct,
@@ -394,8 +421,8 @@ BEGIN
 						--
 						sum(isnull(ps.prior_customer_ct,0)) prior_customer_ct, 
 						sum(isnull(ps.customer_ct,0)) customer_ct, 
-						sum(isnull(prior_line_ct,0)) prior_total_line_ct,
-						sum(isnull(line_ct,0)) total_line_ct,
+						sum(isnull(ps.prior_line_ct,0)) prior_total_line_ct,
+						sum(isnull(ps.line_ct,0)) total_line_ct,
 						--
 						sum(isnull(ps.prior_ytd_new_business_ct,0)) prior_ytd_new_business_ct, 
 						sum(isnull(ps.prior_ytd_new_business_net_premium_amt,0)) prior_ytd_new_business_net_premium_amt, 
@@ -411,8 +438,8 @@ BEGIN
 						sum(isnull(ps.mtd_new_business_ct,0)) mtd_new_business_ct, 
 						sum(isnull(ps.mtd_new_business_net_premium_amt,0)) mtd_new_business_net_premium_amt, 
 						--
-						sum(isnull(ps.prior_mtd_gross_new_business_net_premium_amt,0)) prior_mtd_gross_new_business_net_premium_amt, 
-						sum(isnull(ps.mtd_gross_new_business_net_premium_amt,0)) mtd_gross_new_business_net_premium_amt, 
+						sum(isnull(ps1.prior_mtd_gross_new_business_net_premium_amt,0)) prior_mtd_gross_new_business_net_premium_amt, 
+						sum(isnull(ps1.mtd_gross_new_business_net_premium_amt,0)) mtd_gross_new_business_net_premium_amt, 
 						--
 						sum(isnull(ps.prior_mtd_written_premium_amt,0)) prior_mtd_written_premium_amt, 
 						sum(isnull(ps.mtd_written_premium_amt,0)) mtd_written_premium_amt,  
@@ -444,13 +471,14 @@ BEGIN
 						getdate() update_ts, @etl_audit_sk etl_audit_sk
 				into edw_temp.tbroker_summary_temp
 				from pol_summ ps
-				full join clm_summ cs on ps.broker_sk = cs.broker_sk and ps.product_sk = cs.product_sk and ps.customer_sk = cs.customer_sk and ps.uwco = cs.uwco and ps.state_sk = cs.state_sk
-				full join quotes q    on ps.broker_sk = q.broker_sk  and ps.product_sk = q.product_sk  and ps.customer_sk = q.customer_sk  and ps.uwco = q.uwco  and ps.state_sk = q.state_sk
-				group by  COALESCE(ps.broker_sk, cs.broker_sk, q.broker_sk),
-						COALESCE(ps.product_sk, cs.product_sk, q.product_sk),
-						COALESCE(ps.customer_sk, cs.customer_sk, q.customer_sk),
-						COALESCE(ps.state_sk, cs.state_sk, q.state_sk),
-						COALESCE(ps.uwco, cs.uwco, q.uwco);
+				full join pol_summ1 ps1 on ps.broker_sk = ps1.broker_sk and ps.product_sk = ps1.product_sk and ps.customer_sk = ps1.customer_sk and ps.uwco = ps1.uwco and ps.state_sk = ps1.state_sk
+				full join clm_summ cs  on ps.broker_sk =  cs.broker_sk and ps.product_sk =  cs.product_sk and ps.customer_sk =  cs.customer_sk and ps.uwco =  cs.uwco and ps.state_sk =  cs.state_sk
+				full join quotes q     on ps.broker_sk =   q.broker_sk  and ps.product_sk =  q.product_sk and ps.customer_sk =   q.customer_sk and ps.uwco =   q.uwco and ps.state_sk =   q.state_sk
+				group by  COALESCE(ps.broker_sk, ps1.broker_sk, cs.broker_sk, q.broker_sk),
+						COALESCE(ps.product_sk, ps1.product_sk, cs.product_sk, q.product_sk),
+						COALESCE(ps.customer_sk, ps1.customer_sk, cs.customer_sk, q.customer_sk),
+						COALESCE(ps.state_sk, ps1.state_sk, cs.state_sk, q.state_sk),
+						COALESCE(ps.uwco, ps1.uwco, cs.uwco, q.uwco);
 
 				delete from edw_core.tbroker_summary
 				where month_sk = @month_end_dt_sk; 
@@ -662,6 +690,7 @@ BEGIN
 				DROP TABLE IF EXISTS edw_temp.tbroker_summary_temp; 
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_quotes; 
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_pols; 
+				DROP TABLE IF EXISTS edw_temp.tbroker_summ_pols1; 
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_claims;
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_retention;
 				 
