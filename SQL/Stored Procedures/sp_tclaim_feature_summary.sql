@@ -7,6 +7,7 @@
 -- 09/28/2023	Mohammed Yunus					1. Procedure created
 -- 10/04/2023	Mohammed Yunus					2. Removed start date & end date param
 -- 12/22/2023	Mohammed Yunus					3. Added try catch block and update end_dt_sk logic for current month
+-- 01/05/2023	Mohammed Yunus					4. Added throw statement and updated last_source_extract_ts logic for current month
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_summary]
@@ -21,6 +22,7 @@ BEGIN
 		DECLARE @end_dt_sk INT
 		DECLARE @begin_dt DATE
 		DECLARE @end_dt DATE
+		DECLARE @yearmonth INT
 		DECLARE @rows_affected INT
 		DECLARE @procedure_sk INT, @procedure_nm VARCHAR(255)
 		DECLARE @process_nm VARCHAR(255)=OBJECT_NAME(@@PROCID)
@@ -33,7 +35,7 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 
 		DECLARE cur_main CURSOR FOR
-		SELECT MIN(date_sk) AS begin_dt_sk, MAX(date_sk) AS end_dt_sk, MIN(actual_dt) AS begin_dt, MAX(actual_dt) AS end_dt
+		SELECT yearmonth, MIN(date_sk) AS begin_dt_sk, MAX(date_sk) AS end_dt_sk, MIN(actual_dt) AS begin_dt, MAX(actual_dt) AS end_dt
 		FROM edw_core.tdate
 		WHERE
 			actual_dt >  @last_source_extract_ts
@@ -42,7 +44,7 @@ BEGIN
 		ORDER BY yearmonth;
 
 		OPEN cur_main
-		FETCH NEXT FROM cur_main INTO @begin_dt_sk ,@end_dt_sk , @begin_dt, @end_dt;
+		FETCH NEXT FROM cur_main INTO @yearmonth, @begin_dt_sk ,@end_dt_sk , @begin_dt, @end_dt;
 
 		WHILE @@FETCH_STATUS = 0
 		BEGIN
@@ -147,6 +149,12 @@ BEGIN
 			WHERE month_sk=@end_dt_sk;
 
 			-- Update control table
+			IF @yearmonth = concat(datepart(yyyy,getdate()),iif(datepart(mm,getdate()) < 10,'0','') ,datepart(mm,getdate()) )
+			BEGIN
+				select 	@end_dt = max(actual_dt)
+				from edw_core.tdate
+				where yearmonth = @yearmonth and actual_dt <= cast(getdate() as date); 
+			END
 			SET @new_last_source_extract_ts=COALESCE(@end_dt,@last_source_extract_ts); 	
 			EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
@@ -156,7 +164,7 @@ BEGIN
 
 			SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 
-			FETCH NEXT FROM cur_main INTO @begin_dt_sk,@end_dt_sk, @begin_dt, @end_dt;
+			FETCH NEXT FROM cur_main INTO @yearmonth,@begin_dt_sk,@end_dt_sk, @begin_dt, @end_dt;
 		END
 	
 		CLOSE cur_main;
@@ -169,6 +177,7 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
