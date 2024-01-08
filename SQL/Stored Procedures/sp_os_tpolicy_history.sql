@@ -3,11 +3,16 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
--- =============================================
+-- ================================================================================================
 -- Author:		Yunus Mohammed
 -- Create Date: 11/06/2023
 -- Description: This procedures insert OneShied policy history into tpolicy_history table
--- =============================================
+---------------------------------------------------------------------------------------------------
+-- Change date 		|Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 11/06/23			Mohammed Yunus					1. Created this procedure
+-- 01/08/24			Mohammed Yunus					2. Updated transaction_type logic
+-- =================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tpolicy_history]
 
 AS
@@ -56,6 +61,8 @@ BEGIN
 				ELSE trx.policy_trx_lob_name END AS product_cd,
 		CASE WHEN trx.policy_trx_type_name LIKE 'Cancel%' and trx.cancellation_reason LIKE 'Policy Rew%' 
 					THEN 'Cancellation - Rewrite'
+			WHEN trx.policy_trx_type_name LIKE 'Cancel%' AND trx.cancellation_reason IS NULL
+			THEN 'Cancellation'
 			WHEN trx.policy_trx_type_name LIKE 'Cancel%' 
 			THEN 'Cancellation - ' + trx.cancellation_reason
 			ELSE trx.policy_trx_type_name
