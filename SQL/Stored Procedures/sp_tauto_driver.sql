@@ -7,7 +7,12 @@ GO
 -- Author:		Alberto Almario
 -- Create Date: 2023-09-14
 -- Description: This stored procedure insert and update info related to tauto_driver.
--- =============================================
+---------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 09/14/23		Alberto Almario			    1. Created this procedure
+-- 01/08/24		Yunus Mohammed			    2. Added deleted_on_policy_change_in
+-- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_driver]
 AS
 BEGIN
@@ -42,7 +47,7 @@ BEGIN
             [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
             [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
             [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior],
-			source_system_sk
+			source_system_sk,IsDeletedOnPolicyChange
 		
         INTO [edw_temp].[tauto_driver_temp1]
 		
@@ -56,7 +61,8 @@ BEGIN
                     CASE 
                         WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
                         ELSE 4 --(Metal)
-                    END as [source_system_sk]
+                    END as [source_system_sk],
+                    acctvo.IsDeletedOnPolicyChange
                 FROM
                     (SELECT
                         *
@@ -153,6 +159,7 @@ BEGIN
             min_prior_ct,
             maj_prior_ct,
             spd_prior_ct,
+            deleted_on_policy_change_in,
             source_system_sk,
             create_ts,
             update_ts,
@@ -218,6 +225,7 @@ BEGIN
             t1.[MINPrior] as min_prior_ct,
             t1.[MAJPrior] as maj_prior_ct,
             t1.[SPDPrior] as spd_prior_ct,
+            t1.IsDeletedOnPolicyChange as deleted_on_policy_change_in,
             t1.source_system_sk,
             getdate() AS create_ts,
             getdate() AS update_ts,
