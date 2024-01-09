@@ -3,12 +3,12 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
  
--- =================================================================================================
+-- =====================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the broker data for each month
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------
 -- 06/20/23		Architha Gudimalla				1. Created this procedure 
 -- 10/13/23		Architha Gudimalla				2. Added risk state
 -- 10/20/23		Architha Gudimalla				3. Removed source_system_sk
@@ -19,7 +19,10 @@ GO
 -- 12/13/23		Architha Gudimalla				8. Added retention and submissions
 -- 12/13/23		Architha Gudimalla				9. Changed grain of broker summary
 -- 01/05/24		Architha Gudimalla				10. Corrected prior year gross new prm
--- ================================================================================================= 
+-- 01/06/24		Architha Gudimalla				11. Updated to use tclaim summary instead of feature summary 
+-- 01/06/24		Architha Gudimalla				12. Corrected date filter for gross net prm
+-- 01/06/24		Architha Gudimalla				13. Corrected date filter for current month mtd new prm
+-- ===================================================================================================================================== 
 
 CREATE or ALTER   PROCEDURE [edw_core].[sp_tbroker_summary] 
 @in_end_dt date = null
@@ -52,6 +55,7 @@ BEGIN
 		DECLARE @prior_year_month_begin_dt_sk INT  
 		DECLARE @month_begin_dt_sk INT  
 		DECLARE @prior_year_month_end_dt_sk INT 
+		DECLARE @month_end_dt DATETIME 
 		DECLARE @month_end_dt_sk INT  
 		DECLARE @prior_quarter_begin_dt DATETIME 
 		DECLARE @quarter_begin_dt DATETIME 
@@ -94,7 +98,9 @@ BEGIN
 				SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
 				select 	@month_begin_dt_sk = min(datE_sk),
+						@end_dt_sk = max(datE_sk),  
 						@month_end_dt_sk = max(datE_sk),  
+						@month_end_dt = max(actual_dt), 
 						@end_dt = max(actual_dt),
 						@month_begin_dt = min(actual_dt),
 						@year = max(calendar_year),
@@ -109,6 +115,21 @@ BEGIN
 				from edw_core.tdate
 				where actual_Dt = dateadd(year,-1,@end_dt);
 
+				--need to do this because tdate only has data from 2017
+				if @prior_year_month_end_dt_sk is null 
+				begin
+					set @prior_year_month_end_dt_sk = 0
+					set @prior_year_month_end_dt = dateadd(year,-1,@end_dt)
+					set	@prior_year = datepart(yyyy,@prior_year_month_end_dt)
+					set	@prior_quarter = cast(@prior_year as char) + right(@quarter,2)
+				end;
+
+				if @prior_year%4 = 0 and datepart(mm,@prior_year_month_end_dt) = 2
+				begin
+					set @prior_year_month_end_dt_sk = @prior_year_month_end_dt_sk + 1
+					set @prior_year_month_end_dt = dateadd(dd,+1,@prior_year_month_end_dt)
+				end
+
 				select 	@quarter_begin_dt_sk = min(datE_sk), 
 						@quarter_begin_dt = min(actual_dt) 
 				from edw_core.tdate
@@ -119,10 +140,24 @@ BEGIN
 				from edw_core.tdate
 				where year_quarter = @prior_quarter;
 
+				--need to do this because tdate only has data from 2017
+				if @prior_quarter_begin_dt_sk is null 
+				begin
+					set @prior_quarter_begin_dt_sk = 0
+					set @prior_quarter_begin_dt = dateadd(year,-1,@quarter_begin_dt)
+				end;
+
 				select 	@prior_year_month_begin_dt_sk = date_sk ,
 						@prior_year_month_begin_dt = actual_dt
 				from edw_core.tdate
 				where actual_Dt = dateadd(year,-1,@month_begin_dt);
+
+				--need to do this because tdate only has data from 2017
+				if @prior_year_month_begin_dt_sk is null 
+				begin
+					set @prior_year_month_begin_dt_sk = 0
+					set @prior_year_month_begin_dt = dateadd(year,-1,@month_begin_dt)
+				end;
 
 				select 	@prior_year_begin_dt_sk = min(date_sk) , 
 						@prior_year_begin_dt = min(actual_dt) 
@@ -134,9 +169,22 @@ BEGIN
 				from edw_core.tdate
 				where yearmonth =  cast(cast(@year as varchar) + '01' as int); 
 
+				--need to do this because tdate only has data from 2017
+				if @prior_year_begin_dt_sk is null 
+				begin
+					set @prior_year_begin_dt_sk = 0
+					set @prior_year_begin_dt = dateadd(year,-1,@year_begin_dt)
+				end;
+
 				select 	@prior_year_three_month_end_dt_sk = date_sk 
 				from edw_core.tdate
 				where actual_Dt = dateadd(year,-3,@end_dt);
+
+				--need to do this because tdate only has data from 2017
+				if @prior_year_three_month_end_dt_sk is null 
+				begin
+					set @prior_year_three_month_end_dt_sk = 0 
+				end;
 				
 				 IF @yearmonth = concat(datepart(yyyy,getdate()),iif(datepart(mm,getdate()) < 10,'0','') ,datepart(mm,getdate()) )
 				BEGIN  
@@ -229,7 +277,15 @@ BEGIN
 				into edw_temp.tbroker_summ_retention
 				from ren
 				group by broker_sk,product_sk, customer_sk, uwco, state_sk;
-				
+
+				/*
+				print '@prior_year_month_begin_dt_sk - ' + cast ( @prior_year_month_begin_dt_sk as char)
+				print '@prior_year_month_end_dt_sk - ' + cast ( @prior_year_month_end_dt_sk as char)
+				print '@month_begin_dt_sk - ' + cast ( @month_begin_dt_sk as char)
+				print '@month_end_dt_sk - '+ cast (  @month_end_dt_sk as char)
+				print '@@prior_year_three_month_end_dt_sk - '+ cast (  @prior_year_three_month_end_dt_sk as char) 
+				*/
+
 				--inforce and ytd prm data
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_pols;
 				SELECT summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
@@ -271,11 +327,11 @@ BEGIN
 							--
 							--
 							sum(           case when pol.policy_term = 'New' and td.actual_dt between 	  @prior_year_begin_dt and @prior_year_month_end_dt then summ.mtd_net_premium_amt else 0 end) prior_ytd_new_business_net_premium_amt ,   
-							sum(           case when pol.policy_term = 'New' and td.actual_dt between 	  		@year_begin_dt and 			   	 	@end_dt then summ.mtd_net_premium_amt else 0 end) 	     ytd_new_business_net_premium_amt ,   
+							sum(           case when pol.policy_term = 'New' and td.actual_dt between 	  		@year_begin_dt and 			   	 	@month_end_dt then summ.mtd_net_premium_amt else 0 end) 	     ytd_new_business_net_premium_amt ,   
 							sum(           case when pol.policy_term = 'New' and td.actual_dt between    @prior_quarter_begin_dt and @prior_year_month_end_dt then summ.mtd_net_premium_amt else 0 end) prior_qtd_new_business_net_premium_amt ,   
-							sum(           case when pol.policy_term = 'New' and td.actual_dt between 	  	 @quarter_begin_dt and 				 	@end_dt then summ.mtd_net_premium_amt else 0 end) 	     qtd_new_business_net_premium_amt ,   
+							sum(           case when pol.policy_term = 'New' and td.actual_dt between 	  	 @quarter_begin_dt and 				 	@month_end_dt then summ.mtd_net_premium_amt else 0 end) 	     qtd_new_business_net_premium_amt ,   
 							sum(           case when pol.policy_term = 'New' and td.actual_dt between @prior_year_month_begin_dt and @prior_year_month_end_dt then summ.mtd_net_premium_amt else 0 end) prior_mtd_new_business_net_premium_amt ,   
-							sum(           case when pol.policy_term = 'New' and td.actual_dt between 	  	   @month_begin_dt and 				 	@end_dt then summ.mtd_net_premium_amt else 0 end) 	     mtd_new_business_net_premium_amt ,  
+							sum(           case when pol.policy_term = 'New' and td.actual_dt between 	  	   @month_begin_dt and 				 	@month_end_dt then summ.mtd_net_premium_amt else 0 end) 	     mtd_new_business_net_premium_amt ,  
 							--
 							--sum(           case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 then ph.net_premium_amt else 0 end) prior_mtd_gross_new_business_net_premium_amt,   
 							--sum(           case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	   @month_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 then ph.net_premium_amt else 0 end) 	  mtd_gross_new_business_net_premium_amt,   
@@ -302,7 +358,7 @@ BEGIN
 					 and 	ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
 					 group by summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
-				
+				 
 				--inforce and ytd prm data
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_pols1;
 				SELECT ph.broker_sk, ph.product_sk, ph.customer_sk, st.state_sk,
@@ -320,7 +376,7 @@ BEGIN
 							group by policy_sk ) min_ph on ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
 				inner join edw_core.tstate st on pol.risk_state_cd = st.state_cd
 				left join edw_core.tdaily_inforce_policy prior_inf on pol.policy_sk = prior_inf.policy_sk and prior_inf.inforce_dt_sk = @prior_year_month_end_dt_sk 
-				left join edw_core.tdaily_inforce_policy curr_inf  on pol.policy_sk =  curr_inf.policy_sk and  curr_inf.inforce_dt_sk = 		   @month_end_dt_sk 
+				left join edw_core.tdaily_inforce_policy curr_inf  on pol.policy_sk =  curr_inf.policy_sk and  curr_inf.inforce_dt_sk = 		   @end_dt_sk 
 				group by ph.broker_sk, ph.product_sk, ph.customer_sk, st.state_sk,
 						replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				
@@ -328,42 +384,42 @@ BEGIN
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_claims;
 				select  cs.broker_sk, cs.product_sk, cs.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco, 
-							sum(case when datediff(d,c.loss_dt,@end_dt) between 0 and 365 then 1 else 0 end) one_year_claim_ct, 
-							sum(case when datediff(d,c.loss_dt,@end_dt) between 0 and 365 then [itd_total_incurred_amt] else 0 end) one_year_loss_incurred_amt, 
-							sum(case when datediff(d,c.loss_dt,@end_dt) between 0 and 365 
+							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt then 1 else 0 end) one_year_claim_ct, 
+							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt then [itd_total_incurred_amt] else 0 end) one_year_loss_incurred_amt, 
+							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt 
 									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
 									 else 0 end
 							) one_year_loss_incurred_capped_amt, 
-							sum(case when datediff(d,c.loss_dt,@end_dt) between 0 and 365 and c.catastrophe_sk is not null then 1 else 0 end) one_year_non_cat_claim_ct, 
-							sum(case when datediff(d,c.loss_dt,@end_dt) between 0 and 365 and c.catastrophe_sk is not null 
+							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt and c.catastrophe_sk is not null then 1 else 0 end) one_year_non_cat_claim_ct, 
+							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt and c.catastrophe_sk is not null 
 									 then [itd_total_incurred_amt] 
 									 else 0 
 							end) one_year_non_cat_loss_incurred_amt, 
-							sum(case when datediff(d,c.loss_dt,@end_dt) between 0 and 365 and c.catastrophe_sk is not null
+							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt and c.catastrophe_sk is not null
 									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
 									 else 0 end
 							) one_year_non_cat_loss_incurred_capped_amt, 
-							sum(case when datediff(d,c.loss_dt,@end_dt) between 0 and 1095 then 1 else 0 end) three_year_claim_ct, 
-							sum(case when datediff(d,c.loss_dt,@end_dt) between 0 and 1095 then [itd_total_incurred_amt] else 0 end) three_year_loss_incurred_amt, 
-							sum(case when datediff(d,c.loss_dt,@end_dt) between 0 and 1095 
+							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt then 1 else 0 end) three_year_claim_ct, 
+							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt then [itd_total_incurred_amt] else 0 end) three_year_loss_incurred_amt, 
+							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt 
 									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
 									 else 0 end
 							) three_year_loss_incurred_capped_amt, 
-							sum(case when datediff(d,c.loss_dt,@end_dt) between 0 and 1095 and c.catastrophe_sk is not null then 1 else 0 end) three_year_non_cat_claim_ct, 
-							sum(case when datediff(d,c.loss_dt,@end_dt) between 0 and 1095 and c.catastrophe_sk is not null 
+							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt and c.catastrophe_sk is not null then 1 else 0 end) three_year_non_cat_claim_ct, 
+							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt and c.catastrophe_sk is not null 
 									 then [itd_total_incurred_amt] 
 									 else 0 
 							end) three_year_non_cat_loss_incurred_amt , 
-							sum(case when datediff(d,c.loss_dt,@end_dt) between 0 and 1095 and c.catastrophe_sk is not null
+							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt and c.catastrophe_sk is not null
 									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
 									 else 0 end
 							) three_year_non_cat_loss_incurred_capped_amt
 					into edw_temp.tbroker_summ_claims
-					from edw_core.tclaim_feature_summary cs, edw_core.tclaim c,  edw_core.tpolicy pol, edw_core.tstate st 
+					from edw_core.tclaim_summary cs, edw_core.tclaim c,  edw_core.tpolicy pol, edw_core.tstate st 
 					where	cs.claim_sk  = c.claim_sk
 					and 	cs.policy_sk = pol.policy_sk 
 					 and 	pol.risk_state_cd = st.state_cd
-					and 	month_sk in (@month_end_dt_sk,@end_dt_sk)
+					and 	month_sk in (@month_end_dt_sk)
 					group by cs.broker_sk, cs.product_sk, cs.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				
