@@ -22,6 +22,7 @@ GO
 -- 01/06/24		Architha Gudimalla				11. Updated to use tclaim summary instead of feature summary 
 -- 01/06/24		Architha Gudimalla				12. Corrected date filter for gross net prm
 -- 01/06/24		Architha Gudimalla				13. Corrected date filter for current month mtd new prm
+-- 01/09/24		Architha Gudimalla				14. Corrected non cat claim filter
 -- ===================================================================================================================================== 
 
 CREATE or ALTER   PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -124,6 +125,7 @@ BEGIN
 					set	@prior_quarter = cast(@prior_year as char) + right(@quarter,2)
 				end;
 
+				--if prior year is a leap year, add one day to month end data to change it to 2/29 instead of 2/28
 				if @prior_year%4 = 0 and datepart(mm,@prior_year_month_end_dt) = 2
 				begin
 					set @prior_year_month_end_dt_sk = @prior_year_month_end_dt_sk + 1
@@ -390,12 +392,12 @@ BEGIN
 									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
 									 else 0 end
 							) one_year_loss_incurred_capped_amt, 
-							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt and c.catastrophe_sk is not null then 1 else 0 end) one_year_non_cat_claim_ct, 
-							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt and c.catastrophe_sk is not null 
+							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt and c.catastrophe_sk is null then 1 else 0 end) one_year_non_cat_claim_ct, 
+							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt and c.catastrophe_sk is null 
 									 then [itd_total_incurred_amt] 
 									 else 0 
 							end) one_year_non_cat_loss_incurred_amt, 
-							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt and c.catastrophe_sk is not null
+							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt and c.catastrophe_sk is null
 									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
 									 else 0 end
 							) one_year_non_cat_loss_incurred_capped_amt, 
@@ -405,12 +407,12 @@ BEGIN
 									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
 									 else 0 end
 							) three_year_loss_incurred_capped_amt, 
-							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt and c.catastrophe_sk is not null then 1 else 0 end) three_year_non_cat_claim_ct, 
-							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt and c.catastrophe_sk is not null 
+							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt and c.catastrophe_sk is null then 1 else 0 end) three_year_non_cat_claim_ct, 
+							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt and c.catastrophe_sk is null 
 									 then [itd_total_incurred_amt] 
 									 else 0 
 							end) three_year_non_cat_loss_incurred_amt , 
-							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt and c.catastrophe_sk is not null
+							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt and c.catastrophe_sk is null
 									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
 									 else 0 end
 							) three_year_non_cat_loss_incurred_capped_amt
