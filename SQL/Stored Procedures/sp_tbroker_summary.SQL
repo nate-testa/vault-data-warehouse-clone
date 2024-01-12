@@ -1,3 +1,4 @@
+/****** Object:  StoredProcedure [edw_core].[sp_tbroker_summary]    Script Date: 1/10/2024 3:09:53 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -23,9 +24,11 @@ GO
 -- 01/06/24		Architha Gudimalla				12. Corrected date filter for gross net prm
 -- 01/06/24		Architha Gudimalla				13. Corrected date filter for current month mtd new prm
 -- 01/09/24		Architha Gudimalla				14. Corrected non cat claim filter
+-- 01/10/24		Architha Gudimalla				15. Used cast as date for quote dates to remove timestamp
+-- 01/11/24		Architha Gudimalla				16. Added one and three year written prms
 -- ===================================================================================================================================== 
 
-CREATE or ALTER   PROCEDURE [edw_core].[sp_tbroker_summary] 
+CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
 @in_end_dt date = null
 AS 
 BEGIN
@@ -62,9 +65,11 @@ BEGIN
 		DECLARE @quarter_begin_dt DATETIME 
 		DECLARE @prior_year_month_begin_dt DATETIME 
 		DECLARE @month_begin_dt DATETIME 
+		DECLARE @prior_year_three_month_end_dt DATETIME 
 		DECLARE @prior_year_month_end_dt DATETIME 
 		DECLARE @end_dt DATETIME  
 		DECLARE @end_dt_sk INT  
+		DECLARE @prior_three_year INT 
 		DECLARE @prior_year INT 
 		DECLARE @year INT 
 		DECLARE @yearmonth INT  
@@ -178,15 +183,26 @@ BEGIN
 					set @prior_year_begin_dt = dateadd(year,-1,@year_begin_dt)
 				end;
 
-				select 	@prior_year_three_month_end_dt_sk = date_sk 
+				select 	@prior_year_three_month_end_dt_sk = date_sk ,
+						@prior_year_three_month_end_dt = actual_dt,
+						@prior_three_year = calendar_year
 				from edw_core.tdate
 				where actual_Dt = dateadd(year,-3,@end_dt);
 
 				--need to do this because tdate only has data from 2017
 				if @prior_year_three_month_end_dt_sk is null 
 				begin
-					set @prior_year_three_month_end_dt_sk = 0 
+					set @prior_year_three_month_end_dt_sk = 0
+					set @prior_year_three_month_end_dt = dateadd(year,-3,@end_dt)
+					set	@prior_three_year = datepart(yyyy,@prior_year_three_month_end_dt) 
 				end;
+
+				--if prior year is a leap year, add one day to month end data to change it to 2/29 instead of 2/28
+				if @prior_three_year%4 = 0 and datepart(mm,@prior_year_three_month_end_dt) = 2
+				begin
+					set @prior_year_three_month_end_dt_sk = @prior_year_three_month_end_dt_sk + 1
+					set @prior_year_three_month_end_dt = dateadd(dd,+1,@prior_year_three_month_end_dt)
+				end
 				
 				 IF @yearmonth = concat(datepart(yyyy,getdate()),iif(datepart(mm,getdate()) < 10,'0','') ,datepart(mm,getdate()) )
 				BEGIN  
@@ -205,28 +221,28 @@ BEGIN
 					select br.broker_sk, p.product_sk, cust.customer_sk, st.state_sk,
 							replace(replace(isnull(q.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco,
 							-- 
-							count(distinct case when q.quote_create_ts between 		 @prior_year_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_ytd_submission_ct, 
-							count(distinct case when q.quote_create_ts between 		 	   @year_begin_dt and 				   @end_dt then q.quote_sk end) 	  ytd_submission_ct, 
-							count(distinct case when q.quote_create_ts between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_qtd_submission_ct, 
-							count(distinct case when q.quote_create_ts between 		 	@quarter_begin_dt and 				   @end_dt then q.quote_sk end) 	  qtd_submission_ct, 
-							count(distinct case when q.quote_create_ts between @prior_year_month_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_mtd_submission_ct, 
-							count(distinct case when q.quote_create_ts between 		 	  @month_begin_dt and 				   @end_dt then q.quote_sk end) 	  mtd_submission_ct, 
+							count(distinct case when CAST(q.quote_create_ts AS DATE) between 		 @prior_year_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_ytd_submission_ct, 
+							count(distinct case when CAST(q.quote_create_ts AS DATE) between 		 	   @year_begin_dt and 				   @end_dt then q.quote_sk end) 	  ytd_submission_ct, 
+							count(distinct case when CAST(q.quote_create_ts AS DATE) between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_qtd_submission_ct, 
+							count(distinct case when CAST(q.quote_create_ts AS DATE) between 		 	@quarter_begin_dt and 				   @end_dt then q.quote_sk end) 	  qtd_submission_ct, 
+							count(distinct case when CAST(q.quote_create_ts AS DATE) between @prior_year_month_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_mtd_submission_ct, 
+							count(distinct case when CAST(q.quote_create_ts AS DATE) between 		 	  @month_begin_dt and 				   @end_dt then q.quote_sk end) 	  mtd_submission_ct, 
 							--
-							count(distinct case when q.first_offered_quote_ts between 		@prior_year_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_ytd_quote_ct, 
-							count(distinct case when q.first_offered_quote_ts between 			  @year_begin_dt and 				  @end_dt then q.quote_sk end) 		 ytd_quote_ct, 
-							count(distinct case when q.first_offered_quote_ts between 	 @prior_quarter_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_qtd_quote_ct, 
-							count(distinct case when q.first_offered_quote_ts between 		   @quarter_begin_dt and 				  @end_dt then q.quote_sk end) 		 qtd_quote_ct,
-							count(distinct case when q.first_offered_quote_ts between @prior_year_month_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_mtd_quote_ct, 
-							count(distinct case when q.first_offered_quote_ts between 			 @month_begin_dt and 				  @end_dt then q.quote_sk end) 		 mtd_quote_ct, 
+							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 		@prior_year_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_ytd_quote_ct, 
+							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 			  @year_begin_dt and 				  @end_dt then q.quote_sk end) 		 ytd_quote_ct, 
+							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 	 @prior_quarter_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_qtd_quote_ct, 
+							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 		   @quarter_begin_dt and 				  @end_dt then q.quote_sk end) 		 qtd_quote_ct,
+							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between @prior_year_month_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_mtd_quote_ct, 
+							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 			 @month_begin_dt and 				  @end_dt then q.quote_sk end) 		 mtd_quote_ct, 
 							--
-							sum(case when q.first_offered_quote_ts between 		 @prior_year_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_ytd_quote_net_premium_amt, 
-							sum(case when q.first_offered_quote_ts between 		 	   @year_begin_dt and 				   @end_dt 	then qh.net_premium_amt end) 		ytd_quote_net_premium_amt, 
-							sum(case when q.first_offered_quote_ts between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_qtd_quote_net_premium_amt, 
-							sum(case when q.first_offered_quote_ts between 		 	@quarter_begin_dt and 				   @end_dt 	then qh.net_premium_amt end) 		qtd_quote_net_premium_amt, 
-							sum(case when q.first_offered_quote_ts between @prior_year_month_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_mtd_quote_net_premium_amt, 
-							sum(case when q.first_offered_quote_ts between 			  @month_begin_dt and 				   @end_dt 	then qh.net_premium_amt end)		mtd_quote_net_premium_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 		 @prior_year_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_ytd_quote_net_premium_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 		 	   @year_begin_dt and 				   @end_dt 	then qh.net_premium_amt end) 		ytd_quote_net_premium_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_qtd_quote_net_premium_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 		 	@quarter_begin_dt and 				   @end_dt 	then qh.net_premium_amt end) 		qtd_quote_net_premium_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between @prior_year_month_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_mtd_quote_net_premium_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 			  @month_begin_dt and 				   @end_dt 	then qh.net_premium_amt end)		mtd_quote_net_premium_amt, 
 							--
-							max(q.first_offered_quote_ts) max_quoted_dt, 
+							max(CAST(q.first_offered_quote_ts AS DATE)) max_quoted_dt, 
 							max(q.bind_dt) max_bind_dt
 					from edw_core.tquote q 
 					inner join edw_core.tcustomer cust on cust.customer_id = q.customer_id
@@ -235,8 +251,8 @@ BEGIN
 					inner join edw_core.tbroker br on q.broker_id = br.broker_id
 					inner join edw_core.tstate st on q.risk_state_cd = st.state_cd
 					where  q.quote_term = 'New'
-					and (		  q.quote_create_ts between @prior_year_begin_dt and @end_dt 
-							or q.first_offered_quote_ts between @prior_year_begin_dt and @end_dt 
+					and (		  CAST(q.quote_create_ts AS DATE) between @prior_year_begin_dt and @end_dt 
+							or CAST(q.first_offered_quote_ts AS DATE) between @prior_year_begin_dt and @end_dt 
 							or 				  q.bind_dt between @prior_year_begin_dt and @end_dt) 
 					group by br.broker_sk, p.product_sk, cust.customer_sk, st.state_sk,
 							replace(replace(isnull(q.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
@@ -339,12 +355,15 @@ BEGIN
 							--sum(           case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	   @month_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 then ph.net_premium_amt else 0 end) 	  mtd_gross_new_business_net_premium_amt,   
 							--
 							sum(case when summ.month_sk between @prior_year_month_begin_dt_sk and @prior_year_month_end_dt_sk then summ.mtd_premium_amt else 0 end) prior_mtd_written_premium_amt,   
-							sum(case when summ.month_sk between 	  	   @month_begin_dt_sk and 	  		 @month_end_dt_sk then summ.mtd_premium_amt else 0 end) 	  mtd_written_premium_amt,   
+							sum(case when summ.month_sk between 	  	   @month_begin_dt_sk and 	  		 @month_end_dt_sk then summ.mtd_premium_amt else 0 end) 	  mtd_written_premium_amt,     
 							--
-							sum(case when  summ.month_sk >= @prior_year_month_end_dt_sk 		then summ.earned_net_premium_amt else 0 end) one_year_earned_net_premium_amt,
-							sum(case when  summ.month_sk >= @prior_year_three_month_end_dt_sk 	then summ.earned_net_premium_amt else 0 end) three_year_earned_net_premium_amt, 
-							sum(case when  summ.month_sk >= @prior_year_month_end_dt_sk 		then summ.earned_exposure else 0 end) one_year_earned_exposure,
-							sum(case when  summ.month_sk >= @prior_year_three_month_end_dt_sk 	then summ.earned_exposure else 0 end) three_year_earned_exposure
+							sum(case when summ.month_sk > @prior_year_month_end_dt_sk 		then summ.mtd_premium_amt else 0 end) one_year_written_premium_amt,   
+							sum(case when summ.month_sk > @prior_year_three_month_end_dt_sk then summ.mtd_premium_amt else 0 end) three_year_written_premium_amt,   
+							--
+							sum(case when  summ.month_sk >       @prior_year_month_end_dt_sk then summ.earned_net_premium_amt else 0 end)   one_year_earned_net_premium_amt,
+							sum(case when  summ.month_sk > @prior_year_three_month_end_dt_sk then summ.earned_net_premium_amt else 0 end) three_year_earned_net_premium_amt, 
+							sum(case when  summ.month_sk >       @prior_year_month_end_dt_sk then summ.earned_exposure 		  else 0 end)   one_year_earned_exposure,
+							sum(case when  summ.month_sk > @prior_year_three_month_end_dt_sk then summ.earned_exposure 		  else 0 end) three_year_earned_exposure
 							--
 				 into edw_temp.tbroker_summ_pols
 				 FROM	edw_core.tpolicy_summary summ, edw_core.tpolicy pol, edw_core.tstate st,  edw_core.tdate td,
@@ -502,6 +521,9 @@ BEGIN
 						sum(isnull(ps.prior_mtd_written_premium_amt,0)) prior_mtd_written_premium_amt, 
 						sum(isnull(ps.mtd_written_premium_amt,0)) mtd_written_premium_amt,  
 						--
+						sum(isnull(ps.one_year_written_premium_amt,0)) one_year_written_premium_amt, 
+						sum(isnull(ps.three_year_written_premium_amt,0)) three_year_written_premium_amt,   
+						--
 						sum(isnull(ps.prior_inforce_ct,0)) prior_inforce_ct, 
 						sum(isnull(ps.prior_inforce_net_premium_amt,0)) prior_inforce_net_premium_amt,
 						sum(isnull(ps.inforce_ct,0)) inforce_ct, 
@@ -599,7 +621,10 @@ BEGIN
 						mtd_gross_new_business_net_premium_amt, 
 						--
 						prior_mtd_written_premium_amt, 
-						mtd_written_premium_amt,   
+						mtd_written_premium_amt,  
+						--
+						one_year_written_premium_amt,
+						three_year_written_premium_amt,  
 						--
 						prior_inforce_ct, 
 						prior_inforce_net_premium_amt,
@@ -688,6 +713,9 @@ BEGIN
 						--
 						sum(summ.prior_mtd_written_premium_amt) prior_mtd_written_premium_amt, 
 						sum(summ.mtd_written_premium_amt) mtd_written_premium_amt,  
+						--
+						sum(summ.one_year_written_premium_amt) one_year_written_premium_amt, 
+						sum(summ.three_year_written_premium_amt) three_year_written_premium_amt,   
 						--
 						sum(summ.prior_inforce_ct), sum(summ.prior_inforce_net_premium_amt),  
 						sum(summ.inforce_ct), sum(summ.inforce_net_premium_amt),   
