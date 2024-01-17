@@ -1,4 +1,4 @@
-DROP table  edw_core.ttask;
+DROP table if exists edw_core.ttask;
 
 CREATE TABLE edw_core.ttask (
     task_sk int IDENTITY(1,1) NOT NULL,

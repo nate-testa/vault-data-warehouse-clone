@@ -49,10 +49,10 @@ BEGIN
             ,cu.[name] CreatedBy
             ,au.[name] AssignedTo
             ,fu.[name] Completedby
-            ,null as task_status
+            ,wt.WorkTaskState as task_status
             ,wt.Priority
             ,wt.IsClosed
-            ,null as due_days
+            ,wfs.DueDays due_days
             ,wt.CreatedDate
             ,wt.DueDate
             ,wt.FinishedDate as CompletedDate
