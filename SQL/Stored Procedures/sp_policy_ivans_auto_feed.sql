@@ -38,7 +38,19 @@ BEGIN
             policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
             MAX(create_ts) as create_ts, 
             SUM(premium_amt) as premium_amt,
-            SUM(annual_premium_amt) as annual_premium_amt
+            --SUM(annual_premium_amt) as annual_premium_amt
+            CASE WHEN pt.policy_transaction_type_sk = 5
+				THEN
+        			(SELECT SUM(subpt.premium_amt)
+        			    FROM edw_core.tpolicy_transaction subpt
+        			    WHERE subpt.policy_sk = pt.policy_sk
+        			    AND subpt.transaction_seq_no <= pt.transaction_seq_no)
+    			ELSE
+    			    (SELECT SUM(subpt.annual_premium_amt)
+    			        FROM edw_core.tpolicy_transaction subpt
+    			        WHERE subpt.policy_sk = pt.policy_sk
+    			        AND subpt.transaction_seq_no <= pt.transaction_seq_no)
+    		END AS annual_premium_amt
         INTO [edw_temp].[policy_ivans_auto_feed_temp2]
         FROM edw_core.tpolicy_transaction as pt
         INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
@@ -345,7 +357,7 @@ BEGIN
             '' as [ProducerSubCode_011],
             c.customer_id as [InsurerId_012],
             c.last_nm as [Surname_013],
-            c.first_nm as [GivenName_014],
+            COALESCE(c.first_nm, c.customer_nm) as [GivenName_014],
             c.middle_nm as [OtherGivenName_015],
             pi.prefix as [TitlePrefix_016],
             CASE 
