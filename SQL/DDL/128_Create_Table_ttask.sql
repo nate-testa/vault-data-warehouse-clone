@@ -2,8 +2,8 @@ DROP table if exists edw_core.ttask;
 
 CREATE TABLE edw_core.ttask (
     task_sk int IDENTITY(1,1) NOT NULL,
-    policy_no varchar(255)not NULL,
-    effective_dt date not NULL,
+    policy_no varchar(255) NULL,
+    effective_dt date  NULL,
     transaction_effective_dt date NULL,
     transaction_seq_no int NULL, -- number from account transaction table
     task_nm varchar(255) NULL,
@@ -19,6 +19,7 @@ CREATE TABLE edw_core.ttask (
     created_dt datetime2 NULL,    
     due_dt datetime2 NULL,    
     completed_dt    datetime2 NULL,
+    task_completion_time_in_minutes int,
     updated_dt datetime2 NULL,
     source_system_sk int NULL,
     create_ts datetime NULL,

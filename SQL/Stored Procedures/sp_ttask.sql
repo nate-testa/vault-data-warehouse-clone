@@ -56,10 +56,11 @@ BEGIN
             ,wt.CreatedDate
             ,wt.DueDate
             ,wt.FinishedDate as CompletedDate
+            ,DATEDIFF(mi, wt.CreatedDate, wt.FinishedDate) task_completion_time_in_minutes
             ,wt.UpdatedDate
             ,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
-				 end as [source_system_sk] --20230717 added
+				 end as [source_system_sk] 
             ,getdate() create_ts
             ,getdate() update_ts
             ,@etl_audit_sk as etl_audit_sk
@@ -74,7 +75,7 @@ BEGIN
         left join edw_stage.Workflow wf on wt.WorkflowId = wf.id
         left join edw_stage.WorkflowStep wfs on wt.WorkflowStepId = wfs.id        
 		WHERE GREATEST(acc.CreatedDate,acc.UpdatedDate)>@last_source_extract_ts
-		and acc.policynumber is not null
+		--and acc.policynumber is not null
 
         INSERT INTO [edw_core].[ttask](
             	[policy_no]
@@ -94,13 +95,17 @@ BEGIN
 	            ,[created_dt]
 	            ,[due_dt]
 	            ,[completed_dt]
+            	,task_completion_time_in_minutes 
 	            ,[updated_dt]
 	            ,[source_system_sk]
 	            ,[create_ts]
 	            ,[update_ts]
 	            ,[etl_audit_sk]
         )
-        SELECT *
+        SELECT 	PolicyNumber, EffectiveDate, TransactionEffectiveDate, number, 
+				TaskName, [WorkFlow], [Step], CreatedBy, AssignedTo, Completedby, task_status, 
+				Priority, IsClosed, due_days, CreatedDate, DueDate, CompletedDate, task_completion_time_in_minutes, UpdatedDate, 
+				[source_system_sk], create_ts, update_ts, etl_audit_sk
         FROM edw_temp.[ttask_temp1] 
 
 		SET @rows_affected=@@ROWCOUNT;
