@@ -1,8 +1,15 @@
-﻿-- =============================================
--- Author:		Hernando Gonzalez Garcia
--- Create Date: <Create Date, , >
+﻿SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- ========================================================================================================================================
 -- Description: This procedures insert and update info related to Quote Manuscript
--- =============================================
+---------------------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------------------------------------------
+-- 06/20/23		Hernando Gonzalez Garcia		1. Created this procedure 
+-- 01/17/24		Architha Gudimalla				2. Modified for errors after first run  
+-- ======================================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_manuscript]
 AS
 BEGIN
