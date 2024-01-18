@@ -41,8 +41,7 @@ BEGIN
             acc.PolicyNumber
             ,acc.EffectiveDate
             ,acctr.TransactionEffectiveDate
-            ,acctr.number
-            --,acctr.PolicyChangeNumber
+            ,acctr.number  transaction_seq_no
             ,wt.TaskName
             ,wf.name as [WorkFlow]
             ,wfs.name as [Step]
@@ -51,13 +50,16 @@ BEGIN
             ,fu.[name] Completedby
             ,wt.WorkTaskState as task_status
             ,wt.Priority
-            ,wt.IsClosed
-            ,wfs.DueDays due_days
             ,wt.CreatedDate
             ,wt.DueDate
             ,wt.FinishedDate as CompletedDate
+            ,DATEDIFF(day, wt.CreatedDate, wt.FinishedDate) task_completion_time_in_days
             ,DATEDIFF(mi, wt.CreatedDate, wt.FinishedDate) task_completion_time_in_minutes
             ,wt.UpdatedDate
+            ,case when wt.IsClosed = 1 then 'Yes' else 'No' end IsClosed
+            ,wfs.DueDays due_days
+			,wt.SuspenseUntilDate
+			,wt.AbandonedReason
             ,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
 				 end as [source_system_sk] 
@@ -65,8 +67,8 @@ BEGIN
             ,getdate() update_ts
             ,@etl_audit_sk as etl_audit_sk
         INTO edw_temp.[ttask_temp1] 
-        from edw_stage.account acc
-        inner join edw_stage.[WorkTask] wt on acc.id = wt.accountid
+        from edw_stage.[WorkTask] wt
+        left join edw_stage.account acc on acc.id = wt.accountid
         left join edw_stage.AccountTransaction acctr on wt.accounttransactionid = acctr.Id
         left join edw_stage.[User] au on wt.AssignedUserId = au.Id
         left join edw_stage.[User] cu on wt.CreatedById = cu.Id
@@ -74,37 +76,43 @@ BEGIN
         left join edw_stage.[User] u on wt.AssignedUserId = u.Id
         left join edw_stage.Workflow wf on wt.WorkflowId = wf.id
         left join edw_stage.WorkflowStep wfs on wt.WorkflowStepId = wfs.id        
-		WHERE GREATEST(acc.CreatedDate,acc.UpdatedDate)>@last_source_extract_ts
-		--and acc.policynumber is not null
+		WHERE GREATEST(wt.CreatedDate,wt.UpdatedDate)>@last_source_extract_ts
+		and acc.policynumber is not null
 
         INSERT INTO [edw_core].[ttask](
-            	[policy_no]
-	            ,[effective_dt]
-	            ,[transaction_effective_dt]
-	            ,[transaction_seq_no]
-	            ,[task_nm]
-	            ,[workflow_nm]
-	            ,[workflow_step_nm]
-	            ,[created_by_nm]
-	            ,[assigned_to_nm]
-	            ,[completed_by_nm]
-	            ,[task_status]
-	            ,[priority]
-	            ,[is_closed_in]
-	            ,[due_days]
-	            ,[created_dt]
-	            ,[due_dt]
-	            ,[completed_dt]
-            	,task_completion_time_in_minutes 
-	            ,[updated_dt]
-	            ,[source_system_sk]
-	            ,[create_ts]
-	            ,[update_ts]
-	            ,[etl_audit_sk]
+            	policy_no,
+				effective_dt,
+				transaction_effective_dt,
+				transaction_seq_no,  
+				task_nm,
+				workflow_nm,
+				workflow_step_nm,
+				created_by_nm,
+				assigned_to_nm,
+				completed_by_nm,    
+				task_status,
+				task_priority,
+				task_created_dt,    
+				task_due_dt,    
+				task_completed_dt,
+				task_completion_time_in_days,
+				task_completion_time_in_minutes,
+				task_updated_dt,
+				task_closed_in,   
+				task_due_days, 
+				task_suspended_until_dt,
+				task_abandoned_reason_desc,
+				task_workflow_sk,
+				source_system_sk,
+				create_ts,
+				update_ts,
+				etl_audit_sk
         )
-        SELECT 	PolicyNumber, EffectiveDate, TransactionEffectiveDate, number, 
+        SELECT 	PolicyNumber, EffectiveDate, TransactionEffectiveDate, transaction_seq_no, 
 				TaskName, [WorkFlow], [Step], CreatedBy, AssignedTo, Completedby, task_status, 
-				Priority, IsClosed, due_days, CreatedDate, DueDate, CompletedDate, task_completion_time_in_minutes, UpdatedDate, 
+				Priority, CreatedDate, DueDate, CompletedDate, 
+				task_completion_time_in_days, task_completion_time_in_minutes, UpdatedDate,IsClosed, 
+				due_days, SuspenseUntilDate, AbandonedReason, null,
 				[source_system_sk], create_ts, update_ts, etl_audit_sk
         FROM edw_temp.[ttask_temp1] 
 
