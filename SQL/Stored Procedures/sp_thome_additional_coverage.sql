@@ -311,7 +311,8 @@ BEGIN
 		   ,HomeDayCareCoverage AS home_daycare_coverage_no_of_children
 		   ,IncreasedIncidentalBusinessProperty AS increased_incidental_business_property_in
 		   ,IncreasedIncidentalBusinessPropertyLimit AS increased_incidental_business_property_limit_amt
-		   ,LossAssessmentIncrease AS loss_assessment_increase_desc,sinkholeterritory sinkhole_territory
+		   ,LossAssessmentIncrease AS loss_assessment_increase_desc
+		   ,sinkholeterritory AS sinkhole_territory
 		   ,SpecificNamedStructuresPropertyandLiabilityExclusion AS specific_named_structures_property_and_liability_exclusion_in
 		   ,SpecificNamedStructuresPropertyandLiabilityExclusionDescription AS specific_named_structures_property_and_liability_exclusion_desc
 		   ,UndergroundResourcesExclusion AS underground_water_supplyline_exclusion_in
@@ -339,7 +340,6 @@ BEGIN
 				,transactiondate
 				,transaction_seq_no
 				,home_location_sk
-				,home_coverage_sk
 				,home_coverage_sk
 				,policy_history_sk
 				,CentralReportingFireAlarm
