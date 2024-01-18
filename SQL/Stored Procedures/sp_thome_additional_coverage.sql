@@ -7,6 +7,7 @@
 ------------------------------------------------------------------------------------------------------------------------------
 --						Yunus Mohammed				1. Created this procedure 
 -- 11/17/23				Yunus Mohammed				2. Added new columns
+-- 01/16/24				Alberto Almario				3. Added new column extended_liability_location_ct
 -- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
 
@@ -41,9 +42,9 @@ BEGIN
 			edw_stage.Product pd
 			INNER JOIN edw_stage.[ProductObject] pdo on pd.Id=pdo.ProductId
 			INNER JOIN edw_stage.[ProductObjectField] pdof on pdo.Id=pdof.ProductObjectId
-			WHERE
+			WHERE 
 			pd.[Name]='Homeowners'
-			AND pdo.ObjectType='Homeowner'
+			AND pdo.ObjectType IN ('Homeowner','ExtendedLiabilityLocation')
 		) AS temp
 
 		-- remove last comma
@@ -78,7 +79,7 @@ BEGIN
 			where
 				act.PolicyNumber is not null 
 				and act.[State] =''ISSUED''
-				and atvo.ObjectType in (''Homeowner'',''Condo'')
+				and atvo.ObjectType in (''Homeowner'',''Condo'',''ExtendedLiabilityLocation'')
 				and pr.ProductLine = ''PersonalLines''
 				and act.IssuedDate > @last_source_extract_ts
 				-- )
@@ -165,7 +166,7 @@ BEGIN
 			earthquake_score,earthquake_earthmovement_exclusion_ind,
 			leed_certification_discount_in,mortgage_free_discount_in,annual_brush_removal_contract_in,
 			firewise_community_credit_in,monitored_heat_sensors_in,builders_defect_exclusion_in,
-			gated_community_patrol_service,
+			gated_community_patrol_service, extended_liability_location_ct,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT 
@@ -323,12 +324,171 @@ BEGIN
 		   ,MonitoredHeatSensors AS monitored_heat_sensors_in
 		   ,BuildersDefectExclusion AS builders_defect_exclusion_in
 		   ,GatedCommunityPatrolService AS gated_community_patrol_service
+		   ,COUNT(AddressLine1) AS extended_liability_location_ct
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts
            ,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_additional_coverage_temp1
+			GROUP BY 
+				PolicyNumber
+				,EffectiveDate
+				,TransactionEffectiveDate
+				,ExpirationDate
+				,transactiondate
+				,transaction_seq_no
+				,home_location_sk
+				,home_coverage_sk
+				,home_coverage_sk
+				,policy_history_sk
+				,CentralReportingFireAlarm
+				,CentralReportingBurglarAlarm
+				,HourDoorman
+				,LobbySurveillanceCamera
+				,LockedOrMannedElevators
+				,SignalContinuity
+				,GuardGatedCommunity
+				,GuardCommunityPatrolService
+				,HomeSafe
+				,FulltimeLiveInCaretaker
+				,GasLeakDetector
+				,LightningProtection
+				,LowTemperatureMonitoringDevice
+				,BackupGenerator
+				,ExternalPerimeterGate
+				,ExternalPerimeterSecurity
+				,WaterLeakDetectionSystem
+				,ResidentialSprinklerSystem
+				,BusinessPropertyIncrease
+				,BusinessPropertyIncreaseLimit
+				,DeductibleWaiverLargeLosses
+				,DeductibleWaiverLargeLossesLimit
+				,EarthquakeCoverageExtension
+				,EarthquakeCoverageExtensionDeductible
+				,EarthquakeCoverageExtensionLossAssessment
+				,EarthquakeCoverageExtensionLossAssessmentLimit
+				,FungiBacteriaIncrease
+				,FungiBacteriaIncreaseLimit
+				,FungiBacteriaLiabilityExtension
+				,HomeSystemsProtection
+				,HomeSystemsProtectionLimit
+				,IncreasedIncidentalBusinessThreshold
+				,IncreasedIncidentalBusinessThresholdLimit
+				,LandscapingCoverageIncreasedLimits
+				,LandscapingCoverageIncreasedPlantLimit
+				,LandscapingCoverageIncreasedAggregateLimit
+				,LandscapingCoverageSleetAndWeightofIceAndSnowCoverage
+				,LandscapingCoverageWindAndHailCoverage
+				,LawOrdinanceCoverageIncrease
+				,LawOrdinanceCoverageIncreasedLimit
+				,LossAssessmentIncrease
+				,LossAssessmentIncreaseLimit
+				,ServiceLineProtection
+				,ThoroughbredHorseLiabilityExtension
+				,NumberOfHorses
+				,HomeCyberProtectionCoverage
+				,HomeCyberProtectionCoverageDeductible
+				,HomeCyberProtectionCoverageLimit
+				,OffPremisesOtherPermanentStructuresExtension
+				,OffPremisesOtherPermanentStructuresExtensionDescription
+				,AgreedValue
+				,BackUpOfSewersLimit
+				,ContentsExtendedReplacementCost
+				,CoverageForPiersWharvesAndDocksDueToWeightOfIceOrSnow
+				,CoverageForPiersWharvesAndDocksDueToWeightOfIceOrSnowLimit
+				,DebrisRemovalBroadanedTreeRemoval
+				,EarthquakeEndorsement
+				,EarthquakeEndorsementDeductible
+				,EscapedLiquidFuelLimitOfLiability
+				,EscapedLiquidFuelRemediationCoverage
+				,EscapedLiquidFuelRemediationLimitOfLiability
+				,EscapedLiquidFuelRemediationRiskClassNumber
+				,FortifiedRoofUpgrade
+				,HomeDayCareCoverage
+				,IdentityTheft
+				,PollutantsOrContiminationExtension
+				,PollutantsOrContiminationTankAge
+				,PollutantsOrContiminationTankConstruction
+				,PollutantsOrContiminationTankLocation
+				,PollutantsOrContiminationTankType
+				,ResidenceHeldInTrust
+				,SinkholeCollapse
+				,SinkholeCoverageExtension
+				,SupplementalLossAssessmentCoverage
+				,SupplementalLossAssessmentCoverageAdditionalLocations
+				,SupplementalLossAssessmentCoveragePremises
+				,WorkerCompensationLiability
+				,WorkerCompensationLiabilityFullTimeEmployees
+				,WorkerCompensationLiabilityOccuranceLimit
+				,WorkerCompensationLiabilityPartTimeEmployees
+				,GuaranteedReplacementCost
+				,ReplacementCostCoverage
+				,RoofCoveringFullReconstructionCostCoverage
+				,AdditionalReplacementCostCoverage
+				,AdditionalReplacementCostCoverageWithWildfire
+				,DwellingReconstructionCostCoverage
+				,ExtendedReplacementCostCoverageWithAdditionalWildfire
+				,ExtendedReplacementCostCoverageWithWildfire
+				,ExtendedReplacementCostCoverage
+				,ExtendedReplacementCostCoverageOption
+				,MineSubsidenceCoverage
+				,MineSubsidenceCoverageLimit
+				,MinimumEarnedPremiumEndorsement
+				,MinimumEarnedPremiumEndorsementLimit
+				,ContentsOffPremisesLossExclusion
+				,PremisesLiabilityLimitation
+				,IncludeManuscript
+				,AmendedSettlementBasis
+				,AdditionsAndAlterationsExtendedReplacementCost
+				,DeletionofCosmeticMarringExclusion
+				,ExcludeWind
+				,WindHailExclusion
+				,RoofExclusion
+				,WaterDamageExclusion
+				,WaterDamageLimitationEndorsement
+				,WaterDamageLimitationEndorsementLimit
+				,WaterDamageSubLimit
+				,WaterDamageSubLimitAmount
+				,UndergroundResourcesExclusion
+				,NamedStructuresExclusion
+				,NamedStructuresExclusionDescription
+				,AnimalRelatedLiabilityExclusion
+				,LibelSlanderExclusion
+				,PoliticalActivitiesExclusion
+				,EquineRelatedLiabilityExclusion
+				,CanineLiabilityExclusion
+				,NamedStructuresPropertyAndLiabilityExclusion
+				,NamedStructuresPropertyAndLiabilityExclusionDescription
+				,OtherStructuresAwayFromTheResidencePremises
+				,OtherStructuresAwayFromTheResidencePremisesDescription
+				,OtherStructuresOnTheResidencePremisesIncreasedLimit
+				,OtherStructuresOnTheResidencePremisesIncreasedLimitAmount
+				,OtherStructuresOnTheResidencePremisesIncreasedLimitDescription
+				,ExtendedLiability
+				,AnimalRelatedLiabilityExclusion
+				,AddChangeInTermsSummary
+				,ExtendedReplacementCostCoverageWithAdditionalWildfirePlusTwentyFivePercent
+				,HomeDayCareCoverageLimit
+				,HomeDayCareCoverage
+				,IncreasedIncidentalBusinessProperty
+				,IncreasedIncidentalBusinessPropertyLimit
+				,LossAssessmentIncrease
+				,sinkholeterritory
+				,SpecificNamedStructuresPropertyandLiabilityExclusion
+				,SpecificNamedStructuresPropertyandLiabilityExclusionDescription
+				,UndergroundResourcesExclusion
+				,EarthquakeScore
+				,EarthquakeandEarthMovementExclusion
+				,LEEDCertificationDiscount
+				,MortgageFreeDiscount
+				,AnnualBrushRemovalContract
+				,FirewiseCommunityCredit
+				,MonitoredHeatSensors
+				,BuildersDefectExclusion
+				,GatedCommunityPatrolService
+				,source_system_sk
+
 
 			SET @rows_affected=@@ROWCOUNT;
 
