@@ -89,8 +89,6 @@ BEGIN
 				)
 		) as pivottable;
 
-
-		
 		WITH driver_age AS
 		(
 			select
@@ -99,18 +97,17 @@ BEGIN
 				sum(case driver when 'Adult' then 1 else 0 end) as adult_drivers_ct
 			from
 			(
-			select
-			tp.policy_no,tp.effective_dt, tph.transaction_seq_no,
-			CASE
-					WHEN risk_state_cd in ( 'AZ', 'CO', 'GA', 'LA')  AND ((CONVERT(int,CONVERT(char(8),getdate(),112))-CONVERT(char(8),cast(birth_dt as date),112))/10000) < = 24 THEN 'Youthful'
-					WHEN risk_state_cd = 'MA' and (license_year - year(getdate())) < = 4 THEN 'Youthful'
-					WHEN ((CONVERT(int,CONVERT(char(8),getdate(),112))-CONVERT(char(8),cast(birth_dt as date),112))/10000) < = 25 THEN 'Youthful'
-					ELSE 'Adult'
+				SELECT
+				tp.policy_no,tp.effective_dt, tph.transaction_seq_no,
+				CASE
+				    WHEN tp.risk_state_cd in ('AZ', 'CO', 'GA', 'LA') AND DATEDIFF(year, peld.birth_dt, GETDATE()) <= 24 THEN 'Youthful'
+				    WHEN tp.risk_state_cd = 'MA' AND (YEAR(GETDATE()) - peld.license_year) <= 4 THEN 'Youthful'
+				    WHEN DATEDIFF(year, peld.birth_dt, GETDATE()) <= 25 THEN 'Youthful'
+				    ELSE 'Adult'
 				END AS driver
-			from
-			edw_core.tpolicy tp
-			inner join edw_core.tpolicy_history tph on tph.policy_sk = tp.policy_sk
-			INNER JOIN edw_core.tpel_driver peld on peld.policy_history_sk = tph.policy_history_sk 
+				FROM edw_core.tpolicy tp
+				INNER JOIN edw_core.tpolicy_history tph on tph.policy_sk = tp.policy_sk
+				INNER JOIN edw_core.tpel_driver peld on peld.policy_history_sk = tph.policy_history_sk 
 			) as a
 			group by policy_no, effective_dt, transaction_seq_no
 		)
@@ -180,4 +177,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-

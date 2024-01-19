@@ -39,7 +39,19 @@ BEGIN
             policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
             MAX(create_ts) as create_ts, 
             SUM(premium_amt) as premium_amt,
-            SUM(annual_premium_amt) as annual_premium_amt
+            --SUM(annual_premium_amt) as annual_premium_amt,
+			CASE WHEN policy_transaction_type_sk = 5
+				THEN
+        			(SELECT SUM(subpt.premium_amt)
+        			    FROM edw_core.tpolicy_transaction subpt
+        			    WHERE subpt.policy_sk = pt.policy_sk
+        			    AND subpt.transaction_seq_no <= pt.transaction_seq_no)
+    			ELSE
+    			    (SELECT SUM(subpt.annual_premium_amt)
+    			        FROM edw_core.tpolicy_transaction subpt
+    			        WHERE subpt.policy_sk = pt.policy_sk
+    			        AND subpt.transaction_seq_no <= pt.transaction_seq_no)
+    		END AS annual_premium_amt
 			,coverage_sk
 		INTO [edw_temp].[policy_ivans_home_temp1]
         FROM edw_core.tpolicy_transaction as pt
@@ -469,7 +481,7 @@ BEGIN
 		,'' as [010_ProducerSubCode]
 		,c.customer_id as [011_InsurerId]
 		,c.last_nm AS [012_Surname]
-		,c.first_nm AS [013_GivenName]
+		,COALESCE(c.first_nm, c.customer_nm) AS [013_GivenName]
 		,c.middle_nm as [014_OtherGivenName]
 		,CASE WHEN c.Insured_type = 'Trust/LLC'  THEN 'Entity' END as [182_CommercialName]
 		,c.prefix AS [015_Prefix]
