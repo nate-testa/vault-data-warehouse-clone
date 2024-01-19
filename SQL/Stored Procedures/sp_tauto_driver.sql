@@ -11,7 +11,7 @@ GO
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 09/14/23		Alberto Almario			    1. Created this procedure
--- 01/08/24		Yunus Mohammed			    2. Added deleted_on_policy_change_in
+-- 01/08/24		Yunus Mohammed			    2. Added driver_deleted_in flag
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_driver]
 AS
@@ -159,7 +159,7 @@ BEGIN
             min_prior_ct,
             maj_prior_ct,
             spd_prior_ct,
-            deleted_on_policy_change_in,
+            driver_deleted_in,
             source_system_sk,
             create_ts,
             update_ts,
@@ -225,7 +225,7 @@ BEGIN
             t1.[MINPrior] as min_prior_ct,
             t1.[MAJPrior] as maj_prior_ct,
             t1.[SPDPrior] as spd_prior_ct,
-            t1.IsDeletedOnPolicyChange as deleted_on_policy_change_in,
+            t1.IsDeletedOnPolicyChange as driver_deleted_in,
             t1.source_system_sk,
             getdate() AS create_ts,
             getdate() AS update_ts,

@@ -83,7 +83,7 @@ BEGIN
 		(
 			policy_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no,policy_history_sk,
 			driver_no,prefix,first_nm,middle_nm,last_nm,suffix,birth_dt,license_status,license_country_nm,license_state_cd,license_year,
-			license_no,deleted_on_policy_change_in,source_system_sk,create_ts,update_ts,etl_audit_sk
+			license_no,driver_deleted_in,source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
@@ -91,7 +91,7 @@ BEGIN
 			[Index] AS driver_no,Prefix AS prefix,FirstName AS first_nm,MiddleName AS middle_nm,
 			LastName AS last_nm,Suffix AS suffix,Birthdate AS birth_dt,LicenseStatus AS license_status,
 			LicenseCountry AS license_country_nm,LicenseState AS license_state_cd,LicenseYear AS license_year,
-			LicenseNumber AS license_no,IsDeletedOnPolicyChange AS deleted_on_policy_change_in,
+			LicenseNumber AS license_no,IsDeletedOnPolicyChange AS driver_deleted_in,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM
 			edw_temp.tpel_driver_temp1 AS ttlc
