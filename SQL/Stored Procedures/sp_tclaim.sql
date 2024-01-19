@@ -5,9 +5,10 @@
 -----------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 07/28/23		Yunus Mohammd				1. Created this procedure
--- 11/20/23		Yunus Mohammd				2. Added Throw
--- 12/08/2023	Yunus Mohammed				3. Updated broker_id and customer_id
+-- 07/28/2023		Yunus Mohammd				1. Created this procedure
+-- 11/20/2023		Yunus Mohammd				2. Added Throw
+-- 12/08/2023		Yunus Mohammed				3. Updated broker_id and customer_id
+-- 01/19/2024		Yunus Mohammed				4. Added claim reject reason
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim]
 
@@ -19,7 +20,7 @@ BEGIN
     -- interfering with SELECT statements.
     SET NOCOUNT ON
 		BEGIN TRY
-	DECLARE @last_source_extract_ts DATETIME2(7)
+		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
 		DECLARE @rows_affected INT
@@ -56,18 +57,33 @@ BEGIN
 				and ch.new_status = 'REOPEN'
 			GROUP BY c.claim_no
 		)
+		,reject_reason as
+		(
+		SELECT 
+			LEFT(String1,Delim-1) AS reason,
+			RIGHT(String1,LEN(String1)-Delim) AS reject_code
+			FROM 
+			(
+				SELECT
+					DYNAMIC_FIELDS, 
+					CHARINDEX('^',REPLACE(REPLACE(REPLACE(CAST(DYNAMIC_FIELDS AS VARCHAR(MAX)), '{"DisplayValue":"',''), '","DataValue":','^'),'}','')) AS Delim,
+					REPLACE(REPLACE(REPLACE(CAST(DYNAMIC_FIELDS AS VARCHAR(MAX)), '{"DisplayValue":"',''), '","DataValue":','^'),'}','')  AS String1
+				FROM edw_stage.t_dd_busi_data_table_record
+				WHERE data_table_id = 1013
+			) as parsing
+		)
 		SELECT
 		claim_no, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS policy_effective_dt, 
 		policy_sk,cause_of_loss_sk,loss_desc, source_claim_status,claim_status, catastrophe_sk, product_sk,
 		loss_address ,loss_city_nm ,loss_state_cd ,loss_zip_cd,loss_country_nm,broker_id,customer_id,underwriting_company_nm,
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
-		claim_created_ts,claim_created_by_nm,policy_history_sk,
+		claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
 		3 AS source_system_sk,sub_cause_of_loss_sk,update_time
 		INTO edw_temp.tclaim_temp1
 		FROM
 		(
 		SELECT
-			ROW_NUMBER() OVER(PARTITION BY tcase.claim_no,tph.policy_no ORDER BY tph.transaction_seq_no DESC) AS rn,
+			ROW_NUMBER() OVER(PARTITION BY tcase.claim_no,tph.policy_no ORDER BY tph.transaction_seq_no DESC,iif(UPPER(tcasestat.status_name)='REJECTED', rr.reason,NULL) desc) AS rn,
 			CASE WHEN tph.effective_dt IS NULL THEN CAST(tcp.EFF_DATE AS DATE) ELSE CAST(tph.effective_dt AS DATE) END AS effective_dt,
 			tbrk.broker_id,
 			c.customer_id,
@@ -115,9 +131,19 @@ BEGIN
 			fro.claim_first_reopen_dt,
 			tcase.insert_time AS claim_created_ts,
 			tpu.REAL_NAME AS claim_created_by_nm,
-			tph.policy_history_sk
+			tph.policy_history_sk,
+			iif(UPPER(tcasestat.status_name)='REJECTED', rr.reason,NULL) as claim_reject_reason_desc
 		FROM
 			edw_stage.t_clm_case tcase
+			LEFT JOIN edw_stage.t_clm_case_his h on tcase.case_id = h.case_id
+			LEFT JOIN 
+			(
+				SELECT case_id
+				,MAX(insert_time) AS insert_time
+				FROM edw_stage.t_clm_case_his				
+				GROUP BY case_id
+			) his ON his.case_id = h.case_id AND his.insert_time = h.INSERT_TIME
+			LEFT JOIN reject_reason rr ON rr.reject_code = h.REJECT_REASON
 			LEFT JOIN edw_core.tpolicy_history tph ON TRIM(tcase.policy_no) = tph.policy_no
 			AND tph.policy_history_sk = (
                                 SELECT TOP 1 policy_history_sk
@@ -159,7 +185,7 @@ BEGIN
 			,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,loss_address,loss_city_nm
 			,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_id,contact_nm,contact_type
 			,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
-			claim_created_ts,claim_created_by_nm,policy_history_sk,
+			claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -169,7 +195,7 @@ BEGIN
 		,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,loss_address,loss_city_nm
 		,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_id,contact_nm,contact_type
 		,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,claim_created_ts ,claim_created_by_nm,
-		policy_history_sk,
+		policy_history_sk,claim_reject_reason_desc,
 		source_system_sk,@current_date,@current_date,@etl_audit_sk
 		)
 	-- For Updates
@@ -204,7 +230,8 @@ BEGIN
 		Target.claim_created_ts=Source.claim_created_ts,
 		Target.claim_created_by_nm=Source.claim_created_by_nm,
 		Target.update_ts=@current_date,
-		Target.sub_cause_of_loss_sk=Source.sub_cause_of_loss_sk;
+		Target.sub_cause_of_loss_sk=Source.sub_cause_of_loss_sk,
+		Target.claim_reject_reason_desc=Source.claim_reject_reason_desc;
 
 		SET @rows_affected=@@ROWCOUNT;
 
@@ -230,4 +257,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-
