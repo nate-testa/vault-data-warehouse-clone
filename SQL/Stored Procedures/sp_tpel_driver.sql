@@ -35,7 +35,8 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,policy_history_sk,source_system_sk,[Index],
 			IssuedDate,FirstName,LastName,Birthdate,InsuredType,LicenseStatus,LicenseNumber,
-			Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,IsDeletedOnPolicyChange
+			Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,
+			CASE IsDeletedOnPolicyChange WHEN 0 THEN 'No' WHEN 1 THEN 'Yes' END AS IsDeletedOnPolicyChange			
 			into edw_temp.tpel_driver_temp1
 		from
 		(
