@@ -124,7 +124,8 @@ BEGIN
 		-- Update policy_sk for the above claims
 		UPDATE tc
 		SET
-			tc.policy_sk = tph.policy_sk
+			tc.policy_sk = tph.policy_sk,
+			tc.policy_history_sk=tph.policy_history_sk
 		FROM
 			edw_core.tclaim tc
 			LEFT JOIN edw_core.tpolicy_history tph ON 
@@ -149,7 +150,8 @@ BEGIN
 		UPDATE tc
 		SET
 			tc.policy_sk = tph.policy_sk,
-			tc.policy_no = tph.policy_no
+			tc.policy_no = tph.policy_no,
+			tc.policy_history_sk=tph.policy_history_sk
 		FROM
 			edw_stage.t_clm_case tcase
 			INNER JOIN edw_core.tclaim tc on tcase.CLAIM_NO = tc.claim_no
