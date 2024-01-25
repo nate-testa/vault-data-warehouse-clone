@@ -15,6 +15,7 @@ GO
 -- 11/14/23		       	Sandeep Gundreddy		    3. Modified tqupte_home_location_sk join
 -- 11/17/23				Yunus Mohammed				4. Added new columns
 -- 01/18/24				Alberto Almario				5. Added new column extended_liability_location_ct
+-- 01/25/24				Alberto Almario				6. Added new columns roof_
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage]
@@ -189,6 +190,7 @@ BEGIN
 			leed_certification_discount_in,mortgage_free_discount_in,annual_brush_removal_contract_in,
 			firewise_community_credit_in,monitored_heat_sensors_in,builders_defect_exclusion_in,
 			gated_community_patrol_service, extended_liability_location_ct,
+			RoofExclusionWEnsuingLoss,RoofCoverageEndorsementWH,RoofCoverageEndorsementAP,RoofCoverageEndorsementRV,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT 
@@ -346,6 +348,10 @@ BEGIN
 		   ,BuildersDefectExclusion AS builders_defect_exclusion_in
 		   ,GatedCommunityPatrolService AS gated_community_patrol_service
 		   ,b.extended_liability_location_ct
+		   ,RoofExclusionWEnsuingLoss AS roof_exclusion_with_ensuing_loss_in
+		   ,RoofCoverageEndorsementWH AS roof_coverage_endorsement_wh_in
+		   ,RoofCoverageEndorsementAP AS roof_coverage_endorsement_ap_in
+		   ,RoofCoverageEndorsementRV AS roof_coverage_endorsement_rv_in
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts
