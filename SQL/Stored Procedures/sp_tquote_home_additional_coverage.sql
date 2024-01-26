@@ -190,7 +190,7 @@ BEGIN
 			leed_certification_discount_in,mortgage_free_discount_in,annual_brush_removal_contract_in,
 			firewise_community_credit_in,monitored_heat_sensors_in,builders_defect_exclusion_in,
 			gated_community_patrol_service, extended_liability_location_ct,
-			RoofExclusionWEnsuingLoss,RoofCoverageEndorsementWH,RoofCoverageEndorsementAP,RoofCoverageEndorsementRV,
+			roof_exclusion_with_ensuing_loss_in,roof_coverage_endorsement_wh_in,roof_coverage_endorsement_ap_in,roof_coverage_endorsement_rv_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT 
