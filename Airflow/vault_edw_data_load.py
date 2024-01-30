@@ -777,7 +777,17 @@ with DAG(
 
     with TaskGroup("policy_group") as policy_group:
 
-        policy_group_items = ['sp_tpolicy','sp_tpolicy_history', 'sp_tpolicy_insured', 'sp_tloss_history', 'sp_tadditional_interest', 'sp_tpolicy_update_non_renwal_billing', 'sp_tmanuscript']
+        policy_group_items = [
+            'sp_tpolicy',
+            'sp_tpolicy_history', 
+            'sp_tpolicy_insured', 
+            'sp_tloss_history', 
+            'sp_tadditional_interest', 
+            'sp_tpolicy_update_non_renwal_billing',
+            'sp_ttask_workflow',
+            'sp_ttask', 
+            'sp_tmanuscript'
+            ]
 
         sp_tpolicy = MsSqlOperator(
             task_id='sp_tpolicy',
@@ -827,6 +837,22 @@ with DAG(
             autocommit=True,
         )
 
+        sp_ttask_workflow = MsSqlOperator(
+            task_id='sp_ttask_workflow',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_ttask_workflow",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_ttask = MsSqlOperator(
+            task_id='sp_ttask',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_ttask",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_tmanuscript = MsSqlOperator(
             task_id='sp_tmanuscript',
             mssql_conn_id='Vault_EDW',
@@ -842,7 +868,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(policy_group_items, 'All stored procedures executed successfully for all the Policy tables'),
         )
 
-        sp_tpolicy >> sp_tpolicy_update_non_renwal_billing >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tloss_history >> sp_tadditional_interest >> sp_tmanuscript >> send_policy_email
+        sp_tpolicy >> sp_tpolicy_update_non_renwal_billing >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tloss_history >> sp_tadditional_interest >> sp_ttask_workflow >> sp_ttask >> sp_tmanuscript >> send_policy_email
 
 
     # with TaskGroup("vendor_report_group") as vendor_report_group:
