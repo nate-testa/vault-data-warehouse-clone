@@ -11,8 +11,9 @@ GO
 -- Change date			|Author							|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
 -- 10/23/2023 			Yunus Mohammed					1. Created this procedure 
--- 11/11/23		Sandeep Gundreddy		        2. modified source query and transaction_seq_no logic
--- 11/12/23		Sandeep Gundreddy		        3. removed  EffectiveDate from partition clause
+-- 11/11/23				Sandeep Gundreddy		        2. modified source query and transaction_seq_no logic
+-- 11/12/23				Sandeep Gundreddy		        3. removed  EffectiveDate from partition clause
+-- 01/30/24				Yunus Mohammed					4. Added unit no
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_location]
 
@@ -60,7 +61,7 @@ BEGIN
 		SELECT 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,source_system_sk,
 			RiskAddressLine2,RiskAddressCity,RiskAddressLine1,RiskAddressZipCode,RiskAddressState,
-			RiskAddressCounty,RiskAddressCountry,Longitude,Latitude
+			RiskAddressCounty,RiskAddressCountry,Longitude,Latitude,RiskAddressLineUnit
 		INTO edw_temp.tquote_home_location_temp2
 		FROM
 		(
@@ -81,7 +82,7 @@ BEGIN
 			where
 				atvo.ObjectType in ('Homeowner','Condo')
 				and atvof.Field IN ('RiskAddressLine2','RiskAddressCity','RiskAddressLine1','RiskAddressZipCode','RiskAddressState',
-					'RiskAddressCounty','RiskAddressCountry','Longitude','Latitude')
+					'RiskAddressCounty','RiskAddressCountry','Longitude','Latitude','RiskAddressLineUnit')
 				and act.CreatedDate > @last_source_extract_ts
 			) as t
 			where policy_txn_order=1
@@ -89,9 +90,8 @@ BEGIN
 		pivot 
 		(
 			max(Value) FOR Field IN (RiskAddressLine2,RiskAddressCity,RiskAddressLine1,RiskAddressZipCode,RiskAddressState,
-				RiskAddressCounty,RiskAddressCountry,Longitude,Latitude)
+				RiskAddressCounty,RiskAddressCountry,Longitude,Latitude,RiskAddressLineUnit)
 		) as pivottable
-
 
 		-- Start Merge process
 		MERGE [edw_core].[tquote_home_location] AS Target
@@ -105,7 +105,7 @@ BEGIN
 				)
 		VALUES 
 		(
-			Source.PolicyNumber,Source.EffectiveDate,Source.RiskAddressLine1,Source.RiskAddressLine2,null,
+			Source.PolicyNumber,Source.EffectiveDate,Source.RiskAddressLine1,Source.RiskAddressLine2,RiskAddressLineUnit,
 			Source.RiskAddressCity,Source.RiskAddressState,Source.RiskAddressZipCode,
 			Source.RiskAddressCounty,Source.RiskAddressCountry,Source.Longitude,Source.Latitude,
 			Source.source_system_sk,getdate(),getdate(),@etl_audit_sk
@@ -122,6 +122,7 @@ BEGIN
 		TARGET.country_nm=SOURCE.RiskAddressCountry,
 		Target.longitude=SOURCE.Longitude,
 		Target.latitude=Source.Latitude,
+		Target.unit_no=Source.RiskAddressLineUnit,
 		TARGET.update_ts=getdate();
 
 		SET @rows_affected=@@ROWCOUNT;
