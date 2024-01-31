@@ -1,0 +1,9 @@
+ALTER TABLE edw_core.tclaim_feature ADD assignment_of_benefits_contractor_in varchar(255);
+ALTER TABLE edw_core.tclaim_feature ADD public_adjuster_in varchar(255);
+ALTER TABLE edw_core.tclaim_feature ADD arbitration_in varchar(255);
+ALTER TABLE edw_core.tclaim_feature ADD mediation_in varchar(255);
+ALTER TABLE edw_core.tclaim_feature ADD appraisal_in varchar(255);
+ALTER TABLE edw_core.tclaim_feature ADD alternative_dispute_resolution_in varchar(255);
+ALTER TABLE edw_core.tclaim_feature ADD neutral_evaluation_in varchar(255);
+ALTER TABLE edw_core.tclaim_feature ADD setllement_conference_in varchar(255);
+ALTER TABLE edw_core.tclaim_feature ADD settlement_resolution_in varchar(255);
