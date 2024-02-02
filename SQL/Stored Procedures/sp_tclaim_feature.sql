@@ -5,8 +5,9 @@
 -----------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 07/28/23		Yunus Mohammd				1. Created this procedure
--- 11/20/23		Yunus Mohammd				2. Added Throw
+-- 07/28/23		Yunus Mohammed				1. Created this procedure
+-- 11/20/23		Yunus Mohammed				2. Added Throw
+-- 01/31/24		Yunus Mohammed				3. Added new fields
 -- ========================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature]
@@ -55,6 +56,15 @@ BEGIN
 		e.loss_status AS claim_feature_status,
 		asl.aslob_sk, 
 		g.real_name AS claim_adjuster_nm,tcpi2.insured_name AS risk_item,
+		c.assignment_of_benefits_contractor AS assignment_of_benefits_contractor_in,
+		c.public_adjuster AS public_adjuster_in,
+		c.arbitration AS arbitration_in,
+		c.mediation AS mediation_in,
+		c.appraisal AS appraisal_in,
+		c.alternative_dispute_resolution AS alternative_dispute_resolution_in,
+		c.neutral_evaluation AS neutral_evaluation_in,
+		c.settlement_conference AS setllement_conference_in,
+		c.settlement_resolution  AS settlement_resolution_in,
 		3 AS source_system_sk,
 		CASE
 			prd.product_cd
@@ -183,6 +193,8 @@ BEGIN
 			claimant_nm,damage_severity,damage_type,possible_subrogation_in,possible_salvage_in,total_loss_in,
 			litigation_in,product_sk,claim_feature_status,aslob_sk,claim_adjuster_nm,risk_item,
 			coverage_sk,item_sk,vehicle_coverage_sk,
+			assignment_of_benefits_contractor_in,public_adjuster_in,arbitration_in,mediation_in,
+			appraisal_in,alternative_dispute_resolution_in,neutral_evaluation_in,setllement_conference_in,settlement_resolution_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -191,6 +203,8 @@ BEGIN
 		claimant_nm,damage_severity,damage_type,possible_subrogation_in,possible_salvage_in,total_loss_in,
 		litigation_in,product_sk,claim_feature_status,aslob_sk,claim_adjuster_nm,risk_item,
 		coverage_sk,item_sk,vehicle_coverage_sk,
+		assignment_of_benefits_contractor_in,public_adjuster_in,arbitration_in,mediation_in,
+		appraisal_in,alternative_dispute_resolution_in,neutral_evaluation_in,setllement_conference_in,settlement_resolution_in,
 		3,@current_date,@current_date,@etl_audit_sk
 		)
 	-- For Updates
@@ -214,6 +228,15 @@ BEGIN
 		Target.vehicle_coverage_sk=Source.vehicle_coverage_sk,
 		Target.claim_adjuster_nm=Source.claim_adjuster_nm,
 		Target.risk_item=Source.risk_item,
+		Target.assignment_of_benefits_contractor_in=Source.assignment_of_benefits_contractor_in,
+		Target.public_adjuster_in=Source.public_adjuster_in,
+		Target.arbitration_in=Source.arbitration_in,
+		Target.mediation_in=Source.mediation_in,
+		Target.appraisal_in=Source.appraisal_in,
+		Target.alternative_dispute_resolution_in=Source.alternative_dispute_resolution_in,
+		Target.neutral_evaluation_in=Source.neutral_evaluation_in,
+		Target.setllement_conference_in=Source.setllement_conference_in,
+		Target.settlement_resolution_in=Source.settlement_resolution_in,
 		Target.update_ts=@current_date;
 
 		SET @rows_affected=@@ROWCOUNT;

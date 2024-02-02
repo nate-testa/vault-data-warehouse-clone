@@ -777,7 +777,17 @@ with DAG(
 
     with TaskGroup("policy_group") as policy_group:
 
-        policy_group_items = ['sp_tpolicy','sp_tpolicy_history', 'sp_tpolicy_insured', 'sp_tloss_history', 'sp_tadditional_interest', 'sp_tpolicy_update_non_renwal_billing', 'sp_tmanuscript']
+        policy_group_items = [
+            'sp_tpolicy',
+            'sp_tpolicy_history', 
+            'sp_tpolicy_insured', 
+            'sp_tloss_history', 
+            'sp_tadditional_interest', 
+            'sp_tpolicy_update_non_renwal_billing',
+            'sp_ttask_workflow',
+            'sp_ttask', 
+            'sp_tmanuscript'
+            ]
 
         sp_tpolicy = MsSqlOperator(
             task_id='sp_tpolicy',
@@ -827,6 +837,22 @@ with DAG(
             autocommit=True,
         )
 
+        sp_ttask_workflow = MsSqlOperator(
+            task_id='sp_ttask_workflow',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_ttask_workflow",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_ttask = MsSqlOperator(
+            task_id='sp_ttask',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_ttask",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_tmanuscript = MsSqlOperator(
             task_id='sp_tmanuscript',
             mssql_conn_id='Vault_EDW',
@@ -842,7 +868,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(policy_group_items, 'All stored procedures executed successfully for all the Policy tables'),
         )
 
-        sp_tpolicy >> sp_tpolicy_update_non_renwal_billing >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tloss_history >> sp_tadditional_interest >> sp_tmanuscript >> send_policy_email
+        sp_tpolicy >> sp_tpolicy_update_non_renwal_billing >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tloss_history >> sp_tadditional_interest >> sp_ttask_workflow >> sp_ttask >> sp_tmanuscript >> send_policy_email
 
 
     # with TaskGroup("vendor_report_group") as vendor_report_group:
@@ -967,7 +993,8 @@ with DAG(
             'sp_policy_ivans_pel_feed',
             'sp_customer_broker_livevox_feed',
             'sp_claim_renewal_rating_home_collection_api',
-            'sp_claim_renewal_rating_auto_pel_api'
+            'sp_claim_renewal_rating_auto_pel_api',
+            'sp_claim_product_search_api'
             ]
 
         sp_tclaim_policy_search_api = MsSqlOperator(
@@ -1093,6 +1120,14 @@ with DAG(
             autocommit=True,
         )
 
+        sp_claim_product_search_api = MsSqlOperator(
+            task_id='sp_claim_product_search_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_claim_product_search_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_integration_email = EmailOperator(
             task_id='send_integration_email',
             to=to_email,
@@ -1100,7 +1135,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
         )
 
-        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_billing_account_customer_portal_api >> sp_policy_customer_portal_api >> sp_policy_ivans_auto_feed >> sp_policy_ivans_home >> sp_policy_ivans_pel_feed >> ivans_api_call >> sp_customer_broker_livevox_feed >> generate_livevox_file >> upload_livevox_file_to_sftp >> sp_claim_renewal_rating_home_collection_api >> sp_claim_renewal_rating_auto_pel_api >> send_integration_email
+        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_billing_account_customer_portal_api >> sp_policy_customer_portal_api >> sp_policy_ivans_auto_feed >> sp_policy_ivans_home >> sp_policy_ivans_pel_feed >> ivans_api_call >> sp_customer_broker_livevox_feed >> generate_livevox_file >> upload_livevox_file_to_sftp >> sp_claim_renewal_rating_home_collection_api >> sp_claim_renewal_rating_auto_pel_api >> sp_claim_product_search_api >> send_integration_email
 
     exec_vault_edw_data_load_quotes = TriggerDagRunOperator(
         task_id="exec_vault_edw_data_load_quotes",

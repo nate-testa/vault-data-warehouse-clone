@@ -3,6 +3,13 @@
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert homeowners risk location data
 -- =============================================
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Change date 			|Author						|	Change Description
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+-- 						Yunus Mohammed				1. Created this procedure  
+-- 01/30/24				Yunus Mohammed				2. Added unit_no
+-- ======================================================================================================================================================= 
+
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_location]
 
 AS
@@ -50,7 +57,7 @@ BEGIN
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transactiondate,transaction_seq_no,source_system_sk,
 			IssuedDate,
 			RiskAddressLine2,RiskAddressCity,RiskAddressLine1,RiskAddressZipCode,RiskAddressState,
-			RiskAddressCounty,RiskAddressCountry,Longitude,Latitude
+			RiskAddressCounty,RiskAddressCountry,Longitude,Latitude,RiskAddressLineUnit
 		INTO edw_temp.thome_location_temp2
 		FROM
 		(
@@ -76,7 +83,7 @@ BEGIN
 				act.[State] ='ISSUED'
 				and atvo.ObjectType in ('Homeowner','Condo')
 				and atvof.Field IN ('RiskAddressLine2','RiskAddressCity','RiskAddressLine1','RiskAddressZipCode','RiskAddressState',
-					'RiskAddressCounty','RiskAddressCountry','Longitude','Latitude')
+					'RiskAddressCounty','RiskAddressCountry','Longitude','Latitude','RiskAddressLineUnit')
 				and act.IssuedDate > @last_source_extract_ts
 			) as t
 			where policy_txn_order=1
@@ -84,7 +91,7 @@ BEGIN
 		pivot 
 		(
 			max(Value) FOR Field IN (RiskAddressLine2,RiskAddressCity,RiskAddressLine1,RiskAddressZipCode,RiskAddressState,
-				RiskAddressCounty,RiskAddressCountry,Longitude,Latitude)
+				RiskAddressCounty,RiskAddressCountry,Longitude,Latitude,RiskAddressLineUnit)
 		) as pivottable
 
 		-- Start Merge process
@@ -100,7 +107,7 @@ BEGIN
 				)
 		VALUES 
 		(
-			Source.PolicyNumber,Source.EffectiveDate,Source.RiskAddressLine1,Source.RiskAddressLine2,null,
+			Source.PolicyNumber,Source.EffectiveDate,Source.RiskAddressLine1,Source.RiskAddressLine2,RiskAddressLineUnit,
 			Source.RiskAddressCity,Source.RiskAddressState,Source.RiskAddressZipCode,
 			Source.RiskAddressCounty,Source.RiskAddressCountry,Source.Longitude,Source.Latitude,
 			Source.source_system_sk,getdate(),getdate(),@etl_audit_sk
@@ -117,6 +124,7 @@ BEGIN
 		TARGET.country_nm=SOURCE.RiskAddressCountry,
 		Target.longitude=SOURCE.Longitude,
 		Target.latitude=Source.Latitude,
+		Target.unit_no=Source.RiskAddressLineUnit,
 		TARGET.update_ts=getdate();
 
 		SET @rows_affected=@@ROWCOUNT;
