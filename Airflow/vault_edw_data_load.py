@@ -436,7 +436,8 @@ with DAG(
             'sp_tclaim_diary',
             'sp_update_tclaim',
             'sp_update_tclaim_feature',
-            'sp_treconciliation_ebao'
+            'sp_treconciliation_ebao',
+            'sp_tclaim_litigation'
             ]
 
         sp_tcatastrophe = MsSqlOperator(
@@ -543,6 +544,14 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tclaim_litigation = MsSqlOperator(
+            task_id='sp_tclaim_litigation',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tclaim_litigation",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_claim_email = EmailOperator(
             task_id='send_claim_email',
             to=to_email,
@@ -550,7 +559,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(claim_group_items, 'All stored procedures executed successfully for all the Claim tables'),
         )
 
-        sp_tcatastrophe >> sp_tcause_of_loss >> sp_tsub_cause_of_loss >> sp_tclaim >> sp_ebao_tclaim_onetime_datafix >> sp_tclaim_feature >> sp_tclaim_payment >> sp_tclaim_transaction >> sp_tclaim_note >> sp_tclaim_diary >> sp_update_tclaim >> sp_update_tclaim_feature >> sp_treconciliation_ebao >> send_claim_email
+        sp_tcatastrophe >> sp_tcause_of_loss >> sp_tsub_cause_of_loss >> sp_tclaim >> sp_ebao_tclaim_onetime_datafix >> sp_tclaim_feature >> sp_tclaim_payment >> sp_tclaim_transaction >> sp_tclaim_note >> sp_tclaim_diary >> sp_update_tclaim >> sp_update_tclaim_feature >> sp_treconciliation_ebao >> sp_tclaim_litigation >> send_claim_email
 
 
     with TaskGroup("datamart_group") as datamart_group:
