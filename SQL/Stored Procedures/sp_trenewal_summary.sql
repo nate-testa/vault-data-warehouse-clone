@@ -3,12 +3,12 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
--- ====================================================================================================================================
+-- ===========================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the renewals data for each month
-------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
-------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------
 -- 08/14/23		Architha Gudimalla				1. Created this procedure 
 -- 09/12/23		Architha Gudimalla				2. Added additional columns after discussing with Olivia 
 -- 10/02/23		Architha Gudimalla				3. Corrected code afrer testing table
@@ -19,9 +19,11 @@ GO
 -- 11/15/23		Architha Gudimalla				7. Added uw_company_cd
 -- 11/17/23		Architha Gudimalla				8. Fixed divide by 0 error
 -- 11/27/23		Architha Gudimalla				9. Corrected the logic for residence type and TIV
--- ==================================================================================================================================== 
+-- 01/30/24		Architha Gudimalla				10. Added replace on policy_no to match the policy numbers that skipped 'x' in it
+-- 02/01/24		Architha Gudimalla				11. Added logic for wip_renewal_quote_ct, offered_or_not_taken_quote_ct, renewal_quote_sk 
+-- =========================================================================================================================================== 
 
-ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
+CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
 @in_yearmonth int = null
 AS 
 BEGIN
@@ -139,11 +141,13 @@ BEGIN
 				(
 				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no,
 						replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd, 
-						 case when prior_policy_no is null  then original_policy_no
-								  when CHARINDEX('-',prior_policy_no) = 0 then prior_policy_no 
-								  else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
+						 case when prior_policy_no is null and original_policy_no is null then policy_no
+							  when prior_policy_no is null  							  then original_policy_no
+							  when CHARINDEX('-',prior_policy_no) = 0 					  then prior_policy_no 
+							  else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
 						end prior_policy_no,
-						rank() over (partition by case when prior_policy_no is null  then original_policy_no
+						rank() over (partition by case when prior_policy_no is null and original_policy_no is null then policy_no
+												 	   when prior_policy_no is null then original_policy_no
 												 	   when CHARINDEX('-',prior_policy_no) = 0 then prior_policy_no 
 								  					   else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
 												  end order by policy_sk) rnk
@@ -156,6 +160,18 @@ BEGIN
 				 SELECT *
 				 FROM	ren_pols_all
 				 where rnk = 1
+				),
+				--pols renewing all in current month
+				ren_quotes as
+				(
+				 SELECT quote_sk, quote_no, effective_dt, original_policy_no,  
+						 case when prior_policy_no is null and original_policy_no is null then quote_no
+							  when prior_policy_no is null  							  then original_policy_no
+							  when CHARINDEX('-',prior_policy_no) = 0 					  then prior_policy_no 
+							  else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
+						end prior_policy_no, quote_Status 
+				 from edw_core.tquote q 
+				 where	effective_dt between @begin_dt and @end_dt 
 				),
 				/*ren_pols as
 				--pols renewing in current month
@@ -310,6 +326,9 @@ BEGIN
 						update_ts,
 						etl_audit_sk
 						,uw_company_cd
+						,wip_renewal_quote_ct
+						,offered_or_not_taken_quote_ct
+						,renewal_quote_sk  
 					)
 				select 	@month_end_dt_sk, 
 						exp_pols_prm.policy_sk, 
@@ -356,11 +375,25 @@ BEGIN
 							 when exp_pols.uw_company_cd = ren_pols.uw_company_cd then ren_pols.uw_company_cd
 								else exp_pols.uw_company_cd + ' to ' + ren_pols.uw_company_cd 
 						end
+						,case when ren_pols.policy_sk is not null then 0 
+						 	  when ren_quotes.quote_no is not null then 1 
+						 	  else 0 
+						 end wip_renewal_quote_ct
+						,case when ren_pols.policy_sk is not null then 0 
+						 	  when ren_quotes.quote_no is not null and ren_quotes.quote_Status in ('Offered','Not taken') then 1 
+						 	  else 0 
+						 end offered_or_not_taken_quote_ct
+						,case when ren_pols.policy_sk is not null then 0 
+						 	  when ren_quotes.quote_no is not null then ren_quotes.quote_sk 
+						 	  else 0 
+						 end renewal_quote_sk
 				from exp_pols
 				-- join to get prms for expiring policies
 				inner join prm exp_pols_prm on exp_pols_prm.policy_sk = exp_pols.policy_sk 
 				-- join to get renewals for expiring policies
-				left join ren_pols on ren_pols.prior_policy_no = exp_pols.original_policy_no and ren_pols.effective_dt = exp_pols.expiration_dt 
+				left join ren_pols on replace(ren_pols.prior_policy_no,'x','') = replace(exp_pols.original_policy_no,'x','') and ren_pols.effective_dt = exp_pols.expiration_dt 
+				-- join to get renewals quotes for expiring policies
+				left join ren_quotes on replace(ren_quotes.prior_policy_no,'x','') = replace(exp_pols.original_policy_no,'x','') and ren_quotes.effective_dt = exp_pols.expiration_dt 
 				-- join to get prm for renewals 
 				left join prm ren_pols_prm on ren_pols_prm.policy_sk = ren_pols.policy_sk 
 				inner join max_tr on exp_pols_prm.policy_sk = max_tr.policy_sk and exp_pols_prm.transaction_seq_no = max_tr.transaction_seq_no
