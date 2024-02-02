@@ -9,6 +9,7 @@
 -- 11/27/23		Architha Gudimalla				3. Add source_system_sk and datamart
 -- 12/01/23		Architha Gudimalla				4. Using dbo for metal tables
 -- 12/04/23		Architha Gudimalla				5. Updated the proc to run for 7 days
+-- 01/23/24		Architha Gudimalla				6. Rounded the premiums
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_treconciliation]
@@ -42,7 +43,7 @@ BEGIN
 		with src_metal as
 		(
 			select cast(acct.IssuedDate as date) iss_dt, count(*) cnt, 
-					sum(coalesce(totalpremiumdeltaprorated, totalpremium)) prm ,
+					round(sum(coalesce(totalpremiumdeltaprorated, totalpremium)),2) prm ,
 					case when acct.ExternalSourceId is not NULL 
 					 then 2 --(AV2) 
 					 Else 4 --(Metal)
@@ -62,7 +63,7 @@ BEGIN
 		src_edw as
 		(
 			select td.actual_dt iss_dt, count(distinct pol.policy_sk+transaction_seq_no) cnt, 
-					sum(premium_amt) prm , tr.source_system_sk ssk
+					round(sum(premium_amt),2) prm , tr.source_system_sk ssk
 			from edw_core.tpolicy_transaction tr, edw_core.tpolicy pol , edw_core.tdate td
 			where pol.policy_sk = tr.policy_sk
 			and td.date_sk = tr.transaction_dt_sk 
