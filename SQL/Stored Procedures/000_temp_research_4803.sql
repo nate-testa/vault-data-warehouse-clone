@@ -1,3 +1,11 @@
+-- metal_product_fieldname_datafix
+-- Product- 
+-- Home
+-- Auto
+-- PEL
+-- Lux
+
+
 select * from edw_core.tpolicy_history where policy_no =  'AU100004762-01';
 select * from edw_core.tauto_vehicle where trim(vehicle_type) = '/';--299
 
@@ -23,10 +31,12 @@ AND VersionObjectId in (
 
 
 --Cruce final
-SELECT av.policy_no, av.effective_dt, acctvo.[UniqueId] as vehicle_unique_id, av.policyimageidentifierid, av.PolicyObjectIdentifierId, acctvof.VersionObjectId, acctvof.[Value] AS metal_vehicle_type, av.vehicle_type AS AV2_vehicle_type
--- INTO [edw_temp].[metal_auto_vehicle_type]
+SELECT acct.PolicyNumber AS policy_no, acct.EffectiveDate AS effective_dt, acct.policychangenumber AS transaction_seq_no, acctvo.[UniqueId] as vehicle_unique_id, av.policyimageidentifierid, av.PolicyObjectIdentifierId, 
+acctvof.Id AS acctvof_Id, acctvof.VersionObjectId, acctvof.Field AS acctvof_Field, acctvof.[Value] AS METAL_vehicle_type, av.vehicle_type AS AV2_vehicle_type
+-- INTO [edw_temp].[metal_Auto_VehicleType_datafix]
 FROM [edw_temp].[av2_auto_vehicle] av
-INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.ExternalSourceId = av.policyimageidentifierid AND acctv.PolicyNumber = av.policy_no
+INNER JOIN [edw_stage].[AccountTransaction] acct ON acct.PolicyNumber = av.policy_no
+INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acct.Id = acctv.AccountTransactionId AND acctv.ExternalSourceId = av.policyimageidentifierid AND acctv.PolicyNumber = av.policy_no
 INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo ON acctvo.AccountTransactionVersionId = acctv.Id AND acctvo.ExternalSourceId = av.PolicyObjectIdentifierId
 INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof ON acctvof.VersionObjectId = acctvo.id
 WHERE 1=1
@@ -41,6 +51,5 @@ WHERE TRIM(av.vehicle_type) = '/'
 AND av.policy_no = 'AU100012285'
 ;
 
-SELECT * FROM [edw_temp].[metal_auto_vehicle_type]
+SELECT * FROM [edw_temp].[metal_Auto_VehicleType_datafix]
 ;
-
