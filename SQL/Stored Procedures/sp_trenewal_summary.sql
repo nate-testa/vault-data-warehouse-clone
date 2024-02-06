@@ -164,14 +164,25 @@ BEGIN
 				--pols renewing all in current month
 				ren_quotes as
 				(
-				 SELECT quote_sk, quote_no, effective_dt, original_policy_no,  
-						 case when prior_policy_no is null and original_policy_no is null then quote_no
-							  when prior_policy_no is null  							  then original_policy_no
-							  when CHARINDEX('-',prior_policy_no) = 0 					  then prior_policy_no 
-							  else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
-						end prior_policy_no, quote_Status 
-				 from edw_core.tquote q 
-				 where	effective_dt between @begin_dt and @end_dt 
+					select *
+					FROM
+					(
+						SELECT quote_sk, quote_no, effective_dt, original_policy_no,  
+								case when prior_policy_no is null and original_policy_no is null then quote_no
+									when prior_policy_no is null  							  then original_policy_no
+									when CHARINDEX('-',prior_policy_no) = 0 					  then prior_policy_no 
+									else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
+								end prior_policy_no, quote_Status,
+								rank() over (partition by case when prior_policy_no is null and original_policy_no is null then quote_no
+															when prior_policy_no is null  							  then original_policy_no
+															when CHARINDEX('-',prior_policy_no) = 0 					  then prior_policy_no 
+															else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
+														end order by quote_sk) rnk  
+						from edw_core.tquote q 
+						where	effective_dt between @begin_dt and @end_dt  
+						and quote_Status <> 'Issued'
+					) A
+				 	where rnk = 1
 				),
 				/*ren_pols as
 				--pols renewing in current month
@@ -376,14 +387,20 @@ BEGIN
 								else exp_pols.uw_company_cd + ' to ' + ren_pols.uw_company_cd 
 						end
 						,case when ren_pols.policy_sk is not null then 0 
+						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
+						 	  when exp_pols_prm.cancel_ind <> 0 then 0 
 						 	  when ren_quotes.quote_no is not null then 1 
 						 	  else 0 
 						 end wip_renewal_quote_ct
 						,case when ren_pols.policy_sk is not null then 0 
+						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
+						 	  when exp_pols_prm.cancel_ind <> 0 then 0 
 						 	  when ren_quotes.quote_no is not null and ren_quotes.quote_Status in ('Offered','Not taken') then 1 
 						 	  else 0 
 						 end offered_or_not_taken_quote_ct
 						,case when ren_pols.policy_sk is not null then 0 
+						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
+						 	  when exp_pols_prm.cancel_ind <> 0 then 0 
 						 	  when ren_quotes.quote_no is not null then ren_quotes.quote_sk 
 						 	  else 0 
 						 end renewal_quote_sk

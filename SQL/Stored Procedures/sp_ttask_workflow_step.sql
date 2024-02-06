@@ -3,16 +3,14 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 -- =============================================================================================================
--- Description: This procedures inserts task workflow names 
+-- Description: This procedures inserts task workflow step names 
 ------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 ------------------------------------------------------------------------------------------------------------
--- 01/16/24		Architha Gudimalla				1. Created this procedure 
--- 01/17/24		Architha Gudimalla				2. Fixed errors after first run  
--- 02/06/24		Architha Gudimalla				3. Dropping the temp table  
+-- 02/06/24		Architha Gudimalla				1. Created this procedure   
 -- ============================================================================================================= 
 
-CREATE or ALTER   PROCEDURE edw_core.sp_ttask_workflow
+CREATE or ALTER   PROCEDURE edw_core.sp_ttask_workflow_step
 
 AS
 BEGIN 
@@ -35,49 +33,43 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
         -- Create temp table with name as sp_tttask_temp and use it in 
-        DROP TABLE IF EXISTS edw_temp.ttask_workflow_temp1
+        DROP TABLE IF EXISTS edw_temp.ttask_workflow_step_temp1
         SELECT 	  wf.name task_workflow_nm
-				, null as task_workflow_category_nm  
-				, CreatedDate
-				, UpdatedDate
-        INTO 	edw_temp.ttask_workflow_temp1 
-		from 	edw_stage.Workflow wf      
-		WHERE 	GREATEST(wf.CreatedDate,wf.UpdatedDate)>@last_source_extract_ts 
+				 ,wfs.name as task_workflow_step_nm 
+				 , null as task_workflow_step_category_nm  
+				, wfs.CreatedDate
+				, wfs.UpdatedDate
+        INTO 	edw_temp.ttask_workflow_step_temp1 
+        from  edw_stage.Workflow wf 
+        inner join edw_stage.WorkflowStep wfs on wf.id = wfs.WorkflowId 
+		WHERE 	GREATEST(wfs.CreatedDate,wf.UpdatedDate)>@last_source_extract_ts  
 
-		MERGE edw_core.ttask_workflow AS Target
+		MERGE edw_core.ttask_workflow_step AS Target
 		USING 
 		(	
-			SELECT 	task_workflow_nm, task_workflow_category_nm
-        	FROM edw_temp.ttask_workflow_temp1 
+			SELECT 	task_workflow_nm, task_workflow_step_nm, task_workflow_step_category_nm
+        	FROM edw_temp.ttask_workflow_step_temp1 
 		)  AS Source
-		ON Source.task_workflow_nm = Target.task_workflow_nm 
+		ON Source.task_workflow_nm = Target.task_workflow_nm and Source.task_workflow_step_nm = Target.task_workflow_step_nm 
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
 				task_workflow_nm,
-				task_workflow_category_nm,
+				task_workflow_step_nm,
+				task_workflow_step_category_nm,
 				create_ts,
 				update_ts 
 			)
-		VALUES (Source.task_workflow_nm, Source.task_workflow_category_nm, getdate(), getdate() )
+		VALUES (Source.task_workflow_nm, source.task_workflow_step_nm, Source.task_workflow_step_category_nm, getdate(), getdate() )
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-        Target.update_ts					= getdate(); /*
-
-		INSERT INTO edw_core.ttask_workflow(
-				task_workflow_nm,
-				task_workflow_category_nm,
-				create_ts,
-				update_ts 
-			)
-        SELECT 	task_workflow_nm, task_workflow_category_nm,  getdate(), getdate()
-        	FROM edw_temp.ttask_workflow_temp1 ;*/
+        Target.update_ts					= getdate(); 
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(t1.CreatedDate,t1.UpdatedDate)) FROM edw_temp.ttask_workflow_temp1 t1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(t1.CreatedDate,t1.UpdatedDate)) FROM edw_temp.ttask_workflow_step_temp1 t1),@last_source_extract_ts)
 
-        DROP TABLE IF EXISTS edw_temp.ttask_workflow_temp1
+        DROP TABLE IF EXISTS edw_temp.ttask_workflow_step_temp1
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
