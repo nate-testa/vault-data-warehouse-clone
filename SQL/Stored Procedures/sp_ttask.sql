@@ -11,7 +11,8 @@ GO
 ------------------------------------------------------------------------------------------------------------
 -- 01/16/24		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 01/17/24		Architha Gudimalla				2. Fixed errors after first run  
--- 02/06/24		Architha Gudimalla				3. Added task_workflow_step_sk
+-- 02/06/24		Architha Gudimalla				3. Added task_workflow_step_sk 
+-- 02/07/24		Architha Gudimalla				4. Updated merge join
 -- ============================================================================================================= 
 
 CREATE or ALTER   PROCEDURE edw_core.sp_ttask
@@ -80,7 +81,7 @@ BEGIN
         left join edw_stage.Workflow wf on wt.WorkflowId = wf.id
         left join edw_stage.WorkflowStep wfs on wt.WorkflowStepId = wfs.id 
         left join edw_core.ttask_workflow twf on wf.name = twf.task_workflow_nm 
-        left join edw_core.ttask_workflow_step twfs on wfs.name = twfs.task_workflow_step_nm        
+        left join edw_core.ttask_workflow_step twfs on wfs.name = twfs.task_workflow_step_nm  and wf.name = twfs.task_workflow_nm      
 		WHERE GREATEST(wt.CreatedDate,wt.UpdatedDate)>@last_source_extract_ts
 		and acc.policynumber is not null;
 
@@ -95,7 +96,7 @@ BEGIN
 						source_system_sk, create_ts, update_ts, etl_audit_sk
 				FROM edw_temp.ttask_temp1
 		)  AS Source
-		ON  Source.policy_no = Target.policy_no and Source.effective_dt = Target.effective_dt 
+		ON  Source.policy_no = Target.policy_no and Source.effective_dt = Target.effective_dt and isnull(Source.transaction_seq_no,0) = isnull(Target.transaction_seq_no ,0)
 		and Source.task_nm = Target.task_nm and Source.workflow_nm = Target.workflow_nm and Source.workflow_step_nm = Target.workflow_step_nm 
 		and Source.task_created_dt = Target.task_created_dt 
 		WHEN NOT MATCHED BY Target THEN
@@ -150,7 +151,9 @@ BEGIN
 		Target.task_updated_dt 					= Source.task_updated_dt,
 		Target.task_closed_in 					= Source.task_closed_in,
 		Target.task_suspended_until_dt 			= Source.task_suspended_until_dt,
-		Target.task_abandoned_reason_desc 		= Source.task_abandoned_reason_desc
+		Target.task_abandoned_reason_desc 		= Source.task_abandoned_reason_desc,
+		Target.task_workflow_sk 				= Source.task_workflow_sk,
+		Target.task_workflow_step_sk 			= Source.task_workflow_step_sk
 		; 
 
         /*INSERT INTO edw_core.ttask(
