@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.titem_inforce add annual_net_premium_amt decimal(15,2) null;
