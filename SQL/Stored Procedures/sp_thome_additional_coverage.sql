@@ -8,7 +8,10 @@
 --						Yunus Mohammed				1. Created this procedure 
 -- 11/17/23				Yunus Mohammed				2. Added new columns
 -- 01/16/24				Alberto Almario				3. Added new column extended_liability_location_ct
--- 01/25/24				Alberto Almario				4. Added new columns roof_
+-- 01/25/24				Alberto Almario				4. Added new columns roof_exclusion_with_ensuing_loss_in, 
+--																		 roof_coverage_endorsement_wh_in, 
+--																		 roof_coverage_endorsement_ap_in,
+--																		 roof_coverage_endorsement_rv_in
 -- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
 
