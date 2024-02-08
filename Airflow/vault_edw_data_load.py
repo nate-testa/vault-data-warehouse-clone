@@ -794,6 +794,7 @@ with DAG(
             'sp_tadditional_interest', 
             'sp_tpolicy_update_non_renwal_billing',
             'sp_ttask_workflow',
+            'sp_ttask_workflow_step',
             'sp_ttask', 
             'sp_tmanuscript'
             ]
@@ -854,6 +855,14 @@ with DAG(
             autocommit=True,
         )
 
+        sp_ttask_workflow_step = MsSqlOperator(
+            task_id='sp_ttask_workflow_step',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_ttask_workflow_step",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_ttask = MsSqlOperator(
             task_id='sp_ttask',
             mssql_conn_id='Vault_EDW',
@@ -877,7 +886,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(policy_group_items, 'All stored procedures executed successfully for all the Policy tables'),
         )
 
-        sp_tpolicy >> sp_tpolicy_update_non_renwal_billing >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tloss_history >> sp_tadditional_interest >> sp_ttask_workflow >> sp_ttask >> sp_tmanuscript >> send_policy_email
+        sp_tpolicy >> sp_tpolicy_update_non_renwal_billing >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tloss_history >> sp_tadditional_interest >> sp_ttask_workflow >> sp_ttask_workflow_step >> sp_ttask >> sp_tmanuscript >> send_policy_email
 
 
     # with TaskGroup("vendor_report_group") as vendor_report_group:
