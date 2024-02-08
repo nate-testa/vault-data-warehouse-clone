@@ -6,6 +6,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 10/12/23		Mohammed Yunus					1. Created this procedure 
 -- 10/27/23		Architha Gudimalla				2. Added cast on broker_id
+-- 02/08/24		Alberto Almario					3. Added new column producer_id and change to use merge
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tproducer]
@@ -42,31 +43,79 @@ BEGIN
 			NULLIF(Phone,'') AS phone_no,
 			NULLIF(NationalProducerNumber,'') AS national_producer_no,
 			br.CreatedDate,
-			br.UpdatedDate
+			br.UpdatedDate,
+			br.ID AS producer_id
 		INTO edw_temp.tproducer_temp1
 		FROM
 			edw_stage.[Broker] br
 			INNER JOIN edw_stage.Brokerage brk on brk.id=br.BrokerageId
 			INNER JOIN edw_core.tbroker tbr on tbr.broker_id=cast(brk.ProducerId as varchar)
 		WHERE
-				GREATEST(br.CreatedDate,br.UpdatedDate)>@last_source_extract_ts
-		
-		-- Delete from [tproducer] table
-		DELETE FROM edw_core.[tproducer];
+			GREATEST(br.CreatedDate,br.UpdatedDate)>@last_source_extract_ts
 
-		-- Reset identity column
-		DBCC CHECKIDENT('edw_core.tproducer',RESEED,0);
 
-		INSERT edw_core.[tproducer]
-			(
-				broker_id,broker_sk,first_nm,last_nm,title,email,phone_no,
-				national_producer_no,create_ts,update_ts,etl_audit_sk
-			)
-		SELECT
-				broker_id,broker_sk,first_nm,last_nm,title,email,phone_no,
-				national_producer_no,GETDATE(),GETDATE(),@etl_audit_sk
-		FROM
-			edw_temp.tproducer_temp1
+		--Start Merge process
+		MERGE edw_core.tproducer AS Target
+		USING (
+			SELECT 
+				broker_id,
+				broker_sk,
+				first_nm,
+				last_nm,
+				title,
+				email,
+				phone_no,
+				national_producer_no,
+				CreatedDate,
+				UpdatedDate,
+				producer_id
+			FROM 
+				edw_temp.tproducer_temp1
+		) AS Source
+		ON Source.producer_id = Target.producer_id
+		--For Inserts
+		WHEN NOT MATCHED BY Target THEN
+		INSERT (
+			broker_id,
+			broker_sk,
+			first_nm,
+			last_nm,
+			title,
+			email,
+			phone_no,
+			national_producer_no,
+			create_ts,
+			update_ts,
+			etl_audit_sk,
+			producer_id
+		)
+		VALUES (
+			Source.broker_id,
+			Source.broker_sk,
+			Source.first_nm,
+			Source.last_nm,
+			Source.title,
+			Source.email,
+			Source.phone_no,
+			Source.national_producer_no,
+			getdate(), 
+			getdate(), 
+			@etl_audit_sk,
+			Source.producer_id
+		)
+		--For Updates
+		WHEN MATCHED THEN UPDATE 
+		SET
+			Target.broker_id = Source.broker_id,
+			Target.broker_sk = Source.broker_sk,
+			Target.first_nm = Source.first_nm,
+			Target.last_nm = Source.last_nm,
+			Target.title = Source.title,
+			Target.email = Source.email,
+			Target.phone_no = Source.phone_no,
+			Target.national_producer_no = Source.national_producer_no,
+			Target.update_ts = getdate()
+		;
 
 		SET @rows_affected=@@ROWCOUNT;	
 
