@@ -9,6 +9,7 @@ GO
 ------------------------------------------------------------------------------------------------------------
 -- 01/16/24		Architha Gudimalla				1. Created this procedure 
 -- 01/17/24		Architha Gudimalla				2. Fixed errors after first run  
+-- 02/06/24		Architha Gudimalla				3. Dropping the temp table  
 -- ============================================================================================================= 
 
 CREATE or ALTER   PROCEDURE edw_core.sp_ttask_workflow
@@ -76,7 +77,7 @@ BEGIN
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(t1.CreatedDate,t1.UpdatedDate)) FROM edw_temp.ttask_workflow_temp1 t1),@last_source_extract_ts)
 
-        DROP TABLE IF EXISTS edw_temp.ttask_temp1
+        DROP TABLE IF EXISTS edw_temp.ttask_workflow_temp1
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;

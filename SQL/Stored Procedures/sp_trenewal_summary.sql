@@ -21,6 +21,9 @@ GO
 -- 11/27/23		Architha Gudimalla				9. Corrected the logic for residence type and TIV
 -- 01/30/24		Architha Gudimalla				10. Added replace on policy_no to match the policy numbers that skipped 'x' in it
 -- 02/01/24		Architha Gudimalla				11. Added logic for wip_renewal_quote_ct, offered_or_not_taken_quote_ct, renewal_quote_sk 
+-- 02/07/24		Architha Gudimalla				12. Added logic for pending non renewal prm
+-- 02/07/24		Architha Gudimalla				13. customer other inf count
+-- 02/09/24		Architha Gudimalla				14. customer other inf count default to 0 if null
 -- =========================================================================================================================================== 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -133,8 +136,19 @@ BEGIN
 				(
 				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no,
 						replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd
+						, non_renewal_in, pending_non_renewal_in
 				 FROM	edw_core.tpolicy
 				 where	expiration_dt between @begin_dt and @end_dt 
+				),
+				--customer inf count
+				cust_inf as
+				(
+					select customer_sk, td.actual_dt inforce_dt, count(policy_sk) inf_ct
+					from edw_core.tdaily_inforce_policy inf, edw_core.tdate td
+					where inf.inforce_dt_sk = td.date_sk
+					and td.yearmonth = 202401
+					and customer_sk is not null
+					group by customer_sk, td.actual_dt
 				),
 				--pols renewing all in current month
 				ren_pols_all as
@@ -164,14 +178,25 @@ BEGIN
 				--pols renewing all in current month
 				ren_quotes as
 				(
-				 SELECT quote_sk, quote_no, effective_dt, original_policy_no,  
-						 case when prior_policy_no is null and original_policy_no is null then quote_no
-							  when prior_policy_no is null  							  then original_policy_no
-							  when CHARINDEX('-',prior_policy_no) = 0 					  then prior_policy_no 
-							  else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
-						end prior_policy_no, quote_Status 
-				 from edw_core.tquote q 
-				 where	effective_dt between @begin_dt and @end_dt 
+					select *
+					FROM
+					(
+						SELECT quote_sk, quote_no, effective_dt, original_policy_no,  
+								case when prior_policy_no is null and original_policy_no is null then quote_no
+									when prior_policy_no is null  							  then original_policy_no
+									when CHARINDEX('-',prior_policy_no) = 0 					  then prior_policy_no 
+									else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
+								end prior_policy_no, quote_Status,
+								rank() over (partition by case when prior_policy_no is null and original_policy_no is null then quote_no
+															when prior_policy_no is null  							  then original_policy_no
+															when CHARINDEX('-',prior_policy_no) = 0 					  then prior_policy_no 
+															else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
+														end order by quote_sk) rnk  
+						from edw_core.tquote q 
+						where	effective_dt between @begin_dt and @end_dt  
+						and quote_Status <> 'Issued'
+					) A
+				 	where rnk = 1
 				),
 				/*ren_pols as
 				--pols renewing in current month
@@ -302,6 +327,7 @@ BEGIN
 						expiring_written_premium_amt,
 						expiring_premium_renewal_accepted_amt,
 						expiring_non_renewal_written_premium_amt,
+						expiring_pending_non_renewal_written_premium_amt ,
 						expiring_total_finished_square_feet ,
 						expiring_residence_type,
 						expiring_sixty_day_tiv_amt,
@@ -328,7 +354,8 @@ BEGIN
 						,uw_company_cd
 						,wip_renewal_quote_ct
 						,offered_or_not_taken_quote_ct
-						,renewal_quote_sk  
+						,renewal_quote_sk 
+						,expiring_customer_other_inforce_ct
 					)
 				select 	@month_end_dt_sk, 
 						exp_pols_prm.policy_sk, 
@@ -341,6 +368,7 @@ BEGIN
 						expiring_premium_amount, 
 						exp_pols_prm.expiring_premium_amount * (case when ren_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end) as expiringpremiumrenewalaccepted,
 						exp_pols_prm.expiring_premium_amount * (case when exp_pols_prm.non_renewal_in = 'Yes' then -1 else 0 end) as non_renewal_expiring_premium_amount,
+						exp_pols_prm.expiring_premium_amount * (case when exp_pols.pending_non_renewal_in = 'Yes' then -1 else 0 end) as non_renewal_expiring_premium_amount,
 						exp_pols_prm.totalsquarefeet,  
 						(CASE when exp_pols_prm.product_cd  in ('HO','CO')  and exp_pols_prm.max_tr_residencetype =  'Homeowners' then 'Homeowners'
 							  when exp_pols_prm.product_cd in ('HO','CO')  and exp_pols_prm.max_tr_residencetype <> 'Homeowners' then 'Condo/Tenant'
@@ -376,17 +404,24 @@ BEGIN
 								else exp_pols.uw_company_cd + ' to ' + ren_pols.uw_company_cd 
 						end
 						,case when ren_pols.policy_sk is not null then 0 
+						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
+						 	  when exp_pols_prm.cancel_ind <> 0 then 0 
 						 	  when ren_quotes.quote_no is not null then 1 
 						 	  else 0 
 						 end wip_renewal_quote_ct
 						,case when ren_pols.policy_sk is not null then 0 
+						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
+						 	  when exp_pols_prm.cancel_ind <> 0 then 0 
 						 	  when ren_quotes.quote_no is not null and ren_quotes.quote_Status in ('Offered','Not taken') then 1 
 						 	  else 0 
 						 end offered_or_not_taken_quote_ct
 						,case when ren_pols.policy_sk is not null then 0 
+						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
+						 	  when exp_pols_prm.cancel_ind <> 0 then 0 
 						 	  when ren_quotes.quote_no is not null then ren_quotes.quote_sk 
 						 	  else 0 
 						 end renewal_quote_sk
+						,isnull(ci.inf_ct,0) expiring_customer_other_inforce_ct
 				from exp_pols
 				-- join to get prms for expiring policies
 				inner join prm exp_pols_prm on exp_pols_prm.policy_sk = exp_pols.policy_sk 
@@ -397,6 +432,7 @@ BEGIN
 				-- join to get prm for renewals 
 				left join prm ren_pols_prm on ren_pols_prm.policy_sk = ren_pols.policy_sk 
 				inner join max_tr on exp_pols_prm.policy_sk = max_tr.policy_sk and exp_pols_prm.transaction_seq_no = max_tr.transaction_seq_no
+				left join cust_inf ci on ci.customer_sk = max_tr.customer_sk and ci.inforce_dt = exp_pols.expiration_dt
 				 
        
 				SET @rows_affected=@@ROWCOUNT;

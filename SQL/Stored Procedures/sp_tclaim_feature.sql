@@ -3,11 +3,12 @@
 -- Create Date: 07/28/2023
 -- Description: This procedures inserts and updates claim feature data
 -----------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date 			|Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 07/28/23		Yunus Mohammed				1. Created this procedure
--- 11/20/23		Yunus Mohammed				2. Added Throw
--- 01/31/24		Yunus Mohammed				3. Added new fields
+-- 07/28/23				Yunus Mohammed				1. Created this procedure
+-- 11/20/23				Yunus Mohammed				2. Added Throw
+-- 01/31/24				Yunus Mohammed				3. Added new fields
+-- 02/07/24				Yunus Mohammed				4. Converted 'Y' to 'Yes' and 'N' to 'No' for newly added fields.
 -- ========================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature]
@@ -56,15 +57,42 @@ BEGIN
 		e.loss_status AS claim_feature_status,
 		asl.aslob_sk, 
 		g.real_name AS claim_adjuster_nm,tcpi2.insured_name AS risk_item,
-		c.assignment_of_benefits_contractor AS assignment_of_benefits_contractor_in,
-		c.public_adjuster AS public_adjuster_in,
-		c.arbitration AS arbitration_in,
-		c.mediation AS mediation_in,
-		c.appraisal AS appraisal_in,
-		c.alternative_dispute_resolution AS alternative_dispute_resolution_in,
-		c.neutral_evaluation AS neutral_evaluation_in,
-		c.settlement_conference AS setllement_conference_in,
-		c.settlement_resolution  AS settlement_resolution_in,
+		CASE c.assignment_of_benefits_contractor
+			WHEN 'Y' THEN 'Yes'
+			WHEN 'N' THEN 'No'
+		END AS assignment_of_benefits_contractor_in,
+		CASE c.public_adjuster
+			WHEN 'Y' THEN 'Yes'
+			WHEN 'N' THEN 'No'
+		END AS public_adjuster_in,
+		CASE c.arbitration
+			WHEN 'Y' THEN 'Yes'
+			WHEN 'N' THEN 'No'
+		END AS arbitration_in,
+		CASE c.mediation
+			WHEN 'Y' THEN 'Yes'
+			WHEN 'N' THEN 'No'
+		END AS mediation_in,
+		CASE c.appraisal
+			WHEN 'Y' THEN 'Yes'
+			WHEN 'N' THEN 'No'
+		END AS appraisal_in,
+		CASE c.alternative_dispute_resolution
+			WHEN 'Y' THEN 'Yes'
+			WHEN 'N' THEN 'No'
+		END AS alternative_dispute_resolution_in,
+		CASE c.neutral_evaluation
+			WHEN 'Y' THEN 'Yes'
+			WHEN 'N' THEN 'No'
+		END AS neutral_evaluation_in,
+		CASE c.settlement_conference
+			WHEN 'Y' THEN 'Yes'
+			WHEN 'N' THEN 'No'
+		END AS setllement_conference_in,
+		CASE c.settlement_resolution
+			WHEN 'Y' THEN 'Yes'
+			WHEN 'N' THEN 'No'
+		END AS settlement_resolution_in,
 		3 AS source_system_sk,
 		CASE
 			prd.product_cd
