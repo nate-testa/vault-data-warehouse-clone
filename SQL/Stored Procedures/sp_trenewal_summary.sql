@@ -23,6 +23,7 @@ GO
 -- 02/01/24		Architha Gudimalla				11. Added logic for wip_renewal_quote_ct, offered_or_not_taken_quote_ct, renewal_quote_sk 
 -- 02/07/24		Architha Gudimalla				12. Added logic for pending non renewal prm
 -- 02/07/24		Architha Gudimalla				13. customer other inf count
+-- 02/09/24		Architha Gudimalla				14. customer other inf count default to 0 if null
 -- =========================================================================================================================================== 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -420,7 +421,7 @@ BEGIN
 						 	  when ren_quotes.quote_no is not null then ren_quotes.quote_sk 
 						 	  else 0 
 						 end renewal_quote_sk
-						,ci.inf_ct expiring_customer_other_inforce_ct
+						,isnull(ci.inf_ct,0) expiring_customer_other_inforce_ct
 				from exp_pols
 				-- join to get prms for expiring policies
 				inner join prm exp_pols_prm on exp_pols_prm.policy_sk = exp_pols.policy_sk 
