@@ -2,9 +2,11 @@ import pandas as pd
 from airflow.hooks.mssql_hook import MsSqlHook
 
 
-
-
 def get_HTML_on_vault_format(p_msg_text, p_html_tbl):
+
+    p_msg_text = p_msg_text.replace("Release Highlights:", '<span style="background-color: #9D0208; color: white; font-weight: bold;">Release Highlights:</span>')
+    p_msg_text = p_msg_text.replace('\n', '<br>')
+
     html_str = '''
                     <html>
                     <head>
@@ -35,7 +37,7 @@ def get_HTML_on_vault_format(p_msg_text, p_html_tbl):
                         ''' + p_html_tbl + '''
                         <br><br><br>
                         <td style="padding:0 18pt;word-break:break-word;">
-                            <p style="margin-right:0;margin-bottom:18pt;margin-left:0;line-height:18.0pt;"><span style="color:#353535;font-size:12pt;font-family:Segoe UI,sans-serif;">Sincerely,</span></p>
+                            <p style="margin-right:0;margin-bottom:18pt;margin-left:0;line-height:18.0pt;"><span style="color:#353535;font-size:12pt;font-family:Segoe UI,sans-serif;">This is an auto-generated message. If you have any questions, please reach out to <a href="mailto:itdatateam@vault.insurance">itdatateam@vault.insurance</a>. <br><br> Sincerely,</span></p>
                             <p style="font-size:11pt;font-family:Calibri,sans-serif;margin:9.75pt 0 18pt 0;line-height:18.0pt;"><b><span style="color:#B31B34;font-size:12pt;font-family:Segoe UI,sans-serif;">Vault Data Platform</span></b></p>
                         </td>
                     </body>
@@ -59,7 +61,7 @@ def get_sp_success_data_HTML(process_nm_list, msg_text):
 
     df = conn_str.get_pandas_df(qry)
     html_tbl = df.to_html(index=False, justify='center', max_rows=1000)
-    html_str = html_str = get_HTML_on_vault_format(msg_text, html_tbl)
+    html_str = get_HTML_on_vault_format(msg_text, html_tbl)
 
     return html_str
 
@@ -90,9 +92,24 @@ def get_vault_data_HTML(sql_qry, msg_text):
 
     df = conn_str.get_pandas_df(sql_qry)
     html_tbl = df.to_html(index=False, justify='center', max_rows=1000)
-    html_str = html_str = get_HTML_on_vault_format(msg_text, html_tbl)
+    html_str = get_HTML_on_vault_format(msg_text, html_tbl)
 
     return html_str
+
+
+def get_release_notes_data_HTML(sql_qry, msg_text):
+
+    conn_str = MsSqlHook(mssql_conn_id="Vault_EDW")
+
+    df = conn_str.get_pandas_df(sql_qry)
+    html_tbl = df.to_html(index=False, justify='center', max_rows=4000)
+    html_tbl = html_tbl.replace('<th>', '<th style="background-color: #9D0208; color: white;">')
+    html_tbl = html_tbl.replace('<table', '<table style="border-collapse: collapse; border: 2px solid black;"')
+    html_tbl = html_tbl.replace('<td', '<td style="border: 2px solid black;"')
+    html_str = get_HTML_on_vault_format(msg_text, html_tbl)
+
+    return html_str
+
 
 if __name__ == "__main__":
     print('*****name == main******')
