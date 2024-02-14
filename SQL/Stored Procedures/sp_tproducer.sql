@@ -44,7 +44,8 @@ BEGIN
 			NULLIF(NationalProducerNumber,'') AS national_producer_no,
 			br.CreatedDate,
 			br.UpdatedDate,
-			br.ID AS producer_id
+			br.ID AS producer_id,
+			CASE WHEN bt.UserEmailConfirmed = 1 Then 'Active' Else 'Pending' end as producer_status
 		INTO edw_temp.tproducer_temp1
 		FROM
 			edw_stage.[Broker] br
@@ -68,7 +69,8 @@ BEGIN
 				national_producer_no,
 				CreatedDate,
 				UpdatedDate,
-				producer_id
+				producer_id,
+				producer_status
 			FROM 
 				edw_temp.tproducer_temp1
 		) AS Source
@@ -87,7 +89,8 @@ BEGIN
 			create_ts,
 			update_ts,
 			etl_audit_sk,
-			producer_id
+			producer_id,
+			producer_status
 		)
 		VALUES (
 			Source.broker_id,
@@ -101,7 +104,8 @@ BEGIN
 			getdate(), 
 			getdate(), 
 			@etl_audit_sk,
-			Source.producer_id
+			Source.producer_id,
+			producer_status
 		)
 		--For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -114,6 +118,7 @@ BEGIN
 			Target.email = Source.email,
 			Target.phone_no = Source.phone_no,
 			Target.national_producer_no = Source.national_producer_no,
+			Target.producer_status = Source.producer_status,
 			Target.update_ts = getdate()
 		;
 
