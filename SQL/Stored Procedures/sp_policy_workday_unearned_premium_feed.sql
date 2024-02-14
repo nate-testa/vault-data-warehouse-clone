@@ -7,7 +7,8 @@
 ---------------------------------------------------------------------------------------------------
 -- 11/15/23		Yunus Mohammed				1. Updated logic for cancelled and expired policies
 -- 12/01/23		Yunus Mohammed				2. Updated  product name and company name
--- 12/05/23		Yunus Mohammed				3. Removed distinct and added contribcutoffdate date
+-- 12/05/23		Yunus Mohammed				3. Added contribcutoffdate date
+-- 02/14/24		Yunus Mohammed				3. Removed distinct and added check from tpolicy_history table
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -150,7 +151,7 @@ BEGIN
 				uep.[address],uep.county,uep.city,uep.risk_state,uep.zip,uep.fire_protection,uep.category,
 				CASE WHEN  uep.subcategory IN ('Subscriber Contribution (Automobile)','Subscriber Contribution (Homeowners)')
 				THEN 'Subscriber Contribution'
-				ELSE uep.subcategory END AS subcategory
+				ELSE uep.subcategory END AS subcategory,
 				uep.financial_category_id,uep.financial_category_name,
 				uep.aslob,uep.amount,uep.unearned,d.subscriber_contribution_end_dt AS contribcutoffdate,uep.extraction_time,uep.create_ts,uep.update_ts,uep.etl_audit_sk
 			FROM
