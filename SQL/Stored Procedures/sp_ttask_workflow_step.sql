@@ -9,6 +9,7 @@ GO
 ------------------------------------------------------------------------------------------------------------
 -- 02/06/24		Architha Gudimalla				1. Created this procedure   
 -- 02/07/24		Architha Gudimalla				2. Added update on task_workflow_step_category_nm
+-- 02/14/24		Architha Gudimalla				3. Added 2 updates on task_workflow_step_category_nm
 -- ============================================================================================================= 
 
 CREATE or ALTER   PROCEDURE edw_core.sp_ttask_workflow_step
@@ -169,6 +170,9 @@ BEGIN
 		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'Renewal' where task_workflow_nm = 'VC - Renewal Queue' and task_workflow_step_nm  =  'New York Dec requires stamping';
 		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'Renewal' where task_workflow_nm = 'VC - Renewal Queue' and task_workflow_step_nm  =  'Renewal Referral';
 		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'Follow Ups' where task_workflow_nm = 'Anythng in the follow up status' and task_workflow_step_nm  =  '';
+		--added below on 20240214
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'VRE to VES' and task_workflow_step_nm  =  'Quote VRE to VES Option';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'Non-Admitted Option (From Admitted)' and task_workflow_step_nm  =  'Non-Admitted Renewal Option Underwriting Review'; 
 
 		SET @rows_affected=@@ROWCOUNT;
 
