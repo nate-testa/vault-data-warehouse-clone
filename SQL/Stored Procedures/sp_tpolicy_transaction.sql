@@ -20,6 +20,7 @@
 -- 11/06/23		Alberto Almario					12. change to use UniqueId instead of Index and change name from vehicle_no to vehicle_unique_id
 -- 11/10/23		Architha Gudimalla				13. Corrected cal_mn for tfs temp table
 -- 12/11/23		Architha Gudimalla				14. Updated logic for source.stage (used as transaction type)
+-- 02/14/24		Architha Gudimalla				15. Updated logic for Lux subscriber contributoin on ho
 -- ====================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -85,7 +86,8 @@ BEGIN
 			COALESCE (acctrcp.CommissionDeltaProRated ,acctrcp.commission) as comm,
 			0 as tfs, tmp1.ssk, 'prm' typ,
 			COALESCE(acctrcp.CededPremiumDelta,acctrcp.CededPremium) as ceded_annual_premium_amt,
-			COALESCE(acctrcp.CededPremiumDeltaProRated,acctrcp.CededPremium) as ceded_premium_amt
+			COALESCE(acctrcp.CededPremiumDeltaProRated,acctrcp.CededPremium) as ceded_premium_amt,
+			null covID
 		INTO edw_temp.tpolicy_transaction_temp2  
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
@@ -117,10 +119,12 @@ BEGIN
 			0 as comm ,
 			COALESCE (acctrtf.AmountDeltaProRated ,acctrtf.Amount) as tfs, tmp1.ssk, 'tfs' typ,
 			0 as ceded_annual_premium_amt,
-			0 as ceded_premium_amt
+			0 as ceded_premium_amt,
+			cov.Name covID
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
 		inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = tmp1.Id 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
+		left join edw_stage.coverage cov on cov.id = acctrtf.coverageid
 
 		-- Start Inserting records
 		INSERT INTO edw_core.tpolicy_transaction 
@@ -205,9 +209,11 @@ BEGIN
 		LEFT JOIN edw_core.tproduct pr on pr.product_cd = pol.product_cd
 		LEFT JOIN edw_core.tbroker br on pol.broker_id = br.broker_id
 		LEFT JOIN edw_core.tcustomer cust on pol.customer_id = cust.customer_id
-		LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) and pr.product_cd = ic.product_cd  
-		LEFT JOIN edw_core.tinternal_coverage tfs on tfs.internal_coverage_desc = source.coverage and source.typ <> 'prm' and pr.product_cd = tfs.product_cd  
-		--LEFT JOIN edw_core.ttax_fee_surcharge ttfs on ttfs.tax_fee_surcharge_desc = source.coverage 
+		LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) 
+												and (case when source.coverage = 'Subscriber Contribution' and source.covID = 'Lux' then 'LUX' else pr.product_cd end) = ic.product_cd  
+		--LEFT JOIN edw_core.tinternal_coverage tfs on tfs.internal_coverage_desc = source.coverage and source.typ <> 'prm' and (pr.product_cd = tfs.product_cd)    
+		LEFT JOIN edw_core.tinternal_coverage tfs on tfs.internal_coverage_desc = source.coverage and source.typ <> 'prm' 
+													and (case when source.coverage = 'Subscriber Contribution' and source.covID = 'Lux' then 'LUX' else pr.product_cd end = tfs.product_cd)    
 		LEFT JOIN edw_core.tpolicy_transaction_type tt on tt.policy_transaction_type_cd = source.stage 
 
 		SET @rows_affected=@@ROWCOUNT; 
