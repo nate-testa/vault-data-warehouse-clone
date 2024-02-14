@@ -5,20 +5,26 @@ from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
+from airflow.models import Variable
 from vault_edw_HTML_format import get_HTML_on_vault_format, get_release_notes_data_HTML
 
-to_email = "sandeep.gundreddy@vault.insurance, architha.gudimalla@vault.insurance, yunus.mohammed@vault.insurance, tuba.mohsin@vault.insurance, rushin.shah@vault.insurance, hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
-# to_email = "alberto.valbuena@vault.insurance"
+ENVIRONMENT = Variable.get("environment")
+if ENVIRONMENT == 'PRODUCTION':
+    to_email = "edw_users@vault.insurance"
+else:
+    to_email = "itdatateam@vault.insurance"
+    # to_email = "alberto.valbuena@vault.insurance"
+
 cc_email = ""
 
 
 def check_tedw_release_note_and_send_email(**kwargs):
     
-    current_date = datetime.now().strftime('%Y-%m-%d')
+    current_date = datetime.now().strftime('%m/%d/%Y')
     
     sql_qry = """
                 SELECT 
-                    ticket_no,ticket_short_desc,ticket_type,database_change_type,impacted_table_nm,impacted_column_nm, resolution_summary
+                    TICKET_NO,TICKET_SHORT_DESC,TICKET_TYPE,DATABASE_CHANGE_TYPE,IMPACTED_TABLE_NM,IMPACTED_COLUMN_NM, RESOLUTION_SUMMARY
                 FROM edw_core.tedw_release_note 
                 WHERE send_email_in = 'Yes' 
                 AND send_email_dt = CAST(GETDATE() AS DATE) 
@@ -34,17 +40,17 @@ def check_tedw_release_note_and_send_email(**kwargs):
               """
     mssql_hook_hl = MsSqlHook(mssql_conn_id='Vault_EDW')
     result_hl = mssql_hook_hl.get_first(sql_qry_hl)
-    msg_text = "Please check the release notes below."
+    msg_text = "The following is a detailed list of database changes implemented in this release."
 
     if result_hl is not None:
         release_highlights = result_hl[0]
-        msg_text = release_highlights + "\nPlease check the release notes below."              
+        msg_text = release_highlights + "\nThe following is a detailed list of database changes implemented in this release."              
     
     if result is not None:
         EmailOperator(
             task_id='send_email_release_notes',
             to=to_email,
-            subject='Enterprise Data Warehouse(EDW) Release Notes ' + current_date,
+            subject='Enterprise Data Warehouse(EDW) Release Notes - ' + current_date,
             html_content=get_release_notes_data_HTML(sql_qry,msg_text),
             dag=kwargs['dag'],
         ).execute(context=kwargs)
