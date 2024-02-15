@@ -45,7 +45,7 @@ BEGIN
 			br.CreatedDate,
 			br.UpdatedDate,
 			br.ID AS producer_id,
-			CASE WHEN bt.UserEmailConfirmed = 1 Then 'Active' Else 'Pending' end as producer_status
+			CASE WHEN br.UserEmailConfirmed = 1 Then 'Active' Else 'Pending' end as producer_status
 		INTO edw_temp.tproducer_temp1
 		FROM
 			edw_stage.[Broker] br
