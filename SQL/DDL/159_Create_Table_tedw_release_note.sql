@@ -1,0 +1,25 @@
+CREATE TABLE edw_core.tedw_release_note
+(
+edw_release_note_sk int IDENTITY(1,1) NOT NULL,
+ticket_no varchar(255),
+ticket_short_desc nvarchar(max),
+ticket_type  varchar(255),
+production_deployment_dt date,
+resource_nm   varchar(255),        
+database_change_type   varchar(255),
+impacted_table_schema  varchar(255),
+impacted_table_nm   varchar(255),
+impacted_column_nm  varchar(255),
+resolution_summary nvarchar(max), 
+edw_release_summary_sk int NOT NULL,
+send_email_in  varchar(255) ,
+send_email_dt date,
+create_ts  datetime,
+update_ts  datetime,
+CONSTRAINT pk_tedw_release_note PRIMARY KEY (edw_release_note_sk),
+ CONSTRAINT chk_database_change_type CHECK (database_change_type IN ('Addition', 'Modification', 'Deletion','Datafix')),
+CONSTRAINT chk_impacted_table_schema CHECK (impacted_table_schema IN ('edw_core', 'edw_stage','edw_integration')),
+CONSTRAINT chk_ticket_type CHECK (ticket_type IN ('Bug', 'Enhancement')),
+CONSTRAINT chk_send_email_in CHECK (send_email_in IN ('Yes', 'No')),
+CONSTRAINT fk_tedw_release_note_edw_release_summary_sk FOREIGN KEY (edw_release_summary_sk) REFERENCES edw_core.tedw_release_summary(edw_release_summary_sk)
+);
