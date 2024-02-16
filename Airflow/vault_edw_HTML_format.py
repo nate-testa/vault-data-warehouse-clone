@@ -32,7 +32,7 @@ def get_HTML_on_vault_format(p_msg_text, p_html_tbl):
                         ''' + p_msg_text + '''
                         <br><br>
                         ''' + p_html_tbl + '''
-                        <br><br><br>
+                        <br>
                         <td style="padding:0 18pt;word-break:break-word;">
                             <p style="margin-right:0;margin-bottom:0pt;margin-left:0;line-height:18.0pt;"><span style="color:#353535;font-size:12pt;font-family:Segoe UI,sans-serif;">This is an auto-generated message. If you have any questions, please reach out to <a href="mailto:itdatateam@vault.insurance">itdatateam@vault.insurance</a></span></p>
                             <p style="margin:0;line-height:18.0pt;"><span> <br> Sincerely,</span></p>
