@@ -118,6 +118,8 @@ BEGIN
 			WHERE
 				tpts.month_sk=@acounting_date_sk
 				AND (tic.internal_coverage_category_nm = 'Premium' OR tic.internal_coverage_desc like 'Subscriber Contribution%')
+				AND tpts.transaction_effective_dt_sk < = @acounting_date_sk
+				AND tpts.expiration_dt_sk > @acounting_date_sk
 				AND 
 				(
 				SELECT top 1 transaction_type
