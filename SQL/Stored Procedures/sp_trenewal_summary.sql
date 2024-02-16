@@ -24,6 +24,7 @@ GO
 -- 02/07/24		Architha Gudimalla				12. Added logic for pending non renewal prm
 -- 02/07/24		Architha Gudimalla				13. customer other inf count
 -- 02/09/24		Architha Gudimalla				14. customer other inf count default to 0 if null
+-- 02/13/24		Architha Gudimalla				15. Removed the default month from customer other inf
 -- =========================================================================================================================================== 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -130,6 +131,22 @@ BEGIN
 
 				delete from edw_core.trenewal_summary
 				where month_sk = @month_end_dt_sk;
+				
+				DROP TABLE IF EXISTS edw_temp.tren_summ_oth_cust_inf_temp;
+				
+				select customer_id, td.actual_dt inforce_dt, 
+						case when pol.prior_policy_no is null and pol.original_policy_no is null then pol.policy_no
+							 when pol.prior_policy_no is null  							  		 then pol.original_policy_no
+							 when CHARINDEX('-',pol.prior_policy_no) = 0 					  	 then pol.prior_policy_no 
+							 else left(pol.prior_policy_no, CHARINDEX('-',pol.prior_policy_no) - 1) 
+						end original_policy_no, 
+						pol.policy_no, pol.effective_dt
+				into edw_temp.tren_summ_oth_cust_inf_temp
+				from edw_core.tdaily_inforce_policy inf, edw_core.tdate td, edw_core.tpolicy pol
+				where inf.inforce_dt_sk = td.date_sk	
+				and inf.policy_sk  = pol.policy_sk 
+				and td.actual_dt between @begin_dt and @end_dt
+				and customer_sk is not null; 
 
 				with exp_pols as
 				--pols expiration in current month
@@ -140,15 +157,14 @@ BEGIN
 				 FROM	edw_core.tpolicy
 				 where	expiration_dt between @begin_dt and @end_dt 
 				),
-				--customer inf count
-				cust_inf as
+				--customer other inf count
+				cust_oth_inf as
 				(
-					select customer_sk, td.actual_dt inforce_dt, count(policy_sk) inf_ct
-					from edw_core.tdaily_inforce_policy inf, edw_core.tdate td
-					where inf.inforce_dt_sk = td.date_sk
-					and td.yearmonth = 202401
-					and customer_sk is not null
-					group by customer_sk, td.actual_dt
+					SELECT pol.policy_sk, count(*) oth_inf_ct--pol.policy_no, pol.expiration_dt, pol.original_policy_no, ci.*
+					FROM	edw_core.tpolicy pol
+					inner join edw_temp.tren_summ_oth_cust_inf_temp ci on pol.customer_id = ci.customer_id and pol.expiration_dt = ci.inforce_dt and pol.original_policy_no <> ci.original_policy_no
+				 	where	expiration_dt between @begin_dt and @end_dt 
+					group by pol.policy_sk
 				),
 				--pols renewing all in current month
 				ren_pols_all as
@@ -421,7 +437,7 @@ BEGIN
 						 	  when ren_quotes.quote_no is not null then ren_quotes.quote_sk 
 						 	  else 0 
 						 end renewal_quote_sk
-						,isnull(ci.inf_ct,0) expiring_customer_other_inforce_ct
+						,isnull(ci.oth_inf_ct,0) expiring_customer_other_inforce_ct
 				from exp_pols
 				-- join to get prms for expiring policies
 				inner join prm exp_pols_prm on exp_pols_prm.policy_sk = exp_pols.policy_sk 
@@ -432,7 +448,7 @@ BEGIN
 				-- join to get prm for renewals 
 				left join prm ren_pols_prm on ren_pols_prm.policy_sk = ren_pols.policy_sk 
 				inner join max_tr on exp_pols_prm.policy_sk = max_tr.policy_sk and exp_pols_prm.transaction_seq_no = max_tr.transaction_seq_no
-				left join cust_inf ci on ci.customer_sk = max_tr.customer_sk and ci.inforce_dt = exp_pols.expiration_dt
+				left join cust_oth_inf ci on ci.policy_sk = exp_pols.policy_sk 
 				 
        
 				SET @rows_affected=@@ROWCOUNT;
@@ -451,7 +467,9 @@ BEGIN
 				begin
 					set @parameter_desc= 'last_source_extract_ts = ' + CAST(@yearmonth AS VARCHAR(200))
 				end 
-				EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc; 
+				EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;   
+				
+				DROP TABLE IF EXISTS edw_temp.tren_summ_oth_cust_inf_temp;
 				 
 				FETCH NEXT FROM c1_rec INTO @yearmonth;
 			END; 
