@@ -1,5 +1,5 @@
 
--- tedw_release_summary
+-- tedw_release_summary--
 INSERT INTO edw_core.tedw_release_summary (release_summary, send_email_in, send_email_dt, create_ts, update_ts)
 VALUES (
 '
@@ -37,7 +37,7 @@ VALUES (
 )
 ;
 
--- tedw_release_note
+-- tedw_release_note--
 
 INSERT INTO edw_core.tedw_release_note (ticket_no, ticket_short_desc, ticket_type, production_deployment_dt, resource_nm, database_change_type, impacted_table_schema, impacted_table_nm, impacted_column_nm, resolution_summary, edw_release_summary_sk, send_email_in, send_email_dt, create_ts, update_ts) VALUES ('AD4651','Roof_ Field Additions into additional coverage tables','Enhancement','2024-02-09','Alberto Almario','Addition','edw_core','thome_additional_coverage ','roof_exclusion_with_ensuing_loss_in ','Metal 01/24 release related new column','1','Yes','2024-02-20',getdate(),getdate());
 INSERT INTO edw_core.tedw_release_note (ticket_no, ticket_short_desc, ticket_type, production_deployment_dt, resource_nm, database_change_type, impacted_table_schema, impacted_table_nm, impacted_column_nm, resolution_summary, edw_release_summary_sk, send_email_in, send_email_dt, create_ts, update_ts) VALUES ('AD4651','Roof_ Field Additions into additional coverage tables','Enhancement','2024-02-09','Alberto Almario','Addition','edw_core','thome_additional_coverage ','roof_coverage_endorsement_wh_in ','Metal 01/24 release related new column','1','Yes','2024-02-20',getdate(),getdate());
