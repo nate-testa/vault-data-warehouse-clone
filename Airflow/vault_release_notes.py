@@ -24,7 +24,13 @@ def check_tedw_release_note_and_send_email(**kwargs):
     
     sql_qry = """
                 SELECT 
-                    TICKET_NO,TICKET_SHORT_DESC,TICKET_TYPE,DATABASE_CHANGE_TYPE,IMPACTED_TABLE_NM,IMPACTED_COLUMN_NM, RESOLUTION_SUMMARY
+                    TICKET_NO,
+                    TICKET_SHORT_DESC AS TICKET_DESCRIPTION,
+                    TICKET_TYPE,
+                    DATABASE_CHANGE_TYPE,
+                    IMPACTED_TABLE_NM AS IMPACTED_TABLE_NAME,
+                    IMPACTED_COLUMN_NM  AS IMPACTED_COLUMN_NAME, 
+                    RESOLUTION_SUMMARY
                 FROM edw_core.tedw_release_note 
                 WHERE send_email_in = 'Yes' 
                 AND send_email_dt = CAST(GETDATE() AS DATE) 
