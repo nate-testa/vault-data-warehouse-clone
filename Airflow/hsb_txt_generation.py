@@ -185,6 +185,10 @@ def generate_txt_files(COMPANY_PRODUCTS, DATA_TYPE, QRY):
         txt_path = os.path.join(TXT_FOLDER_PATH, TXT_FILE_NAME)
         df.to_csv(txt_path, sep='~', index=False)
 
+        # Add extra line to the end of the file
+        with open(txt_path, 'a') as f:
+            f.write(f"{COMPANY_PRODUCT_CD}~{DATA_TYPE}~CONTROL~{df.shape[0]}~{datetime.now().strftime('%Y%m%d')}~02.10\n")
+
         # vacum to tmp folder
         delete_old_files(TXT_FOLDER_PATH,2)
 
