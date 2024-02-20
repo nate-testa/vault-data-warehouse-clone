@@ -38,8 +38,8 @@ BEGIN
             END AS policy_no,
             CONVERT(VARCHAR(8), p.effective_dt, 112) as homeowner_policy_effective_dt,
             CONVERT(VARCHAR(8), p.expiration_dt, 112) as homeowner_policy_expiration_dt,
-            '' as coverage_effective_dt,
-            '' as original_homeowner_policy_effective_dt,
+            CONVERT(VARCHAR(8), p.effective_dt, 112) as coverage_effective_dt,
+            CONVERT(VARCHAR(8), p.effective_dt, 112) as original_homeowner_policy_effective_dt,
             '' as prior_homeowner_insurance_ind,
             c.customer_nm as insured_nm,
             c.mailing_address_line1 as dwelling_address,
@@ -59,9 +59,21 @@ BEGIN
             '' as homeowners_or_dwelling_fire_policy_form_type,
             '' as product_form_no,
             '' as client_product_nm,
-            hc.residence_type,
-            '' as usage_type,
-            hc.occupancy_type as occupancy,
+            CASE 
+                WHEN p.product_cd = 'HO' THEN 'Dwelling'
+                WHEN p.product_cd = 'CO' THEN 'Condo'
+            END AS residence_type,
+            CASE 
+                WHEN hc.occupancy_type IN ('Primary','Vacant') THEN 'Primary'
+                WHEN hc.occupancy_type IN ('Rented to others','Partially Rented to Others') THEN 'Secondary'
+                WHEN hc.occupancy_type LIKE 'Seasonal%' THEN 'Season'
+            END AS usage_type,
+            CASE 
+                WHEN hc.residence_type = 'Tenant' THEN 'Tenant'
+                WHEN hc.occupancy_type = 'Vacant' THEN 'Vacant'
+                WHEN hc.occupancy_type IN ('Primary','Rented to Others','Partially Rented to Others') THEN 'Owner'
+                WHEN hc.occupancy_type LIKE 'Seasonal%' THEN 'Seasonal'
+            END AS occupancy,
             hc.built_year as year_build,
             hc.total_finished_square_feet as total_living_area,
             '' as no_of_units_in_dwelling,
