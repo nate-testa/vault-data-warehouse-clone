@@ -29,9 +29,15 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[tpolicy_hsb_cyber_feed_temp1];
 		SELECT 
             getdate() as reporting_date,
-            '4004' as company_product_cd,
+            CASE 
+                WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '4404'
+                WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '4854'
+            END AS company_product_cd,
             'HCP' as product_nm,
-            '1004100' as contract_no,
+            CASE 
+                WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '1004100'
+                WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '1004610'
+            END AS contract_no,
             CASE 
                 WHEN CHARINDEX('-', p.policy_no) > 0 THEN LEFT(p.policy_no, CHARINDEX('-', p.policy_no) - 1)
                 ELSE p.policy_no
@@ -43,16 +49,19 @@ BEGIN
             c.mailing_address_city_nm as dwelling_city,
             c.mailing_address_state_cd as dwelling_state,
             c.mailing_address_zip_cd as dwelling_zip_cd,
-            ROUND(pt.ceded_premium_amt,0) as hcp_net_premium_amt,
+            ROUND(pt.ceded_premium_amt,2) as hcp_net_premium_amt,
             hac.home_cyber_protection_coverage_deductible as hcp_deductible_amt,
             hc.dwelling_limit_amt as coverage_a_value,
             hac.home_cyber_protection_coverage_limit_amt as slc_limit_amt,
             '' as homeowner_policy_form_no,
             '' as product_form_no,
             '' as client_product_nm,
-            '' as dwelling_type,
+            CASE 
+                WHEN p.product_cd = 'HO' THEN 280
+                WHEN p.product_cd = 'CO' THEN 282
+            END AS dwelling_type,
             '' as base_homeowner_premium,
-            ROUND(pt.net_premium_amt,0) as final_homeowner_premium,
+            ROUND(pt.net_premium_amt,2) as final_homeowner_premium,
             hc.aop_deductible as policy_deductible,
             hc.built_year as year_build,
             hc.total_finished_square_feet as total_living_area,
@@ -70,9 +79,7 @@ BEGIN
             p.create_ts as policy_history_create_ts
 		INTO [edw_temp].[tpolicy_hsb_cyber_feed_temp1] 
         FROM 
-            edw_core.tpolicy AS p
-        INNER JOIN 
-            edw_core.tdate AS d ON d.actual_dt = p.effective_dt
+            (SELECT * FROM edw_core.tpolicy WHERE policy_status = 'Active' AND product_cd in ('HO','CO')) AS p
         LEFT JOIN 
             edw_core.tcustomer AS c ON c.customer_id = p.customer_id
         LEFT JOIN 
@@ -111,6 +118,7 @@ BEGIN
             ON pt.policy_sk = p.policy_sk 
             AND pt.effective_dt = p.effective_dt
         WHERE cast(p.create_ts as datetime2(7)) > @last_source_extract_ts
+        AND pt.ceded_premium_amt <> 0
         ;
 
 
