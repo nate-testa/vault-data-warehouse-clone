@@ -29,9 +29,15 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[tpolicy_hsb_hsp_feed_temp1];
 		SELECT 
             getdate() as reporting_date,
-            '4271' as company_product_cd,
+            CASE 
+                WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '4271'
+                WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '4850'
+            END as company_product_cd,
             'HSP' as product_nm,
-            '1004006' as contract_no,
+            CASE 
+                WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '1004006'
+                WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '1004608'
+            END as contract_no,
             CASE 
                 WHEN CHARINDEX('-', p.policy_no) > 0 THEN LEFT(p.policy_no, CHARINDEX('-', p.policy_no) - 1)
                 ELSE p.policy_no
@@ -47,7 +53,10 @@ BEGIN
             c.mailing_address_state_cd as dwelling_state,
             c.mailing_address_zip_cd as dwelling_zip_cd,
             ROUND(pt.ceded_premium_amt,2) as hsp_net_premium_amt,
-            hac.home_systems_protection_limit_amt as hsp_limit_amt,
+            CASE 
+                WHEN hac.home_systems_protection_limit_amt IS NULL THEN 0 
+                ELSE REPLACE(hac.home_systems_protection_limit_amt,',','') 
+            END AS hsp_limit_amt,
             '500' as hsp_deductible_amt,
             NULL as base_homeowner_premium,
             ROUND(pt.net_premium_amt,2) as final_homeowner_premium,
@@ -98,9 +107,7 @@ BEGIN
             p.create_ts as policy_history_create_ts
         INTO [edw_temp].[tpolicy_hsb_hsp_feed_temp1] 
         FROM 
-            edw_core.tpolicy AS p
-        INNER JOIN 
-            edw_core.tdate AS d ON d.actual_dt = p.effective_dt
+            (SELECT * FROM edw_core.tpolicy WHERE policy_status = 'Active' AND product_cd in ('HO','CO')) AS p
         LEFT JOIN 
             edw_core.tcustomer AS c ON c.customer_id = p.customer_id
         LEFT JOIN 
@@ -139,6 +146,7 @@ BEGIN
             ON pt.policy_sk = p.policy_sk 
             AND pt.effective_dt = p.effective_dt
         WHERE cast(p.create_ts as datetime2(7)) > @last_source_extract_ts
+        AND pt.ceded_premium_amt <> 0
         ;
 
 		-- Start Insert process

@@ -29,9 +29,15 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[tpolicy_hsb_slc_feed_temp1];
 		SELECT 
             getdate() as reporting_date,
-            '4280' as company_product_cd,
+            CASE 
+                WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '4280'
+                WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '4852'
+            END as company_product_cd,
             'SLC' as product_nm,
-            '1004013' as contract_no,
+            CASE 
+                WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '1004013'
+                WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '1004609'
+            END as contract_no,
             CASE 
                 WHEN CHARINDEX('-', p.policy_no) > 0 THEN LEFT(p.policy_no, CHARINDEX('-', p.policy_no) - 1)
                 ELSE p.policy_no
@@ -98,9 +104,7 @@ BEGIN
             p.create_ts as policy_history_create_ts
 		INTO [edw_temp].[tpolicy_hsb_slc_feed_temp1] 
         FROM 
-            edw_core.tpolicy AS p
-        INNER JOIN 
-            edw_core.tdate AS d ON d.actual_dt = p.effective_dt
+            (SELECT * FROM edw_core.tpolicy WHERE policy_status = 'Active' AND product_cd in ('HO','CO')) AS p
         LEFT JOIN 
             edw_core.tcustomer AS c ON c.customer_id = p.customer_id
         LEFT JOIN 
@@ -139,6 +143,7 @@ BEGIN
             ON pt.policy_sk = p.policy_sk 
             AND pt.effective_dt = p.effective_dt
         WHERE cast(p.create_ts as datetime2(7)) > @last_source_extract_ts
+        AND pt.ceded_premium_amt <> 0
         ;
 
 

@@ -29,9 +29,15 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[tpolicy_hsb_cyber_feed_temp1];
 		SELECT 
             getdate() as reporting_date,
-            '4004' as company_product_cd,
+            CASE 
+                WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '4404'
+                WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '4854'
+            END AS company_product_cd,
             'HCP' as product_nm,
-            '1004100' as contract_no,
+            CASE 
+                WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '1004100'
+                WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '1004610'
+            END AS contract_no,
             CASE 
                 WHEN CHARINDEX('-', p.policy_no) > 0 THEN LEFT(p.policy_no, CHARINDEX('-', p.policy_no) - 1)
                 ELSE p.policy_no
@@ -50,7 +56,10 @@ BEGIN
             '' as homeowner_policy_form_no,
             '' as product_form_no,
             '' as client_product_nm,
-            '' as dwelling_type,
+            CASE 
+                WHEN p.product_cd = 'HO' THEN 280
+                WHEN p.product_cd = 'CO' THEN 282
+            END AS dwelling_type,
             '' as base_homeowner_premium,
             ROUND(pt.net_premium_amt,2) as final_homeowner_premium,
             hc.aop_deductible as policy_deductible,
@@ -70,9 +79,7 @@ BEGIN
             p.create_ts as policy_history_create_ts
 		INTO [edw_temp].[tpolicy_hsb_cyber_feed_temp1] 
         FROM 
-            edw_core.tpolicy AS p
-        INNER JOIN 
-            edw_core.tdate AS d ON d.actual_dt = p.effective_dt
+            (SELECT * FROM edw_core.tpolicy WHERE policy_status = 'Active' AND product_cd in ('HO','CO')) AS p
         LEFT JOIN 
             edw_core.tcustomer AS c ON c.customer_id = p.customer_id
         LEFT JOIN 
@@ -111,6 +118,7 @@ BEGIN
             ON pt.policy_sk = p.policy_sk 
             AND pt.effective_dt = p.effective_dt
         WHERE cast(p.create_ts as datetime2(7)) > @last_source_extract_ts
+        AND pt.ceded_premium_amt <> 0
         ;
 
 
