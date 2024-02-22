@@ -12,6 +12,7 @@ GO
 ---------------------------------------------------------------------------------------------------
 -- 09/14/23		Alberto Almario			    1. Created this procedure
 -- 01/08/24		Yunus Mohammed			    2. Added driver_deleted_in flag
+-- 22/02/24		Hernnando Gonzalez		    3. Added new field lending_loss_amt
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_driver]
 AS
@@ -48,6 +49,7 @@ BEGIN
             [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
             [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior],
 			source_system_sk,CASE IsDeletedOnPolicyChange WHEN 0 THEN 'No' WHEN 1 THEN 'Yes' END AS IsDeletedOnPolicyChange
+            ,[LendingLoss]
 		
         INTO [edw_temp].[tauto_driver_temp1]
 		
@@ -93,7 +95,7 @@ BEGIN
                     [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
                     [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
                     [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior]
+                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [LendingLoss]
                 )
 			) pivottable
 
@@ -163,7 +165,8 @@ BEGIN
             source_system_sk,
             create_ts,
             update_ts,
-            etl_audit_sk
+            etl_audit_sk,
+            lending_loss_amt
 		)
         SELECT 
             t1.policy_no,
@@ -229,7 +232,8 @@ BEGIN
             t1.source_system_sk,
             getdate() AS create_ts,
             getdate() AS update_ts,
-            @etl_audit_sk AS etl_audit_sk
+            @etl_audit_sk AS etl_audit_sk,
+            t1.[LendingLoss] as lending_loss_amt
         FROM 
             [edw_temp].[tauto_driver_temp1] AS t1
         ;
