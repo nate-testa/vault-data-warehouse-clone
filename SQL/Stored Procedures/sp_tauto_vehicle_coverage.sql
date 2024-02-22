@@ -13,7 +13,8 @@ GO
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- 11/06/23		Alberto Almario					1. change to use UniqueId instead of Index and change name from vehicle_no to vehicle_unique_id
 -- 11/07/23     Sandeep Gundreddy               2. Added logic to get max auto_garage_location_sk
--- 11/16/23     Architha Gudimalla              2. Updated logic for auto_garage_location_sk
+-- 11/16/23     Architha Gudimalla              3. Updated logic for auto_garage_location_sk
+-- 02/22/24     Architha Gudimalla              4. Added Security and Safety Features in the acctvof group
 -- ================================================================================================================================================
 
 create or ALTER     PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
@@ -96,7 +97,7 @@ BEGIN
                 WHERE
                     p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'
-                    AND acctvof.[Group] in ('Vehicle','Registration','Symbols','Symbols - ISO','Vehicle Coverages','AntiTheftDevice','Discounts','Surcharge')
+                    AND acctvof.[Group] in ('Vehicle','Registration','Symbols','Symbols - ISO','Vehicle Coverages','AntiTheftDevice','Discounts','Surcharge','Security and Safety Features')
 			) t
 		PIVOT 
 			(
