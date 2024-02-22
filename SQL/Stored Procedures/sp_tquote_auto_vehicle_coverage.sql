@@ -12,10 +12,11 @@ GO
 -- 10/23/23		Alberto Almario				    1. Created this procedure 
 -- 11/14/23		Sandeep Gundreddy			    2. modified tquote_auto_vehicle join
 -- 11/16/23		Architha Gudimalla			    3. modified garage join
--- 11/16/23     Architha Gudimalla              2. Updated logic for auto_garage_location_sk
+-- 11/16/23     Architha Gudimalla              4. Updated logic for auto_garage_location_sk
+-- 02/22/24     Hernando Gonzalez               5. Added new fields carfax_wholesale_value_amt
 -- ===================================================================================================================== 
 
-create or ALTER   PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -51,8 +52,8 @@ BEGIN
             [CustomizedEquipment], [ExtendedTowingAndLabor], [MotorcycleMEDLimits], [RatingTerritory], [OwnedVehicleDiscount], [HighPerformanceVehicleRating], [ExpenseLoadBI], [ExpenseLoadPD], 
             [ExpenseLoadPIP], [ExpenseLoadMED], [ExpenseLoadOTC], [ExpenseLoadCOLL], [ExpenseLoadUM], [BodilyInjuryNCRBPremium], [PropertyDamageNCRBPremium], [MedicalPaymentsNCRBPremium], 
             [UninsuredMotoristsBodilyInjuryNCRBPremium], [UninsuredMotoristsPropertyDamageNCRBPremium], [SendVehicleToLiabilityReporting], [AntiTheftDevice], [AntiLockBrakes], [PassiveRestraint], 
-            [SeasonalUse], [DirectRepair], [CarStorageFacility], [VINEtching], [LossProtectionDiscount], [SeasonalUsePart2], [MarketAppreciationandDiminutionofValue],
-			source_system_sk, vehicle_deleted_in
+            [SeasonalUse], [DirectRepair], [CarStorageFacility], [VINEtching], [LossProtectionDiscount], [SeasonalUsePart2], [MarketAppreciationandDiminutionofValue]
+			,source_system_sk, vehicle_deleted_in, [VendorReportedWholesaleAmount]
 		
         INTO [edw_temp].[tquote_auto_vehicle_coverage_temp1]
 		
@@ -107,7 +108,7 @@ BEGIN
                     [CustomizedEquipment], [ExtendedTowingAndLabor], [MotorcycleMEDLimits], [RatingTerritory], [OwnedVehicleDiscount], [HighPerformanceVehicleRating], [ExpenseLoadBI], [ExpenseLoadPD], 
                     [ExpenseLoadPIP], [ExpenseLoadMED], [ExpenseLoadOTC], [ExpenseLoadCOLL], [ExpenseLoadUM], [BodilyInjuryNCRBPremium], [PropertyDamageNCRBPremium], [MedicalPaymentsNCRBPremium], 
                     [UninsuredMotoristsBodilyInjuryNCRBPremium], [UninsuredMotoristsPropertyDamageNCRBPremium], [SendVehicleToLiabilityReporting], [AntiTheftDevice], [AntiLockBrakes], [PassiveRestraint], 
-                    [SeasonalUse], [DirectRepair], [CarStorageFacility], [VINEtching], [LossProtectionDiscount], [SeasonalUsePart2], [MarketAppreciationandDiminutionofValue]
+                    [SeasonalUse], [DirectRepair], [CarStorageFacility], [VINEtching], [LossProtectionDiscount], [SeasonalUsePart2], [MarketAppreciationandDiminutionofValue], [VendorReportedWholesaleAmount]
                 )
 			) pivottable
 
@@ -199,7 +200,8 @@ BEGIN
             create_ts,
             update_ts,
             etl_audit_sk,
-            vehicle_deleted_in
+            vehicle_deleted_in,
+            carfax_wholesale_value_amt
 		)
         SELECT 
             t1.quote_no,
@@ -287,7 +289,8 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
-            CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in 
+            CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in,
+            t1.[VendorReportedWholesaleAmount] as carfax_wholesale_value_amt
         FROM 
             [edw_temp].[tquote_auto_vehicle_coverage_temp1] AS t1
         left join [edw_stage].[AccountTransactionVersionObject] AS atvo ON atvo.id = t1.GaragingLocationId
