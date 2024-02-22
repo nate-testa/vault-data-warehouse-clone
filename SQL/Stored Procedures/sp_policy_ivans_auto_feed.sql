@@ -317,7 +317,7 @@ BEGIN
                 aglf.policy_no, aglf.effective_dt, aglf.transaction_seq_no,
                 (
                     SELECT 
-                        agl.garage_location_no as locationNo,
+                        CONCAT('L',agl.garage_location_no) as locationNo,
                         agl.garage_address_line1 as addr1,
                         agl.garage_address_city_nm as city,
                         agl.garage_address_state_cd as [state],
@@ -375,11 +375,7 @@ BEGIN
             '' as [Latitude_023],
             '' as [Longitude_024],
             '' as [County_025],
-            CASE
-                WHEN pi.home_phone_no is not null THEN 'Home'
-                WHEN pi.mobile_phone_no is not null THEN 'Mobile'
-                ELSE ''
-            END as [PhoneTypeCd_026],
+            '' as [PhoneTypeCd_026],
             RIGHT(REPLACE(TRANSLATE(pi.home_phone_no, '+-/()#', '      '), ' ', ''), 10) as [HomePhoneNumber_027],
 		    RIGHT(REPLACE(TRANSLATE(pi.mobile_phone_no, '+-/()#', '      '), ' ', ''), 10) as [MobilePhoneNumber_027],
             pi.email as [EmailAddr_028],
@@ -397,9 +393,9 @@ BEGIN
             p.expiration_dt as [ExpirationDt_036],
             '' as [Dummy_037],
             '' as [Dummy_038],
-            CASE WHEN ba.bill_type = 'Insured' THEN 'Direct' ELSE 'Not Direct' END AS [BillingMethodCd_039],
-            pt.premium_amt as [Amt_040],
-            pt.premium_amt as [Amt_041],
+            CASE WHEN ba.bill_type in ('Insured', 'Mortgagee') THEN 'Direct' ELSE 'Not Direct' END AS [BillingMethodCd_039],
+            COALESCE(pt.annual_premium_amt, 0) as [Amt_040],
+            COALESCE(pt.premium_amt, 0) as [Amt_041],
             'en' as [LanguageCd_042],
             op.min_original_policy_effective_dt as [OriginalPolicyInceptionDt_043],
             '' as [Dummy_044],
@@ -575,7 +571,17 @@ BEGIN
             [Latitude_023],
             [Longitude_024],
             [County_025],
-            [PhoneTypeCd_026],
+            CASE
+				WHEN [HomePhoneNumber_027] IS NOT NULL
+					AND LEN([HomePhoneNumber_027]) = 10
+					AND LEFT([HomePhoneNumber_027], 1) NOT IN ('0', '1')
+					THEN 'Home'
+				WHEN [MobilePhoneNumber_027] IS NOT NULL
+					AND LEN([MobilePhoneNumber_027]) = 10
+					AND LEFT([MobilePhoneNumber_027], 1) NOT IN ('0', '1')
+					THEN 'Mobile'
+				ELSE ''
+			END AS [PhoneTypeCd_026],
             CASE
 				WHEN [HomePhoneNumber_027] IS NOT NULL
 					AND LEN([HomePhoneNumber_027]) = 10
