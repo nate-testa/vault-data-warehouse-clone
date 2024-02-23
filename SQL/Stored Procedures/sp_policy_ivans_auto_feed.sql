@@ -250,6 +250,7 @@ BEGIN
 					WHERE avcf.policy_no = avc.policy_no
 						AND avcf.effective_dt = avc.effective_dt
 						AND avcf.transaction_seq_no = avc.transaction_seq_no
+                    AND avc.vehicle_deleted_in = 'No'
 					FOR JSON PATH, INCLUDE_NULL_VALUES 
 				) AS AU_Vehicles
 			FROM edw_core.tauto_vehicle_coverage as avcf
@@ -317,7 +318,7 @@ BEGIN
                 aglf.policy_no, aglf.effective_dt, aglf.transaction_seq_no,
                 (
                     SELECT 
-                        agl.garage_location_no as locationNo,
+                        CONCAT('L',agl.garage_location_no) as locationNo,
                         agl.garage_address_line1 as addr1,
                         agl.garage_address_city_nm as city,
                         agl.garage_address_state_cd as [state],
@@ -375,11 +376,7 @@ BEGIN
             '' as [Latitude_023],
             '' as [Longitude_024],
             '' as [County_025],
-            CASE
-                WHEN pi.home_phone_no is not null THEN 'Home'
-                WHEN pi.mobile_phone_no is not null THEN 'Mobile'
-                ELSE ''
-            END as [PhoneTypeCd_026],
+            '' as [PhoneTypeCd_026],
             RIGHT(REPLACE(TRANSLATE(pi.home_phone_no, '+-/()#', '      '), ' ', ''), 10) as [HomePhoneNumber_027],
 		    RIGHT(REPLACE(TRANSLATE(pi.mobile_phone_no, '+-/()#', '      '), ' ', ''), 10) as [MobilePhoneNumber_027],
             pi.email as [EmailAddr_028],
@@ -397,9 +394,9 @@ BEGIN
             p.expiration_dt as [ExpirationDt_036],
             '' as [Dummy_037],
             '' as [Dummy_038],
-            CASE WHEN ba.bill_type = 'Insured' THEN 'Direct' ELSE 'Not Direct' END AS [BillingMethodCd_039],
-            pt.premium_amt as [Amt_040],
-            pt.premium_amt as [Amt_041],
+            CASE WHEN ba.bill_type in ('Insured', 'Mortgagee') THEN 'Direct' ELSE 'Not Direct' END AS [BillingMethodCd_039],
+            COALESCE(pt.annual_premium_amt, 0) as [Amt_040],
+            COALESCE(pt.premium_amt, 0) as [Amt_041],
             'en' as [LanguageCd_042],
             op.min_original_policy_effective_dt as [OriginalPolicyInceptionDt_043],
             '' as [Dummy_044],
@@ -450,6 +447,7 @@ BEGIN
         INTO [edw_temp].[policy_ivans_auto_feed_temp1] 
         FROM [edw_temp].[policy_ivans_auto_feed_temp2] AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
+        INNER JOIN edw_core.tbroker AS b ON p.broker_id = b.broker_id
         LEFT JOIN edw_core.tpolicy_insured as pi ON p.policy_no = pi.policy_no AND p.effective_dt = pi.effective_dt AND pt.transaction_seq_no = pi.transaction_seq_no AND pi.primary_insured_in = 'Yes'
 		LEFT JOIN edw_core.tdate AS d1 ON pt.transaction_effective_dt_sk = d1.date_sk
         LEFT JOIN edw_core.tdate AS d2 ON pt.transaction_dt_sk = d2.date_sk
@@ -474,6 +472,7 @@ BEGIN
 			) tprc
 		ON p.broker_id = tprc.broker_id
 		AND tprc.rn = 1
+        WHERE b.ivans_y_account IS NOT NULL
         ;
 
         -- Start Insert process
@@ -575,7 +574,17 @@ BEGIN
             [Latitude_023],
             [Longitude_024],
             [County_025],
-            [PhoneTypeCd_026],
+            CASE
+				WHEN [HomePhoneNumber_027] IS NOT NULL
+					AND LEN([HomePhoneNumber_027]) = 10
+					AND LEFT([HomePhoneNumber_027], 1) NOT IN ('0', '1')
+					THEN 'Home'
+				WHEN [MobilePhoneNumber_027] IS NOT NULL
+					AND LEN([MobilePhoneNumber_027]) = 10
+					AND LEFT([MobilePhoneNumber_027], 1) NOT IN ('0', '1')
+					THEN 'Mobile'
+				ELSE ''
+			END AS [PhoneTypeCd_026],
             CASE
 				WHEN [HomePhoneNumber_027] IS NOT NULL
 					AND LEN([HomePhoneNumber_027]) = 10
