@@ -10,6 +10,7 @@ GO
 -- 02/06/24		Architha Gudimalla				1. Created this procedure   
 -- 02/07/24		Architha Gudimalla				2. Added update on task_workflow_step_category_nm
 -- 02/14/24		Architha Gudimalla				3. Added 2 updates on task_workflow_step_category_nm
+-- 02/23/24		Architha Gudimalla				4. Added group by to source query
 -- ============================================================================================================= 
 
 CREATE or ALTER   PROCEDURE edw_core.sp_ttask_workflow_step
@@ -39,12 +40,14 @@ BEGIN
         SELECT 	  wf.name task_workflow_nm
 				 ,wfs.name as task_workflow_step_nm 
 				 , null as task_workflow_step_category_nm  
-				, wfs.CreatedDate
-				, wfs.UpdatedDate
+				, min(wfs.CreatedDate) CreatedDate
+				, max(wfs.UpdatedDate) UpdatedDate
         INTO 	edw_temp.ttask_workflow_step_temp1 
         from  edw_stage.Workflow wf 
         inner join edw_stage.WorkflowStep wfs on wf.id = wfs.WorkflowId 
-		WHERE 	GREATEST(wfs.CreatedDate,wf.UpdatedDate)>@last_source_extract_ts  
+		WHERE 	GREATEST(wfs.CreatedDate,wf.UpdatedDate)>@last_source_extract_ts 
+		group by  wf.name
+				 ,wfs.name  
 
 		MERGE edw_core.ttask_workflow_step AS Target
 		USING 
@@ -66,6 +69,8 @@ BEGIN
 		WHEN MATCHED THEN UPDATE 
 		SET
         Target.update_ts					= getdate(); 
+
+		SET @rows_affected=@@ROWCOUNT; 
 
 		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'Endorsement' where task_workflow_nm = 'Admitted Endorsement' and task_workflow_step_nm  =  'Admitted Endorsement Bound & Issued';
 		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'Endorsement' where task_workflow_nm = 'Admitted Endorsement' and task_workflow_step_nm  =  'Admitted Endorsement Declined';
