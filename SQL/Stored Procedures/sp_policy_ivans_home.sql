@@ -90,7 +90,6 @@ BEGIN
 							WHEN ic.internal_coverage_cd = 'Contents Extended' or ic.internal_coverage_cd = 'Contents Off Premises Loss Exclusion' then hc.contents_limit_amt
 							WHEN ic.internal_coverage_cd = 'Loss of Use' then hc.loss_of_use_limit_amt
 							WHEN ic.internal_coverage_cd = 'Liability Coverage' then hc.personal_liability_limit_amt
-							WHEN ic.internal_coverage_cd = 'Medical Payments' then hc.medical_payments_limit_amt
 							ELSE '' 
 						END AS [limit],
 						CASE 
@@ -114,6 +113,22 @@ BEGIN
 					LEFT JOIN edw_core.thome_coverage as hc ON pt.coverage_sk = hc.home_coverage_sk
 					LEFT JOIN edw_core.thome_additional_coverage as hac ON hc.home_coverage_sk = hac.home_coverage_sk
 					LEFT JOIN edw_core.tinternal_coverage as ic ON pt.internal_coverage_sk = ic.internal_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
+					--
+					UNION ALL
+					SELECT DISTINCT
+						hc.policy_no as policyNumber
+						,'MEDPM' as coverageCd
+						,'Medical' as coverageDesc
+						,0.0 as changeAmount
+						,0.0 as currentAmount
+						,CAST(hc.medical_payments_limit_amt as NVARCHAR(255)) as [limit]
+						,'0.0' as deductible
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
+					INNER JOIN edw_core.thome_coverage as hc
+					ON pt.coverage_sk = hc.home_coverage_sk
 					WHERE  pt.policy_sk = ptf.policy_sk
 						AND pt.effective_dt_sk = ptf.effective_dt_sk
 						AND pt.transaction_seq_no = ptf.transaction_seq_no
@@ -234,7 +249,7 @@ BEGIN
 								when tcct.class_type = 'Fine Arts' then 'SCHFA'
 								when tcct.class_type = 'Furs' then 'SCHFURS'
 								when tcct.class_type = 'Guns' then 'SCHGUNS'
-								when tcct.class_type = 'Jewelry' then 'SCHJWLRY'
+								when tcct.class_type = 'Jewelry' or tcct.class_type = 'Worldwide Jewelry' then 'SCHJWLRY'
 								when tcct.class_type = 'Bank Vaulted Jewelry' then 'SCHVLTJWRY'
 								when tcct.class_type = 'Miscellaneous' then 'SCHMISC'
 								when tcct.class_type = 'Musical Instruments' then 'SCHMUSIC'
@@ -281,7 +296,7 @@ BEGIN
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
 						WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
 						and coalesce(pt.premium_amt, 0) + coalesce(tcct.scheduled_limit_amt, 0) + coalesce(tcct.scheduled_highest_value_limit_amt, 0) <> 0 
-						and ic.aslob_cd ='090' and ic.product_cd = 'HO' and ic.internal_coverage_category_nm = 'Premium' and ic.internal_coverage_cd like '%chedule%'
+						and ic.aslob_cd in ('090', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%chedule%' or ic.internal_coverage_cd like '%lux%')
 						--
 						UNION ALL
 						--
@@ -299,7 +314,7 @@ BEGIN
 								when tcct.class_type = 'Fine Arts' then 'SCHFA'
 								when tcct.class_type = 'Furs' then 'SCHFURS'
 								when tcct.class_type = 'Guns' then 'SCHGUNS'
-								when tcct.class_type = 'Jewelry' then 'SCHJWLRY'
+								when tcct.class_type = 'Jewelry' or tcct.class_type = 'Worldwide Jewelry' then 'SCHJWLRY'
 								--when tcct.class_type = 'Bank Vaulted Jewelry' then 'SCHVLTJWRY'
 								--when tcct.class_type = 'Miscellaneous' then 'SCHMISC'
 								when tcct.class_type = 'Musical Instruments' then 'SCHMUSIC'
@@ -346,7 +361,7 @@ BEGIN
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
 						WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
 						and coalesce(pt.premium_amt, 0) + coalesce(tcct.blanket_limit_amt, 0) + coalesce(tcct.blanket_single_article_limit_amt, 0) + coalesce(tcct.blanket_highest_value_limit_amt, 0) <> 0 
-						and ic.aslob_cd ='090' and ic.product_cd = 'HO' and ic.internal_coverage_category_nm = 'Premium' and ic.internal_coverage_cd like '%lanket%'
+						and ic.aslob_cd in ('090', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%lanket%' or ic.internal_coverage_cd like '%lux%')
 					) ud
 						WHERE  ud.policy_sk = ptf.policy_sk
                        AND ud.effective_dt_sk = ptf.effective_dt_sk
