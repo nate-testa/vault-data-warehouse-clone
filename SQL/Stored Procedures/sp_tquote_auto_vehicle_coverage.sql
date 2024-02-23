@@ -14,6 +14,7 @@ GO
 -- 11/16/23		Architha Gudimalla			    3. modified garage join
 -- 11/16/23     Architha Gudimalla              4. Updated logic for auto_garage_location_sk
 -- 02/22/24     Hernando Gonzalez               5. Added new fields carfax_wholesale_value_amt
+-- 02/23/24     Architha Gudimalla              6. Added Security and Safety Features in the acctvof group
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
@@ -94,7 +95,7 @@ BEGIN
                 WHERE
                     p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'
-                    AND acctvof.[Group] in ('Vehicle','Registration','Symbols','Symbols - ISO','Vehicle Coverages','AntiTheftDevice','Discounts','Surcharge')
+                    AND acctvof.[Group] in ('Vehicle','Registration','Symbols','Symbols - ISO','Vehicle Coverages','AntiTheftDevice','Discounts','Surcharge','Security and Safety Features')
 			) t
 		PIVOT 
 			(
