@@ -127,7 +127,7 @@ BEGIN
             create_ts, 
             update_ts, 
             etl_audit_sk,
-            lending_loss_amt
+            lending_loss_in
 		)
         SELECT 
             t1.policy_no, 
@@ -167,7 +167,7 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
-            t1.[LendingLoss] as lending_loss_amt
+            t1.[LendingLoss] as lending_loss_in
         FROM 
             [edw_temp].[tauto_driver_incident_temp1] AS t1
         ;
