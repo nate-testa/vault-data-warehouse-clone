@@ -37,8 +37,8 @@ BEGIN
 			CreatedDate, quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_history_sk, quote_auto_driver_sk, driver_no, incident_no,
             [IncidentSource], [IncidentDate], [IncidentType], [IncidentDescription], [TotalPayout], [IsDisputed], [IncludeInRate], [IncidentCode], [IncidentStatus], [BodilyInjuryPayment], 
             [CollisionPayment], [ComprehensivePayment], [GlassPayment], [MedicalExpensePayment], [MedicalPaymentPayment], [OtherPayment], [PropertyDamagePayment], [PersonalInjuryProtectionPayment], 
-            [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment],
-			source_system_sk
+            [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss],
+			source_system_sk  
 		
         INTO [edw_temp].[tquote_auto_driver_incident_temp1]
 		
@@ -83,7 +83,7 @@ BEGIN
                 (
                     [IncidentSource], [IncidentDate], [IncidentType], [IncidentDescription], [TotalPayout], [IsDisputed], [IncludeInRate], [IncidentCode], [IncidentStatus], [BodilyInjuryPayment], 
                     [CollisionPayment], [ComprehensivePayment], [GlassPayment], [MedicalExpensePayment], [MedicalPaymentPayment], [OtherPayment], [PropertyDamagePayment], [PersonalInjuryProtectionPayment], 
-                    [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment]
+                    [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss]
                 )
 			) pivottable
 
@@ -124,7 +124,8 @@ BEGIN
             source_system_sk, 
             create_ts, 
             update_ts, 
-            etl_audit_sk
+            etl_audit_sk,
+            lending_loss_in
 		)
         SELECT 
             t1.quote_no, 
@@ -161,7 +162,8 @@ BEGIN
             t1.source_system_sk, 
             getdate() AS create_ts,
             getdate() AS update_ts,
-            @etl_audit_sk AS etl_audit_sk
+            @etl_audit_sk AS etl_audit_sk,
+            t1.[LendingLoss] as lending_loss_in
         FROM 
             [edw_temp].[tquote_auto_driver_incident_temp1] AS t1
         ;

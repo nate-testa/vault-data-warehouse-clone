@@ -49,7 +49,7 @@ BEGIN
             [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
             [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior],
 			source_system_sk,CASE IsDeletedOnPolicyChange WHEN 0 THEN 'No' WHEN 1 THEN 'Yes' END AS IsDeletedOnPolicyChange
-            ,[LendingLoss]
+            
 		
         INTO [edw_temp].[tauto_driver_temp1]
 		
@@ -95,7 +95,7 @@ BEGIN
                     [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
                     [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
                     [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [LendingLoss]
+                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior]
                 )
 			) pivottable
 
@@ -165,8 +165,7 @@ BEGIN
             source_system_sk,
             create_ts,
             update_ts,
-            etl_audit_sk,
-            lending_loss_amt
+            etl_audit_sk
 		)
         SELECT 
             t1.policy_no,
@@ -232,8 +231,7 @@ BEGIN
             t1.source_system_sk,
             getdate() AS create_ts,
             getdate() AS update_ts,
-            @etl_audit_sk AS etl_audit_sk,
-            t1.[LendingLoss] as lending_loss_amt
+            @etl_audit_sk AS etl_audit_sk
         FROM 
             [edw_temp].[tauto_driver_temp1] AS t1
         ;
