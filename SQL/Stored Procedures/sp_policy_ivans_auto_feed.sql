@@ -250,6 +250,7 @@ BEGIN
 					WHERE avcf.policy_no = avc.policy_no
 						AND avcf.effective_dt = avc.effective_dt
 						AND avcf.transaction_seq_no = avc.transaction_seq_no
+                    AND avc.vehicle_deleted_in = 'No'
 					FOR JSON PATH, INCLUDE_NULL_VALUES 
 				) AS AU_Vehicles
 			FROM edw_core.tauto_vehicle_coverage as avcf
@@ -446,6 +447,7 @@ BEGIN
         INTO [edw_temp].[policy_ivans_auto_feed_temp1] 
         FROM [edw_temp].[policy_ivans_auto_feed_temp2] AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
+        INNER JOIN edw_core.tbroker AS b ON p.broker_id = b.broker_id
         LEFT JOIN edw_core.tpolicy_insured as pi ON p.policy_no = pi.policy_no AND p.effective_dt = pi.effective_dt AND pt.transaction_seq_no = pi.transaction_seq_no AND pi.primary_insured_in = 'Yes'
 		LEFT JOIN edw_core.tdate AS d1 ON pt.transaction_effective_dt_sk = d1.date_sk
         LEFT JOIN edw_core.tdate AS d2 ON pt.transaction_dt_sk = d2.date_sk
@@ -470,6 +472,7 @@ BEGIN
 			) tprc
 		ON p.broker_id = tprc.broker_id
 		AND tprc.rn = 1
+        WHERE b.ivans_y_account IS NOT NULL
         ;
 
         -- Start Insert process
