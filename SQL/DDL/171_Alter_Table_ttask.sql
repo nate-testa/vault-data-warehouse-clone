@@ -8,7 +8,7 @@ IF NOT EXISTS (
     TABLE_SCHEMA='edw_core'
     AND TABLE_NAME = 'ttask'
     AND COLUMN_NAME = 'customer_sk'
-) BEGIN ALTER TABLE edw_core.ttask ADD customer_sk decimal (15,2) null END;
+) BEGIN ALTER TABLE edw_core.ttask ADD customer_sk int null END;
 
 
  IF OBJECT_ID('edw_core.uidx_ttask_polno_effdt_task')  IS NOT NULL 
