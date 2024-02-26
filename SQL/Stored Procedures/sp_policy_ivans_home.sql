@@ -55,7 +55,7 @@ BEGIN
 			,coverage_sk
 		INTO [edw_temp].[policy_ivans_home_temp1]
         FROM edw_core.tpolicy_transaction as pt
-        WHERE product_sk = 1 -- Home
+        WHERE product_sk in (1, 5) -- Home and Condo
             AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
         GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
 		,coverage_sk;
@@ -85,6 +85,11 @@ BEGIN
 							WHEN ic.internal_coverage_cd = 'Loss Assessment Increase' then hac.loss_assessment_increase_limit_amt
 							--WHEN ic.internal_coverage_cd = 'Premises Liability Limitation'
 							WHEN ic.internal_coverage_cd = 'Workers Compensation' then hac.workercompensation_liability_occurance_limit_amt
+							WHEN ic.internal_coverage_cd = 'Dwelling Reconstruction Cost' then hc.dwelling_limit_amt
+							WHEN ic.internal_coverage_cd = 'Other' or ic.internal_coverage_cd = 'Other Structures Away Residence Premises' then hc.other_structures_limit_amt
+							WHEN ic.internal_coverage_cd = 'Contents Extended' or ic.internal_coverage_cd = 'Contents Off Premises Loss Exclusion' then hc.contents_limit_amt
+							WHEN ic.internal_coverage_cd = 'Loss of Use' then hc.loss_of_use_limit_amt
+							WHEN ic.internal_coverage_cd = 'Liability Coverage' then hc.personal_liability_limit_amt
 							ELSE '' 
 						END AS [limit],
 						CASE 
@@ -111,89 +116,7 @@ BEGIN
 					WHERE  pt.policy_sk = ptf.policy_sk
 						AND pt.effective_dt_sk = ptf.effective_dt_sk
 						AND pt.transaction_seq_no = ptf.transaction_seq_no
-					--FOR JSON PATH, INCLUDE_NULL_VALUES
 					--
-					-- Dwelling
-					UNION ALL
-					SELECT DISTINCT
-						hc.policy_no as policyNumber
-						,'DWELL' as coverageCd
-						,'Dwelling' as coverageDesc
-						,0.0 as changeAmount
-						,0.0 as currentAmount
-						,CAST(hc.dwelling_limit_amt as NVARCHAR(255)) as [limit]
-						,'0.0' as deductible
-					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
-					INNER JOIN edw_core.thome_coverage as hc
-					ON pt.coverage_sk = hc.home_coverage_sk
-					WHERE  pt.policy_sk = ptf.policy_sk
-						AND pt.effective_dt_sk = ptf.effective_dt_sk
-						AND pt.transaction_seq_no = ptf.transaction_seq_no
-					-- Other Structures
-					UNION ALL
-					SELECT DISTINCT
-						hc.policy_no as policyNumber
-						,'OS' as coverageCd
-						,'Other Structures' as coverageDesc
-						,0.0 as changeAmount
-						,0.0 as currentAmountcurrentAmount
-						,CAST(hc.other_structures_limit_amt as NVARCHAR(255)) as [limit]
-						,'0.0' as deductible
-					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
-					INNER JOIN edw_core.thome_coverage as hc
-					ON pt.coverage_sk = hc.home_coverage_sk
-					WHERE  pt.policy_sk = ptf.policy_sk
-						AND pt.effective_dt_sk = ptf.effective_dt_sk
-						AND pt.transaction_seq_no = ptf.transaction_seq_no
-					-- Contents
-					UNION ALL
-					SELECT DISTINCT
-						hc.policy_no as policyNumber
-						,'PP' as coverageCd
-						,'Contents' as coverageDesc
-						,0.0 as changeAmount
-						,0.0 as currentAmount
-						,CAST(hc.contents_limit_amt as NVARCHAR(255)) as [limit]
-						,'0.0' as deductible
-					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
-					INNER JOIN edw_core.thome_coverage as hc
-					ON pt.coverage_sk = hc.home_coverage_sk
-					WHERE  pt.policy_sk = ptf.policy_sk
-						AND pt.effective_dt_sk = ptf.effective_dt_sk
-						AND pt.transaction_seq_no = ptf.transaction_seq_no
-					-- Loss of Use
-					UNION ALL
-					SELECT DISTINCT
-						hc.policy_no as policyNumber
-						,'LOU' as coverageCd
-						,'Loss of Use' as coverageDesc
-						,0.0 as changeAmount
-						,0.0 as currentAmount
-						,CAST(hc.loss_of_use_limit_amt as NVARCHAR(255)) as [limit]
-						,'0.0' as deductible
-					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
-					INNER JOIN edw_core.thome_coverage as hc
-					ON pt.coverage_sk = hc.home_coverage_sk
-					WHERE  pt.policy_sk = ptf.policy_sk
-						AND pt.effective_dt_sk = ptf.effective_dt_sk
-						AND pt.transaction_seq_no = ptf.transaction_seq_no
-					-- Homeowners Liability Premium
-					UNION ALL
-					SELECT DISTINCT
-						hc.policy_no as policyNumber
-						,'PL' as coverageCd
-						,'Homeowners Liability Premium' as coverageDesc
-						,0.0 as changeAmount
-						,0.0 as currentAmount
-						,CAST(hc.personal_liability_limit_amt as NVARCHAR(255)) as [limit]
-						,'0.0' as deductible
-					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
-					INNER JOIN edw_core.thome_coverage as hc
-					ON pt.coverage_sk = hc.home_coverage_sk
-					WHERE  pt.policy_sk = ptf.policy_sk
-						AND pt.effective_dt_sk = ptf.effective_dt_sk
-						AND pt.transaction_seq_no = ptf.transaction_seq_no
-					-- Homeowners Liability Premium
 					UNION ALL
 					SELECT DISTINCT
 						hc.policy_no as policyNumber
@@ -209,7 +132,6 @@ BEGIN
 					WHERE  pt.policy_sk = ptf.policy_sk
 						AND pt.effective_dt_sk = ptf.effective_dt_sk
 						AND pt.transaction_seq_no = ptf.transaction_seq_no
-					--
 				) jd FOR JSON PATH, INCLUDE_NULL_VALUES
 			) AS Home_Coverages
 			FROM [edw_temp].[policy_ivans_home_temp1] as ptf
@@ -327,7 +249,7 @@ BEGIN
 								when tcct.class_type = 'Fine Arts' then 'SCHFA'
 								when tcct.class_type = 'Furs' then 'SCHFURS'
 								when tcct.class_type = 'Guns' then 'SCHGUNS'
-								when tcct.class_type = 'Jewelry' then 'SCHJWLRY'
+								when tcct.class_type = 'Jewelry' or tcct.class_type = 'Worldwide Jewelry' then 'SCHJWLRY'
 								when tcct.class_type = 'Bank Vaulted Jewelry' then 'SCHVLTJWRY'
 								when tcct.class_type = 'Miscellaneous' then 'SCHMISC'
 								when tcct.class_type = 'Musical Instruments' then 'SCHMUSIC'
@@ -351,7 +273,7 @@ BEGIN
 							,tcl.county_nm as county
 							,tcl.state_cd as [state] 
 							,tcl.zip_cd as zip
-							,'' as riskType
+							,'IMInfo' as riskType
 						--FROM policy_transaction as pt
 						FROM edw_core.tpolicy_transaction pt
 						INNER JOIN edw_core.tpolicy tp
@@ -374,7 +296,7 @@ BEGIN
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
 						WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
 						and coalesce(pt.premium_amt, 0) + coalesce(tcct.scheduled_limit_amt, 0) + coalesce(tcct.scheduled_highest_value_limit_amt, 0) <> 0 
-						and ic.aslob_cd ='090' and ic.product_cd = 'HO' and ic.internal_coverage_category_nm = 'Premium' and ic.internal_coverage_cd like '%chedule%'
+						and ic.aslob_cd in ('090', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%chedule%' or ic.internal_coverage_cd like '%lux%')
 						--
 						UNION ALL
 						--
@@ -392,7 +314,7 @@ BEGIN
 								when tcct.class_type = 'Fine Arts' then 'SCHFA'
 								when tcct.class_type = 'Furs' then 'SCHFURS'
 								when tcct.class_type = 'Guns' then 'SCHGUNS'
-								when tcct.class_type = 'Jewelry' then 'SCHJWLRY'
+								when tcct.class_type = 'Jewelry' or tcct.class_type = 'Worldwide Jewelry' then 'SCHJWLRY'
 								--when tcct.class_type = 'Bank Vaulted Jewelry' then 'SCHVLTJWRY'
 								--when tcct.class_type = 'Miscellaneous' then 'SCHMISC'
 								when tcct.class_type = 'Musical Instruments' then 'SCHMUSIC'
@@ -416,7 +338,7 @@ BEGIN
 							,tcl.county_nm as county
 							,tcl.state_cd as [state]
 							,tcl.zip_cd as zip
-							,'' as riskType
+							,'IMInfo' as riskType
 						--FROM policy_transaction as pt
 						FROM edw_core.tpolicy_transaction pt
 						INNER JOIN edw_core.tpolicy tp
@@ -439,7 +361,7 @@ BEGIN
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
 						WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
 						and coalesce(pt.premium_amt, 0) + coalesce(tcct.blanket_limit_amt, 0) + coalesce(tcct.blanket_single_article_limit_amt, 0) + coalesce(tcct.blanket_highest_value_limit_amt, 0) <> 0 
-						and ic.aslob_cd ='090' and ic.product_cd = 'HO' and ic.internal_coverage_category_nm = 'Premium' and ic.internal_coverage_cd like '%lanket%'
+						and ic.aslob_cd in ('090', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%lanket%' or ic.internal_coverage_cd like '%lux%')
 					) ud
 						WHERE  ud.policy_sk = ptf.policy_sk
                        AND ud.effective_dt_sk = ptf.effective_dt_sk
@@ -494,11 +416,7 @@ BEGIN
 		,hl.latitude as [022_Latitude]
 		,hl.longitude as [023_Longitude]
 		,c.mailing_address_county_nm as [024_County]
-		,CASE
-                WHEN c.home_phone_no is not null THEN 'Home'
-                WHEN c.mobile_phone_no is not null THEN 'Mobile'
-                ELSE ''
-            END as [025_PhoneTypeCd]
+		,'' as [025_PhoneTypeCd]
 		,RIGHT(REPLACE(TRANSLATE(c.home_phone_no, '+-/()#', '      '), ' ', ''), 10) as [026_HomePhoneNumber]
 		,RIGHT(REPLACE(TRANSLATE(c.mobile_phone_no, '+-/()#', '      '), ' ', ''), 10) as [026_MobilePhoneNumber]
 		,c.email as [027_EmailAddr]
@@ -516,7 +434,7 @@ BEGIN
 		,p.expiration_dt as [035_ExpirationDt]
 		,'' as [036_BillingAccountNumber]
 		,'' as [037_ControllingStateProvCd]
-		,CASE WHEN ba.bill_type = 'Insured' THEN 'Direct' ELSE 'Not Direct' END AS [038_BillingMethodCd]
+		,CASE WHEN ba.bill_type = 'Insured' or ba.bill_type = 'Mortgagee' THEN 'Direct' ELSE 'Not Direct' END AS [038_BillingMethodCd]
 		,COALESCE(pt.annual_premium_amt, 0) as [039_Amt] -- Need to validate this
 		,COALESCE(pt.premium_amt, 0)  as [040_Amt]
 		,'en' as [041_LanguageCd]
@@ -637,7 +555,7 @@ BEGIN
 		,'' as [122_OtherImprovementDesc]
 		,'' as [123_OtherImprovementCd]
 		,'' as [124_OtherImprovementDt]
-		,c.customer_nm as [125_CommercialName]
+		,COALESCE(tmor.mortgagee_nm, tadi.additional_interest_nm) as [125_CommercialName]
 		,'' as [126_Addr1]
 		,'' as [127_City]
 		,'' as [128_StateProvCd]
@@ -736,6 +654,8 @@ BEGIN
 		FROM [edw_temp].[policy_ivans_home_temp1] pt
 		INNER JOIN edw_core.tpolicy p
 		ON pt.policy_sk = p.policy_sk
+		INNER JOIN edw_core.tbroker b
+		ON p.broker_id = b.broker_id
 		LEFT JOIN edw_core.tproduct pr
 		ON p.product_cd = pr.product_cd
 		LEFT JOIN edw_core.tpolicy_insured as poi
@@ -788,9 +708,17 @@ BEGIN
 				,ROW_NUMBER() OVER (PARTITION BY broker_id ORDER BY broker_sk DESC) AS rn
 				from edw_core.tproducer
 			) tprc
-		ON p.broker_id = tprc.broker_id
-		AND tprc.rn = 1
+		ON p.broker_id = tprc.broker_id AND tprc.rn = 1
+		LEFT JOIN [edw_core].[tmortgagee] tmor
+		ON p.policy_no = tmor.policy_no
+		AND p.effective_dt = tmor.effective_dt
+		AND pt.transaction_seq_no = tmor.transaction_seq_no
+		LEFT JOIN edw_core.tadditional_interest tadi
+		ON p.policy_no = tadi.policy_no
+		AND p.effective_dt = tadi.effective_dt
+		AND pt.transaction_seq_no = tadi.transaction_seq_no
 		WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+		AND b.ivans_y_account IS NOT NULL
 
 		-- Start Insert process
 		INSERT INTO [edw_integration].[policy_ivans_home_feed](
@@ -1009,7 +937,17 @@ BEGIN
 			,[022_Latitude]
 			,[023_Longitude]
 			,[024_County]
-			,[025_PhoneTypeCd]
+			,CASE
+				WHEN [026_HomePhoneNumber] IS NOT NULL
+					AND LEN([026_HomePhoneNumber]) = 10
+					AND LEFT([026_HomePhoneNumber], 1) NOT IN ('0', '1')
+					THEN 'Home'
+				WHEN [026_MobilePhoneNumber] IS NOT NULL
+					AND LEN([026_MobilePhoneNumber]) = 10
+					AND LEFT([026_MobilePhoneNumber], 1) NOT IN ('0', '1')
+					THEN 'Mobile'
+				ELSE ''
+			END AS [025_PhoneTypeCd]
 			,CASE
 				WHEN [026_HomePhoneNumber] IS NOT NULL
 					AND LEN([026_HomePhoneNumber]) = 10
