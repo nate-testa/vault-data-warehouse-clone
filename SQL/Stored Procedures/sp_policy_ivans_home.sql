@@ -555,7 +555,7 @@ BEGIN
 		,'' as [122_OtherImprovementDesc]
 		,'' as [123_OtherImprovementCd]
 		,'' as [124_OtherImprovementDt]
-		,c.customer_nm as [125_CommercialName]
+		,COALESCE(tmor.mortgagee_nm, tadi.additional_interest_nm) as [125_CommercialName]
 		,'' as [126_Addr1]
 		,'' as [127_City]
 		,'' as [128_StateProvCd]
@@ -709,6 +709,14 @@ BEGIN
 				from edw_core.tproducer
 			) tprc
 		ON p.broker_id = tprc.broker_id AND tprc.rn = 1
+		LEFT JOIN [edw_core].[tmortgagee] tmor
+		ON p.policy_no = tmor.policy_no
+		AND p.effective_dt = tmor.effective_dt
+		AND pt.transaction_seq_no = tmor.transaction_seq_no
+		LEFT JOIN edw_core.tadditional_interest tadi
+		ON p.policy_no = tadi.policy_no
+		AND p.effective_dt = tadi.effective_dt
+		AND pt.transaction_seq_no = tadi.transaction_seq_no
 		WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
 		AND b.ivans_y_account IS NOT NULL
 

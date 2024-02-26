@@ -132,7 +132,7 @@ BEGIN
       ,[FirstName]
       ,[LastName]
 	  ,CASE WHEN [InterestType] = 'Loss Payee' THEN [Name] ELSE NULL END AS [loss_payee_nm]
-	  ,CASE WHEN [InterestType] = 'Additional Interest' THEN [Name] ELSE NULL END AS [additional_interest_nm]
+	  ,CASE WHEN [InterestType] = 'Additional Interest' OR [InterestType] = 'Additional Insured' THEN [Name] ELSE NULL END AS [additional_interest_nm]
       ,[AddressLine1]
       ,[AddressLine2]
       ,[AddressCity]
