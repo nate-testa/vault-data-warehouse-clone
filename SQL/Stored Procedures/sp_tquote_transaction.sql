@@ -7,6 +7,7 @@
 -- 11/14/23		Sandeep Gundreddy		2. modified quote_auto_vehicle join
 -- 11/29/23		Architha Gudimalla		3. modified @new_last_source_extract_ts
 -- 12/11/23		Architha Gudimalla		4. modified logic for stage pol term
+-- 02/27/24		Architha Gudimalla		5. Updated logic for Lux subscriber contributoin on ho
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction]
@@ -72,7 +73,8 @@ BEGIN
 			COALESCE (acctrcp.CommissionDeltaProRated ,acctrcp.commission) as comm,
 			0 as tfs, tmp1.ssk, 'prm' typ,
 			COALESCE(acctrcp.CededPremiumDelta,acctrcp.CededPremium) as ceded_annual_premium_amt,
-			COALESCE(acctrcp.CededPremiumDeltaProRated,acctrcp.CededPremium) as ceded_premium_amt
+			COALESCE(acctrcp.CededPremiumDeltaProRated,acctrcp.CededPremium) as ceded_premium_amt,
+			null covID
 		INTO edw_temp.TQuote_transaction_temp2  
 		FROM edw_temp.TQuote_transaction_temp1 tmp1 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
@@ -104,10 +106,12 @@ BEGIN
 			0 as comm ,
 			COALESCE (acctrtf.AmountDeltaProRated ,acctrtf.Amount) as tfs, tmp1.ssk, 'tfs' typ,
 			0 as ceded_annual_premium_amt,
-			0 as ceded_premium_amt
+			0 as ceded_premium_amt,
+			cov.Name covID
 		FROM edw_temp.TQuote_transaction_temp1 tmp1 
 		inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = tmp1.Id 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
+		left join edw_stage.coverage cov on cov.id = acctrtf.coverageid 
 
 		-- Start Inserting records
 		INSERT INTO edw_core.TQuote_transaction 
@@ -183,8 +187,11 @@ BEGIN
 		LEFT JOIN edw_core.tproduct pr on pr.product_cd = q.product_cd
 		LEFT JOIN edw_core.tbroker br on q.broker_id = br.broker_id
 		LEFT JOIN edw_core.tcustomer cust on q.customer_id = cust.customer_id
-		LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) and pr.product_cd = ic.product_cd  
+		--LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) and pr.product_cd = ic.product_cd  
+		LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) 
+												and (case when source.coverage = 'Subscriber Contribution' and source.covID = 'Lux' then 'LUX' else pr.product_cd end) = ic.product_cd  
 		--LEFT JOIN edw_core.ttax_fee_surcharge ttfs on ttfs.tax_fee_surcharge_desc = source.coverage  
+		
 
 		SET @rows_affected=@@ROWCOUNT; 
 
