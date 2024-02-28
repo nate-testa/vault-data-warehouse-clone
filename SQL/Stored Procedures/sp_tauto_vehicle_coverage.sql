@@ -16,6 +16,7 @@ GO
 -- 11/16/23     Architha Gudimalla              3. Updated logic for auto_garage_location_sk
 -- 02/22/24     Architha Gudimalla              4. Added Security and Safety Features in the acctvof group
 -- 02/22/24     Hernando Gonzalez               5. Added new fields carfax_wholesale_value_amt
+-- 02/27/24     Architha Gudimalla              6. Added case for antitheft
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
@@ -284,7 +285,17 @@ BEGIN
             t1.[UninsuredMotoristsBodilyInjuryNCRBPremium] as uninsured_motorist_bodily_injury_ncrb_premium_amt,
             t1.[UninsuredMotoristsPropertyDamageNCRBPremium] as uninsured_motorist_property_damage_ncrb_premium_amt,
             t1.[SendVehicleToLiabilityReporting] as send_vehicle_to_liability_reporting_in,
-            t1.[AntiTheftDevice] as antitheft_device_feature,
+            case	when t1.[AntiTheftDevice] = 'Active' then 'Active - a disabling device that much be activated by the operator'
+                    when t1.[AntiTheftDevice] = 'Passive' then 'Passive - a disabling device that is automatically activated when the car is parked'
+                    when t1.[AntiTheftDevice] = 'Recovery' then 'Recovery - an active vehicle recovery system'
+                    when t1.[AntiTheftDevice] = 'Category1' then 'Category 1 (Ignition Cut Off, Active External Alarms, etc.)'
+                    when t1.[AntiTheftDevice] = 'Category2' then 'Category 2 (Active Fuel Cut Off, Wheel Lock, Emergency Handbrake Locks, Transmission Locks, etc.)'
+                    when t1.[AntiTheftDevice] = 'Category3' then 'Category 3 (Passive Alarm Systems, Passive Fuel Locks, etc.)'
+                    when t1.[AntiTheftDevice] = 'Category4' then 'Category 4 (Recovery Devices Including GPS Tracking)'
+                    when t1.[AntiTheftDevice] = 'Category3And4' then 'Categories 3 & 4'
+                    when t1.[AntiTheftDevice] = '' then Null
+            else t1.[AntiTheftDevice]
+            end as antitheft_device_feature,
             t1.[AntiLockBrakes] as antilock_brake_in,
             t1.[PassiveRestraint] as passive_restraint_in,
             t1.[SeasonalUse] as seasonal_use_in,
