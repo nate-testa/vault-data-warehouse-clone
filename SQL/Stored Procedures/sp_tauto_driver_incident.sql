@@ -2,12 +2,14 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-
--- =============================================
--- Author:		Alberto Almario
--- Create Date: 2023-09-15
+-- ================================================================================================================================================
 -- Description: This stored procedure insert and update info related to tauto_driver_incident.
--- =============================================
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- 09/15/23		Alberto Almario					1. Created the proc
+-- 03/01/24     Architha Gudimalla              2. Updated the logic to use parent object id to get the correct driver no with the incidents
+-- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_driver_incident]
 AS
 BEGIN
@@ -54,28 +56,22 @@ BEGIN
                         ELSE 4 --(Metal)
                     END as [source_system_sk]
                 FROM
-                    (SELECT
-                        *
+                (
+                    SELECT *
                     FROM [edw_stage].[AccountTransaction]
                     WHERE [State] = 'ISSUED'
                         AND IssuedDate > @last_source_extract_ts
-                    ) acct
+                ) acct
                 INNER JOIN [edw_stage].[Product] AS p on p.Id = acct.ProductId
                 INNER JOIN [edw_stage].[AccountTransactionVersion] AS acctv ON acctv.AccountTransactionId = acct.Id
                 INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
-                INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] AS acctvof ON acctvof.VersionObjectId = acctvo.id
-                LEFT JOIN [edw_core].[tpolicy_history] AS ph 
-                    ON ph.policy_no = acct.PolicyNumber
-                    AND ph.effective_dt = acct.EffectiveDate
-                    AND ph.transaction_seq_no = acct.policychangenumber
-                LEFT JOIN [edw_core].[tauto_driver] AS ad
-                    ON ad.policy_no = acct.PolicyNumber
-                    AND ad.effective_dt = acct.EffectiveDate
-                    AND ad.transaction_seq_no = acct.policychangenumber
-                WHERE
-                    p.[Name] = 'Automobile'
-                    AND p.ProductLine = 'PersonalLines'
-                    AND acctvof.[Group] in ('Incidents in the Past 5 Years')
+                INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] AS acctvof ON acctvof.VersionObjectId = acctvo.id  
+                INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS pid ON acctvo.parentobjectid = pid.Id
+                LEFT JOIN [edw_core].[tpolicy_history] AS ph ON ph.policy_no = acct.PolicyNumber AND ph.effective_dt = acct.EffectiveDate AND ph.transaction_seq_no = acct.policychangenumber
+                LEFT JOIN [edw_core].[tauto_driver] AS ad ON ad.policy_no = acct.PolicyNumber AND ad.effective_dt = acct.EffectiveDate AND ad.transaction_seq_no = acct.policychangenumber and ad.driver_no=pid.[index]
+                WHERE   p.[Name] = 'Automobile'
+                AND     p.ProductLine = 'PersonalLines'
+                AND     acctvof.[Group] in ('Incidents in the Past 5 Years') 
 			) t
 		PIVOT 
 			(
