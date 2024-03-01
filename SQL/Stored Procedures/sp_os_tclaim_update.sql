@@ -2,7 +2,12 @@
 -- Author:		Yunus Mohammed
 -- Create Date: 11/08/2023
 -- Description: This procedures update OneShield claim into tclaim table
--- =============================================
+-----------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+-----------------------------------------------------------------------------------------------------------
+-- 11/08/23		Yunus Mohammd				1. Created this procedure
+-- 03/01/24		Yunus Mohammd				2. Added 
+-- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tclaim_update]
 
 AS
@@ -89,6 +94,13 @@ BEGIN
             )
         where
             tca.source_system_sk=1
+
+		-- Update cause_of_loss_sk
+		update edw_core.tclaim set cause_of_loss_sk = 1 where claim_no = 'CL-1322129470';
+		update edw_core.tclaim set cause_of_loss_sk = 1 where claim_no = 'CL-1357191188';
+		update edw_core.tclaim set cause_of_loss_sk = 38 where claim_no = 'CL-1338963181';
+		update edw_core.tclaim set cause_of_loss_sk = 23 where claim_no = 'CL-1336345173';
+		update edw_core.tclaim set cause_of_loss_sk = 1 where claim_no = 'CL-1372618270';
 
 		SET @rows_affected=@@ROWCOUNT;	
 
