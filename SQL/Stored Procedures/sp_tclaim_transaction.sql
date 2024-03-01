@@ -4,11 +4,12 @@
 -----------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 08/03/23		Yunus Mohammd				1. Created this procedure
--- 11/20/23		Yunus Mohammd				2. Added Throw
--- 12/08/23		Yunus Mohammd				3. Added policy_sk, broker_sk and customer_sk
--- 12/19/23		Yunus Mohammd				4. Update calculation logic for expense_reserve_amt and refund_expense_paid_amt
--- 12/27/23		Yunus Mohammd				4. Reverted calculation logic for expense_reserve_amt and refund_expense_paid_amt
+-- 08/03/23		Yunus Mohammed				1. Created this procedure
+-- 11/20/23		Yunus Mohammed				2. Added Throw
+-- 12/08/23		Yunus Mohammed				3. Added policy_sk, broker_sk and customer_sk
+-- 12/19/23		Yunus Mohammed				4. Update calculation logic for expense_reserve_amt and refund_expense_paid_amt
+-- 12/27/23		Yunus Mohammed				5. Reverted calculation logic for expense_reserve_amt and refund_expense_paid_amt
+-- 03/01/24		Yunus Mohammed				6. Update calculation logic for refund_expense_paid_amt
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction]
@@ -75,7 +76,7 @@ BEGIN
 			t1.post_date, 
 			cast(t1.post_date as date) AS transaction_dt,
 			t1.business_instance_id AS settlement_id,t1.NEW_STATUS,
-						SUM(CASE WHEN t1.reserve_type='RC_01' THEN outstanding_changed ELSE 0 END) AS loss_reserve_amt,
+			SUM(CASE WHEN t1.reserve_type='RC_01' THEN outstanding_changed ELSE 0 END) AS loss_reserve_amt,
 			SUM(CASE WHEN t1.reserve_type='RC_02' THEN outstanding_changed ELSE 0 END) AS expense_reserve_amt,
 			SUM(CASE WHEN t1.reserve_type='RC_03' THEN outstanding_changed ELSE 0 END) AS adjusting_other_reserve_amt,
 			SUM(CASE WHEN t1.reserve_type='RC_04' THEN outstanding_changed ELSE 0 END) AS subro_reserve_amt,
@@ -90,8 +91,11 @@ BEGIN
 			CAST(t1.payee_name AS VARCHAR(MAX))='Copart') THEN settle_changed ELSE 0 END) AS salvage_recovery_amt,
 			SUM(CASE WHEN t1.reserve_type='RC_06' THEN settle_changed ELSE 0 END) AS salvage_expense_paid_amt,
 			SUM(CASE WHEN t1.reserve_type='RC_07' THEN settle_changed ELSE 0 END) AS subro_expense_paid_amt,			
-			SUM(CASE WHEN t1.reserve_type='RC_01' AND t1.claim_type='LOS' AND settle_changed < 0 THEN settle_changed WHEN t1.reserve_type ='RC_01' AND t1.claim_type LIKE '%SAL%' AND CAST(t1.payee_name AS VARCHAR(MAX)) NOT IN ('Copart') THEN settle_changed ELSE 0 END) AS refund_indemnity_paid_amt,
-			SUM(CASE WHEN t1.reserve_type='RC_02' AND t1.claim_type='LOS' AND settle_changed < 0 THEN settle_changed ELSE 0 END) AS refund_expense_paid_amt,
+			SUM(CASE WHEN t1.reserve_type='RC_01' AND t1.claim_type='LOS' AND settle_changed < 0 THEN settle_changed
+					WHEN t1.reserve_type ='RC_01' AND t1.claim_type LIKE '%SAL%' AND CAST(t1.payee_name AS VARCHAR(MAX)) NOT IN ('Copart') THEN settle_changed
+					ELSE 0 END
+				) AS refund_indemnity_paid_amt,
+			SUM(CASE WHEN t1.reserve_type='RC_02' AND t1.claim_type IN ('LOS','LOS,SAL,SUB') AND settle_changed < 0 THEN settle_changed ELSE 0 END) AS refund_expense_paid_amt,
 			MAX(CASE WHEN t1.ROLE_NAME = 'Lawyer' OR t1.ROLE_NAME  = 'Legal Firm' THEN 'Y' ELSE 'N' END) AS dcc_in
 			FROM
 			(
@@ -142,7 +146,7 @@ BEGIN
 		refund_indemnity_paid_amt,refund_expense_paid_amt,source_system_sk,create_ts,update_ts,@etl_audit_sk
 		FROM
 			edw_temp.tclaim_transaction_temp1
-			
+
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
@@ -155,7 +159,7 @@ BEGIN
 
 		
 		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tclaim_temp1
+		DROP TABLE IF EXISTS edw_temp.tclaim_transaction_temp1
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
