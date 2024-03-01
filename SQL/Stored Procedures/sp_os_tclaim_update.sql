@@ -6,7 +6,7 @@
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 11/08/23		Yunus Mohammd				1. Created this procedure
--- 03/01/24		Yunus Mohammd				2. Added 
+-- 03/01/24		Yunus Mohammd				2. Updated cause_of_loss_sk for 5 claims
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tclaim_update]
 
