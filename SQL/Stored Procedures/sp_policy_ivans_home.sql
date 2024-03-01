@@ -64,7 +64,7 @@ BEGIN
         WHERE product_sk in (1, 5) -- Home
             AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
         GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
-		,coverage_sk;
+		,coverage_sk
 
 		SELECT temp3.*
 		INTO [edw_temp].[policy_ivans_home_temp3]
@@ -424,7 +424,7 @@ BEGIN
                 edw_core.tloss_history
             GROUP BY 
                 policy_no, effective_dt, transaction_seq_no
-        ) temp8;		
+        ) temp8
 
 		/* */
 
@@ -1173,6 +1173,12 @@ BEGIN
 
         DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp1];
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp2];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp3];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp4];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp5];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp6];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp7];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp8];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
