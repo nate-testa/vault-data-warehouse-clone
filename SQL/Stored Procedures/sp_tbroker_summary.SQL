@@ -26,6 +26,7 @@ GO
 -- 01/09/24		Architha Gudimalla				14. Corrected non cat claim filter
 -- 01/10/24		Architha Gudimalla				15. Used cast as date for quote dates to remove timestamp
 -- 01/11/24		Architha Gudimalla				16. Added one and three year written prms
+-- 02/29/24		Architha Gudimalla				17. Added one and three year non cat earned prms
 -- ===================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -380,6 +381,51 @@ BEGIN
 					 group by summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				 
+				--earned non cat net prms
+				DROP TABLE IF EXISTS edw_temp.tbroker_summ_int_cov_pols;
+				SELECT summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
+							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco,    
+							--
+							sum(case when  summ.month_sk >       @prior_year_month_end_dt_sk then summ.earned_net_premium_amt else 0 end)   one_year_earned_net_premium_amt,
+							sum(case when  summ.month_sk > @prior_year_three_month_end_dt_sk then summ.earned_net_premium_amt else 0 end) three_year_earned_net_premium_amt
+							--
+				 into edw_temp.tbroker_summ_int_cov_pols
+				 FROM	edw_core.tinternal_coverage_summary summ, edw_core.tpolicy pol, edw_core.tstate st,  edw_core.tdate td,
+				 		edw_core.tpolicy_history ph, edw_core.tinternal_coverage ic,
+				 		(select policy_sk, min(transaction_seq_no) transaction_seq_no
+							from edw_core.tpolicy_history
+							group by policy_sk ) min_ph
+					 where	summ.month_sk between  @prior_year_three_month_end_dt_sk and @month_end_dt_sk
+					 and td.date_sk = summ.month_sk
+					 and 	summ.policy_sk = pol.policy_sk
+					 and 	pol.risk_state_cd = st.state_cd
+					 and 	summ.policy_sk = ph.policy_sk 
+					 and 	ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
+					 and ic.internal_coverage_sk = summ.internal_coverage_sk and ic.primary_coverage_cd not in ('Hurricane','Wildfire')
+					 group by summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
+							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
+					union all
+					SELECT summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
+							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco,    
+							--
+							sum(case when  summ.month_sk >       @prior_year_month_end_dt_sk then summ.earned_net_premium_amt else 0 end)   one_year_earned_net_premium_amt,
+							sum(case when  summ.month_sk > @prior_year_three_month_end_dt_sk then summ.earned_net_premium_amt else 0 end) three_year_earned_net_premium_am
+							--
+				 FROM	edw_core.tpolicy_summary summ, edw_core.tpolicy pol, edw_core.tstate st,  edw_core.tdate td,
+				 		edw_core.tpolicy_history ph,
+				 		(select policy_sk, min(transaction_seq_no) transaction_seq_no
+							from edw_core.tpolicy_history
+							group by policy_sk ) min_ph
+					 where	summ.month_sk between  @prior_year_three_month_end_dt_sk and @month_end_dt_sk
+					 and td.date_sk = summ.month_sk
+					 and 	summ.policy_sk = pol.policy_sk
+					 and 	pol.risk_state_cd = st.state_cd
+					 and 	summ.policy_sk = ph.policy_sk 
+					 and pol.source_system_sk = 1
+					 and 	ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
+					 group by summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
+							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES');
+							
 				--inforce and ytd prm data
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_pols1;
 				SELECT ph.broker_sk, ph.product_sk, ph.customer_sk, st.state_sk,
@@ -397,7 +443,7 @@ BEGIN
 							group by policy_sk ) min_ph on ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
 				inner join edw_core.tstate st on pol.risk_state_cd = st.state_cd
 				left join edw_core.tdaily_inforce_policy prior_inf on pol.policy_sk = prior_inf.policy_sk and prior_inf.inforce_dt_sk = @prior_year_month_end_dt_sk 
-				left join edw_core.tdaily_inforce_policy curr_inf  on pol.policy_sk =  curr_inf.policy_sk and  curr_inf.inforce_dt_sk = 		   @end_dt_sk 
+				left join edw_core.tdaily_inforce_policy curr_inf  on pol.policy_sk =  curr_inf.policy_sk and  curr_inf.inforce_dt_sk = 		   @end_dt_sk  
 				group by ph.broker_sk, ph.product_sk, ph.customer_sk, st.state_sk,
 						replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				
@@ -455,6 +501,11 @@ BEGIN
 					select * 
 					from  edw_temp.tbroker_summ_pols1
 					 
+				),  pol_summ2 as
+				(
+					select * 
+					from  edw_temp.tbroker_summ_int_cov_pols
+					 
 				), 
 				clm_summ as
 				( 
@@ -466,11 +517,11 @@ BEGIN
 					select *
 					from edw_temp.tbroker_summ_quotes
 				)   
-				select 	COALESCE(ps.broker_sk, ps1.broker_sk, cs.broker_sk, q.broker_sk) broker_sk,
-						COALESCE(ps.product_sk, ps1.product_sk, cs.product_sk, q.product_sk) product_sk,
-						COALESCE(ps.customer_sk, ps1.customer_sk, cs.customer_sk, q.customer_sk) customer_sk,
-						COALESCE(ps.state_sk, ps1.state_sk, cs.state_sk, q.state_sk) state_sk,
-						COALESCE(ps.uwco, ps1.uwco, cs.uwco, q.uwco) uwco,
+				select 	COALESCE(ps.broker_sk, 		ps1.broker_sk, 		ps2.broker_sk, 		cs.broker_sk, 	q.broker_sk) broker_sk,
+						COALESCE(ps.product_sk, 	ps1.product_sk, 	ps2.product_sk, 	cs.product_sk, 	q.product_sk) product_sk,
+						COALESCE(ps.customer_sk, 	ps1.customer_sk, 	ps2.customer_sk, 	cs.customer_sk, q.customer_sk) customer_sk,
+						COALESCE(ps.state_sk, 		ps1.state_sk, 		ps2.state_sk, 		cs.state_sk, 	q.state_sk) state_sk,
+						COALESCE(ps.uwco, 			ps1.uwco, 			ps2.uwco, 			cs.uwco, 		q.uwco) uwco,
 						--
 						sum(isnull(q.prior_ytd_submission_ct,0)) prior_ytd_submission_ct,
 						sum(isnull(q.ytd_submission_ct,0)) ytd_submission_ct,
@@ -534,6 +585,9 @@ BEGIN
 						sum(isnull(ps.one_year_earned_exposure,0)) one_year_earned_exposure, 
 						sum(isnull(ps.three_year_earned_exposure,0)) three_year_earned_exposure,   
 						--
+						sum(isnull(ps2.one_year_earned_net_premium_amt,0)) one_year_non_cat_earned_net_premium_amt, 
+						sum(isnull(ps2.three_year_earned_net_premium_amt,0)) three_year_non_cat_earned_net_premium_amt,  
+						--
 						sum(isnull(cs.one_year_claim_ct,0)) one_year_claim_ct, 
 						sum(isnull(cs.one_year_loss_incurred_amt,0)) one_year_loss_incurred_amt,
 						sum(isnull(cs.one_year_loss_incurred_capped_amt,0)) one_year_loss_incurred_capped_amt,
@@ -552,13 +606,14 @@ BEGIN
 				into edw_temp.tbroker_summary_temp
 				from pol_summ ps
 				full join pol_summ1 ps1 on ps.broker_sk = ps1.broker_sk and ps.product_sk = ps1.product_sk and ps.customer_sk = ps1.customer_sk and ps.uwco = ps1.uwco and ps.state_sk = ps1.state_sk
+				full join pol_summ2 ps2 on ps.broker_sk = ps2.broker_sk and ps.product_sk = ps2.product_sk and ps.customer_sk = ps2.customer_sk and ps.uwco = ps2.uwco and ps.state_sk = ps2.state_sk
 				full join clm_summ cs  on ps.broker_sk =  cs.broker_sk and ps.product_sk =  cs.product_sk and ps.customer_sk =  cs.customer_sk and ps.uwco =  cs.uwco and ps.state_sk =  cs.state_sk
 				full join quotes q     on ps.broker_sk =   q.broker_sk  and ps.product_sk =  q.product_sk and ps.customer_sk =   q.customer_sk and ps.uwco =   q.uwco and ps.state_sk =   q.state_sk
-				group by  COALESCE(ps.broker_sk, ps1.broker_sk, cs.broker_sk, q.broker_sk),
-						COALESCE(ps.product_sk, ps1.product_sk, cs.product_sk, q.product_sk),
-						COALESCE(ps.customer_sk, ps1.customer_sk, cs.customer_sk, q.customer_sk),
-						COALESCE(ps.state_sk, ps1.state_sk, cs.state_sk, q.state_sk),
-						COALESCE(ps.uwco, ps1.uwco, cs.uwco, q.uwco);
+				group by  COALESCE(ps.broker_sk, 	ps1.broker_sk, 		ps2.broker_sk, 		cs.broker_sk, 	q.broker_sk),
+						  COALESCE(ps.product_sk, 	ps1.product_sk, 	ps2.product_sk, 	cs.product_sk, 	q.product_sk),
+						  COALESCE(ps.customer_sk, 	ps1.customer_sk, 	ps2.customer_sk, 	cs.customer_sk, q.customer_sk),
+						  COALESCE(ps.state_sk, 	ps1.state_sk, 		ps2.state_sk, 		cs.state_sk, 	q.state_sk),
+						  COALESCE(ps.uwco, 		ps1.uwco, 			ps2.uwco, 			cs.uwco, 		q.uwco);
 
 				delete from edw_core.tbroker_summary
 				where month_sk = @month_end_dt_sk; 
@@ -656,7 +711,10 @@ BEGIN
 						policy_renewal_premium_amt, 
 						--
 						update_ts,
-						etl_audit_sk
+						etl_audit_sk,
+						--
+						one_year_non_cat_earned_net_premium_amt, 
+						three_year_non_cat_earned_net_premium_amt 
 					)
 				select @month_end_dt_sk, 
 						coalesce(summ.broker_sk, r.broker_sk), 
@@ -744,7 +802,10 @@ BEGIN
 						sum(isnull(r.expiring_prm,0)) policy_expiring_premium_amt,
 						sum(isnull(r.renewal_prm,0)) policy_renewal_premium_amt,
 						--
-						max(summ.update_ts), max(summ.etl_audit_sk)
+						max(summ.update_ts), max(summ.etl_audit_sk),
+						--
+						sum(summ.one_year_non_cat_earned_net_premium_amt), 
+						sum(summ.three_year_non_cat_earned_net_premium_amt) 
 				from edw_temp.tbroker_summary_temp summ
 				LEFT join edw_temp.tbroker_summ_retention r on summ.broker_sk = r.broker_sk and summ.product_sk = r.product_sk and summ.customer_sk = r.customer_sk and summ.uwco = r.uwco and summ.state_sk = r.state_sk  
 				group by  
