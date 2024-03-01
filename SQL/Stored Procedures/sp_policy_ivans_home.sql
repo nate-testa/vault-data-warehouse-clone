@@ -34,6 +34,12 @@ BEGIN
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp1];
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp2];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp3];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp4];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp5];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp6];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp7];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp8];
 
         SELECT 
             policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
@@ -55,13 +61,14 @@ BEGIN
 			,coverage_sk
 		INTO [edw_temp].[policy_ivans_home_temp1]
         FROM edw_core.tpolicy_transaction as pt
-        WHERE product_sk in (1, 5) -- Home and Condo
+        WHERE product_sk in (1, 5) -- Home
             AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
         GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
-		,coverage_sk;
+		,coverage_sk
 
-		WITH
-		json_home_coverage AS (
+		SELECT temp3.*
+		INTO [edw_temp].[policy_ivans_home_temp3]
+		FROM (
 			SELECT ptf.policy_sk, ptf.effective_dt_sk ,ptf.transaction_seq_no, (
 				SELECT * FROM (
 					SELECT
@@ -73,31 +80,56 @@ BEGIN
 						pt.premium_amt AS changeAmount,
 						pt.annual_premium_amt AS currentAmount,
 						CASE
-							WHEN ic.internal_coverage_cd = 'Systems Protection' then hac.home_systems_protection_limit_amt
-							WHEN ic.internal_coverage_cd = 'Cyber Protection' then hac.home_cyber_protection_coverage_limit_amt
-							WHEN ic.internal_coverage_cd = 'Earthquake Coverage Extended for Loss Assessment' then hac.earthquake_coverage_extension_loss_assessment_limit_amt
-							WHEN ic.internal_coverage_cd = 'Fungi Liability Extension' then hac.fungi_bacteria_increase_limit
-							WHEN ic.internal_coverage_cd = 'Increased Incident Business Property' then hac.business_property_increase_limit_amt
-							WHEN ic.internal_coverage_cd = 'Increased Incidental Business Property' then hac.increased_incidental_business_property_limit_amt
-							--WHEN ic.internal_coverage_cd = 'Sump Pump & Sewers Increased Limits'
-							WHEN ic.internal_coverage_cd = 'Landscape' then hac.landscaping_coverage_increased_aggregate_limit
-							WHEN ic.internal_coverage_cd = 'Law Ordinance Coverage Increase' then hac.law_ordinance_coverage_increased_limit
-							WHEN ic.internal_coverage_cd = 'Loss Assessment Increase' then hac.loss_assessment_increase_limit_amt
-							--WHEN ic.internal_coverage_cd = 'Premises Liability Limitation'
-							WHEN ic.internal_coverage_cd = 'Workers Compensation' then hac.workercompensation_liability_occurance_limit_amt
-							WHEN ic.internal_coverage_cd = 'Dwelling Reconstruction Cost' then hc.dwelling_limit_amt
-							WHEN ic.internal_coverage_cd = 'Other' or ic.internal_coverage_cd = 'Other Structures Away Residence Premises' then hc.other_structures_limit_amt
-							WHEN ic.internal_coverage_cd = 'Contents Extended' or ic.internal_coverage_cd = 'Contents Off Premises Loss Exclusion' then hc.contents_limit_amt
-							WHEN ic.internal_coverage_cd = 'Loss of Use' then hc.loss_of_use_limit_amt
-							WHEN ic.internal_coverage_cd = 'Liability Coverage' then hc.personal_liability_limit_amt
-							ELSE '' 
+						    WHEN ic.internal_coverage_cd = 'Systems Protection'
+						        THEN CAST(hac.home_systems_protection_limit_amt as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Cyber Protection'
+						        THEN CAST(hac.home_cyber_protection_coverage_limit_amt as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Earthquake Coverage Extended for Loss Assessment'
+						        THEN CAST(hac.earthquake_coverage_extension_loss_assessment_limit_amt as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Fungi Liability Extension'
+						        THEN CAST(hac.fungi_bacteria_increase_limit as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Increased Incident Business Property'
+						        THEN CAST(hac.business_property_increase_limit_amt as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Increased Incidental Business Property'
+						        THEN CAST(hac.increased_incidental_business_property_limit_amt as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Landscape'
+						        THEN CAST(hac.landscaping_coverage_increased_aggregate_limit as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Law Ordinance Coverage Increase'
+						        THEN CAST(hac.law_ordinance_coverage_increased_limit as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Loss Assessment Increase'
+						        THEN CAST(hac.loss_assessment_increase_limit_amt as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Workers Compensation'
+						        THEN CAST(hac.workercompensation_liability_occurance_limit_amt as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Dwelling Reconstruction Cost'
+						        THEN CAST(hc.dwelling_limit_amt as NVARCHAR(255))
+						    WHEN (ic.internal_coverage_cd = 'Other')
+						        THEN CAST(hc.other_structures_limit_amt as NVARCHAR(255))
+							WHEN (ic.internal_coverage_cd = 'Other Structures Away Residence Premises')
+						        THEN CAST(hc.other_structures_limit_amt as NVARCHAR(255))
+						    WHEN (ic.internal_coverage_cd = 'Contents Extended')
+						        THEN CAST(hc.contents_limit_amt as NVARCHAR(255))
+							WHEN (ic.internal_coverage_cd = 'Contents Off Premises Loss Exclusion')
+						        THEN CAST(hc.contents_limit_amt as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Loss of Use'
+						        THEN CAST(hc.loss_of_use_limit_amt as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Liability Coverage'
+						        THEN CAST(hc.personal_liability_limit_amt as NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Liability Extension'
+						        THEN CAST(hc.personal_liability_limit_amt as NVARCHAR(255))
+						    ELSE NULL 
 						END AS [limit],
 						CASE 
-							WHEN ic.internal_coverage_cd = 'AOP' then hc.aop_deductible 
-							WHEN ic.internal_coverage_cd = 'Cyber Protection' then hac.home_cyber_protection_coverage_deductible
-							WHEN ic.internal_coverage_cd = 'Earthquake Coverage Extended for Loss Assessment' then hac.earthquake_coverage_extension_loss_assessment_limit_amt
-							WHEN ic.internal_coverage_cd = 'Hurricane' then hc.hurricane_deductible
-							WHEN ic.internal_coverage_cd = 'Wildfire' then hc.wildfire_deductible
+						    WHEN ic.internal_coverage_cd = 'AOP'
+						        THEN CAST(hc.aop_deductible as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Cyber Protection'
+						        THEN CAST(hac.home_cyber_protection_coverage_deductible as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Earthquake Coverage Extended for Loss Assessment'
+						        THEN CAST(hac.earthquake_coverage_extension_loss_assessment_limit_amt as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Hurricane'
+						        THEN CAST(hc.hurricane_deductible as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Wildfire'
+						        THEN CAST(hc.wildfire_deductible AS NVARCHAR(255))
+						    ELSE NULL 
 						END AS deductible
 					FROM 
 					(
@@ -106,7 +138,7 @@ BEGIN
 							SUM(annual_premium_amt) AS annual_premium_amt, 
 							SUM(premium_amt) AS premium_amt 
 						FROM edw_core.tpolicy_transaction as pt
-						WHERE product_sk = 1 -- Home
+						WHERE product_sk in (1, 5) -- Home and Condo
 						AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
 						GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk
 					) as pt 
@@ -135,75 +167,81 @@ BEGIN
 				) jd FOR JSON PATH, INCLUDE_NULL_VALUES
 			) AS Home_Coverages
 			FROM [edw_temp].[policy_ivans_home_temp1] as ptf
-		),
-		json_Additional_Interests AS (
-			SELECT
-			    ptf.policy_no, ptf.effective_dt, ptf.transaction_seq_no,
-			    (
-					SELECT uniqueId, policyNumber, commercialName, addr1, city, [state], zip, natureInterestCd, accountNumberId
-					FROM (
-						SELECT
-							tm.policy_no, tm.effective_dt, tm.transaction_seq_no,
-							--CONCAT('M-', tm.mortgage_sk) as unique_id,
-							CONCAT('M-', ROW_NUMBER() OVER (PARTITION BY tm.policy_no, tm.effective_dt, tm.transaction_seq_no ORDER BY tm.mortgage_sk ASC)) as uniqueId,
-							tm.policy_no as policyNumber,
-							TRIM(NULLIF(tm.mortgagee_nm, 'null')) as commercialName,
-							COALESCE(tm.address_line_1, '') as addr1,
-							COALESCE(tm.city_nm, '') as city,
-							COALESCE(tm.state_cd, '') as [state],
-							COALESCE(tm.zip_cd, '') as zip,
-							-- '' as Latitude,
-							-- '' as Longitude,
-							-- '' as County,
-							'MORTG' as natureInterestCd,
-							COALESCE(tm.loan_no, '') as accountNumberId
-						FROM [edw_core].[tmortgagee] tm
-						UNION ALL
-						SELECT
-							ai.policy_no, ai.effective_dt, ai.transaction_seq_no,
-							--CONCAT('AI-', ai.additional_interest_sk) as unique_id,
-							CONCAT('AI-', ROW_NUMBER() OVER (PARTITION BY ai.policy_no, ai.effective_dt, ai.transaction_seq_no ORDER BY ai.additional_interest_sk ASC)) as uniqueId,
-							ai.policy_no as policyNumber,
-							CONCAT(ISNULL(ai.first_nm, ''), ' ', ISNULL(ai.last_nm, '')) as commercialName,
-							COALESCE(ai.address_line_1, '') as addr1,
-							COALESCE(ai.city_nm, '') as city,
-							COALESCE(ai.state_cd, '') as [state],
-							COALESCE(ai.zip_cd, '') as zip,
-							-- '' as Latitude,
-							-- '' as Longitude,
-							-- '' as County,
-							CASE
-								WHEN ai.interest_type = 'Additional Insured' THEN 'ADDIN'
-								WHEN ai.interest_type = 'Additional Interest' THEN 'AINT'
-								WHEN ai.interest_type = 'Additional Insured - Individual' THEN 'ADDIN'
-								WHEN ai.interest_type = 'Additional Insured - Limited Liability' THEN 'OT'
-								WHEN ai.interest_type = 'Additional Insured - Contents' THEN 'OT'
-								WHEN ai.interest_type = 'Loss Payee' THEN 'LOSSP'
-								WHEN ai.interest_type = 'NJ Senior Citizen Designee' THEN 'OT'
-								WHEN ai.interest_type = 'Designated Additional Person to Receive Notice of Cancellation or Nonrenewal' THEN 'OT'
-								WHEN ai.interest_type = 'Third Party Designee' THEN 'TP'
-								ELSE 'NA'
-							END as natureInterestCd,
-							COALESCE(tp.customer_id, '') as accountNumberId
-						FROM edw_core.tadditional_interest as ai
-						LEFT JOIN edw_core.tpolicy tp ON ai.policy_no = tp.policy_no AND ai.effective_dt = tp.effective_dt
-					) AS jdata
-						WHERE  ptf.policy_no = jdata.policy_no
-							AND ptf.effective_dt = jdata.effective_dt
-							AND ptf.transaction_seq_no = jdata.transaction_seq_no
-					FOR JSON PATH, INCLUDE_NULL_VALUES 
-				) AS Additional_Interests
-				FROM (SELECT policy_no, effective_dt, transaction_seq_no FROM [edw_core].[tmortgagee]
-						UNION 
-					  SELECT policy_no, effective_dt, transaction_seq_no FROM edw_core.tadditional_interest) as ptf
-		),
-		json_Scheduled_Items AS (
+		) temp3
+		
+		SELECT temp4.*
+		INTO [edw_temp].[policy_ivans_home_temp4]
+		FROM (
+		SELECT
+		    ptf.policy_no, ptf.effective_dt, ptf.transaction_seq_no,
+		    (
+				SELECT uniqueId, policyNumber, commercialName, addr1, city, [state], zip, natureInterestCd, accountNumberId
+				FROM (
+					SELECT
+						tm.policy_no, tm.effective_dt, tm.transaction_seq_no,
+						--CONCAT('M-', tm.mortgage_sk) as unique_id,
+						CONCAT('M-', ROW_NUMBER() OVER (PARTITION BY tm.policy_no, tm.effective_dt, tm.transaction_seq_no ORDER BY tm.mortgage_sk ASC)) as uniqueId,
+						tm.policy_no as policyNumber,
+						TRIM(NULLIF(tm.mortgagee_nm, 'null')) as commercialName,
+						COALESCE(tm.address_line_1, '') as addr1,
+						COALESCE(tm.city_nm, '') as city,
+						COALESCE(tm.state_cd, '') as [state],
+						COALESCE(tm.zip_cd, '') as zip,
+						-- '' as Latitude,
+						-- '' as Longitude,
+						-- '' as County,
+						'MORTG' as natureInterestCd,
+						COALESCE(tm.loan_no, '') as accountNumberId
+					FROM [edw_core].[tmortgagee] tm
+					UNION ALL
+					SELECT
+						ai.policy_no, ai.effective_dt, ai.transaction_seq_no,
+						--CONCAT('AI-', ai.additional_interest_sk) as unique_id,
+						CONCAT('AI-', ROW_NUMBER() OVER (PARTITION BY ai.policy_no, ai.effective_dt, ai.transaction_seq_no ORDER BY ai.additional_interest_sk ASC)) as uniqueId,
+						ai.policy_no as policyNumber,
+						CONCAT(ISNULL(ai.first_nm, ''), ' ', ISNULL(ai.last_nm, '')) as commercialName,
+						COALESCE(ai.address_line_1, '') as addr1,
+						COALESCE(ai.city_nm, '') as city,
+						COALESCE(ai.state_cd, '') as [state],
+						COALESCE(ai.zip_cd, '') as zip,
+						-- '' as Latitude,
+						-- '' as Longitude,
+						-- '' as County,
+						CASE
+							WHEN ai.interest_type = 'Additional Insured' THEN 'ADDIN'
+							WHEN ai.interest_type = 'Additional Interest' THEN 'AINT'
+							WHEN ai.interest_type = 'Additional Insured - Individual' THEN 'ADDIN'
+							WHEN ai.interest_type = 'Additional Insured - Limited Liability' THEN 'OT'
+							WHEN ai.interest_type = 'Additional Insured - Contents' THEN 'OT'
+							WHEN ai.interest_type = 'Loss Payee' THEN 'LOSSP'
+							WHEN ai.interest_type = 'NJ Senior Citizen Designee' THEN 'OT'
+							WHEN ai.interest_type = 'Designated Additional Person to Receive Notice of Cancellation or Nonrenewal' THEN 'OT'
+							WHEN ai.interest_type = 'Third Party Designee' THEN 'TP'
+							ELSE 'NA'
+						END as natureInterestCd,
+						COALESCE(tp.customer_id, '') as accountNumberId
+					FROM edw_core.tadditional_interest as ai
+					LEFT JOIN edw_core.tpolicy tp ON ai.policy_no = tp.policy_no AND ai.effective_dt = tp.effective_dt
+				) AS jdata
+					WHERE  ptf.policy_no = jdata.policy_no
+						AND ptf.effective_dt = jdata.effective_dt
+						AND ptf.transaction_seq_no = jdata.transaction_seq_no
+				FOR JSON PATH, INCLUDE_NULL_VALUES 
+			) AS Additional_Interests
+			FROM (SELECT policy_no, effective_dt, transaction_seq_no FROM [edw_core].[tmortgagee]
+					UNION 
+				SELECT policy_no, effective_dt, transaction_seq_no FROM edw_core.tadditional_interest) as ptf
+		) temp4
+
+		SELECT temp5.*
+		INTO [edw_temp].[policy_ivans_home_temp5]
+		FROM (
 			SELECT
 			    ptf.policy_no, ptf.effective_dt, ptf.transaction_seq_no,
 			    (
 					SELECT
 						--csi.item_no as itemNumber
-						'' as itemNumber
+						csi.scheduled_item_no as itemNumber
 						,csi.item_desc as itemDesc
 						,csi.coverage_limit_amt as itemLimit
 						,csi.collector_car_in as collectorCarInd
@@ -219,13 +257,11 @@ BEGIN
 				) AS Scheduled_Items
 				FROM edw_core.tcollection_scheduled_item as ptf
 				group by ptf.policy_no, ptf.effective_dt, ptf.transaction_seq_no
-		),
-		original_policy AS (
-            SELECT original_policy_no, min(effective_dt) as min_effective_dt, min(expiration_dt) as min_expiration_dt 
-                FROM edw_core.tpolicy 
-            GROUP BY original_policy_no                
-        ),
-		json_Home_Collection_Coverages AS (
+		) temp5
+
+		SELECT temp6.*
+		INTO [edw_temp].[policy_ivans_home_temp6]
+		FROM (
 			SELECT
 			    ptf.policy_sk, ptf.effective_dt_sk ,ptf.transaction_seq_no,
 			    (
@@ -369,18 +405,30 @@ BEGIN
 					FOR JSON PATH, INCLUDE_NULL_VALUES 
 				) Home_Collection_Coverages
 			FROM [edw_temp].[policy_ivans_home_temp1] as ptf
-        ),
-		loss_history AS (
+        ) temp6
+
+		SELECT temp7.*
+		INTO [edw_temp].[policy_ivans_home_temp7]
+		FROM (
+            SELECT original_policy_no, min(effective_dt) as min_effective_dt, min(expiration_dt) as min_expiration_dt 
+                FROM edw_core.tpolicy 
+            GROUP BY original_policy_no                
+		) temp7
+
+		SELECT temp8.*
+		INTO [edw_temp].[policy_ivans_home_temp8]
+		FROM (
             SELECT 
                 policy_no, effective_dt, transaction_seq_no, max(loss_seq_no) as loss_seq_no 
             FROM 
                 edw_core.tloss_history
             GROUP BY 
                 policy_no, effective_dt, transaction_seq_no
-        )
+        ) temp8
+
+		/* */
 
 		SELECT 
-		/* */
 		'PolicyDownload' as [001_MsgTypeCd]
 		,CASE 
 			WHEN ptt.policy_transaction_type_nm = 'New' THEN 'NBS'
@@ -555,7 +603,7 @@ BEGIN
 		,'' as [122_OtherImprovementDesc]
 		,'' as [123_OtherImprovementCd]
 		,'' as [124_OtherImprovementDt]
-		,COALESCE(tmor.mortgagee_nm, tadi.additional_interest_nm) as [125_CommercialName]
+		,c.customer_nm as [125_CommercialName]
 		,'' as [126_Addr1]
 		,'' as [127_City]
 		,'' as [128_StateProvCd]
@@ -681,25 +729,25 @@ BEGIN
 		on hc.home_coverage_sk = hac.home_coverage_sk
 		LEFT JOIN [edw_core].[thome_location] hl
 		on hc.home_location_sk = hl.home_location_sk
-		LEFT JOIN loss_history lh
+		LEFT JOIN [edw_temp].[policy_ivans_home_temp8] lh
 		on p.policy_no = lh.policy_no
 		AND p.effective_dt = lh.effective_dt
 		AND pt.transaction_seq_no = lh.transaction_seq_no
-		LEFT JOIN original_policy AS op
+		LEFT JOIN [edw_temp].[policy_ivans_home_temp7] AS op
 		ON p.original_policy_no = op.original_policy_no
-		LEFT JOIN json_home_coverage jhc
+		LEFT JOIN [edw_temp].[policy_ivans_home_temp3] jhc
 		on pt.policy_sk = jhc.policy_sk
            AND pt.effective_dt_sk = jhc.effective_dt_sk
            AND pt.transaction_seq_no = jhc.transaction_seq_no
-		LEFT JOIN json_Home_Collection_Coverages jhcc
+		LEFT JOIN [edw_temp].[policy_ivans_home_temp6] jhcc
 		on pt.policy_sk = jhcc.policy_sk
            AND pt.effective_dt_sk = jhcc.effective_dt_sk
            AND pt.transaction_seq_no = jhcc.transaction_seq_no
-		LEFT JOIN json_Additional_Interests jai
+		LEFT JOIN [edw_temp].[policy_ivans_home_temp4] jai
 		on p.policy_no = jai.policy_no
            AND p.effective_dt = jai.effective_dt
            AND pt.transaction_seq_no = jai.transaction_seq_no
-		LEFT JOIN json_Scheduled_Items jsi
+		LEFT JOIN [edw_temp].[policy_ivans_home_temp5] jsi
 		on p.policy_no = jsi.policy_no
            AND p.effective_dt = jsi.effective_dt
            AND pt.transaction_seq_no = jsi.transaction_seq_no
@@ -709,14 +757,6 @@ BEGIN
 				from edw_core.tproducer
 			) tprc
 		ON p.broker_id = tprc.broker_id AND tprc.rn = 1
-		LEFT JOIN [edw_core].[tmortgagee] tmor
-		ON p.policy_no = tmor.policy_no
-		AND p.effective_dt = tmor.effective_dt
-		AND pt.transaction_seq_no = tmor.transaction_seq_no
-		LEFT JOIN edw_core.tadditional_interest tadi
-		ON p.policy_no = tadi.policy_no
-		AND p.effective_dt = tadi.effective_dt
-		AND pt.transaction_seq_no = tadi.transaction_seq_no
 		WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
 		AND b.ivans_y_account IS NOT NULL
 
@@ -1133,6 +1173,12 @@ BEGIN
 
         DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp1];
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp2];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp3];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp4];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp5];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp6];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp7];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp8];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
