@@ -38,20 +38,8 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp4];
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp5];
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp6];
-
-		WITH original_policy AS (
-            SELECT original_policy_no, min(effective_dt) as min_effective_dt, min(expiration_dt) as min_expiration_dt 
-                FROM edw_core.tpolicy 
-            GROUP BY original_policy_no                
-		),
-		loss_history AS (
-            SELECT 
-                policy_no, effective_dt, transaction_seq_no, max(loss_seq_no) as loss_seq_no 
-            FROM 
-                edw_core.tloss_history
-            GROUP BY 
-                policy_no, effective_dt, transaction_seq_no
-        )
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp7];
+		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp8];
 
         SELECT 
             policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
@@ -419,6 +407,25 @@ BEGIN
 			FROM [edw_temp].[policy_ivans_home_temp1] as ptf
         ) temp6
 
+		SELECT temp7.*
+		INTO [edw_temp].[policy_ivans_home_temp7]
+		FROM (
+            SELECT original_policy_no, min(effective_dt) as min_effective_dt, min(expiration_dt) as min_expiration_dt 
+                FROM edw_core.tpolicy 
+            GROUP BY original_policy_no                
+		) temp7
+
+		SELECT temp8.*
+		INTO [edw_temp].[policy_ivans_home_temp8]
+		FROM (
+            SELECT 
+                policy_no, effective_dt, transaction_seq_no, max(loss_seq_no) as loss_seq_no 
+            FROM 
+                edw_core.tloss_history
+            GROUP BY 
+                policy_no, effective_dt, transaction_seq_no
+        ) temp8;		
+
 		/* */
 
 		SELECT 
@@ -722,11 +729,11 @@ BEGIN
 		on hc.home_coverage_sk = hac.home_coverage_sk
 		LEFT JOIN [edw_core].[thome_location] hl
 		on hc.home_location_sk = hl.home_location_sk
-		LEFT JOIN loss_history lh
+		LEFT JOIN [edw_temp].[policy_ivans_home_temp8] lh
 		on p.policy_no = lh.policy_no
 		AND p.effective_dt = lh.effective_dt
 		AND pt.transaction_seq_no = lh.transaction_seq_no
-		LEFT JOIN original_policy AS op
+		LEFT JOIN [edw_temp].[policy_ivans_home_temp7] AS op
 		ON p.original_policy_no = op.original_policy_no
 		LEFT JOIN [edw_temp].[policy_ivans_home_temp3] jhc
 		on pt.policy_sk = jhc.policy_sk
