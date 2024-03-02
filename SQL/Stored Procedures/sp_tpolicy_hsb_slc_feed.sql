@@ -29,28 +29,34 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[tpolicy_hsb_slc_feed_temp1];
 		SELECT 
             getdate() as reporting_date,
-            '4280' as company_product_cd,
+            CASE 
+                WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '4280'
+                WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '4852'
+            END as company_product_cd,
             'SLC' as product_nm,
-            '1004013' as contract_no,
+            CASE 
+                WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '1004013'
+                WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '1004609'
+            END as contract_no,
             CASE 
                 WHEN CHARINDEX('-', p.policy_no) > 0 THEN LEFT(p.policy_no, CHARINDEX('-', p.policy_no) - 1)
                 ELSE p.policy_no
             END AS policy_no,
             CONVERT(VARCHAR(8), p.effective_dt, 112) as homeowner_policy_effective_dt,
             CONVERT(VARCHAR(8), p.expiration_dt, 112) as homeowner_policy_expiration_dt,
-            '' as coverage_effective_dt,
-            '' as original_homeowner_policy_effective_dt,
+            CONVERT(VARCHAR(8), p.effective_dt, 112) as coverage_effective_dt,
+            CONVERT(VARCHAR(8), p.effective_dt, 112) as original_homeowner_policy_effective_dt,
             '' as prior_homeowner_insurance_ind,
             c.customer_nm as insured_nm,
             c.mailing_address_line1 as dwelling_address,
             c.mailing_address_city_nm as dwelling_city,
             c.mailing_address_state_cd as dwelling_state,
             c.mailing_address_zip_cd as dwelling_zip_cd,
-            ROUND(pt.ceded_premium_amt,0) as slc_net_premium_amt,
+            ROUND(pt.ceded_premium_amt,2) as slc_net_premium_amt,
             50000 as slc_limit_amt,
             500 as slc_deductible_amt,
             '' as base_homeowner_premium,
-            ROUND(pt.net_premium_amt,0) as final_homeowner_premium,
+            ROUND(pt.net_premium_amt,2) as final_homeowner_premium,
             hc.aop_deductible as policy_deductible,
             hc.dwelling_limit_amt as coverage_a_value,
             hc.other_structures_limit_amt as coverage_b_value,
@@ -59,9 +65,21 @@ BEGIN
             '' as homeowners_or_dwelling_fire_policy_form_type,
             '' as product_form_no,
             '' as client_product_nm,
-            hc.occupancy_type as residence_type,
-            '' as usage_type,
-            hc.occupancy_type as occupancy,
+            CASE 
+                WHEN p.product_cd = 'HO' THEN 'Dwelling'
+                WHEN p.product_cd = 'CO' THEN 'Condo'
+            END AS residence_type,
+            CASE 
+                WHEN hc.occupancy_type IN ('Primary','Vacant') THEN 'Primary'
+                WHEN hc.occupancy_type IN ('Rented to others','Partially Rented to Others') THEN 'Secondary'
+                WHEN hc.occupancy_type LIKE 'Seasonal%' THEN 'Season'
+            END AS usage_type,
+            CASE 
+                WHEN hc.residence_type = 'Tenant' THEN 'Tenant'
+                WHEN hc.occupancy_type = 'Vacant' THEN 'Vacant'
+                WHEN hc.occupancy_type IN ('Primary','Rented to Others','Partially Rented to Others') THEN 'Owner'
+                WHEN hc.occupancy_type LIKE 'Seasonal%' THEN 'Seasonal'
+            END AS occupancy,
             hc.built_year as year_build,
             hc.total_finished_square_feet as total_living_area,
             '' as no_of_units_in_dwelling,
@@ -86,9 +104,7 @@ BEGIN
             p.create_ts as policy_history_create_ts
 		INTO [edw_temp].[tpolicy_hsb_slc_feed_temp1] 
         FROM 
-            edw_core.tpolicy AS p
-        INNER JOIN 
-            edw_core.tdate AS d ON d.actual_dt = p.effective_dt
+            (SELECT * FROM edw_core.tpolicy WHERE policy_status = 'Active' AND product_cd in ('HO','CO')) AS p
         LEFT JOIN 
             edw_core.tcustomer AS c ON c.customer_id = p.customer_id
         LEFT JOIN 
@@ -127,6 +143,7 @@ BEGIN
             ON pt.policy_sk = p.policy_sk 
             AND pt.effective_dt = p.effective_dt
         WHERE cast(p.create_ts as datetime2(7)) > @last_source_extract_ts
+        AND pt.ceded_premium_amt <> 0
         ;
 
 

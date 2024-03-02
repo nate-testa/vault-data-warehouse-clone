@@ -3,19 +3,22 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
--- =============================================================================================================
+
+-- ====================================================================================================================
 -- Author:		Hernando Gonzalez Garcia
 -- Description: This procedures inserts task data
-------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
-------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------
 -- 01/16/24		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 01/17/24		Architha Gudimalla				2. Fixed errors after first run  
 -- 02/06/24		Architha Gudimalla				3. Added task_workflow_step_sk 
 -- 02/07/24		Architha Gudimalla				4. Updated merge join
--- ============================================================================================================= 
+-- 02/23/24		Architha Gudimalla				5. Updated source query to Include rows where policy number is null
+--												   Added customer id
+-- ==================================================================================================================== 
 
-CREATE or ALTER   PROCEDURE edw_core.sp_ttask
+CREATE or ALTER PROCEDURE edw_core.sp_ttask
 
 AS
 BEGIN 
@@ -70,20 +73,24 @@ BEGIN
             ,@etl_audit_sk as etl_audit_sk
 			, twf.task_workflow_sk  
 			, twfs.task_workflow_step_sk  
+			, cust.customer_sk
         INTO edw_temp.ttask_temp1 
         from edw_stage.WorkTask wt
         left join edw_stage.account acc on acc.id = wt.accountid
         left join edw_stage.AccountTransaction acctr on wt.accounttransactionid = acctr.Id
-        left join edw_stage.[User] au on wt.AssignedUserId = au.Id
+        left join edw_stage.[User] au on case when wt.AssignedUserId = '' then null else wt.AssignedUserId end = au.Id
         left join edw_stage.[User] cu on wt.CreatedById = cu.Id
         left join edw_stage.[User] fu on wt.FinishedById = fu.Id
         left join edw_stage.[User] u on wt.AssignedUserId = u.Id
         left join edw_stage.Workflow wf on wt.WorkflowId = wf.id
         left join edw_stage.WorkflowStep wfs on wt.WorkflowStepId = wfs.id 
         left join edw_core.ttask_workflow twf on wf.name = twf.task_workflow_nm 
-        left join edw_core.ttask_workflow_step twfs on wfs.name = twfs.task_workflow_step_nm  and wf.name = twfs.task_workflow_nm      
+        left join edw_core.ttask_workflow_step twfs on wfs.name = twfs.task_workflow_step_nm  and wf.name = twfs.task_workflow_nm  
+        inner join edw_stage.[Insured] ins on ins.id = wt.InsuredId       
+        left join edw_core.tcustomer cust on cust.customer_id = CAST(ins.referencecode AS VARCHAR(255)) 
 		WHERE GREATEST(wt.CreatedDate,wt.UpdatedDate)>@last_source_extract_ts
-		and acc.policynumber is not null;
+		--and acc.policynumber is not null
+		;
 
 		MERGE edw_core.ttask AS Target
 		USING 
@@ -93,12 +100,12 @@ BEGIN
 						task_priority, task_created_dt, task_due_dt, task_completed_dt, 
 						task_completion_time_in_days, task_completion_time_in_minutes, task_updated_dt, task_closed_in, 
 						task_due_days, task_suspended_until_dt, task_abandoned_reason_desc, task_workflow_sk, task_workflow_step_sk, 
-						source_system_sk, create_ts, update_ts, etl_audit_sk
+						source_system_sk, create_ts, update_ts, etl_audit_sk, customer_sk
 				FROM edw_temp.ttask_temp1
 		)  AS Source
-		ON  Source.policy_no = Target.policy_no and Source.effective_dt = Target.effective_dt and isnull(Source.transaction_seq_no,0) = isnull(Target.transaction_seq_no ,0)
+		ON  isnull(Source.policy_no,'') = isnull(Target.policy_no,'') and isnull(Source.effective_dt,'') = isnull(Target.effective_dt,'') and isnull(Source.transaction_seq_no,0) = isnull(Target.transaction_seq_no ,0)
 		and Source.task_nm = Target.task_nm and Source.workflow_nm = Target.workflow_nm and Source.workflow_step_nm = Target.workflow_step_nm 
-		and Source.task_created_dt = Target.task_created_dt 
+		and Source.task_created_dt = Target.task_created_dt and Source.customer_sk = Target.customer_sk
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
 				policy_no,
@@ -129,6 +136,7 @@ BEGIN
 				create_ts,
 				update_ts,
 				etl_audit_sk 
+				, customer_sk
 			)
 		VALUES (Source.policy_no, Source.effective_dt, Source.transaction_effective_dt, Source.transaction_seq_no, 
 						Source.task_nm, Source.workflow_nm, Source.workflow_step_nm, 
@@ -136,7 +144,7 @@ BEGIN
 						Source.task_priority, Source.task_created_dt, Source.task_due_dt, Source.task_completed_dt, 
 						Source.task_completion_time_in_days, Source.task_completion_time_in_minutes, Source.task_updated_dt, Source.task_closed_in, 
 						Source.task_due_days, Source.task_suspended_until_dt, Source.task_abandoned_reason_desc, Source.task_workflow_sk, source.task_workflow_step_sk,
-						Source.source_system_sk, Source.create_ts, Source.update_ts, Source.etl_audit_sk)
+						Source.source_system_sk, Source.create_ts, Source.update_ts, Source.etl_audit_sk, source.customer_sk)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET

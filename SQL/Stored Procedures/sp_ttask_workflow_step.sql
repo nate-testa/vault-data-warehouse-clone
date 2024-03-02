@@ -2,6 +2,7 @@
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
 -- =============================================================================================================
 -- Description: This procedures inserts task workflow step names 
 ------------------------------------------------------------------------------------------------------------
@@ -10,6 +11,8 @@ GO
 -- 02/06/24		Architha Gudimalla				1. Created this procedure   
 -- 02/07/24		Architha Gudimalla				2. Added update on task_workflow_step_category_nm
 -- 02/14/24		Architha Gudimalla				3. Added 2 updates on task_workflow_step_category_nm
+-- 02/23/24		Architha Gudimalla				4. Added group by to source query
+-- 02/26/24		Architha Gudimalla				5. Added 9 updates on task_workflow_step_category_nm
 -- ============================================================================================================= 
 
 CREATE or ALTER   PROCEDURE edw_core.sp_ttask_workflow_step
@@ -39,12 +42,14 @@ BEGIN
         SELECT 	  wf.name task_workflow_nm
 				 ,wfs.name as task_workflow_step_nm 
 				 , null as task_workflow_step_category_nm  
-				, wfs.CreatedDate
-				, wfs.UpdatedDate
+				, min(wfs.CreatedDate) CreatedDate
+				, max(wfs.UpdatedDate) UpdatedDate
         INTO 	edw_temp.ttask_workflow_step_temp1 
         from  edw_stage.Workflow wf 
         inner join edw_stage.WorkflowStep wfs on wf.id = wfs.WorkflowId 
-		WHERE 	GREATEST(wfs.CreatedDate,wf.UpdatedDate)>@last_source_extract_ts  
+		WHERE 	GREATEST(wfs.CreatedDate,wf.UpdatedDate)>@last_source_extract_ts 
+		group by  wf.name
+				 ,wfs.name  
 
 		MERGE edw_core.ttask_workflow_step AS Target
 		USING 
@@ -66,6 +71,8 @@ BEGIN
 		WHEN MATCHED THEN UPDATE 
 		SET
         Target.update_ts					= getdate(); 
+
+		SET @rows_affected=@@ROWCOUNT; 
 
 		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'Endorsement' where task_workflow_nm = 'Admitted Endorsement' and task_workflow_step_nm  =  'Admitted Endorsement Bound & Issued';
 		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'Endorsement' where task_workflow_nm = 'Admitted Endorsement' and task_workflow_step_nm  =  'Admitted Endorsement Declined';
@@ -174,6 +181,28 @@ BEGIN
 		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'VRE to VES' and task_workflow_step_nm  =  'Quote VRE to VES Option';
 		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'Non-Admitted Option (From Admitted)' and task_workflow_step_nm  =  'Non-Admitted Renewal Option Underwriting Review'; 
 
+		--added below on 20240206
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'Renewal Revision' where task_workflow_nm = 'Renewal Revision' and task_workflow_step_nm  =  'Renewal Revision Request';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'Follow Ups' where task_workflow_nm = 'Follow Up'  and task_workflow_step_nm  =  'General Follow Up';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'VRE to VES' and task_workflow_step_nm  =  'VRE to VES Option Bind Request Review';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'VRE to VES' and task_workflow_step_nm  =  'VRE to VES Option Bound & Issued';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'VRE to VES' and task_workflow_step_nm  =  'VRE to VES Option Declined';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'VRE to VES' and task_workflow_step_nm  =  'VRE to VES Option Not Taken';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'VRE to VES' and task_workflow_step_nm  =  'VRE to VES Option Offered';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'VRE to VES' and task_workflow_step_nm  =  'VRE to VES Option Submit Declined';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'VRE to VES' and task_workflow_step_nm  =  'VRE to VES Option Underwriting Review';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'VRE to VES' and task_workflow_step_nm  =  'Submit Dec to ELANY';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'VRE to VES' and task_workflow_step_nm  =  'Upload ELANY Dec and Issue'; 
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'New Business' where task_workflow_nm = 'Legacy' and task_workflow_step_nm  =  'UW Review';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'Non-Admitted Option (From Admitted)' and task_workflow_step_nm  =  'Non-Admitted Renewal Option Bound & Issued';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'Non-Admitted Option (From Admitted)' and task_workflow_step_nm  =  'Non-Admitted Renewal Option Declined';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'Non-Admitted Option (From Admitted)' and task_workflow_step_nm  =  'Non-Admitted Renewal Option Not Taken';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'Non-Admitted Option (From Admitted)' and task_workflow_step_nm  =  'Non-Admitted Renewal Option Offered';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'Non-Admitted Option (From Admitted)' and task_workflow_step_nm  =  'Non-Admitted Renewal Option Submit Declined';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'Non-Admitted Option (From Admitted)' and task_workflow_step_nm  =  'Non-Admitted Renewal Option Underwriting Review';
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'Non-Admitted Option (From Admitted)' and task_workflow_step_nm  =  'Quote Non-Admitted Renewal Option';
+
+		
 		SET @rows_affected=@@ROWCOUNT;
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(t1.CreatedDate,t1.UpdatedDate)) FROM edw_temp.ttask_workflow_step_temp1 t1),@last_source_extract_ts)

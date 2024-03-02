@@ -3,6 +3,7 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
 -- ===========================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the renewals data for each month
@@ -25,6 +26,7 @@ GO
 -- 02/07/24		Architha Gudimalla				13. customer other inf count
 -- 02/09/24		Architha Gudimalla				14. customer other inf count default to 0 if null
 -- 02/13/24		Architha Gudimalla				15. Removed the default month from customer other inf
+-- 02/23/24		Architha Gudimalla				16. Added columns - Renewal Offered TIV, Renewal Offered cov a, Renewal Offered renewal sq feet
 -- =========================================================================================================================================== 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -287,13 +289,28 @@ BEGIN
 							end) as max_tr_residencetype,
 						max(pol.non_renewal_in) non_renewal_in,
 						max(pol.policy_term) policy_term,
-						max(pol.product_cd) product_cd 
+						max(pol.product_cd) product_cd ,
+						sum(CASE WHEN tr.policy_transaction_sk = max_pol_tr.min_policy_transaction_sk
+								  then hoc.total_insured_value_amt  
+								else 0 
+								end) as day_0_TIV,
+						sum(CASE WHEN tr.policy_transaction_sk = max_pol_tr.min_policy_transaction_sk
+								  then hoc.dwelling_limit_amt  
+								else 0 
+								end) as day_0_COVA,
+						sum(CASE WHEN tr.policy_transaction_sk = max_pol_tr.min_policy_transaction_sk
+								  then hoc.total_finished_square_feet  
+								else 0 
+								end) as day_0_totalsquarefeet
 				 FROM	edw_core.tpolicy_transaction tr
 				 inner join edw_core.tpolicy_transaction_type tt on tt.policy_transaction_type_sk = tr.policy_transaction_type_sk
 				 inner join edw_core.tpolicy pol on tr.policy_sk = pol.policy_sk
+				 --getting max transaction record
 				 inner join (
 								 SELECT policy_sk, max(policy_transaction_sk) over (partition by policy_sk 
 																		order by transaction_seq_no desc, policy_transaction_sk desc) policy_transaction_sk, 
+												min(policy_transaction_sk) over (partition by policy_sk 
+																		order by transaction_seq_no, policy_transaction_sk) min_policy_transaction_sk, 
 												max(transaction_seq_no) over (partition by policy_sk 
 																		order by transaction_seq_no desc, policy_transaction_sk desc) transaction_seq_no, 
 												   rank() over (partition by policy_sk 
@@ -302,6 +319,7 @@ BEGIN
 								 where	effective_dt_sk <= @end_dt_sk
 								 --and	transaction_effective_dt_sk <= @end_dt_sk 
 							) max_pol_tr on tr.policy_sk = max_pol_tr.policy_sk
+				 --getting 60 day transaction record
 				 left join (
 								 SELECT policy_sk, max(policy_transaction_sk) over (partition by policy_sk 
 																		order by transaction_seq_no desc, policy_transaction_sk desc) policy_transaction_sk, 
@@ -372,6 +390,9 @@ BEGIN
 						,offered_or_not_taken_quote_ct
 						,renewal_quote_sk 
 						,expiring_customer_other_inforce_ct
+						,renewal_tiv_amt
+						,renewal_cova_amt
+						,renewal_total_finished_square_feet
 					)
 				select 	@month_end_dt_sk, 
 						exp_pols_prm.policy_sk, 
@@ -438,6 +459,9 @@ BEGIN
 						 	  else 0 
 						 end renewal_quote_sk
 						,isnull(ci.oth_inf_ct,0) expiring_customer_other_inforce_ct
+						,case when ren_pols.policy_sk is not null then ren_pols_prm.day_0_TIV else null end renewal_tiv_amt,
+						 case when ren_pols.policy_sk is not null then ren_pols_prm.day_0_COVA else null end renewal_cova_amt,  
+						 case when ren_pols.policy_sk is not null then ren_pols_prm.day_0_totalsquarefeet else null end renewal_total_finished_square_feet
 				from exp_pols
 				-- join to get prms for expiring policies
 				inner join prm exp_pols_prm on exp_pols_prm.policy_sk = exp_pols.policy_sk 

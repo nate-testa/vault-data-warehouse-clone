@@ -2,12 +2,14 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-
--- =============================================
--- Author:		Alberto Almario
--- Create Date: 2023-09-15
+-- ================================================================================================================================================
 -- Description: This stored procedure insert and update info related to tauto_driver_incident.
--- =============================================
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- 09/15/23		Alberto Almario					1. Created the proc
+-- 03/01/24     Architha Gudimalla              2. Updated the logic to use parent object id to get the correct driver no with the incidents
+-- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_driver_incident]
 AS
 BEGIN
@@ -37,8 +39,8 @@ BEGIN
 			IssuedDate, policy_no, effective_dt, transaction_effective_dt, expiration_dt, transaction_dt, transaction_seq_no, policy_history_sk, auto_driver_sk, driver_no, incident_no,
             [IncidentSource], [IncidentDate], [IncidentType], [IncidentDescription], [TotalPayout], [IsDisputed], [IncludeInRate], [IncidentCode], [IncidentStatus], [BodilyInjuryPayment], 
             [CollisionPayment], [ComprehensivePayment], [GlassPayment], [MedicalExpensePayment], [MedicalPaymentPayment], [OtherPayment], [PropertyDamagePayment], [PersonalInjuryProtectionPayment], 
-            [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment],
-			source_system_sk
+            [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss],
+			source_system_sk 
 		
         INTO [edw_temp].[tauto_driver_incident_temp1]
 		
@@ -54,28 +56,22 @@ BEGIN
                         ELSE 4 --(Metal)
                     END as [source_system_sk]
                 FROM
-                    (SELECT
-                        *
+                (
+                    SELECT *
                     FROM [edw_stage].[AccountTransaction]
                     WHERE [State] = 'ISSUED'
                         AND IssuedDate > @last_source_extract_ts
-                    ) acct
+                ) acct
                 INNER JOIN [edw_stage].[Product] AS p on p.Id = acct.ProductId
                 INNER JOIN [edw_stage].[AccountTransactionVersion] AS acctv ON acctv.AccountTransactionId = acct.Id
                 INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
-                INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] AS acctvof ON acctvof.VersionObjectId = acctvo.id
-                LEFT JOIN [edw_core].[tpolicy_history] AS ph 
-                    ON ph.policy_no = acct.PolicyNumber
-                    AND ph.effective_dt = acct.EffectiveDate
-                    AND ph.transaction_seq_no = acct.policychangenumber
-                LEFT JOIN [edw_core].[tauto_driver] AS ad
-                    ON ad.policy_no = acct.PolicyNumber
-                    AND ad.effective_dt = acct.EffectiveDate
-                    AND ad.transaction_seq_no = acct.policychangenumber
-                WHERE
-                    p.[Name] = 'Automobile'
-                    AND p.ProductLine = 'PersonalLines'
-                    AND acctvof.[Group] in ('Incidents in the Past 5 Years')
+                INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] AS acctvof ON acctvof.VersionObjectId = acctvo.id  
+                INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS pid ON acctvo.parentobjectid = pid.Id
+                LEFT JOIN [edw_core].[tpolicy_history] AS ph ON ph.policy_no = acct.PolicyNumber AND ph.effective_dt = acct.EffectiveDate AND ph.transaction_seq_no = acct.policychangenumber
+                LEFT JOIN [edw_core].[tauto_driver] AS ad ON ad.policy_no = acct.PolicyNumber AND ad.effective_dt = acct.EffectiveDate AND ad.transaction_seq_no = acct.policychangenumber and ad.driver_no=pid.[index]
+                WHERE   p.[Name] = 'Automobile'
+                AND     p.ProductLine = 'PersonalLines'
+                AND     acctvof.[Group] in ('Incidents in the Past 5 Years') 
 			) t
 		PIVOT 
 			(
@@ -83,7 +79,7 @@ BEGIN
                 (
                     [IncidentSource], [IncidentDate], [IncidentType], [IncidentDescription], [TotalPayout], [IsDisputed], [IncludeInRate], [IncidentCode], [IncidentStatus], [BodilyInjuryPayment], 
                     [CollisionPayment], [ComprehensivePayment], [GlassPayment], [MedicalExpensePayment], [MedicalPaymentPayment], [OtherPayment], [PropertyDamagePayment], [PersonalInjuryProtectionPayment], 
-                    [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment]
+                    [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss]
                 )
 			) pivottable
 
@@ -126,7 +122,8 @@ BEGIN
             source_system_sk, 
             create_ts, 
             update_ts, 
-            etl_audit_sk
+            etl_audit_sk,
+            lending_loss_in
 		)
         SELECT 
             t1.policy_no, 
@@ -165,7 +162,8 @@ BEGIN
             t1.source_system_sk, 
             getdate() AS create_ts,
             getdate() AS update_ts,
-            @etl_audit_sk AS etl_audit_sk
+            @etl_audit_sk AS etl_audit_sk,
+            t1.[LendingLoss] as lending_loss_in
         FROM 
             [edw_temp].[tauto_driver_incident_temp1] AS t1
         ;

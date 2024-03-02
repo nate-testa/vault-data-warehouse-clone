@@ -9,6 +9,7 @@ GO
 ---------------------------------------------------------------------------------------------------
 -- 08/01/23		Alberto Almario Valbuena		1. Created this procedure 
 -- 10/30/23		Architha Gudimalla				2. Replaced middle name with last name 
+-- 02/29/24		Yunus Mohammed					3. Added 'CO' product code for risk_item
 -- ================================================================================================= 
 create or ALTER   PROCEDURE [edw_core].[sp_tclaim_policy_search_api]
 AS
@@ -51,7 +52,7 @@ BEGIN
 				CASE 
 					WHEN p.product_cd = 'PEL' THEN CONCAT(pl.address_line_1,'-',pl.address_line_2,'-',pl.unit_no,'-',pl.city_nm,'-',pl.state_cd,'-',pl.zip_cd)
 					WHEN p.product_cd = 'LUX' THEN CONCAT(p.mailing_address_line1,'-',p.mailing_address_line2,'-',p.mailing_address_unit_no,'-',p.mailing_address_city_nm,'-',p.mailing_address_state_cd,'-',p.mailing_address_zip_cd)
-					WHEN p.product_cd = 'HO'  THEN CONCAT(hl.address_line_1,'-',hl.address_line_2,'-',hl.unit_no,'-',hl.city_nm,'-',hl.state_cd,'-',hl.zip_cd)
+					WHEN p.product_cd IN ('HO','CO')  THEN CONCAT(hl.address_line_1,'-',hl.address_line_2,'-',hl.unit_no,'-',hl.city_nm,'-',hl.state_cd,'-',hl.zip_cd)
 					WHEN p.product_cd = 'AU' and  av.vehicle_vin is not null THEN av.vehicle_vin
 					ELSE '***!Pending!***'
 				END as risk_item,
