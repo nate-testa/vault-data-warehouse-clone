@@ -1,4 +1,3 @@
-/****** Object:  StoredProcedure [edw_core].[sp_tquote_auto_vehicle_coverage]    Script Date: 11/16/2023 11:57:22 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -62,7 +61,7 @@ BEGIN
         FROM
 			(
                 SELECT
-                    acct.CreatedDate, acct.PolicyNumber as quote_no, acct.EffectiveDate as effective_dt, acctvo.[Index] as vehicle_no, 
+                    acct.CreatedDate, acct.PolicyNumber as quote_no, acct.EffectiveDate as effective_dt, qav.[vehicle_no] as vehicle_no, 
                     acct.ExpirationDate as expiration_dt, acct.Number as transaction_seq_no,
                     qh.quote_history_sk, qav.quote_auto_vehicle_sk, --qagl.quote_auto_garage_location_sk, 
                     acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
@@ -343,3 +342,4 @@ BEGIN
 	
     END CATCH
 END
+GO
