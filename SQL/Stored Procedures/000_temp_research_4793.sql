@@ -2,20 +2,6 @@
 
 SELECT * FROM edw_core.tpolicy WHERE policy_no LIKE 'AU100076620%';
 
-select * from vault_edw.edw_core.tpolicy_transaction
-where policy_sk = '87530'
-and transaction_seq_no = 1
-and internal_coverage_sk = 160
-;
-
-
-select * from dwh_core.PolicyTransactionStats
-where policyImageId = '1771578'
-and statsCoverageName = 'otcPrem'
-;
-
-
-
 --query proposed
 
 
@@ -40,7 +26,6 @@ Tmp_Variables as (
      , ph.transaction_type
      , ph.transaction_seq_no
      , pt.premium_amt
-     , pt.annual_premium_amt
      , pt.vehicle_coverage_sk
      , ic.internal_coverage_desc
      , av.vehicle_model_year
@@ -72,30 +57,76 @@ WHERE  1=1
    -- and ic.internal_coverage_desc = 'Property Protection Insurance'
 --   and greatest(ph.transaction_effective_dt, transaction_ts) between (SELECT YearStart from Tmp_Variables) and (SELECT YearEnd from Tmp_Variables)
 -- ORDER BY p.effective_dt, ph.transaction_seq_no, av.vehicle_vin, vehicle_coverage_sk, internal_coverage_cd
-/*)
-SELECT policy_no
-     , policy_sk
-     , policy_history_sk
-     , transaction_effective_dt
-     , transaction_ts
-     , transaction_type
-     , transaction_seq_no
-     , sum(premium_amt) as premiumChange
-     , internal_coverage_desc
-from TESTING
-GROUP BY policy_no
-     , policy_sk
-     , policy_history_sk
-     , transaction_effective_dt
-     , transaction_ts
-     , transaction_type
-     , transaction_seq_no
-     , internal_coverage_desc
-order by transaction_seq_no, internal_coverage_desc*/
+
 ;
 
-select * from vault_edw.edw_core.tpolicy_transaction
-where policy_sk = '87530'
-and transaction_seq_no = 1
-and internal_coverage_sk = 160
+-- 'AU100028533-01'  
+WITH tbl AS (
+    SELECT 
+        p.policy_no
+        ,p.risk_state_cd
+        -- ,p.effective_dt
+        ,p.policy_sk
+        -- ,ph.policy_history_sk
+        ,ph.transaction_effective_dt
+        -- ,ph.transaction_ts
+        -- ,ph.transaction_type
+        ,ph.transaction_seq_no
+        ,pt.premium_amt
+        ,pt.vehicle_coverage_sk
+        ,ic.internal_coverage_desc
+        ,ic.internal_coverage_sk
+        ,av.vehicle_model_year
+        ,av.vehicle_make
+        ,av.vehicle_model
+        ,av.vehicle_vin 
+        ,avc.auto_vehicle_coverage_sk
+        ,avc.auto_vehicle_sk
+        ,ic.aslob_cd
+        ,ic.internal_coverage_category_nm
+        ,pt.source_system_sk
+    FROM edw_core.tpolicy p 
+    JOIN edw_core.tpolicy_history ph ON ph.policy_sk = p.policy_sk
+    JOIN edw_core.tpolicy_transaction pt ON pt.policy_sk = p.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no
+    JOIN edw_core.tinternal_coverage ic ON ic.internal_coverage_sk = pt.internal_coverage_sk
+    LEFT JOIN edw_core.tauto_vehicle av ON av.auto_vehicle_sk = pt.item_sk
+    LEFT JOIN edw_core.tauto_vehicle_coverage avc ON avc.auto_vehicle_sk = av.auto_vehicle_sk AND avc.policy_history_sk = ph.policy_history_sk
+    WHERE  1=1
+        AND p.policy_no LIKE 'AU100076620-03'
+        AND p.product_cd = 'AU'
+        -- AND ph.premium_amt <> 0
+     --    AND ic.internal_coverage_desc LIKE '%Other%'
+)
+
+select 
+   -- transaction_seq_no, 
+   -- source_system_sk, 
+   vehicle_model, 
+   vehicle_vin, 
+   auto_vehicle_sk,
+   internal_coverage_sk,
+   internal_coverage_desc, 
+   sum(premium_amt) 
+from tbl
+where vehicle_vin = 'U15G1R42559'
+group by 
+   -- transaction_seq_no, 
+   -- source_system_sk, 
+   vehicle_model, 
+   vehicle_vin, 
+   auto_vehicle_sk,
+   internal_coverage_sk,
+   internal_coverage_desc
 ;
+
+select * from edw_core.tpolicy where policy_no = 'AU100076620-03';
+select * from edw_stage.AccountTransaction where PolicyNumber = 'AU100076620-03';
+SELECT distinct item_sk FROM edw_core.tpolicy_transaction WHERE policy_sk = 106890;
+SELECT * FROM edw_core.tauto_vehicle where auto_vehicle_sk in (20673,31559,33252,39256,39580,40594);
+select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = '662c134a-94e4-49b3-9ffc-d22c7dbd10d5';
+
+--**UPDATES**
+--otcPrem - Other Than Collision update premium_amt(PremiumDeltaProRated) from 90 to 84
+SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 106890 and item_sk = 31559 and internal_coverage_sk = 100 order by transaction_seq_no;
+select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = '662c134a-94e4-49b3-9ffc-d22c7dbd10d5' and PremiumDeltaProRated = '90' and id = 675868;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '84' where AccountTransactionId = '662c134a-94e4-49b3-9ffc-d22c7dbd10d5' and PremiumDeltaProRated = '90' and id = 675868;

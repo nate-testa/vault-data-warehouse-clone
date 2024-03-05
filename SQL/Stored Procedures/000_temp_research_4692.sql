@@ -43,6 +43,8 @@ select
    -- source_system_sk, 
    vehicle_model, 
    vehicle_vin, 
+   auto_vehicle_sk,
+   internal_coverage_sk,
    internal_coverage_desc, 
    sum(premium_amt) 
 from tbl
@@ -52,6 +54,8 @@ group by
    -- source_system_sk, 
    vehicle_model, 
    vehicle_vin, 
+   auto_vehicle_sk,
+   internal_coverage_sk,
    internal_coverage_desc
 
 
@@ -59,9 +63,9 @@ group by
 
 SELECT * FROM edw_core.tpolicy WHERE policy_no = 'AU100028533-01';
 SELECT * FROM edw_core.tpolicy_history WHERE policy_no = 'AU100028533-01';
-SELECT DISTINCT item_sk, internal_coverage_sk FROM edw_core.tpolicy_transaction WHERE policy_sk = 102947;
-SELECT * FROM edw_core.tinternal_coverage WHERE internal_coverage_sk IN (25,97,104,142,223,235,243,339);
-SELECT * FROM edw_core.tauto_vehicle where auto_vehicle_sk in (0,14537,14538,14539,14540,14541,14542);
+SELECT distinct internal_coverage_sk FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171; and item_sk = 1409 and internal_coverage_sk = 223 order by transaction_seq_no;
+SELECT * FROM edw_core.tinternal_coverage WHERE internal_coverage_sk IN (25,57,100,103,122,197,209,287);
+SELECT * FROM edw_core.tauto_vehicle where auto_vehicle_sk in (0,1409,4103,4104,13264,13265,18979);
 SELECT * FROM edw_core.tauto_vehicle_coverage WHERE policy_history_sk IN (221438,10830,84551,186039);
 
 select * from edw_core.tsource_system;
@@ -74,13 +78,43 @@ WHERE pt.policy_sk = 26686
 
 SELECT COUNT(1) FROM edw_core.tauto_vehicle_coverage WHERE auto_garage_location_sk IS NULL;--0
 
+SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171;
 
-select *
-from edw_core.tquote_home_location
-where quote_no = 'HO200028240'
-;
+--Changes
 
-select *
-from edw_stage.AccountTransaction
-where PolicyNumber = 'HO200028240'
-;
+select * from edw_stage.AccountTransaction where PolicyNumber = 'AU100028533-01' and PolicyChangeNumber = 2;
+select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808';
+
+--**UPDATES**
+--biPrem - Bodily Injury update premium_amt(PremiumDeltaProRated) from -265 to -266
+SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171 and item_sk = 1409 and internal_coverage_sk = 25 order by transaction_seq_no;
+select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-265' and id = 2954937;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-266' where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-265' and id = 2954937;
+
+--cdPrem - collision update premium_amt(PremiumDeltaProRated) from -202 to -854
+SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171 and item_sk = 1409 and internal_coverage_sk = 209 order by transaction_seq_no;
+select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-202' and id = 2954938;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-854' where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-202' and id = 2954938;
+
+--medPrem - Medical Payments update premium_amt(PremiumDeltaProRated) from -23 to -22
+SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171 and item_sk = 1409 and internal_coverage_sk = 122 order by transaction_seq_no;
+select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-23' and id = 2954934;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-22' where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-23' and id = 2954934;
+
+--otcPrem - Other Than Collision update premium_amt(PremiumDeltaProRated) from 129 to 117 and premium_amt from -54 to -285
+SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171 and item_sk = 1409 and internal_coverage_sk = 100 order by transaction_seq_no;
+select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '129' and id = 2954942;
+select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-54' and id = 2954932;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '117' where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '129' and id = 2954942;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-285' where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-54' and id = 2954932;
+
+--pdPrem - Property Damage update premium_amt(PremiumDeltaProRated) from -86 to -87
+SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171 and item_sk = 1409 and internal_coverage_sk = 197 order by transaction_seq_no;
+select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-86' and id = 2954935;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-87' where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-86' and id = 2954935;
+
+--otcPrem - Other Than Collision update premium_amt(PremiumDeltaProRated) from 0 to 49
+SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171 and item_sk = 4104 and internal_coverage_sk = 100 order by transaction_seq_no;
+select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '0' and id = 2954941;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '49' where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '0' and id = 2954941;
+
