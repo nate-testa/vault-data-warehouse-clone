@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tauto_vehicle_coverage ADD carfax_wholesale_value_amt varchar(255);

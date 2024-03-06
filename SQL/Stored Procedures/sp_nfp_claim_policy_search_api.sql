@@ -1,8 +1,12 @@
 -- =============================================
 -- Author:		Yunus Mohammed
--- Create Date: 11/08/2023
 -- Description: This procedures insert nfp policy data in policy claim search api
--- =============================================
+---------------------------------------------------------------------------------------------------
+-- Change date 		|Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 11/08/23			Mohammed Yunus					1. Created this procedure
+-- 02/14/24			Mohammed Yunus					2. Updated transaction_seq_no logic
+-- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_nfp_claim_policy_search_api]
 
 AS
@@ -37,7 +41,7 @@ BEGIN
 		(
 		SELECT insured_cert_no as policy_no,effective_date as effective_dt,expiration_date as expiration_dt,
 		transaction_date as transaction_effective_dt,null as policy_status,CONCAT_WS(' ' , insured_first_name,insured_last_name) insured_nm,
-		ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date) as transaction_seq_no,
+		ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date, reporting_month) as transaction_seq_no,
 		null as insured_type,'Vault E&S Insurance Company' as uw_company_nm,'PEL' as product_nm,transaction_type,
 		risk_group as risk_item,'NFP' as source_system_nm,update_ts
 		

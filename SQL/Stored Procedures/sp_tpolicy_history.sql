@@ -11,7 +11,8 @@
 -- 10/10/23		Architha Gudimalla				5. Updated logic for transaction_type - renewals
 -- 10/17/23		Architha Gudimalla				6. Updated logic for transaction_desc
 -- 10/17/23		Architha Gudimalla				7. Updated logic for producer_nm
--- 10/26/23		Yunus Mohammed					7. Made changes to fix error on customer_id and broker_id
+-- 10/26/23		Yunus Mohammed					8. Made changes to fix error on customer_id and broker_id
+-- 02/08/24		Alberto Almario					9. Added new column producer_sk
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -73,7 +74,8 @@ BEGIN
 					 Else 4 --(Metal)
 				end ssk,
 				nullif(trim(pr.ProductCode),'') product_cd,
-				usr.name uw_nm, nullif(trim(acct.note),'') note
+				usr.name uw_nm, nullif(trim(acct.note),'') note,
+			pd.producer_sk
 		INTO edw_temp.tpolicy_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
@@ -84,6 +86,7 @@ BEGIN
 		left join edw_stage.[Broker] br on acctv.BrokerId = br.id
 		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acctv.ProductId = pr.id
+		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acctv.BrokerId
 		WHERE acct.State ='ISSUED' --- Review BOUND transactions
 		and	acct.PolicyNumber is not null 
 		and pr.ProductLine = 'PersonalLines'  
@@ -199,6 +202,7 @@ BEGIN
 		   ,insurance_score_desc3
 		   ,insurance_score_cd4
 		   ,insurance_score_desc4
+		   ,producer_sk
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.PolicyChangeNumber, 
 				pol.policy_sk, br.broker_sk, cust.customer_sk, br.Broker_Id, Source.customer_id, 
@@ -229,6 +233,7 @@ BEGIN
 				,source1.InsuranceScoreCode3Description
 				,source1.InsuranceScoreCode4
 				,source1.InsuranceScoreCode4Description
+				,source.producer_sk
 		FROM edw_temp.tpolicy_history_temp1 source
 		LEFT JOIN edw_temp.tpolicy_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tpolicy_history_temp2 source1 on source.id = source1.AccountTransactionId

@@ -329,11 +329,7 @@ BEGIN
             pi.mailing_address_zip_cd as [PostalCode_021],
             pi.mailing_address_country_nm as [Country_022],
             pi.mailing_address_county_nm as [County_023],
-            CASE 
-                WHEN pi.home_phone_no is not null THEN 'Home'
-                WHEN pi.mobile_phone_no is not null THEN 'Mobile'
-                ELSE ''
-            END as [PhoneTypeCd_024],
+            '' as [PhoneTypeCd_024],
             RIGHT(REPLACE(TRANSLATE(pi.home_phone_no, '+-/()#', '      '), ' ', ''), 10) as [HomePhoneNumber_025],
 		    RIGHT(REPLACE(TRANSLATE(pi.mobile_phone_no, '+-/()#', '      '), ' ', ''), 10) as [MobilePhoneNumber_025],
             pi.email as [EmailAddr_026],
@@ -357,9 +353,9 @@ BEGIN
             DATEDIFF(MONTH,p.effective_dt, p.expiration_dt) as [NumUnits_040],
             P.policy_term as [Description_041],
             '' as [ControllingStateProvCd_042],
-            CASE WHEN ba.bill_type = 'Insured' THEN 'Direct' ELSE 'Not Direct' END AS [BillingMethodCd_043],
-            pt.annual_premium_amt as [Amt_044],
-            pt.annual_premium_amt as [Amt_045],
+            CASE WHEN ba.bill_type in ('Insured', 'Mortgagee') THEN 'Direct' ELSE 'Not Direct' END AS [BillingMethodCd_043],
+            COALESCE(pt.annual_premium_amt, 0) as [Amt_044],
+            COALESCE(pt.premium_amt, 0) as [Amt_045],
             op.min_effective_dt as [OriginalPolicyInceptionDt_046],
             '' as [PayorCd_047],
             '' as [RenewalBillingMethodCd_048],
@@ -374,7 +370,10 @@ BEGIN
             '' as [CoverageCd_057],
             '' as [FormatInteger_058],
             '' as [MethodPaymentCd_059],
-            '****pending****' as [PaymentPlanCd_060],
+            CASE 
+                WHEN ba.payment_plan = '1P' THEN 'Full Pay'
+                ELSE replace(ba.payment_plan, 'P', ' Pay')
+            END as [PaymentPlanCd_060],
             '' as [Dummy_061],
             '' as [Dummy_062],
             '' as [Dummy_063],
@@ -424,6 +423,7 @@ BEGIN
         INTO [edw_temp].[policy_ivans_pel_feed_temp1] 
         FROM [edw_temp].[policy_ivans_pel_feed_temp2] AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
+        INNER JOIN edw_core.tbroker AS b ON p.broker_id = b.broker_id
         LEFT JOIN edw_core.tpolicy_insured as pi ON p.policy_no = pi.policy_no AND p.effective_dt = pi.effective_dt AND pt.transaction_seq_no = pi.transaction_seq_no AND pi.primary_insured_in = 'Yes'
 		LEFT JOIN edw_core.tdate AS d1 ON pt.transaction_effective_dt_sk = d1.date_sk
         LEFT JOIN edw_core.tdate AS d2 ON pt.transaction_dt_sk = d2.date_sk
@@ -450,6 +450,7 @@ BEGIN
 			) tprc
 		ON p.broker_id = tprc.broker_id
 		AND tprc.rn = 1
+        WHERE b.ivans_y_account IS NOT NULL
         ;
 
         -- Start Insert process
@@ -567,7 +568,17 @@ BEGIN
                 [PostalCode_021],
                 [Country_022],
                 [County_023],
-                [PhoneTypeCd_024],
+                CASE
+                    WHEN [HomePhoneNumber_025] IS NOT NULL
+                        AND LEN([HomePhoneNumber_025]) = 10
+                        AND LEFT([HomePhoneNumber_025], 1) NOT IN ('0', '1')
+                        THEN 'Home'
+                    WHEN [MobilePhoneNumber_025] IS NOT NULL
+                        AND LEN([MobilePhoneNumber_025]) = 10
+                        AND LEFT([MobilePhoneNumber_025], 1) NOT IN ('0', '1')
+                        THEN 'Mobile'
+                    ELSE ''
+                END AS [PhoneTypeCd_024],
                 CASE
                     WHEN [HomePhoneNumber_025] IS NOT NULL
                         AND LEN([HomePhoneNumber_025]) = 10

@@ -15,7 +15,10 @@ GO
 -- 11/14/23		       	Sandeep Gundreddy		    3. Modified tqupte_home_location_sk join
 -- 11/17/23				Yunus Mohammed				4. Added new columns
 -- 01/18/24				Alberto Almario				5. Added new column extended_liability_location_ct
--- 01/25/24				Alberto Almario				6. Added new columns roof_
+-- 01/25/24				Alberto Almario				6. Added new columns roof_exclusion_with_ensuing_loss_in, 
+--																		 roof_coverage_endorsement_wh_in, 
+--																		 roof_coverage_endorsement_ap_in,
+--																		 roof_coverage_endorsement_rv_in
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage]

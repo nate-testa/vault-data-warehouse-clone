@@ -7,7 +7,8 @@
 ---------------------------------------------------------------------------------------------------
 -- 11/15/23		Yunus Mohammed				1. Updated logic for cancelled and expired policies
 -- 12/01/23		Yunus Mohammed				2. Updated  product name and company name
--- 12/05/23		Yunus Mohammed				3. Removed distinct and added contribcutoffdate date
+-- 12/05/23		Yunus Mohammed				3. Added contribcutoffdate date
+-- 02/14/24		Yunus Mohammed				3. Removed distinct and added check from tpolicy_history table
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -66,8 +67,7 @@ BEGIN
 				@etl_audit_sk AS etl_audit_sk
 			FROM
 			(
-			 SELECT
-				distinct
+			 SELECT				
 				@last_day_month AS [accounting_date],
 				tp.policy_sk AS policy_image_id,
 				tp.policy_no AS [policy_number],
@@ -120,7 +120,18 @@ BEGIN
 				AND (tic.internal_coverage_category_nm = 'Premium' OR tic.internal_coverage_desc like 'Subscriber Contribution%')
 				AND tpts.transaction_effective_dt_sk < = @acounting_date_sk
 				AND tpts.expiration_dt_sk > @acounting_date_sk
-				AND (tp.policy_status !='Cancelled' OR tp.cancellation_effective_dt > @last_day_month)
+				AND 
+				(
+				SELECT top 1 transaction_type
+				from
+					edw_core.tpolicy_history tph1
+				where
+					tph1.policy_sk = tp.policy_sk
+					and GREATEST(tph1.transaction_effective_dt,cast(transaction_ts as date))  < = @last_day_month
+					and cast(tph1.expiration_dt as date) > @last_day_month
+				order by GREATEST(tph1.transaction_effective_dt,transaction_ts) desc,transaction_ts desc
+				) != 'Cancellation'
+				
 			) AS t
 			GROUP BY
 				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
@@ -139,7 +150,11 @@ BEGIN
 			SELECT
 				uep.accounting_date,uep.policy_image_id,uep.policy_number,uep.product,uep.company,uep.transaction_date,uep.transaction_sequence,uep.effective_date,
 				uep.expiration_date,uep.transaction_type,uep.producer_code,uep.agency_name,uep.number_of_installments,uep.insured_name,
-				uep.[address],uep.county,uep.city,uep.risk_state,uep.zip,uep.fire_protection,uep.category,uep.subcategory,uep.financial_category_id,uep.financial_category_name,
+				uep.[address],uep.county,uep.city,uep.risk_state,uep.zip,uep.fire_protection,uep.category,
+				CASE WHEN  uep.subcategory IN ('Subscriber Contribution (Automobile)','Subscriber Contribution (Homeowners)')
+				THEN 'Subscriber Contribution'
+				ELSE uep.subcategory END AS subcategory,
+				uep.financial_category_id,uep.financial_category_name,
 				uep.aslob,uep.amount,uep.unearned,d.subscriber_contribution_end_dt AS contribcutoffdate,uep.extraction_time,uep.create_ts,uep.update_ts,uep.etl_audit_sk
 			FROM
 				policy_workday_unearned_premium_feed_temp uep

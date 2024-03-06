@@ -5,6 +5,8 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 07/18/23		Architha Gudimalla				1. Created this procedure 
+-- 02/07/24		Architha Gudimalla				2. Added annual net prm
+-- 02/13/24		Architha Gudimalla				3. For AU, Added filter on vehicle_deleted_in
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_titem_inforce]
@@ -72,6 +74,7 @@ BEGIN
 						max(policy_transaction_sk)  over (partition by policy_sk,item_sk order by transaction_seq_no desc, policy_transaction_sk desc) policy_transaction_sk,
 				 		sum(premium_amt) over (partition by policy_sk, item_sk) prm,
 				 		sum(annual_premium_amt) over (partition by policy_sk, item_sk) ann_prm,
+				 		sum(case when tax_fee_surcharge_sk = 0 then annual_premium_amt else 0 end) over (partition by policy_sk, item_sk) annual_net_premium_amt,
 				 		sum(tax_fee_surcharge_amt) over (partition by policy_sk, item_sk) tfs
 				 FROM edw_core.tpolicy_transaction 
 				 where effective_dt_sk <= @var_date_sk
@@ -83,17 +86,19 @@ BEGIN
 						policy_sk, item_sk, coverage_sk, vehicle_coverage_sk,
 						customer_sk, broker_sk, product_sk, source_system_sk, month_sk, 
 						premium_amt, net_premium_amt, annual_premium_amt, update_ts, etl_audit_sk
+						,annual_net_premium_amt
 			        )
 			    select 	tr.policy_sk, tr.item_sk, tr.coverage_sk, tr.vehicle_coverage_sk, 
 						tr.customer_sk, tr.broker_sk, tr.product_sk, tr.sourcE_system_sk, @month_end_sk, 
 						max_tr.prm, (max_tr.prm - max_tr.tfs), max_tr.ann_prm, getdate(), @etl_audit_sk
-				from  edw_core.tpolicy_transaction tr, max_tr
-				where tr.policy_sk = max_tr.policy_sk
-				  and tr.transaction_seq_no = max_tr.transaction_seq_no
-				  and tr.policy_transaction_sk = max_tr.policy_transaction_sk
-				  and tr.policy_transaction_type_sk <> 5
+						,max_tr.annual_net_premium_amt
+				from  edw_core.tpolicy_transaction tr
+				inner join max_tr on tr.policy_sk = max_tr.policy_sk and tr.transaction_seq_no = max_tr.transaction_seq_no and tr.policy_transaction_sk = max_tr.policy_transaction_sk 
+				left join edw_core.tauto_vehicle_coverage vc on tr.vehicle_coverage_sk = vc.auto_vehicle_coverage_sk
+				where tr.policy_transaction_type_sk <> 5
 				  and tr.expiration_dt_sk > @var_date_sk 
-				  and max_tr.rnk = 1;
+				  and max_tr.rnk = 1
+				  and (tr.vehicle_coverage_sk = 0 or vc.vehicle_deleted_in = 'No');
 
 				/*
 

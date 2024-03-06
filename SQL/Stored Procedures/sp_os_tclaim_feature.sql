@@ -7,6 +7,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 11/08/23		Yunus Mohammed				1. Created the procedure
 -- 12/12/23		Yunus Mohammed				2. Added update stmts for aslob and sub_claim_type_nm
+-- 01/30/24		Yunus Mohammed				3. Changed name of temp table for aslob and added drop table stmt
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tclaim_feature]
 
@@ -109,9 +110,11 @@ BEGIN
 
 		UPDATE edw_core.taslob SET product_cd = 'Auto' WHERE aslob_sk = 93	
 
+		DROP TABLE IF EXISTS edw_temp.os_tclaim_feature_aslob_temp2
+
 		SELECT
 			tf.claim_feature_sk, ta.aslob_sk
-		INTO edw_temp.sp_os_tclaim_feature_aslob
+		INTO edw_temp.os_tclaim_feature_aslob_temp2
 		FROM
 			edw_core.tclaim_feature tf
 			LEFT JOIN edw_core.tproduct tp ON tf.product_sk=tp.product_sk
@@ -152,7 +155,7 @@ BEGIN
 			tcf.aslob_sk = src.aslob_sk
 		FROM
 			edw_core.tclaim_feature tcf
-			INNER JOIN edw_temp.sp_os_tclaim_feature_aslob src ON tcf.claim_feature_sk = src.claim_feature_sk		
+			INNER JOIN edw_temp.os_tclaim_feature_aslob_temp2 src ON tcf.claim_feature_sk = src.claim_feature_sk		
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
@@ -160,6 +163,7 @@ BEGIN
 
 		-- Drop temp table
 		DROP TABLE IF EXISTS edw_temp.os_tclaim_feature_temp1
+		DROP TABLE IF EXISTS edw_temp.os_tclaim_feature_aslob_temp2
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)

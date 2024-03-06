@@ -8,6 +8,7 @@
 -- 11/27/23		Yunus Mohammed				2. Added update stmt to update company nm
 -- 01/03/24		Yunus Mohammed				3. Updated VRE and VES in update statement
 -- 01/24/24		Yunus Mohammed				4. Updated policy no and policy_sk for given claims in task-4480
+-- 01/31/24		Yunus Mohammed				5. Updated broker_id, customer_id and sk
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_ebao_tclaim_onetime_datafix]
 
@@ -121,11 +122,13 @@ BEGIN
 		UPDATE edw_core.tclaim SET policy_no = 'AUX10001238' WHERE claim_no = 'C22AUA00263'
 		UPDATE edw_core.tclaim SET policy_no = 'HO37788288836-03' WHERE claim_no = 'C22HOA00025'
 
-		-- Update policy_sk for the above claims
+		-- Update policy_sk, broker_id and customer_id for the above claims
 		UPDATE tc
 		SET
 			tc.policy_sk = tph.policy_sk,
-			tc.policy_history_sk=tph.policy_history_sk
+			tc.policy_history_sk = tph.policy_history_sk,
+			tc.broker_id = tbrk.broker_id,
+			tc.customer_id = tcust.customer_id
 		FROM
 			edw_core.tclaim tc
 			LEFT JOIN edw_core.tpolicy_history tph ON 
@@ -138,6 +141,8 @@ BEGIN
 									AND CAST(tph1.transaction_effective_dt AS DATE) <= tc.loss_dt
 								ORDER BY transaction_seq_no DESC
 								)
+			LEFT JOIN edw_core.tbroker tbrk ON tbrk.broker_sk = tph.broker_sk
+			LEFT JOIN edw_core.tcustomer tcust ON tcust.customer_sk=tph.customer_sk
 		where
 			tc.claim_no in 
 		(
@@ -146,12 +151,15 @@ BEGIN
 		'C21AUA00717','C21AUA00721','C21HOA00135','C21HOA00284','C22AUA00263','C22HOA00025'
 		)
 
-		-- For below claims there are some special character in policy_no field in tcase table and we have to remove them.
+		-- For below claims there are some special character in policy_no field in tcase table and we have to remove them
+		-- Also update broker_id and customer_id
 		UPDATE tc
 		SET
 			tc.policy_sk = tph.policy_sk,
 			tc.policy_no = tph.policy_no,
-			tc.policy_history_sk=tph.policy_history_sk
+			tc.policy_history_sk = tph.policy_history_sk,
+			tc.broker_id = tbrk.broker_id,
+			tc.customer_id = tcust.customer_id
 		FROM
 			edw_stage.t_clm_case tcase
 			INNER JOIN edw_core.tclaim tc on tcase.CLAIM_NO = tc.claim_no
@@ -165,6 +173,8 @@ BEGIN
 									AND CAST(tph1.transaction_effective_dt AS DATE) <= CAST(tcase.accident_time AS DATE)
 								ORDER BY transaction_seq_no DESC
 								)
+			LEFT JOIN edw_core.tbroker tbrk ON tbrk.broker_sk = tph.broker_sk
+			LEFT JOIN edw_core.tcustomer tcust ON tcust.customer_sk = tph.customer_sk
 		where
 			tcase.claim_no  in 
 			(
@@ -175,10 +185,14 @@ BEGIN
 
 		UPDATE [tctxn]
 		SET
-			[tctxn].policy_sk = [tc].policy_sk
+			[tctxn].policy_sk = [tc].policy_sk,
+			[tctxn].customer_sk = tcust.customer_sk,
+			[tctxn].broker_sk = tbrk.broker_sk
 		FROM
 			edw_core.tclaim [tc]
 			INNER JOIN edw_core.tclaim_transaction [tctxn] ON [tc].claim_sk = [tctxn].claim_sk
+			LEFT JOIN edw_core.tbroker tbrk ON tbrk.broker_id = tc.broker_id
+			LEFT JOIN edw_core.tcustomer tcust ON tcust.customer_id = [tc].customer_id
 		WHERE
 			tc.claim_no in
 			(

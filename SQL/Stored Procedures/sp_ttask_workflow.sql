@@ -2,6 +2,7 @@
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
 -- =============================================================================================================
 -- Description: This procedures inserts task workflow names 
 ------------------------------------------------------------------------------------------------------------
@@ -9,6 +10,8 @@ GO
 ------------------------------------------------------------------------------------------------------------
 -- 01/16/24		Architha Gudimalla				1. Created this procedure 
 -- 01/17/24		Architha Gudimalla				2. Fixed errors after first run  
+-- 02/06/24		Architha Gudimalla				3. Dropping the temp table   
+-- 02/23/24		Architha Gudimalla				4. Added group by to source query
 -- ============================================================================================================= 
 
 CREATE or ALTER   PROCEDURE edw_core.sp_ttask_workflow
@@ -37,11 +40,12 @@ BEGIN
         DROP TABLE IF EXISTS edw_temp.ttask_workflow_temp1
         SELECT 	  wf.name task_workflow_nm
 				, null as task_workflow_category_nm  
-				, CreatedDate
-				, UpdatedDate
+				, min(CreatedDate) CreatedDate
+				, max(UpdatedDate) UpdatedDate
         INTO 	edw_temp.ttask_workflow_temp1 
 		from 	edw_stage.Workflow wf      
 		WHERE 	GREATEST(wf.CreatedDate,wf.UpdatedDate)>@last_source_extract_ts 
+		group by wf.name
 
 		MERGE edw_core.ttask_workflow AS Target
 		USING 
@@ -76,7 +80,7 @@ BEGIN
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(t1.CreatedDate,t1.UpdatedDate)) FROM edw_temp.ttask_workflow_temp1 t1),@last_source_extract_ts)
 
-        DROP TABLE IF EXISTS edw_temp.ttask_temp1
+        DROP TABLE IF EXISTS edw_temp.ttask_workflow_temp1
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
