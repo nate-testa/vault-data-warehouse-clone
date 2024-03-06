@@ -9,6 +9,7 @@ from airflow.operators.mssql_operator import MsSqlOperator
 from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from airflow.providers.microsoft.azure.operators.data_factory import AzureDataFactoryRunPipelineOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
 
@@ -493,9 +494,15 @@ with DAG(
 
         sp_tbroker_summary >> sp_trenewal_summary >> send_quote_broker_email
 
+    exec_vault_edw_data_load_vendor_reports = TriggerDagRunOperator(
+        task_id="exec_vault_edw_data_load_vendor_reports",
+        trigger_dag_id="vault_edw_data_load_vendor_reports",
+        dag=dag,
+    )
+
     end = DummyOperator(
         task_id='end',
     )
 
 
-start >> quote_group >> [quote_home_group , quote_PEL_group, quote_auto_group] >> quote_collection_group >> quote_transaction_group >> quote_broker_group >> end
+start >> quote_group >> [quote_home_group , quote_PEL_group, quote_auto_group] >> quote_collection_group >> quote_transaction_group >> quote_broker_group >> exec_vault_edw_data_load_vendor_reports >> end
