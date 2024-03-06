@@ -82,39 +82,39 @@ SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171;
 
 --Changes
 
-select * from edw_stage.AccountTransaction where PolicyNumber = 'AU100028533-01' and PolicyChangeNumber = 2;
-select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808';
+select (CommissionDeltaProRated/PremiumDeltaProRated) CommisionPercentage,  * from edw_stage.AccountTransaction where PolicyNumber = 'AU100028533-01' and PolicyChangeNumber = 2;
+select (CommissionDeltaProRated/PremiumDeltaProRated) CommisionPercentage,  * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808';
 
 --**UPDATES**
 --biPrem - Bodily Injury update premium_amt(PremiumDeltaProRated) from -265 to -266
 SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171 and item_sk = 1409 and internal_coverage_sk = 25 order by transaction_seq_no;
-select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-265' and id = 2954937;
--- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-266' where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-265' and id = 2954937;
+select (CommissionDeltaProRated/PremiumDeltaProRated) CommisionPercentage, * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-265' and id = 2954937;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-266', CommissionDeltaProRated = -266*0.12 where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-265' and id = 2954937;
 
 --cdPrem - collision update premium_amt(PremiumDeltaProRated) from -202 to -854
 SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171 and item_sk = 1409 and internal_coverage_sk = 209 order by transaction_seq_no;
-select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-202' and id = 2954938;
--- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-854' where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-202' and id = 2954938;
+select (CommissionDeltaProRated/PremiumDeltaProRated) CommisionPercentage, * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-202' and id = 2954938;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-854', CommissionDeltaProRated = -854*0.12 where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-202' and id = 2954938;
 
 --medPrem - Medical Payments update premium_amt(PremiumDeltaProRated) from -23 to -22
 SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171 and item_sk = 1409 and internal_coverage_sk = 122 order by transaction_seq_no;
-select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-23' and id = 2954934;
--- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-22' where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-23' and id = 2954934;
+select (CommissionDeltaProRated/PremiumDeltaProRated) CommisionPercentage,  * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-23' and id = 2954934;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-22', CommissionDeltaProRated = -22*0.12 where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-23' and id = 2954934;
 
 --otcPrem - Other Than Collision update premium_amt(PremiumDeltaProRated) from 129 to 117 and premium_amt from -54 to -285
 SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171 and item_sk = 1409 and internal_coverage_sk = 100 order by transaction_seq_no;
-select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '129' and id = 2954942;
-select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-54' and id = 2954932;
--- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '117' where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '129' and id = 2954942;
--- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-285' where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-54' and id = 2954932;
+select (CommissionDeltaProRated/PremiumDeltaProRated) CommisionPercentage,  * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '129' and id = 2954942;
+select (CommissionDeltaProRated/PremiumDeltaProRated) CommisionPercentage,  * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-54' and id = 2954932;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '117', CommissionDeltaProRated = 117*0.12 where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '129' and id = 2954942;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-285', CommissionDeltaProRated = -285*0.12 where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-54' and id = 2954932;
 
 --pdPrem - Property Damage update premium_amt(PremiumDeltaProRated) from -86 to -87
 SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171 and item_sk = 1409 and internal_coverage_sk = 197 order by transaction_seq_no;
-select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-86' and id = 2954935;
--- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-87' where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-86' and id = 2954935;
+select (CommissionDeltaProRated/PremiumDeltaProRated) CommisionPercentage,  * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-86' and id = 2954935;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '-87', CommissionDeltaProRated = -87*0.12 where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '-86' and id = 2954935;
 
 --otcPrem - Other Than Collision update premium_amt(PremiumDeltaProRated) from 0 to 49
 SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 108171 and item_sk = 4104 and internal_coverage_sk = 100 order by transaction_seq_no;
 select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '0' and id = 2954941;
--- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '49' where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '0' and id = 2954941;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '49', CommissionDeltaProRated = 49*0.12 where AccountTransactionId = 'fcbb2ecc-504f-4550-8363-5d7a9d742808' and PremiumDeltaProRated = '0' and id = 2954941;
 

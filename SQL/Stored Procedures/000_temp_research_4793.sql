@@ -128,5 +128,5 @@ select * from edw_stage.AccountTransactionCoveragePremium where AccountTransacti
 --**UPDATES**
 --otcPrem - Other Than Collision update premium_amt(PremiumDeltaProRated) from 90 to 84
 SELECT * FROM edw_core.tpolicy_transaction WHERE policy_sk = 106890 and item_sk = 31559 and internal_coverage_sk = 100 order by transaction_seq_no;
-select * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = '662c134a-94e4-49b3-9ffc-d22c7dbd10d5' and PremiumDeltaProRated = '90' and id = 675868;
--- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '84' where AccountTransactionId = '662c134a-94e4-49b3-9ffc-d22c7dbd10d5' and PremiumDeltaProRated = '90' and id = 675868;
+select (CommissionDeltaProRated/PremiumDeltaProRated) CommisionPercentage, * from edw_stage.AccountTransactionCoveragePremium where AccountTransactionId = '662c134a-94e4-49b3-9ffc-d22c7dbd10d5' and PremiumDeltaProRated = '90' and id = 675868;
+-- update edw_stage.AccountTransactionCoveragePremium set PremiumDeltaProRated = '84', CommissionDeltaProRated = 84*0.15 where AccountTransactionId = '662c134a-94e4-49b3-9ffc-d22c7dbd10d5' and PremiumDeltaProRated = '90' and id = 675868;
