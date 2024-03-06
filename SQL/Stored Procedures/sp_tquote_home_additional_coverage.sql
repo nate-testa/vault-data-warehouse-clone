@@ -194,6 +194,7 @@ BEGIN
 			firewise_community_credit_in,monitored_heat_sensors_in,builders_defect_exclusion_in,
 			gated_community_patrol_service, extended_liability_location_ct,
 			roof_exclusion_with_ensuing_loss_in,roof_coverage_endorsement_wh_in,roof_coverage_endorsement_ap_in,roof_coverage_endorsement_rv_in,
+			fire_station_connected_fire_alarm_in, police_station_connected_burglar_alarm_in, local_fire_alarm_system_in, local_burglar_alarm_system_in, automatic_smoke_detectors_in, automatic_sprinkler_system,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT 
@@ -355,6 +356,7 @@ BEGIN
 		   ,RoofCoverageEndorsementWH AS roof_coverage_endorsement_wh_in
 		   ,RoofCoverageEndorsementAP AS roof_coverage_endorsement_ap_in
 		   ,RoofCoverageEndorsementRV AS roof_coverage_endorsement_rv_in
+		   ,fire_station_connected_fire_alarm, police_station_connected_burglar_alarm, local_fire_alarm_system, local_burglar_alarm_system, automatic_smoke_detectors, automatic_sprinkler_system
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts
