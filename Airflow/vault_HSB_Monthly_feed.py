@@ -55,7 +55,7 @@ args = {
 }
 
 with DAG(
-    dag_id='vault_edw_data_load_and_send_HSB_data',
+    dag_id='vault_HSB_Monthly_feed',
     catchup=False,
     max_active_runs=1,
     default_args=args,
