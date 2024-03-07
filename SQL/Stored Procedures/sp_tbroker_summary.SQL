@@ -27,6 +27,7 @@ GO
 -- 01/10/24		Architha Gudimalla				15. Used cast as date for quote dates to remove timestamp
 -- 01/11/24		Architha Gudimalla				16. Added one and three year written prms
 -- 02/29/24		Architha Gudimalla				17. Added one and three year non cat earned prms
+-- 03/07/24		Architha Gudimalla				18. Added KPI calculations
 -- ===================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -714,7 +715,8 @@ BEGIN
 						etl_audit_sk,
 						--
 						one_year_non_cat_earned_net_premium_amt, 
-						three_year_non_cat_earned_net_premium_amt 
+						three_year_non_cat_earned_net_premium_amt
+						-- 
 					)
 				select @month_end_dt_sk, 
 						coalesce(summ.broker_sk, r.broker_sk), 
@@ -806,6 +808,7 @@ BEGIN
 						--
 						sum(summ.one_year_non_cat_earned_net_premium_amt), 
 						sum(summ.three_year_non_cat_earned_net_premium_amt) 
+						--
 				from edw_temp.tbroker_summary_temp summ
 				LEFT join edw_temp.tbroker_summ_retention r on summ.broker_sk = r.broker_sk and summ.product_sk = r.product_sk and summ.customer_sk = r.customer_sk and summ.uwco = r.uwco and summ.state_sk = r.state_sk  
 				group by  
@@ -817,6 +820,27 @@ BEGIN
        
 				SET @rows_affected=@@ROWCOUNT;
 
+				UPDATE edw_core.tbroker_summary
+				set				
+						one_year_loss_ratio  				= case when [one_year_earned_net_premium_amt]			= 0 then 0 else [one_year_loss_incurred_amt]/[one_year_earned_net_premium_amt] end,
+						one_year_loss_ratio_capped 			= case when [one_year_earned_net_premium_amt]			= 0 then 0 else [one_year_loss_incurred_capped_amt]/[one_year_earned_net_premium_amt] end,
+						one_year_non_cat_loss_ratio 		= case when [one_year_non_cat_earned_net_premium_amt]	= 0 then 0 else [one_year_non_cat_loss_incurred_amt]/[one_year_non_cat_earned_net_premium_amt] end,
+						one_year_non_cat_loss_ratio_capped 	= case when [one_year_non_cat_earned_net_premium_amt]	= 0 then 0 else [one_year_non_cat_loss_incurred_capped_amt]/[one_year_non_cat_earned_net_premium_amt] end,
+						one_year_frequency 					= case when [one_year_earned_exposure]					= 0 then 0 else [one_year_claim_ct]/[one_year_earned_exposure] end,
+						one_year_non_cat_frequency 			= case when [one_year_earned_exposure]					= 0 then 0 else [one_year_non_cat_claim_ct]/[one_year_earned_exposure] end,
+						one_year_severity 					= case when [one_year_claim_ct]							= 0 then 0 else [one_year_loss_incurred_amt]/[one_year_claim_ct] end,
+						one_year_non_cat_severity 			= case when [one_year_non_cat_claim_ct]					= 0 then 0 else [one_year_non_cat_loss_incurred_amt]/[one_year_non_cat_claim_ct] end,
+						--
+						three_year_loss_ratio 				= case when [three_year_earned_net_premium_amt]			= 0 then 0 else [three_year_loss_incurred_amt]/[three_year_earned_net_premium_amt] end,
+						three_year_loss_ratio_capped 		= case when [three_year_earned_net_premium_amt]			= 0 then 0 else [three_year_loss_incurred_capped_amt]/[three_year_earned_net_premium_amt] end, 
+						three_year_non_cat_loss_ratio 		= case when [three_year_non_cat_earned_net_premium_amt]	= 0 then 0 else [three_year_non_cat_loss_incurred_amt]/[three_year_non_cat_earned_net_premium_amt] end,
+						three_year_non_cat_loss_ratio_capped = case when [three_year_non_cat_earned_net_premium_amt]= 0 then 0 else [three_year_non_cat_loss_incurred_capped_amt]/[three_year_non_cat_earned_net_premium_amt] end,
+						three_year_frequency 				= case when [three_year_earned_exposure]				= 0 then 0 else [three_year_claim_ct]/[three_year_earned_exposure] end,
+						three_year_non_cat_frequency 		= case when [three_year_earned_exposure]				= 0 then 0 else [three_year_non_cat_claim_ct]/[three_year_earned_exposure] end, 
+						three_year_severity 				= case when [three_year_claim_ct]						= 0 then 0 else [three_year_loss_incurred_amt]/[three_year_claim_ct] end,
+						three_year_non_cat_severity 		= case when [three_year_non_cat_claim_ct]				= 0 then 0 else [three_year_non_cat_loss_incurred_amt]/[three_year_non_cat_claim_ct] end 
+						--
+				where month_sk  = @month_end_dt_sk;
 				
 				-- Update control table
 				SET @new_last_source_extract_ts=COALESCE(@end_dt,@last_source_extract_ts);	
