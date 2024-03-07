@@ -59,7 +59,7 @@ BEGIN
 		SET @sql ='select PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transactiondate,transaction_seq_no,
 		IssuedDate,policy_history_sk,home_location_sk,home_coverage_sk,source_system_sk,
 		'+ @ColumnsToPivot +' into edw_temp.thome_additional_coverage_temp1
-			froma
+			from
 			(
 			select
 			acT.PolicyNumber ,act.EffectiveDate ,act.ExpirationDate ,act.TransactionEffectiveDate ,
