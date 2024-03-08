@@ -49,9 +49,9 @@ BEGIN
 			INNER JOIN edw_stage.[ProductObject] pdo on pd.Id=pdo.ProductId
 			INNER JOIN edw_stage.[ProductObjectField] pdof on pdo.Id=pdof.ProductObjectId 
 			--AG - added condo on 20230823
-			WHERE pd.[Name] in ('Homeowners','Condo')
+			WHERE pd.[Name] in ('Homeowners','Condo','Inspection')
 			--AG - added condo on 20230823
-			AND pdo.ObjectType in ('Homeowner','Condo')
+			AND pdo.ObjectType in ('Homeowner','Condo','Inspection')
 		) as temp
 
 		-- remove last comma
@@ -87,7 +87,7 @@ BEGIN
 			where
 				act.PolicyNumber is not null and
 				act.[Stage] IN (''QUOTE'',''POLICY'')
-				and atvo.ObjectType in (''Homeowner'',''Condo'')
+				and atvo.ObjectType in (''Homeowner'',''Condo'',''Inspection'')
 				and pr.ProductLine = ''PersonalLines''
 				and act.CreatedDate > @last_source_extract_ts
 			) as t
