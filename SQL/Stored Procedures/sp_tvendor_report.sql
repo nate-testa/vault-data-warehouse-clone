@@ -10,6 +10,7 @@ GO
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 07/27/23		Architha Gudimalla				1. Created this procedure  
+-- 03/08/23		Architha Gudimalla				2. Updated a label for LC360
 -- ================================================================================================= 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tvendor_report]
@@ -166,7 +167,11 @@ BEGIN
 					from
 					(
 						SELECT distinct cast(case when  Category  = [Group]  or [Label]  = [Group] then concat('[', cast(Category as nvarchar(max)), ' - ',cast([Label] as nvarchar(max)),']')
-												  when Category <> isnull([Group],'') then concat('[', cast(Category as nvarchar(max)), ' - ',cast(isnull([Group] + ' - ','') as nvarchar(max)), cast([Label] as nvarchar(max)),']')
+												  when Category <> isnull([Group],'') 
+												  then concat('[', cast(Category as nvarchar(max)), ' - ',
+												  				   cast(isnull([Group] + ' - ','') as nvarchar(max)), 
+																   cast(replace([Label],'(when construction starts on second floor)','(when starts on 2nd fl)') as nvarchar(max)),']'
+															 )
 												  else ''
 												  end 
 											 as nvarchar(max)) as field_name 
