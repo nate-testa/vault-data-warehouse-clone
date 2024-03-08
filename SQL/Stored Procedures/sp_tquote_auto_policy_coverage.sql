@@ -210,8 +210,8 @@ BEGIN
             change_in_terms_summary_in,
             year_clean_discount_applied,
             rater_pip_discount,
-            ncrb_ppa_coll_total,
-            ncrb_ppa_otc_total
+            collision_ncrb_premium_amt,
+            otc_ncrb_premium_amt
 		)
         SELECT 
             t1.quote_no,
