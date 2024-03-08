@@ -195,7 +195,7 @@ BEGIN
 						av.vehicle_model_year as modelYear,
 						'' as garagingCd,
 						'' as purchaseDt,
-						agl.garage_location_no as locationRef,
+						CONCAT('L',agl.garage_location_no) as locationRef,
 						avc.rating_territory_cd as territoryCd,
 						av.vehicle_type as vehicleType,
 						CASE WHEN avc.vehicle_ownership = 'leased' THEN 1 ELSE 0 END as leasedVehInd,

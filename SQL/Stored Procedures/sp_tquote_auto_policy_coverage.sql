@@ -1,13 +1,17 @@
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
-GO
+GO  
 
--- =============================================
--- Author:		Alberto Almario
--- Create Date: 2023-10-23
+-- =====================================================================================================================
 -- Description: This stored procedure insert and update info related to tquote_auto_policy_coverage.
--- =============================================
+-----------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+-----------------------------------------------------------------------------------------------------------------------
+-- 10/23/23		Alberto Almario				    1. Created this procedure  
+-- 03/07/24     Architha Gudimalla              2. Added NCRB
+-- ===================================================================================================================== 
+
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage]
 AS
 BEGIN
@@ -46,8 +50,8 @@ BEGIN
             [AutoLockCoverageEnhancementEndorsement], [SparePartsEnhancementEndorsement], [CoverageforAccidentalDeployAirbagEnhancementEndorsement], [IsthisOneYearPolicy], [Tier], 
             [NumberofTotalVehiclesonPolicy], [TotalNumberofPPAs], [TotalOwnedPPAs], [NumberofPPAwithPhysDam], [NumberofCollectorCars], [TotalInsuredLocations], [HOClaims], [NumberofDriversonPolicy], 
             [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
-            [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied],
-			source_system_sk
+            [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], [RaterPIPDiscount],
+			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal]
 		
         INTO [edw_temp].[tquote_auto_policy_coverage_temp1]
 		
@@ -97,7 +101,8 @@ BEGIN
                     [AutoLockCoverageEnhancementEndorsement], [SparePartsEnhancementEndorsement], [CoverageforAccidentalDeployAirbagEnhancementEndorsement], [IsthisOneYearPolicy], [Tier], 
                     [NumberofTotalVehiclesonPolicy], [TotalNumberofPPAs], [TotalOwnedPPAs], [NumberofPPAwithPhysDam], [NumberofCollectorCars], [TotalInsuredLocations], [HOClaims], [NumberofDriversonPolicy], 
                     [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
-                    [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied]
+                    [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], 
+                    [RaterPIPDiscount], [NCRBPPACOLLTotal],[NCRBPPAOTCTotal]
                 )
 			) pivottable
 
@@ -203,7 +208,10 @@ BEGIN
             update_ts,
             etl_audit_sk,
             change_in_terms_summary_in,
-            year_clean_discount_applied
+            year_clean_discount_applied,
+            rater_pip_discount,
+            collision_ncrb_premium_amt,
+            otc_ncrb_premium_amt
 		)
         SELECT 
             t1.quote_no,
@@ -305,7 +313,10 @@ BEGIN
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
             t1.[IncludeChangeInTermsSummary] as change_in_terms_summary_in,
-            t1.[YearCleanDiscountApplied] as year_clean_discount_applied
+            t1.[YearCleanDiscountApplied] as year_clean_discount_applied,
+            t1.[RaterPIPDiscount] as rater_pip_discount,
+            t1.[NCRBPPACOLLTotal],
+            t1.[NCRBPPAOTCTotal]
         FROM 
             [edw_temp].[tquote_auto_policy_coverage_temp1] AS t1
         ;
