@@ -199,7 +199,7 @@ BEGIN
 						--CONCAT('AI-', ai.additional_interest_sk) as unique_id,
 						CONCAT('AI-', ROW_NUMBER() OVER (PARTITION BY ai.policy_no, ai.effective_dt, ai.transaction_seq_no ORDER BY ai.additional_interest_sk ASC)) as uniqueId,
 						ai.policy_no as policyNumber,
-						CONCAT(ISNULL(ai.first_nm, ''), ' ', ISNULL(ai.last_nm, '')) as commercialName,
+						COALESCE(ai.additional_interest_nm, CONCAT(ISNULL(ai.first_nm, ''), ' ', ISNULL(ai.last_nm, ''))) as commercialName,
 						COALESCE(ai.address_line_1, '') as addr1,
 						COALESCE(ai.city_nm, '') as city,
 						COALESCE(ai.state_cd, '') as [state],
@@ -964,7 +964,15 @@ BEGIN
 			,[010_ProducerSubCode]
 			,[011_InsurerId]
 			,[012_Surname]
-			,[013_GivenName]
+			,CASE WHEN
+	  			([015_Prefix] IS NULL OR [015_Prefix] = '') AND
+      			([013_GivenName] IS NULL OR [013_GivenName] = '') AND
+      			([014_OtherGivenName] IS NULL OR [014_OtherGivenName] = '') AND
+      			([012_Surname] IS NULL OR [012_Surname] = '') AND
+      			([056_InsurerName] IS NOT NULL AND [056_InsurerName] <> '')
+			THEN [056_InsurerName]
+	  		ELSE
+				[013_GivenName] END as [013_GivenName]
 			,[014_OtherGivenName]
 			--,[182_CommercialName]
 			,[015_Prefix]
