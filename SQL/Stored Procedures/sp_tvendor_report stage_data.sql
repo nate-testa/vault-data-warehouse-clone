@@ -10,6 +10,7 @@ GO
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 11/28/23		Architha Gudimalla				1. Created this procedure  
+-- 03/10/23		Architha Gudimalla				2. Updated the label in marge
 -- ================================================================================================= 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
@@ -63,13 +64,13 @@ BEGIN
 		merge into edw_stage.tvendor_report_field as target
 		using
 		(
-			select  accr.source, accr.reporttype, accri.Category, accri.[Group], accri.Label, 
+			select  accr.source, accr.reporttype, accri.Category, accri.[Group], replace(replace(replace(replace(Label,'[',' - '),']',''),'''',''),',','') Label, 
 					max(accri.CreatedDate) CreatedDate, max(GREATEST(accri.UpdatedDate,accri.CreatedDate)) UpdatedDate 
 			from	edw_stage.Account acc, edw_stage.AccountReport accr, edw_stage.AccountReportItem accri
 			where	accr.AccountId=acc.Id  and source <> 'HazardHub'
 			and		accr.Id =accri.ReportId 
 			AND		GREATEST(accri.UpdatedDate,accri.CreatedDate)>@last_source_extract_ts
-			group by accr.source, accr.reporttype, accri.Category, accri.[Group], accri.Label
+			group by accr.source, accr.reporttype, accri.Category, accri.[Group], replace(replace(replace(replace(Label,'[',' - '),']',''),'''',''),',','')
 		) as source 
 		on source.source = target.source 
 		and source.reporttype = target.reporttype 
