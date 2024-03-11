@@ -125,7 +125,7 @@ BEGIN
 
 		
 		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tclaim_temp1
+		DROP TABLE IF EXISTS edw_temp.tclaim_payment_temp1
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
