@@ -9,7 +9,8 @@ GO
 ---------------------------------------------------------------------------------------------------
 -- Change date		|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 11/15/2023		Mohammed Yunus				1. Created this procedure 
+-- 11/15/2023		Yunus Mohammed				1. Created this procedure 
+-- 03/11/2024		Yunus Mohammed				2. Logic corrected to calculate amount columns
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_auto_pel_api]
@@ -54,32 +55,32 @@ BEGIN
 		(
 			SELECT
 				cl.claim_sk,
-				SUM(cl.loss_paid_amt + cl.expense_paid_amt + cl.adjusting_other_paid_amt) as TotalPayout,
-				SUM(Case When claim_coverage_desc = 'Bodily Injury' then cl.loss_paid_amt+cl.expense_paid_amt End) as BodilyInjuryPayment,
-				SUM(Case When claim_coverage_desc = 'Collision' then cl.loss_paid_amt+cl.expense_paid_amt End) as CollisionPayment,
-				SUM(Case When claim_coverage_desc = 'Comprehensive' then cl.loss_paid_amt+cl.expense_paid_amt End) as ComprehensivePayment,
-				SUM(Case When claim_coverage_desc = 'Glass' then cl.loss_paid_amt+cl.expense_paid_amt End) as GlassPayment,
-				SUM(Case When claim_coverage_desc = 'Medical Payment' then cl.expense_paid_amt End) as MedicalExpensePayment,
-				SUM(Case When claim_coverage_desc = 'Medical Payment' then cl.loss_paid_amt End) as MedicalPaymentPayment,
-				SUM(Case When claim_coverage_desc in ('Property Protection (MI Only)', 'Property Damage') then cl.loss_paid_amt + cl.expense_paid_amt End) as PropertyDamagePayment,
-				SUM(Case When claim_coverage_desc = 'No-Fault' then cl.loss_paid_amt + cl.expense_paid_amt End) as PersonalInjuryProtectionPayment,
-				SUM(Case When claim_coverage_desc = 'Bodily Injury' then cl.loss_paid_amt + cl.expense_paid_amt End) as SpousalLiabilityPayment,
-				SUM(Case When claim_coverage_desc IN ('Roadside Assistance','Towing') then cl.loss_paid_amt + cl.expense_paid_amt End) as TowingAndLaborPayment,
-				SUM(Case When claim_coverage_desc = 'Uninsured Motorist' then cl.loss_paid_amt + cl.expense_paid_amt End) as UninsuredMotoristPayment,
-				SUM(Case When claim_coverage_desc IN ('Uninsured / Underinsured Motorist','Underinsured Motorist')
-					then cl.loss_paid_amt + cl.expense_paid_amt End) as UnderinsuredMotoristPayment,
-				SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN cl.loss_paid_amt +  cl.expense_paid_amt ELSE NULL END) as ExcessLiabilityCoveragePayment,
-				SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN cl.loss_paid_amt +  cl.expense_paid_amt ELSE NULL END) as UninsuredLiabilityPayment,
-				SUM(CASE WHEN cl.claim_no NOT  LIKE 'NFP%' THEN cl.loss_paid_amt +  cl.expense_paid_amt ELSE NULL END) as UnderinsuredLiabilityPayment,
-				SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN cl.loss_paid_amt +  cl.expense_paid_amt ELSE NULL END) as ExcessLiabilityDOpayment,
-				SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN cl.loss_paid_amt +  cl.expense_paid_amt ELSE NULL END) as EmploymentPracticesPaymentLiabilityPayment,
-				SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN cl.loss_paid_amt +  cl.expense_paid_amt ELSE NULL END) as GrpExcessLiabilityCoveragePayment,
-				SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN cl.loss_paid_amt +  cl.expense_paid_amt ELSE NULL END) as GrpUninsuredLiabilityPayment,
-				SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN cl.loss_paid_amt +  cl.expense_paid_amt ELSE NULL END) as GrpUnderinsuredLiabilityPayment,
-				SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN cl.loss_paid_amt +  cl.expense_paid_amt ELSE NULL END) as GrpUninsuredMotoristPayment,
-				SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN cl.loss_paid_amt +  cl.expense_paid_amt ELSE NULL END) as GrpUnderinsuredMotoristPayment,
-				SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN cl.loss_paid_amt +  cl.expense_paid_amt ELSE NULL END) as GrpExcessLiabilityDOPayment,
-				SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN cl.loss_paid_amt +  cl.expense_paid_amt ELSE NULL END) as GrpEmploymentPracticesLiabilityPayment
+				SUM(clf.loss_paid_amt + clf.expense_paid_amt + clf.adjusting_other_paid_amt) as TotalPayout,
+				SUM(Case When clf.claim_coverage_desc = 'Bodily Injury' then clf.loss_paid_amt+clf.expense_paid_amt End) as BodilyInjuryPayment,
+				SUM(Case When clf.claim_coverage_desc = 'Collision' then clf.loss_paid_amt+clf.expense_paid_amt End) as CollisionPayment,
+				SUM(Case When clf.claim_coverage_desc = 'Comprehensive' then clf.loss_paid_amt+clf.expense_paid_amt End) as ComprehensivePayment,
+				SUM(Case When clf.claim_coverage_desc = 'Glass' then clf.loss_paid_amt+clf.expense_paid_amt End) as GlassPayment,
+				SUM(Case When clf.claim_coverage_desc = 'Medical Payment' then clf.expense_paid_amt End) as MedicalExpensePayment,
+				SUM(Case When clf.claim_coverage_desc = 'Medical Payment' then clf.loss_paid_amt End) as MedicalPaymentPayment,
+				SUM(Case When clf.claim_coverage_desc in ('Property Protection (MI Only)', 'Property Damage') then clf.loss_paid_amt + clf.expense_paid_amt End) as PropertyDamagePayment,
+				SUM(Case When clf.claim_coverage_desc = 'No-Fault' then clf.loss_paid_amt + clf.expense_paid_amt End) as PersonalInjuryProtectionPayment,
+				SUM(Case When clf.claim_coverage_desc = 'Bodily Injury' then clf.loss_paid_amt + clf.expense_paid_amt End) as SpousalLiabilityPayment,
+				SUM(Case When clf.claim_coverage_desc IN ('Roadside Assistance','Towing') then clf.loss_paid_amt + clf.expense_paid_amt End) as TowingAndLaborPayment,
+				SUM(Case When clf.claim_coverage_desc = 'Uninsured Motorist' then clf.loss_paid_amt + clf.expense_paid_amt End) as UninsuredMotoristPayment,
+				SUM(Case When clf.claim_coverage_desc IN ('Uninsured / Underinsured Motorist','Underinsured Motorist')
+					then clf.loss_paid_amt + clf.expense_paid_amt End) as UnderinsuredMotoristPayment,
+				SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt +  clf.expense_paid_amt ELSE NULL END) as ExcessLiabilityCoveragePayment,
+				SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt +  clf.expense_paid_amt ELSE NULL END) as UninsuredLiabilityPayment,
+				SUM(CASE WHEN cl.claim_no NOT  LIKE 'NFP%' THEN clf.loss_paid_amt +  clf.expense_paid_amt ELSE NULL END) as UnderinsuredLiabilityPayment,
+				SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt +  clf.expense_paid_amt ELSE NULL END) as ExcessLiabilityDOpayment,
+				SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt +  clf.expense_paid_amt ELSE NULL END) as EmploymentPracticesPaymentLiabilityPayment,
+				SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt +  clf.expense_paid_amt ELSE NULL END) as GrpExcessLiabilityCoveragePayment,
+				SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt +  clf.expense_paid_amt ELSE NULL END) as GrpUninsuredLiabilityPayment,
+				SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt +  clf.expense_paid_amt ELSE NULL END) as GrpUnderinsuredLiabilityPayment,
+				SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt +  clf.expense_paid_amt ELSE NULL END) as GrpUninsuredMotoristPayment,
+				SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt +  clf.expense_paid_amt ELSE NULL END) as GrpUnderinsuredMotoristPayment,
+				SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt +  clf.expense_paid_amt ELSE NULL END) as GrpExcessLiabilityDOPayment,
+				SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt +  clf.expense_paid_amt ELSE NULL END) as GrpEmploymentPracticesLiabilityPayment
 			FROM
 				edw_core.tclaim cl
 				INNER JOIN edw_core.tclaim_feature clf on cl.claim_sk = clf.claim_sk
