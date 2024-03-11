@@ -1,0 +1,1 @@
+ALTER TABLE edw_stage.t_clm_party ADD EXPERT_SUBTYPE_ROLE varchar(45);
