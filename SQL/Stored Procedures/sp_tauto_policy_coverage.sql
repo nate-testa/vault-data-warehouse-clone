@@ -10,6 +10,7 @@ GO
 -----------------------------------------------------------------------------------------------------------------------
 -- 09/13/23		Alberto Almario				    1. Created this procedure  
 -- 03/07/24     Architha Gudimalla              2. Added NCRB
+-- 03/11/24     Architha Gudimalla              3. Added Discounts for ratePIP
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_policy_coverage]
@@ -84,7 +85,7 @@ BEGIN
                 WHERE
                     p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'
-                    AND acctvof.[Group] in ('Coverages','Additional Coverages','Coverage Limitations','Policy Discount')
+                    AND acctvof.[Group] in ('Coverages','Additional Coverages','Coverage Limitations','Policy Discount','NCRB Premium','Discounts')
 			) t
 		PIVOT 
 			(
