@@ -28,6 +28,7 @@ GO
 -- 01/11/24		Architha Gudimalla				16. Added one and three year written prms
 -- 02/29/24		Architha Gudimalla				17. Added one and three year non cat earned prms
 -- 03/07/24		Architha Gudimalla				18. Added KPI calculations
+-- 03/10/24		Architha Gudimalla				19. Updated KPI calculations to multiply by 100
 -- ===================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -822,21 +823,21 @@ BEGIN
 
 				UPDATE edw_core.tbroker_summary
 				set				
-						one_year_loss_ratio  				= case when [one_year_earned_net_premium_amt]			= 0 then 0 else 1.0*[one_year_loss_incurred_amt]/[one_year_earned_net_premium_amt] end,
-						one_year_loss_ratio_capped 			= case when [one_year_earned_net_premium_amt]			= 0 then 0 else 1.0*[one_year_loss_incurred_capped_amt]/[one_year_earned_net_premium_amt] end,
-						one_year_non_cat_loss_ratio 		= case when [one_year_non_cat_earned_net_premium_amt]	= 0 then 0 else 1.0*[one_year_non_cat_loss_incurred_amt]/[one_year_non_cat_earned_net_premium_amt] end,
-						one_year_non_cat_loss_ratio_capped 	= case when [one_year_non_cat_earned_net_premium_amt]	= 0 then 0 else 1.0*[one_year_non_cat_loss_incurred_capped_amt]/[one_year_non_cat_earned_net_premium_amt] end,
-						one_year_frequency 					= case when [one_year_earned_exposure]					= 0 then 0 else 1.0*[one_year_claim_ct]/[one_year_earned_exposure] end,
-						one_year_non_cat_frequency 			= case when [one_year_earned_exposure]					= 0 then 0 else 1.0*[one_year_non_cat_claim_ct]/[one_year_earned_exposure] end,
+						one_year_loss_ratio  				= case when [one_year_earned_net_premium_amt]			= 0 then 0 else 100.0*[one_year_loss_incurred_amt]/[one_year_earned_net_premium_amt] end,
+						one_year_loss_ratio_capped 			= case when [one_year_earned_net_premium_amt]			= 0 then 0 else 100.0*[one_year_loss_incurred_capped_amt]/[one_year_earned_net_premium_amt] end,
+						one_year_non_cat_loss_ratio 		= case when [one_year_non_cat_earned_net_premium_amt]	= 0 then 0 else 100.0*[one_year_non_cat_loss_incurred_amt]/[one_year_non_cat_earned_net_premium_amt] end,
+						one_year_non_cat_loss_ratio_capped 	= case when [one_year_non_cat_earned_net_premium_amt]	= 0 then 0 else 100.0*[one_year_non_cat_loss_incurred_capped_amt]/[one_year_non_cat_earned_net_premium_amt] end,
+						one_year_frequency 					= case when [one_year_earned_exposure]					= 0 then 0 else 100.0*[one_year_claim_ct]/[one_year_earned_exposure] end,
+						one_year_non_cat_frequency 			= case when [one_year_earned_exposure]					= 0 then 0 else 100.0*[one_year_non_cat_claim_ct]/[one_year_earned_exposure] end,
 						one_year_severity 					= case when [one_year_claim_ct]							= 0 then 0 else 1.0*[one_year_loss_incurred_amt]/[one_year_claim_ct] end,
 						one_year_non_cat_severity 			= case when [one_year_non_cat_claim_ct]					= 0 then 0 else 1.0*[one_year_non_cat_loss_incurred_amt]/[one_year_non_cat_claim_ct] end,
 						--
-						three_year_loss_ratio 				= case when [three_year_earned_net_premium_amt]			= 0 then 0 else 1.0*[three_year_loss_incurred_amt]/[three_year_earned_net_premium_amt] end,
-						three_year_loss_ratio_capped 		= case when [three_year_earned_net_premium_amt]			= 0 then 0 else 1.0*[three_year_loss_incurred_capped_amt]/[three_year_earned_net_premium_amt] end, 
-						three_year_non_cat_loss_ratio 		= case when [three_year_non_cat_earned_net_premium_amt]	= 0 then 0 else 1.0*[three_year_non_cat_loss_incurred_amt]/[three_year_non_cat_earned_net_premium_amt] end,
-						three_year_non_cat_loss_ratio_capped = case when [three_year_non_cat_earned_net_premium_amt]= 0 then 0 else 1.0*[three_year_non_cat_loss_incurred_capped_amt]/[three_year_non_cat_earned_net_premium_amt] end,
-						three_year_frequency 				= case when [three_year_earned_exposure]				= 0 then 0 else 1.0*[three_year_claim_ct]/[three_year_earned_exposure] end,
-						three_year_non_cat_frequency 		= case when [three_year_earned_exposure]				= 0 then 0 else 1.0*[three_year_non_cat_claim_ct]/[three_year_earned_exposure] end, 
+						three_year_loss_ratio 				= case when [three_year_earned_net_premium_amt]			= 0 then 0 else 100.0*[three_year_loss_incurred_amt]/[three_year_earned_net_premium_amt] end,
+						three_year_loss_ratio_capped 		= case when [three_year_earned_net_premium_amt]			= 0 then 0 else 100.0*[three_year_loss_incurred_capped_amt]/[three_year_earned_net_premium_amt] end, 
+						three_year_non_cat_loss_ratio 		= case when [three_year_non_cat_earned_net_premium_amt]	= 0 then 0 else 100.0*[three_year_non_cat_loss_incurred_amt]/[three_year_non_cat_earned_net_premium_amt] end,
+						three_year_non_cat_loss_ratio_capped = case when [three_year_non_cat_earned_net_premium_amt]= 0 then 0 else 100.0*[three_year_non_cat_loss_incurred_capped_amt]/[three_year_non_cat_earned_net_premium_amt] end,
+						three_year_frequency 				= case when [three_year_earned_exposure]				= 0 then 0 else 100.0*[three_year_claim_ct]/[three_year_earned_exposure] end,
+						three_year_non_cat_frequency 		= case when [three_year_earned_exposure]				= 0 then 0 else 100.0*[three_year_non_cat_claim_ct]/[three_year_earned_exposure] end, 
 						three_year_severity 				= case when [three_year_claim_ct]						= 0 then 0 else 1.0*[three_year_loss_incurred_amt]/[three_year_claim_ct] end,
 						three_year_non_cat_severity 		= case when [three_year_non_cat_claim_ct]				= 0 then 0 else 1.0*[three_year_non_cat_loss_incurred_amt]/[three_year_non_cat_claim_ct] end 
 						--
