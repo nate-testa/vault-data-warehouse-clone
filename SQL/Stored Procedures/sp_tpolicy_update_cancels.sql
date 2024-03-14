@@ -4,6 +4,7 @@
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------
 -- 10/05/23		Architha Gudimalla		    1. Created this procedure to update policy status and cancel eff dt
+-- 03/13/24		Yunus Mohammed				2. Updated system conversion
 -- =============================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_cancels]
@@ -49,6 +50,16 @@ BEGIN
 			cancellation_effective_dt = (select actual_dt from edw_core.tdate where date_sk = cancels.transaction_effective_dt_sk)
 		from edw_core.tpolicy pol, cancels 
 		where pol.policy_sk = cancels.policy_sk;
+
+		update tp
+		set
+			oneshield_migrated_in = 'Yes'
+		from
+		edw_core.tpolicy tp
+		inner join [edw_stage].[dw2_oneshield_migrated] temp on tp.policy_no = temp.policynumber
+		where
+			temp.issystemconversion= 'yes'
+
 
 		SET @rows_affected=@@ROWCOUNT;
 	
