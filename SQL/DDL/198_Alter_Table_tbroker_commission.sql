@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tbroker_commission ADD broker_tier varchar(255);
