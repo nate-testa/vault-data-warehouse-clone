@@ -5,8 +5,9 @@
 -----------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 07/28/23		Yunus Mohammd				1. Created this procedure
--- 11/20/23		Yunus Mohammd				2. Added Throw
+-- 07/28/23		Yunus Mohammed				1. Created this procedure
+-- 11/20/23		Yunus Mohammed				2. Added Throw
+-- 03/07/24		Yunus Mohammed				3. Added claim_party_subtype_role
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment]
 
@@ -47,6 +48,7 @@ BEGIN
 		-- DATE(settle_payee.INSERT_TIME) AS payment_submitted_dt, DATE(settle_payee.UPDATE_TIME) AS payment_approver_dt,
 		(CASE WHEN settle.claim_type = 'LOS' THEN 'Payment' ELSE 'Recovery' END) AS payment_category_nm,
 		(CASE WHEN settle_item.pay_final = 4 THEN 'Final' ELSE 'Partial' END) AS partial_final_payment_desc,
+		party.expert_subtype_role,
 		3 AS source_system_sk
 		INTO edw_temp.tclaim_payment_temp1
 		FROM
@@ -81,14 +83,14 @@ BEGIN
 					claim_no,claim_sk,claim_feature_sk,payment_sequence_no,payment_no,payment_status,
 					claim_type_cd,settle_payee_id,payee_id,payee_nm,party_role_nm,paid_amt,payee_address,
 					remark,payment_submitter_nm,payment_approver_nm,payment_submitted_dt,payment_approver_dt,
-					payment_category_nm,partial_final_payment_desc,source_system_sk,create_ts,update_ts,etl_audit_sk
+					payment_category_nm,partial_final_payment_desc,party_subtype_role_nm,source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 		VALUES
 			(
 					claim_no,claim_sk,claim_feature_sk,payment_sequence_no,payment_no,payment_status,
 					claim_type_cd,settle_payee_id,payee_id,payee_nm,party_role_nm,paid_amt,payee_address,
 					remark,payment_submitter_nm,payment_approver_nm,payment_submitted_dt,payment_approver_dt,
-					payment_category_nm,partial_final_payment_desc,3,@current_date,@current_date,@etl_audit_sk
+					payment_category_nm,partial_final_payment_desc,expert_subtype_role,3,@current_date,@current_date,@etl_audit_sk
 			)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -108,6 +110,7 @@ BEGIN
 		Target.payment_approver_dt=Source.payment_approver_dt,
 		Target.payment_category_nm=Source.payment_category_nm,
 		Target.partial_final_payment_desc=Source.partial_final_payment_desc,
+		Target.party_subtype_role_nm=Source.expert_subtype_role,
 		Target.update_ts=@current_date;
 
 		SET @rows_affected=@@ROWCOUNT;
@@ -122,7 +125,7 @@ BEGIN
 
 		
 		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tclaim_temp1
+		DROP TABLE IF EXISTS edw_temp.tclaim_payment_temp1
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
