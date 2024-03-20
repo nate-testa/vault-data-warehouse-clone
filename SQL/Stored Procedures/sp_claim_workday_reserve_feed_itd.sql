@@ -9,6 +9,7 @@
 -- 07/28/23		Yunus Mohammed				1. Created this procedure 
 -- 11/29/23		Yunus Mohammed				2. Update aslob_cd
 -- 11/30/23		Yunus Mohammed				3. Updated insured name for NFP
+-- 03/20/24		Yunus Mohammed				4. month_end updated to last_day_month of prior month
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_reserve_feed_itd]
@@ -28,10 +29,14 @@ BEGIN
 		-- Get last source extract date
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
-
+		
 		DROP TABLE IF EXISTS edw_temp.claim_workday_reserve_feed_itd_temp1
 
-		DECLARE @firstDay DATE,@last_day_month DATE;
+		DECLARE @last_day_month DATE, @year_month INT;
+
+		SELECT @year_month = yearmonth FROM edw_core.tdate WHERE actual_dt = CAST(DATEADD(MONTH,-1,GETDATE()) AS DATE)
+
+		SELECT @last_day_month = actual_dt FROM edw_core.tdate WHERE yearmonth = @year_month and month_end_in = 'Y'
 
 		WITH claim_reserve_itd_feed_temp AS
 		(
@@ -78,7 +83,7 @@ BEGIN
 			CASE WHEN tc.policy_no LIKE 'NFP%' THEN np.risk_state ELSE COALESCE(st.state_cd,tp.risk_state_cd) END AS risk_state,
 			CAST(tasl.aslob_cd AS INT) AS aslob,
 			tcr.claim_transaction_sk AS transaction_id,
-			tdld.actual_dt AS monthend,
+			@last_day_month AS monthend,
 			CASE WHEN tc.policy_no like 'NFP%' THEN np.insured_nm ELSE tp.insured_nm END AS insured_nm,
 			tscl.sub_cause_of_loss_desc AS sub_cause_of_loss_code,
 			tscl.sub_cause_of_loss_desc AS sub_cause_of_loss_name,
