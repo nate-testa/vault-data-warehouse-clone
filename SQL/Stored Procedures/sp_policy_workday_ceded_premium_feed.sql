@@ -7,6 +7,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 09/13/23		Yunus Mohammed				1. Created the procedure
 -- 11/15/23		Yunus Mohammed				2. Updated logic for cancelled and expired policies  
+-- 03/20/24		Yunus Mohammed				3. Included condo policies
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_ceded_premium_feed]
@@ -107,7 +108,7 @@ BEGIN
 					INNER JOIN edw_core.tbroker tb on tb.broker_sk=tpt.broker_sk
 				WHERE
 					tpt.accouting_month_sk BETWEEN @accounting_date_begin_sk AND @accounting_date_end_sk
-					AND tp.product_cd='HO'
+					AND tp.product_cd IN('HO','CO')
 					AND ISNULL(tpt.ceded_premium_amt,0) ! = 0
 					AND tic.internal_coverage_cd in ('Cyber Protection','Service Line','System Protection','Systems Protection')
 				) AS temp

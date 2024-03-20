@@ -8,6 +8,7 @@
 -- 11/16/23		Yunus Mohammed				1. Update logic for category, subcategory columns. Removed extra space in company 
 -- 12/01/23		Yunus Mohammed				2. Updated  product name and company name
 -- 12/05/23		Yunus Mohammed				3. Removed distinct and added contribcutoffdate date
+-- 03/20/24		Yunus Mohammed				4. Added condo in aslob
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
@@ -168,11 +169,11 @@ BEGIN
 				as subcategory,
 				-1 as financial_category_id,
 				'Commission Amount' AS [financial_category_name],
-				CASE tp.product_cd
-				WHEN 'HO' THEN '40'
-				WHEN 'AU' THEN '192'
-				WHEN 'PEL' THEN '171'
-				WHEN 'LUX' THEN '090'
+				CASE 
+				WHEN tp.product_cd IN('HO','CO') THEN '40'				
+				WHEN tp.product_cd = 'AU' THEN '192'
+				WHEN tp.product_cd = 'PEL' THEN '171'
+				WHEN tp.product_cd = 'LUX' THEN '090'
 				END AS [aslob],
 				tpt.commission_amt AS premium_amt
 				FROM
