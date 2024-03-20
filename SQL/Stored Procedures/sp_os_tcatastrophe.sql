@@ -54,6 +54,15 @@ BEGIN
 		(catastrophe_cd, catastrophe_nm, catastrophe_desc, source_system_sk, create_ts, update_ts, etl_audit_sk)
 		VALUES('MAJ-19', 'COVID (03.11.20 - 02.28.21)', 'DATES: March 11, 2020 To February 28, 2021 ---- STATES: All ---- PERILS: NA ---- STORM FAMILY: NA', 1, 
 		getdate(), getdate(), @etl_audit_sk);
+
+		INSERT INTO edw_core.tcatastrophe
+		(catastrophe_cd, catastrophe_nm, catastrophe_desc, source_system_sk, create_ts, update_ts, etl_audit_sk)	
+		VALUES
+		('2030', 'Wind and Thunderstorm Event (5/20/20 - 5/22/2020)', 'DATES: May 20, 2020 To May 22, 2020  ---  STATES: Texas, Alabama, Arkansas, Florida, Georgia, North Carolina, Oklahoma, South Carolina, Tennessee, and Possibly Other Areas.  ----    PERILS: Flooding, Hail, Wind  ----  STORM FAMILY: Wind and Thunderstorm Event', 3,	getdate(), getdate(), @etl_audit_sk),
+		('2037', 'Tropical Storm Cristobal (6/6/20 - 6/9/20)', 'DATES: June 6, 2020 To June 9, 2020  ----  STATES:Alabama, Florida, Georgia, Louisiana, Mississippi, and Possibly Other Areas.  ---- <br/> PERILS:Flooding, Tornadoes, Tropical Storm, Wind  ----  STORM FAMILY: Tropical Storm Cristobal', 3 ,	getdate(), getdate(), @etl_audit_sk),
+		('2044', 'Tropical Storm Isaias (7/30/20 - 8/3/20)',	'DATES: July 30, 2020 To August 2, 2020  ----  EXTENDED TO INCLUDE: August 2, 2020 To August 3, 2020. ----  STATES: Florida, Puerto Rico, and Possibly Other Areas.  ----  PERILS: Flooding, Tornadoes, Tropical Storm, Wind. ----  STORM FAMILY: Tropical Storm Isaias', 3,	getdate(), getdate(), @etl_audit_sk),
+		('2076', 'Tropical Storm Eta (11/08/2020 - 11/12/2020)',	'DATES: November 8, 2020 To November 11, 2020. ---- EXTENDED TO INCLUDE: November 11, 2020 To November 12, 2020. ---- STATES: Florida, and Possibly Other Areas. ---- PERILS: Flooding, Hurricane, Tropical Storm, Wind. ---- STORM FAMILY: Tropical Storm Eta', 3 ,	getdate(), getdate(), @etl_audit_sk),
+		('1954', 'Hurricane Dorian (8/28/2019 - 9/6/2019)', 'DATES: August 28, 2019 To September 6, 2019 ---- STATES:FL, GA, NC, PR, SC, UV, VA ---- PERILS: Flooding,Hurricane,Tornadoes,Wind ---- STORM FAMILY: Hurricane Dorian', 1 ,	getdate(), getdate(), @etl_audit_sk)
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;

@@ -1,4 +1,3 @@
-/****** Object:  StoredProcedure [edw_core].[sp_tauto_vehicle_coverage]    Script Date: 11/16/2023 11:54:24 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -13,10 +12,13 @@ GO
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- 11/06/23		Alberto Almario					1. change to use UniqueId instead of Index and change name from vehicle_no to vehicle_unique_id
 -- 11/07/23     Sandeep Gundreddy               2. Added logic to get max auto_garage_location_sk
--- 11/16/23     Architha Gudimalla              2. Updated logic for auto_garage_location_sk
+-- 11/16/23     Architha Gudimalla              3. Updated logic for auto_garage_location_sk
+-- 02/22/24     Architha Gudimalla              4. Added Security and Safety Features in the acctvof group
+-- 02/22/24     Hernando Gonzalez               5. Added new fields carfax_wholesale_value_amt
+-- 02/27/24     Architha Gudimalla              6. Added case for antitheft
 -- ================================================================================================================================================
 
-create or ALTER     PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -51,15 +53,15 @@ BEGIN
             [CustomizedEquipment], [ExtendedTowingAndLabor], [MotorcycleMEDLimits], [RatingTerritory], [OwnedVehicleDiscount], [HighPerformanceVehicleRating], [ExpenseLoadBI], [ExpenseLoadPD], 
             [ExpenseLoadPIP], [ExpenseLoadMED], [ExpenseLoadOTC], [ExpenseLoadCOLL], [ExpenseLoadUM], [BodilyInjuryNCRBPremium], [PropertyDamageNCRBPremium], [MedicalPaymentsNCRBPremium], 
             [UninsuredMotoristsBodilyInjuryNCRBPremium], [UninsuredMotoristsPropertyDamageNCRBPremium], [SendVehicleToLiabilityReporting], [AntiTheftDevice], [AntiLockBrakes], [PassiveRestraint], 
-            [SeasonalUse], [DirectRepair], [CarStorageFacility], [VINEtching], [LossProtectionDiscount], [SeasonalUsePart2], [MarketAppreciationandDiminutionofValue],
-			source_system_sk, vehicle_deleted_in
+            [SeasonalUse], [DirectRepair], [CarStorageFacility], [VINEtching], [LossProtectionDiscount], [SeasonalUsePart2], [MarketAppreciationandDiminutionofValue] 
+			,source_system_sk, vehicle_deleted_in, [VendorReportedWholesaleAmount]
 		
         INTO [edw_temp].[tauto_vehicle_coverage_temp1]
 		
         FROM
 			(
                 SELECT
-                    acct.IssuedDate, acct.PolicyNumber as policy_no, acct.EffectiveDate as effective_dt, acctvo.[Index] as vehicle_no, [UniqueId] as vehicle_unique_id, acct.TransactionEffectiveDate as transaction_effective_dt, 
+                    acct.IssuedDate, acct.PolicyNumber as policy_no, acct.EffectiveDate as effective_dt, av.[vehicle_no] as vehicle_no, [UniqueId] as vehicle_unique_id, acct.TransactionEffectiveDate as transaction_effective_dt, 
                     acct.ExpirationDate as expiration_dt, acct.IssuedDate as transaction_dt, acct.PolicyChangeNumber as transaction_seq_no,
                     ph.policy_history_sk, av.auto_vehicle_sk, 0 auto_garage_location_sk, 
                     acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
@@ -96,7 +98,7 @@ BEGIN
                 WHERE
                     p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'
-                    AND acctvof.[Group] in ('Vehicle','Registration','Symbols','Symbols - ISO','Vehicle Coverages','AntiTheftDevice','Discounts','Surcharge')
+                    AND acctvof.[Group] in ('Vehicle','Registration','Symbols','Symbols - ISO','Vehicle Coverages','AntiTheftDevice','Discounts','Surcharge','Security and Safety Features')
 			) t
 		PIVOT 
 			(
@@ -110,7 +112,7 @@ BEGIN
                     [CustomizedEquipment], [ExtendedTowingAndLabor], [MotorcycleMEDLimits], [RatingTerritory], [OwnedVehicleDiscount], [HighPerformanceVehicleRating], [ExpenseLoadBI], [ExpenseLoadPD], 
                     [ExpenseLoadPIP], [ExpenseLoadMED], [ExpenseLoadOTC], [ExpenseLoadCOLL], [ExpenseLoadUM], [BodilyInjuryNCRBPremium], [PropertyDamageNCRBPremium], [MedicalPaymentsNCRBPremium], 
                     [UninsuredMotoristsBodilyInjuryNCRBPremium], [UninsuredMotoristsPropertyDamageNCRBPremium], [SendVehicleToLiabilityReporting], [AntiTheftDevice], [AntiLockBrakes], [PassiveRestraint], 
-                    [SeasonalUse], [DirectRepair], [CarStorageFacility], [VINEtching], [LossProtectionDiscount], [SeasonalUsePart2], [MarketAppreciationandDiminutionofValue]
+                    [SeasonalUse], [DirectRepair], [CarStorageFacility], [VINEtching], [LossProtectionDiscount], [SeasonalUsePart2], [MarketAppreciationandDiminutionofValue], [VendorReportedWholesaleAmount]
                 )
 			) pivottable
 
@@ -205,7 +207,8 @@ BEGIN
             update_ts,
             etl_audit_sk,
             vehicle_deleted_in,
-            vehicle_unique_id
+            vehicle_unique_id,
+            carfax_wholesale_value_amt
 		)
         SELECT 
             t1.policy_no,
@@ -281,7 +284,17 @@ BEGIN
             t1.[UninsuredMotoristsBodilyInjuryNCRBPremium] as uninsured_motorist_bodily_injury_ncrb_premium_amt,
             t1.[UninsuredMotoristsPropertyDamageNCRBPremium] as uninsured_motorist_property_damage_ncrb_premium_amt,
             t1.[SendVehicleToLiabilityReporting] as send_vehicle_to_liability_reporting_in,
-            t1.[AntiTheftDevice] as antitheft_device_feature,
+            case	when t1.[AntiTheftDevice] = 'Active' then 'Active - a disabling device that much be activated by the operator'
+                    when t1.[AntiTheftDevice] = 'Passive' then 'Passive - a disabling device that is automatically activated when the car is parked'
+                    when t1.[AntiTheftDevice] = 'Recovery' then 'Recovery - an active vehicle recovery system'
+                    when t1.[AntiTheftDevice] = 'Category1' then 'Category 1 (Ignition Cut Off, Active External Alarms, etc.)'
+                    when t1.[AntiTheftDevice] = 'Category2' then 'Category 2 (Active Fuel Cut Off, Wheel Lock, Emergency Handbrake Locks, Transmission Locks, etc.)'
+                    when t1.[AntiTheftDevice] = 'Category3' then 'Category 3 (Passive Alarm Systems, Passive Fuel Locks, etc.)'
+                    when t1.[AntiTheftDevice] = 'Category4' then 'Category 4 (Recovery Devices Including GPS Tracking)'
+                    when t1.[AntiTheftDevice] = 'Category3And4' then 'Categories 3 & 4'
+                    when t1.[AntiTheftDevice] = '' then Null
+            else t1.[AntiTheftDevice]
+            end as antitheft_device_feature,
             t1.[AntiLockBrakes] as antilock_brake_in,
             t1.[PassiveRestraint] as passive_restraint_in,
             t1.[SeasonalUse] as seasonal_use_in,
@@ -296,7 +309,8 @@ BEGIN
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
             CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in,
-            t1.vehicle_unique_id
+            t1.vehicle_unique_id,
+            t1.[VendorReportedWholesaleAmount] as carfax_wholesale_value_amt
         FROM 
             [edw_temp].[tauto_vehicle_coverage_temp1] AS t1
         left join [edw_stage].[AccountTransactionVersionObject] AS atvo ON atvo.id = t1.GaragingLocationId
@@ -337,3 +351,4 @@ BEGIN
 	
     END CATCH
 END
+GO

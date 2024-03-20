@@ -7,6 +7,10 @@ GO
 -- Author:		Alberto Almario
 -- Create Date: 2023-10-23
 -- Description: This stored procedure insert and update info related to tquote_auto_driver.
+---------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 22/02/24		Hernnando Gonzalez		    1. Added new field lending_loss_amt
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_driver]
 AS
