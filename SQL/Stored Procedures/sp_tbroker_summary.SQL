@@ -29,6 +29,7 @@ GO
 -- 02/29/24		Architha Gudimalla				17. Added one and three year non cat earned prms
 -- 03/07/24		Architha Gudimalla				18. Added KPI calculations
 -- 03/10/24		Architha Gudimalla				19. Updated KPI calculations to multiply by 100
+-- 03/19/24		Architha Gudimalla				20. Exluded wind/hail from non cat prms
 -- ===================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -403,7 +404,7 @@ BEGIN
 					 and 	pol.risk_state_cd = st.state_cd
 					 and 	summ.policy_sk = ph.policy_sk 
 					 and 	ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
-					 and ic.internal_coverage_sk = summ.internal_coverage_sk and ic.primary_coverage_cd not in ('Hurricane','Wildfire')
+					 and ic.internal_coverage_sk = summ.internal_coverage_sk and ic.primary_coverage_cd not in ('Hurricane','Wildfire','Wind/Hail')
 					 group by summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 					union all
