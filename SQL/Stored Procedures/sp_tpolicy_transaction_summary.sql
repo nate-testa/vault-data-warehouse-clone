@@ -6,7 +6,8 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 08/30/23		Architha Gudimalla				1. Created this procedure  
--- 10/05/23		Architha Gudimalla				2. Fixed division by 0 error for EP calculation 
+-- 10/05/23		Architha Gudimalla				2. Fixed division by 0 error for EP calculation  
+-- 03/20/24		Architha Gudimalla				3. Added commission_amt
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction_summary]
@@ -114,7 +115,8 @@ BEGIN
 									* tr.premium_amt/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
 								else 0
 								end
-						   ) mtd_ep 
+						   ) mtd_ep ,
+				 		sum(commission_amt) commission_amt
 				 FROM edw_core.tpolicy_transaction tr, edw_core.tpolicy pol 
 				 where tr.policy_sk = pol.policy_sk
 				 and 	tr.internal_coverage_sk <> 0 
@@ -138,6 +140,7 @@ BEGIN
 						transaction_dt_sk,
 						policy_transaction_type_sk, premium_amt,  
 						earned_premium_amt, unearned_premium_amt,  source_system_sk, update_ts, etl_audit_sk
+						,commission_amt
 					)
 				select 	@month_end_dt_sk, prm.policy_sk, prm.item_sk, prm.transaction_seq_no,  prm.internal_coverage_sk,
 						prm.coverage_sk, prm.vehicle_coverage_sk, 
@@ -149,6 +152,7 @@ BEGIN
 						prm.policy_transaction_type_sk, prm.premium_amt,  
 						prm.mtd_ep earned_premium_amt, (1.0000 * prm.premium_amt)-mtd_ep unearned_premium_amt, 
 						source_system_sk, getdate(), @etl_audit_sk
+						, prm.commission_amt
 				from prm
 				where prm.premium_amt <> 0
 				   or prm.mtd_ep <> 0;
