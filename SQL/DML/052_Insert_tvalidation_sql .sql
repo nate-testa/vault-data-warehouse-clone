@@ -12,4 +12,4 @@ select	 'tpolicy - renewal policy termed as new'
 		,'Y'
 		,'Daily'
 		,getdate()
-		,getdate();    
+		,getdate(); 

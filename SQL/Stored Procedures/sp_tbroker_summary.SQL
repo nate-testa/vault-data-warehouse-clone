@@ -29,7 +29,7 @@ GO
 -- 02/29/24		Architha Gudimalla				17. Added one and three year non cat earned prms
 -- 03/07/24		Architha Gudimalla				18. Added KPI calculations
 -- 03/10/24		Architha Gudimalla				19. Updated KPI calculations to multiply by 100
--- 03/19/24		Architha Gudimalla				20. Exluded wind/hail from non cat prms
+-- 03/19/24		Architha Gudimalla				20. Exluded wind/hail from non cat prms 
 -- ===================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
