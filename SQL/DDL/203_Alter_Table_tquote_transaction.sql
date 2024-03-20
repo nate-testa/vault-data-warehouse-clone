@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote_transaction ADD collection_class_type_sk int DEFAULT 0;
