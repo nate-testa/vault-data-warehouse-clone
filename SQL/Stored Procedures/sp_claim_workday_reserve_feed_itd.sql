@@ -34,9 +34,9 @@ BEGIN
 
 		DECLARE @last_day_month DATE, @year_month INT;
 
-		SELECT @year_month = yearmonth FROM edw_core.tdate WHERE actual_dt = CAST(DATEADD(MONTH,-1,GETDATE()) AS DATE)
+		SELECT @year_month = yearmonth FROM edw_core.tdate WHERE actual_dt = CAST(DATEADD(MONTH,-1,GETDATE()) AS DATE);
 
-		SELECT @last_day_month = actual_dt FROM edw_core.tdate WHERE yearmonth = @year_month and month_end_in = 'Y'
+		SELECT @last_day_month = actual_dt FROM edw_core.tdate WHERE yearmonth = @year_month and month_end_in = 'Y';
 
 		WITH claim_reserve_itd_feed_temp AS
 		(
