@@ -21,6 +21,7 @@
 -- 11/10/23		Architha Gudimalla				13. Corrected cal_mn for tfs temp table
 -- 12/11/23		Architha Gudimalla				14. Updated logic for source.stage (used as transaction type)
 -- 02/14/24		Architha Gudimalla				15. Updated logic for Lux subscriber contributoin on ho
+-- 03/20/24		Architha Gudimalla				16. Added logic for class_type_sk
 -- ====================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -157,7 +158,8 @@ BEGIN
 		   ,user_sk -- not sure
            ,create_ts
            ,update_ts
-           ,etl_audit_sk)
+           ,etl_audit_sk
+		   ,collection_class_type_sk)
 		SELECT
 			pol.policy_sk, dt1.date_sk, dt2.date_sk, dt3.date_sk, Source.PolicyChangeNumber, 
 			br.broker_sk, cust.customer_sk, source.wp, Source.comm, source.ap, source.tfs, source.wp - source.tfs, 
@@ -191,6 +193,11 @@ BEGIN
 		    ceded_premium_amt,
 			0 user_sk, 
 			getdate(),getdate(), @etl_audit_sk --select source.coverage, source.label,ic.*
+			,case when pol.product_cd <> 'Lux' then 0
+			      when ic.internal_coverage_category_nm <> 'Premium' then 0
+			      when cc.collection_class_type_sk is not null then cc.collection_class_type_sk
+				  else 0
+			end collection_class_type_sk
 		FROM
 			edw_temp.tpolicy_transaction_temp2 source
 		LEFT JOIN edw_core.tdate dt1 on dt1.actual_dt = cast(source.EffectiveDate as date)
@@ -215,6 +222,12 @@ BEGIN
 		LEFT JOIN edw_core.tinternal_coverage tfs on tfs.internal_coverage_desc = source.coverage and source.typ <> 'prm' 
 													and (case when source.coverage = 'Subscriber Contribution' and source.covID = 'Lux' then 'LUX' else pr.product_cd end = tfs.product_cd)    
 		LEFT JOIN edw_core.tpolicy_transaction_type tt on tt.policy_transaction_type_cd = source.stage 
+		left join edw_core.tcollection_class_type cc on 	pol.policy_no = cc.policy_no and pol.effective_dt = cc.effective_dt and Source.PolicyChangeNumber = cc.transaction_seq_no 
+														and case 	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Music' then 'Musical Instruments' 
+																	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Fine Arts' then 'Fine Art' 
+																	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Jewelry' then 'Worldwide Jewelry'  
+																	else replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')
+																end = cc.class_type  
 
 		SET @rows_affected=@@ROWCOUNT; 
 
