@@ -143,7 +143,7 @@ BEGIN
            ,etl_audit_sk
 			,ceded_annual_premium_amt
 			,ceded_premium_amt
-		   ,collection_class_type_sk)
+		   ,quote_collection_class_type_sk)
 		SELECT
 			q.quote_sk
            ,qh.quote_history_sk, dt1.date_sk, dt2.date_sk, dt3.date_sk, Source.number, 
@@ -174,9 +174,9 @@ BEGIN
 		    ceded_premium_amt
 			,case when q.product_cd <> 'Lux' then 0
 			      when ic.internal_coverage_category_nm <> 'Premium' then 0
-			      when cc.quote_collection_class_type_sk is not null then cc.collection_class_type_sk
+			      when cc.quote_collection_class_type_sk is not null then cc.quote_collection_class_type_sk
 				  else 0
-			end collection_class_type_sk
+			end quote_collection_class_type_sk
 		FROM
 			edw_temp.TQuote_transaction_temp2 source
 		LEFT JOIN edw_core.tdate dt1 on dt1.actual_dt = cast(source.EffectiveDate as date)
