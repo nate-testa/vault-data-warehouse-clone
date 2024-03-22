@@ -40,17 +40,17 @@ BEGIN
             u.user_sk,
             nt.Content as note_desc,
             nt.CreatedDate as note_created_ts,
-            nt.UpdatedDate as note_updated_ts,            
-            cust.customer_sk ,            
+            nt.UpdatedDate as note_updated_ts,
+            cust.customer_sk ,
             tbrk.broker_sk,
             prd.producer_sk,
             case
-                when nt.IsExternallyShared = 0 then 'N'
-                when nt.IsExternallyShared = 1 then 'Y'
+                when nt.IsExternallyShared = 0 then 'No'
+                when nt.IsExternallyShared = 1 then 'Yes'
             end as externally_shared_in,
             case
-                when nt.IsFlagged = 0 then 'N'
-                when nt.IsFlagged = 1 then 'Y'
+                when nt.IsFlagged = 0 then 'No'
+                when nt.IsFlagged = 1 then 'Yes'
             end as flagged_in,
             case when nt.ExternalSourceId is null then 4 else 2 end as source_system_sk
             into edw_temp.tnote_temp1
@@ -82,7 +82,7 @@ BEGIN
                                                                 end
             left join edw_core.tproducer prd on prd.producer_id = case when nt.ObjectType = 'Broker' then nt.ParentId end
         WHERE
-			nt.UpdatedDate > @last_source_extract_ts;
+			GREATEST(nt.UpdatedDate,nt.CreatedDate) > @last_source_extract_ts;
 
         MERGE edw_core.tnote AS Target
 	    USING edw_temp.tnote_temp1 AS Source
@@ -112,7 +112,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(note_updated_ts) FROM edw_temp.tnote_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(nt.note_updated_ts,nt.note_created_ts)) FROM edw_temp.tnote_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
