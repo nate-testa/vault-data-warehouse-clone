@@ -10,9 +10,10 @@ GO
 -----------------------------------------------------------------------------------------------------------------------
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- 11/16/23		Architha Gudimalla				2. Updated the prior policy logic
+-- 03/22/24		Rushin Shah						3. Added close_reason_desc column
 -- ===================================================================================================================== 
 
-create or ALTER      PROCEDURE [edw_core].[sp_tquote]
+CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
 
 AS 
 BEGIN
@@ -189,7 +190,8 @@ BEGIN
 					  else upper(substring(tmp1.state,1,1)) + lower(substring(tmp1.state, 2, len(tmp1.state)-1))  
 				end as [state],
 				case when tmp1.ExternalSourceId is not null then 'Yes' else 'No' end  migrated_in,
-				prior_pol.policy_sk prior_pol_policy_sk
+				prior_pol.policy_sk prior_pol_policy_sk,
+				tmp1.CloseReasonType as close_reason_desc
 				--select *
 			FROM 
 				edw_temp.tquote_temp1 tmp1
@@ -243,6 +245,7 @@ BEGIN
            ,[quote_source_status]
 		   ,migrated_in
 		   ,prior_term_policy_sk
+		   ,close_reason_desc
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -274,7 +277,9 @@ BEGIN
 				getdate(), getdate(), @etl_audit_sk
                 ,source.state
 				,source.migrated_in
-				,source.prior_pol_policy_sk)
+				,source.prior_pol_policy_sk
+				,source.close_reason_desc
+				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
@@ -304,6 +309,7 @@ BEGIN
 		Target.quote_source_status			= source.state, 
 		Target.migrated_in			    	= source.migrated_in, 
 		Target.prior_term_policy_sk			= source.prior_pol_policy_sk, 
+		Target.close_reason_desc			= source.close_reason_desc,
         Target.update_ts 					= getdate()
 		;
 
