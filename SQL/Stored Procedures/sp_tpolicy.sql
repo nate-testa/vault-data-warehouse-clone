@@ -25,6 +25,7 @@ GO
 -- 12/01/23		Architha Gudimalla		        14. updated program to use from account table
 -- 12/04/23		Architha Gudimalla		        15. updated program to use from AccountTransactionVersionObjectField table
 -- 12/11/23		Architha Gudimalla		        16. Updated policy_term
+-- 03/21/24		Architha Gudimalla		        17. Added rewritten policy as prior policy no and rewritten_in
 -- ======================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tpolicy]
@@ -167,25 +168,29 @@ BEGIN
 				,case when charindex('-',tmp1.PolicyNumber) <> 0
 					 then substring(tmp1.PolicyNumber,1,charindex('-',tmp1.PolicyNumber)-1) 
 					 else tmp1.PolicyNumber  
-				end as original_policy_no
-				,acc_prior.PolicyNumber  prior_policy_no
+				end as original_policy_no				
+				--added on 3/21/24 - AG
+				,case when acc_prior.PolicyNumber is not null then acc_prior.PolicyNumber else acc_rw.PolicyNumber end prior_policy_no
 				,'No' as non_renewal_in
 				, acc.renewalofpolicynumber
 				, tb.billingaccount_sk
 				,acc.externalsourceid
+				,case when acc_rw.PolicyNumber is not null then 'Yes' else 'No' end rewritten_in
 				--select *
 			FROM 
 				edw_temp.tpolicy_temp1 tmp1
 				INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = tmp1.Id
 				inner join edw_stage.Account acc on tmp1.AccountId = acc.Id 
 				left join edw_stage.Account acc_prior on acc.copyofAccountId = acc_prior.Id 
+				--added on 3/21/24 - AG
+				left join edw_stage.Account acc_rw on acc.rewrittenfromaccountid = acc_rw.Id 
 				left join edw_stage.BillingAccount ba on ba.id = acc.BillingAccountId
 				left join edw_core.tbillingaccount tb on tb.billingaccount_no = ba.ReferenceCode
 				left join edw_stage.Brokerage br on acctv.BrokerageId = br.id
 				left join edw_stage.Insured ins on acctv.PrimaryInsuredId = ins.Id
 				left join edw_stage.Product pr on tmp1.ProductId = pr.id
 				left join edw_temp.tpolicy_temp2 tmp2 on tmp2.AccountTransactionId = tmp1.Id
-				where pr.productline <> 'CommercialLines' --and tmp1.policynumber = 'CO100023657'  
+				where pr.productline <> 'CommercialLines' --and tmp1.policynumber = 'CO100023657'   
 		) AS Source
 		ON Source.PolicyNumber = Target.policy_no and cast(Source.EffectiveDate as date) = cast(Target.effective_dt as date)
 		-- For Inserts
@@ -223,6 +228,7 @@ BEGIN
            ,create_ts
            ,update_ts
            ,etl_audit_sk
+		   ,rewritten_in
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, Source.ExpirationDate, Source.BrokerId, Source.customer_id, 
@@ -250,7 +256,8 @@ BEGIN
 				Source.source_system_sk
 		   		,Source.billingaccount_sk, 
 				case when Source.externalsourceid is not null then 'Yes' else 'No' end,
-				getdate(), getdate(), @etl_audit_sk)
+				getdate(), getdate(), @etl_audit_sk
+				,source.rewritten_in)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
@@ -275,8 +282,9 @@ BEGIN
 		Target.prior_policy_no				= source.prior_policy_no, 
 		Target.prior_term_policy_no			= source.renewalofpolicynumber, 
 		Target.billingaccount_sk			= source.billingaccount_sk, 
-		Target.source_system_sk			= source.source_system_sk, 
-        Target.update_ts 					= getdate()
+		Target.source_system_sk				= source.source_system_sk, 
+        Target.update_ts 					= getdate(),
+        Target.rewritten_in 				= rewritten_in
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
