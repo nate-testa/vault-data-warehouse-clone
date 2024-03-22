@@ -9,6 +9,7 @@
 -- 10/09/23		Sandeep  Gundreddy				3. Added Homeowners to product filter
 -- 10/13/23		Architha Gudimalla				4. Correction the location table join
 -- 11/02/23		Architha Gudimalla				5. Updated left joins to inner
+-- 03/21/24		Architha Gudimalla				6. Added deleted flag
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_class_type]
@@ -42,6 +43,7 @@ BEGIN
 			--,4 as [source_system_sk] --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
+			,class_deleted_in
 		INTO [edw_temp].[tcollection_class_type_temp1]
 		FROM
 			(
@@ -54,6 +56,7 @@ BEGIN
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
 				 end as [source_system_sk] --20230717 added
+            	,acct.IsdeletedOnPolicyChange as class_deleted_in
 			FROM
 				(SELECT
 					acct.*
@@ -106,6 +109,7 @@ BEGIN
            ,[create_ts]
            ,[update_ts]
            ,[etl_audit_sk]
+		   ,class_deleted_in
 		)
 		SELECT [PolicyNumber]
            ,[EffectiveDate]
@@ -128,6 +132,7 @@ BEGIN
            ,getdate()
            ,getdate()
 		   ,@etl_audit_sk
+		   ,CASE WHEN class_deleted_in = 1 THEN 'Yes' ELSE 'No' END as class_deleted_in
 		FROM 
 			[edw_temp].[tcollection_class_type_temp1]
 
