@@ -5,6 +5,7 @@
 -----------------------------------------------------------------------------------------------------------------
 -- 10/05/23		Architha Gudimalla		    1. Created this procedure to update policy status and cancel eff dt
 -- 03/13/24		Yunus Mohammed				2. Updated system conversion
+-- 03/22/24		Yunus Mohammed				3. Added prior policy no check in system conversion
 -- =============================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_cancels]
@@ -53,12 +54,14 @@ BEGIN
 
 		update tp
 		set
-			oneshield_migrated_in = 'Yes'
+			oneshield_migrated_in = 'Yes',
+			prior_policy_no = temp.priorpolicynumber
 		from
 		edw_core.tpolicy tp
 		inner join [edw_stage].[dw2_oneshield_migrated] temp on tp.policy_no = temp.policynumber
 		where
 			temp.issystemconversion= 'yes'
+			and prior_policy_no is null
 
 
 		SET @rows_affected=@@ROWCOUNT;

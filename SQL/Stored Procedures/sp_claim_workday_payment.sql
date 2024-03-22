@@ -7,6 +7,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 07/28/23		Yunus Mohammed				1. Created this procedure 
 -- 11/29/23		Yunus Mohammed				2. Update logic to get begin and end date
+-- 03/21/24		Yunus Mohammed				3. Added party_subtype_role_nm in output
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_payment]
@@ -96,7 +97,8 @@ BEGIN
 			tscl.sub_cause_of_loss_desc AS sub_cause_of_loss_code,
 			tscl.sub_cause_of_loss_desc AS sub_cause_of_loss_name,
 			tc.claim_status AS claim_status,
-			tcf.claim_feature_status AS loss_status
+			tcf.claim_feature_status AS loss_status,
+			tpay.party_subtype_role_nm
 			FROM
 			edw_core.tclaim tc
 			LEFT JOIN edw_core.tcause_of_loss tcl ON tcl.cause_of_loss_sk=tc.cause_of_loss_sk
@@ -175,13 +177,13 @@ BEGIN
 			(
 			company,claim_no,policy_no,transaction_date,policyeffectivedate,claimlossdate,claimreporteddate,[address],city,[state],
 			zip,causeofloss,catastrophecode,catastrophename,product,policycoveragetype,paymenttype,payeename,paymentamount,settlementtype,
-			accident_year,risk_state,aslob,transaction_id,monthend,sub_cause_of_loss_code,sub_cause_of_loss_name,claim_status,loss_status,
+			accident_year,risk_state,aslob,transaction_id,monthend,sub_cause_of_loss_code,sub_cause_of_loss_name,claim_status,loss_status,party_subtype_role_nm,
 			create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
 				company,claim_no,policy_no,transaction_date,policyeffectivedate,claimlossdate,claimreporteddate,[address],city,[state],
 				zip,causeofloss,catastrophecode,catastrophename,product,policycoveragetype,paymenttype,payeename,paymentamount,settlementtype,
-				accident_year,risk_state,aslob,transaction_id,monthend,sub_cause_of_loss_code,sub_cause_of_loss_name,claim_status,loss_status,
+				accident_year,risk_state,aslob,transaction_id,monthend,sub_cause_of_loss_code,sub_cause_of_loss_name,claim_status,loss_status,party_subtype_role_nm,
 				GETDATE() AS create_ts,GETDATE() AS update_ts, @etl_audit_sk AS etl_audit_sk
 			FROM
 				claim_workday_payment_feed_temp

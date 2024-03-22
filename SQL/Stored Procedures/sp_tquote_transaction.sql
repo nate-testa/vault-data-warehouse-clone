@@ -8,6 +8,7 @@
 -- 11/29/23		Architha Gudimalla		3. modified @new_last_source_extract_ts
 -- 12/11/23		Architha Gudimalla		4. modified logic for stage pol term
 -- 02/27/24		Architha Gudimalla		5. Updated logic for Lux subscriber contributoin on ho
+-- 03/20/24		Architha Gudimalla		6. Added logic for class_type_sk
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction]
@@ -141,7 +142,8 @@ BEGIN
            ,update_ts
            ,etl_audit_sk
 			,ceded_annual_premium_amt
-			,ceded_premium_amt)
+			,ceded_premium_amt
+		   ,quote_collection_class_type_sk)
 		SELECT
 			q.quote_sk
            ,qh.quote_history_sk, dt1.date_sk, dt2.date_sk, dt3.date_sk, Source.number, 
@@ -170,6 +172,11 @@ BEGIN
 			getdate(),getdate(), @etl_audit_sk, --select source.coverage, source.label,ic.*
 			ceded_annual_premium_amt,
 		    ceded_premium_amt
+			,case when q.product_cd <> 'Lux' then 0
+			      when ic.internal_coverage_category_nm <> 'Premium' then 0
+			      when cc.quote_collection_class_type_sk is not null then cc.quote_collection_class_type_sk
+				  else 0
+			end quote_collection_class_type_sk
 		FROM
 			edw_temp.TQuote_transaction_temp2 source
 		LEFT JOIN edw_core.tdate dt1 on dt1.actual_dt = cast(source.EffectiveDate as date)
@@ -191,6 +198,12 @@ BEGIN
 		LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) 
 												and (case when source.coverage = 'Subscriber Contribution' and source.covID = 'Lux' then 'LUX' else pr.product_cd end) = ic.product_cd  
 		--LEFT JOIN edw_core.ttax_fee_surcharge ttfs on ttfs.tax_fee_surcharge_desc = source.coverage  
+		left join edw_core.tquote_collection_class_type cc on 	q.quote_no = cc.quote_no and q.effective_dt = cc.effective_dt and Source.number = cc.transaction_seq_no 
+														and case 	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Music' then 'Musical Instruments' 
+																	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Fine Arts' then 'Fine Art' 
+																	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Jewelry' then 'Worldwide Jewelry'  
+																	else replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')
+																end = cc.class_type   
 		
 
 		SET @rows_affected=@@ROWCOUNT; 

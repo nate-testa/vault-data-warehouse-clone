@@ -65,7 +65,7 @@ with DAG(
 
     with TaskGroup("vendor_report_group") as vendor_report_group:
 
-        vendor_report_group_items = ['sp_tvendor_report_stage_data','sp_tvendor_report']
+        vendor_report_group_items = ['sp_tvendor_report_stage_data','sp_tvendor_report','sp_tvendor_report_hazardhub','sp_tvendor_report_clue_property']
 
         sp_tvendor_report_stage_data = MsSqlOperator(
             task_id='sp_tvendor_report_stage_data',
@@ -171,6 +171,22 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tvendor_report_hazardhub = MsSqlOperator(
+            task_id='sp_tvendor_report_hazardhub',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tvendor_report_hazardhub",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tvendor_report_clue_property = MsSqlOperator(
+            task_id='sp_tvendor_report_clue_property',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tvendor_report_clue_property",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_vendor_report_email = EmailOperator(
             task_id='send_vendor_report_email',
             to=to_email,
@@ -178,7 +194,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(vendor_report_group_items, 'All executions of stored procedure vendor report executed successfully'),
         )
 
-        sp_tvendor_report_stage_data >> sp_tvendor_report_AonCatStore >> sp_tvendor_report_CarfaxMileage >> sp_tvendor_report_CarfaxValue >> sp_tvendor_report_CLUEAuto >> sp_tvendor_report_GuyCarpenter >> sp_tvendor_report_IsoVehicle >> sp_tvendor_report_IsoProperty >> sp_tvendor_report_LC360 >> sp_tvendor_report_MVR >> sp_tvendor_report_NHTSA >> sp_tvendor_report_TransUnion >> sp_tvendor_report_SAQ >> send_vendor_report_email
+        sp_tvendor_report_stage_data >> sp_tvendor_report_AonCatStore >> sp_tvendor_report_CarfaxMileage >> sp_tvendor_report_CarfaxValue >> sp_tvendor_report_CLUEAuto >> sp_tvendor_report_GuyCarpenter >> sp_tvendor_report_IsoVehicle >> sp_tvendor_report_IsoProperty >> sp_tvendor_report_LC360 >> sp_tvendor_report_MVR >> sp_tvendor_report_NHTSA >> sp_tvendor_report_TransUnion >> sp_tvendor_report_SAQ >> sp_tvendor_report_hazardhub >> sp_tvendor_report_clue_property >> send_vendor_report_email
 
 
     end = DummyOperator(

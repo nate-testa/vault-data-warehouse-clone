@@ -4,12 +4,12 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- ===========================================================================================================================================
+-- =================================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the renewals data for each month
-----------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
-----------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------
 -- 08/14/23		Architha Gudimalla				1. Created this procedure 
 -- 09/12/23		Architha Gudimalla				2. Added additional columns after discussing with Olivia 
 -- 10/02/23		Architha Gudimalla				3. Corrected code afrer testing table
@@ -27,7 +27,8 @@ GO
 -- 02/09/24		Architha Gudimalla				14. customer other inf count default to 0 if null
 -- 02/13/24		Architha Gudimalla				15. Removed the default month from customer other inf
 -- 02/23/24		Architha Gudimalla				16. Added columns - Renewal Offered TIV, Renewal Offered cov a, Renewal Offered renewal sq feet
--- =========================================================================================================================================== 
+-- 03/22/24		Architha Gudimalla				17. Updated renewal columns for pols that were renewed after 60 day of expiry
+-- ================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
 @in_yearmonth int = null
@@ -238,6 +239,10 @@ BEGIN
 								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round((365.0*1/(expiration_dt_sk - transaction_effective_dt_sk)),5) 
 								else 0 
 								end) as effective_date_60_day_prem,
+						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk and tt.policy_transaction_type_nm in ('New','Renewal') --'Renewal','New Business' 
+								then tr.commission_amt * round((365.0*1/(expiration_dt_sk - transaction_effective_dt_sk)),5) 
+								else 0 
+								end) as initial_written_comm,
 						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk and transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk  < 61 
 								then tr.commission_amt  * round((365.0*1/(expiration_dt_sk - transaction_effective_dt_sk)),5) 
 								else 0 
@@ -427,12 +432,12 @@ BEGIN
 						case when ren_pols.policy_sk is not null then 1 else 0 end renewalcount,
 						case when ren_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end non_flatcancel_renewal_ind,
 						case when ren_pols.policy_sk is not null then ren_pols_prm.initial_written_prem else null end initial_written_renewal_prem,
-						case when ren_pols.policy_sk is not null then ren_pols_prm.effective_date_60_day_prem else null end effective_date_60_day_renewal_prem, 
-						case when ren_pols.policy_sk is not null then ren_pols_prm.effective_date_60_day_comm else null end effective_date_60_day_renewal_comm,
-						case when ren_pols.policy_sk is not null then ren_pols_prm.sixty_day_TIV else null end sixty_day_renewal_TIV,
-						case when ren_pols.policy_sk is not null then ren_pols_prm.sixty_day_COVA else null end sixty_day_renewal_COVA,  
+						case when ren_pols.policy_sk is not null then iif(ren_pols_prm.effective_date_60_day_prem=0,ren_pols_prm.initial_written_prem,ren_pols_prm.effective_date_60_day_prem) else null end effective_date_60_day_renewal_prem, 
+						case when ren_pols.policy_sk is not null then iif(ren_pols_prm.effective_date_60_day_comm=0,ren_pols_prm.initial_written_comm,ren_pols_prm.effective_date_60_day_comm) else null end effective_date_60_day_renewal_comm,
+						case when ren_pols.policy_sk is not null then iif(ren_pols_prm.sixty_day_TIV=0,ren_pols_prm.day_0_TIV,ren_pols_prm.sixty_day_TIV) else null end sixty_day_renewal_TIV,
+						case when ren_pols.policy_sk is not null then iif(ren_pols_prm.sixty_day_COVA=0,ren_pols_prm.day_0_COVA,ren_pols_prm.sixty_day_COVA) else null end sixty_day_renewal_COVA,  
 						case when ren_pols.policy_sk is not null and exp_pols_prm.totalsquarefeet > 0 
-							 then ren_pols_prm.sixty_day_COVA/exp_pols_prm.totalsquarefeet 
+							 then iif(ren_pols_prm.sixty_day_COVA=0,ren_pols_prm.day_0_COVA,ren_pols_prm.sixty_day_COVA)/exp_pols_prm.totalsquarefeet 
 							 else null 
 						end renewal_accepted_price_sqft, 
 						getdate(), @etl_audit_sk 
