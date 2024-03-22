@@ -175,7 +175,8 @@ BEGIN
 				, acc.renewalofpolicynumber
 				, tb.billingaccount_sk
 				,acc.externalsourceid
-				,case when acc_rw.PolicyNumber is not null then 'Yes' else 'No' end rewritten_in
+				--,case when acc_rw.PolicyNumber is not null then 'Yes' else 'No' end rewritten_in
+				,case when acc.isrewritten = 1 then 'Yes' else 'No' end rewritten_in
 				--select *
 			FROM 
 				edw_temp.tpolicy_temp1 tmp1
@@ -284,7 +285,7 @@ BEGIN
 		Target.billingaccount_sk			= source.billingaccount_sk, 
 		Target.source_system_sk				= source.source_system_sk, 
         Target.update_ts 					= getdate(),
-        Target.rewritten_in 				= rewritten_in
+        Target.rewritten_in 				= source.rewritten_in
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
