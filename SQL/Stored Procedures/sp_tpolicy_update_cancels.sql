@@ -70,8 +70,9 @@ BEGIN
 		set pol.policy_term = pol1.policy_term 
 		from edw_core.tpolicy pol
 		inner join edw_core.tpolicy pol1 on pol1.policy_no = pol.prior_policy_no 
-		where pol.policy_term = 'New' and pol.policy_no like '%-%' and pol1.policy_term = 'Renewal'
-
+		where pol.policy_term = 'New' 
+		--and pol.policy_no like '%-%' 
+		and pol1.policy_term = 'Renewal';
 
 		SET @rows_affected=@@ROWCOUNT;
 	
