@@ -6,6 +6,7 @@
 -- 10/05/23		Architha Gudimalla		    1. Created this procedure to update policy status and cancel eff dt
 -- 03/13/24		Yunus Mohammed				2. Updated system conversion
 -- 03/22/24		Yunus Mohammed				3. Added prior policy no check in system conversion
+-- 03/25/24		Architha Gudimalla			4. Added policy term update for cancel rewrites
 -- =============================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_cancels]
@@ -62,6 +63,14 @@ BEGIN
 		where
 			temp.issystemconversion= 'yes'
 			and prior_policy_no is null
+
+		--added on 3/25
+		--rewritten policies have policy term as new, update there as renewals since prior term is renewal
+		update pol
+		set pol.policy_term = pol1.policy_term 
+		from edw_core.tpolicy pol
+		inner join edw_core.tpolicy pol1 on pol1.policy_no = pol.prior_policy_no 
+		where pol.policy_term = 'New' and pol.policy_no like '%-%' and pol1.policy_term = 'Renewal'
 
 
 		SET @rows_affected=@@ROWCOUNT;
