@@ -378,12 +378,20 @@ with DAG(
 
     with TaskGroup("policy_transaction_group") as policy_transaction_group:
 
-        policy_transaction_group_items = ['sp_tpolicy_transaction','sp_tpolicy_update_cancels','sp_treconciliation']
+        policy_transaction_group_items = ['sp_tpolicy_transaction','sp_tpolicy_transaction_update','sp_tpolicy_update_cancels','sp_treconciliation']
 
         sp_tpolicy_transaction = MsSqlOperator(
             task_id='sp_tpolicy_transaction',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tpolicy_transaction",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tpolicy_transaction_update = MsSqlOperator(
+            task_id='sp_tpolicy_transaction_update',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tpolicy_transaction_update",
             database="vault_edw",
             autocommit=True,
         )
@@ -418,7 +426,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(policy_transaction_group_items, 'All stored procedures executed successfully for all the Policy Transaction tables'),
         )
 
-        sp_tpolicy_transaction >> sp_tpolicy_update_cancels >> sp_treconciliation >> treconciliation_email >> send_policy_transaction_email
+        sp_tpolicy_transaction >> sp_tpolicy_transaction_update >> sp_tpolicy_update_cancels >> sp_treconciliation >> treconciliation_email >> send_policy_transaction_email
 
 
     with TaskGroup("claim_group") as claim_group:
