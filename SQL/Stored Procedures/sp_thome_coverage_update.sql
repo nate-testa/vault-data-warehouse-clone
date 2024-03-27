@@ -1,11 +1,12 @@
--- ===============================================================================================================
+-- ==================================================================================================================================
 -- Description: This procedures updates Thome_coverage
------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
 -- 10/05/23		Architha Gudimalla		    1. Created this procedure to update TIV
 -- 11/09/23		Architha Gudimalla		    2. Added logic for loss_of_use_derived_pc
--- =============================================================================================================== 
+-- 03/26/24		Architha Gudimalla		    3. Added to  loss_of_use_derived_pc - Reasonable and Necessary Expenses- 12 months
+-- ================================================================================================================================== 
 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage_update]
@@ -51,7 +52,7 @@ BEGIN
 												and isnull(iif(trim(loss_of_use_option)='','0',trim(loss_of_use_option)),'0')   = '0' 
 												and isnull(iif(trim(loss_of_use_limit_amt)='','0',trim(loss_of_use_limit_amt)),'0')  = '0' 
 													THEN  0
-												WHEN loss_of_use_option in ('Reasonable and Necessary Expenses','reasonableAndNecessaryExpenses12months') 
+												WHEN loss_of_use_option in ('Reasonable and Necessary Expenses','reasonableAndNecessaryExpenses12months','Reasonable and Necessary Expenses- 12 months') 
 													THEN 0.2
 												WHEN loss_of_use_option like '%.%' 
 													THEN  cast(loss_of_use_option as float) 
