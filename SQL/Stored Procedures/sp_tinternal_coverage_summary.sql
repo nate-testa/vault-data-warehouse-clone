@@ -18,6 +18,7 @@ GO
 -- 11/10/23		Architha Gudimalla				7. Corrected net ep code
 -- 12/06/23		Architha Gudimalla				8. Fixed exposure calculation
 -- 02/07/24		Architha Gudimalla				9. Added annual net prm
+-- 03/26/24		Architha Gudimalla				10. Added collection_class_type_sk
 -- ========================================================================================================================================= 
 
 create or ALTER      PROCEDURE [edw_core].[sp_tinternal_coverage_summary]
@@ -349,6 +350,7 @@ BEGIN
 				(
 				 SELECT tr.policy_sk, tr.item_sk, tr.internal_coverage_sk, tr.product_sk, --tr.customer_sk, tr.broker_sk, pol.source_system_sk,
 				 		max(tr.transaction_seq_no) transaction_seq_no,
+						max(tr.collection_class_type_sk) collection_class_type_sk,
 						--max(tr.product_sk)  product_sk,
 						max(tr.coverage_sk)  coverage_sk,
 						max(tr.vehicle_coverage_sk)  vehicle_coverage_sk,
@@ -451,6 +453,7 @@ BEGIN
 						earned_premium_amt, unearned_premium_amt, 
 						earned_net_premium_amt, unearned_net_premium_amt, 
 						written_exposure, earned_exposure, update_ts, etl_audit_sk
+						,collection_class_type_sk
 					) 
 				select 	@month_end_dt_sk, prm.policy_sk, prm.item_sk, prm.internal_coverage_sk,
 						case when inf.coverage_sk is not null then inf.coverage_sk else prm.coverage_sk end coverage_sk, 
@@ -470,7 +473,8 @@ BEGIN
 						written_exposure,
 						isnull(xpsr_new.ee,0) + isnull(xpsr_exp.ee,0) + isnull(xpsr_cancel.ee,0) + isnull(xpsr_rein.ee,0) 
 						earned_exposure, 
-						getdate(), @etl_audit_sk 
+						getdate(), @etl_audit_sk
+						,prm.collection_class_type_sk 
 				from prm
 				inner join max_tr on prm.policy_sk = max_tr.policy_sk and prm.transaction_seq_no = max_tr.transaction_seq_no
 				left join inf on prm.policy_sk = inf.policy_sk and prm.item_sk = inf.item_sk and prm.internal_coverage_sk = inf.internal_coverage_sk
