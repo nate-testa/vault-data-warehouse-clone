@@ -16,7 +16,7 @@ IF NOT EXISTS (SELECT * FROM sys.columns
                WHERE Name = N'IsIntegrationDisable' AND Object_ID = Object_ID(N'edw_stage.Account'))
 BEGIN
     ALTER TABLE edw_stage.Account
-    ADD IsIntegrationDisable bit CONSTRAINT DF_IsIntegrationDisable DEFAULT 0;
+    ADD IsIntegrationDisable bit;
 END
 
 IF NOT EXISTS (SELECT * FROM sys.columns 
@@ -37,21 +37,21 @@ IF NOT EXISTS (SELECT * FROM sys.columns
                WHERE Name = N'IsRenewalRequoted' AND Object_ID = Object_ID(N'edw_stage.Account'))
 BEGIN
     ALTER TABLE edw_stage.Account
-    ADD IsRenewalRequoted bit CONSTRAINT DF_IsRenewalRequoted DEFAULT 0;
+    ADD IsRenewalRequoted bit;
 END
 
 IF NOT EXISTS (SELECT * FROM sys.columns 
                WHERE Name = N'IsExcessCoverage' AND Object_ID = Object_ID(N'edw_stage.Account'))
 BEGIN
     ALTER TABLE edw_stage.Account
-    ADD IsExcessCoverage bit CONSTRAINT DF_IsExcessCoverage DEFAULT 0;
+    ADD IsExcessCoverage bit;
 END
 
 IF NOT EXISTS (SELECT * FROM sys.columns 
                WHERE Name = N'IsOfferedAtLeastOne' AND Object_ID = Object_ID(N'edw_stage.Account'))
 BEGIN
     ALTER TABLE edw_stage.Account
-    ADD IsOfferedAtLeastOne bit CONSTRAINT DF_IsOfferedAtLeastOne DEFAULT 0;
+    ADD IsOfferedAtLeastOne bit;
 END
 
 IF NOT EXISTS (SELECT * FROM sys.columns 
