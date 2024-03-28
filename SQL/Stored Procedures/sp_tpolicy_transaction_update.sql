@@ -29,6 +29,7 @@ BEGIN
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))  
 
+		/*
 		update edw_core.tpolicy_transaction 
 		set collection_class_type_sk = 0;
 
@@ -52,6 +53,8 @@ BEGIN
 					and 	ic.internal_coverage_category_nm = 'Premium'
 					group by policy_transaction_sk, tr.transaction_seq_no,  internal_coverage_cd,  cc.class_type
 		) b on a.policy_transaction_sk = b.policy_transaction_sk;
+
+		*/
 
 		--update all policies that have class type as Jewelry (Scheduled) in tpolicy_transaction and class type as Bank Vaulted Jewelry in tcollection_class_type
 		update a
@@ -105,6 +108,7 @@ BEGIN
 																		end = cc.class_type   
 					where 	tr.collection_class_type_sk = 0
 					and 	tr.product_sk in (1,2,5) 
+					and 	tr.source_system_sk <> 4
 					and 	ic.primary_coverage_cd = 'Lux' 
 					and 	ic.internal_coverage_category_nm = 'Premium'
 					group by policy_transaction_sk, tr.transaction_seq_no,  internal_coverage_cd,  cc.class_type
@@ -123,6 +127,7 @@ BEGIN
 																	and internal_coverage_cd = 'Jewelry (Scheduled)' and cc.class_type like '%Bank Vaulted Jewelry%' 
 					where 	tr.collection_class_type_sk = 0
 					and 	tr.product_sk in (1,2,5) 
+					and 	tr.source_system_sk <> 4
 					and 	ic.primary_coverage_cd = 'Lux' 
 					and 	ic.internal_coverage_category_nm = 'Premium' --and pol.policy_sk = 111021
 					group by policy_transaction_sk, tr.transaction_seq_no,  internal_coverage_cd,  cc.class_type
