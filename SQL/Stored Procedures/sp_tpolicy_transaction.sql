@@ -193,7 +193,7 @@ BEGIN
 		    ceded_premium_amt,
 			0 user_sk, 
 			getdate(),getdate(), @etl_audit_sk 
-			,case when tr.product_sk not in (1,2,5) then 0
+			,case when pr.product_sk not in (1,2,5) then 0
 			      when ic.internal_coverage_category_nm <> 'Premium' then 0
 			      when cc.collection_class_type_sk is not null then cc.collection_class_type_sk
 				  else 0
