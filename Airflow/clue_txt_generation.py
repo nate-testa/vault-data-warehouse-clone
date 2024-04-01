@@ -90,7 +90,7 @@ QRY_CLUE = f"""
     FROM 
         [edw_integration].[claim_clue_property_feed]
     WHERE 
-        create_ts = (SELECT MAX(create_ts) AS create_ts FROM [edw_integration].[claim_clue_property_feed])
+        CAST(create_ts AS DATE) = (SELECT MAX(CAST(create_ts AS DATE)) AS create_ts FROM [edw_integration].[claim_clue_property_feed])
 """
 
 QRY_CLUE_START_END_DATE = """
