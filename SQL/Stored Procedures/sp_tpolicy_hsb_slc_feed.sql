@@ -181,7 +181,7 @@ BEGIN
             LEFT JOIN 
                 (
                     select 
-                        policy_no, effective_dt, transaction_seq_no, home_systems_protection_limit_amt, home_cyber_protection_coverage_in,
+                        policy_no, effective_dt, transaction_seq_no, home_systems_protection_limit_amt, serviceline_protection_in,
                         ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt ORDER BY transaction_seq_no DESC) AS RN
                     from edw_core.thome_additional_coverage
                 ) AS hac
