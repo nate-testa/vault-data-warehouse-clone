@@ -193,7 +193,7 @@ BEGIN
                 AND hac.RN = 1
             LEFT JOIN 
                 edw_core.tsource_system AS ss ON ss.source_system_sk = p.source_system_sk
-            WHERE hac.home_cyber_protection_coverage_in = 'Yes'
+            WHERE hac.home_systems_protection_in = 'Yes'
             ;
 
             -- Delete previous data for the date that we are processing
