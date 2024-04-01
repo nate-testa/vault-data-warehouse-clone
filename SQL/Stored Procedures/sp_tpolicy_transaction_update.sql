@@ -4,6 +4,7 @@
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 -- 03/25/24		Architha Gudimalla				1. Created this procedure 
+-- 03/29/24		Architha Gudimalla				2. Added update for 0 veh_cov_sk
 -- ====================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_transaction_update]
@@ -131,7 +132,37 @@ BEGIN
 					and 	ic.primary_coverage_cd = 'Lux' 
 					and 	ic.internal_coverage_category_nm = 'Premium' --and pol.policy_sk = 111021
 					group by policy_transaction_sk, tr.transaction_seq_no,  internal_coverage_cd,  cc.class_type
-		) b on a.policy_transaction_sk = b.policy_transaction_sk;
+		) b on a.policy_transaction_sk = b.policy_transaction_sk; 
+
+		drop table if exists edw_temp.tpolicy_transaction_update_temp1;
+	
+		select *
+		into edw_temp.tpolicy_transaction_update_temp1
+		from edw_core.tpolicy_transaction
+		where product_sk = 3 and vehicle_coveragE_sk = 0 and tax_fee_surcharge_sk = 0
+		and source_system_sk <> 1 and internal_coverage_sk not in (select internal_coverage_sk from edw_core.tinternal_coverage       
+																	where internal_coverage_cd in ('Automobile Death Indemnity and Disability Income','Auto Death Disability','Emergency Living Expense',
+																	'Equipment Manufacturer Parts Enhancement','Full Glass Coverage Enhancement','Multiple Policy Deductible Enhancement','Stated Value Enhancement'))
+		and item_sk <> 0
+		and source_system_sk = 2;
+
+		update tr
+		set tr.vehicle_coveragE_sk = tmp1.auto_vehicle_coverage_sk
+		from edw_core.tpolicy_transaction tr
+		inner join (	
+					Select distinct --pol.policy_sk, tr.transaction_seq_no, tr.item_sk , tr.internal_coverage_sk, 
+							tr.policy_transaction_sk, 
+							first_value(avc.auto_vehicle_coverage_sk) over (partition by avc.policy_no, pol.effective_dt,avc.auto_vehicle_sk order by avc.transaction_seq_no desc) auto_vehicle_coverage_sk
+						from edw_temp.tpolicy_transaction_update_temp1 tr
+						inner join edw_core.tpolicy pol on pol.policy_sk = tr.policy_sk
+						left join edw_core.tauto_vehicle_coverage avc on pol.policy_no = avc.policy_no and pol.effective_dt = avc.effective_dt and tr.item_sk = avc.auto_vehicle_sk and tr.transaction_seq_no >= avc.transaction_seq_no  
+					) tmp1 on tr.policy_transaction_sk = tmp1.policy_transaction_sk
+		where product_sk = 3 and vehicle_coveragE_sk = 0 and tax_fee_surcharge_sk = 0
+		and item_sk <> 0
+		and source_system_sk = 2 ;
+
+		drop table if exists edw_temp.tpolicy_transaction_update_temp1;
+
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT actual_dt from edw_core.tdate where date_sk = ( select MAX(transaction_dt_sk) FROM edw_core.tpolicy_transaction))
 													,@last_source_extract_ts);
