@@ -234,7 +234,7 @@ BEGIN
             '' AS [filler_reservedforFutureUse4],
             '' AS [clueControlArea],
             '' AS [filler_reservedforFutureUse5],
-            '' AS [recordVersionNumber],
+            '2' AS [recordVersionNumber],
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
