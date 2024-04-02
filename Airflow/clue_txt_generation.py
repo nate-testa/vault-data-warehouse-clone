@@ -236,11 +236,11 @@ class SFTPUploadClueFileOperator(BaseOperator):
 
     def execute(self, context):
         if ENVIRONMENT == 'PRODUCTION':
-            clue_data_present = context['ti'].xcom_pull(task_ids='integration_group.generate_clue_txt_file', key='clue_data_present')
+            clue_data_present = context['ti'].xcom_pull(task_ids='CLUE_files_to_SFTP_group.generate_clue_txt_file', key='clue_data_present')
 
             if clue_data_present == True:
-                local_filepath = context['ti'].xcom_pull(task_ids='integration_group.generate_clue_txt_file', key='file_local_clue_file_name')
-                remote_filepath = context['ti'].xcom_pull(task_ids='integration_group.generate_clue_txt_file', key='file_remote_clue_file_name')
+                local_filepath = context['ti'].xcom_pull(task_ids='CLUE_files_to_SFTP_group.generate_clue_txt_file', key='file_local_clue_file_name')
+                remote_filepath = context['ti'].xcom_pull(task_ids='CLUE_files_to_SFTP_group.generate_clue_txt_file', key='file_remote_clue_file_name')
                 
                 hook = SFTPHook(ftp_conn_id=self.sftp_conn_id)
                 self.log.info(f"**** Starting to transfer {local_filepath} to {remote_filepath}")
