@@ -258,9 +258,6 @@ BEGIN
 
         
         -- Start Insert process
-        TRUNCATE TABLE [edw_integration].[claim_clue_property_feed]
-        ;
-
         INSERT INTO [edw_integration].[claim_clue_property_feed](
             [contribCompany],
             [claimNumber],

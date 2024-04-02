@@ -55,7 +55,7 @@ args = {
 }
 
 with DAG(
-    dag_id='vault_CLUE_Monthly_feed',
+    dag_id='vault_CLUE_daily_feed',
     catchup=False,
     max_active_runs=1,
     default_args=args,

@@ -97,7 +97,8 @@ QRY_CLUE_START_END_DATE = """
     SELECT TOP 1  
         CONVERT(VARCHAR(8), report_start_date, 112) + CONVERT(VARCHAR(8), report_end_date, 112) AS start_end_date
     FROM [edw_integration].[claim_clue_property_feed]
-    WHERE create_ts = (SELECT MAX(create_ts) AS create_ts FROM [edw_integration].[claim_clue_property_feed])
+    WHERE 
+        CAST(create_ts AS DATE) = (SELECT MAX(CAST(create_ts AS DATE)) AS create_ts FROM [edw_integration].[claim_clue_property_feed])
 """
 
 def get_start_end_date():
@@ -163,6 +164,8 @@ def PGP_encrypt_file(file_to_encrypt, recipient_public_key):
 def generate_txt_file_and_encrypt(**kwargs):
 
     print(f"**** Start file generation for CLUE Data")
+    
+    kwargs['ti'].xcom_push(key='clue_data_present', value=True)
 
     FILE_DATE = datetime.now().strftime('%Y%m%d%H%M%S')
     if ENVIRONMENT == 'PRODUCTION':
@@ -171,6 +174,12 @@ def generate_txt_file_and_encrypt(**kwargs):
         TXT_FILE_NAME = f'clup_history_test_vaulthd1_{FILE_DATE}.txt'
 
     df = CONN_STR.get_pandas_df(QRY_CLUE)
+    if df.empty:
+        kwargs['ti'].xcom_push(key='clue_data_present', value=False)
+        print("**** !!!There is no data to send. File generation will not proceed.!!!")
+        return
+
+
     create_directory_if_not_exists(TXT_FOLDER_PATH)
     TXT_FILE_PATH = os.path.join(TXT_FOLDER_PATH, TXT_FILE_NAME)
     # df.to_csv(TXT_FILE_PATH, sep=None, index=False, header=False)
@@ -227,13 +236,18 @@ class SFTPUploadClueFileOperator(BaseOperator):
 
     def execute(self, context):
         if ENVIRONMENT == 'PRODUCTION':
-            local_filepath = context['ti'].xcom_pull(task_ids='integration_group.generate_clue_txt_file', key='file_local_clue_file_name')
-            remote_filepath = context['ti'].xcom_pull(task_ids='integration_group.generate_clue_txt_file', key='file_remote_clue_file_name')
-            
-            hook = SFTPHook(ftp_conn_id=self.sftp_conn_id)
-            self.log.info(f"**** Starting to transfer {local_filepath} to {remote_filepath}")
-            hook.store_file(remote_filepath, local_filepath)
-            self.log.info(f"**** Finished transferring {local_filepath} to {remote_filepath}")
+            clue_data_present = context['ti'].xcom_pull(task_ids='integration_group.generate_clue_txt_file', key='clue_data_present')
+
+            if clue_data_present == True:
+                local_filepath = context['ti'].xcom_pull(task_ids='integration_group.generate_clue_txt_file', key='file_local_clue_file_name')
+                remote_filepath = context['ti'].xcom_pull(task_ids='integration_group.generate_clue_txt_file', key='file_remote_clue_file_name')
+                
+                hook = SFTPHook(ftp_conn_id=self.sftp_conn_id)
+                self.log.info(f"**** Starting to transfer {local_filepath} to {remote_filepath}")
+                hook.store_file(remote_filepath, local_filepath)
+                self.log.info(f"**** Finished transferring {local_filepath} to {remote_filepath}")
+            else:
+                print("**** !!!There is no data to send. no files to transfer into SFTP!!!")
         else:
             print(f"**** Environment: [{ENVIRONMENT}] is not authorized to send Clue files.")
 
