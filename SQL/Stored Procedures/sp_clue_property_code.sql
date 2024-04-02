@@ -202,7 +202,7 @@ BEGIN
             '' AS [policyHolderNameMiddle],
             '' AS [policyHolderNameSuffix],
             '' AS [policyHolderSSN],
-            FORMAT(cu.birth_dt, 'yyyyMMdd') AS [policyHolderDOB],
+            FORMAT(cu.birth_dt, 'MMddyyyy') AS [policyHolderDOB],
             '' AS [policyHolderSex],
             '' AS [filler_reservedforFutureUse2],
             '' AS [policyHolder2NamePrefix],

@@ -207,7 +207,7 @@ def generate_txt_file_and_encrypt(**kwargs):
         f.write(file_new_content)
 
     # vacum to tmp folder
-    delete_old_files(TXT_FOLDER_PATH,2)
+    delete_old_files(TXT_FOLDER_PATH,30)
 
 
     # ******************
