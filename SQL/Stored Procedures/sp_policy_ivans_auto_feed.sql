@@ -213,7 +213,7 @@ BEGIN
 						END as multiCarDiscount,
 						(
 							SELECT 
-								ai.additional_interest_nm as commercialName,
+								COALESCE(ai.additional_interest_nm, ai.loss_payee_nm) as commercialName,
 								ai.address_line_1 as address1,
 								ai.city_nm as city,
 								ai.state_cd as stateProvCd,
