@@ -7,7 +7,8 @@ GO
 -- Author:		Alberto Almario
 -- Create Date: 2023-10-23
 -- Description: This stored procedure insert and update info related to tquote_auto_vehicle.
---11/14/2023  Sandeep Gundreddy  2. Removed effectivedtae from partition by clause
+--11/14/2023     Sandeep Gundreddy               2. Removed effectivedtae from partition by clause
+--03/04/2024     Alberto Almario                 3. add 5 new columns
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle]
 AS
@@ -39,6 +40,7 @@ BEGIN
                 ROW_NUMBER() OVER (PARTITION BY PolicyNumber, [Index] ORDER BY policychangenumber DESC) AS RN, 
                 PolicyNumber, EffectiveDate, [Index] as vehicle_no, CreatedDate,
                 [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],
+                [VINChangeIndicator],[EngineCylinders],[Height],[Length],[Width],
                 source_system_sk
             
             FROM
@@ -71,7 +73,8 @@ BEGIN
                 (
                     MAX([Value]) FOR [Field] IN 
                     (
-                        [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate]
+                        [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],
+                        [VINChangeIndicator],[EngineCylinders],[Height],[Length],[Width]
                     )
                 ) pivottable
 
@@ -103,6 +106,11 @@ BEGIN
                 t1.HighPerformanceVehicle as high_performance_vehicle_in,
                 t1.PurchaseDate as purchase_dt,
                 t1.source_system_sk
+                ,t1.VINChangeIndicator as vehicle_vin_change_in
+                ,t1.EngineCylinders as vehicle_engine_cylinders
+                ,t1.Height as vehicle_height
+                ,t1.Length as vehicle_length
+                ,t1.Width as vehicle_width
 			FROM 
 				[edw_temp].[tquote_auto_vehicle_temp1] AS t1
 		) AS src
@@ -131,6 +139,11 @@ BEGIN
             create_ts,
             update_ts,
             etl_audit_sk
+            ,vehicle_vin_change_in
+            ,vehicle_engine_cylinders
+            ,vehicle_height
+            ,vehicle_length
+            ,vehicle_width
 			)
 		VALUES (
             src.quote_no,
@@ -153,6 +166,11 @@ BEGIN
             getdate(), 
             getdate(), 
             @etl_audit_sk
+            ,src.vehicle_vin_change_in
+            ,src.vehicle_engine_cylinders
+            ,src.vehicle_height
+            ,src.vehicle_length
+            ,src.vehicle_width
             )
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -171,6 +189,11 @@ BEGIN
             trg.high_performance_vehicle_in = src.high_performance_vehicle_in,
             trg.purchase_dt = src.purchase_dt,
             trg.update_ts = getdate()
+            ,trg.vehicle_vin_change_in = src.vehicle_vin_change_in
+            ,trg.vehicle_engine_cylinders = src.vehicle_engine_cylinders
+            ,trg.vehicle_height = src.vehicle_height
+            ,trg.vehicle_length = src.vehicle_length
+            ,trg.vehicle_width = src.vehicle_width
         ;
 
         --************End************

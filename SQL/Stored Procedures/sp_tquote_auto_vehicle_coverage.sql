@@ -15,6 +15,7 @@ GO
 -- 02/22/24     Hernando Gonzalez               5. Added new fields carfax_wholesale_value_amt
 -- 02/23/24     Architha Gudimalla              6. Added Security and Safety Features in the acctvof group
 -- 02/27/24     Architha Gudimalla              7. Added case for antitheft
+-- 02/04/24     Alberto Almario                 7. add 62 new columns
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
@@ -26,7 +27,7 @@ BEGIN
 
 	BEGIN TRY
 		DECLARE @last_source_extract_ts DATETIME2(7)
-		DECLARE @etl_audit_sk INT
+		DECLARE @etl_audit_sk INT = NULL
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
 		DECLARE @rows_affected INT
 		DECLARE @process_nm VARCHAR(255)=OBJECT_NAME(@@PROCID)
@@ -42,76 +43,233 @@ BEGIN
         -- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tquote_auto_vehicle_coverage_temp1];
 
-		SELECT 
-			CreatedDate, quote_no, effective_dt, vehicle_no, expiration_dt, transaction_seq_no, quote_history_sk, quote_auto_vehicle_sk, 
-            --quote_auto_garage_location_sk,
-            [GaragingLocationId], [PrimaryParkingLocation], [DrivewaySecurity], [VehicleUsage], [DistanceToWork], [AnnualMiles], [LPMPFilingDate], [Ownership], [RegistrationStatus], [RegistrationDate], 
-            [ExpirationDate], [RegisteredOwner], [RegisteredOwnerName], [ListedDriverName], [NonDriverName], [CompanyOtherEntityName], [RegistrationState], [RegistrationAddressLine1], 
-            [RegistrationAddressLine2], /*[*pending*-registration_address_unit_no],*/ [RegistrationAddressCity], [RegistrationAddressZipCode], [RegistrationAddressState], [SymbolBIPD], [SymbolPIPMED], 
-            [SymbolOTC], [SymbolColl], [SymbolCostNewValue], [CostNew], [SymbolCostNew_ISO], [SymbolColl_ISO], [SymbolOTC_ISO], [SymbolBIPD_ISO], [SymbolPIPMED_ISO], 
-            [OTCDeductible], [COLLDeductible], [FullGlass], [COLLType], [FireCoverage], [TheftCoverage], [UMPDCov], [UMPDLimit], [UMPDDeductible], [AgreedValue], [MarketValue], 
-            [CustomizedEquipment], [ExtendedTowingAndLabor], [MotorcycleMEDLimits], [RatingTerritory], [OwnedVehicleDiscount], [HighPerformanceVehicleRating], [ExpenseLoadBI], [ExpenseLoadPD], 
-            [ExpenseLoadPIP], [ExpenseLoadMED], [ExpenseLoadOTC], [ExpenseLoadCOLL], [ExpenseLoadUM], [BodilyInjuryNCRBPremium], [PropertyDamageNCRBPremium], [MedicalPaymentsNCRBPremium], 
-            [UninsuredMotoristsBodilyInjuryNCRBPremium], [UninsuredMotoristsPropertyDamageNCRBPremium], [SendVehicleToLiabilityReporting], [AntiTheftDevice], [AntiLockBrakes], [PassiveRestraint], 
-            [SeasonalUse], [DirectRepair], [CarStorageFacility], [VINEtching], [LossProtectionDiscount], [SeasonalUsePart2], [MarketAppreciationandDiminutionofValue]
-			,source_system_sk, vehicle_deleted_in, [VendorReportedWholesaleAmount]
-		
-        INTO [edw_temp].[tquote_auto_vehicle_coverage_temp1]
-		
-        FROM
-			(
-                SELECT
-                    acct.CreatedDate, acct.PolicyNumber as quote_no, acct.EffectiveDate as effective_dt, qav.[vehicle_no] as vehicle_no, 
-                    acct.ExpirationDate as expiration_dt, acct.Number as transaction_seq_no,
-                    qh.quote_history_sk, qav.quote_auto_vehicle_sk, --qagl.quote_auto_garage_location_sk, 
-                    acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
-                    acctvof.[Field], acctvof.[Value],
+        WITH 
+        acct AS (
+            SELECT
+                *
+            FROM [edw_stage].[AccountTransaction]
+            WHERE Stage in ('QUOTE','POLICY')
+            AND IssuedDate > @last_source_extract_ts
+        )
+        ,acctvpf AS (
+            SELECT  
+                acct.PolicyNumber, acct.EffectiveDate, acct.IssuedDate, acct.Number,
+                acctvpf.AccountTransactionVersionPremiumId,
+                acctvpf.ObjectUniqueId,
+                acctvpf.Coverage,
+                CONCAT(
                     CASE 
-                        WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
-                        ELSE 4 --(Metal)
-                    END as [source_system_sk]
-                FROM
-                    (SELECT
-                        *
-                    FROM [edw_stage].[AccountTransaction]
-                    WHERE Stage in ('QUOTE','POLICY')
-                        AND CreatedDate > @last_source_extract_ts
-                    ) acct
-                INNER JOIN [edw_stage].[Product] AS p on p.Id = acct.ProductId
-                INNER JOIN [edw_stage].[AccountTransactionVersion] AS acctv ON acctv.AccountTransactionId = acct.Id
-                INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
-                INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] AS acctvof ON acctvof.VersionObjectId = acctvo.id
-                LEFT JOIN [edw_core].[tquote_history] AS qh 
-                    ON qh.quote_no = acct.PolicyNumber
-                    AND qh.effective_dt = acct.EffectiveDate
-                    AND qh.transaction_seq_no = acct.number
-                LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
-                    ON qav.quote_no = acct.PolicyNumber
-                    AND qav.vehicle_no = acctvo.[Index]/*
-                LEFT JOIN [edw_core].[tquote_auto_garage_location] AS qagl
-                    ON qagl.quote_no = acct.PolicyNumber
-                    AND qagl.effective_dt = acct.EffectiveDate
-                    AND qagl.transaction_seq_no = acct.number*/
-                WHERE
-                    p.[Name] = 'Automobile'
-                    AND p.ProductLine = 'PersonalLines'
-                    AND acctvof.[Group] in ('Vehicle','Registration','Symbols','Symbols - ISO','Vehicle Coverages','AntiTheftDevice','Discounts','Surcharge','Security and Safety Features')
-			) t
-		PIVOT 
-			(
-				MAX([Value]) FOR [Field] IN 
-                (
-                    [GaragingLocationId], [PrimaryParkingLocation], [DrivewaySecurity], [VehicleUsage], [DistanceToWork], [AnnualMiles], [LPMPFilingDate], [Ownership], [RegistrationStatus], [RegistrationDate], 
-                    [ExpirationDate], [RegisteredOwner], [RegisteredOwnerName], [ListedDriverName], [NonDriverName], [CompanyOtherEntityName], [RegistrationState], [RegistrationAddressLine1], 
-                    [RegistrationAddressLine2], /*[*pending*-registration_address_unit_no],*/ [RegistrationAddressCity], [RegistrationAddressZipCode], [RegistrationAddressState], [SymbolBIPD], [SymbolPIPMED], 
-                    [SymbolOTC], [SymbolColl], [SymbolCostNewValue], [CostNew], [SymbolCostNew_ISO], [SymbolColl_ISO], [SymbolOTC_ISO], [SymbolBIPD_ISO], [SymbolPIPMED_ISO], 
-                    [OTCDeductible], [COLLDeductible], [FullGlass], [COLLType], [FireCoverage], [TheftCoverage], [UMPDCov], [UMPDLimit], [UMPDDeductible], [AgreedValue], [MarketValue], 
-                    [CustomizedEquipment], [ExtendedTowingAndLabor], [MotorcycleMEDLimits], [RatingTerritory], [OwnedVehicleDiscount], [HighPerformanceVehicleRating], [ExpenseLoadBI], [ExpenseLoadPD], 
-                    [ExpenseLoadPIP], [ExpenseLoadMED], [ExpenseLoadOTC], [ExpenseLoadCOLL], [ExpenseLoadUM], [BodilyInjuryNCRBPremium], [PropertyDamageNCRBPremium], [MedicalPaymentsNCRBPremium], 
-                    [UninsuredMotoristsBodilyInjuryNCRBPremium], [UninsuredMotoristsPropertyDamageNCRBPremium], [SendVehicleToLiabilityReporting], [AntiTheftDevice], [AntiLockBrakes], [PassiveRestraint], 
-                    [SeasonalUse], [DirectRepair], [CarStorageFacility], [VINEtching], [LossProtectionDiscount], [SeasonalUsePart2], [MarketAppreciationandDiminutionofValue], [VendorReportedWholesaleAmount]
+                        WHEN Coverage = 'Extended Towing and Labor' THEN 'extended_towing_labor'
+                        ELSE LOWER(REPLACE(Coverage,' ','_'))
+                    END
+                    ,'_premium_adjustment'
+                ) AS FinalColumnName,
+                acctvpf.FactorMethod AS method,
+                CONVERT(nvarchar(3000), acctvpf.Factor) AS amount,
+                acctvpf.Retention AS [retention],
+                acctvpf.Reason AS reason
+            FROM acct
+            INNER JOIN [edw_stage].[Product] p ON p.Id = acct.ProductId
+            INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
+            INNER JOIN [edw_stage].[AccountTransactionVersionPremiumFactor] acctvpf ON acctvpf.AccountTransactionVersionPremiumId = acctv.Id
+            WHERE acctvpf.Coverage IN ('Bodily Injury', 'Property Damage', 'Medical Payments', 'Underinsured Motorist', 'Other Than Collision', 'Collision', 'Personal Injury Protection', 'Extended Towing and Labor')
+            AND p.[Name] = 'Automobile'
+            AND p.ProductLine = 'PersonalLines'
+        )
+        ,acctvpf_unpivot AS (
+            SELECT PolicyNumber, EffectiveDate, IssuedDate, Number, ObjectUniqueId, CONCAT(FinalColumnName, '_method') AS FinalColumnName, method           as FinalValue FROM acctvpf WHERE method IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, IssuedDate, Number, ObjectUniqueId, CONCAT(FinalColumnName, '_amount') AS FinalColumnName, amount           as FinalValue FROM acctvpf WHERE amount IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, IssuedDate, Number, ObjectUniqueId, CONCAT(FinalColumnName, '_retention') AS FinalColumnName, [retention]   as FinalValue FROM acctvpf WHERE [retention] IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, IssuedDate, Number, ObjectUniqueId, CONCAT(FinalColumnName, '_reason') AS FinalColumnName, reason           as FinalValue FROM acctvpf WHERE reason IS NOT NULL
+        )
+        ,FinalTablePremAdj AS (
+            SELECT
+                PolicyNumber, EffectiveDate, IssuedDate, Number
+                ,ObjectUniqueId
+                ,bodily_injury_premium_adjustment_method
+                ,bodily_injury_premium_adjustment_amount
+                ,bodily_injury_premium_adjustment_retention
+                ,bodily_injury_premium_adjustment_reason
+                ,property_damage_premium_adjustment_method
+                ,property_damage_premium_adjustment_amount
+                ,property_damage_premium_adjustment_retention
+                ,property_damage_premium_adjustment_reason
+                ,medical_payments_premium_adjustment_method
+                ,medical_payments_premium_adjustment_amount
+                ,medical_payments_premium_adjustment_retention
+                ,medical_payments_premium_adjustment_reason
+                ,uninsured_motorist_premium_adjustment_method
+                ,uninsured_motorist_premium_adjustment_amount
+                ,uninsured_motorist_premium_adjustment_retention
+                ,uninsured_motorist_premium_adjustment_reason
+                ,other_than_collision_premium_adjustment_method
+                ,other_than_collision_premium_adjustment_amount
+                ,other_than_collision_premium_adjustment_retention
+                ,other_than_collision_premium_adjustment_reason
+                ,collision_premium_adjustment_method
+                ,collision_premium_adjustment_amount
+                ,collision_premium_adjustment_retention
+                ,collision_premium_adjustment_reason
+                ,personal_injury_protection_premium_adjustment_method
+                ,personal_injury_protection_premium_adjustment_amount
+                ,personal_injury_protection_premium_adjustment_retention
+                ,personal_injury_protection_premium_adjustment_reason
+                ,extended_towing_labor_premium_adjustment_method
+                ,extended_towing_labor_premium_adjustment_amount
+                ,extended_towing_labor_premium_adjustment_retention
+                ,extended_towing_labor_premium_adjustment_reason
+            FROM acctvpf_unpivot
+            PIVOT 
+            (
+                MAX(FinalValue) FOR FinalColumnName IN (
+                    bodily_injury_premium_adjustment_method
+                    ,bodily_injury_premium_adjustment_amount
+                    ,bodily_injury_premium_adjustment_retention
+                    ,bodily_injury_premium_adjustment_reason
+                    ,property_damage_premium_adjustment_method
+                    ,property_damage_premium_adjustment_amount
+                    ,property_damage_premium_adjustment_retention
+                    ,property_damage_premium_adjustment_reason
+                    ,medical_payments_premium_adjustment_method
+                    ,medical_payments_premium_adjustment_amount
+                    ,medical_payments_premium_adjustment_retention
+                    ,medical_payments_premium_adjustment_reason
+                    ,uninsured_motorist_premium_adjustment_method
+                    ,uninsured_motorist_premium_adjustment_amount
+                    ,uninsured_motorist_premium_adjustment_retention
+                    ,uninsured_motorist_premium_adjustment_reason
+                    ,other_than_collision_premium_adjustment_method
+                    ,other_than_collision_premium_adjustment_amount
+                    ,other_than_collision_premium_adjustment_retention
+                    ,other_than_collision_premium_adjustment_reason
+                    ,collision_premium_adjustment_method
+                    ,collision_premium_adjustment_amount
+                    ,collision_premium_adjustment_retention
+                    ,collision_premium_adjustment_reason
+                    ,personal_injury_protection_premium_adjustment_method
+                    ,personal_injury_protection_premium_adjustment_amount
+                    ,personal_injury_protection_premium_adjustment_retention
+                    ,personal_injury_protection_premium_adjustment_reason
+                    ,extended_towing_labor_premium_adjustment_method
+                    ,extended_towing_labor_premium_adjustment_amount
+                    ,extended_towing_labor_premium_adjustment_retention
+                    ,extended_towing_labor_premium_adjustment_reason
                 )
-			) pivottable
+            ) AS pvt
+        )
+        ,FinalTable AS (
+            SELECT 
+                CreatedDate, quote_no, effective_dt, vehicle_no, expiration_dt, transaction_seq_no, quote_history_sk, quote_auto_vehicle_sk, 
+                [GaragingLocationId], [PrimaryParkingLocation], [DrivewaySecurity], [VehicleUsage], [DistanceToWork], [AnnualMiles], [LPMPFilingDate], [Ownership], [RegistrationStatus], [RegistrationDate], 
+                [ExpirationDate], [RegisteredOwner], [RegisteredOwnerName], [ListedDriverName], [NonDriverName], [CompanyOtherEntityName], [RegistrationState], [RegistrationAddressLine1], 
+                [RegistrationAddressLine2], [RegistrationAddressCity], [RegistrationAddressZipCode], [RegistrationAddressState], [SymbolBIPD], [SymbolPIPMED], 
+                [SymbolOTC], [SymbolColl], [SymbolCostNewValue], [CostNew], [SymbolCostNew_ISO], [SymbolColl_ISO], [SymbolOTC_ISO], [SymbolBIPD_ISO], [SymbolPIPMED_ISO], 
+                [OTCDeductible], [COLLDeductible], [FullGlass], [COLLType], [FireCoverage], [TheftCoverage], [UMPDCov], [UMPDLimit], [UMPDDeductible], [AgreedValue], [MarketValue], 
+                [CustomizedEquipment], [ExtendedTowingAndLabor], [MotorcycleMEDLimits], [RatingTerritory], [OwnedVehicleDiscount], [HighPerformanceVehicleRating], [ExpenseLoadBI], [ExpenseLoadPD], 
+                [ExpenseLoadPIP], [ExpenseLoadMED], [ExpenseLoadOTC], [ExpenseLoadCOLL], [ExpenseLoadUM], [BodilyInjuryNCRBPremium], [PropertyDamageNCRBPremium], [MedicalPaymentsNCRBPremium], 
+                [UninsuredMotoristsBodilyInjuryNCRBPremium], [UninsuredMotoristsPropertyDamageNCRBPremium], [SendVehicleToLiabilityReporting], [AntiTheftDevice], [AntiLockBrakes], [PassiveRestraint], 
+                [SeasonalUse], [DirectRepair], [CarStorageFacility], [VINEtching], [LossProtectionDiscount], [SeasonalUsePart2], [MarketAppreciationandDiminutionofValue], [VendorReportedWholesaleAmount],
+                [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
+                [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
+                [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
+                [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, vehicle_unique_id
+            
+            FROM
+                (
+                    SELECT
+                        acct.CreatedDate, acct.PolicyNumber as quote_no, acct.EffectiveDate as effective_dt, qav.[vehicle_no] as vehicle_no, acctvo.[UniqueId] as vehicle_unique_id,
+                        acct.ExpirationDate as expiration_dt, acct.Number as transaction_seq_no,
+                        qh.quote_history_sk, qav.quote_auto_vehicle_sk, 
+                        acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
+                        acctvof.[Field], acctvof.[Value],
+                        CASE 
+                            WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
+                            ELSE 4 --(Metal)
+                        END as [source_system_sk]
+                    FROM acct
+                    INNER JOIN [edw_stage].[Product] AS p on p.Id = acct.ProductId
+                    INNER JOIN [edw_stage].[AccountTransactionVersion] AS acctv ON acctv.AccountTransactionId = acct.Id
+                    INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
+                    INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] AS acctvof ON acctvof.VersionObjectId = acctvo.id
+                    LEFT JOIN [edw_core].[tquote_history] AS qh 
+                        ON qh.quote_no = acct.PolicyNumber
+                        AND qh.effective_dt = acct.EffectiveDate
+                        AND qh.transaction_seq_no = acct.number
+                    LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
+                        ON qav.quote_no = acct.PolicyNumber
+                        AND qav.vehicle_no = acctvo.[Index]
+                    WHERE
+                        p.[Name] = 'Automobile'
+                        AND p.ProductLine = 'PersonalLines'
+                        AND acctvof.[Group] in ('Vehicle','Registration','Symbols','Symbols - ISO','Vehicle Coverages','AntiTheftDevice','Discounts','Surcharge','Security and Safety Features')
+                ) t
+            PIVOT 
+                (
+                    MAX([Value]) FOR [Field] IN 
+                    (
+                        [GaragingLocationId], [PrimaryParkingLocation], [DrivewaySecurity], [VehicleUsage], [DistanceToWork], [AnnualMiles], [LPMPFilingDate], [Ownership], [RegistrationStatus], [RegistrationDate], 
+                        [ExpirationDate], [RegisteredOwner], [RegisteredOwnerName], [ListedDriverName], [NonDriverName], [CompanyOtherEntityName], [RegistrationState], [RegistrationAddressLine1], 
+                        [RegistrationAddressLine2], [RegistrationAddressCity], [RegistrationAddressZipCode], [RegistrationAddressState], [SymbolBIPD], [SymbolPIPMED], 
+                        [SymbolOTC], [SymbolColl], [SymbolCostNewValue], [CostNew], [SymbolCostNew_ISO], [SymbolColl_ISO], [SymbolOTC_ISO], [SymbolBIPD_ISO], [SymbolPIPMED_ISO], 
+                        [OTCDeductible], [COLLDeductible], [FullGlass], [COLLType], [FireCoverage], [TheftCoverage], [UMPDCov], [UMPDLimit], [UMPDDeductible], [AgreedValue], [MarketValue], 
+                        [CustomizedEquipment], [ExtendedTowingAndLabor], [MotorcycleMEDLimits], [RatingTerritory], [OwnedVehicleDiscount], [HighPerformanceVehicleRating], [ExpenseLoadBI], [ExpenseLoadPD], 
+                        [ExpenseLoadPIP], [ExpenseLoadMED], [ExpenseLoadOTC], [ExpenseLoadCOLL], [ExpenseLoadUM], [BodilyInjuryNCRBPremium], [PropertyDamageNCRBPremium], [MedicalPaymentsNCRBPremium], 
+                        [UninsuredMotoristsBodilyInjuryNCRBPremium], [UninsuredMotoristsPropertyDamageNCRBPremium], [SendVehicleToLiabilityReporting], [AntiTheftDevice], [AntiLockBrakes], [PassiveRestraint], 
+                        [SeasonalUse], [DirectRepair], [CarStorageFacility], [VINEtching], [LossProtectionDiscount], [SeasonalUsePart2], [MarketAppreciationandDiminutionofValue], [VendorReportedWholesaleAmount],
+                        [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
+                        [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
+                        [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
+                        [MotorHomeClass],[PassengerHazardExclusion]
+                    )
+                ) pivottable
+        )
+
+        SELECT 
+            a.*
+            ,b.bodily_injury_premium_adjustment_method
+            ,b.bodily_injury_premium_adjustment_amount
+            ,b.bodily_injury_premium_adjustment_retention
+            ,b.bodily_injury_premium_adjustment_reason
+            ,b.property_damage_premium_adjustment_method
+            ,b.property_damage_premium_adjustment_amount
+            ,b.property_damage_premium_adjustment_retention
+            ,b.property_damage_premium_adjustment_reason
+            ,b.medical_payments_premium_adjustment_method
+            ,b.medical_payments_premium_adjustment_amount
+            ,b.medical_payments_premium_adjustment_retention
+            ,b.medical_payments_premium_adjustment_reason
+            ,b.uninsured_motorist_premium_adjustment_method
+            ,b.uninsured_motorist_premium_adjustment_amount
+            ,b.uninsured_motorist_premium_adjustment_retention
+            ,b.uninsured_motorist_premium_adjustment_reason
+            ,b.other_than_collision_premium_adjustment_method
+            ,b.other_than_collision_premium_adjustment_amount
+            ,b.other_than_collision_premium_adjustment_retention
+            ,b.other_than_collision_premium_adjustment_reason
+            ,b.collision_premium_adjustment_method
+            ,b.collision_premium_adjustment_amount
+            ,b.collision_premium_adjustment_retention
+            ,b.collision_premium_adjustment_reason
+            ,b.personal_injury_protection_premium_adjustment_method
+            ,b.personal_injury_protection_premium_adjustment_amount
+            ,b.personal_injury_protection_premium_adjustment_retention
+            ,b.personal_injury_protection_premium_adjustment_reason
+            ,b.extended_towing_labor_premium_adjustment_method
+            ,b.extended_towing_labor_premium_adjustment_amount
+            ,b.extended_towing_labor_premium_adjustment_retention
+            ,b.extended_towing_labor_premium_adjustment_reason
+        INTO [edw_temp].[tquote_auto_vehicle_coverage_temp1]
+        FROM FinalTable AS a 
+        INNER JOIN FinalTablePremAdj AS b
+        ON a.quote_no = b.PolicyNumber
+        AND a.effective_dt = b.EffectiveDate
+        AND a.transaction_seq_no = b.Number
+        AND a.vehicle_unique_id = b.ObjectUniqueId
+
+
 
 		-- Start Insert process
 		INSERT INTO [edw_core].[tquote_auto_vehicle_coverage]
@@ -203,6 +361,68 @@ BEGIN
             etl_audit_sk,
             vehicle_deleted_in,
             carfax_wholesale_value_amt
+            ,basic_model_nm
+            ,vehicle_distribution_dt
+            ,vehicle_restraint
+            ,field_change_in
+            ,four_wheel_drive_in
+            ,electronic_stability_control
+            ,tonnage_in
+            ,payload_capacity
+            ,daytime_running_light_in
+            ,wheel_base
+            ,class_cd
+            ,antitheft_in
+            ,vehicle_gross_weight
+            ,state_exception
+            ,vm_performance_in
+            ,ncic_cd
+            ,vehicle_chassis
+            ,base_msrp
+            ,special_handling_in
+            ,rapa_interim_in
+            ,special_info_selector
+            ,model_series_info
+            ,vehicle_body_info
+            ,vehicle_engine_info
+            ,restraint_info
+            ,transmission_info
+            ,other_info
+            ,vehicle_release_dt
+            ,motor_home_class
+            ,passenger_hazard_exclusion_in
+            ,bodily_injury_premium_adjustment_method
+            ,bodily_injury_premium_adjustment_amount
+            ,bodily_injury_premium_adjustment_retention
+            ,bodily_injury_premium_adjustment_reason
+            ,property_damage_premium_adjustment_method
+            ,property_damage_premium_adjustment_amount
+            ,property_damage_premium_adjustment_retention
+            ,property_damage_premium_adjustment_reason
+            ,medical_payments_premium_adjustment_method
+            ,medical_payments_premium_adjustment_amount
+            ,medical_payments_premium_adjustment_retention
+            ,medical_payments_premium_adjustment_reason
+            ,uninsured_motorist_premium_adjustment_method
+            ,uninsured_motorist_premium_adjustment_amount
+            ,uninsured_motorist_premium_adjustment_retention
+            ,uninsured_motorist_premium_adjustment_reason
+            ,other_than_collision_premium_adjustment_method
+            ,other_than_collision_premium_adjustment_amount
+            ,other_than_collision_premium_adjustment_retention
+            ,other_than_collision_premium_adjustment_reason
+            ,collision_premium_adjustment_method
+            ,collision_premium_adjustment_amount
+            ,collision_premium_adjustment_retention
+            ,collision_premium_adjustment_reason
+            ,personal_injury_protection_premium_adjustment_method
+            ,personal_injury_protection_premium_adjustment_amount
+            ,personal_injury_protection_premium_adjustment_retention
+            ,personal_injury_protection_premium_adjustment_reason
+            ,extended_towing_labor_premium_adjustment_method
+            ,extended_towing_labor_premium_adjustment_amount
+            ,extended_towing_labor_premium_adjustment_retention
+            ,extended_towing_labor_premium_adjustment_reason
 		)
         SELECT 
             t1.quote_no,
@@ -212,7 +432,7 @@ BEGIN
             t1.transaction_seq_no,
             t1.quote_history_sk,
             t1.quote_auto_vehicle_sk,
-            coalesce(gar.quote_auto_garage_location_sk,gar1.quote_auto_garage_location_sk),
+            coalesce(gar.quote_auto_garage_location_sk,gar1.quote_auto_garage_location_sk) as quote_auto_garage_location_sk,
             t1.[PrimaryParkingLocation] as primary_parking_location,
             t1.[DrivewaySecurity] as driveway_security,
             t1.[VehicleUsage] as vehicle_usage,
@@ -302,6 +522,68 @@ BEGIN
             @etl_audit_sk AS etl_audit_sk,
             CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in,
             t1.[VendorReportedWholesaleAmount] as carfax_wholesale_value_amt
+            ,t1.[BasicModelName] as basic_model_nm
+            ,t1.[DistributionDate] as vehicle_distribution_dt
+            ,t1.[Restraint] as vehicle_restraint
+            ,t1.[FieldChangeIndicator] as field_change_in
+            ,t1.[FourWheelDriveIndicator] as four_wheel_drive_in
+            ,t1.[ElectronicStabilityControl] as electronic_stability_control
+            ,t1.[TonnageIndicator] as tonnage_in
+            ,t1.[PayloadCapacity] as payload_capacity
+            ,t1.[DaytimeRunningLightIndicator] as daytime_running_light_in
+            ,t1.[Wheelbase] as wheel_base
+            ,t1.[ClassCode] as class_cd
+            ,t1.[AntiTheftIndicator] as antitheft_in
+            ,t1.[GrossVehicleWeight] as vehicle_gross_weight
+            ,t1.[StateException] as state_exception
+            ,t1.[VMPerformanceIndicator] as vm_performance_in
+            ,t1.[NCICCode] as ncic_cd
+            ,t1.[Chassis] as vehicle_chassis
+            ,t1.[BaseMSRP] as base_msrp
+            ,t1.[SpecialHandlingIndicator] as special_handling_in
+            ,t1.[RAPAInterimIndicator] as rapa_interim_in
+            ,t1.[SpecialInfoSelector] as special_info_selector
+            ,t1.[ModelSeriesInfo] as model_series_info
+            ,t1.[BodyInfo] as vehicle_body_info
+            ,t1.[EngineInfo] as vehicle_engine_info
+            ,t1.[RestraintInfo] as restraint_info
+            ,t1.[TransmissionInfo] as transmission_info
+            ,t1.[OtherInfo] as other_info
+            ,t1.[ReleaseDate] as vehicle_release_dt
+            ,t1.[MotorHomeClass] as motor_home_class
+            ,t1.[PassengerHazardExclusion] as passenger_hazard_exclusion_in
+            ,t1.bodily_injury_premium_adjustment_method
+            ,t1.bodily_injury_premium_adjustment_amount
+            ,t1.bodily_injury_premium_adjustment_retention
+            ,t1.bodily_injury_premium_adjustment_reason
+            ,t1.property_damage_premium_adjustment_method
+            ,t1.property_damage_premium_adjustment_amount
+            ,t1.property_damage_premium_adjustment_retention
+            ,t1.property_damage_premium_adjustment_reason
+            ,t1.medical_payments_premium_adjustment_method
+            ,t1.medical_payments_premium_adjustment_amount
+            ,t1.medical_payments_premium_adjustment_retention
+            ,t1.medical_payments_premium_adjustment_reason
+            ,t1.uninsured_motorist_premium_adjustment_method
+            ,t1.uninsured_motorist_premium_adjustment_amount
+            ,t1.uninsured_motorist_premium_adjustment_retention
+            ,t1.uninsured_motorist_premium_adjustment_reason
+            ,t1.other_than_collision_premium_adjustment_method
+            ,t1.other_than_collision_premium_adjustment_amount
+            ,t1.other_than_collision_premium_adjustment_retention
+            ,t1.other_than_collision_premium_adjustment_reason
+            ,t1.collision_premium_adjustment_method
+            ,t1.collision_premium_adjustment_amount
+            ,t1.collision_premium_adjustment_retention
+            ,t1.collision_premium_adjustment_reason
+            ,t1.personal_injury_protection_premium_adjustment_method
+            ,t1.personal_injury_protection_premium_adjustment_amount
+            ,t1.personal_injury_protection_premium_adjustment_retention
+            ,t1.personal_injury_protection_premium_adjustment_reason
+            ,t1.extended_towing_labor_premium_adjustment_method
+            ,t1.extended_towing_labor_premium_adjustment_amount
+            ,t1.extended_towing_labor_premium_adjustment_retention
+            ,t1.extended_towing_labor_premium_adjustment_reason
         FROM 
             [edw_temp].[tquote_auto_vehicle_coverage_temp1] AS t1
         left join [edw_stage].[AccountTransactionVersionObject] AS atvo ON atvo.id = t1.GaragingLocationId
