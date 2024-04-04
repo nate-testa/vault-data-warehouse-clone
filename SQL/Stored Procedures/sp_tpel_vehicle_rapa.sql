@@ -109,6 +109,8 @@ BEGIN
 		FROM
 			edw_temp.tpel_vehicle_rapa_temp1
 			where RAPASymbolBI is not null
+			and RAPASymbolPD is not null
+			and RAPASymbolNF is not null
 
 		SET @rows_affected=@@ROWCOUNT;
 
