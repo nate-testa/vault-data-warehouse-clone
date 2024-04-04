@@ -264,7 +264,7 @@ BEGIN
             ,b.extended_towing_labor_premium_adjustment_reason
         INTO [edw_temp].[tquote_auto_vehicle_coverage_temp1]
         FROM FinalTable AS a 
-        INNER JOIN FinalTablePremAdj AS b
+        LEFT JOIN FinalTablePremAdj AS b
         ON a.quote_no = b.PolicyNumber
         AND a.effective_dt = b.EffectiveDate
         AND a.transaction_seq_no = b.Number
