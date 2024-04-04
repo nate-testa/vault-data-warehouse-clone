@@ -27,7 +27,7 @@ BEGIN
 
 	BEGIN TRY
 		DECLARE @last_source_extract_ts DATETIME2(7)
-		DECLARE @etl_audit_sk INT = NULL
+		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
 		DECLARE @rows_affected INT
 		DECLARE @process_nm VARCHAR(255)=OBJECT_NAME(@@PROCID)
@@ -71,7 +71,8 @@ BEGIN
             FROM acct
             INNER JOIN [edw_stage].[Product] p ON p.Id = acct.ProductId
             INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
-            INNER JOIN [edw_stage].[AccountTransactionVersionPremiumFactor] acctvpf ON acctvpf.AccountTransactionVersionPremiumId = acctv.Id
+            INNER JOIN [edw_stage].[AccountTransactionVersionPremium] AS acctvp ON acctv.id = acctvp.AccountTransactionVersionId
+            INNER JOIN [edw_stage].[AccountTransactionVersionPremiumFactor] AS acctvpf ON acctvp.id = acctvpf.AccountTransactionVersionPremiumId
             WHERE acctvpf.Coverage IN ('Bodily Injury', 'Property Damage', 'Medical Payments', 'Underinsured Motorist', 'Other Than Collision', 'Collision', 'Personal Injury Protection', 'Extended Towing and Labor')
             AND p.[Name] = 'Automobile'
             AND p.ProductLine = 'PersonalLines'
