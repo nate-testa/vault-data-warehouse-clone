@@ -8,6 +8,10 @@ GO
 -- Author:		Mohammed Yunus
 -- Description: This procedures insert broker vault team data 
 ---------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 04/03/23		Rushin Shah					1. Updated joins to fetch data from  CompanyTeamBrokerage and CompanyTeamMember (instead of decommissioned table BrokerageCompanyTeamMember)
+-- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker_vault_team]
 
 AS
@@ -35,20 +39,23 @@ BEGIN
 
 		SELECT
 			tbrk.broker_id,tbrk.broker_sk,tpr.product_nm AS product_nm,
-			brkctm.[State] AS state_cd,brkctm.ProgramType AS program_type,
-			brkctm.TeamMemberType AS team_member_type,u.name as team_member_nm,
-			brkctm.CreatedDate,brkctm.UpdatedDate
+			ctm.[State] AS state_cd,
+            ctm.ProgramType AS program_type,
+			ctm.TeamMemberType AS team_member_type,
+            u.name as team_member_nm,
+			ctm.CreatedDate,ctm.UpdatedDate
 			,tpr.product_sk
 		INTO edw_temp.tbroker_vault_team_temp
 		FROM
 			edw_stage.Brokerage as brk
 			inner join edw_core.tbroker tbrk on CAST(brk.ProducerId AS VARCHAR(255)) = tbrk.broker_id
-			inner join edw_stage.BrokerageCompanyTeamMember brkctm on brk.Id=brkctm.BrokerageId
-			left join edw_stage.Product prd on brkctm.ProductId=prd.Id
+			inner join edw_stage.CompanyTeamBrokerage ctb on ctb.BrokerageId = brk.Id
+            inner join edw_stage.CompanyTeamMember as ctm on ctm.CompanyTeamId = ctb.CompanyTeamId
+			left join edw_stage.Product prd on ctm.ProductId=prd.Id
 			left join edw_core.tproduct tpr on tpr.product_cd=prd.ProductCode
-			left join edw_stage.[User] u on brkctm.UserId=u.id
+			left join edw_stage.[User] u on ctm.UserId=u.id
 		WHERE
-			GREATEST(brkctm.CreatedDate,brkctm.UpdatedDate) > @last_source_extract_ts
+			GREATEST(ctm.CreatedDate,ctm.UpdatedDate) > @last_source_extract_ts
 
 		-- Delete from tbroker_license table
 		DELETE FROM edw_core.tbroker_vault_team;
