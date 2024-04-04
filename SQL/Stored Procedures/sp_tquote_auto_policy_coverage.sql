@@ -11,6 +11,7 @@ GO
 -- 10/23/23		Alberto Almario				    1. Created this procedure  
 -- 03/07/24     Architha Gudimalla              2. Added NCRB
 -- 03/11/24     Architha Gudimalla              3. Added Discounts for ratePIP
+-- 02/04/24     Alberto Almario                 4. add 3 new columns
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage]
@@ -52,7 +53,7 @@ BEGIN
             [NumberofTotalVehiclesonPolicy], [TotalNumberofPPAs], [TotalOwnedPPAs], [NumberofPPAwithPhysDam], [NumberofCollectorCars], [TotalInsuredLocations], [HOClaims], [NumberofDriversonPolicy], 
             [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
             [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], [RaterPIPDiscount],
-			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal]
+			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay]
 		
         INTO [edw_temp].[tquote_auto_policy_coverage_temp1]
 		
@@ -103,7 +104,7 @@ BEGIN
                     [NumberofTotalVehiclesonPolicy], [TotalNumberofPPAs], [TotalOwnedPPAs], [NumberofPPAwithPhysDam], [NumberofCollectorCars], [TotalInsuredLocations], [HOClaims], [NumberofDriversonPolicy], 
                     [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
                     [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], 
-                    [RaterPIPDiscount], [NCRBPPACOLLTotal],[NCRBPPAOTCTotal]
+                    [RaterPIPDiscount], [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay]
                 )
 			) pivottable
 
@@ -213,6 +214,9 @@ BEGIN
             rater_pip_discount,
             collision_ncrb_premium_amt,
             otc_ncrb_premium_amt
+            ,transportation_expense_amt
+            ,transportation_expense_daily_limit_amt
+            ,transportation_expense_copay_amt
 		)
         SELECT 
             t1.quote_no,
@@ -318,6 +322,9 @@ BEGIN
             t1.[RaterPIPDiscount] as rater_pip_discount,
             t1.[NCRBPPACOLLTotal],
             t1.[NCRBPPAOTCTotal]
+            ,t1.[TransportationExpense] as transportation_expense_amt
+            ,t1.[TransportationExpenseDailyLimit] as transportation_expense_daily_limit_amt
+            ,t1.[TransportationExpenseCoPay] as transportation_expense_copay_amt
         FROM 
             [edw_temp].[tquote_auto_policy_coverage_temp1] AS t1
         ;
