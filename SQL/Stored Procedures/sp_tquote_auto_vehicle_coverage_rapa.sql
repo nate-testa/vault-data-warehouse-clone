@@ -184,8 +184,8 @@ BEGIN
         FROM 
             [edw_temp].[tquote_auto_vehicle_coverage_rapa_temp1] AS t1
 			where t1.RAPASymbolBI is not null
-			and t1.RAPASymbolPD is not null
-			and t1.RAPASymbolNF is not null
+			or t1.RAPASymbolPD is not null
+			or t1.RAPASymbolNF is not null
         ;
 
         --************End************

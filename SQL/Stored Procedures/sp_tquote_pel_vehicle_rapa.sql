@@ -111,8 +111,8 @@ BEGIN
 		FROM
 			edw_temp.tquote_pel_vehicle_rapa_temp1
 			where RAPASymbolBI is not null
-			and RAPASymbolPD is not null
-			and RAPASymbolNF is not null
+			or RAPASymbolPD is not null
+			or RAPASymbolNF is not null
 
 		SET @rows_affected=@@ROWCOUNT;
 
