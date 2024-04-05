@@ -8,6 +8,7 @@ GO
 -- Author:		Hernando Gonzalez Garcia
 -- Create Date: 2023-08-28
 -- Description: This procedures insert and update info related to IVANS Home
+-- 04/05/2024                      sandeep Gundreddy                             repush to Git Repo
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_home]
 AS
