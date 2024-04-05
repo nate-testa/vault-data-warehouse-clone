@@ -6,7 +6,7 @@
 -- 4/5/2024			Rushin Shah					1. Created this procedure
 -- ================================================================================================= 
 
-CREATE OR ALTER PROCEDURE [edw_temp].[sp_tauto_vehicle_coverage_update_5412]
+CREATE OR ALTER PROCEDURE [edw_temp].[sp_tauto_vehicle_coverage_update]
 
 AS
 BEGIN
