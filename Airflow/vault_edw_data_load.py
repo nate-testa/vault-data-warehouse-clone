@@ -336,7 +336,7 @@ with DAG(
             'sp_tauto_vehicle',
             'sp_tauto_garage_location',
             'sp_tauto_vehicle_coverage',
-            'sp_tauto_vehicle_coverage_update_5412',
+            'sp_tauto_vehicle_coverage_update',
             'sp_tauto_policy_coverage',
             'sp_tauto_driver',
             'sp_tauto_driver_incident',
@@ -367,10 +367,10 @@ with DAG(
             autocommit=True,
         )
 
-        sp_tauto_vehicle_coverage_update_5412 = MsSqlOperator(
-            task_id='sp_tauto_vehicle_coverage_update_5412',
+        sp_tauto_vehicle_coverage_update = MsSqlOperator(
+            task_id='sp_tauto_vehicle_coverage_update',
             mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tauto_vehicle_coverage_update_5412",
+            sql="EXEC edw_core.sp_tauto_vehicle_coverage_update",
             database="vault_edw",
             autocommit=True,
         )
@@ -414,7 +414,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(auto_group_items, 'All stored procedures executed successfully for all the Auto tables'),
         )
 
-        sp_tauto_vehicle >> sp_tauto_garage_location >> sp_tauto_vehicle_coverage >> sp_tauto_vehicle_coverage_update_5412 >> sp_tauto_policy_coverage >> sp_tauto_driver >> sp_tauto_driver_incident >> sp_tauto_vehicle_coverage_rapa >> send_auto_email
+        sp_tauto_vehicle >> sp_tauto_garage_location >> sp_tauto_vehicle_coverage >> sp_tauto_vehicle_coverage_update >> sp_tauto_policy_coverage >> sp_tauto_driver >> sp_tauto_driver_incident >> sp_tauto_vehicle_coverage_rapa >> send_auto_email
 
 
     with TaskGroup("policy_transaction_group") as policy_transaction_group:
