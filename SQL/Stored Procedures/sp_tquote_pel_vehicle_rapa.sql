@@ -69,6 +69,7 @@ BEGIN
 					on tqv.quote_no = act.PolicyNumber
 					and tqv.effective_dt = act.EffectiveDate
 					and tqv.transaction_seq_no = act.[Number]
+					and tqv.vehicle_no = atvo.[Index]
 				left join [edw_core].[tquote_pel_coverage] tqc
 					on tqc.quote_no = act.PolicyNumber
 					and tqc.effective_dt = CAST(act.EffectiveDate AS DATE)
@@ -77,7 +78,7 @@ BEGIN
 					on act.ProductId = pr.id
 				where
 					act.PolicyNumber is not null and
-					act.[State] in ('QUOTE','POLICY')
+					act.[Stage] in ('QUOTE','POLICY')
 					and p.[Name]='Personal Excess Liability'
 					and pr.ProductLine = 'PersonalLines'
 					and atvof.[Group] in ('Symbols', 'Symbols - ISO')

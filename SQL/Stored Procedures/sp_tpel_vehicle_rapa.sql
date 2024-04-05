@@ -68,6 +68,7 @@ BEGIN
 					on tpv.policy_no = act.PolicyNumber
 					and tpv.effective_dt = act.EffectiveDate
 					and tpv.transaction_seq_no = act.policychangenumber
+					and tpv.vehicle_no = atvo.[Index]
 				left join [edw_core].[tpel_coverage] tpc
 					on tpc.policy_no = act.PolicyNumber
 					and tpc.effective_dt = CAST(act.EffectiveDate AS DATE)
