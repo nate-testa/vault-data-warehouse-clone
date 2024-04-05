@@ -204,7 +204,15 @@ with DAG(
 
     with TaskGroup("quote_PEL_group") as quote_PEL_group:
 
-        quote_PEL_group_items = ['sp_tquote_pel_location','sp_tquote_pel_driver','sp_tquote_pel_driver_incident','sp_tquote_pel_vehicle','sp_tquote_pel_watercraft','sp_tquote_pel_coverage']
+        quote_PEL_group_items = [
+            'sp_tquote_pel_location',
+            'sp_tquote_pel_driver',
+            'sp_tquote_pel_driver_incident',
+            'sp_tquote_pel_vehicle',
+            'sp_tquote_pel_watercraft',
+            'sp_tquote_pel_coverage',
+            'sp_tquote_pel_vehicle_rapa'
+            ]
 
         sp_tquote_pel_location = MsSqlOperator(
             task_id='sp_tquote_pel_location',
@@ -254,6 +262,14 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_pel_vehicle_rapa = MsSqlOperator(
+            task_id='sp_tquote_pel_vehicle_rapa',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_pel_vehicle_rapa",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_quote_PEL_email = EmailOperator(
             task_id='send_quote_PEL_email',
             to=to_email,
@@ -261,12 +277,20 @@ with DAG(
             html_content=get_sp_success_data_HTML(quote_PEL_group_items, 'All stored procedures executed successfully for all the Quote PEL tables'),
         )
 
-        sp_tquote_pel_location >> sp_tquote_pel_driver >> sp_tquote_pel_driver_incident >> sp_tquote_pel_vehicle >> sp_tquote_pel_watercraft >> sp_tquote_pel_coverage >> send_quote_PEL_email
+        sp_tquote_pel_location >> sp_tquote_pel_driver >> sp_tquote_pel_driver_incident >> sp_tquote_pel_vehicle >> sp_tquote_pel_watercraft >> sp_tquote_pel_coverage >> sp_tquote_pel_vehicle_rapa >> send_quote_PEL_email
 
 
     with TaskGroup("quote_auto_group") as quote_auto_group:
 
-        quote_auto_group_items = ['sp_tquote_auto_vehicle','sp_tquote_auto_garage_location','sp_tquote_auto_vehicle_coverage','sp_tquote_auto_policy_coverage','sp_tquote_auto_driver','sp_tquote_auto_driver_incident']
+        quote_auto_group_items = [
+            'sp_tquote_auto_vehicle',
+            'sp_tquote_auto_garage_location',
+            'sp_tquote_auto_vehicle_coverage',
+            'sp_tquote_auto_policy_coverage',
+            'sp_tquote_auto_driver',
+            'sp_tquote_auto_driver_incident',
+            'sp_tquote_auto_vehicle_coverage_rapa'
+            ]
 
         sp_tquote_auto_vehicle = MsSqlOperator(
             task_id='sp_tquote_auto_vehicle',
@@ -316,6 +340,14 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_auto_vehicle_coverage_rapa = MsSqlOperator(
+            task_id='sp_tquote_auto_vehicle_coverage_rapa',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_auto_vehicle_coverage_rapa",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_quote_auto_email = EmailOperator(
             task_id='send_quote_auto_email',
             to=to_email,
@@ -323,7 +355,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(quote_auto_group_items, 'All stored procedures executed successfully for all the Quote Auto tables'),
         )
 
-        sp_tquote_auto_vehicle >> sp_tquote_auto_garage_location >> sp_tquote_auto_vehicle_coverage >> sp_tquote_auto_policy_coverage >> sp_tquote_auto_driver >> sp_tquote_auto_driver_incident >> send_quote_auto_email
+        sp_tquote_auto_vehicle >> sp_tquote_auto_garage_location >> sp_tquote_auto_vehicle_coverage >> sp_tquote_auto_policy_coverage >> sp_tquote_auto_driver >> sp_tquote_auto_driver_incident >> sp_tquote_auto_vehicle_coverage_rapa >> send_quote_auto_email
 
 
     with TaskGroup("quote_group") as quote_group:
