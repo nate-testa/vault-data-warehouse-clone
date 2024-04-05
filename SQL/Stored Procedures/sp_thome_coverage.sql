@@ -13,6 +13,7 @@
 -- 11/30/23		Yunus Mohammed					8. Added new fields
 -- 12/06/23		Alberto Almario					9. Added new field WindstormOrHailDeductibleManual
 -- 22/02/24		Hernando Gonzalez				10. Added new fields aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt
+-- 04/02/24		Ynunus Mohammed					11. Updated wind_derived_deductible logic
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -164,21 +165,21 @@ BEGIN
 				tthc.WildfireDeductible AS wildfire_deductible,
 				CASE
 					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' AND tthc.HurricaneDeductible like '%Exclude Wind%' THEN 'Exclude'
-						WHEN ISNULL(tthc.HurricaneDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
 					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' AND tthc.HurricaneOrNamedStormDeductible like '%Exclude Wind%' THEN 'Exclude'
-						WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' AND (tthc.HurricaneOrNamedStormDeductible like '%aop applies%' or tthc.HurricaneOrNamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' AND (tthc.HurricaneOrNamedStormDeductible like '%aop applies%' or tthc.HurricaneOrNamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
 					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' AND tthc.NamedStormDeductible like '%Exclude Wind%' THEN 'Exclude'
-						WHEN ISNULL(tthc.NamedStormDeductible,'') != '' AND (tthc.NamedStormDeductible like '%aop applies%' or tthc.NamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' AND (tthc.NamedStormDeductible like '%aop applies%' or tthc.NamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
 					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND tthc.TornadoorHailstormDeductible like '%Exclude Wind%' THEN 'Exclude'
-						WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND (tthc.TornadoorHailstormDeductible like '%aop applies%' or tthc.TornadoorHailstormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND (tthc.TornadoorHailstormDeductible like '%aop applies%' or tthc.TornadoorHailstormDeductible like '%aopApplies%') THEN 'AOP Applies'
 					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') != '' AND tthc.WindStormOrHailDeductible like '%Exclude Wind%' THEN 'Exclude'
-						WHEN ISNULL(tthc.WindStormOrHailDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.WindStormOrHailDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
 					--
-					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' THEN HurricaneDeductible
-					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' THEN HurricaneOrNamedStormDeductible
-					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' THEN NamedStormDeductible
-					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' THEN TornadoorHailstormDeductible
-					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') != '' THEN WindStormOrHailDeductible
+					WHEN ISNULL(tthc.HurricaneDeductible,'')  NOT IN ('','0') THEN HurricaneDeductible
+					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') NOT IN ('','0') THEN HurricaneOrNamedStormDeductible
+					WHEN ISNULL(tthc.NamedStormDeductible,'') NOT IN ('','0') THEN NamedStormDeductible
+					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') NOT IN ('','0') THEN TornadoorHailstormDeductible
+					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') NOT IN ('','0') THEN WindStormOrHailDeductible
 				END AS wind_derived_deductible,
 				tthc.NumberOfMortgagees AS no_of_mortgagees,
 				tthc.PriorClaims AS prior_claim_last5yr_in,tthc.PriorNonWaterClaims AS prior_nonwater_claim_ct,

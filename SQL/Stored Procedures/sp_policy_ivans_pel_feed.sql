@@ -7,6 +7,8 @@ GO
 -- Author:		Alberto Almario
 -- Create Date: 2023-10-17
 -- Description: This stored procedure insert and update info related to policy_ivans_pel_feed.
+-- 04/05/2024 repush to Git Repo
+-- 04/05/2024                      sandeep Gundreddy                             repush to Git Repo
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_pel_feed]
 AS
