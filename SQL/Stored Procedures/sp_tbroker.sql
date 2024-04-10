@@ -9,7 +9,8 @@
 -- 08/29/23		Mohammed Yunus					3. Procedure updated for new columns
 -- 10/26/23		Mohammed Yunus					4. Made changes to fix error
 -- 10/31/23		Mohammed Yunus					5. Added CommissionStatementEmail
--- 08/02/24		Hernando Gonzalez				7. Added broker_terminated_dt
+-- 08/02/24		Hernando Gonzalez				6. Added broker_terminated_dt
+-- 04/10/24		Rushin Shah						7. Added related_broker_id, related_brokerage_nm, relationship_type
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker]
@@ -47,7 +48,7 @@ BEGIN
 			NULLIF(brk.[LexisNexisCompanyCodeSuffix],'') as lexis_nexis_company_code_suffix,
 			CONCAT_WS(' ',br.FirstName,br.LastName) AS primary_contact_nm,
 			NULLIF(brk.PrimaryPhoneNumber,'') AS broker_phone_no,
-			NULLIF(brk.PrimaryEmail,'') AS broker_email,NULLIF(NewBusinessContactEmail,'') AS newbusiness_contact_email,
+			NULLIF(brk.PrimaryEmail,'') AS broker_email,NULLIF(brk.NewBusinessContactEmail,'') AS newbusiness_contact_email,
 			NULLIF(brk.RenewalContactEmail,'') AS renewal_contact_email,
 			NULLIF(brk.PolicyChangeContactEmail,'') AS policy_change_contact_email,
 			NULLIF(brk.ClaimsContactEmail,'') AS claims_contact_email,
@@ -110,9 +111,12 @@ BEGIN
 			brk.CreatedDate,
 			brk.UpdatedDate,
 			brk.TerminatedDate
+			,brk1.referencecode related_broker_id, brk1.name related_brokerage_nm, brr.RelationshipType relationship_type
 		INTO edw_temp.tbroker_temp1
 		FROM
 			edw_stage.Brokerage brk
+			inner join [edw_stage].[BrokerageRelation] brr on brk.id = brr.relationBrokerageId -- RS Added
+			inner join [edw_stage].[Brokerage] brk1 on brk1.id = brr.relatedbrokerageid -- RS Added
 			left join [edw_stage].[BrokerageBankingDetail] brkbd on brkbd.BrokerageId=brk.Id
 			left join edw_stage.[Broker] br on brk.PrimaryBrokerId=br.Id
 		WHERE
@@ -139,6 +143,7 @@ BEGIN
 				commission_address_zip_cd,commission_address_county_nm,commission_address_country_nm,insurance_company_nm,insurance_policy_no,
 				insurance_policy_limit_amt,insurance_policy_effective_dt,insurance_policy_expiration_dt,company_nm,bank_nm,routing_no,account_no,
 				accounting_type,token_id,commission_statement_email,create_ts,update_ts,etl_audit_sk,broker_terminated_dt
+				,related_broker_id, related_brokerage_nm, relationship_type
 			)
 		VALUES
 			(
@@ -156,6 +161,7 @@ BEGIN
 				insurance_policy_limit_amt,insurance_policy_effective_dt,insurance_policy_expiration_dt,company_nm,bank_nm,routing_no,account_no,
 				accounting_type,token_id,commission_statement_email,
 				getdate(),getdate(),@etl_audit_sk,TerminatedDate
+				,related_broker_id, related_brokerage_nm, relationship_type
 			)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -227,6 +233,9 @@ BEGIN
 		Target.token_id = Source.token_id,
 		Target.commission_statement_email = Source.commission_statement_email,
 		Target.broker_terminated_dt = Source.TerminatedDate,
+		Target.related_broker_id = Source.related_broker_id, -- RS Added
+		Target.related_brokerage_nm = Source.related_brokerage_nm, -- RS Added
+		Target.relationship_type = Source.relationship_type, -- RS Added
 		Target.[update_ts] = getdate();
 		
 		SET @rows_affected=@@ROWCOUNT;
