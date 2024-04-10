@@ -253,7 +253,7 @@ BEGIN
         LEFT JOIN mortagee AS m ON m.policy_no = c.policy_no 
         LEFT JOIN location_address AS la ON c.policy_no = la.policy_no
         LEFT JOIN policy_insured_2 AS pi2 ON c.policy_no = pi2.policy_no
-        WHERE p.product_cd IN ('HO','CO')
+        WHERE p.product_cd IN ('HO','CO','LUX','PEL')
         ;
 
         
