@@ -115,8 +115,8 @@ BEGIN
 		INTO edw_temp.tbroker_temp1
 		FROM
 			edw_stage.Brokerage brk
-			inner join [edw_stage].[BrokerageRelation] brr on brk.id = brr.relationBrokerageId -- RS Added
-			inner join [edw_stage].[Brokerage] brk1 on brk1.id = brr.relatedbrokerageid -- RS Added
+			inner join [edw_stage].[BrokerageRelation] brr on brk.id = brr.relationBrokerageId
+			inner join [edw_stage].[Brokerage] brk1 on brk1.id = brr.relatedbrokerageid
 			left join [edw_stage].[BrokerageBankingDetail] brkbd on brkbd.BrokerageId=brk.Id
 			left join edw_stage.[Broker] br on brk.PrimaryBrokerId=br.Id
 		WHERE
@@ -233,9 +233,9 @@ BEGIN
 		Target.token_id = Source.token_id,
 		Target.commission_statement_email = Source.commission_statement_email,
 		Target.broker_terminated_dt = Source.TerminatedDate,
-		Target.related_broker_id = Source.related_broker_id, -- RS Added
-		Target.related_brokerage_nm = Source.related_brokerage_nm, -- RS Added
-		Target.relationship_type = Source.relationship_type, -- RS Added
+		Target.related_broker_id = Source.related_broker_id,
+		Target.related_brokerage_nm = Source.related_brokerage_nm, 
+		Target.relationship_type = Source.relationship_type, 
 		Target.[update_ts] = getdate();
 		
 		SET @rows_affected=@@ROWCOUNT;
