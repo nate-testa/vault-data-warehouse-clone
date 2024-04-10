@@ -64,7 +64,7 @@ BEGIN
 			,coverage_sk
 		INTO [edw_temp].[policy_ivans_home_temp1]
         FROM edw_core.tpolicy_transaction as pt
-		LEFT JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
+		INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
 		WHERE pt.product_sk in (1, 5) -- Home
             AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
         GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk
@@ -142,7 +142,7 @@ BEGIN
 							SUM(pt.annual_premium_amt) AS annual_premium_amt, 
 							SUM(pt.premium_amt) AS premium_amt 
 						FROM edw_core.tpolicy_transaction as pt
-						LEFT JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
+						INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
 						WHERE pt.product_sk in (1, 5) -- Home and Condo
 						AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
 						GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk
@@ -339,7 +339,7 @@ BEGIN
 						on thc.home_coverage_sk = tcct.home_coverage_sk
 						LEFT JOIN edw_core.tinternal_coverage as ic
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
-						LEFT JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
+						INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
 						WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
 						and coalesce(pt.premium_amt, 0) + coalesce(tcct.scheduled_limit_amt, 0) + coalesce(tcct.scheduled_highest_value_limit_amt, 0) <> 0 
 						and ic.aslob_cd in ('090', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%chedule%' or ic.internal_coverage_cd like '%lux%')
@@ -405,7 +405,7 @@ BEGIN
 						on thc.home_coverage_sk = tcct.home_coverage_sk
 						LEFT JOIN edw_core.tinternal_coverage as ic
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
-						LEFT JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
+						INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
 						WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
 						and coalesce(pt.premium_amt, 0) + coalesce(tcct.blanket_limit_amt, 0) + coalesce(tcct.blanket_single_article_limit_amt, 0) + coalesce(tcct.blanket_highest_value_limit_amt, 0) <> 0 
 						and ic.aslob_cd in ('090', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%lanket%' or ic.internal_coverage_cd like '%lux%')
