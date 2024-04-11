@@ -46,6 +46,7 @@ QRY_CLUE = f"""
         [policyHolderMailAddressState] + 
         [policyHolderMailAddressZip] + 
         [policyHolderMailAddressZipPlus4] + 
+        [policyHolderTelAreaCode] +
         [policyHolderTelNumber] + 
         [filler_reservedforFutureUse1] + 
         [policyHolderNamePrefix] + 
