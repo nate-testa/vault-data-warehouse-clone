@@ -1,0 +1,2 @@
+ALTER TABLE edw_stage.AccountTransactionVersion
+ALTER COLUMN UnderwriterUserId UNIQUEIDENTIFIER NULL;
