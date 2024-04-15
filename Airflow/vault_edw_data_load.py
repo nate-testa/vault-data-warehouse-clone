@@ -59,6 +59,24 @@ def check_tvalidation_and_send_email(**kwargs):
             dag=kwargs['dag'],
         ).execute(context=kwargs)
 
+def check_for_new_internal_coverage_cd_and_send_email(**kwargs):
+    sql_qry = """
+                SELECT internal_coverage_sk, internal_coverage_cd, product_cd, aslob_cd, internal_coverage_category_nm, primary_coverage_cd
+                FROM edw_core.tinternal_coverage
+                WHERE CAST(create_ts as date) = CAST(GETDATE() as date)
+                ORDER BY internal_coverage_sk
+              """
+    mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
+    result = mssql_hook.get_first(sql_qry)
+    if result is not None:
+        EmailOperator(
+            task_id='send_email_new_internal_coverage',
+            to=to_email,
+            subject='Airflow - New Internal Coverage created',
+            html_content=get_vault_data_HTML(sql_qry,'There are new Internal Coverage rows created into edw_core.tinternal_coverage table. Please review the details below.'),
+            dag=kwargs['dag'],
+        ).execute(context=kwargs)
+
 def on_failure_callback(context):
 
     task_instance = context['task_instance']
@@ -744,6 +762,13 @@ with DAG(
             autocommit=True,
         )
 
+        new_internal_coverage_cd_email = PythonOperator(
+            task_id='new_internal_coverage_cd_email',
+            python_callable=check_for_new_internal_coverage_cd_and_send_email,
+            provide_context=True,
+            dag=dag,
+        )
+
         sp_ttax_fee_surcharge = MsSqlOperator(
             task_id='sp_ttax_fee_surcharge',
             mssql_conn_id='Vault_EDW',
@@ -767,7 +792,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(reference_group_items, 'All stored procedures executed successfully for all the Reference tables'),
         )
 
-        sp_tcustomer >> sp_tuser >> sp_tinternal_coverage >> sp_ttax_fee_surcharge >> sp_tbillingaccount >> send_reference_email
+        sp_tcustomer >> sp_tuser >> sp_tinternal_coverage >> new_internal_coverage_cd_email >> sp_ttax_fee_surcharge >> sp_tbillingaccount >> send_reference_email
 
 
     with TaskGroup("broker_group") as broker_group:
