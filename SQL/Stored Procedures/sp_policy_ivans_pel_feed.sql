@@ -135,14 +135,15 @@ BEGIN
                             (
                                 SELECT 
                                     pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk,
-                                    SUM(annual_premium_amt) AS annual_premium_amt, 
-                                    SUM(premium_amt) AS premium_amt 
+                                    SUM(pt.annual_premium_amt) AS annual_premium_amt, 
+                                    SUM(pt.premium_amt) AS premium_amt 
                                 FROM edw_core.tpolicy_transaction as pt
+                                INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
                                 INNER JOIN edw_core.tpolicy_history as ph 
                                 ON pt.policy_sk = ph.policy_sk
                                 AND pt.transaction_seq_no = ph.transaction_seq_no
                                 WHERE 1=1
-                                    AND product_sk = 4
+                                    AND pr.product_cd = 'PEL'
                                 AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
                                 GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk
                             ) as pt 
