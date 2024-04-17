@@ -3,15 +3,16 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
--- =================================================================================================
+-- =======================================================================================================================
 -- Author:	Architha Gudimalla		
 -- Description: This procedures loads vendor reports data
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
 -- 11/28/23		Architha Gudimalla				1. Created this procedure  
--- 03/10/23		Architha Gudimalla				2. Updated the label in marge
--- ================================================================================================= 
+-- 03/10/23		Architha Gudimalla				2. Updated the label in merge
+-- 03/10/23		Architha Gudimalla				2. Updated the label with replace for some too long labels for LC360
+-- ======================================================================================================================= 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
 @in_source varchar(255) = null
@@ -64,13 +65,13 @@ BEGIN
 		merge into edw_stage.tvendor_report_field as target
 		using
 		(
-			select  accr.source, accr.reporttype, accri.Category, accri.[Group], replace(replace(replace(replace(Label,'[',' - '),']',''),'''',''),',','') Label, 
+			select  accr.source, accr.reporttype, accri.Category, accri.[Group], replace(replace(replace(replace(replace(replace(label,' Toilet Supply Lines That Have Plastic B-nut Connectors and',' Toilet Lines having Plastic B-nut Conn and'),'when construction starts on second floor','construction on 2nd fl'),'[',' - '),']',''),'''',''),',','') Label, 
 					max(accri.CreatedDate) CreatedDate, max(GREATEST(accri.UpdatedDate,accri.CreatedDate)) UpdatedDate 
 			from	edw_stage.Account acc, edw_stage.AccountReport accr, edw_stage.AccountReportItem accri
 			where	accr.AccountId=acc.Id  and source <> 'HazardHub'
 			and		accr.Id =accri.ReportId 
 			AND		GREATEST(accri.UpdatedDate,accri.CreatedDate)>@last_source_extract_ts
-			group by accr.source, accr.reporttype, accri.Category, accri.[Group], replace(replace(replace(replace(Label,'[',' - '),']',''),'''',''),',','')
+			group by accr.source, accr.reporttype, accri.Category, accri.[Group], replace(replace(replace(replace(replace(replace(label,' Toilet Supply Lines That Have Plastic B-nut Connectors and',' Toilet Lines having Plastic B-nut Conn and'),'when construction starts on second floor','construction on 2nd fl'),'[',' - '),']',''),'''',''),',','')
 		) as source 
 		on source.source = target.source 
 		and source.reporttype = target.reporttype 
@@ -113,8 +114,8 @@ BEGIN
 					+ ' select	 acc.policynumber, acc.effectivedate, 
 												GREATEST(accri.UpdatedDate,accri.CreatedDate) UpdatedDate ,  accri.CreatedDate, 
 												accr.dateordered, accr.dateTimeRecieved, accr.dateTimeCompleted, accr.TransactionStatus, accr.[source], accr.reporttype, 
-												case when accri.Category  = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(accri.Label,''['','' - ''),'']'',''''),'''''''',''''))
-													when accri.Category <> accri.[Group] then concat(accri.Category, '' - '', accri.[Group], '' - '',replace(replace(replace(accri.Label,''['','' - ''),'']'',''''),'''''''',''''))
+												case when accri.Category  = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(replace(replace(accri.label,'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
+													when accri.Category <> accri.[Group] then concat(accri.Category, '' - '', accri.[Group], '' - '',replace(replace(replace(replace(replace(accri.label,'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
 													else ''''
 												end field_name,accri.[Value] 
 										from	edw_stage.[Account] acc, edw_stage.[AccountReport] accr, edw_stage.AccountReportItem accri
