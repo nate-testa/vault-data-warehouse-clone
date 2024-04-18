@@ -46,7 +46,7 @@ BEGIN
 
         SELECT 
              pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk,
-            MAX(ph.transaction_ts) as create_ts, -- MAX(create_ts) as create_ts, RS Updated
+            MAX(ph.transaction_ts) as transaction_ts, -- MAX(create_ts) as create_ts, RS Updated
             SUM(pt.premium_amt) as premium_amt,
             --SUM(annual_premium_amt) as annual_premium_amt,
 			CASE WHEN pt.policy_transaction_type_sk = 5
@@ -705,7 +705,7 @@ BEGIN
 		,jsi.Scheduled_Items
 		,pt.transaction_seq_no as [transaction_seq_no]
 		--
-		,pt.create_ts as policy_transaction_create_ts
+		,pt.transaction_ts as policy_history_transaction_ts
 		--
 		,tprc.national_producer_no
 		INTO [edw_temp].[policy_ivans_home_temp2]
@@ -768,7 +768,7 @@ BEGIN
 				from edw_core.tproducer
 			) tprc
 		ON p.broker_id = tprc.broker_id AND tprc.rn = 1
-		WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+		WHERE cast(pt.transaction_ts as datetime2(7)) > @last_source_extract_ts
 		AND b.ivans_y_account IS NOT NULL
 
 		-- Start Insert process
@@ -1188,7 +1188,7 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_transaction_create_ts) FROM [edw_temp].[policy_ivans_home_temp2] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_history_transaction_ts) FROM [edw_temp].[policy_ivans_home_temp2] t1),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp1];
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp2];
