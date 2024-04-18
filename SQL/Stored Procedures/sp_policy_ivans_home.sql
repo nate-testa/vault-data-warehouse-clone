@@ -4,12 +4,14 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =============================================
+-- ========================================================================================================================================
 -- Author:		Hernando Gonzalez Garcia
 -- Create Date: 2023-08-28
 -- Description: This procedures insert and update info related to IVANS Home
 -- 04/05/2024                      sandeep Gundreddy                             repush to Git Repo
--- =============================================
+-- 04/09/2024					   Rushin Shah									Update SP to identify delta based on last_source_extract_ts
+-- ========================================================================================================================================= 
+
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_home]
 AS
 BEGIN
@@ -43,11 +45,11 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp8];
 
         SELECT 
-            policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
-            MAX(create_ts) as create_ts, 
-            SUM(premium_amt) as premium_amt,
+             pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk,
+            MAX(ph.transaction_ts) as transaction_ts, -- MAX(create_ts) as create_ts, RS Updated
+            SUM(pt.premium_amt) as premium_amt,
             --SUM(annual_premium_amt) as annual_premium_amt,
-			CASE WHEN policy_transaction_type_sk = 5
+			CASE WHEN pt.policy_transaction_type_sk = 5
 				THEN
         			(SELECT SUM(subpt.premium_amt)
         			    FROM edw_core.tpolicy_transaction subpt
@@ -62,10 +64,11 @@ BEGIN
 			,coverage_sk
 		INTO [edw_temp].[policy_ivans_home_temp1]
         FROM edw_core.tpolicy_transaction as pt
-        WHERE product_sk in (1, 5) -- Home
-            AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-        GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
-		,coverage_sk
+		INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
+		WHERE pt.product_sk in (1, 5) -- Home
+            AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
+        GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk
+		,pt.coverage_sk
 
 		SELECT temp3.*
 		INTO [edw_temp].[policy_ivans_home_temp3]
@@ -135,13 +138,14 @@ BEGIN
 					FROM 
 					(
 						SELECT 
-							policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk,
-							SUM(annual_premium_amt) AS annual_premium_amt, 
-							SUM(premium_amt) AS premium_amt 
+							pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk,
+							SUM(pt.annual_premium_amt) AS annual_premium_amt, 
+							SUM(pt.premium_amt) AS premium_amt 
 						FROM edw_core.tpolicy_transaction as pt
-						WHERE product_sk in (1, 5) -- Home and Condo
-						AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-						GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk
+						INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
+						WHERE pt.product_sk in (1, 5) -- Home and Condo
+						AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
+						GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk
 					) as pt 
 					LEFT JOIN edw_core.thome_coverage as hc ON pt.coverage_sk = hc.home_coverage_sk
 					LEFT JOIN edw_core.thome_additional_coverage as hac ON hc.home_coverage_sk = hac.home_coverage_sk
@@ -335,7 +339,8 @@ BEGIN
 						on thc.home_coverage_sk = tcct.home_coverage_sk
 						LEFT JOIN edw_core.tinternal_coverage as ic
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
-						WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+						INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
+						WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
 						and coalesce(pt.premium_amt, 0) + coalesce(tcct.scheduled_limit_amt, 0) + coalesce(tcct.scheduled_highest_value_limit_amt, 0) <> 0 
 						and ic.aslob_cd in ('090', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%chedule%' or ic.internal_coverage_cd like '%lux%')
 						--
@@ -400,7 +405,8 @@ BEGIN
 						on thc.home_coverage_sk = tcct.home_coverage_sk
 						LEFT JOIN edw_core.tinternal_coverage as ic
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
-						WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+						INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
+						WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
 						and coalesce(pt.premium_amt, 0) + coalesce(tcct.blanket_limit_amt, 0) + coalesce(tcct.blanket_single_article_limit_amt, 0) + coalesce(tcct.blanket_highest_value_limit_amt, 0) <> 0 
 						and ic.aslob_cd in ('090', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%lanket%' or ic.internal_coverage_cd like '%lux%')
 					) ud
@@ -699,7 +705,7 @@ BEGIN
 		,jsi.Scheduled_Items
 		,pt.transaction_seq_no as [transaction_seq_no]
 		--
-		,pt.create_ts as policy_transaction_create_ts
+		,pt.transaction_ts as policy_history_transaction_ts
 		--
 		,tprc.national_producer_no
 		INTO [edw_temp].[policy_ivans_home_temp2]
@@ -762,7 +768,7 @@ BEGIN
 				from edw_core.tproducer
 			) tprc
 		ON p.broker_id = tprc.broker_id AND tprc.rn = 1
-		WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+		WHERE cast(pt.transaction_ts as datetime2(7)) > @last_source_extract_ts
 		AND b.ivans_y_account IS NOT NULL
 
 		-- Start Insert process
@@ -1182,7 +1188,7 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_transaction_create_ts) FROM [edw_temp].[policy_ivans_home_temp2] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_history_transaction_ts) FROM [edw_temp].[policy_ivans_home_temp2] t1),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp1];
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp2];
