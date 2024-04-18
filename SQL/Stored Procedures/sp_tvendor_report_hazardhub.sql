@@ -69,8 +69,8 @@ BEGIN
             vrh.TransactionStatus,
             (
                 SELECT 
-                    vrhj.[source], 
-                    vrhj.[reporttype], 
+                    --vrhj.[source], 
+                    --vrhj.[reporttype], 
                     vrhj.[Category],
                     vrhj.[Group], 
                     vrhj.[Label],
