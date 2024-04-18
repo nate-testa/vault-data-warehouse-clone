@@ -797,12 +797,20 @@ with DAG(
 
     with TaskGroup("broker_group") as broker_group:
 
-        broker_group_items = ['sp_tbroker','sp_tbroker_commission','sp_tbroker_license','sp_tbroker_vault_team', 'sp_tproducer']
+        broker_group_items = ['sp_tbroker','sp_tbroker_relation','sp_tbroker_commission','sp_tbroker_license','sp_tbroker_vault_team', 'sp_tproducer']
 
         sp_tbroker = MsSqlOperator(
             task_id='sp_tbroker',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tbroker",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tbroker_relation = MsSqlOperator(
+            task_id='sp_tbroker_relation',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tbroker_relation",
             database="vault_edw",
             autocommit=True,
         )
@@ -846,7 +854,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(broker_group_items, 'All stored procedures executed successfully for all the Broker tables'),
         )
 
-        sp_tbroker >> sp_tbroker_commission >> sp_tbroker_license >> sp_tbroker_vault_team >> sp_tproducer >> send_broker_email
+        sp_tbroker >> sp_tbroker_relation >> sp_tbroker_commission >> sp_tbroker_license >> sp_tbroker_vault_team >> sp_tproducer >> send_broker_email
 
 
     with TaskGroup("policy_group") as policy_group:
