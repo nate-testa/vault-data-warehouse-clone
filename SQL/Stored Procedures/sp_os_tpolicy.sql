@@ -5,8 +5,9 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date 		|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 10/20/23			Mohammed Yunus					1. Created this procedure
--- 12/15/23			Mohammed Yunus					2. Updated program_type logic
+-- 10/20/23			Yunus Mohammed					1. Created this procedure
+-- 12/15/23			Yunus Mohammed					2. Updated program_type logic
+-- 04/15/24			Yunus Mohammed					3. Updated logic for original policy no and effective date
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tpolicy]
@@ -81,13 +82,15 @@ BEGIN
 			SELECT TOP 1 trx1.policy_trx_policy_number FROM edw_stage.dragon_policy_trx trx1
 			WHERE
 				trx1.policy_id = trx.policy_id
-			ORDER BY trx1.policy_trx_seq_num DESC
+				and trx1.policy_trx_policy_number is not null
+			ORDER BY trx1.policy_trx_seq_num
 		)  as original_policy_no,
 		(
 			SELECT TOP 1 trx1.policy_trx_image_eff_date FROM edw_stage.dragon_policy_trx trx1
 			WHERE
 				trx1.policy_id = trx.policy_id
-			ORDER BY trx1.policy_trx_seq_num DESC
+				and trx1.policy_trx_image_eff_date is not null
+			ORDER BY trx1.policy_trx_seq_num
 		)  as original_policy_effective_dt,
 		ba.address_line1 as mailing_address_line1,
 		null as mailing_address_line2,
