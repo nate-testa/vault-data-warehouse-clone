@@ -12,6 +12,7 @@ GO
 -- 03/07/24     Architha Gudimalla              2. Added NCRB
 -- 03/11/24     Architha Gudimalla              3. Added Discounts for ratePIP
 -- 02/04/24     Alberto Almario                 4. add 3 new columns
+-- 04/19/24     Architha Gudimalla              5. Added limit converion to front end display valu
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_policy_coverage]
@@ -336,8 +337,45 @@ BEGIN
 
         --************End************
 
-		SET @rows_affected=@@ROWCOUNT;
+		SET @rows_affected=@@ROWCOUNT; 
 
+        declare @edw_field_nm VARCHAR(255)
+        declare @metal_field_nm VARCHAR(255)
+        declare @sql nvarchar(max)
+
+        DECLARE c1_rec CURSOR
+        FOR 
+        select 'additional_pip'						as edw_field_nm, 'AdditionalPIP'		metal_field_nm union all
+        select 'basic_pip'							as edw_field_nm, 'BasicPIP'				metal_field_nm union all
+        select 'bodily_injury_limit_amt'			as edw_field_nm, 'BILimit'				metal_field_nm union all
+        select 'deductible_applies_to'				as edw_field_nm, 'DeductibleAppliesTo'	metal_field_nm union all
+        select 'underinsured_motorist_limit_amt'	as edw_field_nm, 'UIMLimit'				metal_field_nm union all
+        select 'um_bi_policy_limit_amt'				as edw_field_nm, 'UMBIPolicyLimit'		metal_field_nm union all
+        select 'uninsured_motorist_limit_amt'		as edw_field_nm, 'UMLimit'				metal_field_nm union all 
+        select 'work_loss_exclusion'				as edw_field_nm, 'WorkLossExclusion'	metal_field_nm
+
+        open c1_rec; 
+            FETCH NEXT FROM c1_rec INTO @edw_field_nm, @metal_field_nm; 
+            WHILE @@FETCH_STATUS = 0
+                BEGIN 
+
+                    set @sql =	'
+                            update		avc 
+                            set			avc.' + @edw_field_nm + ' = replace( pfvd.ValueDisplay,''$'','''') 
+                            from		edw_temp.tauto_policy_coverage avc
+                            inner join	edw_core.tpolicy pol on  avc.policy_no = pol.policy_no and avc.effective_dt = pol.effective_dt
+                            left join	[edw_stage].[ProductObjectFieldValueDisplay] pfvd 
+                                                    on pfvd.StateCode = pol.risk_state_cd and pfvd.ObjectType = ''Automobile'' and pfvd.field = ''' + @metal_field_nm + ''' and avc.' + @edw_field_nm + ' = pfvd.Value
+                            where		avc.' + @edw_field_nm + ' is not null and replace( pfvd.ValueDisplay,''$'','''') is not null
+                            '
+                    --print @sql
+
+                    EXECUTE sp_executesql @sql
+                    
+                    FETCH NEXT FROM c1_rec INTO @edw_field_nm, @metal_field_nm;
+                END; 
+            CLOSE c1_rec;
+            DEALLOCATE c1_rec;  
 		
 		-- Update control table
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(IssuedDate) FROM edw_temp.[tauto_policy_coverage_temp1]),@last_source_extract_ts);
