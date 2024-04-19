@@ -371,7 +371,8 @@ with DAG(
             'sp_tquote_transaction_status_history',
             'sp_tquote_insured',
             'sp_tquote_history_update',
-            'sp_tquote_update'
+            'sp_tquote_update',
+            'sp_tquote_referral_message'
             ]
 
         sp_tquote = MsSqlOperator(
@@ -462,6 +463,14 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_referral_message = MsSqlOperator(
+            task_id='sp_tquote_referral_message',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_referral_message",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_quote_email = EmailOperator(
             task_id='send_quote_email',
             to=to_email,
@@ -469,7 +478,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(quote_group_items, 'All stored procedures executed successfully for all the Quote Policy tables'),
         )
 
-        sp_tquote >> sp_tquote_history >> sp_tquote_additional_interest >> sp_tquote_manuscript >> sp_tquote_mortgagee >> sp_tquote_loss_history >> sp_tquote_status_history >> sp_tquote_transaction_status_history >> sp_tquote_insured >> sp_tquote_history_update >> sp_tquote_update >> send_quote_email
+        sp_tquote >> sp_tquote_history >> sp_tquote_additional_interest >> sp_tquote_manuscript >> sp_tquote_mortgagee >> sp_tquote_loss_history >> sp_tquote_status_history >> sp_tquote_transaction_status_history >> sp_tquote_insured >> sp_tquote_history_update >> sp_tquote_update >> sp_tquote_referral_message >> send_quote_email
 
     with TaskGroup("quote_transaction_group") as quote_transaction_group:
 
