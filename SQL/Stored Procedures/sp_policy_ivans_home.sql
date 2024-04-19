@@ -252,7 +252,7 @@ BEGIN
 		) temp4
 
 		SELECT temp5.*
-		--INTO [edw_temp].[policy_ivans_home_temp5]
+		INTO [edw_temp].[policy_ivans_home_temp5]
 		FROM (
 			SELECT
 			    ptf.policy_no, ptf.effective_dt, ptf.transaction_seq_no,
