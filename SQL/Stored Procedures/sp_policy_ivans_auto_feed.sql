@@ -35,10 +35,9 @@ BEGIN
         DROP TABLE IF EXISTS [edw_temp].[policy_ivans_auto_feed_temp2];
 
         SELECT 
-            policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
-            MAX(create_ts) as create_ts, 
-            SUM(premium_amt) as premium_amt,
-            --SUM(annual_premium_amt) as annual_premium_amt
+            pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk,
+            MAX(ph.transaction_ts) as transaction_ts, 
+            SUM(pt.premium_amt) as premium_amt,
             CASE WHEN pt.policy_transaction_type_sk = 5
 				THEN
         			(SELECT SUM(subpt.premium_amt)
@@ -54,10 +53,13 @@ BEGIN
         INTO [edw_temp].[policy_ivans_auto_feed_temp2]
         FROM edw_core.tpolicy_transaction as pt
         INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
+        INNER JOIN edw_core.tpolicy_history as ph 
+        ON pt.policy_sk = ph.policy_sk
+        AND pt.transaction_seq_no = ph.transaction_seq_no
         WHERE 1=1
             AND pr.product_cd = 'AU'
-            AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-        GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
+            AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
+        GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk
         ;
 
 
@@ -114,15 +116,18 @@ BEGIN
                         FROM 
                             (
                                 SELECT 
-                                    policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk,
-                                    SUM(annual_premium_amt) AS annual_premium_amt, 
-                                    SUM(premium_amt) AS premium_amt 
+                                    pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk,
+                                    SUM(pt.annual_premium_amt) AS annual_premium_amt, 
+                                    SUM(pt.premium_amt) AS premium_amt 
                                 FROM edw_core.tpolicy_transaction as pt
                                 INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
+                                INNER JOIN edw_core.tpolicy_history as ph 
+                                ON pt.policy_sk = ph.policy_sk
+                                AND pt.transaction_seq_no = ph.transaction_seq_no
                                 WHERE 1=1
                                     AND pr.product_cd = 'AU'
-                                AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-                                GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk
+                                AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
+                                GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk
                             ) as pt 
                             INNER JOIN edw_core.tauto_policy_coverage as apc ON pt.coverage_sk = apc.auto_policy_coverage_sk
                             INNER JOIN edw_core.tinternal_coverage as ic ON pt.internal_coverage_sk = ic.internal_coverage_sk
@@ -159,15 +164,18 @@ BEGIN
             FROM 
                 (
                     SELECT 
-                        policy_sk, effective_dt_sk, transaction_seq_no, vehicle_coverage_sk, internal_coverage_sk,
-                        SUM(annual_premium_amt) AS annual_premium_amt, 
-                        SUM(premium_amt) AS premium_amt 
+                        pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.vehicle_coverage_sk, pt.internal_coverage_sk,
+                        SUM(pt.annual_premium_amt) AS annual_premium_amt, 
+                        SUM(pt.premium_amt) AS premium_amt 
                     FROM edw_core.tpolicy_transaction as pt
                     INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
+                    INNER JOIN edw_core.tpolicy_history as ph 
+                    ON pt.policy_sk = ph.policy_sk
+                    AND pt.transaction_seq_no = ph.transaction_seq_no
                     WHERE 1=1
                         AND pr.product_cd = 'AU'
-                    AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-                    GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, vehicle_coverage_sk, internal_coverage_sk
+                    AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
+                    GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.vehicle_coverage_sk, pt.internal_coverage_sk
                 ) as pt 
                 INNER JOIN edw_core.tauto_vehicle_coverage as avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
                 INNER JOIN edw_core.tinternal_coverage as ic ON pt.internal_coverage_sk = ic.internal_coverage_sk
@@ -443,7 +451,7 @@ BEGIN
             getdate() as update_ts,
             @etl_audit_sk as etl_audit_sk,
             tprc.national_producer_no as NIPRid_200,
-            pt.create_ts as policy_transaction_create_ts
+            pt.transaction_ts as policy_history_transaction_ts
         INTO [edw_temp].[policy_ivans_auto_feed_temp1] 
         FROM [edw_temp].[policy_ivans_auto_feed_temp2] AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
@@ -467,7 +475,7 @@ BEGIN
             ON p.policy_no = jad.policy_no AND p.effective_dt = jad.effective_dt AND pt.transaction_seq_no = jad.transaction_seq_no
         LEFT JOIN (
 				select broker_sk, broker_id, national_producer_no
-				    ,ROW_NUMBER() OVER (PARTITION BY broker_id ORDER BY broker_sk DESC) AS rn
+				    ,ROW_NUMBER() OVER (PARTITION BY broker_id ORDER BY producer_sk DESC) AS rn
 				from edw_core.tproducer
 			) tprc
 		ON p.broker_id = tprc.broker_id
@@ -647,7 +655,7 @@ BEGIN
 
 		
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(policy_transaction_create_ts) FROM edw_temp.[policy_ivans_auto_feed_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(policy_history_transaction_ts) FROM edw_temp.[policy_ivans_auto_feed_temp1]),@last_source_extract_ts);
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

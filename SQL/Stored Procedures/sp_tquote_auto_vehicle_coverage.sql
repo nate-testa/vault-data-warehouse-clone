@@ -49,11 +49,11 @@ BEGIN
                 *
             FROM [edw_stage].[AccountTransaction]
             WHERE Stage in ('QUOTE','POLICY')
-            AND IssuedDate > @last_source_extract_ts
+            AND CreatedDate > @last_source_extract_ts
         )
         ,acctvpf AS (
             SELECT  
-                acct.PolicyNumber, acct.EffectiveDate, acct.IssuedDate, acct.Number,
+                acct.PolicyNumber, acct.EffectiveDate, acct.Number,
                 acctvpf.AccountTransactionVersionPremiumId,
                 acctvpf.ObjectUniqueId,
                 acctvpf.Coverage,
@@ -78,17 +78,17 @@ BEGIN
             AND p.ProductLine = 'PersonalLines'
         )
         ,acctvpf_unpivot AS (
-            SELECT PolicyNumber, EffectiveDate, IssuedDate, Number, ObjectUniqueId, CONCAT(FinalColumnName, '_method') AS FinalColumnName, method           as FinalValue FROM acctvpf WHERE method IS NOT NULL
+            SELECT PolicyNumber, EffectiveDate, Number, ObjectUniqueId, CONCAT(FinalColumnName, '_method') AS FinalColumnName, method           as FinalValue FROM acctvpf WHERE method IS NOT NULL
             UNION ALL
-            SELECT PolicyNumber, EffectiveDate, IssuedDate, Number, ObjectUniqueId, CONCAT(FinalColumnName, '_amount') AS FinalColumnName, amount           as FinalValue FROM acctvpf WHERE amount IS NOT NULL
+            SELECT PolicyNumber, EffectiveDate, Number, ObjectUniqueId, CONCAT(FinalColumnName, '_amount') AS FinalColumnName, amount           as FinalValue FROM acctvpf WHERE amount IS NOT NULL
             UNION ALL
-            SELECT PolicyNumber, EffectiveDate, IssuedDate, Number, ObjectUniqueId, CONCAT(FinalColumnName, '_retention') AS FinalColumnName, [retention]   as FinalValue FROM acctvpf WHERE [retention] IS NOT NULL
+            SELECT PolicyNumber, EffectiveDate, Number, ObjectUniqueId, CONCAT(FinalColumnName, '_retention') AS FinalColumnName, [retention]   as FinalValue FROM acctvpf WHERE [retention] IS NOT NULL
             UNION ALL
-            SELECT PolicyNumber, EffectiveDate, IssuedDate, Number, ObjectUniqueId, CONCAT(FinalColumnName, '_reason') AS FinalColumnName, reason           as FinalValue FROM acctvpf WHERE reason IS NOT NULL
+            SELECT PolicyNumber, EffectiveDate, Number, ObjectUniqueId, CONCAT(FinalColumnName, '_reason') AS FinalColumnName, reason           as FinalValue FROM acctvpf WHERE reason IS NOT NULL
         )
         ,FinalTablePremAdj AS (
             SELECT
-                PolicyNumber, EffectiveDate, IssuedDate, Number
+                PolicyNumber, EffectiveDate, Number
                 ,ObjectUniqueId
                 ,bodily_injury_premium_adjustment_method
                 ,bodily_injury_premium_adjustment_amount

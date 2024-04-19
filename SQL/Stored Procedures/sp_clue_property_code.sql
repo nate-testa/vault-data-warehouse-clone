@@ -35,11 +35,29 @@ BEGIN
 
         WITH 
         location_address AS (
-            SELECT policy_no, LEFT(address_line_1, 20) AS address_line_1, address_line_2, unit_no, city_nm, state_cd, zip_cd FROM edw_core.tpel_location
+            SELECT 
+                policy_no, 
+                LEFT(TRIM(SUBSTRING(address_line_1, PATINDEX('%[^0-9]%', address_line_1), 30)),20) as address_line_1, 
+                address_line_2, 
+                SUBSTRING(address_line_1, 1, PATINDEX('%[^0-9]%', address_line_1 + 'x') - 1) as home_no, 
+                unit_no, city_nm, state_cd, zip_cd 
+            FROM edw_core.tpel_location
                 UNION
-            SELECT policy_no, LEFT(address_line_1, 20) AS address_line_1, address_line_2, unit_no, city_nm, state_cd, zip_cd FROM edw_core.thome_location
+            SELECT 
+                policy_no, 
+                LEFT(TRIM(SUBSTRING(address_line_1, PATINDEX('%[^0-9]%', address_line_1), 30)),20) as address_line_1, 
+                address_line_2, 
+                SUBSTRING(address_line_1, 1, PATINDEX('%[^0-9]%', address_line_1 + 'x') - 1) as home_no, 
+                unit_no, city_nm, state_cd, zip_cd
+            FROM edw_core.thome_location
                 UNION
-            SELECT policy_no, LEFT(address_line_1, 20) AS address_line_1, address_line_2, unit_no, city_nm, state_cd, zip_cd FROM edw_core.tcollection_location
+            SELECT 
+                policy_no, 
+                LEFT(TRIM(SUBSTRING(address_line_1, PATINDEX('%[^0-9]%', address_line_1), 30)),20) as address_line_1, 
+                address_line_2, 
+                SUBSTRING(address_line_1, 1, PATINDEX('%[^0-9]%', address_line_1 + 'x') - 1) as home_no, 
+                unit_no, city_nm, state_cd, zip_cd
+            FROM edw_core.tcollection_location
         )
         ,mortagee AS (
             SELECT 
@@ -179,15 +197,15 @@ BEGIN
             m.mortgagee_nm AS [mortgageName],
             m.loan_no  AS [mortgageLoanNumber],
             '' AS [filler_reservedforFutureUse],
-            la.unit_no AS [riskAddressHseNum],
+            la.home_no AS [riskAddressHseNum],
             la.address_line_1 AS [riskAddressStreetName],
             la.unit_no AS [riskAddressAptNum],
             la.city_nm AS [riskAddressCity],
             la.state_cd AS [riskAddressState],
             la.zip_cd AS [riskAddressZip],
-            '' AS [riskAddressZipPlus4],
-            p.mailing_address_unit_no AS [policyHolderMailAddrHseNum],
-            p.mailing_address_line2 AS [policyHolderMailAddressStreetName],
+            '' AS [riskAddressZipPlus4], 
+            SUBSTRING(p.mailing_address_line1, 1, PATINDEX('%[^0-9]%', p.mailing_address_line1 + 'x') - 1) AS [policyHolderMailAddrHseNum],
+            LEFT(TRIM(SUBSTRING(p.mailing_address_line1, PATINDEX('%[^0-9]%', p.mailing_address_line1), 30)),20) AS [policyHolderMailAddressStreetName],
             p.mailing_address_unit_no AS [policyHolderMailAddressAptNum],
             p.mailing_address_city_nm AS [policyHolderMailAddressCity],
             p.mailing_address_state_cd AS [policyHolderMailAddressState],
@@ -253,7 +271,7 @@ BEGIN
         LEFT JOIN mortagee AS m ON m.policy_no = c.policy_no 
         LEFT JOIN location_address AS la ON c.policy_no = la.policy_no
         LEFT JOIN policy_insured_2 AS pi2 ON c.policy_no = pi2.policy_no
-        WHERE p.product_cd IN ('HO','CO')
+        WHERE p.product_cd IN ('HO','CO','LUX','PEL')
         ;
 
         

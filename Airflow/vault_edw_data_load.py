@@ -59,6 +59,24 @@ def check_tvalidation_and_send_email(**kwargs):
             dag=kwargs['dag'],
         ).execute(context=kwargs)
 
+def check_for_new_internal_coverage_cd_and_send_email(**kwargs):
+    sql_qry = """
+                SELECT internal_coverage_sk, internal_coverage_cd, product_cd, aslob_cd, internal_coverage_category_nm, primary_coverage_cd
+                FROM edw_core.tinternal_coverage
+                WHERE CAST(create_ts as date) = CAST(GETDATE() as date)
+                ORDER BY internal_coverage_sk
+              """
+    mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
+    result = mssql_hook.get_first(sql_qry)
+    if result is not None:
+        EmailOperator(
+            task_id='send_email_new_internal_coverage',
+            to=to_email,
+            subject='Airflow - New Internal Coverage created',
+            html_content=get_vault_data_HTML(sql_qry,'There are new Internal Coverage rows created into edw_core.tinternal_coverage table. Please review the details below.'),
+            dag=kwargs['dag'],
+        ).execute(context=kwargs)
+
 def on_failure_callback(context):
 
     task_instance = context['task_instance']
@@ -744,6 +762,13 @@ with DAG(
             autocommit=True,
         )
 
+        new_internal_coverage_cd_email = PythonOperator(
+            task_id='new_internal_coverage_cd_email',
+            python_callable=check_for_new_internal_coverage_cd_and_send_email,
+            provide_context=True,
+            dag=dag,
+        )
+
         sp_ttax_fee_surcharge = MsSqlOperator(
             task_id='sp_ttax_fee_surcharge',
             mssql_conn_id='Vault_EDW',
@@ -767,17 +792,25 @@ with DAG(
             html_content=get_sp_success_data_HTML(reference_group_items, 'All stored procedures executed successfully for all the Reference tables'),
         )
 
-        sp_tcustomer >> sp_tuser >> sp_tinternal_coverage >> sp_ttax_fee_surcharge >> sp_tbillingaccount >> send_reference_email
+        sp_tcustomer >> sp_tuser >> sp_tinternal_coverage >> new_internal_coverage_cd_email >> sp_ttax_fee_surcharge >> sp_tbillingaccount >> send_reference_email
 
 
     with TaskGroup("broker_group") as broker_group:
 
-        broker_group_items = ['sp_tbroker','sp_tbroker_commission','sp_tbroker_license','sp_tbroker_vault_team', 'sp_tproducer']
+        broker_group_items = ['sp_tbroker','sp_tbroker_relation','sp_tbroker_commission','sp_tbroker_license','sp_tbroker_vault_team', 'sp_tproducer']
 
         sp_tbroker = MsSqlOperator(
             task_id='sp_tbroker',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tbroker",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tbroker_relation = MsSqlOperator(
+            task_id='sp_tbroker_relation',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tbroker_relation",
             database="vault_edw",
             autocommit=True,
         )
@@ -821,7 +854,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(broker_group_items, 'All stored procedures executed successfully for all the Broker tables'),
         )
 
-        sp_tbroker >> sp_tbroker_commission >> sp_tbroker_license >> sp_tbroker_vault_team >> sp_tproducer >> send_broker_email
+        sp_tbroker >> sp_tbroker_relation >> sp_tbroker_commission >> sp_tbroker_license >> sp_tbroker_vault_team >> sp_tproducer >> send_broker_email
 
 
     with TaskGroup("policy_group") as policy_group:
@@ -837,7 +870,8 @@ with DAG(
             'sp_ttask_workflow_step',
             'sp_ttask', 
             'sp_tmanuscript',
-            'sp_tnote'
+            'sp_tnote',
+            'sp_tpolicy_referral_message'
             ]
 
         sp_tpolicy = MsSqlOperator(
@@ -928,6 +962,14 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tpolicy_referral_message = MsSqlOperator(
+            task_id='sp_tpolicy_referral_message',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tpolicy_referral_message",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_policy_email = EmailOperator(
             task_id='send_policy_email',
             to=to_email,
@@ -935,7 +977,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(policy_group_items, 'All stored procedures executed successfully for all the Policy tables'),
         )
 
-        sp_tpolicy >> sp_tpolicy_update_non_renwal_billing >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tloss_history >> sp_tadditional_interest >> sp_ttask_workflow >> sp_ttask_workflow_step >> sp_ttask >> sp_tmanuscript >> sp_tnote >> send_policy_email
+        sp_tpolicy >> sp_tpolicy_update_non_renwal_billing >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tloss_history >> sp_tadditional_interest >> sp_ttask_workflow >> sp_ttask_workflow_step >> sp_ttask >> sp_tmanuscript >> sp_tnote >> sp_tpolicy_referral_message >> send_policy_email
 
 
     # with TaskGroup("vendor_report_group") as vendor_report_group:
