@@ -35,14 +35,6 @@ BEGIN
         act.ExpirationDate AS expiration_dt,act.Number as transaction_seq_no, tqh.quote_history_sk,
         acti.[Message] AS referral_message,
         acti.ReferralLevel AS referral_level,
-        CASE acti.CanRefer
-            WHEN 0 THEN 'No'
-            WHEN 1 THEN 'Yes'
-        END AS refer_in,
-        CASE acti.IsApproved
-            WHEN 0 THEN 'No'
-            WHEN 1 THEN 'Yes'
-        END AS approved_in,
         acti.CreatedDate AS referral_message_created_ts,
         acti.UpdatedDate AS referral_message_updated_ts,
         CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk
@@ -56,17 +48,17 @@ BEGIN
         WHERE act.PolicyNumber IS NOT NULL
         AND	act.[Stage] IN ('QUOTE','POLICY')
         AND pr.ProductLine = 'PersonalLines'
-        AND GREATEST(acti.CreatedDate,acti.UpdatedDate) > @last_source_extract_ts
+        AND acti.CreatedDate > @last_source_extract_ts
 
 		INSERT INTO edw_core.tquote_referral_message
         (
         quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_history_sk, referral_message,
-        referral_level, refer_in, approved_in, referral_message_created_ts, referral_message_updated_ts,
+        referral_level, referral_message_created_ts, referral_message_updated_ts,
         source_system_sk, create_ts, update_ts, etl_audit_sk
         )
 		SELECT
 			quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_history_sk, referral_message,
-            referral_level, refer_in, approved_in, referral_message_created_ts, referral_message_updated_ts,
+            referral_level, referral_message_created_ts, referral_message_updated_ts,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM
 			edw_temp.tquote_referral_message_temp1
@@ -74,7 +66,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(referral_message_created_ts,referral_message_updated_ts)) 
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(referral_message_created_ts) 
                         FROM edw_temp.tquote_referral_message_temp1),@last_source_extract_ts)	
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
