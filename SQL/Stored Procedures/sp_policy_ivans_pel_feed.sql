@@ -454,7 +454,7 @@ BEGIN
             ON p.policy_no = jppu.policy_no AND p.effective_dt = jppu.effective_dt AND pt.transaction_seq_no = jppu.transaction_seq_no
         LEFT JOIN (
 				select broker_sk, broker_id, national_producer_no
-				    ,ROW_NUMBER() OVER (PARTITION BY broker_id ORDER BY broker_sk DESC) AS rn
+				    ,ROW_NUMBER() OVER (PARTITION BY broker_id ORDER BY producer_sk DESC) AS rn
 				from edw_core.tproducer
 			) tprc
 		ON p.broker_id = tprc.broker_id
