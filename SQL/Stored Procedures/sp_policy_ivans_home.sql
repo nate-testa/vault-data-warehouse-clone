@@ -198,6 +198,8 @@ BEGIN
 						'MORTG' as natureInterestCd,
 						COALESCE(tm.loan_no, '') as accountNumberId
 					FROM [edw_core].[tmortgagee] tm
+					INNER JOIN edw_core.tpolicy_history ph ON tm.policy_history_sk = ph.policy_history_sk
+					WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
 					UNION ALL
 					SELECT
 						ai.policy_no, ai.effective_dt, ai.transaction_seq_no,
@@ -230,16 +232,23 @@ BEGIN
 						END as natureInterestCd,
 						COALESCE(tp.customer_id, '') as accountNumberId
 					FROM edw_core.tadditional_interest as ai
-					LEFT JOIN edw_core.tpolicy tp ON ai.policy_no = tp.policy_no AND ai.effective_dt = tp.effective_dt
+					INNER JOIN edw_core.tpolicy_history ph ON ai.policy_history_sk = ph.policy_history_sk
+					INNER JOIN edw_core.tpolicy tp ON ai.policy_no = tp.policy_no AND ai.effective_dt = tp.effective_dt
+					WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
 				) AS jdata
 					WHERE  ptf.policy_no = jdata.policy_no
 						AND ptf.effective_dt = jdata.effective_dt
 						AND ptf.transaction_seq_no = jdata.transaction_seq_no
 				FOR JSON PATH, INCLUDE_NULL_VALUES 
 			) AS Additional_Interests
-			FROM (SELECT policy_no, effective_dt, transaction_seq_no FROM [edw_core].[tmortgagee]
+			FROM (SELECT tm.policy_no, tm.effective_dt, tm.transaction_seq_no FROM [edw_core].[tmortgagee] tm
+					INNER JOIN edw_core.tpolicy_history ph ON tm.policy_history_sk = ph.policy_history_sk
+					WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
 					UNION 
-				SELECT policy_no, effective_dt, transaction_seq_no FROM edw_core.tadditional_interest) as ptf
+				SELECT ai.policy_no, ai.effective_dt, ai.transaction_seq_no FROM edw_core.tadditional_interest ai
+				INNER JOIN edw_core.tpolicy_history ph ON ai.policy_history_sk = ph.policy_history_sk
+				WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
+				) as ptf
 		) temp4
 
 		SELECT temp5.*
@@ -257,6 +266,8 @@ BEGIN
 						,COALESCE(csi.schedule_on_file_in, '') as onFile
 						,cct.class_type as classtype
 						FROM edw_core.tcollection_scheduled_item csi
+						INNER JOIN edw_core.tpolicy_history ph ON csi.policy_history_sk = ph.policy_history_sk
+						AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
 						LEFT JOIN edw_core.tcollection_class_type cct
 						on csi.collection_class_type_sk = cct.collection_class_type_sk
 						WHERE  ptf.policy_no = csi.policy_no
@@ -265,6 +276,8 @@ BEGIN
 					FOR JSON PATH, INCLUDE_NULL_VALUES 
 				) AS Scheduled_Items
 				FROM edw_core.tcollection_scheduled_item as ptf
+				INNER JOIN edw_core.tpolicy_history ph ON ptf.policy_history_sk = ph.policy_history_sk
+				WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
 				group by ptf.policy_no, ptf.effective_dt, ptf.transaction_seq_no
 		) temp5
 
