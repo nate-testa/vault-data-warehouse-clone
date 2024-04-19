@@ -252,7 +252,7 @@ BEGIN
 		) temp4
 
 		SELECT temp5.*
-		INTO [edw_temp].[policy_ivans_home_temp5]
+		--INTO [edw_temp].[policy_ivans_home_temp5]
 		FROM (
 			SELECT
 			    ptf.policy_no, ptf.effective_dt, ptf.transaction_seq_no,
@@ -266,6 +266,8 @@ BEGIN
 						,COALESCE(csi.schedule_on_file_in, '') as onFile
 						,cct.class_type as classtype
 						FROM edw_core.tcollection_scheduled_item csi
+						INNER JOIN edw_core.tpolicy_history ph ON csi.policy_history_sk = ph.policy_history_sk
+						AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
 						LEFT JOIN edw_core.tcollection_class_type cct
 						on csi.collection_class_type_sk = cct.collection_class_type_sk
 						WHERE  ptf.policy_no = csi.policy_no
