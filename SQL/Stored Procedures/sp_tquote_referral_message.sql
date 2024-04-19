@@ -36,12 +36,12 @@ BEGIN
         acti.[Message] AS referral_message,
         acti.ReferralLevel AS referral_level,
         CASE acti.CanRefer
-            WHEN 0 THEN 'N'
-            WHEN 1 THEN 'Y'
+            WHEN 0 THEN 'No'
+            WHEN 1 THEN 'Yes'
         END AS refer_in,
         CASE acti.IsApproved
-            WHEN 0 THEN 'N'
-            WHEN 1 THEN 'Y'
+            WHEN 0 THEN 'No'
+            WHEN 1 THEN 'Yes'
         END AS approved_in,
         acti.CreatedDate AS referral_message_created_ts,
         acti.UpdatedDate AS referral_message_updated_ts,
