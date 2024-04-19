@@ -53,7 +53,7 @@ BEGIN
         edw_stage.AccountTransactionIssue acti
         INNER JOIN edw_stage.AccountTransaction act ON acti.AccountTransactionId = act.Id
         INNER JOIN edw_core.tpolicy_history tqh ON tqh.policy_no = act.PolicyNumber AND 
-            tqh.effective_dt = act.EffectiveDate AND tqh.transaction_seq_no = act.Number
+            tqh.effective_dt = act.EffectiveDate AND tqh.transaction_seq_no = act.PolicyChangeNumber
         INNER JOIN edw_stage.Product pr ON pr.Id=act.ProductId
         WHERE act.PolicyNumber IS NOT NULL
         AND	act.[State] = 'ISSUED'
