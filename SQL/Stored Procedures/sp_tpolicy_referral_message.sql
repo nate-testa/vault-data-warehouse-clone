@@ -5,7 +5,8 @@
 ------------------------------------------------------------------------------------------------------------------------------
 -- Change date			|Author							|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
--- 04/18/2024 			Yunus Mohammed					1. Created this procedure 
+-- 04/18/2024 			Yunus Mohammed					1. Created this procedure
+-- 04/22/2024 			Yunus Mohammed					2. Updated transaction_seq_no logic
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_referral_message]
 
