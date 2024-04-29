@@ -133,7 +133,7 @@ BEGIN
                             update		avc 
                             set			avc.' + @edw_field_nm + ' = replace( pfvd.ValueDisplay,''$'','''') 
                             from		[edw_temp].[tquote_auto_policy_coverage_temp1] avc
-                            inner join	edw_core.tpolicy pol on  avc.policy_no = pol.policy_no and avc.effective_dt = pol.effective_dt
+                            inner join	edw_core.tquote pol on  avc.quote_no = pol.quote_no and avc.effective_dt = pol.effective_dt
                             inner join	[edw_stage].[ProductObjectFieldValueDisplay] pfvd 
                                                     on pfvd.StateCode = pol.risk_state_cd and pfvd.ObjectType = ''Automobile'' and pfvd.field = ''' + @metal_field_nm + ''' and avc.' + @edw_field_nm + ' = pfvd.Value
                             where		avc.' + @edw_field_nm + ' is not null and replace( pfvd.ValueDisplay,''$'','''') is not null
