@@ -28,7 +28,8 @@ BEGIN
 		drop table if exists edw_temp.tpel_watercraft_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,[Index],policy_history_sk,source_system_sk,
-			IssuedDate,[Year],Make,Model,[Length],HullValue,Horsepower,AnyWatercraftOwnedTrustOrLlc,AnyWatercraftCaptainOrCrew
+			IssuedDate,[Year],Make,Model,[Length],HullValue,Horsepower,AnyWatercraftOwnedTrustOrLlc,AnyWatercraftCaptainOrCrew,
+			MotorType,MilesPerHour,SailboatPowerType
 			into edw_temp.tpel_watercraft_temp1
 		from
 		(
@@ -60,14 +61,16 @@ BEGIN
 				and atvo.ObjectType='Watercraft'
 				and atvof.Field IN 
 				(
-					'Year','Make','Model','Length','HullValue','Horsepower','AnyWatercraftOwnedTrustOrLlc','AnyWatercraftCaptainOrCrew'
+					'Year','Make','Model','Length','HullValue','Horsepower','AnyWatercraftOwnedTrustOrLlc','AnyWatercraftCaptainOrCrew',
+					'MotorType','MilesPerHour','SailboatPowerType'
 				)
 				and act.IssuedDate > @last_source_extract_ts
 			) as t
 		) as t
 		pivot 
 		(
-			max([Value]) FOR Field IN ([Year],Make,Model,[Length],HullValue,Horsepower,AnyWatercraftOwnedTrustOrLlc,AnyWatercraftCaptainOrCrew)
+			max([Value]) FOR Field IN ([Year],Make,Model,[Length],HullValue,Horsepower,AnyWatercraftOwnedTrustOrLlc,AnyWatercraftCaptainOrCrew,
+										MotorType,MilesPerHour,SailboatPowerType)
 		) as pivottable
 
 		INSERT INTO [edw_core].[tpel_watercraft]
@@ -75,7 +78,8 @@ BEGIN
 			policy_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no,policy_history_sk,
 			watercraft_no,watercraft_year,watercraft_make,watercraft_model,	watercraft_length,watercraft_hull_value,
 			watercraft_horsepower,vessels_owned_trust_llc_in,vessels_with_captain_crew_in,
-			source_system_sk,create_ts,	update_ts,etl_audit_sk
+			source_system_sk,create_ts,	update_ts,etl_audit_sk,
+			watercraft_motor_type, watercraft_miles_per_hr, watercraft_sailboat_power_type
 		)
 		SELECT
 			PolicyNumber AS policy_no,EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
@@ -83,7 +87,8 @@ BEGIN
 			[Index] as watercraft_no,[Year] AS watercraft_year,Make AS watercraft_make,Model AS watercraft_model,
 			[Length] AS watercraft_length,HullValue AS watercraft_hull_value,Horsepower AS watercraft_horsepower,
 			AnyWatercraftOwnedTrustOrLlc AS vessels_owned_trust_llc_in,AnyWatercraftCaptainOrCrew AS vessels_with_captain_crew_in,
-			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
+			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,
+			MotorType AS watercraft_motor_type,MilesPerHour AS watercraft_miles_per_hr,SailboatPowerType AS watercraft_sailboat_power_type
 		FROM
 			edw_temp.tpel_watercraft_temp1 AS ttpv
 
