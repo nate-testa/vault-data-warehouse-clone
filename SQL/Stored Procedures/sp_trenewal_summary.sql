@@ -29,6 +29,7 @@ GO
 -- 02/23/24		Architha Gudimalla				16. Added columns - Renewal Offered TIV, Renewal Offered cov a, Renewal Offered renewal sq feet
 -- 03/22/24		Architha Gudimalla				17. Updated renewal columns for pols that were renewed after 60 day of expiry
 -- 04/26/24		Architha Gudimalla				18. Added temp table for the last insert
+-- 04/30/24		Alberto Almario					19. Added New columns expiring_mid_term_endorsement_premium_amt, expiring_price_sqft, issued_price_sqft, renewal_offered_price_sqft
 -- ================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -481,6 +482,10 @@ BEGIN
 						,renewal_tiv_amt
 						,renewal_cova_amt
 						,renewal_total_finished_square_feet
+						,expiring_mid_term_endorsement_premium_amt
+						,expiring_price_sqft
+						,issued_price_sqft
+						,renewal_offered_price_sqft
 					)
 				select @month_end_dt_sk, policy_sk,  customer_sk, broker_sk, product_sk, sourcE_system_sk, 
 						initial_written_prem, 
@@ -521,7 +526,25 @@ BEGIN
 						,expiring_customer_other_inforce_ct
 						,renewal_tiv_amt,
 						 renewal_cova_amt,  
-						 renewal_total_finished_square_feet
+						 renewal_total_finished_square_feet,
+						(effective_date_60_day_prem - initial_written_prem - mid_term_cancel_amount) AS expiring_mid_term_endorsement_premium_amt,
+						case 
+							when totalsquarefeet > 0
+							then expiring_COVA/totalsquarefeet
+							else 0 
+						end AS expiring_price_sqft,
+						
+						case 
+							when totalsquarefeet > 0
+							then sixty_day_COVA/totalsquarefeet
+							else 0 
+						end AS issued_price_sqft,
+						case 
+							when renewal_total_finished_square_feet > 0 
+							then renewal_cova_amt/renewal_total_finished_square_feet 
+							else 0 
+						end AS renewal_offered_price_sqft
+
 				from edw_temp.tren_summ;
 
 				SET @rows_affected=@@ROWCOUNT;
