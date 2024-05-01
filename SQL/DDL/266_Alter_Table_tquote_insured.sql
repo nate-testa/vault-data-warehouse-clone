@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote_insured ADD named_insured_limit_type varchar(255);
