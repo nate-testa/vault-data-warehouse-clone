@@ -1,0 +1,137 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "AZR-PREP-DATA-ADF-CORE01"
+		},
+		"LS_EDW_PREPROD_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_EDW_PREPROD'"
+		},
+		"LS_METALDB_PREPROD_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_METALDB_PREPROD'"
+		},
+		"LS_eBao_preProd_aws_us_preprod_address_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_address'"
+		},
+		"LS_eBao_preProd_aws_us_preprod_diary_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_diary'"
+		},
+		"LS_eBao_preProd_aws_us_preprod_pub_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_pub'"
+		},
+		"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_unicorn_insurepay'"
+		},
+		"LS_eBao_preProd_aws_us_preprod_vault_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_vault'"
+		},
+		"azr_prep_data_core01_pep01_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PREP-DATA-DB-RG/providers/Microsoft.Sql/servers/azr-prep-data-db-core01"
+		},
+		"azr_prep_data_core01_pep01_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr_prep_data_core01_pep01_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-prep-data-db-core01.database.windows.net"
+			]
+		},
+		"azr_prep_metal_core01_pep01_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PREP-METAL-DB-RG/providers/Microsoft.Sql/servers/azr-prep-metal-db-core01"
+		},
+		"azr_prep_metal_core01_pep01_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr_prep_metal_core01_pep01_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-prep-metal-db-core01.database.windows.net"
+			]
+		},
+		"containerUri": {
+			"type": "string",
+			"metadata": "URI to storage account containing linked ARM templates"
+		},
+		"containerSasToken": {
+			"type": "string",
+			"metadata": "Sas token to storage account containing linked ARM templates"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "AZR-PREP-DATA-ADF-CORE01_ArmTemplate_0",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"LS_eBao_preProd_aws_us_preprod_address_connectionString": {
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_address_connectionString')]"
+					},
+					"LS_eBao_preProd_aws_us_preprod_diary_connectionString": {
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_diary_connectionString')]"
+					},
+					"LS_eBao_preProd_aws_us_preprod_pub_connectionString": {
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_pub_connectionString')]"
+					},
+					"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_connectionString": {
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_connectionString')]"
+					},
+					"LS_eBao_preProd_aws_us_preprod_vault_connectionString": {
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_vault_connectionString')]"
+					},
+					"LS_EDW_PREPROD_connectionString": {
+						"value": "[parameters('LS_EDW_PREPROD_connectionString')]"
+					},
+					"LS_METALDB_PREPROD_connectionString": {
+						"value": "[parameters('LS_METALDB_PREPROD_connectionString')]"
+					},
+					"azr_prep_data_core01_pep01_properties_privateLinkResourceId": {
+						"value": "[parameters('azr_prep_data_core01_pep01_properties_privateLinkResourceId')]"
+					},
+					"azr_prep_data_core01_pep01_properties_groupId": {
+						"value": "[parameters('azr_prep_data_core01_pep01_properties_groupId')]"
+					},
+					"azr_prep_data_core01_pep01_properties_fqdns": {
+						"value": "[parameters('azr_prep_data_core01_pep01_properties_fqdns')]"
+					},
+					"azr_prep_metal_core01_pep01_properties_privateLinkResourceId": {
+						"value": "[parameters('azr_prep_metal_core01_pep01_properties_privateLinkResourceId')]"
+					},
+					"azr_prep_metal_core01_pep01_properties_groupId": {
+						"value": "[parameters('azr_prep_metal_core01_pep01_properties_groupId')]"
+					},
+					"azr_prep_metal_core01_pep01_properties_fqdns": {
+						"value": "[parameters('azr_prep_metal_core01_pep01_properties_fqdns')]"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

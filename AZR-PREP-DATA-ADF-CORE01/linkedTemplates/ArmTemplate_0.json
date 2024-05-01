@@ -1,0 +1,281 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "AZR-PREP-DATA-ADF-CORE01"
+		},
+		"LS_eBao_preProd_aws_us_preprod_address_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_address'"
+		},
+		"LS_eBao_preProd_aws_us_preprod_diary_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_diary'"
+		},
+		"LS_eBao_preProd_aws_us_preprod_pub_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_pub'"
+		},
+		"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_unicorn_insurepay'"
+		},
+		"LS_eBao_preProd_aws_us_preprod_vault_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_vault'"
+		},
+		"LS_EDW_PREPROD_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_EDW_PREPROD'"
+		},
+		"LS_METALDB_PREPROD_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_METALDB_PREPROD'"
+		},
+		"azr_prep_data_core01_pep01_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PREP-DATA-DB-RG/providers/Microsoft.Sql/servers/azr-prep-data-db-core01"
+		},
+		"azr_prep_data_core01_pep01_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr_prep_data_core01_pep01_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-prep-data-db-core01.database.windows.net"
+			]
+		},
+		"azr_prep_metal_core01_pep01_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PREP-METAL-DB-RG/providers/Microsoft.Sql/servers/azr-prep-metal-db-core01"
+		},
+		"azr_prep_metal_core01_pep01_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr_prep_metal_core01_pep01_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-prep-metal-db-core01.database.windows.net"
+			]
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/default')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks",
+			"apiVersion": "2018-06-01",
+			"properties": {},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AWS-PREPROD')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "SelfHosted",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_eBao_preProd_aws_us_preprod_address')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "MySql",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_eBao_preProd_aws_us_preprod_address_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AWS-PREPROD",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-PREPROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_eBao_preProd_aws_us_preprod_diary')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "MySql",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_eBao_preProd_aws_us_preprod_diary_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AWS-PREPROD",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-PREPROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_eBao_preProd_aws_us_preprod_pub')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "MySql",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_eBao_preProd_aws_us_preprod_pub_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AWS-PREPROD",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-PREPROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_eBao_preProd_aws_us_preprod_unicorn_insurepay')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "MySql",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AWS-PREPROD",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-PREPROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_eBao_preProd_aws_us_preprod_vault')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "MySql",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_eBao_preProd_aws_us_preprod_vault_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AWS-PREPROD",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-PREPROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AZR-ADF-IR')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "East US",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 10,
+							"cleanup": false,
+							"customProperties": []
+						},
+						"pipelineExternalComputeScaleProperties": {
+							"timeToLive": 60,
+							"numberOfPipelineNodes": 1,
+							"numberOfExternalNodes": 1
+						}
+					}
+				},
+				"managedVirtualNetwork": {
+					"type": "ManagedVirtualNetworkReference",
+					"referenceName": "default"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/azr_prep_data_core01_pep01')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('azr_prep_data_core01_pep01_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('azr_prep_data_core01_pep01_properties_groupId')]",
+				"fqdns": "[parameters('azr_prep_data_core01_pep01_properties_fqdns')]"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/azr_prep_metal_core01_pep01')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('azr_prep_metal_core01_pep01_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('azr_prep_metal_core01_pep01_properties_groupId')]",
+				"fqdns": "[parameters('azr_prep_metal_core01_pep01_properties_fqdns')]"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_EDW_PREPROD')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Integration runtime using SQL server in PREPROD.  -> \nazr-prep-data-db-core01",
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_EDW_PREPROD_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AZR-ADF-IR",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AZR-ADF-IR')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_METALDB_PREPROD')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_METALDB_PREPROD_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AZR-ADF-IR",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AZR-ADF-IR')]"
+			]
+		}
+	]
+}
