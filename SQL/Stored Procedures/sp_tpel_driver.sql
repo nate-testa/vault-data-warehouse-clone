@@ -71,7 +71,7 @@ BEGIN
 				and atvof.Field IN 
 				(
 					'FirstName','LastName','Birthdate','InsuredType','LicenseStatus','LicenseNumber',
-					'Model','LicenseCountry','LicenseState','MiddleName','Suffix','Prefix','LicenseYear'
+					'Model','LicenseCountry','LicenseState','MiddleName','Suffix','Prefix','LicenseYear','DriverLimitsIndicator'
 				)
 				and act.IssuedDate > @last_source_extract_ts
 			) as t

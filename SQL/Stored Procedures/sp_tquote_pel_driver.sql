@@ -76,7 +76,7 @@ BEGIN
 		pivot 
 		(
 			max(Value) FOR Field IN (FirstName,LastName,Birthdate,InsuredType,LicenseStatus,LicenseNumber,
-					Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear)
+					Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,DriverLimitsIndicator)
 		) as pivottable
 			
 		INSERT INTO [edw_core].[tquote_pel_driver]
