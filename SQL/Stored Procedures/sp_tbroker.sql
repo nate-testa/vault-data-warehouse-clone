@@ -1,15 +1,15 @@
 ﻿-- =================================================================================================
--- Author:		Mohammed Yunus
 -- Description: This procedures insert and update broker data 
 ---------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 06/02/23		Mohammed Yunus					1. Created this procedure 
+-- 06/02/23		Yunus Mohammed					1. Created this procedure 
 -- 06/29/23		Architha Gudimalla				2. Made changes to fix the errors on first run
 -- 08/29/23		Mohammed Yunus					3. Procedure updated for new columns
 -- 10/26/23		Mohammed Yunus					4. Made changes to fix error
 -- 10/31/23		Mohammed Yunus					5. Added CommissionStatementEmail
 -- 08/02/24		Hernando Gonzalez				7. Added broker_terminated_dt
+-- 05/02/24		Yunus Mohammed					8. Added broker_tier
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker]
@@ -109,7 +109,8 @@ BEGIN
 			where brkemail.BrokerageId = brk.Id ),'') as commission_statement_email,
 			brk.CreatedDate,
 			brk.UpdatedDate,
-			brk.TerminatedDate
+			brk.TerminatedDate,
+			brk.Tier AS broker_tier
 		INTO edw_temp.tbroker_temp1
 		FROM
 			edw_stage.Brokerage brk
@@ -138,7 +139,8 @@ BEGIN
 				commission_address_line_2,commission_address_unit_no,commission_address_city_nm,commission_address_state_cd,
 				commission_address_zip_cd,commission_address_county_nm,commission_address_country_nm,insurance_company_nm,insurance_policy_no,
 				insurance_policy_limit_amt,insurance_policy_effective_dt,insurance_policy_expiration_dt,company_nm,bank_nm,routing_no,account_no,
-				accounting_type,token_id,commission_statement_email,create_ts,update_ts,etl_audit_sk,broker_terminated_dt
+				accounting_type,token_id,commission_statement_email,broker_tier,
+				create_ts,update_ts,etl_audit_sk,broker_terminated_dt
 			)
 		VALUES
 			(
@@ -154,7 +156,7 @@ BEGIN
 				commission_address_line_2,commission_address_unit_no,commission_address_city_nm,commission_address_state_cd,
 				commission_address_zip_cd,commission_address_county_nm,commission_address_country_nm,insurance_company_nm,insurance_policy_no,
 				insurance_policy_limit_amt,insurance_policy_effective_dt,insurance_policy_expiration_dt,company_nm,bank_nm,routing_no,account_no,
-				accounting_type,token_id,commission_statement_email,
+				accounting_type,token_id,commission_statement_email,broker_tier,
 				getdate(),getdate(),@etl_audit_sk,TerminatedDate
 			)
 		-- For Updates
@@ -227,6 +229,7 @@ BEGIN
 		Target.token_id = Source.token_id,
 		Target.commission_statement_email = Source.commission_statement_email,
 		Target.broker_terminated_dt = Source.TerminatedDate,
+		Target.broker_tier = Source.broker_tier,
 		Target.[update_ts] = getdate();
 		
 		SET @rows_affected=@@ROWCOUNT;
