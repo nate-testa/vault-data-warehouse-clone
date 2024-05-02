@@ -34,7 +34,7 @@ BEGIN
 			HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
 			PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
 			CriminalTrafficViolationField,SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
-			AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit
+			AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit
 			into edw_temp.tpel_coverage_temp1
 		from
 		(
@@ -73,7 +73,7 @@ BEGIN
 					'HigherUnderlyingLimitsEndorsement','AILimitedLiability','MinimumEarnedPremiumEndorsement','MinimumEarnedPremiumEndorsementLimit',
 					'PremisesLiabilityLimitation','DeletionofCosmeticMarringExclusion','Manuscript','ProfileAdjustment','CriminalTrafficViolation',
 					'CriminalTrafficViolationField','SecondaryInsuredCoverageAmount','UnderinsuredMotoristLiabilityForSecondaryInsured','DefenseInsideLimits','AutoLiabilityExclusion',
-					'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit'
+					'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit'
 				)
 				and act.IssuedDate>@last_source_extract_ts
 			) as t
@@ -88,7 +88,7 @@ BEGIN
 				HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
 				PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
 				CriminalTrafficViolationField,SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
-				AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit
+				AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit
 				)
 		) as pivottable;
 
@@ -154,7 +154,7 @@ BEGIN
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,
 			SecondaryInsuredCoverageAmount AS secondary_insured_coverage_amt,UnderinsuredMotoristLiabilityForSecondaryInsured AS underinsured_motorist_liability_for_secondary_insured_amt,
 			DefenseInsideLimits AS defense_inside_limits_in,AutoLiabilityExclusion AS auto_liability_exclusion_in,
-			AutoUnderlyingLimitType AS auto_underlying_limit_type,AutoUnderlyingLimitAmountPerOccurence AS auto_underlying_limit_per_occurence_amt,
+			AutoUnderlyingLimitType AS auto_underlying_limit_type,AutoUnderlyingLimitAmountPerOccurrence AS auto_underlying_limit_per_occurence_amt,
 			AutoUnderlyingLimitAmountForPropertyDamage AS auto_underlying_limit_for_property_damage_amt,HomeUnderlyingLimit AS home_underlying_limit_amt
 		FROM
 			edw_temp.tpel_coverage_temp1 AS ttlc
