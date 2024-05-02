@@ -1,1 +1,1 @@
-ALTER TABLE edw_core.tbroker ADD broker_tier varchar(255);
+ALTER TABLE edw_core.tbroker ADD broker_tier int;
