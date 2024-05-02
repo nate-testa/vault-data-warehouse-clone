@@ -8,6 +8,7 @@
 ------------------------------------------------------------------------------------------------------------------------------
 -- 10/24/2023 			Yunus Mohammed					1. Created this procedure 
 -- 11/11/23		        Sandeep Gundreddy		        2. modified quote_history_sk logic and removed transaction_effective_dt
+-- 02/05/24				Hernando Gonzalez				3. Added Limits Indicator
 -- =========================================================================================================================== 
 CREATE or alter  PROCEDURE [edw_core].[sp_tquote_pel_driver]
 
@@ -35,7 +36,7 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,policy_history_sk,source_system_sk,[Index],
 			CreatedDate,FirstName,LastName,Birthdate,InsuredType,LicenseStatus,LicenseNumber,
-			Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear
+			Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,DriverLimitsIndicator
 			into edw_temp.tquote_pel_driver_temp1
 		from
 		(
@@ -67,7 +68,7 @@ BEGIN
 				and atvof.Field IN 
 				(
 					'FirstName','LastName','Birthdate','InsuredType','LicenseStatus','LicenseNumber',
-					'Model','LicenseCountry','LicenseState','MiddleName','Suffix','Prefix','LicenseYear'
+					'Model','LicenseCountry','LicenseState','MiddleName','Suffix','Prefix','LicenseYear','DriverLimitsIndicator'
 				)
 				and act.CreatedDate > @last_source_extract_ts
 			) as t
@@ -82,7 +83,7 @@ BEGIN
 		(
 			quote_no,effective_dt,expiration_dt,transaction_seq_no,quote_history_sk,
 			driver_no,prefix,first_nm,middle_nm,last_nm,suffix,birth_dt,license_status,license_country_nm,license_state_cd,license_year,
-			license_no,source_system_sk,create_ts,update_ts,etl_audit_sk
+			license_no,source_system_sk,create_ts,update_ts,etl_audit_sk, driver_limit_type
 		)
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,
@@ -91,7 +92,7 @@ BEGIN
 			LastName AS last_nm,Suffix AS suffix,Birthdate AS birth_dt,LicenseStatus AS license_status,
 			LicenseCountry AS license_country_nm,LicenseState AS license_state_cd,LicenseYear AS license_year,
 			LicenseNumber AS license_no,
-			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
+			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk, DriverLimitsIndicator as driver_limit_type
 		FROM
 			edw_temp.tquote_pel_driver_temp1 AS ttlc
 

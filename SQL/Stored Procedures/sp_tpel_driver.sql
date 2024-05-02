@@ -8,6 +8,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 				Yunus Mohammed			    1. Created this procedure
 -- 01/08/24		Yunus Mohammed			    2. Added deleted_on_policy_change_in
+-- 02/05/24		Hernando Gonzalez			3. Added Limits Indicator
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_driver]
 
@@ -36,7 +37,8 @@ BEGIN
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,policy_history_sk,source_system_sk,[Index],
 			IssuedDate,FirstName,LastName,Birthdate,InsuredType,LicenseStatus,LicenseNumber,
 			Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,
-			CASE IsDeletedOnPolicyChange WHEN 0 THEN 'No' WHEN 1 THEN 'Yes' END AS IsDeletedOnPolicyChange			
+			CASE IsDeletedOnPolicyChange WHEN 0 THEN 'No' WHEN 1 THEN 'Yes' END AS IsDeletedOnPolicyChange,
+			DriverLimitsIndicator		
 			into edw_temp.tpel_driver_temp1
 		from
 		(
@@ -77,14 +79,14 @@ BEGIN
 		pivot 
 		(
 			max(Value) FOR Field IN (FirstName,LastName,Birthdate,InsuredType,LicenseStatus,LicenseNumber,
-					Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear)
+					Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,DriverLimitsIndicator)
 		) as pivottable
 			
 		INSERT INTO [edw_core].[tpel_driver]
 		(
 			policy_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no,policy_history_sk,
 			driver_no,prefix,first_nm,middle_nm,last_nm,suffix,birth_dt,license_status,license_country_nm,license_state_cd,license_year,
-			license_no,driver_deleted_in,source_system_sk,create_ts,update_ts,etl_audit_sk
+			license_no,driver_deleted_in,source_system_sk,create_ts,update_ts,etl_audit_sk, driver_limit_type
 		)
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
@@ -93,7 +95,7 @@ BEGIN
 			LastName AS last_nm,Suffix AS suffix,Birthdate AS birth_dt,LicenseStatus AS license_status,
 			LicenseCountry AS license_country_nm,LicenseState AS license_state_cd,LicenseYear AS license_year,
 			LicenseNumber AS license_no,IsDeletedOnPolicyChange AS driver_deleted_in,
-			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
+			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,DriverLimitsIndicator as driver_limit_type
 		FROM
 			edw_temp.tpel_driver_temp1 AS ttlc
 
