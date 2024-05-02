@@ -10,6 +10,7 @@
 -- 10/26/23		Architha Gudimalla				3. Used insuredname for LLC
 -- 11/29/23		Architha Gudimalla		        4. Updated coinsured logic
 -- 11/29/23		Architha Gudimalla		        5. Updated insurance score  logic
+-- 02/05/24		Hernando Gonzalez		        65. Included Limits Indicator
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_insured]
@@ -83,7 +84,8 @@ BEGIN
 				nullif(trim(InsuranceScoreCode4),'') InsuranceScoreCode4,
 				nullif(trim(SubscriberContributionEndDate),'') SubscriberContributionEndDate,
 				nullif(trim(IsCoInsured),'') IsCoInsured,
-				nullif(trim(Title),'') Title
+				nullif(trim(Title),'') Title,
+				nullif(trim(NamedInsuredLimitsIndicator),'') NamedInsuredLimitsIndicator
 				
 		INTO edw_temp.tpolicy_insured_temp2
 		FROM
@@ -107,7 +109,7 @@ BEGIN
 										 MailingAddressState, MailingAddressZipCode, MailingAddressCounty, MailingAddressCountry, 
 										 IncludeOnDec, Email, Employer, InsuranceScore,
 										 InsuranceScoreCode1, InsuranceScoreCode2, InsuranceScoreCode3, InsuranceScoreCode4,
-										 SubscriberContributionEndDate, IsCoInsured, Title)
+										 SubscriberContributionEndDate, IsCoInsured, Title, NamedInsuredLimitsIndicator)
 			) pivottable
 
 		INSERT into edw_core.tpolicy_insured
@@ -120,7 +122,7 @@ BEGIN
 				include_on_dec_in, email, employer_nm, insurance_score, 
 				insurance_score_cd1, insurance_score_desc1, insurance_score_cd2, insurance_score_desc2, 
 				insurance_score_cd3, insurance_score_desc3, insurance_score_cd4, insurance_score_desc4, subscriber_contribution_end_dt,
-				source_system_sk, create_ts, update_ts, etl_audit_sk 
+				source_system_sk, create_ts, update_ts, etl_audit_sk, named_insured_limit_type
 			)
 		select 	t1.PolicyNumber, t1.EffectiveDate, t1.TransactionEffectiveDate, t1.PolicyChangeNumber, t1.IssuedDate, ph.policy_history_sk, 
 				case when nullif(trim(isnull(t2.Prefix + ' ','') + isnull(t2.FirstName + ' ','') + isnull(t2.MiddleName + ' ','') 
@@ -134,7 +136,7 @@ BEGIN
 				t2.MailingAddressState, t2.MailingAddressZipCode, t2.MailingAddressCounty, t2.MailingAddressCountry, 
 				t2.IncludeOnDec, t2.Email, t2.Employer, t2.InsuranceScore,
 				t2.InsuranceScoreCode1, '', InsuranceScoreCode2, '', InsuranceScoreCode3, '', InsuranceScoreCode4, '', 
-				t2.SubscriberContributionEndDate, t1.ssk, getdate(), getdate(), @etl_audit_sk
+				t2.SubscriberContributionEndDate, t1.ssk, getdate(), getdate(), @etl_audit_sk, NamedInsuredLimitsIndicator
 		FROM 	edw_temp.tpolicy_insured_temp1 t1
 		inner join edw_temp.tpolicy_insured_temp2 t2 on t1.id = t2.AccountTransactionId
 		LEFT JOIN edw_core.tpolicy pol on t1.PolicyNumber = pol.policy_no and cast(t1.EffectiveDate as date) = pol.effective_dt
