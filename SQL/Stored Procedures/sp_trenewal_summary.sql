@@ -4,12 +4,12 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =================================================================================================================================================
+-- =======================================================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the renewals data for each month
-----------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
-----------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 08/14/23		Architha Gudimalla				1. Created this procedure 
 -- 09/12/23		Architha Gudimalla				2. Added additional columns after discussing with Olivia 
 -- 10/02/23		Architha Gudimalla				3. Corrected code afrer testing table
@@ -29,8 +29,9 @@ GO
 -- 02/23/24		Architha Gudimalla				16. Added columns - Renewal Offered TIV, Renewal Offered cov a, Renewal Offered renewal sq feet
 -- 03/22/24		Architha Gudimalla				17. Updated renewal columns for pols that were renewed after 60 day of expiry
 -- 04/26/24		Architha Gudimalla				18. Added temp table for the last insert
--- 04/30/24		Alberto Almario					19. Added New columns expiring_mid_term_endorsement_premium_amt, expiring_price_sqft, issued_price_sqft, renewal_offered_price_sqft
--- ================================================================================================================================================= 
+-- 04/30/24		Alberto Almario					19. Added expiring_mid_term_endorsement_premium_amt, expiring_price_sqft, issued_price_sqft, renewal_offered_price_sqft
+-- 04/26/24		Architha Gudimalla				18. Added cancellation_reason_desc
+-- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
 @in_yearmonth int = null
@@ -486,8 +487,14 @@ BEGIN
 						,expiring_price_sqft
 						,issued_price_sqft
 						,renewal_offered_price_sqft
+						,cancellation_reason_desc
 					)
-				select @month_end_dt_sk, policy_sk,  customer_sk, broker_sk, product_sk, sourcE_system_sk, 
+				select @month_end_dt_sk, 
+						a.policy_sk,  
+						customer_sk, 
+						broker_sk, 
+						product_sk, 
+						sourcE_system_sk, 
 						initial_written_prem, 
 						effective_date_60_day_prem, 
 						effective_date_60_day_comm, 
@@ -544,8 +551,13 @@ BEGIN
 							then renewal_cova_amt/renewal_total_finished_square_feet 
 							else 0 
 						end AS renewal_offered_price_sqft
-
-				from edw_temp.tren_summ;
+						,b.cancellation_reason_desc
+				from edw_temp.tren_summ a
+				left join ( select distinct cancellation_reason_desc, policy_sk, effective_dt 
+							FROM edw_core.tpolicy_history ph
+							Where transaction_type  = 'Cancellation'
+							and latest_transaction_in ='Y') b 
+						on a.policy_sk = b.policy_sk 
 
 				SET @rows_affected=@@ROWCOUNT;
 
