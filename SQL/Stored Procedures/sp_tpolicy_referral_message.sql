@@ -5,7 +5,8 @@
 ------------------------------------------------------------------------------------------------------------------------------
 -- Change date			|Author							|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
--- 04/18/2024 			Yunus Mohammed					1. Created this procedure 
+-- 04/18/2024 			Yunus Mohammed					1. Created this procedure
+-- 04/22/2024 			Yunus Mohammed					2. Updated transaction_seq_no logic
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_referral_message]
 
@@ -34,7 +35,7 @@ BEGIN
 		SELECT act.PolicyNumber AS policy_no, act.EffectiveDate AS effective_dt,
         act.TransactionEffectiveDate as transaction_effective_dt,
         act.IssuedDate as transaction_dt,
-        act.ExpirationDate AS expiration_dt,act.Number as transaction_seq_no, tqh.policy_history_sk,
+        act.ExpirationDate AS expiration_dt,act.PolicyChangeNumber as transaction_seq_no, tqh.policy_history_sk,
         acti.[Message] AS referral_message,
         acti.ReferralLevel AS referral_level,
         acti.CreatedDate AS referral_message_created_ts,

@@ -6,6 +6,7 @@
 -- 10/05/23		Architha Gudimalla		    1. Created this procedure to update TIV
 -- 11/09/23		Architha Gudimalla		    2. Added logic for loss_of_use_derived_pc
 -- 03/26/24		Architha Gudimalla		    3. Added to  loss_of_use_derived_pc - Reasonable and Necessary Expenses- 12 months
+-- 04/19/24		Architha Gudimalla		    4. Updated the @new_last_source_extract_ts and also added the update to check for nulls
 -- ================================================================================================================================== 
 
 
@@ -72,7 +73,8 @@ BEGIN
 													THEN  cast(loss_of_use_pc as float) 
 												else loss_of_use_pc
 											END ,4) 
-		where transaction_dt > @last_source_extract_ts;
+		where transaction_dt > @last_source_extract_ts
+		or loss_of_use_derived_pc is null;
 		
 		update [edw_core].[thome_coverage]
 			set total_insured_value_amt = 	isnull(dwelling_limit_amt,0) + isnull(other_structures_limit_amt,0) + isnull(contents_limit_amt,0) +
@@ -84,11 +86,12 @@ BEGIN
 											    then round(cast(loss_of_use_derived_pc as float) * cast(iif(residence_type = 'Homeowners', dwelling_limit_amt, contents_limit_amt) as int),0)
 											else 0
 											end*/
-		where transaction_dt > @last_source_extract_ts;
+		where transaction_dt > @last_source_extract_ts
+		or total_insured_value_amt is null;
 
 		SET @rows_affected=@@ROWCOUNT;
 	
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(transaction_Dt) FROM edw_core.thome_coverage t2),@last_source_extract_ts); 
+		SET @new_last_source_extract_ts=COALESCE((SELECT dateadd(d,-1,MAX(transaction_Dt)) FROM edw_core.thome_coverage t2),@last_source_extract_ts); 
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts; 

@@ -7,6 +7,7 @@
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- 12/11/23		Architha Gudimalla				2. Commented out stage in forst temp table
 -- 02/08/24		Alberto Almario					3. Added new column producer_sk
+-- 04/29/24		Hernando Gonzalez				4. Added new column insurance_score_last_run_dt
 -- ===================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history]
@@ -125,7 +126,8 @@ BEGIN
 				InsuranceScoreCode3,
 				InsuranceScoreCode3Description,
 				InsuranceScoreCode4,
-				InsuranceScoreCode4Description
+				InsuranceScoreCode4Description,
+				InsuranceScoreLastRunDate
 		INTO edw_temp.tquote_history_temp2
 		FROM
 			(
@@ -147,7 +149,7 @@ BEGIN
 										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
 										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
-										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description)
+										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate)
 			) pivottable 
 
 		-- Start Inserting records
@@ -201,6 +203,7 @@ BEGIN
 		   ,insurance_score_cd4
 		   ,insurance_score_desc4
 		   ,producer_sk
+		   ,insurance_score_last_run_dt
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, 
 				Source.TransactionEffectiveDate, Source.Number, 
@@ -241,6 +244,7 @@ BEGIN
 				,source1.InsuranceScoreCode4
 				,source1.InsuranceScoreCode4Description
 				,source.producer_sk
+				,source1.InsuranceScoreLastRunDate
 		FROM edw_temp.tquote_history_temp1 source
 		LEFT JOIN edw_temp.tquote_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tquote_history_temp2 source1 on source.id = source1.AccountTransactionId 

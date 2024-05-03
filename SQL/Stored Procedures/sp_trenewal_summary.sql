@@ -4,12 +4,12 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =================================================================================================================================================
+-- =======================================================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the renewals data for each month
-----------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
-----------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 08/14/23		Architha Gudimalla				1. Created this procedure 
 -- 09/12/23		Architha Gudimalla				2. Added additional columns after discussing with Olivia 
 -- 10/02/23		Architha Gudimalla				3. Corrected code afrer testing table
@@ -28,7 +28,10 @@ GO
 -- 02/13/24		Architha Gudimalla				15. Removed the default month from customer other inf
 -- 02/23/24		Architha Gudimalla				16. Added columns - Renewal Offered TIV, Renewal Offered cov a, Renewal Offered renewal sq feet
 -- 03/22/24		Architha Gudimalla				17. Updated renewal columns for pols that were renewed after 60 day of expiry
--- ================================================================================================================================================= 
+-- 04/26/24		Architha Gudimalla				18. Added temp table for the last insert
+-- 04/30/24		Alberto Almario					19. Added expiring_mid_term_endorsement_premium_amt, expiring_price_sqft, issued_price_sqft, renewal_offered_price_sqft
+-- 04/26/24		Architha Gudimalla				18. Added cancellation_reason_desc
+-- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
 @in_yearmonth int = null
@@ -150,6 +153,8 @@ BEGIN
 				and inf.policy_sk  = pol.policy_sk 
 				and td.actual_dt between @begin_dt and @end_dt
 				and customer_sk is not null; 
+
+				DROP TABLE IF EXISTS edw_temp.tren_summ;
 
 				with exp_pols as
 				--pols expiration in current month
@@ -355,6 +360,86 @@ BEGIN
 					--and   transaction_dt_sk <= @end_dt_sk 
 					group by policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 				)
+				select 	exp_pols_prm.policy_sk, 
+						max_tr.customer_sk, max_tr.broker_sk, max_tr.product_sk, max_tr.sourcE_system_sk, 
+						exp_pols_prm.initial_written_prem, 
+						exp_pols_prm.effective_date_60_day_prem, 
+						exp_pols_prm.effective_date_60_day_comm, 
+						exp_pols_prm.mid_term_cancel_amount, 
+						case when exp_pols_prm.cancel_ind = 0 then exp_pols_prm.expiring_premium_amount else 0 end 
+						expiring_premium_amount, 
+						exp_pols_prm.expiring_premium_amount * (case when ren_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end) as expiringpremiumrenewalaccepted,
+						exp_pols_prm.expiring_premium_amount * (case when exp_pols_prm.non_renewal_in = 'Yes' then -1 else 0 end) as non_renewal_expiring_premium_amount,
+						exp_pols_prm.expiring_premium_amount * (case when exp_pols.pending_non_renewal_in = 'Yes' then -1 else 0 end) as pending_non_renewal_expiring_premium_amount,
+						exp_pols_prm.totalsquarefeet,  
+						(CASE when exp_pols_prm.product_cd  in ('HO','CO')  and exp_pols_prm.max_tr_residencetype =  'Homeowners' then 'Homeowners'
+							  when exp_pols_prm.product_cd in ('HO','CO')  and exp_pols_prm.max_tr_residencetype <> 'Homeowners' then 'Condo/Tenant'
+							  when exp_pols_prm.product_cd in ('HO','CO')  then 'Homeowners'
+						else 'Non-Home Product'
+						end) as residencetype,
+						exp_pols_prm.sixty_day_TIV, 
+						exp_pols_prm.sixty_day_COVA, 
+						exp_pols_prm.expiring_TIV, 
+						exp_pols_prm.expiring_TIV * (case when exp_pols_prm.non_renewal_in = 'Yes' then 1 else 0 end)  as expiring_TIV_post_NR,
+						exp_pols_prm.expiring_COVA,
+						--1 as policy_ct,
+						case when exp_pols_prm.cancel_sixty_days_ind <> 0 then 1 else 0 end flatcancel_ind, 
+						case when exp_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end non_flatcancel_ind, 
+						case when exp_pols_prm.cancel_ind <> 0 and exp_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end midterm_cancel_ind,  
+						case when exp_pols_prm.cancel_ind = 0 then 1 else 0 end expiring_ind,   
+						case when exp_pols_prm.non_renewal_in = 'Yes' then 1 else 0 end as nonrenewal_ind, 
+						case when ren_pols.policy_sk is not null then ren_pols.policy_sk else null end renewal_sk,
+						case when ren_pols.policy_sk is not null then 1 else 0 end renewalcount,
+						case when ren_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end non_flatcancel_renewal_ind,
+						case when ren_pols.policy_sk is not null then ren_pols_prm.initial_written_prem else null end initial_written_renewal_prem,
+						case when ren_pols.policy_sk is not null then iif(ren_pols_prm.effective_date_60_day_prem=0,ren_pols_prm.initial_written_prem,ren_pols_prm.effective_date_60_day_prem) else null end effective_date_60_day_renewal_prem, 
+						case when ren_pols.policy_sk is not null then iif(ren_pols_prm.effective_date_60_day_comm=0,ren_pols_prm.initial_written_comm,ren_pols_prm.effective_date_60_day_comm) else null end effective_date_60_day_renewal_comm,
+						case when ren_pols.policy_sk is not null then iif(ren_pols_prm.sixty_day_TIV=0,ren_pols_prm.day_0_TIV,ren_pols_prm.sixty_day_TIV) else null end sixty_day_renewal_TIV,
+						case when ren_pols.policy_sk is not null then iif(ren_pols_prm.sixty_day_COVA=0,ren_pols_prm.day_0_COVA,ren_pols_prm.sixty_day_COVA) else null end sixty_day_renewal_COVA,  
+						case when ren_pols.policy_sk is not null and exp_pols_prm.totalsquarefeet > 0 
+							 then iif(ren_pols_prm.sixty_day_COVA=0,ren_pols_prm.day_0_COVA,ren_pols_prm.sixty_day_COVA)/exp_pols_prm.totalsquarefeet 
+							 else null 
+						end renewal_accepted_price_sqft
+						,case when ren_pols.uw_company_cd is null then exp_pols.uw_company_cd
+							 when exp_pols.uw_company_cd = ren_pols.uw_company_cd then ren_pols.uw_company_cd
+								else exp_pols.uw_company_cd + ' to ' + ren_pols.uw_company_cd 
+						end uw_company_cd
+						,case when ren_pols.policy_sk is not null then 0 
+						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
+						 	  when exp_pols_prm.cancel_ind <> 0 then 0 
+						 	  when ren_quotes.quote_no is not null then 1 
+						 	  else 0 
+						 end wip_renewal_quote_ct
+						,case when ren_pols.policy_sk is not null then 0 
+						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
+						 	  when exp_pols_prm.cancel_ind <> 0 then 0 
+						 	  when ren_quotes.quote_no is not null and ren_quotes.quote_Status in ('Offered','Not taken') then 1 
+						 	  else 0 
+						 end offered_or_not_taken_quote_ct
+						,case when ren_pols.policy_sk is not null then 0 
+						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
+						 	  when exp_pols_prm.cancel_ind <> 0 then 0 
+						 	  when ren_quotes.quote_no is not null then ren_quotes.quote_sk 
+						 	  else 0 
+						 end renewal_quote_sk
+						,isnull(ci.oth_inf_ct,0) expiring_customer_other_inforce_ct
+						,case when ren_pols.policy_sk is not null then ren_pols_prm.day_0_TIV else null end renewal_tiv_amt,
+						 case when ren_pols.policy_sk is not null then ren_pols_prm.day_0_COVA else null end renewal_cova_amt,  
+						 case when ren_pols.policy_sk is not null then ren_pols_prm.day_0_totalsquarefeet else null end renewal_total_finished_square_feet
+				into edw_temp.tren_summ
+				from exp_pols
+				-- join to get prms for expiring policies
+				inner join prm exp_pols_prm on exp_pols_prm.policy_sk = exp_pols.policy_sk 
+				-- join to get renewals for expiring policies
+				left join ren_pols on replace(ren_pols.prior_policy_no,'x','') = replace(exp_pols.original_policy_no,'x','') and ren_pols.effective_dt = exp_pols.expiration_dt 
+				-- join to get renewals quotes for expiring policies
+				left join ren_quotes on replace(ren_quotes.prior_policy_no,'x','') = replace(exp_pols.original_policy_no,'x','') and ren_quotes.effective_dt = exp_pols.expiration_dt 
+				-- join to get prm for renewals 
+				left join prm ren_pols_prm on ren_pols_prm.policy_sk = ren_pols.policy_sk 
+				inner join max_tr on exp_pols_prm.policy_sk = max_tr.policy_sk and exp_pols_prm.transaction_seq_no = max_tr.transaction_seq_no
+				left join cust_oth_inf ci on ci.policy_sk = exp_pols.policy_sk 
+				 
+				
 				INSERT INTO --select * from  
 				edw_core.trenewal_summary
 					( 
@@ -398,88 +483,82 @@ BEGIN
 						,renewal_tiv_amt
 						,renewal_cova_amt
 						,renewal_total_finished_square_feet
+						,expiring_mid_term_endorsement_premium_amt
+						,expiring_price_sqft
+						,issued_price_sqft
+						,renewal_offered_price_sqft
+						,cancellation_reason_desc
 					)
-				select 	@month_end_dt_sk, 
-						exp_pols_prm.policy_sk, 
-						max_tr.customer_sk, max_tr.broker_sk, max_tr.product_sk, max_tr.sourcE_system_sk, 
-						exp_pols_prm.initial_written_prem, 
-						exp_pols_prm.effective_date_60_day_prem, 
-						exp_pols_prm.effective_date_60_day_comm, 
-						exp_pols_prm.mid_term_cancel_amount, 
-						case when exp_pols_prm.cancel_ind = 0 then exp_pols_prm.expiring_premium_amount else 0 end 
+				select @month_end_dt_sk, 
+						a.policy_sk,  
+						customer_sk, 
+						broker_sk, 
+						product_sk, 
+						sourcE_system_sk, 
+						initial_written_prem, 
+						effective_date_60_day_prem, 
+						effective_date_60_day_comm, 
+						mid_term_cancel_amount, 
 						expiring_premium_amount, 
-						exp_pols_prm.expiring_premium_amount * (case when ren_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end) as expiringpremiumrenewalaccepted,
-						exp_pols_prm.expiring_premium_amount * (case when exp_pols_prm.non_renewal_in = 'Yes' then -1 else 0 end) as non_renewal_expiring_premium_amount,
-						exp_pols_prm.expiring_premium_amount * (case when exp_pols.pending_non_renewal_in = 'Yes' then -1 else 0 end) as non_renewal_expiring_premium_amount,
-						exp_pols_prm.totalsquarefeet,  
-						(CASE when exp_pols_prm.product_cd  in ('HO','CO')  and exp_pols_prm.max_tr_residencetype =  'Homeowners' then 'Homeowners'
-							  when exp_pols_prm.product_cd in ('HO','CO')  and exp_pols_prm.max_tr_residencetype <> 'Homeowners' then 'Condo/Tenant'
-							  when exp_pols_prm.product_cd in ('HO','CO')  then 'Homeowners'
-						else 'Non-Home Product'
-						end) as residencetype,
-						exp_pols_prm.sixty_day_TIV, 
-						exp_pols_prm.sixty_day_COVA, 
-						exp_pols_prm.expiring_TIV, 
-						exp_pols_prm.expiring_TIV * (case when exp_pols_prm.non_renewal_in = 'Yes' then 1 else 0 end)  as expiring_TIV_post_NR,
-						exp_pols_prm.expiring_COVA,
-						--1 as policy_ct,
-						case when exp_pols_prm.cancel_sixty_days_ind <> 0 then 1 else 0 end flatcancel_ind, 
-						case when exp_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end non_flatcancel_ind, 
-						case when exp_pols_prm.cancel_ind <> 0 and exp_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end midterm_cancel_ind,  
-						case when exp_pols_prm.cancel_ind = 0 then 1 else 0 end expiring_ind,   
-						case when exp_pols_prm.non_renewal_in = 'Yes' then 1 else 0 end as nonrenewal_ind, 
-						case when ren_pols.policy_sk is not null then ren_pols.policy_sk else null end renewal_sk,
-						case when ren_pols.policy_sk is not null then 1 else 0 end renewalcount,
-						case when ren_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end non_flatcancel_renewal_ind,
-						case when ren_pols.policy_sk is not null then ren_pols_prm.initial_written_prem else null end initial_written_renewal_prem,
-						case when ren_pols.policy_sk is not null then iif(ren_pols_prm.effective_date_60_day_prem=0,ren_pols_prm.initial_written_prem,ren_pols_prm.effective_date_60_day_prem) else null end effective_date_60_day_renewal_prem, 
-						case when ren_pols.policy_sk is not null then iif(ren_pols_prm.effective_date_60_day_comm=0,ren_pols_prm.initial_written_comm,ren_pols_prm.effective_date_60_day_comm) else null end effective_date_60_day_renewal_comm,
-						case when ren_pols.policy_sk is not null then iif(ren_pols_prm.sixty_day_TIV=0,ren_pols_prm.day_0_TIV,ren_pols_prm.sixty_day_TIV) else null end sixty_day_renewal_TIV,
-						case when ren_pols.policy_sk is not null then iif(ren_pols_prm.sixty_day_COVA=0,ren_pols_prm.day_0_COVA,ren_pols_prm.sixty_day_COVA) else null end sixty_day_renewal_COVA,  
-						case when ren_pols.policy_sk is not null and exp_pols_prm.totalsquarefeet > 0 
-							 then iif(ren_pols_prm.sixty_day_COVA=0,ren_pols_prm.day_0_COVA,ren_pols_prm.sixty_day_COVA)/exp_pols_prm.totalsquarefeet 
-							 else null 
-						end renewal_accepted_price_sqft, 
-						getdate(), @etl_audit_sk 
-						,case when ren_pols.uw_company_cd is null then exp_pols.uw_company_cd
-							 when exp_pols.uw_company_cd = ren_pols.uw_company_cd then ren_pols.uw_company_cd
-								else exp_pols.uw_company_cd + ' to ' + ren_pols.uw_company_cd 
-						end
-						,case when ren_pols.policy_sk is not null then 0 
-						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
-						 	  when exp_pols_prm.cancel_ind <> 0 then 0 
-						 	  when ren_quotes.quote_no is not null then 1 
-						 	  else 0 
-						 end wip_renewal_quote_ct
-						,case when ren_pols.policy_sk is not null then 0 
-						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
-						 	  when exp_pols_prm.cancel_ind <> 0 then 0 
-						 	  when ren_quotes.quote_no is not null and ren_quotes.quote_Status in ('Offered','Not taken') then 1 
-						 	  else 0 
-						 end offered_or_not_taken_quote_ct
-						,case when ren_pols.policy_sk is not null then 0 
-						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
-						 	  when exp_pols_prm.cancel_ind <> 0 then 0 
-						 	  when ren_quotes.quote_no is not null then ren_quotes.quote_sk 
-						 	  else 0 
-						 end renewal_quote_sk
-						,isnull(ci.oth_inf_ct,0) expiring_customer_other_inforce_ct
-						,case when ren_pols.policy_sk is not null then ren_pols_prm.day_0_TIV else null end renewal_tiv_amt,
-						 case when ren_pols.policy_sk is not null then ren_pols_prm.day_0_COVA else null end renewal_cova_amt,  
-						 case when ren_pols.policy_sk is not null then ren_pols_prm.day_0_totalsquarefeet else null end renewal_total_finished_square_feet
-				from exp_pols
-				-- join to get prms for expiring policies
-				inner join prm exp_pols_prm on exp_pols_prm.policy_sk = exp_pols.policy_sk 
-				-- join to get renewals for expiring policies
-				left join ren_pols on replace(ren_pols.prior_policy_no,'x','') = replace(exp_pols.original_policy_no,'x','') and ren_pols.effective_dt = exp_pols.expiration_dt 
-				-- join to get renewals quotes for expiring policies
-				left join ren_quotes on replace(ren_quotes.prior_policy_no,'x','') = replace(exp_pols.original_policy_no,'x','') and ren_quotes.effective_dt = exp_pols.expiration_dt 
-				-- join to get prm for renewals 
-				left join prm ren_pols_prm on ren_pols_prm.policy_sk = ren_pols.policy_sk 
-				inner join max_tr on exp_pols_prm.policy_sk = max_tr.policy_sk and exp_pols_prm.transaction_seq_no = max_tr.transaction_seq_no
-				left join cust_oth_inf ci on ci.policy_sk = exp_pols.policy_sk 
-				 
-       
+						expiringpremiumrenewalaccepted,
+						non_renewal_expiring_premium_amount,
+						pending_non_renewal_expiring_premium_amount,
+						totalsquarefeet,  
+						residencetype,
+						sixty_day_TIV, 
+						sixty_day_COVA, 
+						expiring_TIV, 
+						expiring_TIV_post_NR,
+						expiring_COVA,
+						flatcancel_ind, 
+						non_flatcancel_ind, 
+						midterm_cancel_ind,  
+						expiring_ind,   
+						nonrenewal_ind, 
+						renewal_sk,
+						renewalcount,
+						non_flatcancel_renewal_ind,
+						initial_written_renewal_prem,
+						effective_date_60_day_renewal_prem, 
+						effective_date_60_day_renewal_comm,
+						sixty_day_renewal_TIV,
+						sixty_day_renewal_COVA,  
+						renewal_accepted_price_sqft, 
+						getdate(), 
+						@etl_audit_sk 
+						,uw_company_cd
+						,wip_renewal_quote_ct
+						,offered_or_not_taken_quote_ct
+						,renewal_quote_sk
+						,expiring_customer_other_inforce_ct
+						,renewal_tiv_amt,
+						 renewal_cova_amt,  
+						 renewal_total_finished_square_feet,
+						(effective_date_60_day_prem - initial_written_prem - mid_term_cancel_amount) AS expiring_mid_term_endorsement_premium_amt,
+						case 
+							when totalsquarefeet > 0
+							then expiring_COVA/totalsquarefeet
+							else 0 
+						end AS expiring_price_sqft,
+						
+						case 
+							when totalsquarefeet > 0
+							then sixty_day_COVA/totalsquarefeet
+							else 0 
+						end AS issued_price_sqft,
+						case 
+							when renewal_total_finished_square_feet > 0 
+							then renewal_cova_amt/renewal_total_finished_square_feet 
+							else 0 
+						end AS renewal_offered_price_sqft
+						,b.cancellation_reason_desc
+				from edw_temp.tren_summ a
+				left join ( select distinct cancellation_reason_desc, policy_sk, effective_dt 
+							FROM edw_core.tpolicy_history ph
+							Where transaction_type  = 'Cancellation'
+							and latest_transaction_in ='Y') b 
+						on a.policy_sk = b.policy_sk 
+
 				SET @rows_affected=@@ROWCOUNT;
 
 				-- Update control table
@@ -499,6 +578,7 @@ BEGIN
 				EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;   
 				
 				DROP TABLE IF EXISTS edw_temp.tren_summ_oth_cust_inf_temp;
+				DROP TABLE IF EXISTS edw_temp.tren_summ;
 				 
 				FETCH NEXT FROM c1_rec INTO @yearmonth;
 			END; 

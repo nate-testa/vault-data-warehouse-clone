@@ -1,0 +1,1 @@
+alter table edw_core.tstate add state_territory_nm varchar(255)

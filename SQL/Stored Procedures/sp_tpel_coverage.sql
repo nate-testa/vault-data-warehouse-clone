@@ -33,7 +33,8 @@ BEGIN
 			LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
 			HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
 			PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
-			CriminalTrafficViolationField
+			CriminalTrafficViolationField,SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
+			AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit
 			into edw_temp.tpel_coverage_temp1
 		from
 		(
@@ -71,7 +72,8 @@ BEGIN
 					'CustomerHasPublicProfile','LevelOfAttention','LibelSlanderExclusion','PoliticalExclusion','AnimalRelatedLiabilityExclusion',
 					'HigherUnderlyingLimitsEndorsement','AILimitedLiability','MinimumEarnedPremiumEndorsement','MinimumEarnedPremiumEndorsementLimit',
 					'PremisesLiabilityLimitation','DeletionofCosmeticMarringExclusion','Manuscript','ProfileAdjustment','CriminalTrafficViolation',
-					'CriminalTrafficViolationField'
+					'CriminalTrafficViolationField','SecondaryInsuredCoverageAmount','UnderinsuredMotoristLiabilityForSecondaryInsured','DefenseInsideLimits','AutoLiabilityExclusion',
+					'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit'
 				)
 				and act.IssuedDate>@last_source_extract_ts
 			) as t
@@ -85,7 +87,8 @@ BEGIN
 				LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
 				HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
 				PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
-				CriminalTrafficViolationField
+				CriminalTrafficViolationField,SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
+				AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit
 				)
 		) as pivottable;
 
@@ -122,7 +125,9 @@ BEGIN
 			minimum_earned_premium_endorsement_in,minimum_earned_premium_endorsement_limit_pc,premises_liability_limitation_in,
 			deletion_of_cosmetic_marring_exclusion_in,manuscript_in,profile_adjustment,criminal_traffic_violation_in,
 			criminal_traffic_violation_desc,youthful_drivers_ct,adult_drivers_ct,
-			source_system_sk,create_ts,update_ts,etl_audit_sk
+			source_system_sk,create_ts,update_ts,etl_audit_sk,
+			secondary_insured_coverage_amt,underinsured_motorist_liability_for_secondary_insured_amt,defense_inside_limits_in,auto_liability_exclusion_in,
+			auto_underlying_limit_type,auto_underlying_limit_per_occurence_amt,auto_underlying_limit_for_property_damage_amt,home_underlying_limit_amt
 		)
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
@@ -146,7 +151,11 @@ BEGIN
 			CriminalTrafficViolationField AS criminal_traffic_violation_desc,
 			drv.youthful_drivers_ct,
 			drv.adult_drivers_ct,
-			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
+			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,
+			SecondaryInsuredCoverageAmount AS secondary_insured_coverage_amt,UnderinsuredMotoristLiabilityForSecondaryInsured AS underinsured_motorist_liability_for_secondary_insured_amt,
+			DefenseInsideLimits AS defense_inside_limits_in,AutoLiabilityExclusion AS auto_liability_exclusion_in,
+			AutoUnderlyingLimitType AS auto_underlying_limit_type,AutoUnderlyingLimitAmountPerOccurrence AS auto_underlying_limit_per_occurence_amt,
+			AutoUnderlyingLimitAmountForPropertyDamage AS auto_underlying_limit_for_property_damage_amt,HomeUnderlyingLimit AS home_underlying_limit_amt
 		FROM
 			edw_temp.tpel_coverage_temp1 AS ttlc
 			LEFT JOIN driver_age drv ON drv.policy_no = ttlc.PolicyNumber and drv.effective_dt = cast(ttlc.EffectiveDate as date)

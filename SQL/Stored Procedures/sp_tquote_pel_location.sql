@@ -9,6 +9,8 @@
 -- 10/24/2023 			Yunus Mohammed					1. Created this procedure
 -- 11/11/23		        Sandeep Gundreddy		        2. modified quote_history_sk 
 -- 11/24/23				Yunus Mohammed					3. Removed bug. Only one pel location was showing for a policy.
+-- 04/29/24				Hernando Gonzalez				4. add new columns SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental
+-- 02/05/24				Hernando Gonzalez				5. Added Limits Indicator
 -- =========================================================================================================================== 
 CREATE or alter  PROCEDURE [edw_core].[sp_tquote_pel_location]
 
@@ -36,7 +38,8 @@ BEGIN
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,source_system_sk,quote_history_sk,
 			rownum as [index],
 			CreatedDate,AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,
-			NumberOfSwimmingPools,MultiFamilyDwelling,VacantOrUnoccupied,ForSale
+			NumberOfSwimmingPools,MultiFamilyDwelling,VacantOrUnoccupied,ForSale,
+			SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator
 			into edw_temp.tquote_pel_location_temp1
 		from
 		(
@@ -72,7 +75,8 @@ BEGIN
 				and atvof.Field IN 
 				(
 					'AddressLine1','AddressLine2','AddressCity','AddressState','AddressZipCode','AddressCounty',
-					'AddressCounty','NumberOfSwimmingPools','MultiFamilyDwelling','VacantOrUnoccupied','ForSale'
+					'AddressCounty','NumberOfSwimmingPools','MultiFamilyDwelling','VacantOrUnoccupied','ForSale',
+					'SquareFootage','NumberofAthleticStructures','ShortTermRental','LongTermRental','LocationsLimitsIndicator'
 				)
 				and act.CreatedDate > @last_source_extract_ts
 			) as t
@@ -82,14 +86,15 @@ BEGIN
 			max(Value) FOR Field IN (NumberOfMortgagees,[Name],MortgageeType,BillMortgagee,Email,Fax,Phone,
 					IsaoAtima,IsaoAtimaOther,LoanNumber,AddressLine1,AddressLine2,AddressCity,
 					AddressState,AddressZipCode,AddressCounty,AddressCountry,NumberOfSwimmingPools,MultiFamilyDwelling,
-					VacantOrUnoccupied,ForSale)
+					VacantOrUnoccupied,ForSale,SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator)
 		) as pivottable
 		
 		INSERT INTO [edw_core].[tquote_pel_location]
 		(
 			quote_no,effective_dt,expiration_dt,transaction_seq_no,quote_history_sk,
 			location_no,address_line_1,address_line_2,unit_no,city_nm,state_cd,zip_cd,county_nm,country_nm,longitude,latitude,
-			swimming_pool_ct,multi_family_dwelling_in,vacant_unoccupied_in,for_sale_in,source_system_sk,create_ts,update_ts,etl_audit_sk
+			swimming_pool_ct,multi_family_dwelling_in,vacant_unoccupied_in,for_sale_in,source_system_sk,create_ts,update_ts,etl_audit_sk,
+			square_feet,no_of_athletic_structures,short_term_rental_in,long_term_rental_in,location_limit_type
 		)
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,
@@ -98,7 +103,8 @@ BEGIN
 			AddressState AS state_cd,AddressZipCode AS zip_cd,AddressCounty AS county_nm,AddressCounty AS country_nm,NULL AS longitude,NULL AS latitude,
 			NumberOfSwimmingPools AS swimming_pool_ct,MultiFamilyDwelling AS multi_family_dwelling_in,
 			VacantOrUnoccupied AS vacant_unoccupied_in,ForSale AS for_sale_in,
-			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
+			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,
+			SquareFootage AS square_feet,NumberofAthleticStructures AS no_of_athletic_structures,ShortTermRental AS short_term_rental_in,LongTermRental AS long_term_rental_in,LocationsLimitsIndicator as location_limit_type
 		FROM
 			edw_temp.tquote_pel_location_temp1 AS ttlc
 
