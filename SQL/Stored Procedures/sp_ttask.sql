@@ -16,6 +16,7 @@ GO
 -- 02/07/24		Architha Gudimalla				4. Updated merge join
 -- 02/23/24		Architha Gudimalla				5. Updated source query to Include rows where policy number is null
 --												   Added customer id
+-- 05/03/24		Architha Gudimalla				6. Added filter on ProductLine
 -- ==================================================================================================================== 
 
 CREATE or ALTER PROCEDURE edw_core.sp_ttask
@@ -77,6 +78,7 @@ BEGIN
         INTO edw_temp.ttask_temp1 
         from edw_stage.WorkTask wt
         left join edw_stage.account acc on acc.id = wt.accountid
+		left join edw_stage.Product pr on acc.ProductId = pr.id
         left join edw_stage.AccountTransaction acctr on wt.accounttransactionid = acctr.Id
         left join edw_stage.[User] au on case when wt.AssignedUserId = '' then null else wt.AssignedUserId end = au.Id
         left join edw_stage.[User] cu on wt.CreatedById = cu.Id
@@ -89,6 +91,7 @@ BEGIN
         inner join edw_stage.[Insured] ins on ins.id = wt.InsuredId       
         left join edw_core.tcustomer cust on cust.customer_id = CAST(ins.referencecode AS VARCHAR(255)) 
 		WHERE GREATEST(wt.CreatedDate,wt.UpdatedDate)>@last_source_extract_ts
+		and pr.ProductLine = 'PersonalLines'
 		--and acc.policynumber is not null
 		;
 
