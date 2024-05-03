@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tbroker ADD broker_tier int;
