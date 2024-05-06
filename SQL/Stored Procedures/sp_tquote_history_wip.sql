@@ -1,8 +1,8 @@
-﻿-- =================================================================================================
+﻿-- ===================================================================================================================== 
 -- Description: This procedures inserts into sp_tquote_history_wip
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- ===================================================================================================================== 
@@ -144,8 +144,65 @@ BEGIN
 										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate)
 			) pivottable 
 
-		-- Start Inserting records
-		INSERT INTO edw_core.tquote_history 
+		-- Start Merge process
+		MERGE edw_core.tquote_history AS Target
+		USING 
+		(
+			SELECT	temp.PolicyNumber, temp.EffectiveDate, temp.ExpirationDate, 
+				temp.TransactionEffectiveDate, temp.Number, 
+				q.quote_sk, br.broker_sk, cust.customer_sk,pr.product_sk, br.Broker_Id, 
+				cast(temp.customer_id as varchar) customer_id
+				,temp.uw_nm
+				,temp.producer_nm,
+				case when temp.IsRenewal = 1 then 'Renewal' else 'New' end as policy_term,  
+				upper(substring(temp.state,1,1)) + lower(substring(temp.state, 2, len(temp.state)-1))  transaction_Status,
+				temp.note
+				,temp.policychangenotes,  
+				wp, 
+				wp-isnull(tfs.tfs,0) wp_net,
+				isnull(tfs.tfs,0) tfs,
+				comm,
+				ap,  
+				temp1.CompanionCreditCollections, temp1.CompanionCreditPersonalExcessLiability, 
+				temp1.CompanionCreditAuto, temp1.CompanionCreditHomeowner,
+				ResidenceHasPrior, PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
+				PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, 
+				temp.ssk, 
+				getdate() cr, 
+				getdate() up, 
+				@etl_audit_sk etl,
+                temp.CreatedDate, 
+				temp.UpdatedDate
+				,temp.CommissionPercent
+				,temp.CommissionPercentOverride
+				,temp.CommissionPercentOverrideRetention, temp.nottakenreason
+				,null as refname, null crename, null revname
+				,temp.BindDate
+				,temp1.InsuranceScore
+				,temp1.InsuranceScoreCode1
+				,temp1.InsuranceScoreCode1Description
+				,temp1.InsuranceScoreCode2
+				,temp1.InsuranceScoreCode2Description
+				,temp1.InsuranceScoreCode3
+				,temp1.InsuranceScoreCode3Description
+				,temp1.InsuranceScoreCode4
+				,temp1.InsuranceScoreCode4Description
+				,temp.producer_sk
+				,temp1.InsuranceScoreLastRunDate
+			FROM edw_temp.tquote_history_temp1 temp
+			LEFT JOIN edw_temp.tquote_history_temp3 tfs on temp.id = tfs.id
+			LEFT JOIN edw_temp.tquote_history_temp2 temp1 on temp.id = temp1.AccountId 
+			LEFT JOIN edw_core.tquote q on temp.PolicyNumber = q.quote_no
+			LEFT JOIN edw_core.tbroker br on cast(temp.BrokerId as varchar)  = br.broker_id
+			LEFT JOIN edw_core.tproduct pr on pr.product_cd = temp.product_cd 
+			left join edw_core.tcustomer cust on cast(temp.customer_id as varchar) = cust.customer_id
+			--eft join edw_stage.[user] cu on cu.id = temp.CreatedById    -- commented bedcause of no id
+			--left join edw_stage.[user] rvu on rvu.id = temp.ReviewedById -- commented bedcause of no id
+			--left join edw_stage.[user] rfu on rfu.id = temp.ReferredByUserId  -- commented bedcause of no id			
+		) AS Source	ON Source.PolicyNumber = Target.quote_no  and Source.Number = Target.transaction_seq_no
+		-- For Inserts
+		WHEN NOT MATCHED BY Target THEN 
+		INSERT 
 			(quote_no
            ,effective_dt
            ,expiration_dt
@@ -183,8 +240,7 @@ BEGIN
 		   ,transaction_updated_ts
 		   ,commission_pc,override_commission_pc,commission_retention,not_taken_reason_desc
 		   ,[created_by_nm], [referred_by_nm], [reviewed_by_nm]
-		   ,bind_dt
-           --,[created_by_nm],[referred_by_nm],[reviewed_by_nm],[approval_note],[deny_note] --updated using seprate update proc
+		   --,bind_dt 
 		   ,insurance_score
 		   ,insurance_score_cd1
 		   ,insurance_score_desc1
@@ -196,57 +252,113 @@ BEGIN
 		   ,insurance_score_desc4
 		   ,producer_sk
 		   ,insurance_score_last_run_dt
-		   )
-		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, 
-				Source.TransactionEffectiveDate, Source.Number, 
-				q.quote_sk, br.broker_sk, cust.customer_sk,pr.product_sk, br.Broker_Id, 
-				cast(source.customer_id as varchar)
-				,source.uw_nm
-				,source.producer_nm,
-				case when source.IsRenewal = 1 then 'Renewal' else 'New' end as policy_term,  
-				upper(substring(source.state,1,1)) + lower(substring(source.state, 2, len(source.state)-1))  ,
-				source.note
-				,source.policychangenotes,  
-				wp, 
-				wp-isnull(tfs.tfs,0),isnull(tfs.tfs,0),
-				comm,
-				ap,  
-				source1.CompanionCreditCollections, source1.CompanionCreditPersonalExcessLiability, 
-				source1.CompanionCreditAuto, source1.CompanionCreditHomeowner,
-				ResidenceHasPrior, PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
-				PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, 
-				source.ssk, 
-				getdate(), 
-				getdate(), 
-				@etl_audit_sk,
+		   ) 
+		VALUES (Source.PolicyNumber, 
+				Source.EffectiveDate, 
+				Source.ExpirationDate, 
+				Source.TransactionEffectiveDate, 
+				Source.Number, 
+				Source.quote_sk, Source.broker_sk, Source.customer_sk,Source.product_sk, Source.Broker_Id, 
+				Source.customer_id
+				,Source.uw_nm
+				,Source.producer_nm,
+				Source.policy_term,  
+				source.transaction_Status,
+				Source.note
+				,Source.policychangenotes,  
+				Source.wp, 
+				Source.wp_net,
+				Source.tfs,
+				Source.comm,
+				Source.ap,  
+				Source.CompanionCreditCollections, Source.CompanionCreditPersonalExcessLiability, 
+				Source.CompanionCreditAuto, Source.CompanionCreditHomeowner,
+				Source.ResidenceHasPrior, Source.PriorResidenceAddressLine1, Source.PriorResidenceAddressLine2, Source.PriorResidenceAddressLineUnit, Source.PriorResidenceAddressCity, 
+				Source.PriorResidenceAddressState, Source.PriorResidenceAddressZipCode, Source.PriorResidenceAddressCounty, Source.PriorResidenceAddressCountry, 
+				Source.ssk, 
+				Source.cr, 
+				Source.up, 
+				Source.etl,
                 Source.CreatedDate, 
 				Source.UpdatedDate
-				,source.CommissionPercent
-				,source.CommissionPercentOverride
-				,source.CommissionPercentOverrideRetention, source.nottakenreason
-				, rfu.name as refname, cu.name crename, rvu.name revname
-				,source.BindDate
-				,source1.InsuranceScore
-				,source1.InsuranceScoreCode1
-				,source1.InsuranceScoreCode1Description
-				,source1.InsuranceScoreCode2
-				,source1.InsuranceScoreCode2Description
-				,source1.InsuranceScoreCode3
-				,source1.InsuranceScoreCode3Description
-				,source1.InsuranceScoreCode4
-				,source1.InsuranceScoreCode4Description
-				,source.producer_sk
-				,source1.InsuranceScoreLastRunDate
-		FROM edw_temp.tquote_history_temp1 source
-		LEFT JOIN edw_temp.tquote_history_temp3 tfs on source.id = tfs.id
-		LEFT JOIN edw_temp.tquote_history_temp2 source1 on source.id = source1.AccountId 
-		LEFT JOIN edw_core.tquote q on source.PolicyNumber = q.quote_no
-		LEFT JOIN edw_core.tbroker br on cast(source.BrokerId as varchar)  = br.broker_id
-		LEFT JOIN edw_core.tproduct pr on pr.product_cd = source.product_cd 
-		left join edw_core.tcustomer cust on cast(source.customer_id as varchar) = cust.customer_id
-		--eft join edw_stage.[user] cu on cu.id = source.CreatedById    -- commented bedcause of no id
-		--left join edw_stage.[user] rvu on rvu.id = source.ReviewedById -- commented bedcause of no id
-		--left join edw_stage.[user] rfu on rfu.id = source.ReferredByUserId  -- commented bedcause of no id
+				,Source.CommissionPercent
+				,Source.CommissionPercentOverride
+				,Source.CommissionPercentOverrideRetention, Source.nottakenreason
+				, Source.refname, Source.crename, Source.revname
+				--,Source.BindDate
+				,Source.InsuranceScore
+				,Source.InsuranceScoreCode1
+				,Source.InsuranceScoreCode1Description
+				,Source.InsuranceScoreCode2
+				,Source.InsuranceScoreCode2Description
+				,Source.InsuranceScoreCode3
+				,Source.InsuranceScoreCode3Description
+				,Source.InsuranceScoreCode4
+				,Source.InsuranceScoreCode4Description
+				,Source.producer_sk
+				,Source.InsuranceScoreLastRunDate
+				)
+		-- For Updates
+		WHEN MATCHED THEN UPDATE 
+		SET
+        Target.Effective_dt							= Source.EffectiveDate,
+        Target.expiration_dt						= Source.ExpirationDate,
+        Target.transaction_effective_dt				= Source.TransactionEffectiveDate,
+        Target.broker_sk							= Source.broker_sk,
+        Target.customer_sk							= Source.customer_sk,
+        Target.product_sk							= Source.product_sk, 
+        Target.broker_id							= Source.Broker_Id,
+        Target.customer_id							= Source.customer_id,
+        Target.underwriter_nm						= Source.uw_nm, 
+        Target.producer_nm							= Source.producer_nm,
+        Target.transaction_type						= Source.policy_term,
+        Target.transaction_Status					= Source.transaction_Status,
+        Target.transaction_desc		 				= Source.note ,
+        Target.policy_change_summary				= Source.policychangenotes,
+        Target.premium_amt							= Source.wp,
+        Target.net_premium_amt						= Source.wp_net,
+        Target.tax_fee_surcharge_amt				= Source.tfs,
+        Target.commission_amt						= Source.comm,
+        Target.annual_premium_amt 					= Source.ap ,
+        Target.collection_policy_credit_in			= Source.CompanionCreditCollections, 
+        Target.excess_liability_policy_credit_in	= Source.CompanionCreditPersonalExcessLiability,  
+        Target.auto_policy_credit_in				= Source.CompanionCreditAuto, 
+        Target.home_policy_credit_in				= Source.CompanionCreditHomeowner, 
+        Target.prior_address_in 					= Source.ResidenceHasPrior , 
+        Target.prior_address_line_1 				= Source.PriorResidenceAddressLine1 , 
+        Target.prior_address_line_2 				= Source.PriorResidenceAddressLine2 , 
+        Target.prior_address_unit_no				= Source.PriorResidenceAddressLineUnit, 
+        Target.prior_address_city_nm 				= Source.PriorResidenceAddressCity , 
+        Target.prior_address_state_cd 				= Source.PriorResidenceAddressState	 , 
+        Target.prior_address_zip_cd 				= Source.PriorResidenceAddressZipCode , 
+        Target.prior_address_county_nm 				= Source.PriorResidenceAddressCounty , 
+        Target.prior_address_country_nm				= Source.PriorResidenceAddressCountry, 
+        Target.source_system_sk 					= Source.ssk , 
+        Target.transaction_created_ts 				= Source.CreatedDate , 
+        Target.transaction_updated_ts 				= Source.UpdatedDate , 
+        Target.commission_pc 						= Source.CommissionPercent , 
+        Target.override_commission_pc 				= Source.CommissionPercentOverride , 
+        Target.commission_retention 				= Source.CommissionPercentOverrideRetention , 
+        Target.not_taken_reason_desc 				= Source.nottakenreason , 
+        Target.created_by_nm	 					= Source.crename , 
+        Target.referred_by_nm 						= Source.refname , 
+        Target.reviewed_by_nm 						= Source.revname , 
+       -- Target.bind_dt 								= Source.BindDate , 
+        Target.insurance_score 						= Source.InsuranceScore , 
+        Target.insurance_score_cd1 					= Source.InsuranceScoreCode1 , 
+        Target.insurance_score_desc1 				= Source.InsuranceScoreCode1Description , 
+        Target.insurance_score_cd2 					= Source.InsuranceScoreCode2 , 
+        Target.insurance_score_desc2 				= Source.InsuranceScoreCode2Description , 
+        Target.insurance_score_cd3 					= Source.InsuranceScoreCode3 , 
+        Target.insurance_score_desc3 				= Source.InsuranceScoreCode3Description , 
+        Target.insurance_score_cd4 					= Source.InsuranceScoreCode4 , 
+        Target.insurance_score_desc4 				= Source.InsuranceScoreCode3Description , 
+        Target.producer_sk 							= Source.producer_sk , 
+        Target.insurance_score_last_run_dt 			= Source.InsuranceScoreLastRunDate , 
+        Target.update_ts 							= getdate()
+		;
+
+		
 
 		SET @rows_affected=@@ROWCOUNT;
 
