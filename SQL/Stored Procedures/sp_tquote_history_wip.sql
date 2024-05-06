@@ -155,7 +155,7 @@ BEGIN
 				,temp.uw_nm
 				,temp.producer_nm,
 				case when temp.IsRenewal = 1 then 'Renewal' else 'New' end as policy_term,  
-				upper(substring(temp.state,1,1)) + lower(substring(temp.state, 2, len(temp.state)-1))  transaction_Status,
+				'In Progress'  transaction_Status,
 				temp.note
 				,temp.policychangenotes,  
 				wp, 
@@ -356,39 +356,9 @@ BEGIN
         Target.producer_sk 							= Source.producer_sk , 
         Target.insurance_score_last_run_dt 			= Source.InsuranceScoreLastRunDate , 
         Target.update_ts 							= getdate()
-		;
+		; 
 
-		
-
-		SET @rows_affected=@@ROWCOUNT;
-
-		update h
-		set latest_transaction_in = 'N'
-		from edw_core.tquote_history h
-		where exists (select 'x' from edw_temp.tquote_history_temp1 h1 where h.quote_no = h1.policynumber and h.effective_dt = cast(h1.EffectiveDate as date));
-
-		update h
-		set latest_transaction_in = 'Y'
-		from edw_core.tquote_history h
-		where exists (select 'x' from edw_temp.tquote_history_temp1 h1 
-					  where h.quote_no = h1.policynumber 
-					  and h.effective_dt = cast(h1.EffectiveDate as date) 
-					  and h.transaction_seq_no = h1.Number and h1.rnk = 1);
-
-		/*
-		with max_tr as
-		(
-			select  policy_sk, max(transaction_seq_no) transaction_seq_no
-			from edw_core.tquote_history h
-			where exists (select 'x' from edw_temp.tquote_history_temp2 h1 where h.policy_no = h1.policynumber)
-			group by policy_sk
-		)
-		update edw_core.tquote_history  
-		set latest_transaction_in = 'Y'
-		from edw_core.tquote_history h, max_tr 
-		where h.policy_sk = max_tr.policy_sk
-		and   h.transaction_seq_no = max_tr.transaction_seq_no;*/
-
+		SET @rows_affected=@@ROWCOUNT;  
 		
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest(t1.CreatedDate, t1.UpdatedDate)) FROM edw_temp.tquote_history_temp1 t1),@last_source_extract_ts);
 		
