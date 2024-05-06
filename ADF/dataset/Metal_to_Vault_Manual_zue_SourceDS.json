@@ -2,7 +2,7 @@
 	"name": "Metal_to_Vault_Manual_zue_SourceDS",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "LS_metal_prePROD",
+			"referenceName": "LS_METALDB_PREPROD",
 			"type": "LinkedServiceReference"
 		},
 		"parameters": {
