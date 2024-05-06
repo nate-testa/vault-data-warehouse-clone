@@ -95,10 +95,7 @@ BEGIN
                 '500' as slc_deductible_amt,
                 '' as base_homeowner_premium,
                 ROUND(pt.net_premium_amt,2) as final_homeowner_premium,
-                CASE 
-                    WHEN ISNUMERIC(hc.aop_deductible) = 0 THEN NULL 
-                    ELSE ROUND(hc.aop_deductible,0,1)
-                END AS policy_deductible,
+                '500' as policy_deductible,
                 hc.dwelling_limit_amt as coverage_a_value,
                 hc.other_structures_limit_amt as coverage_b_value,
                 hc.contents_limit_amt as coverage_c_value,
@@ -116,10 +113,9 @@ BEGIN
                     WHEN hc.occupancy_type LIKE 'Seasonal%' THEN 'Season'
                 END AS usage_type,
                 CASE 
-                    WHEN hc.residence_type = 'Tenant' THEN 'Tenant'
                     WHEN hc.occupancy_type = 'Vacant' THEN 'Vacant'
-                    WHEN hc.occupancy_type IN ('Primary','Rented to Others','Partially Rented to Others') THEN 'Owner'
-                    WHEN hc.occupancy_type LIKE 'Seasonal%' THEN 'Seasonal'
+                    WHEN hc.residence_type = 'Tenant' THEN 'Tenant'
+                    ELSE 'owner'
                 END AS occupancy,
                 hc.built_year as year_build,
                 hc.total_finished_square_feet as total_living_area,
@@ -170,7 +166,12 @@ BEGIN
             LEFT JOIN 
                 (
                     select 
-                        policy_no, effective_dt, transaction_seq_no, aop_deductible, dwelling_limit_amt, other_structures_limit_amt, contents_limit_amt, residence_type, 
+                        policy_no, effective_dt, transaction_seq_no, 
+                        CASE 
+                            WHEN ISNUMERIC(aop_deductible) = 0 THEN NULL 
+                            ELSE ROUND(aop_deductible,0,1)
+                        END AS aop_deductible,
+                        dwelling_limit_amt, other_structures_limit_amt, contents_limit_amt, residence_type, 
                         occupancy_type, built_year, total_finished_square_feet, hvac_updated_year, electrical_updated_year, plumbing_updated_year,
                         ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt ORDER BY transaction_seq_no DESC) AS RN
                     from edw_core.thome_coverage 
