@@ -1,15 +1,15 @@
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
-GO
-
--- =====================================================================================================================
--- Description: This procedures  insert and update info related to tquote_auto_vehicle_coverage_wip.
------------------------------------------------------------------------------------------------------------------------
+GO 
+-- ================================================================================================================================================
+-- Description: This stored procedure inserts and updates info related to quote auto vehicle coverage - wip
+--------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
------------------------------------------------------------------------------------------------------------------------
--- 05/07/24		Alberto Almario				    1. Created this procedure 
--- ===================================================================================================================== 
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- 05/06/24		Alberto Almario					1. Created the proc
+-- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
+-- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip]
 AS
@@ -155,7 +155,7 @@ BEGIN
         )
         ,FinalTable AS (
             SELECT 
-                CreatedDate, quote_no, effective_dt, vehicle_no, expiration_dt, 0 as transaction_seq_no, quote_history_sk, quote_auto_vehicle_sk, 
+                CreatedDate, UpdatedDate, quote_no, effective_dt, vehicle_no, expiration_dt, 0 as transaction_seq_no, quote_history_sk, quote_auto_vehicle_sk, 
                 [GaragingLocationId], [PrimaryParkingLocation], [DrivewaySecurity], [VehicleUsage], [DistanceToWork], [AnnualMiles], [LPMPFilingDate], [Ownership], [RegistrationStatus], [RegistrationDate], 
                 [ExpirationDate], [RegisteredOwner], [RegisteredOwnerName], [ListedDriverName], [NonDriverName], [CompanyOtherEntityName], [RegistrationState], [RegistrationAddressLine1], 
                 [RegistrationAddressLine2], [RegistrationAddressCity], [RegistrationAddressZipCode], [RegistrationAddressState], [SymbolBIPD], [SymbolPIPMED], 
@@ -173,8 +173,8 @@ BEGIN
             FROM
                 (
                     SELECT
-                        acc.CreatedDate, acc.PolicyNumber as quote_no, acc.EffectiveDate as effective_dt, qav.[vehicle_no] as vehicle_no, acco.[UniqueId] as vehicle_unique_id,
-                        acc.ExpirationDate as expiration_dt, acc.Number as transaction_seq_no,
+                        acc.CreatedDate, acc.UpdatedDate, acc.PolicyNumber as quote_no, acc.EffectiveDate as effective_dt, qav.[vehicle_no] as vehicle_no, acco.[UniqueId] as vehicle_unique_id,
+                        acc.ExpirationDate as expiration_dt, --acc.Number as transaction_seq_no,
                         qh.quote_history_sk, qav.quote_auto_vehicle_sk, 
                         acco.IsdeletedOnPolicyChange as vehicle_deleted_in,
                         accof.[Field], accof.[Value],
@@ -905,7 +905,7 @@ BEGIN
 
 		
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(CreatedDate) FROM edw_temp.[tquote_auto_vehicle_coverage_wip_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(Greatest(CreatedDate,UpdatedDate)) FROM edw_temp.[tquote_auto_vehicle_coverage_wip_temp1]),@last_source_extract_ts);
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

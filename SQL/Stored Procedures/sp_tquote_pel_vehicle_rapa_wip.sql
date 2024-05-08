@@ -2,13 +2,15 @@ SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
-GO
-
--- =============================================
--- Author:		Hernando Gonzalez
--- Create Date: 2024-04-01
--- Description: This stored procedure insert and update info related to tpel_vehicle_rapa.
--- =============================================
+GO 
+-- =========================================================================================================================== 
+-- Description: This procedures insert and update info related to tpel_vehicle_rapa.
+------------------------------------------------------------------------------------------------------------------------------
+-- Change date			|Author							|	Change Description
+------------------------------------------------------------------------------------------------------------------------------
+-- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
+-- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
+-- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_vehicle_rapa_wip]
 
 AS
@@ -33,7 +35,7 @@ BEGIN
 
 		drop table if exists edw_temp.tquote_pel_vehicle_rapa_wip_temp1
 		select 
-			CreatedDate, quote_no, EffectiveDate, vehicle_no, ExpirationDate, transaction_seq_no
+			CreatedDate, UpdatedDate, quote_no, EffectiveDate, vehicle_no, ExpirationDate, transaction_seq_no
 			,quote_history_sk
 			,quote_pel_vehicle_sk, quote_pel_coverage_sk
 			,RAPABodilyInjuryIndicatedSymbolRelativityChar1, RAPAPropertyDamageIndicatedSymbolRelativityChar1, RAPAMedicalPaymentsIndicatedSymbolRelativityChar1, RAPAPersonalInjuryProtectionIndicatedSymbolRelativityChar1, RAPACollisionIndicatedSymbolRelativityChar1, RAPAComprehensiveIndicatedSymbolRelativityChar1, RAPASingleLimitIndicatedSymbolRelativityChar1, RAPABodilyInjuryIndicatedSymbolRelativityChar2, RAPAPropertyDamageIndicatedSymbolRelativityChar2, RAPAMedicalPaymentsIndicatedSymbolRelativityChar2, RAPAPersonalInjuryProtectionIndicatedSymbolRelativityChar2, RAPACollisionIndicatedSymbolRelativityChar2, RAPAComprehensiveIndicatedSymbolRelativityChar2, RAPASingleLimitIndicatedSymbolRelativityChar2, RAPABodilyInjuryIndicatedSymbol, RAPAPropertyDamageIndicatedSymbol, RAPAMedicalPaymentsIndicatedSymbol, RAPAPersonalInjuryProtectionIndicatedSymbol, RAPACollisionIndicatedSymbol, RAPAComprehensiveIndicatedSymbol, RAPASingleLimitIndicatedSymbol, RAPABodilyInjuryIndicatedSymbolRelativity, RAPAPropertyDamageIndicatedSymbolRelativity, RAPAMedicalPaymentsIndicatedSymbolRelativity, RAPAPersonalInjuryProtectionIndicatedSymbolRelativity, RAPACollisionIndicatedSymbolRelativity, RAPAComprehensiveIndicatedSymbolRelativity, RAPASingleLimitIndicatedSymbolRelativity, RAPAComprehensiveNonGlassIndicatedSymbolRelativityChar1, RAPAComprehensiveNonGlassIndicatedSymbolRelativityChar2, RAPAComprehensiveNonGlassIndicatedSymbol, RAPAComprehensiveNonGlassIndicatedSymbolRelativity, RAPABodilyInjuryRatingSymbolRelativity, RAPASymbolBI, RAPAPropertyDamageRatingSymbolRelativity, RAPASymbolPD, RAPAMedicalPaymentsRatingSymbolRelativity, RAPASymbolMP, RAPAPersonalInjuryProtectionRatingSymbolRelativity, RAPASymbolNF, RAPACollisionRatingSymbolRelativity, RAPASymbolCL, RAPAComprehensiveRatingSymbolRelativity, RAPASymbolCP, RAPASingleLimitRatingSymbolRelativity, RAPASymbolSL, RAPAComprehensiveNonGlassRatingSymbolRelativity, RAPASymbolCN, RAPASymbolCappingIndicatorBI, RAPASymbolCappingIndicatorPD, RAPASymbolCappingIndicatorMP, RAPASymbolCappingIndicatorNF, RAPASymbolCappingIndicatorCL, RAPASymbolCappingIndicatorCP, RAPASymbolCappingIndicatorSL, RAPASymbolCappingIndicatorCN
@@ -45,7 +47,7 @@ BEGIN
 			from
 			(
 				select
-				acc.CreatedDate, acc.PolicyNumber as quote_no, CAST(acc.EffectiveDate AS DATE) AS EffectiveDate, acco.[Index] AS [vehicle_no], CAST(acc.ExpirationDate AS DATE) AS ExpirationDate
+				acc.CreatedDate, acc.UpdatedDate, acc.PolicyNumber as quote_no, CAST(acc.EffectiveDate AS DATE) AS EffectiveDate, acco.[Index] AS [vehicle_no], CAST(acc.ExpirationDate AS DATE) AS ExpirationDate
 				,0 AS transaction_seq_no
 				,tqh.quote_history_sk
 				,tqv.quote_pel_vehicle_sk
@@ -263,7 +265,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(CreatedDate) FROM edw_temp.tquote_pel_vehicle_rapa_wip_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest(UpdatedDate,CreatedDate)) FROM edw_temp.tquote_pel_vehicle_rapa_wip_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts
 
 		-- Update audit table

@@ -1,12 +1,12 @@
-﻿-- =============================================
--- Author:		Hernando Gonzalez
--- Create Date: 06/05/2024
+﻿-- =========================================================================================================================== 
 -- Description: This procedures insert pel quote driver incident data
 ------------------------------------------------------------------------------------------------------------------------------
 -- Change date			|Author							|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
--- 
+-- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
+-- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
 -- =========================================================================================================================== 
+
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_pel_driver_incident_wip]
 
 AS
@@ -32,7 +32,7 @@ BEGIN
 		drop table if exists edw_temp.tquote_pel_driver_incident_wip_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,source_system_sk,quote_history_sk,[Index],
-			CreatedDate,IncidentDate,IncidentType,IncidentDescription,IncludeInRate,Disputed
+			CreatedDate,UpdatedDate,IncidentDate,IncidentType,IncidentDescription,IncludeInRate,Disputed
 			into edw_temp.tquote_pel_driver_incident_wip_temp1
 		from
 		(
@@ -45,7 +45,7 @@ BEGIN
 			CAST(acc.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,acco.[Index],tph.quote_history_sk ,
 			0 AS transaction_seq_no, 
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,			
-			acc.CreatedDate,accof.Field,accof.[Value]
+			acc.CreatedDate,acc.UpdatedDate,accof.Field,accof.[Value]
 			from
 				(
 				    SELECT *
@@ -133,7 +133,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(CreatedDate) FROM edw_temp.tquote_pel_driver_incident_wip_temp1),@last_source_extract_ts)	
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest(UpdatedDate,CreatedDate)) FROM edw_temp.tquote_pel_driver_incident_wip_temp1),@last_source_extract_ts)	
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts
 
 		-- Update audit table

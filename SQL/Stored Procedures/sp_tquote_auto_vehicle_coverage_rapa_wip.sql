@@ -3,15 +3,14 @@ GO
 
 SET QUOTED_IDENTIFIER ON
 GO
-
+ 
 -- ================================================================================================================================================
--- Author:		Hernando Gonzalez
--- Create Date: 2024-05-07
--- Description: This stored procedure insert and update info related to tquote_auto_vehicle_coverage_rapa_wip.
+-- Description: This stored procedure inserts and updates info related to quote auto vehicle coverage rapa - wip
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 --------------------------------------------------------------------------------------------------------------------------------------------------
--- 07/05/24		Hernando Gonzalez			1. Initial Version
+-- 05/06/24		Alberto Almario					1. Created the proc
+-- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_rapa_wip]
@@ -40,7 +39,7 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[tquote_auto_vehicle_coverage_rapa_wip_temp1];
 
 		SELECT 
-			CreatedDate, quote_no, effective_dt, vehicle_no, expiration_dt, 0 as transaction_seq_no, quote_history_sk, quote_auto_vehicle_sk, quote_auto_vehicle_coverage_sk
+			CreatedDate, UpdatedDate, quote_no, effective_dt, vehicle_no, expiration_dt, 0 as transaction_seq_no, quote_history_sk, quote_auto_vehicle_sk, quote_auto_vehicle_coverage_sk
             ,RAPABodilyInjuryIndicatedSymbolRelativityChar1, RAPAPropertyDamageIndicatedSymbolRelativityChar1, RAPAMedicalPaymentsIndicatedSymbolRelativityChar1, 
 			RAPAPersonalInjuryProtectionIndicatedSymbolRelativityChar1, RAPACollisionIndicatedSymbolRelativityChar1, RAPAComprehensiveIndicatedSymbolRelativityChar1, 
 			RAPASingleLimitIndicatedSymbolRelativityChar1, RAPABodilyInjuryIndicatedSymbolRelativityChar2, RAPAPropertyDamageIndicatedSymbolRelativityChar2, 
@@ -59,8 +58,8 @@ BEGIN
         FROM
 			(
                 SELECT
-                    acc.CreatedDate, acc.PolicyNumber as quote_no, acc.EffectiveDate as effective_dt, qav.[vehicle_no] as vehicle_no, acco.[UniqueId] as vehicle_unique_id,
-                    acc.ExpirationDate as expiration_dt, acc.[Number] as transaction_seq_no,
+                    acc.CreatedDate, acc.UpdatedDate, acc.PolicyNumber as quote_no, acc.EffectiveDate as effective_dt, qav.[vehicle_no] as vehicle_no, acco.[UniqueId] as vehicle_unique_id,
+                    acc.ExpirationDate as expiration_dt, --acc.[Number] as transaction_seq_no,
                     qh.quote_history_sk, qav.quote_auto_vehicle_sk, qavc.quote_auto_vehicle_coverage_sk, 
                     accof.[Field], accof.[Value],
                     CASE 
@@ -339,7 +338,7 @@ BEGIN
 
 		
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(CreatedDate) FROM edw_temp.[tquote_auto_vehicle_coverage_rapa_wip_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(Greatest(CreatedDate,UpdatedDate)) FROM edw_temp.[tquote_auto_vehicle_coverage_rapa_wip_temp1]),@last_source_extract_ts);
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
