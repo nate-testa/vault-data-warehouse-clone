@@ -1,8 +1,11 @@
-﻿-- =============================================
--- Author:		Hernando Gonzalez
--- Create Date: 06/05/2024
--- Description: This procedures insert pel quote driver data
--- =============================================
+﻿-- =========================================================================================================================== 
+-- Description: This procedures insert pel quote data
+------------------------------------------------------------------------------------------------------------------------------
+-- Change date			|Author							|	Change Description
+------------------------------------------------------------------------------------------------------------------------------
+-- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
+-- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
+-- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_coverage_wip]
 
 AS
@@ -28,7 +31,7 @@ BEGIN
 		drop table if exists edw_temp.tquote_pel_coverage_wip_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,policy_history_sk,source_system_sk,
-			CreatedDate,CoverageLimit,UnderinsuredMotoristLiability,UnderinsuredLiability,EmploymentPracticesLiabilityLimit,
+			CreatedDate,UpdatedDate,CoverageLimit,UnderinsuredMotoristLiability,UnderinsuredLiability,EmploymentPracticesLiabilityLimit,
 			DomesticEmployeeCount,IncludeEmploymentPracticesLiability,DONotForProfitLimit,DOContinuityDate,DOContinuityDateOverride,CustomerHasPublicProfile,
 			LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
 			HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
@@ -48,7 +51,7 @@ BEGIN
 			CAST(acc.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.quote_history_sk policy_history_sk,
 			0 AS transaction_seq_no, 
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
-			acco.[Index],acc.CreatedDate,
+			acco.[Index],acc.CreatedDate,acc.UpdatedDate,
 			accof.Field,NULLIF(TRIM(accof.[Value]),'') AS [Value]
 			from
 				(
@@ -211,7 +214,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(CreatedDate) FROM edw_temp.tquote_pel_coverage_wip_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest(UpdatedDate,CreatedDate)) FROM edw_temp.tquote_pel_coverage_wip_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts
 		
 		-- Update audit table

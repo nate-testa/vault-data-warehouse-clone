@@ -1,13 +1,15 @@
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
-GO
-
--- =============================================
--- Author:		Alberto Almario
--- Create Date: 2024-05-07
--- Description: This stored procedure insert and update info related to tquote_auto_vehicle_wip.
--- =============================================
+GO 
+-- ================================================================================================================================================
+-- Description: This stored procedure inserts and updates info related to quote auto vehicle
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- 05/06/24		Alberto Almario					1. Created the proc
+-- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
+-- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_wip]
 AS
 BEGIN
@@ -35,7 +37,7 @@ BEGIN
 
 		WITH FinalTable AS (
             SELECT
-                PolicyNumber, EffectiveDate, [Index] as vehicle_no, CreatedDate,
+                PolicyNumber, EffectiveDate, [Index] as vehicle_no, CreatedDate,UpdatedDate,
                 [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],
                 [VINChangeIndicator],[EngineCylinders],[Height],[Length],[Width],
                 source_system_sk
@@ -43,7 +45,7 @@ BEGIN
             FROM
                 (
                     SELECT
-                        acc.PolicyNumber, acc.EffectiveDate, acc.CreatedDate, 
+                        acc.PolicyNumber, acc.EffectiveDate, acc.CreatedDate,acc.UpdatedDate, 
                         acco.[Index], accof.[Field], accof.[Value],
                         CASE 
                             WHEN acc.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
@@ -198,7 +200,7 @@ BEGIN
 
 		
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(CreatedDate) FROM edw_temp.[tquote_auto_vehicle_wip_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(Greatest(CreatedDate,UpdatedDate)) FROM edw_temp.[tquote_auto_vehicle_wip_temp1]),@last_source_extract_ts);
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

@@ -1,13 +1,15 @@
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
-GO
-
--- =============================================
--- Author:		Alberto Almario
--- Create Date: 2024-04-06
--- Description: This stored procedure insert and update info related to tquote_auto_garage_location_wip.
--- =============================================
+GO 
+-- ================================================================================================================================================
+-- Description: This stored procedure inserts and updates info related to quote auto grage - wip
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- 05/06/24		Alberto Almario					1. Created the proc
+-- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
+-- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_garage_location_wip]
 AS
 BEGIN
@@ -34,7 +36,7 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[tquote_auto_garage_location_wip_temp1];
 
 		SELECT 
-			CreatedDate, quote_no, effective_dt, expiration_dt, 0 as transaction_seq_no, quote_history_sk, garage_location_no,
+			CreatedDate, UpdatedDate, quote_no, effective_dt, expiration_dt, 0 as transaction_seq_no, quote_history_sk, garage_location_no,
             [AddressLine1],[AddressLine2],/*['**Pending garage_address_unit_no'],*/[AddressCity],[AddressZipCode],[AddressState],[AddressCounty],[AddressCountry],
             [CensusTract],[FloodZone],[WildfireThreat],[ProtectionClass],[DistanceToCoast],[CentralReportingFireAlarm],[CentralReportingBurglarAlarm],
 			source_system_sk
@@ -44,8 +46,9 @@ BEGIN
         FROM
 			(
                 SELECT
-                    acc.CreatedDate, acc.PolicyNumber as quote_no, acc.EffectiveDate as effective_dt, 
-                    acc.ExpirationDate as expiration_dt, acc.Number as transaction_seq_no, qh.quote_history_sk,
+                    acc.CreatedDate, acc.UpdatedDate, acc.PolicyNumber as quote_no, acc.EffectiveDate as effective_dt, 
+                    acc.ExpirationDate as expiration_dt, --acc.Number as transaction_seq_no, 
+                    qh.quote_history_sk,
                     acco.[Index] as garage_location_no,
                     accof.[Field], accof.[Value],
                     CASE 
@@ -173,7 +176,7 @@ BEGIN
 
 		
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(CreatedDate) FROM edw_temp.[tquote_auto_garage_location_wip_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(Greatest(CreatedDate,UpdatedDate)) FROM edw_temp.[tquote_auto_garage_location_wip_temp1]),@last_source_extract_ts);
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

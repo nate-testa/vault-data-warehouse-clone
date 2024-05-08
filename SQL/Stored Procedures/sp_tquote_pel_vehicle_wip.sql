@@ -1,13 +1,11 @@
-﻿-- =============================================
--- Author:		Hernando Gonzalez
--- Create Date: 06/07/2024
--- Description: This procedures insert pel quote vehicle data
+﻿-- =========================================================================================================================== 
+-- Description: This procedures insert and update info related to pel quote vehicle data
 ------------------------------------------------------------------------------------------------------------------------------
 -- Change date			|Author							|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
--- 
+-- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
+-- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
 -- =========================================================================================================================== 
-
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_vehicle_wip]
 
 AS
@@ -33,7 +31,7 @@ BEGIN
 		drop table if exists edw_temp.tquote_pel_vehicle_wip_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,quote_history_sk,source_system_sk,
-			CreatedDate,[Index],VehicleType,Model,Vin,[Year],Make,
+			CreatedDate,UpdatedDate,[Index],VehicleType,Model,Vin,[Year],Make,
 			[Body], Weight, Horsepower, EngineSize, EngineType, HighPerformanceVehicle, BasicModelName,
 			VINChangeIndicator, DistributionDate, Restraint, AntiLockBrakes, EngineCylinders, FieldChangeIndicator, FourWheelDriveIndicator, ElectronicStabilityControl, TonnageIndicator, PayloadCapacity, DaytimeRunningLightIndicator, Wheelbase, ClassCode, AntiTheftIndicator, GrossVehicleWeight, Height, StateException, VMPerformanceIndicator, NCICCode, Chassis, [Length], Width, BaseMSRP, SpecialHandlingIndicator, RAPAInterimIndicator, SpecialInfoSelector, ModelSeriesInfo, BodyInfo, EngineInfo, RestraintInfo, TransmissionInfo, OtherInfo, ReleaseDate,
 			CollectorCarType, MotorHomeClass,
@@ -48,7 +46,7 @@ BEGIN
 			acc.PolicyNumber,CAST(acc.EffectiveDate AS DATE) AS EffectiveDate,CAST(acc.ExpirationDate AS DATE) AS ExpirationDate,
 			CAST(acc.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.quote_history_sk ,
 			0 AS transaction_seq_no,acco.[Index],
-			acc.CreatedDate,
+			acc.CreatedDate,acc.UpdatedDate,
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			accof.Field,accof.[Value]
 			from
@@ -249,7 +247,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(CreatedDate) FROM edw_temp.tquote_pel_vehicle_wip_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest(UpdatedDate,CreatedDate)) FROM edw_temp.tquote_pel_vehicle_wip_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts
 
 		-- Update audit table
