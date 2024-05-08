@@ -15,7 +15,7 @@ GO
 -- 05/08/24		Architha Gudimalla				4. Updated the label for another long label for LC360
 -- ======================================================================================================================= 
 
-ALTER       PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
+CREATE OR ALTER       PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
 @in_source varchar(255) = null
 AS
 BEGIN
