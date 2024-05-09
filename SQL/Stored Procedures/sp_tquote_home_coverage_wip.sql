@@ -55,7 +55,7 @@ BEGIN
 		declare @sql nvarchar(max)
 		drop table if exists edw_temp.tquote_home_coverage_wip_temp1
 		SET @sql ='select quote_no,EffectiveDate,ExpirationDate,0 as transaction_seq_no,source_system_sk,
-		quote_history_sk,quote_home_location_sk,product_name,CreatedDate,
+		quote_history_sk,quote_home_location_sk,product_name,CreatedDate,UpdatedDate,
 		FactorMethod, Factor, Retention, Reason,
 		'+ @ColumnsToPivot +' into edw_temp.tquote_home_coverage_wip_temp1
 			from
@@ -63,7 +63,7 @@ BEGIN
 			select
 			acc.PolicyNumber as quote_no,acc.EffectiveDate ,acc.ExpirationDate ,acc.TransactionEffectiveDate ,
 			tqh.quote_history_sk,thql.quote_home_location_sk,
-			0 as transaction_seq_no,acc.CreatedDate, pr.name product_name,
+			0 as transaction_seq_no,acc.CreatedDate,acc.UpdatedDate, pr.name product_name,
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,accvof.Field,accvof.[Value],
 			accpf.FactorMethod, accpf.Factor, accpf.Retention, accpf.Reason
 			from
@@ -405,7 +405,7 @@ BEGIN
 			SET @rows_affected=@@ROWCOUNT; 
 
 			-- Update control table
-			SET @new_last_source_extract_ts=COALESCE((SELECT MAX(CreatedDate) FROM edw_temp.tquote_home_coverage_wip_temp1),@last_source_extract_ts);	
+			SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(CreatedDate,UpdatedDate)) FROM edw_temp.tquote_home_coverage_wip_temp1),@last_source_extract_ts);	
 			EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 			-- Update audit table
 			SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
