@@ -91,33 +91,86 @@ BEGIN
 					)
 			) pivottable
 
-		-- Start Insert process
-		INSERT INTO [edw_core].[tquote_collection_scheduled_item] (
-			[quote_no]
-           ,[effective_dt]
-           ,[expiration_dt]
-           ,[transaction_seq_no]
-           ,[quote_history_sk]
-           ,[quote_collection_class_type_sk]
-		   ,[scheduled_item_no]
-           ,[item_desc]
-           ,[coverage_limit_amt]
-           ,[schedule_on_file_in]
-           ,[appraisal_dt]
-		   ,[collector_car_in]
-           ,[source_system_sk]
-           ,[create_ts]
-           ,[update_ts]
-           ,[etl_audit_sk]
-			)
-		SELECT 
-			[quote_no],[EffectiveDate],[ExpirationDate],[Number]
-			,[quote_history_sk],[quote_collection_class_type_sk]
-			,[scheduled_item_no]
-			,[Description],[CoverageLimit],[SeeScheduleOnFileWithTheCompany],[AppraisalDate],[CollectorCar]
-			,[source_system_sk],getdate(),getdate(), @etl_audit_sk
-		FROM 
-			[edw_temp].[tquote_collection_scheduled_item_wip_temp1]
+		MERGE INTO [edw_core].[tquote_collection_scheduled_item] AS TARGET
+		USING (
+		    SELECT 
+		        [quote_no],
+		        [EffectiveDate] AS effective_dt,
+		        [ExpirationDate] AS expiration_dt,
+		        [Number] AS transaction_seq_no,
+		        [quote_history_sk],
+		        [quote_collection_class_type_sk],
+		        [scheduled_item_no],
+		        [Description] AS item_desc,
+		        [CoverageLimit] AS coverage_limit_amt,
+		        [SeeScheduleOnFileWithTheCompany] AS schedule_on_file_in,
+		        [AppraisalDate] AS appraisal_dt,
+		        [CollectorCar] AS collector_car_in,
+		        [source_system_sk],
+		        GETDATE() AS create_ts,
+		        GETDATE() AS update_ts,
+		        @etl_audit_sk AS etl_audit_sk
+		    FROM 
+		        [edw_temp].[tquote_collection_scheduled_item_wip_temp1]
+		) AS SOURCE
+		ON 
+		    TARGET.quote_no = SOURCE.quote_no AND
+		    TARGET.effective_dt = SOURCE.effective_dt AND
+		    TARGET.expiration_dt = SOURCE.expiration_dt AND
+		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
+		    TARGET.quote_history_sk = SOURCE.quote_history_sk
+		
+		WHEN MATCHED THEN
+		    UPDATE SET
+		        TARGET.quote_collection_class_type_sk = SOURCE.quote_collection_class_type_sk,
+		        TARGET.scheduled_item_no = SOURCE.scheduled_item_no,
+		        TARGET.item_desc = SOURCE.item_desc,
+		        TARGET.coverage_limit_amt = SOURCE.coverage_limit_amt,
+		        TARGET.schedule_on_file_in = SOURCE.schedule_on_file_in,
+		        TARGET.appraisal_dt = SOURCE.appraisal_dt,
+		        TARGET.collector_car_in = SOURCE.collector_car_in,
+		        TARGET.source_system_sk = SOURCE.source_system_sk,
+		        TARGET.create_ts = SOURCE.create_ts,
+		        TARGET.update_ts = SOURCE.update_ts,
+		        TARGET.etl_audit_sk = SOURCE.etl_audit_sk
+		
+		WHEN NOT MATCHED BY TARGET THEN
+		    INSERT (
+		        quote_no,
+		        effective_dt,
+		        expiration_dt,
+		        transaction_seq_no,
+		        quote_history_sk,
+		        quote_collection_class_type_sk,
+		        scheduled_item_no,
+		        item_desc,
+		        coverage_limit_amt,
+		        schedule_on_file_in,
+		        appraisal_dt,
+		        collector_car_in,
+		        source_system_sk,
+		        create_ts,
+		        update_ts,
+		        etl_audit_sk
+		    )
+		    VALUES (
+		        SOURCE.quote_no,
+		        SOURCE.effective_dt,
+		        SOURCE.expiration_dt,
+		        SOURCE.transaction_seq_no,
+		        SOURCE.quote_history_sk,
+		        SOURCE.quote_collection_class_type_sk,
+		        SOURCE.scheduled_item_no,
+		        SOURCE.item_desc,
+		        SOURCE.coverage_limit_amt,
+		        SOURCE.schedule_on_file_in,
+		        SOURCE.appraisal_dt,
+		        SOURCE.collector_car_in,
+		        SOURCE.source_system_sk,
+		        SOURCE.create_ts,
+		        SOURCE.update_ts,
+		        SOURCE.etl_audit_sk
+		);
 
 		SET @rows_affected=@@ROWCOUNT;
 
