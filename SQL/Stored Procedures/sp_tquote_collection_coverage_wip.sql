@@ -440,7 +440,7 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.createddate) FROM [edw_temp].[tquote_collection_coverage_wip_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest(t1.CreatedDate, t1.UpdatedDate)) FROM [edw_temp].[tquote_collection_coverage_wip_temp1] t1),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS [edw_temp].[tquote_collection_coverage_wip_temp1];
 		

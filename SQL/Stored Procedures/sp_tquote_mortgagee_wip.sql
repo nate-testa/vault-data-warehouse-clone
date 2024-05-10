@@ -109,7 +109,7 @@ BEGIN
 		    TARGET.effective_dt = SOURCE.effective_dt AND
 		    TARGET.expiration_dt = SOURCE.expiration_dt AND
 		    TARGET.quote_history_sk = SOURCE.quote_history_sk
-		
+
 		WHEN MATCHED THEN
 		    UPDATE SET
 		        TARGET.transaction_seq_no = SOURCE.transaction_seq_no,
@@ -134,7 +134,7 @@ BEGIN
 		        TARGET.create_ts = SOURCE.create_ts,
 		        TARGET.update_ts = SOURCE.update_ts,
 		        TARGET.etl_audit_sk = SOURCE.etl_audit_sk
-		
+
 		WHEN NOT MATCHED BY TARGET THEN
 		    INSERT (
 		        quote_no,
@@ -196,7 +196,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(createdDate) FROM edw_temp.tquote_mortgagee_wip_temp1),@last_source_extract_ts);	
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest(t1.CreatedDate, t1.UpdatedDate)) FROM edw_temp.tquote_mortgagee_wip_temp1),@last_source_extract_ts);	
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
