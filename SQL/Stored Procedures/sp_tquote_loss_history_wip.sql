@@ -7,9 +7,9 @@ GO
 
 -- =================================================================================================
 -- Description: This procedures inserts quote loss history wip
------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
 -- Change date          |Author						|	Change Description
------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
 -- 05/09/24		        Yunus Mohammed			     1. Created the proc
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_loss_history_wip]
@@ -86,9 +86,14 @@ BEGIN
 					Coverage, ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred
 					)
 			) pivottable
-			
+
+		MERGE edw_core.tquote_loss_history AS Target
+		USING edw_temp.tquote_loss_history_wip_temp1 AS Source
+		ON Target.quote_no = Source.quote_no and Target.effective_dt= Source.EffectiveDate AND
+		Target.transaction_seq_no = Source.Number and Source.loss_seq_no = Target.loss_seq_no
+		WHEN NOT MATCHED BY Target THEN
 		-- Start Insert process
-		INSERT INTO edw_core.tquote_loss_history 
+		INSERT
         (
         quote_no,effective_dt,expiration_dt,transaction_seq_no,quote_history_sk,loss_seq_no,property_or_liability,source_nm
         ,claim_status,claimant_nm,file_no,loss_dt,loss_indentifier,type_of_loss,sub_cause_of_loss_desc,loss_desc,policy_type
@@ -96,13 +101,44 @@ BEGIN
         ,loss_address_zip_cd,coverage_desc,indemnity_reserve_amt,expense_reserve_amt,indemnity_paid_amt,expense_paid_amt,total_incurred_amt
         ,source_system_sk,create_ts,update_ts,etl_audit_sk
         )
-        SELECT quote_no,EffectiveDate,ExpirationDate,[Number],quote_history_sk,loss_seq_no,PropertyOrLiability,Source_nm,ClaimStatus
+        VALUES 
+		(
+		quote_no,EffectiveDate,ExpirationDate,[Number],quote_history_sk,loss_seq_no,PropertyOrLiability,Source_nm,ClaimStatus
         ,Claimant,FileNumber,LossDate,LossIdentifier,LossType,sub_cause_of_loss,LossDescription,PolicyType,CatIndicator
         ,Disputed,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressState,AddressZipCode,Coverage,ReserveIndemnity
         ,ReserveExpense,PaidIndemnity,PaidExpense,TotalIncurred
         ,source_system_sk,getdate(),getdate(),@etl_audit_sk
-        FROM 
-            edw_temp.tquote_loss_history_wip_temp1
+		)
+        WHEN MATCHED THEN UPDATE
+		SET
+		Target.expiration_dt = Source.ExpirationDate,
+		Target.quote_history_sk = Source.quote_history_sk,
+		Target.property_or_liability = Source.PropertyOrLiability,
+		Target.source_nm =Source.Source_nm ,
+		Target.claim_status = Source.ClaimStatus,
+		Target.claimant_nm = Source.Claimant,
+		Target.file_no = Source.FileNumber,
+		Target.loss_dt = Source.LossDate,
+		Target.loss_indentifier = Source.LossIdentifier,
+		Target.type_of_loss = Source.LossType,
+		Target.sub_cause_of_loss_desc = Source.sub_cause_of_loss,
+		Target.loss_desc = Source.LossDescription,
+		Target.policy_type = Source.PolicyType,
+		Target.cat_loss_in = Source.CatIndicator,
+		Target.disputed_in = Source.Disputed,
+		Target.loss_address_line_1 = Source.AddressLine1,
+		Target.loss_address_line_2 = Source.AddressLine2,
+		Target.loss_address_unit_no = Source.AddressLineUnit,
+		Target.loss_address_city_nm= Source.AddressCity,
+		Target.loss_address_state_cd = Source.AddressState,
+		Target.loss_address_zip_cd = Source.AddressZipCode,
+		Target.coverage_desc = Source.Coverage,
+		Target.indemnity_reserve_amt = Source.ReserveIndemnity,
+		Target.expense_reserve_amt = Source.ReserveExpense,
+		Target.indemnity_paid_amt = Source.PaidIndemnity,
+		Target.expense_paid_amt = Source.PaidExpense,
+		Target.total_incurred_amt = Source.TotalIncurred,
+		Target.update_ts = GETDATE();
 
 		SET @rows_affected=@@ROWCOUNT;
 
