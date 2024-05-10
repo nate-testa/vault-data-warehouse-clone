@@ -119,10 +119,8 @@ BEGIN
 		    TARGET.expiration_dt = SOURCE.expiration_dt AND
 		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
 		    TARGET.quote_history_sk = SOURCE.quote_history_sk
-		
 		WHEN MATCHED THEN
 		    UPDATE SET
-		        TARGET.quote_collection_class_type_sk = SOURCE.quote_collection_class_type_sk,
 		        TARGET.scheduled_item_no = SOURCE.scheduled_item_no,
 		        TARGET.item_desc = SOURCE.item_desc,
 		        TARGET.coverage_limit_amt = SOURCE.coverage_limit_amt,
@@ -133,7 +131,6 @@ BEGIN
 		        TARGET.create_ts = SOURCE.create_ts,
 		        TARGET.update_ts = SOURCE.update_ts,
 		        TARGET.etl_audit_sk = SOURCE.etl_audit_sk
-		
 		WHEN NOT MATCHED BY TARGET THEN
 		    INSERT (
 		        quote_no,
