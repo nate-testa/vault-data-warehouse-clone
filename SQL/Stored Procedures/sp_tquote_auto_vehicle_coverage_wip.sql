@@ -9,6 +9,7 @@ GO
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- 05/06/24		Alberto Almario					1. Created the proc
 -- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
+-- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip]
@@ -46,7 +47,7 @@ BEGIN
         )
         ,acctvpf AS (
             SELECT  
-                acc.PolicyNumber, acc.EffectiveDate, acc.Number,
+                acc.PolicyNumber, acc.EffectiveDate, 0 as Number,
                 accpf.AccountPremiumId,
                 accpf.ObjectUniqueId,
                 accpf.Coverage,
@@ -189,7 +190,7 @@ BEGIN
                     LEFT JOIN [edw_core].[tquote_history] AS qh 
                         ON qh.quote_no = acc.PolicyNumber
                         AND qh.effective_dt = acc.EffectiveDate
-                        AND qh.transaction_seq_no = acc.number
+                        AND qh.transaction_seq_no = 0
                     LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                         ON qav.quote_no = acc.PolicyNumber
                         AND qav.vehicle_no = acco.[Index]

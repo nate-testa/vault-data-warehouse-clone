@@ -9,6 +9,7 @@ GO
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- 05/06/24		Alberto Almario					1. Created the proc
 -- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
+-- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_driver_incident_wip]
 AS
@@ -67,8 +68,8 @@ BEGIN
                 INNER JOIN [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
                 INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
                 INNER JOIN [edw_stage].[AccountObject] AS pid ON acco.parentobjectid = pid.Id
-                LEFT JOIN [edw_core].[tquote_history] AS qh  ON qh.quote_no = acc.PolicyNumber AND qh.effective_dt = acc.EffectiveDate AND qh.transaction_seq_no = acc.Number
-                LEFT JOIN [edw_core].[tquote_auto_driver] AS qad ON qad.quote_no = acc.PolicyNumber AND qad.effective_dt = acc.EffectiveDate AND qad.transaction_seq_no = acc.Number and qad.driver_no=pid.[index]
+                LEFT JOIN [edw_core].[tquote_history] AS qh  ON qh.quote_no = acc.PolicyNumber AND qh.effective_dt = acc.EffectiveDate AND qh.transaction_seq_no = 0
+                LEFT JOIN [edw_core].[tquote_auto_driver] AS qad ON qad.quote_no = acc.PolicyNumber AND qad.effective_dt = acc.EffectiveDate AND qad.transaction_seq_no = 0 and qad.driver_no=pid.[index]
                 WHERE p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'
                     AND accof.[Group] in ('Incidents in the Past 5 Years')

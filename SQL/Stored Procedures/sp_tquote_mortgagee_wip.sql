@@ -1,12 +1,14 @@
--- =============================================
+--=================================================================================================
 -- Author:		Hernando Gonzalez Garcia
--- Create Date: <Create Date, , >
 -- Description: This procedures insert homeowners mortgagee data
--- =============================================
+---------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 05/05/24		Hernando Gonzalez Garcia		1. Created this procedure 
+-- 05/14/24		Architha Gudimalla				2. Corrected errors
+-- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_mortgagee_wip]
-
 AS
-
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
     -- interfering with SELECT statements.
@@ -30,7 +32,7 @@ BEGIN
 			PolicyNumber as quote_no,EffectiveDate,ExpirationDate
 			--,transaction_seq_no
 			,0 as transaction_seq_no
-			,createdDate,quote_history_sk,source_system_sk,
+			,createdDate,UpdatedDate,quote_history_sk,source_system_sk,
 			mortgagee_no,NumberOfMortgagees,[Name],MortgageeType,BillMortgagee,Email,Fax,Phone,
 			IsaoAtima,IsaoAtimaOther,LoanNumber,AddressLine1,AddressLine2,AddressCity,AddressState,
 			AddressZipCode,AddressCounty,AddressCountry
@@ -40,7 +42,7 @@ BEGIN
 		select 
 			acc.PolicyNumber,CAST(acc.EffectiveDate AS DATE) AS EffectiveDate,CAST(acc.ExpirationDate AS DATE) AS ExpirationDate,
 			tqh.quote_history_sk,acco.[index] mortgagee_no,
-			acc.number AS transaction_seq_no,acc.createdDate,
+			0 AS transaction_seq_no,acc.createdDate,acc.UpdatedDate,
 			CASE WHEN acc.ExternalSourceId IS NULL THEN 2 ELSE 4 END source_system_sk,accof.Field,accof.[Value]
 			from
 				(
@@ -55,7 +57,7 @@ BEGIN
 				inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
 				LEFT JOIN edw_core.tquote_history tqh on tqh.quote_no=acc.PolicyNumber
 						and tqh.effective_dt=acc.EffectiveDate
-						and tqh.transaction_seq_no = acc.number
+						and tqh.transaction_seq_no = 0
 				left join edw_stage.Product pr on acc.ProductId = pr.id
 			where
 				acco.ObjectType IN ('Mortgagee')
@@ -107,12 +109,12 @@ BEGIN
 		ON
 		    TARGET.quote_no = SOURCE.quote_no AND
 		    TARGET.effective_dt = SOURCE.effective_dt AND
-		    TARGET.expiration_dt = SOURCE.expiration_dt AND
-		    TARGET.quote_history_sk = SOURCE.quote_history_sk
+		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no 
+		    --TARGET.expiration_dt = SOURCE.expiration_dt AND
+		    --TARGET.quote_history_sk = SOURCE.quote_history_sk
 
 		WHEN MATCHED THEN
 		    UPDATE SET
-		        TARGET.transaction_seq_no = SOURCE.transaction_seq_no,
 		        TARGET.mortgagee_no = SOURCE.mortgagee_no,
 		        TARGET.mortgagee_nm = SOURCE.mortgagee_nm,
 		        TARGET.mortgagee_type = SOURCE.mortgagee_type,
@@ -196,7 +198,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest(t1.CreatedDate, t1.UpdatedDate)) FROM edw_temp.tquote_mortgagee_wip_temp1),@last_source_extract_ts);	
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest(t1.CreatedDate, t1.UpdatedDate)) FROM edw_temp.tquote_mortgagee_wip_temp1 t1),@last_source_extract_ts);	
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table

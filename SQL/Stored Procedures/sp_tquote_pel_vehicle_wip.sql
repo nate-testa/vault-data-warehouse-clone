@@ -5,6 +5,7 @@
 ------------------------------------------------------------------------------------------------------------------------------
 -- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
+-- 05/14/2024 			Architha Gudimalla					3. Corrected errors
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_vehicle_wip]
 
@@ -62,7 +63,7 @@ BEGIN
 				inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
 				left join [edw_core].[tquote_history] tph on tph.quote_no=acc.PolicyNumber
 						and tph.effective_dt=acc.EffectiveDate
-						and tph.transaction_seq_no = acc.[Number]
+						and tph.transaction_seq_no = 0
 				left join edw_stage.Product pr on acc.ProductId = pr.id
 			where
 				acc.PolicyNumber is not null

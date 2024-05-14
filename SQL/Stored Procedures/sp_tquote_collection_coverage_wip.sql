@@ -85,7 +85,7 @@ BEGIN
 				    inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
 					LEFT JOIN edw_core.tquote_history tqh on tqh.quote_no=acc.PolicyNumber
 						and tqh.effective_dt=acc.EffectiveDate
-						and tqh.transaction_seq_no = acc.number
+						and tqh.transaction_seq_no = 0
 					LEFT JOIN edw_core.tquote_collection_location tqcl on tqcl.quote_no=acc.PolicyNumber						
 				WHERE
 					p.Name=''Collections''

@@ -11,6 +11,7 @@ GO
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- 05/06/24		Alberto Almario					1. Created the proc
 -- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
+-- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_rapa_wip]
@@ -84,12 +85,12 @@ BEGIN
 				INNER JOIN [edw_core].[tquote_auto_vehicle_coverage] AS qavc
 					ON qavc.quote_no = acc.PolicyNumber
                     AND qavc.effective_dt = CAST(acc.EffectiveDate AS DATE)
-                    AND qavc.transaction_seq_no = acc.[Number]
+                    AND qavc.transaction_seq_no = 0
 					AND qavc.vehicle_no = qav.vehicle_no
 				LEFT JOIN [edw_core].[tquote_history] AS qh 
                     ON qh.quote_no = acc.PolicyNumber
                     AND qh.effective_dt = acc.EffectiveDate
-                    AND qh.transaction_seq_no = acc.[Number]
+                    AND qh.transaction_seq_no = 0
                 WHERE
                     p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'

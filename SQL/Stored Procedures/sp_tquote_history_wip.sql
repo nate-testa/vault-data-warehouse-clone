@@ -5,6 +5,7 @@
 -----------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
+-- 05/14/24		Architha Gudimalla				2. Corrected errors
 -- ===================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history_wip]
@@ -81,7 +82,7 @@ BEGIN
 		WHERE --acct.Stage in ('QUOTE','POLICY')  and
 			acc.PolicyNumber is not null 
 		and pr.ProductLine = 'PersonalLines'  
-		and not exists (select * from dbo.AccountTransaction actr where actr.AccountId=acc.id)
+		and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
         and greatest(acc.CreatedDate,acc.UpdatedDate)>@last_source_extract_ts 
 
 		DROP TABLE IF EXISTS edw_temp.tquote_history_temp3
@@ -95,7 +96,7 @@ BEGIN
 		WHERE --acct.Stage in ('QUOTE','POLICY') and
 			acc.PolicyNumber is not null 
 		and pr.ProductLine = 'PersonalLines'  
-		and not exists (select * from dbo.AccountTransaction actr where actr.AccountId=acc.id)
+		and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
         and greatest(acc.CreatedDate,acc.UpdatedDate)>@last_source_extract_ts 
 		group by acc.id  
 

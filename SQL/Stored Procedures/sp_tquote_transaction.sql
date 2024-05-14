@@ -9,6 +9,7 @@
 -- 12/11/23		Architha Gudimalla		4. modified logic for stage pol term
 -- 02/27/24		Architha Gudimalla		5. Updated logic for Lux subscriber contributoin on ho
 -- 03/20/24		Architha Gudimalla		6. Added logic for class_type_sk
+
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction]

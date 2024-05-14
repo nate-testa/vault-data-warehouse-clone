@@ -5,6 +5,7 @@
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 09/05/24		Hernando Gonzalez Garcia		1. Created this procedure 
+-- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_scheduled_item_wip]
@@ -74,11 +75,11 @@ BEGIN
 				LEFT JOIN [edw_stage].[AccountObjectField] pid ON pid.objectid = acco.parentobjectid and pid.Field = 'ClassType'
 				LEFT JOIN edw_core.tquote_history tqh on tqh.quote_no=acc.PolicyNumber
 						and tqh.effective_dt=acc.EffectiveDate
-						and tqh.transaction_seq_no = acc.number
+						and tqh.transaction_seq_no = 0
 				LEFT JOIN edw_core.tquote_collection_class_type tqcct 
 						on tqcct.quote_no=acc.PolicyNumber
 						and tqcct.effective_dt=acc.EffectiveDate
-						and tqcct.transaction_seq_no = acc.number and pid.value = tqcct.class_type 
+						and tqcct.transaction_seq_no = 0 and pid.value = tqcct.class_type 
 			WHERE
 				p.[Name] in ('Collections','Homeowners')
 				AND acco.ObjectType = 'CollectionClassScheduleItem'
@@ -116,12 +117,14 @@ BEGIN
 		ON 
 		    TARGET.quote_no = SOURCE.quote_no AND
 		    TARGET.effective_dt = SOURCE.effective_dt AND
-		    TARGET.expiration_dt = SOURCE.expiration_dt AND
+		    --TARGET.expiration_dt = SOURCE.expiration_dt AND
 		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
-		    TARGET.quote_history_sk = SOURCE.quote_history_sk
+		    TARGET.quote_collection_class_type_sk = SOURCE.quote_collection_class_type_sk AND
+		    TARGET.scheduled_item_no = SOURCE.scheduled_item_no 
+		   -- TARGET.quote_history_sk = SOURCE.quote_history_sk
 		WHEN MATCHED THEN
 		    UPDATE SET
-		        TARGET.scheduled_item_no = SOURCE.scheduled_item_no,
+		        --TARGET.scheduled_item_no = SOURCE.scheduled_item_no,
 		        TARGET.item_desc = SOURCE.item_desc,
 		        TARGET.coverage_limit_amt = SOURCE.coverage_limit_amt,
 		        TARGET.schedule_on_file_in = SOURCE.schedule_on_file_in,

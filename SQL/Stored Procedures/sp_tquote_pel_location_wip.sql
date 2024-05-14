@@ -63,7 +63,7 @@ BEGIN
 				inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
 				left join [edw_core].[tquote_history] tph on tph.quote_no=acc.PolicyNumber
 						and tph.effective_dt=acc.EffectiveDate
-						and tph.transaction_seq_no = acc.[Number]
+						and tph.transaction_seq_no = 0
 				left join edw_stage.Product pr on acc.ProductId = pr.id
 			where
 				acc.PolicyNumber is not null
