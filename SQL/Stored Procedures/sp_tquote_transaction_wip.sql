@@ -5,8 +5,7 @@
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 05/08/24				Architha Gudimalla		1. Created this procedure
 -- 05/14/2024 			Architha Gudimalla		3. Corrected errors
--- ==================================================================================================================================== 
-
+-- ====================================================================================================================================  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction_wip]
 
 AS
@@ -43,14 +42,14 @@ BEGIN
 		WHERE PolicyNumber is not null 
 		  --and acc.Stage in ('QUOTE','POLICY') 
 		  and pr.ProductLine='PersonalLines'
-		  AND greatest(acc.CreatedDate,acc.UpdatedDate)>@last_source_extract_ts
-		  and not exists (select * from dbo.AccountTransaction actr where actr.AccountId=acc.id)
+		  AND acc.CreatedDate>@last_source_extract_ts
+		and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
 
         -- Create temp table with name as sp_tcustomer_temp1 and use it in 
         DROP TABLE IF EXISTS edw_temp.TQuote_transaction_wip_temp2
         SELECT 
 			tmp1.PolicyNumber,
-			case when tmp1.productcode = 'AU' then atvo.[index] else null end as vehicle_no,
+			case when tmp1.productcode = 'AU' then atvof.[index] else null end as vehicle_no,
 			tmp1.ProductId,
 			tmp1.EffectiveDate,
 			tmp1.ExpirationDate, 
@@ -60,7 +59,7 @@ BEGIN
 			null Commission,
 			tmp1.TransactionEffectiveDate,
 			null IssuedDate,
-			'' CancellationReason,
+			null CancellationReason,
 			tmp1.CreatedDate,
 			iif(tmp1.TransactionEffectiveDate > null, tmp1.TransactionEffectiveDate, null) cal_mn,
 			tmp1.UpdatedDate,
@@ -76,7 +75,7 @@ BEGIN
 		INTO edw_temp.TQuote_transaction_wip_temp2  
 		FROM edw_temp.TQuote_transaction_wip_temp1 tmp1 
 		inner join edw_stage.Account acct on acct.id = tmp1.id
-        left join edw_stage.Accountpremium ap on ap.AccountId=acct.id -->
+		inner join edw_stage.Accountpremium ap on ap.AccountId=acct.id -->
         left join edw_stage.AccountPremiumCoverage apc on apc.AccountPremiumId=ap.id --> Accounttransactionversioncoveragepremium
         inner join edw_stage.AccountObject atvo on atvo.AccountId=acct.id --> Accounttransactionversionobject
         inner join edw_stage.AccountObjectField atvof on atvof.ObjectId=atvo.id -->AccountTransactionVersionObjectField
@@ -113,77 +112,9 @@ BEGIN
 		INNER JOIN edw_stage.[AccountPremiumTaxAndFee] accptf on accptf.AccountPremiumId = ap.Id 
 		left join edw_stage.coverage cov on cov.id = accptf.coverageid 
 
-
-		merge edw_core.TQuote_transaction  AS Target
-		using
-		(
-			SELECT
-				q.quote_sk
-				,qh.quote_history_sk, dt1.date_sk eff_dt, dt2.date_sk exp_dt, dt3.date_sk tr_eff_dt, 0 as [number], 
-				br.broker_sk, cust.customer_sk, source.wp, Source.comm, source.ap, source.tfs, source.wp - source.tfs, 
-				case when ho.quote_no is not null then ho.quote_home_location_sk 
-					when coll.quote_no is not null then coll.quote_collection_location_sk 
-					--when pel_loc.quote_no is not null then pel_loc.pel_location_sk  
-					when au_veh.quote_no is not null then au_veh.quote_auto_vehicle_sk 
-					else 0 
-				end item_sk, 
-				case when ho.quote_no is not null then ho.quote_home_coverage_sk 
-					when coll.quote_no is not null then coll.quote_collection_coverage_sk 
-					when pel_cov.quote_no is not null then pel_cov.quote_pel_coverage_sk 
-					when au_pol_cov.quote_no is not null then au_pol_cov.quote_auto_policy_coverage_sk 
-					else 0 
-				end cov_sk, 
-				case when au_veh_cov.quote_no is not null then au_veh_cov.quote_auto_vehicle_coverage_sk 
-					else 0 
-				end veh_cov_sk, 
-				dt4.date_sk tr_dt_sk,  
-				pr.product_sk,  
-				isnull(ic.internal_coverage_sk,0) int_cov_sk, 
-				source.ssk,  
-				--isnull(ttfs.tax_fee_surcharge_sk,0), 
-				0 user_sk, 
-				--getdate(),getdate(), @etl_audit_sk, --select source.coverage, source.label,ic.*
-				ceded_annual_premium_amt,
-				ceded_premium_amt
-				,case when q.product_cd <> 'Lux' then 0
-					when ic.internal_coverage_category_nm <> 'Premium' then 0
-					when cc.quote_collection_class_type_sk is not null then cc.quote_collection_class_type_sk
-					else 0
-				end quote_collection_class_type_sk
-			FROM
-				edw_temp.TQuote_transaction_wip_temp2 source
-			LEFT JOIN edw_core.tdate dt1 on dt1.actual_dt = cast(source.EffectiveDate as date)
-			LEFT JOIN edw_core.tdate dt2 on dt2.actual_dt = cast(source.ExpirationDate as date)
-			LEFT JOIN edw_core.tdate dt3 on dt3.actual_dt = cast(source.EffectiveDate as date)
-			LEFT JOIN edw_core.tdate dt4 on dt4.actual_dt = cast(source.CreatedDate as date) 
-			LEFT JOIN edw_core.TQuote q on source.PolicyNumber = q.quote_no --and cast(source.EffectiveDate as date) = q.effective_dt
-			LEFT JOIN edw_core.tquote_history qh on source.PolicyNumber = qh.quote_no and cast(source.EffectiveDate as date) = qh.effective_dt and source.number = qh.transaction_seq_no
-			LEFT JOIN edw_core.tquote_home_coverage ho on source.PolicyNumber = ho.quote_no and cast(source.EffectiveDate as date) = ho.effective_dt and source.number = ho.transaction_seq_no
-			LEFT JOIN edw_core.tquote_collection_coverage coll on source.PolicyNumber = coll.quote_no and cast(source.EffectiveDate as date) = coll.effective_dt and source.number = coll.transaction_seq_no
-			LEFT JOIN edw_core.tquote_pel_coverage pel_cov on source.PolicyNumber = pel_cov.quote_no and cast(source.EffectiveDate as date) = pel_cov.effective_dt and source.number = pel_cov.transaction_seq_no
-			LEFT JOIN edw_core.tquote_auto_vehicle au_veh on source.PolicyNumber = au_veh.quote_no and source.vehicle_no = au_veh.vehicle_no
-			LEFT JOIN edw_core.tquote_auto_policy_coverage au_pol_cov on source.PolicyNumber = au_pol_cov.quote_no and cast(source.EffectiveDate as date) = au_pol_cov.effective_dt and source.number = au_pol_cov.transaction_seq_no
-			LEFT JOIN edw_core.tquote_auto_vehicle_coverage au_veh_cov on source.PolicyNumber = au_veh_cov.quote_no and cast(source.EffectiveDate as date) = au_veh_cov.effective_dt and source.number = au_veh_cov.transaction_seq_no and source.vehicle_no = au_veh_cov.vehicle_no
-			LEFT JOIN edw_core.tproduct pr on pr.product_cd = q.product_cd
-			LEFT JOIN edw_core.tbroker br on q.broker_id = br.broker_id
-			LEFT JOIN edw_core.tcustomer cust on q.customer_id = cust.customer_id
-			--LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) and pr.product_cd = ic.product_cd  
-			LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) 
-													and (case when source.coverage = 'Subscriber Contribution' and source.covID = 'Lux' then 'LUX' else pr.product_cd end) = ic.product_cd  
-			--LEFT JOIN edw_core.ttax_fee_surcharge ttfs on ttfs.tax_fee_surcharge_desc = source.coverage  
-			left join edw_core.tquote_collection_class_type cc on 	q.quote_no = cc.quote_no and q.effective_dt = cc.effective_dt and Source.number = cc.transaction_seq_no 
-															and case 	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Music' then 'Musical Instruments' 
-																		when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Fine Arts' then 'Fine Art' 
-																		when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Jewelry' then 'Worldwide Jewelry'  
-																		else replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')
-																	end = cc.class_type 
-
-			) AS Source ON Source.PolicyNumber = Target.quote_no and cast(Source.EffectiveDate as date) = cast(Target.effective_dt as date) 
-			and Source.number = Target.transaction_seq_no and Source.internal_coverage_sk = Target.internal_coverage_sk
-		-- For Inserts
-		WHEN NOT MATCHED BY Target THEN
-		INSERT (
-			quote_sk
+		-- Start Inserting records
+		INSERT INTO edw_core.TQuote_transaction 
+			(quote_sk
            ,quote_history_sk
            ,effective_dt_sk
            ,expiration_dt_sk
@@ -211,39 +142,71 @@ BEGIN
 			,ceded_annual_premium_amt
 			,ceded_premium_amt
 		   ,quote_collection_class_type_sk)
-		VALUEs(Source.quote_sk
-				,Source.quote_history_sk, Source.eff_Dt, Source.exp_dt, Source.tr_eff_Dt, [number], 
-				Source.broker_sk, Source.customer_sk, Source.wp, Source.comm, source.ap, source.tfs, source.wp - source.tfs, 
-				Source.item_sk, 
-				Source.cov_sk, 
-				Source.veh_cov_sk, 
-				Source.tr_dt_sk,  
-				Source.product_sk,  
-				Source.int_cov_sk, 
-				source.ssk,  
-				source.user_sk, 
-				getdate(),getdate(), @etl_audit_sk, --select source.coverage, source.label,ic.*
-				source.ceded_annual_premium_amt,
-				source.ceded_premium_amt
-				,source.quote_collection_class_type_sk
-		)
-		-- For Updates
-		WHEN MATCHED THEN UPDATE 
-		SET
-        Target.transaction_effective_dt_sk	= Source.tr_eff_Dt, 
-        Target.premium_amt					= Source.wp,
-        Target.commission_amt				= Source.comm,
-        Target.annual_premium_amt			= Source.ap,
-        Target.tax_fee_surcharge_amt		= Source.tfs, 
-        Target.net_premium_amt				= source.wp - source.tfs,
-        Target.ceded_annual_premium_amt		= Source.ceded_annual_premium_amt,
-        Target.ceded_premium_amt			= Source.ceded_premium_amt ,
-        Target.update_ts 					= getdate()
-		; 
-		  
+		SELECT
+			q.quote_sk
+           ,qh.quote_history_sk, dt1.date_sk, dt2.date_sk, dt3.date_sk, Source.number, 
+			br.broker_sk, cust.customer_sk, source.wp, Source.comm, source.ap, source.tfs, source.wp - source.tfs, 
+			case when ho.quote_no is not null then ho.quote_home_location_sk 
+				 when coll.quote_no is not null then coll.quote_collection_location_sk 
+			     --when pel_loc.quote_no is not null then pel_loc.pel_location_sk  
+			     when au_veh.quote_no is not null then au_veh.quote_auto_vehicle_sk 
+			     else 0 
+			end item_sk, 
+			case when ho.quote_no is not null then ho.quote_home_coverage_sk 
+				 when coll.quote_no is not null then coll.quote_collection_coverage_sk 
+			     when pel_cov.quote_no is not null then pel_cov.quote_pel_coverage_sk 
+			     when au_pol_cov.quote_no is not null then au_pol_cov.quote_auto_policy_coverage_sk 
+			     else 0 
+			end cov_sk, 
+			case when au_veh_cov.quote_no is not null then au_veh_cov.quote_auto_vehicle_coverage_sk 
+			     else 0 
+			end veh_cov_sk, 
+			dt4.date_sk tr_dt_sk,  
+			pr.product_sk,  
+			isnull(ic.internal_coverage_sk,0), 
+			source.ssk,  
+			--isnull(ttfs.tax_fee_surcharge_sk,0), 
+			0 user_sk, 
+			getdate(),getdate(), @etl_audit_sk, --select source.coverage, source.label,ic.*
+			ceded_annual_premium_amt,
+		    ceded_premium_amt
+			,case when q.product_cd <> 'Lux' then 0
+			      when ic.internal_coverage_category_nm <> 'Premium' then 0
+			      when cc.quote_collection_class_type_sk is not null then cc.quote_collection_class_type_sk
+				  else 0
+			end quote_collection_class_type_sk
+		FROM
+			edw_temp.TQuote_transaction_wip_temp2 source
+		LEFT JOIN edw_core.tdate dt1 on dt1.actual_dt = cast(source.EffectiveDate as date)
+		LEFT JOIN edw_core.tdate dt2 on dt2.actual_dt = cast(source.ExpirationDate as date)
+		LEFT JOIN edw_core.tdate dt3 on dt3.actual_dt = cast(source.EffectiveDate as date)
+		LEFT JOIN edw_core.tdate dt4 on dt4.actual_dt = cast(source.CreatedDate as date) 
+		LEFT JOIN edw_core.TQuote q on source.PolicyNumber = q.quote_no --and cast(source.EffectiveDate as date) = q.effective_dt
+		LEFT JOIN edw_core.tquote_history qh on source.PolicyNumber = qh.quote_no and cast(source.EffectiveDate as date) = qh.effective_dt and source.number = qh.transaction_seq_no
+		LEFT JOIN edw_core.tquote_home_coverage ho on source.PolicyNumber = ho.quote_no and cast(source.EffectiveDate as date) = ho.effective_dt and source.number = ho.transaction_seq_no
+		LEFT JOIN edw_core.tquote_collection_coverage coll on source.PolicyNumber = coll.quote_no and cast(source.EffectiveDate as date) = coll.effective_dt and source.number = coll.transaction_seq_no
+		LEFT JOIN edw_core.tquote_pel_coverage pel_cov on source.PolicyNumber = pel_cov.quote_no and cast(source.EffectiveDate as date) = pel_cov.effective_dt and source.number = pel_cov.transaction_seq_no
+		LEFT JOIN edw_core.tquote_auto_vehicle au_veh on source.PolicyNumber = au_veh.quote_no and source.vehicle_no = au_veh.vehicle_no
+		LEFT JOIN edw_core.tquote_auto_policy_coverage au_pol_cov on source.PolicyNumber = au_pol_cov.quote_no and cast(source.EffectiveDate as date) = au_pol_cov.effective_dt and source.number = au_pol_cov.transaction_seq_no
+		LEFT JOIN edw_core.tquote_auto_vehicle_coverage au_veh_cov on source.PolicyNumber = au_veh_cov.quote_no and cast(source.EffectiveDate as date) = au_veh_cov.effective_dt and source.number = au_veh_cov.transaction_seq_no and source.vehicle_no = au_veh_cov.vehicle_no
+		LEFT JOIN edw_core.tproduct pr on pr.product_cd = q.product_cd
+		LEFT JOIN edw_core.tbroker br on q.broker_id = br.broker_id
+		LEFT JOIN edw_core.tcustomer cust on q.customer_id = cust.customer_id
+		--LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) and pr.product_cd = ic.product_cd  
+		LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) 
+												and (case when source.coverage = 'Subscriber Contribution' and source.covID = 'Lux' then 'LUX' else pr.product_cd end) = ic.product_cd  
+		--LEFT JOIN edw_core.ttax_fee_surcharge ttfs on ttfs.tax_fee_surcharge_desc = source.coverage  
+		left join edw_core.tquote_collection_class_type cc on 	q.quote_no = cc.quote_no and q.effective_dt = cc.effective_dt and Source.number = cc.transaction_seq_no 
+														and case 	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Music' then 'Musical Instruments' 
+																	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Fine Arts' then 'Fine Art' 
+																	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Jewelry' then 'Worldwide Jewelry'  
+																	else replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')
+																end = cc.class_type   
+		
+
 		SET @rows_affected=@@ROWCOUNT; 
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest(t1.CreatedDate,t1.updateddate)) FROM edw_temp.TQuote_transaction_wip_temp1 t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.CreatedDate) FROM edw_temp.TQuote_transaction_wip_temp1 t1),@last_source_extract_ts);
 		
         DROP TABLE IF EXISTS edw_temp.TQuote_transaction_wip_temp1
 		DROP TABLE IF EXISTS edw_temp.TQuote_transaction_wip_temp2
