@@ -10,6 +10,7 @@ GO
 ------------------------------------------------------------------------------------------------------------------------------
 -- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
+-- 05/14/2024 			Architha Gudimalla					3. Corrected errors
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_vehicle_rapa_wip]
 
@@ -68,16 +69,16 @@ BEGIN
 				left join [edw_core].[tquote_history] tqh
 					on tqh.quote_no = acc.PolicyNumber
 					and tqh.effective_dt = acc.EffectiveDate
-					and tqh.transaction_seq_no = acc.[Number]
+					and tqh.transaction_seq_no = 0
 				left join [edw_core].[tquote_pel_vehicle] tqv
 					on tqv.quote_no = acc.PolicyNumber
 					and tqv.effective_dt = acc.EffectiveDate
-					and tqv.transaction_seq_no = acc.[Number]
+					and tqv.transaction_seq_no = 0
 					and tqv.vehicle_no = acco.[Index]
 				left join [edw_core].[tquote_pel_coverage] tqc
 					on tqc.quote_no = acc.PolicyNumber
 					and tqc.effective_dt = CAST(acc.EffectiveDate AS DATE)
-					and tqc.transaction_seq_no = acc.[Number]
+					and tqc.transaction_seq_no = 0
 				left join edw_stage.Product pr
 					on acc.ProductId = pr.id
 				where

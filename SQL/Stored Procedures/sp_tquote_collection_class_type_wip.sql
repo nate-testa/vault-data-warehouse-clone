@@ -5,6 +5,7 @@
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 09/05/24		Hernando Gonzalez Garcia		1. Created this procedure 
+-- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_class_type_wip]
@@ -67,12 +68,12 @@ BEGIN
 				inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
 				LEFT JOIN edw_core.tquote_history tqh on tqh.quote_no=acc.PolicyNumber
 						and tqh.effective_dt=acc.EffectiveDate
-						and tqh.transaction_seq_no = acc.number
+						and tqh.transaction_seq_no = 0
 				LEFT JOIN edw_core.tquote_collection_location tqcl on tqcl.quote_no=acc.PolicyNumber			
 				LEFT JOIN edw_core.tquote_collection_coverage tqcc on tqcc.quote_no=acc.PolicyNumber
-						and tqcc.effective_dt=acc.EffectiveDate and tqcc.transaction_seq_no = acc.number
+						and tqcc.effective_dt=acc.EffectiveDate and tqcc.transaction_seq_no = 0
 				LEFT JOIN edw_core.tquote_home_coverage tqhc on tqhc.quote_no=acc.PolicyNumber
-						and tqhc.effective_dt=acc.EffectiveDate and tqhc.transaction_seq_no = acc.number
+						and tqhc.effective_dt=acc.EffectiveDate and tqhc.transaction_seq_no = 0
 				
 				
 			WHERE

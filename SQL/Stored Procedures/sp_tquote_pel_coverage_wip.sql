@@ -5,6 +5,7 @@
 ------------------------------------------------------------------------------------------------------------------------------
 -- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
+-- 05/14/2024 			Architha Gudimalla					3. Corrected errors
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_coverage_wip]
 
@@ -66,7 +67,7 @@ BEGIN
 				inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
 				left join [edw_core].[tquote_history] tph on tph.quote_no = acc.PolicyNumber
 						and tph.effective_dt = acc.EffectiveDate
-						and tph.transaction_seq_no = acc.number
+						and tph.transaction_seq_no = 0
 				left join edw_stage.Product pr on acc.ProductId = pr.id
 			where
 				acc.PolicyNumber is not null
@@ -127,7 +128,7 @@ BEGIN
 		        ttlc.HigherUnderlyingLimitsEndorsement AS higher_underlying_limits_endorsement_in,
 		        ttlc.AILimitedLiability AS addl_insured_limited_liability_in,
 		        ttlc.MinimumEarnedPremiumEndorsement AS minimum_earned_premium_endorsement_in,
-		        ttlc.MinimumEarnedPremiumEndorsementLimit AS minimum_earned_premium_endorsement_limit_pc,
+		        replace(ttlc.MinimumEarnedPremiumEndorsementLimit,',','') AS minimum_earned_premium_endorsement_limit_pc,
 		        ttlc.PremisesLiabilityLimitation AS premises_liability_limitation_in,
 		        ttlc.DeletionofCosmeticMarringExclusion AS deletion_of_cosmetic_marring_exclusion_in,
 		        ttlc.Manuscript AS manuscript_in,
