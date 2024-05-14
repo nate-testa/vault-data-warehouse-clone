@@ -8,6 +8,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 05/09/24		        Yunus Mohammed			     1. Created the proc
+-- 05/14/24				Yunus Mohammed				 2. Removed updated date from delta identifier
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_insured_wip]
@@ -46,7 +47,7 @@ BEGIN
 		WHERE PolicyNumber is not null
 		  and pr.ProductLine='PersonalLines'
           and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
-		  AND GREATEST(acc.createdDate,acc.UpdatedDate)>@last_source_extract_ts
+		  AND acc.createdDate > @last_source_extract_ts
 
 		-- Pivot Table
 		DROP TABLE IF EXISTS edw_temp.tquote_insured_wip_temp2; 
@@ -145,7 +146,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX((GREATEST(t1.createdDate,t1.UpdatedDate))) FROM edw_temp.tquote_insured_wip_temp1 t1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.createdDate) FROM edw_temp.tquote_insured_wip_temp1 t1),@last_source_extract_ts)
 
         DROP TABLE IF EXISTS edw_temp.tquote_insured_wip_temp1
 		
