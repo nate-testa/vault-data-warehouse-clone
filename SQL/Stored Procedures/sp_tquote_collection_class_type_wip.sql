@@ -74,8 +74,6 @@ BEGIN
 						and tqcc.effective_dt=acc.EffectiveDate and tqcc.transaction_seq_no = 0
 				LEFT JOIN edw_core.tquote_home_coverage tqhc on tqhc.quote_no=acc.PolicyNumber
 						and tqhc.effective_dt=acc.EffectiveDate and tqhc.transaction_seq_no = 0
-				
-				
 			WHERE
 				p.[Name] in ('Collections','Homeowners')
 				AND acco.ObjectType = 'CollectionClass'
@@ -112,11 +110,12 @@ BEGIN
 		        @etl_audit_sk AS etl_audit_sk
 		    FROM
 		        [edw_temp].[tquote_collection_class_type_wip_temp1]
+				where [ClassType] is not null
 		) AS SOURCE
 		ON
 		    TARGET.quote_no = SOURCE.quote_no AND
 		    TARGET.effective_dt = SOURCE.effective_dt AND
-		    --TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
+		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
 		    TARGET.class_type = SOURCE.class_type
 
 		WHEN MATCHED THEN
