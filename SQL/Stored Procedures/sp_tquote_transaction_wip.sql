@@ -49,7 +49,7 @@ BEGIN
         DROP TABLE IF EXISTS edw_temp.TQuote_transaction_wip_temp2
         SELECT 
 			tmp1.PolicyNumber,
-			case when tmp1.productcode = 'AU' then atvof.[index] else null end as vehicle_no,
+			case when tmp1.productcode = 'AU' then atvo.[index] else null end as vehicle_no,
 			tmp1.ProductId,
 			tmp1.EffectiveDate,
 			tmp1.ExpirationDate, 
@@ -77,8 +77,7 @@ BEGIN
 		inner join edw_stage.Account acct on acct.id = tmp1.id
 		inner join edw_stage.Accountpremium ap on ap.AccountId=acct.id -->
         left join edw_stage.AccountPremiumCoverage apc on apc.AccountPremiumId=ap.id --> Accounttransactionversioncoveragepremium
-        inner join edw_stage.AccountObject atvo on atvo.AccountId=acct.id --> Accounttransactionversionobject
-        inner join edw_stage.AccountObjectField atvof on atvof.ObjectId=atvo.id -->AccountTransactionVersionObjectField
+        inner join edw_stage.AccountObject atvo on atvo.id=apc.objectid --> Accounttransactionversionobject 
 		--where premium!=0  
 		union all
 		SELECT 
@@ -110,7 +109,13 @@ BEGIN
 		FROM edw_temp.TQuote_transaction_wip_temp1 tmp1 
 		left join edw_stage.Accountpremium ap on ap.AccountId=tmp1.id 
 		INNER JOIN edw_stage.[AccountPremiumTaxAndFee] accptf on accptf.AccountPremiumId = ap.Id 
-		left join edw_stage.coverage cov on cov.id = accptf.coverageid 
+		left join edw_stage.coverage cov on cov.id = accptf.coverageid
+		
+		delete from   a 
+		from edw_core.tquote_transaction a 
+		where exists (select * from edw_temp.TQuote_transaction_wip_temp2 b, edw_core.tquote q 
+					  where q.quote_no = b.policynumber and a.quote_sk = q.quote_sk and b.number = a.transaction_seq_no 
+					 ) 
 
 		-- Start Inserting records
 		INSERT INTO edw_core.TQuote_transaction 

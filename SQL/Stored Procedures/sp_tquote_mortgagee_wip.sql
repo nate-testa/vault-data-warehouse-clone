@@ -109,13 +109,13 @@ BEGIN
 		ON
 		    TARGET.quote_no = SOURCE.quote_no AND
 		    TARGET.effective_dt = SOURCE.effective_dt AND
-		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no 
+		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
+		    TARGET.mortgagee_no = SOURCE.mortgagee_no 
 		    --TARGET.expiration_dt = SOURCE.expiration_dt AND
 		    --TARGET.quote_history_sk = SOURCE.quote_history_sk
 
 		WHEN MATCHED THEN
-		    UPDATE SET
-		        TARGET.mortgagee_no = SOURCE.mortgagee_no,
+		    UPDATE SET 
 		        TARGET.mortgagee_nm = SOURCE.mortgagee_nm,
 		        TARGET.mortgagee_type = SOURCE.mortgagee_type,
 		        TARGET.bill_mortgagee_in = SOURCE.bill_mortgagee_in,
