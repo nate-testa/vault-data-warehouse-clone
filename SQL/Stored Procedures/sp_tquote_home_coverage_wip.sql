@@ -81,7 +81,7 @@ BEGIN
 				left join edw_stage.Product pr on acc.ProductId = pr.id
 			where
 				acc.PolicyNumber is not null
-				and not exists (select * from dbo.AccountTransaction actr where actr.AccountId=acc.id)
+				and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
 				and accvo.ObjectType in (''Homeowner'',''Condo'',''Inspection'')
 				and pr.ProductLine = ''PersonalLines''
 				and greatest(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts

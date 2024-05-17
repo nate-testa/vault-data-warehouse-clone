@@ -4,6 +4,7 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 10/05/2024		Hernando Gonzalez Garcia		1. Created this procedure 
+-- 05/16/2024		Architha Gudimalla 				2. Updated after errors 
 -- ======================================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_manuscript_wip]
 AS
@@ -36,7 +37,7 @@ BEGIN
 			,quote_history_sk
 			,ManuscriptTitle, ManuscriptNumber, ManuscriptDescription
 			,source_system_sk --20230717 added
-			,CreatedDate
+			,CreatedDate, UpdatedDate
 			,[Index] as manuscript_seq_no
 		INTO [edw_temp].[tquote_manuscript_wip_temp1]
 		FROM
@@ -48,7 +49,7 @@ BEGIN
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
 				 end as [source_system_sk] --20230717 added
-				,acc.CreatedDate
+				,acc.CreatedDate,acc.UpdatedDate
 				,acco.[Index]
 			FROM
 				(

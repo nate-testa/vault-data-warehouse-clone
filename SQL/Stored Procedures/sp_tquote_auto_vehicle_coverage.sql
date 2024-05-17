@@ -15,7 +15,8 @@ GO
 -- 02/22/24     Hernando Gonzalez               5. Added new fields carfax_wholesale_value_amt
 -- 02/23/24     Architha Gudimalla              6. Added Security and Safety Features in the acctvof group
 -- 02/27/24     Architha Gudimalla              7. Added case for antitheft
--- 02/04/24     Alberto Almario                 7. add 62 new columns
+-- 02/04/24     Alberto Almario                 8. add 62 new columns
+-- 05/17/24     Architha Gudimalla              9. Updated join for tquote_auto_vehicle
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
@@ -180,33 +181,35 @@ BEGIN
             
             FROM
                 (
-                    SELECT
-                        acct.CreatedDate, acct.PolicyNumber as quote_no, acct.EffectiveDate as effective_dt, qav.[vehicle_no] as vehicle_no, acctvo.[UniqueId] as vehicle_unique_id,
-                        acct.ExpirationDate as expiration_dt, acct.Number as transaction_seq_no,
-                        qh.quote_history_sk, qav.quote_auto_vehicle_sk, 
-                        acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
-                        acctvof.[Field], acctvof.[Value],
-                        CASE 
-                            WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
-                            ELSE 4 --(Metal)
-                        END as [source_system_sk]
-                    FROM acct
-                    INNER JOIN [edw_stage].[Product] AS p on p.Id = acct.ProductId
-                    INNER JOIN [edw_stage].[AccountTransactionVersion] AS acctv ON acctv.AccountTransactionId = acct.Id
-                    INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
-                    INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] AS acctvof ON acctvof.VersionObjectId = acctvo.id
-                    LEFT JOIN [edw_core].[tquote_history] AS qh 
-                        ON qh.quote_no = acct.PolicyNumber
-                        AND qh.effective_dt = acct.EffectiveDate
-                        AND qh.transaction_seq_no = acct.number
-                    LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
-                        ON qav.quote_no = acct.PolicyNumber
-                        AND qav.vehicle_no = acctvo.[Index]
-                    WHERE
-                        p.[Name] = 'Automobile'
-                        AND p.ProductLine = 'PersonalLines'
-                        AND acctvof.[Group] in ('Vehicle','Registration','Symbols','Symbols - ISO','Vehicle Coverages','AntiTheftDevice','Discounts','Surcharge','Security and Safety Features')
-                ) t
+                        SELECT
+                            acct.CreatedDate, acct.PolicyNumber as quote_no, acct.EffectiveDate as effective_dt, qav.[vehicle_no] as vehicle_no, acctvo.[UniqueId] as vehicle_unique_id,
+                            acct.ExpirationDate as expiration_dt, acct.Number as transaction_seq_no,
+                            qh.quote_history_sk, qav.quote_auto_vehicle_sk, 
+                            acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
+                            acctvof.[Field], acctvof.[Value],
+                            CASE 
+                                WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
+                                ELSE 4 --(Metal)
+                            END as [source_system_sk]
+                        FROM acct
+                        INNER JOIN [edw_stage].[Product] AS p on p.Id = acct.ProductId
+                        INNER JOIN [edw_stage].[AccountTransactionVersion] AS acctv ON acctv.AccountTransactionId = acct.Id
+                        INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
+                        INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] AS acctvof ON acctvof.VersionObjectId = acctvo.id
+                        LEFT JOIN [edw_core].[tquote_history] AS qh 
+                            ON qh.quote_no = acct.PolicyNumber
+                            AND qh.effective_dt = acct.EffectiveDate
+                            AND qh.transaction_seq_no = acct.number
+                        LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
+                            ON qav.quote_no = acct.PolicyNumber
+                            AND qav.effective_dt = acct.effectivedate
+                            AND qav.vehicle_unique_id = acctvo.[UniqueId]
+                            --AND qav.vehicle_no = acco.[Index]
+                        WHERE
+                            p.[Name] = 'Automobile'
+                            AND p.ProductLine = 'PersonalLines'
+                            AND acctvof.[Group] in ('Vehicle','Registration','Symbols','Symbols - ISO','Vehicle Coverages','AntiTheftDevice','Discounts','Surcharge','Security and Safety Features')
+                    ) t
             PIVOT 
                 (
                     MAX([Value]) FOR [Field] IN 
@@ -360,7 +363,7 @@ BEGIN
             create_ts,
             update_ts,
             etl_audit_sk,
-            vehicle_deleted_in,
+            vehicle_deleted_in, vehicle_unique_id,
             carfax_wholesale_value_amt
             ,basic_model_nm
             ,vehicle_distribution_dt
@@ -521,7 +524,7 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
-            CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in,
+            CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in, t1.vehicle_unique_id,
             t1.[VendorReportedWholesaleAmount] as carfax_wholesale_value_amt
             ,t1.[BasicModelName] as basic_model_nm
             ,t1.[DistributionDate] as vehicle_distribution_dt

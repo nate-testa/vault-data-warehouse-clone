@@ -78,7 +78,7 @@ BEGIN
 				left join edw_stage.Product pr on acc.ProductId = pr.id
 			where
 				acc.PolicyNumber is not null 
-                and not exists (select * from dbo.AccountTransaction actr where actr.AccountId=acc.Id)
+                and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.Id)
 				and accvo.ObjectType in (''Homeowner'',''Condo'')
 				and pr.ProductLine = ''PersonalLines''
 				and greatest(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
@@ -100,7 +100,7 @@ BEGIN
                 INNER JOIN edw_stage.[AccountObjectField] AS accvof ON accvof.ObjectId = accvo.Id
 				where
 					acc.PolicyNumber is not null 
-					and not exists (select * from dbo.AccountTransaction actr where actr.AccountId=acc.Id)
+					and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.Id)
 					and accvo.ObjectType in ('ExtendedLiabilityLocation')
 					and p.ProductLine = 'PersonalLines'
 					and greatest(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
