@@ -22,10 +22,11 @@ IF NOT EXISTS (
     AND     COLUMN_NAME = 'vehicle_vin_invalid_in'
 ) BEGIN ALTER TABLE edw_core.tquote_auto_vehicle ADD vehicle_vin_invalid_in      varchar(255) end;
 
-ALTER TABLE [edw_core].[tquote_auto_vehicle] drop CONSTRAINT [uidx_tquote_auto_vehicle_qtno_vehicleno]; 
+/*ALTER TABLE [edw_core].[tquote_auto_vehicle] drop CONSTRAINT [uidx_tquote_auto_vehicle_qtno_vehicleno]; 
 
 ALTER TABLE [edw_core].[tquote_auto_vehicle] ADD CONSTRAINT [uidx_tquote_auto_vehicle_qtno_vehicle_unique_id] 
 UNIQUE (quote_no,effective_dt,vehicle_unique_id);
+*/
 
 
 
