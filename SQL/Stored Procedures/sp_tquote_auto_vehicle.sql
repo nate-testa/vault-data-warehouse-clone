@@ -10,6 +10,7 @@ GO
 --11/14/2023     Sandeep Gundreddy               2. Removed effectivedtae from partition by clause
 --03/04/2024     Alberto Almario                 3. add 5 new columns
 --05/17/2024     Architha Gudimalla              4. added vehicle_unique_id 
+--05/17/2024     Architha Gudimalla              5. removed join on vehicle_unique_id 
 -- =================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle]
 AS
@@ -38,8 +39,8 @@ BEGIN
 
 		WITH FinalTable AS (
             SELECT
-                  ROW_NUMBER() OVER (PARTITION BY PolicyNumber, effectivedate, [UniqueId] ORDER BY [number] DESC) AS RN, 
-                --ROW_NUMBER() OVER (PARTITION BY PolicyNumber, [Index]    ORDER BY policychangenumber DESC) AS RN, 
+                --  ROW_NUMBER() OVER (PARTITION BY PolicyNumber, effectivedate, [UniqueId] ORDER BY [number] DESC) AS RN, 
+                ROW_NUMBER() OVER (PARTITION BY PolicyNumber, [Index]    ORDER BY policychangenumber DESC) AS RN, 
                 PolicyNumber, EffectiveDate, [Index] as vehicle_no, [UniqueId] as vehicle_unique_id, CreatedDate,
                 [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],
 				[HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage],
@@ -49,7 +50,7 @@ BEGIN
             FROM
                 (
                     SELECT
-                        acct.PolicyNumber, acct.EffectiveDate, acct.CreatedDate, acct.number,--acct.policychangenumber,
+                        acct.PolicyNumber, acct.EffectiveDate, acct.CreatedDate, acct.policychangenumber,
                         acctvo.[Index], acctvo.[UniqueId], acctvof.[Field], acctvof.[Value],
                         CASE 
                             WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
@@ -123,8 +124,8 @@ BEGIN
 		) AS src
 		ON src.quote_no = trg.quote_no
         AND src.effective_dt = trg.effective_dt
-        AND src.vehicle_unique_id = trg.vehicle_unique_id
-        --AND src.vehicle_no = trg.vehicle_no
+        --AND src.vehicle_unique_id = trg.vehicle_unique_id
+        AND src.vehicle_no = trg.vehicle_no
 		-- For Inserts
 		WHEN NOT MATCHED BY TARGET THEN
 		INSERT (
@@ -206,7 +207,7 @@ BEGIN
             trg.vehicle_vin_invalid_in = src.vehicle_vin_invalid_in,
             trg.vehicle_vin_invalid_message = src.vehicle_vin_invalid_message,
             trg.update_ts = getdate(),
-            trg.vehicle_no = src.vehicle_no
+            trg.vehicle_unique_id = src.vehicle_unique_id
             ,trg.vehicle_vin_change_in = src.vehicle_vin_change_in
             ,trg.vehicle_engine_cylinders = src.vehicle_engine_cylinders
             ,trg.vehicle_height = src.vehicle_height

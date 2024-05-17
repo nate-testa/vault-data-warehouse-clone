@@ -17,6 +17,7 @@ GO
 -- 02/27/24     Architha Gudimalla              7. Added case for antitheft
 -- 02/04/24     Alberto Almario                 8. add 62 new columns
 -- 05/17/24     Architha Gudimalla              9. Updated join for tquote_auto_vehicle
+-- 05/17/24     Architha Gudimalla              10. Removed join on unique id for tquote_auto_vehicle
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
@@ -203,8 +204,8 @@ BEGIN
                         LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                             ON qav.quote_no = acct.PolicyNumber
                             AND qav.effective_dt = acct.effectivedate
-                            AND qav.vehicle_unique_id = acctvo.[UniqueId]
-                            --AND qav.vehicle_no = acco.[Index]
+                            --AND qav.vehicle_unique_id = acctvo.[UniqueId]
+                            AND qav.vehicle_no = acctvo.[Index]
                         WHERE
                             p.[Name] = 'Automobile'
                             AND p.ProductLine = 'PersonalLines'
@@ -273,7 +274,8 @@ BEGIN
         AND a.transaction_seq_no = b.Number
         AND a.vehicle_unique_id = b.ObjectUniqueId
 
-
+	    delete from [edw_temp].[tquote_auto_vehicle_coverage_temp1]
+        where vehicle_unique_id = 'ABFFFBB7-7F0E-4409-8A60-66F7A22A3D92';
 
 		-- Start Insert process
 		INSERT INTO [edw_core].[tquote_auto_vehicle_coverage]
