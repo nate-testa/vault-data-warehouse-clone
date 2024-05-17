@@ -112,7 +112,15 @@ with DAG(
     
     with TaskGroup("quote_home_group") as quote_home_group:
 
-        quote_home_group_items = ['sp_tquote_home_location','sp_tquote_home_coverage','sp_tquote_home_coverage_update','sp_tquote_home_additional_coverage']
+        quote_home_group_items = [
+            'sp_tquote_home_location',
+            'sp_tquote_home_location_wip',
+            'sp_tquote_home_coverage',
+            'sp_tquote_home_coverage_wip',
+            'sp_tquote_home_coverage_update',
+            'sp_tquote_home_additional_coverage',
+            'sp_tquote_home_additional_coverage_wip'
+            ]
 
         sp_tquote_home_location = MsSqlOperator(
             task_id='sp_tquote_home_location',
@@ -122,10 +130,26 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_home_location_wip = MsSqlOperator(
+            task_id='sp_tquote_home_location_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_home_location_wip",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_tquote_home_coverage = MsSqlOperator(
             task_id='sp_tquote_home_coverage',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_home_coverage",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_home_coverage_wip = MsSqlOperator(
+            task_id='sp_tquote_home_coverage_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_home_coverage_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -146,6 +170,14 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_home_additional_coverage_wip = MsSqlOperator(
+            task_id='sp_tquote_home_additional_coverage_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_home_additional_coverage_wip",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_quote_home_email = EmailOperator(
             task_id='send_quote_home_email',
             to=to_email,
@@ -153,17 +185,50 @@ with DAG(
             html_content=get_sp_success_data_HTML(quote_home_group_items, 'All stored procedures executed successfully for all the Quote Home tables'),
         )
 
-        sp_tquote_home_location >> sp_tquote_home_coverage >> sp_tquote_home_coverage_update >> sp_tquote_home_additional_coverage >> send_quote_home_email
+        sp_tquote_home_location_wip >> sp_tquote_home_location >> sp_tquote_home_coverage_wip >> sp_tquote_home_coverage >> sp_tquote_home_coverage_update >> sp_tquote_home_additional_coverage_wip >> sp_tquote_home_additional_coverage >> send_quote_home_email
 
 
     with TaskGroup("quote_collection_group") as quote_collection_group:
 
-        quote_collection_group_items = ['sp_tquote_collection_location','sp_tquote_collection_coverage','sp_tquote_collection_class_type','sp_tquote_collection_scheduled_item']
+        quote_collection_group_items = [
+            'sp_tquote_collection_location',
+            'sp_tquote_collection_location_wip',
+            'sp_tquote_collection_coverage',
+            'sp_tquote_collection_coverage_wip',
+            'sp_tquote_collection_class_type',
+            'sp_tquote_collection_class_type_wip',
+            'sp_tquote_collection_scheduled_item',
+            'sp_tquote_collection_scheduled_item_wip'
+        ]
         
         sp_tquote_collection_location = MsSqlOperator(
             task_id='sp_tquote_collection_location',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_collection_location",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_collection_location_wip = MsSqlOperator(
+            task_id='sp_tquote_collection_location_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_collection_location_wip",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_collection_coverage = MsSqlOperator(
+            task_id='sp_tquote_collection_coverage',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_collection_coverage",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_collection_coverage_wip = MsSqlOperator(
+            task_id='sp_tquote_collection_coverage_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_collection_coverage_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -175,11 +240,11 @@ with DAG(
             database="vault_edw",
             autocommit=True,
         )
-        
-        sp_tquote_collection_coverage = MsSqlOperator(
-            task_id='sp_tquote_collection_coverage',
+
+        sp_tquote_collection_class_type_wip = MsSqlOperator(
+            task_id='sp_tquote_collection_class_type_wip',
             mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tquote_collection_coverage",
+            sql="EXEC edw_core.sp_tquote_collection_class_type_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -192,6 +257,14 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_collection_scheduled_item_wip = MsSqlOperator(
+            task_id='sp_tquote_collection_scheduled_item_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_collection_scheduled_item_wip",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_quote_collection_email = EmailOperator(
             task_id='send_quote_collection_email',
             to=to_email,
@@ -199,25 +272,41 @@ with DAG(
             html_content=get_sp_success_data_HTML(quote_collection_group_items, 'All stored procedures executed successfully for all the Quote Collection tables'),
         )
 
-        sp_tquote_collection_location >> sp_tquote_collection_coverage >> sp_tquote_collection_class_type >> sp_tquote_collection_scheduled_item >> send_quote_collection_email
+        sp_tquote_collection_location_wip >> sp_tquote_collection_location >> sp_tquote_collection_coverage_wip >> sp_tquote_collection_coverage >> sp_tquote_collection_class_type_wip >> sp_tquote_collection_class_type >> sp_tquote_collection_scheduled_item_wip >> sp_tquote_collection_scheduled_item >> send_quote_collection_email
+
 
 
     with TaskGroup("quote_PEL_group") as quote_PEL_group:
 
         quote_PEL_group_items = [
             'sp_tquote_pel_location',
+            'sp_tquote_pel_location_wip',
             'sp_tquote_pel_driver',
+            'sp_tquote_pel_driver_wip',
             'sp_tquote_pel_driver_incident',
+            'sp_tquote_pel_driver_incident_wip',
             'sp_tquote_pel_vehicle',
+            'sp_tquote_pel_vehicle_wip',
             'sp_tquote_pel_watercraft',
+            'sp_tquote_pel_watercraft_wip',
             'sp_tquote_pel_coverage',
-            'sp_tquote_pel_vehicle_rapa'
-            ]
+            'sp_tquote_pel_coverage_wip',
+            'sp_tquote_pel_vehicle_rapa',
+            'sp_tquote_pel_vehicle_rapa_wip'
+        ]
 
         sp_tquote_pel_location = MsSqlOperator(
             task_id='sp_tquote_pel_location',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_pel_location",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_pel_location_wip = MsSqlOperator(
+            task_id='sp_tquote_pel_location_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_pel_location_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -230,10 +319,26 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_pel_driver_wip = MsSqlOperator(
+            task_id='sp_tquote_pel_driver_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_pel_driver_wip",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_tquote_pel_driver_incident = MsSqlOperator(
             task_id='sp_tquote_pel_driver_incident',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_pel_driver_incident",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_pel_driver_incident_wip = MsSqlOperator(
+            task_id='sp_tquote_pel_driver_incident_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_pel_driver_incident_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -246,10 +351,26 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_pel_vehicle_wip = MsSqlOperator(
+            task_id='sp_tquote_pel_vehicle_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_pel_vehicle_wip",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_tquote_pel_watercraft = MsSqlOperator(
             task_id='sp_tquote_pel_watercraft',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_pel_watercraft",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_pel_watercraft_wip = MsSqlOperator(
+            task_id='sp_tquote_pel_watercraft_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_pel_watercraft_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -262,10 +383,26 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_pel_coverage_wip = MsSqlOperator(
+            task_id='sp_tquote_pel_coverage_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_pel_coverage_wip",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_tquote_pel_vehicle_rapa = MsSqlOperator(
             task_id='sp_tquote_pel_vehicle_rapa',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_pel_vehicle_rapa",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_pel_vehicle_rapa_wip = MsSqlOperator(
+            task_id='sp_tquote_pel_vehicle_rapa_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_pel_vehicle_rapa_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -277,25 +414,41 @@ with DAG(
             html_content=get_sp_success_data_HTML(quote_PEL_group_items, 'All stored procedures executed successfully for all the Quote PEL tables'),
         )
 
-        sp_tquote_pel_location >> sp_tquote_pel_driver >> sp_tquote_pel_driver_incident >> sp_tquote_pel_vehicle >> sp_tquote_pel_watercraft >> sp_tquote_pel_coverage >> sp_tquote_pel_vehicle_rapa >> send_quote_PEL_email
+        sp_tquote_pel_location_wip >> sp_tquote_pel_location >> sp_tquote_pel_driver_wip >> sp_tquote_pel_driver >> sp_tquote_pel_driver_incident_wip >> sp_tquote_pel_driver_incident >> sp_tquote_pel_vehicle_wip >> sp_tquote_pel_vehicle >> sp_tquote_pel_watercraft_wip >> sp_tquote_pel_watercraft >> sp_tquote_pel_coverage_wip >> sp_tquote_pel_coverage >> sp_tquote_pel_vehicle_rapa_wip >> sp_tquote_pel_vehicle_rapa >> send_quote_PEL_email
+
 
 
     with TaskGroup("quote_auto_group") as quote_auto_group:
 
         quote_auto_group_items = [
             'sp_tquote_auto_vehicle',
+            'sp_tquote_auto_vehicle_wip',
             'sp_tquote_auto_garage_location',
+            'sp_tquote_auto_garage_location_wip',
             'sp_tquote_auto_vehicle_coverage',
+            'sp_tquote_auto_vehicle_coverage_wip',
             'sp_tquote_auto_policy_coverage',
+            'sp_tquote_auto_policy_coverage_wip',
             'sp_tquote_auto_driver',
+            'sp_tquote_auto_driver_wip',
             'sp_tquote_auto_driver_incident',
-            'sp_tquote_auto_vehicle_coverage_rapa'
-            ]
+            'sp_tquote_auto_driver_incident_wip',
+            'sp_tquote_auto_vehicle_coverage_rapa',
+            'sp_tquote_auto_vehicle_coverage_rapa_wip'
+        ]
 
         sp_tquote_auto_vehicle = MsSqlOperator(
             task_id='sp_tquote_auto_vehicle',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_auto_vehicle",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_auto_vehicle_wip = MsSqlOperator(
+            task_id='sp_tquote_auto_vehicle_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_auto_vehicle_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -308,10 +461,26 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_auto_garage_location_wip = MsSqlOperator(
+            task_id='sp_tquote_auto_garage_location_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_auto_garage_location_wip",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_tquote_auto_vehicle_coverage = MsSqlOperator(
             task_id='sp_tquote_auto_vehicle_coverage',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_auto_vehicle_coverage",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_auto_vehicle_coverage_wip = MsSqlOperator(
+            task_id='sp_tquote_auto_vehicle_coverage_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_auto_vehicle_coverage_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -324,10 +493,26 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_auto_policy_coverage_wip = MsSqlOperator(
+            task_id='sp_tquote_auto_policy_coverage_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_auto_policy_coverage_wip",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_tquote_auto_driver = MsSqlOperator(
             task_id='sp_tquote_auto_driver',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_auto_driver",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_auto_driver_wip = MsSqlOperator(
+            task_id='sp_tquote_auto_driver_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_auto_driver_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -340,10 +525,26 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_auto_driver_incident_wip = MsSqlOperator(
+            task_id='sp_tquote_auto_driver_incident_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_auto_driver_incident_wip",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_tquote_auto_vehicle_coverage_rapa = MsSqlOperator(
             task_id='sp_tquote_auto_vehicle_coverage_rapa',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_auto_vehicle_coverage_rapa",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_auto_vehicle_coverage_rapa_wip = MsSqlOperator(
+            task_id='sp_tquote_auto_vehicle_coverage_rapa_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_auto_vehicle_coverage_rapa_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -355,7 +556,8 @@ with DAG(
             html_content=get_sp_success_data_HTML(quote_auto_group_items, 'All stored procedures executed successfully for all the Quote Auto tables'),
         )
 
-        sp_tquote_auto_vehicle >> sp_tquote_auto_garage_location >> sp_tquote_auto_vehicle_coverage >> sp_tquote_auto_policy_coverage >> sp_tquote_auto_driver >> sp_tquote_auto_driver_incident >> sp_tquote_auto_vehicle_coverage_rapa >> send_quote_auto_email
+        sp_tquote_auto_vehicle_wip >> sp_tquote_auto_vehicle >> sp_tquote_auto_garage_location_wip >> sp_tquote_auto_garage_location >> sp_tquote_auto_vehicle_coverage_wip >> sp_tquote_auto_vehicle_coverage >> sp_tquote_auto_policy_coverage_wip >> sp_tquote_auto_policy_coverage >> sp_tquote_auto_driver_wip >> sp_tquote_auto_driver >> sp_tquote_auto_driver_incident_wip >> sp_tquote_auto_driver_incident >> sp_tquote_auto_vehicle_coverage_rapa_wip >> sp_tquote_auto_vehicle_coverage_rapa >> send_quote_auto_email
+
 
 
     with TaskGroup("quote_group") as quote_group:
@@ -363,17 +565,23 @@ with DAG(
         quote_group_items = [
             'sp_tquote',
             'sp_tquote_history',
+            'sp_tquote_history_wip',
             'sp_tquote_additional_interest',
+            'sp_tquote_additional_interest_wip',
             'sp_tquote_manuscript',
+            'sp_tquote_manuscript_wip',
             'sp_tquote_mortgagee',
+            'sp_tquote_mortgagee_wip',
             'sp_tquote_loss_history',
+            'sp_tquote_loss_history_wip',
             'sp_tquote_status_history',
             'sp_tquote_transaction_status_history',
             'sp_tquote_insured',
+            'sp_tquote_insured_wip',
             'sp_tquote_history_update',
             'sp_tquote_update',
             'sp_tquote_referral_message'
-            ]
+        ]
 
         sp_tquote = MsSqlOperator(
             task_id='sp_tquote',
@@ -391,10 +599,26 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_history_wip = MsSqlOperator(
+            task_id='sp_tquote_history_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_history_wip",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_tquote_additional_interest = MsSqlOperator(
             task_id='sp_tquote_additional_interest',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_additional_interest",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_additional_interest_wip = MsSqlOperator(
+            task_id='sp_tquote_additional_interest_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_additional_interest_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -407,6 +631,14 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_manuscript_wip = MsSqlOperator(
+            task_id='sp_tquote_manuscript_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_manuscript_wip",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_tquote_mortgagee = MsSqlOperator(
             task_id='sp_tquote_mortgagee',
             mssql_conn_id='Vault_EDW',
@@ -415,10 +647,26 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_mortgagee_wip = MsSqlOperator(
+            task_id='sp_tquote_mortgagee_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_mortgagee_wip",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_tquote_loss_history = MsSqlOperator(
             task_id='sp_tquote_loss_history',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_loss_history",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_loss_history_wip = MsSqlOperator(
+            task_id='sp_tquote_loss_history_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_loss_history_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -443,6 +691,14 @@ with DAG(
             task_id='sp_tquote_insured',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_insured",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_insured_wip = MsSqlOperator(
+            task_id='sp_tquote_insured_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_insured_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -478,18 +734,28 @@ with DAG(
             html_content=get_sp_success_data_HTML(quote_group_items, 'All stored procedures executed successfully for all the Quote Policy tables'),
         )
 
-        sp_tquote >> sp_tquote_history >> sp_tquote_additional_interest >> sp_tquote_manuscript >> sp_tquote_mortgagee >> sp_tquote_loss_history >> sp_tquote_status_history >> sp_tquote_transaction_status_history >> sp_tquote_insured >> sp_tquote_history_update >> sp_tquote_update >> sp_tquote_referral_message >> send_quote_email
+        sp_tquote >> sp_tquote_history_wip >> sp_tquote_history >> sp_tquote_additional_interest_wip >> sp_tquote_additional_interest >> sp_tquote_manuscript_wip >> sp_tquote_manuscript >> sp_tquote_mortgagee_wip >> sp_tquote_mortgagee >> sp_tquote_loss_history_wip >> sp_tquote_loss_history >> sp_tquote_status_history >> sp_tquote_transaction_status_history >> sp_tquote_insured_wip >> sp_tquote_insured >> sp_tquote_history_update >> sp_tquote_update >> sp_tquote_referral_message >>  send_quote_email
+
 
     with TaskGroup("quote_transaction_group") as quote_transaction_group:
 
         quote_transaction_group_items = [
-            'sp_tquote_transaction'
-            ]
+            'sp_tquote_transaction',
+            'sp_tquote_transaction_wip'
+        ]
 
         sp_tquote_transaction = MsSqlOperator(
             task_id='sp_tquote_transaction',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tquote_transaction",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tquote_transaction_wip = MsSqlOperator(
+            task_id='sp_tquote_transaction_wip',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_transaction_wip",
             database="vault_edw",
             autocommit=True,
         )
@@ -501,7 +767,8 @@ with DAG(
             html_content=get_sp_success_data_HTML(quote_transaction_group_items, 'All stored procedures executed successfully for all the Quote transaction tables'),
         )
 
-        sp_tquote_transaction >> send_quote_transaction_email
+        sp_tquote_transaction_wip >> sp_tquote_transaction >> send_quote_transaction_email
+
 
     with TaskGroup("quote_broker_group") as quote_broker_group:
 
