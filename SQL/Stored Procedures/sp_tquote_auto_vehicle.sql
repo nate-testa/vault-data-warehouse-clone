@@ -206,7 +206,7 @@ BEGIN
             trg.purchase_dt = src.purchase_dt,
             trg.vehicle_vin_invalid_in = src.vehicle_vin_invalid_in,
             trg.vehicle_vin_invalid_message = src.vehicle_vin_invalid_message,
-            trg.update_ts = getdate(),
+            trg.update_ts = getdate()
             --trg.vehicle_unique_id = src.vehicle_unique_id
             ,trg.vehicle_vin_change_in = src.vehicle_vin_change_in
             ,trg.vehicle_engine_cylinders = src.vehicle_engine_cylinders

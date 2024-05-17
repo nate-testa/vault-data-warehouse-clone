@@ -286,10 +286,10 @@ BEGIN
 						   	sum(r.renewal_non_flat_cancelled_ct) renewal_ct,  
 							sum(renewal_ct) policy_renewal_offered_ct, 
 							sum(case when renewal_ct > 0 then renewal_initial_written_premium_amt else 0 end) policy_renewal_offered_premium_amt, 
-							sum(case when renewal_ct > 0 then r.expiring_premium_amount else 0 end) prm,
+							sum(case when renewal_ct > 0 then r.expiring_written_premium_amt else 0 end) prm,
 							sum(r.non_flat_cancelled_ct-r.mid_term_cancelled_ct) expiring_ct,
-							sum(isnull(r.expiring_sixty_day_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) ) expiring_prm
-							sum(isnull(r.renewal_sixty_day_written_premium_amt,0)) renewal_prm,
+							sum(isnull(r.expiring_sixty_day_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) ) expiring_prm,
+							sum(isnull(r.renewal_sixty_day_written_premium_amt,0)) renewal_prm
 					from edw_core.trenewal_summary r, edw_core.tpolicy pol, edw_core.tstate st  
 					where r.policy_sk = pol.policy_sk 
 					and  pol.risk_state_cd = st.state_cd
