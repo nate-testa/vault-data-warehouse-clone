@@ -1,14 +1,14 @@
-﻿-- =================================================================================================
+﻿-- ==============================================================================================================================
 -- Description: This procedures inserts into tquote_history
----------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description 
+---------------------------------------------------------------------------------------------------------------------------------
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- 12/11/23		Architha Gudimalla				2. Commented out stage in forst temp table
 -- 02/08/24		Alberto Almario					3. Added new column producer_sk
 -- 04/29/24		Hernando Gonzalez				4. Added new column insurance_score_last_run_dt
--- ===================================================================================================================== 
+-- 05/15/24		Architha Gudimalla				5. Removed effecivedate from partiion in rnk used for latest_transaction_ind
+-- ============================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history]
 
@@ -44,7 +44,7 @@ BEGIN
 			CAST(ins.ReferenceCode AS VARCHAR(255)) as customer_id,
 			ins.id as MasterInsuredId,
 			acct.Number,
-			DENSE_RANK()OVER(PARTITION BY acct.PolicyNumber,CAST(acct.EffectiveDate AS DATE) ORDER BY acct.UpdatedDate DESC) AS rnk, 
+			DENSE_RANK()OVER(PARTITION BY acct.PolicyNumber                                  ORDER BY acct.UpdatedDate DESC) AS rnk, 
 			case when acct.TransactionEffectiveDate is null then acct.EffectiveDate else acct.TransactionEffectiveDate end TransactionEffectiveDate,
 			acct.CancellationReason, 
 			acct.CreatedDate,
@@ -262,7 +262,7 @@ BEGIN
 		update h
 		set latest_transaction_in = 'N'
 		from edw_core.tquote_history h
-		where exists (select 'x' from edw_temp.tquote_history_temp1 h1 where h.quote_no = h1.policynumber and h.effective_dt = cast(h1.EffectiveDate as date));
+		where exists (select 'x' from edw_temp.tquote_history_temp1 h1 where h.quote_no = h1.policynumber);
 
 		update h
 		set latest_transaction_in = 'Y'

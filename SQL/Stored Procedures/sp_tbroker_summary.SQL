@@ -4,12 +4,12 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
  
--- =====================================================================================================================================
+-- ==================================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the broker data for each month
-------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
-------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------------
 -- 06/20/23		Architha Gudimalla				1. Created this procedure 
 -- 10/13/23		Architha Gudimalla				2. Added risk state
 -- 10/20/23		Architha Gudimalla				3. Removed source_system_sk
@@ -30,7 +30,10 @@ GO
 -- 03/07/24		Architha Gudimalla				18. Added KPI calculations
 -- 03/10/24		Architha Gudimalla				19. Updated KPI calculations to multiply by 100
 -- 03/19/24		Architha Gudimalla				20. Exluded wind/hail from non cat prms 
--- ===================================================================================================================================== 
+-- 05/15/24		Architha Gudimalla				21. Removed from retention - expiring prm --> + isnull(r.expiring_non_renewal_written_premium_amt,0)
+-- 05/15/24		Architha Gudimalla				22. Removed from retention - expiring ct --> -r.non_renewal_ct
+-- 05/15/24		Architha Gudimalla				23. Added renewal offered count and premium - VI-30737
+-- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
 @in_end_dt date = null
@@ -280,9 +283,13 @@ BEGIN
 					select 	r.month_sk,
 							r.broker_sk, r.product_sk, r.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco, 
-						   	sum(r.renewal_non_flat_cancelled_ct) renewal_ct, sum(r.non_flat_cancelled_ct-r.mid_term_cancelled_ct-r.non_renewal_ct) expiring_ct,
-							sum(isnull(r.renewal_sixty_day_written_premium_amt,0)) renewal_prm, 
-							sum(isnull(r.expiring_sixty_day_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) + isnull(r.expiring_non_renewal_written_premium_amt,0)) expiring_prm
+						   	sum(r.renewal_non_flat_cancelled_ct) renewal_ct,  
+							sum(renewal_ct) policy_renewal_offered_ct, 
+							sum(case when renewal_ct > 0 then renewal_initial_written_premium_amt else 0 end) policy_renewal_offered_premium_amt, 
+							sum(case when renewal_ct > 0 then r.expiring_premium_amount else 0 end) prm,
+							sum(r.non_flat_cancelled_ct-r.mid_term_cancelled_ct) expiring_ct,
+							sum(isnull(r.expiring_sixty_day_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) ) expiring_prm
+							sum(isnull(r.renewal_sixty_day_written_premium_amt,0)) renewal_prm,
 					from edw_core.trenewal_summary r, edw_core.tpolicy pol, edw_core.tstate st  
 					where r.policy_sk = pol.policy_sk 
 					and  pol.risk_state_cd = st.state_cd
@@ -292,7 +299,9 @@ BEGIN
 				)
 				select broker_sk,product_sk, customer_sk, uwco, state_sk,
 						--  
-						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_ct else 0 end) renewal_ct,   
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_ct else 0 end) renewal_ct,  
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_ct else 0 end) policy_renewal_offered_ct,   
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_premium_amt else 0 end) policy_renewal_offered_premium_amt,   
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_ct else 0 end) expiring_ct,
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_prm else 0 end) renewal_prm,   
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_prm else 0 end) expiring_prm  
@@ -710,6 +719,8 @@ BEGIN
 						--
 						policy_expiring_ct,
 						policy_renewal_ct,
+						policy_renewal_offered_ct,
+						policy_renewal_offered_premium_amt,
 						policy_expiring_premium_amt,
 						policy_renewal_premium_amt, 
 						--
@@ -803,6 +814,8 @@ BEGIN
 						--
 						sum(isnull(r.expiring_ct,0)) policy_expiring_ct,
 						sum(isnull(r.renewal_ct,0)) policy_renewal_ct,
+						sum(isnull(r.renewal_offered_ct,0)) policy_renewal_offered_ct,
+						sum(isnull(r.renewal_offered_premium_amt,0)) renewal_offered_premium_amt,
 						sum(isnull(r.expiring_prm,0)) policy_expiring_premium_amt,
 						sum(isnull(r.renewal_prm,0)) policy_renewal_premium_amt,
 						--

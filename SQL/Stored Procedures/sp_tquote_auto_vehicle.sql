@@ -3,13 +3,15 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =============================================
+-- =================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2023-10-23
 -- Description: This stored procedure insert and update info related to tquote_auto_vehicle.
 --11/14/2023     Sandeep Gundreddy               2. Removed effectivedtae from partition by clause
 --03/04/2024     Alberto Almario                 3. add 5 new columns
--- =============================================
+--05/17/2024     Architha Gudimalla              4. added vehicle_unique_id 
+--05/17/2024     Architha Gudimalla              5. removed join on vehicle_unique_id 
+-- =================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle]
 AS
 BEGIN
@@ -37,9 +39,11 @@ BEGIN
 
 		WITH FinalTable AS (
             SELECT
-                ROW_NUMBER() OVER (PARTITION BY PolicyNumber, [Index] ORDER BY policychangenumber DESC) AS RN, 
-                PolicyNumber, EffectiveDate, [Index] as vehicle_no, CreatedDate,
-                [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],
+                --  ROW_NUMBER() OVER (PARTITION BY PolicyNumber, effectivedate, [UniqueId] ORDER BY [number] DESC) AS RN, 
+                ROW_NUMBER() OVER (PARTITION BY PolicyNumber, [Index]    ORDER BY policychangenumber DESC) AS RN, 
+                PolicyNumber, EffectiveDate, [Index] as vehicle_no, [UniqueId] as vehicle_unique_id, CreatedDate,
+                [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],
+				[HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage],
                 [VINChangeIndicator],[EngineCylinders],[Height],[Length],[Width],
                 source_system_sk
             
@@ -47,7 +51,7 @@ BEGIN
                 (
                     SELECT
                         acct.PolicyNumber, acct.EffectiveDate, acct.CreatedDate, acct.policychangenumber,
-                        acctvo.[Index], acctvof.[Field], acctvof.[Value],
+                        acctvo.[Index], acctvo.[UniqueId], acctvof.[Field], acctvof.[Value],
                         CASE 
                             WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
                             ELSE 4 --(Metal)
@@ -73,7 +77,8 @@ BEGIN
                 (
                     MAX([Value]) FOR [Field] IN 
                     (
-                        [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],
+                        [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],
+						[HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage],
                         [VINChangeIndicator],[EngineCylinders],[Height],[Length],[Width]
                     )
                 ) pivottable
@@ -91,6 +96,7 @@ BEGIN
 	        SELECT 
                 t1.PolicyNumber as quote_no,
                 t1.EffectiveDate as effective_dt,
+                --t1.vehicle_unique_id,
                 t1.vehicle_no,
                 t1.VehicleType as vehicle_type,
                 t1.CollectorCarType as collector_car_type,
@@ -105,6 +111,8 @@ BEGIN
                 t1.EngineType as vehicle_engine_type,
                 t1.HighPerformanceVehicle as high_performance_vehicle_in,
                 t1.PurchaseDate as purchase_dt,
+                t1.VinIsInvalid as vehicle_vin_invalid_in,
+                t1.VinInvalidMessage as vehicle_vin_invalid_message,
                 t1.source_system_sk
                 ,t1.VINChangeIndicator as vehicle_vin_change_in
                 ,t1.EngineCylinders as vehicle_engine_cylinders
@@ -115,6 +123,8 @@ BEGIN
 				[edw_temp].[tquote_auto_vehicle_temp1] AS t1
 		) AS src
 		ON src.quote_no = trg.quote_no
+        AND src.effective_dt = trg.effective_dt
+        --AND src.vehicle_unique_id = trg.vehicle_unique_id
         AND src.vehicle_no = trg.vehicle_no
 		-- For Inserts
 		WHEN NOT MATCHED BY TARGET THEN
@@ -138,7 +148,10 @@ BEGIN
             source_system_sk,
             create_ts,
             update_ts,
-            etl_audit_sk
+            etl_audit_sk,
+            vehicle_vin_invalid_in,
+            vehicle_vin_invalid_message
+            --,vehicle_unique_id
             ,vehicle_vin_change_in
             ,vehicle_engine_cylinders
             ,vehicle_height
@@ -165,7 +178,10 @@ BEGIN
             src.source_system_sk,
             getdate(), 
             getdate(), 
-            @etl_audit_sk
+            @etl_audit_sk,
+            src.vehicle_vin_invalid_in,
+            src.vehicle_vin_invalid_message
+            --,src.vehicle_unique_id
             ,src.vehicle_vin_change_in
             ,src.vehicle_engine_cylinders
             ,src.vehicle_height
@@ -188,7 +204,10 @@ BEGIN
             trg.vehicle_engine_type = src.vehicle_engine_type,
             trg.high_performance_vehicle_in = src.high_performance_vehicle_in,
             trg.purchase_dt = src.purchase_dt,
-            trg.update_ts = getdate()
+            trg.vehicle_vin_invalid_in = src.vehicle_vin_invalid_in,
+            trg.vehicle_vin_invalid_message = src.vehicle_vin_invalid_message,
+            trg.update_ts = getdate(),
+            --trg.vehicle_unique_id = src.vehicle_unique_id
             ,trg.vehicle_vin_change_in = src.vehicle_vin_change_in
             ,trg.vehicle_engine_cylinders = src.vehicle_engine_cylinders
             ,trg.vehicle_height = src.vehicle_height

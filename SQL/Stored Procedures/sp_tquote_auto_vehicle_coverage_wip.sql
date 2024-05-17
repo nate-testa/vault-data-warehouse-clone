@@ -10,6 +10,8 @@ GO
 -- 05/06/24		Alberto Almario					1. Created the proc
 -- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
 -- 05/14/24		Architha Gudimalla				3. Corrected errors
+-- 05/17/24     Architha Gudimalla              4. Updated join for tquote_auto_vehicle
+-- 05/17/24     Architha Gudimalla              5. Removed unique id join
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip]
@@ -156,7 +158,7 @@ BEGIN
         )
         ,FinalTable AS (
             SELECT 
-                CreatedDate, UpdatedDate, quote_no, effective_dt, vehicle_no, expiration_dt, 0 as transaction_seq_no, quote_history_sk, quote_auto_vehicle_sk, 
+                CreatedDate, UpdatedDate, quote_no, effective_dt, vehicle_no,  expiration_dt, 0 as transaction_seq_no, quote_history_sk, quote_auto_vehicle_sk, 
                 [GaragingLocationId], [PrimaryParkingLocation], [DrivewaySecurity], [VehicleUsage], [DistanceToWork], [AnnualMiles], [LPMPFilingDate], [Ownership], [RegistrationStatus], [RegistrationDate], 
                 [ExpirationDate], [RegisteredOwner], [RegisteredOwnerName], [ListedDriverName], [NonDriverName], [CompanyOtherEntityName], [RegistrationState], [RegistrationAddressLine1], 
                 [RegistrationAddressLine2], [RegistrationAddressCity], [RegistrationAddressZipCode], [RegistrationAddressState], [SymbolBIPD], [SymbolPIPMED], 
@@ -193,6 +195,8 @@ BEGIN
                         AND qh.transaction_seq_no = 0
                     LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                         ON qav.quote_no = acc.PolicyNumber
+                        AND qav.effective_dt = acc.effectivedate
+                        --AND qav.vehicle_unique_id = acco.[UniqueId]
                         AND qav.vehicle_no = acco.[Index]
                     WHERE
                         p.[Name] = 'Automobile'
@@ -368,6 +372,7 @@ BEGIN
                     WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' 
                     ELSE 'No' 
                 END AS vehicle_deleted_in,
+                --t1.vehicle_unique_id,
                 t1.[VendorReportedWholesaleAmount] AS carfax_wholesale_value_amt,
                 t1.[BasicModelName] AS basic_model_nm,
                 t1.[DistributionDate] AS vehicle_distribution_dt,
@@ -449,8 +454,10 @@ BEGIN
             AND target.effective_dt = source.effective_dt 
             AND target.vehicle_no = source.vehicle_no 
             AND target.transaction_seq_no = source.transaction_seq_no
+            --AND target.vehicle_unique_id = source.vehicle_unique_id 
         WHEN MATCHED THEN
             UPDATE SET 
+                --target.vehicle_unique_id = source.vehicle_unique_id,
                 target.expiration_dt = source.expiration_dt,
                 target.quote_history_sk = source.quote_history_sk,
                 target.quote_auto_vehicle_sk = source.quote_auto_vehicle_sk,
