@@ -10,6 +10,7 @@ GO
 -- 05/06/24		Alberto Almario					1. Created the proc
 -- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
 -- 05/17/24		Architha Gudimalla				3. Added vehicle unique index
+-- 05/17/24		Architha Gudimalla				4. Removed vehicle unique join
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_wip]
 AS
@@ -120,8 +121,8 @@ BEGIN
 		) AS src
 		ON src.quote_no = trg.quote_no
         AND src.effective_dt = trg.effective_dt
-        AND src.vehicle_unique_id = trg.vehicle_unique_id
-        --AND src.vehicle_no = trg.vehicle_no
+        --AND src.vehicle_unique_id = trg.vehicle_unique_id
+        AND src.vehicle_no = trg.vehicle_no
 		-- For Inserts
 		WHEN NOT MATCHED BY TARGET THEN
 		INSERT (

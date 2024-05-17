@@ -11,6 +11,7 @@ GO
 -- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
 -- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- 05/17/24     Architha Gudimalla              4. Updated join for tquote_auto_vehicle
+-- 05/17/24     Architha Gudimalla              5. Removed unique id join
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip]
@@ -195,8 +196,8 @@ BEGIN
                     LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                         ON qav.quote_no = acc.PolicyNumber
                         AND qav.effective_dt = acc.effectivedate
-                        AND qav.vehicle_unique_id = acco.[UniqueId]
-                        --AND qav.vehicle_no = acco.[Index]
+                        --AND qav.vehicle_unique_id = acco.[UniqueId]
+                        AND qav.vehicle_no = acco.[Index]
                     WHERE
                         p.[Name] = 'Automobile'
                         AND p.ProductLine = 'PersonalLines'
@@ -451,12 +452,12 @@ BEGIN
         ) AS source 
             ON target.quote_no = source.quote_no 
             AND target.effective_dt = source.effective_dt 
-            --AND target.vehicle_no = source.vehicle_no 
+            AND target.vehicle_no = source.vehicle_no 
             AND target.transaction_seq_no = source.transaction_seq_no
-            AND target.vehicle_unique_id = source.vehicle_unique_id 
+            --AND target.vehicle_unique_id = source.vehicle_unique_id 
         WHEN MATCHED THEN
             UPDATE SET 
-                target.vehicle_no = source.vehicle_no,
+                target.vehicle_unique_id = source.vehicle_unique_id,
                 target.expiration_dt = source.expiration_dt,
                 target.quote_history_sk = source.quote_history_sk,
                 target.quote_auto_vehicle_sk = source.quote_auto_vehicle_sk,
