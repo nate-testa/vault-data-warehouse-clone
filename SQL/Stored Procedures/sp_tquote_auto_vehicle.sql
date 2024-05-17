@@ -96,7 +96,7 @@ BEGIN
 	        SELECT 
                 t1.PolicyNumber as quote_no,
                 t1.EffectiveDate as effective_dt,
-                t1.vehicle_unique_id,
+                --t1.vehicle_unique_id,
                 t1.vehicle_no,
                 t1.VehicleType as vehicle_type,
                 t1.CollectorCarType as collector_car_type,
@@ -150,8 +150,8 @@ BEGIN
             update_ts,
             etl_audit_sk,
             vehicle_vin_invalid_in,
-            vehicle_vin_invalid_message,
-            vehicle_unique_id
+            vehicle_vin_invalid_message
+            --,vehicle_unique_id
             ,vehicle_vin_change_in
             ,vehicle_engine_cylinders
             ,vehicle_height
@@ -180,8 +180,8 @@ BEGIN
             getdate(), 
             @etl_audit_sk,
             src.vehicle_vin_invalid_in,
-            src.vehicle_vin_invalid_message,
-            src.vehicle_unique_id
+            src.vehicle_vin_invalid_message
+            --,src.vehicle_unique_id
             ,src.vehicle_vin_change_in
             ,src.vehicle_engine_cylinders
             ,src.vehicle_height
@@ -207,7 +207,7 @@ BEGIN
             trg.vehicle_vin_invalid_in = src.vehicle_vin_invalid_in,
             trg.vehicle_vin_invalid_message = src.vehicle_vin_invalid_message,
             trg.update_ts = getdate(),
-            trg.vehicle_unique_id = src.vehicle_unique_id
+            --trg.vehicle_unique_id = src.vehicle_unique_id
             ,trg.vehicle_vin_change_in = src.vehicle_vin_change_in
             ,trg.vehicle_engine_cylinders = src.vehicle_engine_cylinders
             ,trg.vehicle_height = src.vehicle_height

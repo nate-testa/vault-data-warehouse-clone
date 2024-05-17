@@ -365,7 +365,7 @@ BEGIN
             create_ts,
             update_ts,
             etl_audit_sk,
-            vehicle_deleted_in, vehicle_unique_id,
+            vehicle_deleted_in, --vehicle_unique_id,
             carfax_wholesale_value_amt
             ,basic_model_nm
             ,vehicle_distribution_dt
@@ -526,7 +526,7 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
-            CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in, t1.vehicle_unique_id,
+            CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in, --t1.vehicle_unique_id,
             t1.[VendorReportedWholesaleAmount] as carfax_wholesale_value_amt
             ,t1.[BasicModelName] as basic_model_nm
             ,t1.[DistributionDate] as vehicle_distribution_dt

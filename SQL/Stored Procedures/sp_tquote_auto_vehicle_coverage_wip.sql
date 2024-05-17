@@ -372,7 +372,7 @@ BEGIN
                     WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' 
                     ELSE 'No' 
                 END AS vehicle_deleted_in,
-                t1.vehicle_unique_id,
+                --t1.vehicle_unique_id,
                 t1.[VendorReportedWholesaleAmount] AS carfax_wholesale_value_amt,
                 t1.[BasicModelName] AS basic_model_nm,
                 t1.[DistributionDate] AS vehicle_distribution_dt,
@@ -457,7 +457,7 @@ BEGIN
             --AND target.vehicle_unique_id = source.vehicle_unique_id 
         WHEN MATCHED THEN
             UPDATE SET 
-                target.vehicle_unique_id = source.vehicle_unique_id,
+                --target.vehicle_unique_id = source.vehicle_unique_id,
                 target.expiration_dt = source.expiration_dt,
                 target.quote_history_sk = source.quote_history_sk,
                 target.quote_auto_vehicle_sk = source.quote_auto_vehicle_sk,
