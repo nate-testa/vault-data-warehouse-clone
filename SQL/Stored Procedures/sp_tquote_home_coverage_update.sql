@@ -8,6 +8,7 @@ GO
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------
 -- 11/13/23		Architha Gudimalla		    1. Created this procedure to update TIV and loss_of_use_derived_pc
+-- 05/17/23		Architha Gudimalla		    2. Updated logic for loss_of_use_derived_pc
 -- =============================================================================================================== 
 
 
@@ -35,26 +36,43 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) 
 		
 		update [edw_core].[tquote_home_coverage]
-			set loss_of_use_derived_pc = 	round(
+			set loss_of_use_derived_pc = 	 
+								round(
 											CASE
 												WHEN (loss_of_use_pc is null or
 													loss_of_use_pc = '' or
 													loss_of_use_pc = '0' or
-													loss_of_use_pc = '0%'
+													loss_of_use_pc = '0%' or
+													loss_of_use_pc = '0%' or
+													loss_of_use_pc = 'NaN' 
 													)
 												and (loss_of_use_option is null or
 													loss_of_use_option = '' or
-													loss_of_use_option = '0'
+													loss_of_use_option = '%' or
+													loss_of_use_option = '0'or
+													loss_of_use_option = '1'
 													)
 												and (loss_of_use_limit_amt is null or
 													loss_of_use_limit_amt = '' or
+													loss_of_use_limit_amt = 'Yes' or
 													loss_of_use_limit_amt = '0' or
 													isnumeric(trim(loss_of_use_limit_amt)) = 0
 													)
-												and isnull(iif(trim(loss_of_use_option)='','0',trim(loss_of_use_option)),'0')   = '0' 
-												and isnull(iif(trim(loss_of_use_limit_amt)='','0',trim(loss_of_use_limit_amt)),'0')  = '0' 
+												--and isnull(iif(trim(loss_of_use_option)='','0',trim(loss_of_use_option)),'0')   = '0' 
+												--and isnull(iif(trim(loss_of_use_limit_amt)='','0',trim(loss_of_use_limit_amt)),'0')  = '0' 
 													THEN  0
-												WHEN loss_of_use_option in ('Reasonable and Necessary Expenses','reasonableAndNecessaryExpenses12months') 
+												WHEN loss_of_use_limit_amt in (
+												'Reasonable and Necessary Expenses',
+												'Reasonable and Necessary Expenses- 24 months',
+												'reasonableAndNecessaryExpenses24months',
+												'reasonableAndNecessaryExpenses12months',
+												'Reasonable and Necessary Expenses- 12 months')
+												or loss_of_use_option in (
+												'Reasonable and Necessary Expenses',
+												'Reasonable and Necessary Expenses- 24 months',
+												'reasonableAndNecessaryExpenses24months',
+												'reasonableAndNecessaryExpenses12months',
+												'Reasonable and Necessary Expenses- 12 months')
 													THEN 0.2
 												WHEN loss_of_use_option like '%.%' 
 													THEN  cast(loss_of_use_option as float) 
@@ -62,23 +80,32 @@ BEGIN
 												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 0 
 												and case when loss_of_use_pc = '' then '0' else loss_of_use_pc end = '0'
 													then 0
-												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 1 
-												and loss_of_use_limit_amt > 100 
+												WHEN ((isnumeric(trim(loss_of_use_limit_amt)) = 1 
+												and loss_of_use_limit_amt > 100 )  
+												)
 												and dwelling_limit_amt > 0 
 													then cast(loss_of_use_limit_amt as float)/dwelling_limit_amt
 												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 1 
 												and loss_of_use_limit_amt > 100 
 												and contents_limit_amt > 0 
 													then cast(loss_of_use_limit_amt as float)/contents_limit_amt 
+												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 1 
+												and loss_of_use_limit_amt > 100 
+												and contents_limit_amt = 0 and dwelling_limit_amt = 0
+													then 0 
+												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 1 
+												and loss_of_use_limit_amt < 100 
+													then loss_of_use_limit_amt
 												WHEN loss_of_use_pc like '%.%' 
 													THEN  cast(loss_of_use_pc as float) 
-												else loss_of_use_pc
-											END ,6) 
+													else 0
+												--else loss_of_use_pc
+											END ,4)
 		where [update_ts] > @last_source_extract_ts;
 		
 		update [edw_core].[tquote_home_coverage]
 			set total_insured_value_amt = 	isnull(dwelling_limit_amt,0) + isnull(other_structures_limit_amt,0) + isnull(contents_limit_amt,0) +
-											round(loss_of_use_derived_pc * cast(iif(residence_type = 'Homeowners', dwelling_limit_amt, contents_limit_amt) as int),0)
+											round(cast(loss_of_use_derived_pc as float) * cast(iif(residence_type = 'Homeowners', dwelling_limit_amt, contents_limit_amt) as int),0)
 											/*
 											case when isnumeric(trim(loss_of_use_limit_amt)) = 1 and cast(loss_of_use_limit_amt as float) > 0.0 
 											    then loss_of_use_limit_amt

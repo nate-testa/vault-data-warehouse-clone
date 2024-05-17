@@ -1,18 +1,12 @@
 -- ====================================================================================================================================
--- Description: This procedures inserts into TQuote_Transaction  
+-- Description: This procedures inserts into TQuote_Transaction  wip
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
--- 06/02/23		Architha Gudimalla		1. Created this procedure
--- 11/14/23		Sandeep Gundreddy		2. modified quote_auto_vehicle join
--- 11/29/23		Architha Gudimalla		3. modified @new_last_source_extract_ts
--- 12/11/23		Architha Gudimalla		4. modified logic for stage pol term
--- 02/27/24		Architha Gudimalla		5. Updated logic for Lux subscriber contributoin on ho
--- 03/20/24		Architha Gudimalla		6. Added logic for class_type_sk
-
--- ==================================================================================================================================== 
-
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction]
+-- 05/08/24				Architha Gudimalla		1. Created this procedure
+-- 05/14/2024 			Architha Gudimalla		3. Corrected errors
+-- ====================================================================================================================================  
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction_wip]
 
 AS
 BEGIN
@@ -35,53 +29,55 @@ BEGIN
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-		DROP TABLE IF EXISTS edw_temp.TQuote_transaction_temp1;
+		DROP TABLE IF EXISTS edw_temp.TQuote_transaction_wip_temp1;
 		-- Step1 limit amount of rows.
 		SELECT
-			acctr.*,
-			case when acctr.ExternalSourceId is not NULL then 2--(AV2) 
+			acc.*,
+			case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 				 Else 4 --(Metal)
 			end ssk , pr.productcode
-		INTO edw_temp.TQuote_transaction_temp1
-		FROM edw_stage.AccountTransaction acctr
-		left join edw_stage.Product pr on acctr.ProductId = pr.id
+		INTO edw_temp.TQuote_transaction_wip_temp1
+		FROM edw_stage.Account acc
+		left join edw_stage.Product pr on acc.ProductId = pr.id
 		WHERE PolicyNumber is not null 
-		  and acctr.Stage in ('QUOTE','POLICY') 
+		  --and acc.Stage in ('QUOTE','POLICY') 
 		  and pr.ProductLine='PersonalLines'
-		  AND acctr.CreatedDate>@last_source_extract_ts
+		  AND acc.CreatedDate>@last_source_extract_ts
+		and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
 
         -- Create temp table with name as sp_tcustomer_temp1 and use it in 
-        DROP TABLE IF EXISTS edw_temp.TQuote_transaction_temp2
+        DROP TABLE IF EXISTS edw_temp.TQuote_transaction_wip_temp2
         SELECT 
 			tmp1.PolicyNumber,
-			case when tmp1.productcode = 'AU' then acctrvo.[index] else null end as vehicle_no,
+			case when tmp1.productcode = 'AU' then atvo.[index] else null end as vehicle_no,
 			tmp1.ProductId,
 			tmp1.EffectiveDate,
 			tmp1.ExpirationDate, 
 			--acc.BrokerId,
 			--acc.MasterInsuredId,
-			tmp1.number,
-			tmp1.Commission,
+			0 as number,
+			null Commission,
 			tmp1.TransactionEffectiveDate,
-			tmp1.IssuedDate,
-			tmp1.CancellationReason,
+			null IssuedDate,
+			null CancellationReason,
 			tmp1.CreatedDate,
-			iif(tmp1.TransactionEffectiveDate > tmp1.IssuedDate, tmp1.TransactionEffectiveDate, tmp1.IssuedDate) cal_mn,
+			iif(tmp1.TransactionEffectiveDate > null, tmp1.TransactionEffectiveDate, null) cal_mn,
 			tmp1.UpdatedDate,
 			iif(acct.RenewalIndex<>0,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage,
-			acctrcp.Coverage ,acctrcp.label,
-			COALESCE (acctrcp.PremiumDeltaProRated ,premium) as wp, 
-			COALESCE (acctrcp.Premiumdelta ,premium) as ap,
-			COALESCE (acctrcp.CommissionDeltaProRated ,acctrcp.commission) as comm,
+			apc.Coverage ,apc.label,
+			apc.premium as wp, 
+			apc.premium as ap,
+			apc.commission as comm,
 			0 as tfs, tmp1.ssk, 'prm' typ,
-			COALESCE(acctrcp.CededPremiumDelta,acctrcp.CededPremium) as ceded_annual_premium_amt,
-			COALESCE(acctrcp.CededPremiumDeltaProRated,acctrcp.CededPremium) as ceded_premium_amt,
+			apc.CededPremium as ceded_annual_premium_amt,
+			apc.CededPremium as ceded_premium_amt,
 			null covID
-		INTO edw_temp.TQuote_transaction_temp2  
-		FROM edw_temp.TQuote_transaction_temp1 tmp1 
-		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
-		inner join edw_stage.AccountTransactionCoveragePremium acctrcp on acctrcp.AccountTransactionId = tmp1.Id
-		left join edw_stage.AccountTransactionVersionObject acctrvo on acctrcp.objectid=acctrvo.id 
+		INTO edw_temp.TQuote_transaction_wip_temp2  
+		FROM edw_temp.TQuote_transaction_wip_temp1 tmp1 
+		inner join edw_stage.Account acct on acct.id = tmp1.id
+		inner join edw_stage.Accountpremium ap on ap.AccountId=acct.id -->
+        left join edw_stage.AccountPremiumCoverage apc on apc.AccountPremiumId=ap.id --> Accounttransactionversioncoveragepremium
+        inner join edw_stage.AccountObject atvo on atvo.id=apc.objectid --> Accounttransactionversionobject 
 		--where premium!=0  
 		union all
 		SELECT 
@@ -92,28 +88,34 @@ BEGIN
 			tmp1.ExpirationDate, 
 			--acc.BrokerId,
 			--acc.MasterInsuredId,
-			tmp1.number,
-			tmp1.Commission,
+			0 as number,
+			null Commission,
 			tmp1.TransactionEffectiveDate,
-			tmp1.IssuedDate,
-			tmp1.CancellationReason,
+			null IssuedDate,
+			''  CancellationReason,
 			tmp1.CreatedDate,
 			iif(tmp1.TransactionEffectiveDate > tmp1.CreatedDate, tmp1.TransactionEffectiveDate, tmp1.CreatedDate) cal_mn,
 			tmp1.UpdatedDate,
-			iif(acct.RenewalIndex<>0,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage, 
+			iif(tmp1.RenewalIndex<>0,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage, 
 			--ROW_NUMBER() OVER (PARTITION BY tmp1.PolicyNumber, tmp1.EffectiveDate, tmp1.PolicyChangeNumber ORDER BY tmp1.CreatedDate DESC) AS PolicyNumber_Rank,
-			acctrtf.Name, '',
-			COALESCE (acctrtf.AmountDeltaProRated ,acctrtf.Amount) as wp, 
-			COALESCE (acctrtf.AmountDelta  ,acctrtf.Amount) as ap, 
+			accptf.Name, '',
+			accptf.Amount as wp, 
+			accptf.Amount as ap, 
 			0 as comm ,
-			COALESCE (acctrtf.AmountDeltaProRated ,acctrtf.Amount) as tfs, tmp1.ssk, 'tfs' typ,
+			accptf.Amount as tfs, tmp1.ssk, 'tfs' typ,
 			0 as ceded_annual_premium_amt,
 			0 as ceded_premium_amt,
 			cov.Name covID
-		FROM edw_temp.TQuote_transaction_temp1 tmp1 
-		inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = tmp1.Id 
-		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
-		left join edw_stage.coverage cov on cov.id = acctrtf.coverageid 
+		FROM edw_temp.TQuote_transaction_wip_temp1 tmp1 
+		left join edw_stage.Accountpremium ap on ap.AccountId=tmp1.id 
+		INNER JOIN edw_stage.[AccountPremiumTaxAndFee] accptf on accptf.AccountPremiumId = ap.Id 
+		left join edw_stage.coverage cov on cov.id = accptf.coverageid
+		
+		delete from   a 
+		from edw_core.tquote_transaction a 
+		where exists (select * from edw_temp.TQuote_transaction_wip_temp2 b, edw_core.tquote q 
+					  where q.quote_no = b.policynumber and a.quote_sk = q.quote_sk and b.number = a.transaction_seq_no 
+					 ) 
 
 		-- Start Inserting records
 		INSERT INTO edw_core.TQuote_transaction 
@@ -179,7 +181,7 @@ BEGIN
 				  else 0
 			end quote_collection_class_type_sk
 		FROM
-			edw_temp.TQuote_transaction_temp2 source
+			edw_temp.TQuote_transaction_wip_temp2 source
 		LEFT JOIN edw_core.tdate dt1 on dt1.actual_dt = cast(source.EffectiveDate as date)
 		LEFT JOIN edw_core.tdate dt2 on dt2.actual_dt = cast(source.ExpirationDate as date)
 		LEFT JOIN edw_core.tdate dt3 on dt3.actual_dt = cast(source.EffectiveDate as date)
@@ -209,10 +211,10 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT; 
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.CreatedDate) FROM edw_temp.TQuote_transaction_temp1 t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.CreatedDate) FROM edw_temp.TQuote_transaction_wip_temp1 t1),@last_source_extract_ts);
 		
-        DROP TABLE IF EXISTS edw_temp.TQuote_transaction_temp1
-		DROP TABLE IF EXISTS edw_temp.TQuote_transaction_temp2
+        DROP TABLE IF EXISTS edw_temp.TQuote_transaction_wip_temp1
+		DROP TABLE IF EXISTS edw_temp.TQuote_transaction_wip_temp2
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;

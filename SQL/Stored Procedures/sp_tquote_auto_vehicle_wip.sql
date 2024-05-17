@@ -1,18 +1,18 @@
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
-GO
-
--- =================================================================================================================
--- Author:		Alberto Almario
--- Create Date: 2023-10-23
--- Description: This stored procedure insert and update info related to tquote_auto_vehicle.
---11/14/2023     Sandeep Gundreddy               2. Removed effectivedtae from partition by clause
---03/04/2024     Alberto Almario                 3. add 5 new columns
---05/17/2024     Architha Gudimalla              4. added vehicle_unique_id 
---05/17/2024     Architha Gudimalla              5. removed join on vehicle_unique_id 
--- =================================================================================================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle]
+GO 
+-- ================================================================================================================================================
+-- Description: This stored procedure inserts and updates info related to quote auto vehicle
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- 05/06/24		Alberto Almario					1. Created the proc
+-- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
+-- 05/17/24		Architha Gudimalla				3. Added vehicle unique index
+-- 05/17/24		Architha Gudimalla				4. Removed vehicle unique join
+-- ================================================================================================================================================
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_wip]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -35,50 +35,47 @@ BEGIN
 		--************Start************
 
         -- Step1 limit amount of rows.
-		DROP TABLE IF EXISTS [edw_temp].[tquote_auto_vehicle_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[tquote_auto_vehicle_wip_temp1];
 
 		WITH FinalTable AS (
             SELECT
-                --  ROW_NUMBER() OVER (PARTITION BY PolicyNumber, effectivedate, [UniqueId] ORDER BY [number] DESC) AS RN, 
-                ROW_NUMBER() OVER (PARTITION BY PolicyNumber, [Index]    ORDER BY policychangenumber DESC) AS RN, 
-                PolicyNumber, EffectiveDate, [Index] as vehicle_no, [UniqueId] as vehicle_unique_id, CreatedDate,
+                PolicyNumber, EffectiveDate, [Index] as vehicle_no,  [UniqueId] as vehicle_unique_id, CreatedDate,UpdatedDate,
                 [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],
-				[HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage],
+                [HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage],
                 [VINChangeIndicator],[EngineCylinders],[Height],[Length],[Width],
                 source_system_sk
             
             FROM
                 (
                     SELECT
-                        acct.PolicyNumber, acct.EffectiveDate, acct.CreatedDate, acct.policychangenumber,
-                        acctvo.[Index], acctvo.[UniqueId], acctvof.[Field], acctvof.[Value],
+                        acc.PolicyNumber, acc.EffectiveDate, acc.CreatedDate,acc.UpdatedDate, 
+                        acco.[Index],acco.[UniqueId], accof.[Field], accof.[Value],
                         CASE 
-                            WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
+                            WHEN acc.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
                             ELSE 4 --(Metal)
                         END as [source_system_sk]
                     FROM
-                        (SELECT
-                            *
-                        FROM [edw_stage].[AccountTransaction]
-                        WHERE
-                            Stage in ('QUOTE','POLICY')
-                            AND CreatedDate > @last_source_extract_ts
-                        ) acct
-                    INNER JOIN [edw_stage].[Product] p ON p.Id = acct.ProductId
-                    INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
-                    INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
-                    INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof ON acctvof.VersionObjectId = acctvo.id
+                        (
+                            SELECT *
+                            FROM [edw_stage].[Account] AS a
+                            WHERE NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where b.AccountId=a.id)
+                            AND GREATEST(CreatedDate,UpdatedDate) > @last_source_extract_ts
+                            AND a.PolicyNumber IS NOT NULL
+                        ) acc
+                    INNER JOIN [edw_stage].[Product] p ON p.Id = acc.ProductId
+                    INNER JOIN [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
+                    INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
                     WHERE 1=1
                         AND p.[Name] = 'Automobile'
                         AND p.ProductLine = 'PersonalLines'
-                        AND acctvof.[Group] = 'Vehicle'
+                        AND accof.[Group] = 'Vehicle'
                 ) t
             PIVOT 
                 (
                     MAX([Value]) FOR [Field] IN 
                     (
                         [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],
-						[HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage],
+                        [HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage],
                         [VINChangeIndicator],[EngineCylinders],[Height],[Length],[Width]
                     )
                 ) pivottable
@@ -86,8 +83,8 @@ BEGIN
         )
 
         SELECT * 
-        INTO [edw_temp].[tquote_auto_vehicle_temp1]
-        FROM FinalTable WHERE RN = 1
+        INTO [edw_temp].[tquote_auto_vehicle_wip_temp1]
+        FROM FinalTable
         
 
 		-- Start Merge process
@@ -96,7 +93,7 @@ BEGIN
 	        SELECT 
                 t1.PolicyNumber as quote_no,
                 t1.EffectiveDate as effective_dt,
-                --t1.vehicle_unique_id,
+                t1.vehicle_unique_id,
                 t1.vehicle_no,
                 t1.VehicleType as vehicle_type,
                 t1.CollectorCarType as collector_car_type,
@@ -120,7 +117,7 @@ BEGIN
                 ,t1.Length as vehicle_length
                 ,t1.Width as vehicle_width
 			FROM 
-				[edw_temp].[tquote_auto_vehicle_temp1] AS t1
+				[edw_temp].[tquote_auto_vehicle_wip_temp1] AS t1
 		) AS src
 		ON src.quote_no = trg.quote_no
         AND src.effective_dt = trg.effective_dt
@@ -206,8 +203,8 @@ BEGIN
             trg.purchase_dt = src.purchase_dt,
             trg.vehicle_vin_invalid_in = src.vehicle_vin_invalid_in,
             trg.vehicle_vin_invalid_message = src.vehicle_vin_invalid_message,
-            trg.update_ts = getdate()
-            --trg.vehicle_unique_id = src.vehicle_unique_id
+            trg.update_ts = getdate(),
+            trg.vehicle_no = src.vehicle_no
             ,trg.vehicle_vin_change_in = src.vehicle_vin_change_in
             ,trg.vehicle_engine_cylinders = src.vehicle_engine_cylinders
             ,trg.vehicle_height = src.vehicle_height
@@ -221,14 +218,14 @@ BEGIN
 
 		
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(CreatedDate) FROM edw_temp.[tquote_auto_vehicle_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(Greatest(CreatedDate,UpdatedDate)) FROM edw_temp.[tquote_auto_vehicle_wip_temp1]),@last_source_extract_ts);
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
         -- Drop temp table
-        DROP TABLE IF EXISTS edw_temp.[tquote_auto_vehicle_temp1];
+        DROP TABLE IF EXISTS edw_temp.[tquote_auto_vehicle_wip_temp1];
 
 	END TRY
 	BEGIN CATCH
