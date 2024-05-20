@@ -6,6 +6,7 @@
 -----------------------------------------------------------------------------------------------------------------------
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- 05/14/24		Architha Gudimalla				2. Corrected errors
+-- 05/20/24		Architha Gudimalla				3. Added update for latest_transaction_in
 -- ===================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history_wip]
@@ -360,6 +361,14 @@ BEGIN
 		; 
 
 		SET @rows_affected=@@ROWCOUNT;  
+
+		
+		update h
+		set latest_transaction_in='Y'
+		from edw_core.tquote_history h
+		where not exists (select * from edw_core.tquote_history h1 where h1.quote_sk = h.quote_sk and latest_transaction_in='Y')
+		and exists (select quote_sk from edw_core.tquote_history h2 where h2.quote_sk = h.quote_sk and isnull(latest_transaction_in,'N')='N')
+		and transaction_seq_no = 0;
 		
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest(t1.CreatedDate, t1.UpdatedDate)) FROM edw_temp.tquote_history_temp1 t1),@last_source_extract_ts);
 		
