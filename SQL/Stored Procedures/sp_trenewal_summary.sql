@@ -220,7 +220,7 @@ BEGIN
 														end order by quote_sk) rnk  
 						from edw_core.tquote q 
 						where	effective_dt between @begin_dt and @end_dt  
-						and quote_Status <> 'Issued'
+						--and quote_Status <> 'Issued'
 					) A
 				 	where rnk = 1
 				),
