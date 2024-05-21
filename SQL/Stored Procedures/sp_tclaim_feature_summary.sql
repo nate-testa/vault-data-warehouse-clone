@@ -2,12 +2,13 @@
 -- Author:		Yunus Mohammed
 -- Description: This procedure calculate claim amounts at coverage level
 ---------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date 		|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 09/28/2023	Mohammed Yunus					1. Procedure created
--- 10/04/2023	Mohammed Yunus					2. Removed start date & end date param
--- 12/22/2023	Mohammed Yunus					3. Added try catch block and update end_dt_sk logic for current month
--- 01/05/2023	Mohammed Yunus					4. Added throw statement and updated last_source_extract_ts logic for current month
+-- 09/28/2023		Yunus Mohammed					1. Procedure created
+-- 10/04/2023		Yunus Mohammed					2. Removed start date & end date param
+-- 12/22/2023		Yunus Mohammed					3. Added try catch block and update end_dt_sk logic for current month
+-- 01/05/2023		Yunus Mohammed					4. Added throw statement and updated last_source_extract_ts logic for current month\
+-- 05/21/2024		Yunus Mohammed					5. Update logic to calculate start month and end month
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_summary]
@@ -35,11 +36,17 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 
 		DECLARE cur_main CURSOR FOR
-		SELECT yearmonth, MIN(date_sk) AS begin_dt_sk, MAX(date_sk) AS end_dt_sk, MIN(actual_dt) AS begin_dt, MAX(actual_dt) AS end_dt
-		FROM edw_core.tdate
-		WHERE
-			actual_dt >  @last_source_extract_ts
-			and actual_dt <= EOMONTH(GETDATE())
+		SELECT td.yearmonth, MIN(td.date_sk) AS begin_dt_sk, MAX(td.date_sk) AS end_dt_sk, MIN(td.actual_dt) AS begin_dt, MAX(td.actual_dt) AS end_dt		
+		FROM edw_core.tdate as td
+		INNER JOIN
+		(
+			SELECT Min(yearmonth) start_month, max(yearmonth) as end_month
+			FROM
+				edw_core.tdate
+			WHERE
+				actual_dt >  @last_source_extract_ts
+				and actual_dt <= EOMONTH(GETDATE())
+		) AS ym on td.yearmonth between start_month and end_month
 		GROUP BY yearmonth
 		ORDER BY yearmonth;
 
