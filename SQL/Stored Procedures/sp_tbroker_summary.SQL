@@ -33,6 +33,9 @@ GO
 -- 05/15/24		Architha Gudimalla				21. Removed from retention - expiring prm --> + isnull(r.expiring_non_renewal_written_premium_amt,0)
 -- 05/15/24		Architha Gudimalla				22. Removed from retention - expiring ct --> -r.non_renewal_ct
 -- 05/15/24		Architha Gudimalla				23. Added renewal offered count and premium - VI-30737
+-- 05/21/24		Architha Gudimalla				24. Upong olivia'as request, Changed quote history join 
+--													from	q.first_offered_quote_history_sk = qh.quote_history_sk 
+--													to 		q.quote_sk = qh.quote_sk and qh.latest_transaction_in = 'Y' 
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -254,7 +257,7 @@ BEGIN
 					from edw_core.tquote q 
 					inner join edw_core.tcustomer cust on cust.customer_id = q.customer_id
 					inner join edw_core.tproduct p on p.product_cd = q.product_cd
-					left join edw_core.tquote_history qh on q.first_offered_quote_history_sk = qh.quote_history_sk 
+					left join edw_core.tquote_history qh on q.quote_sk = qh.quote_sk and qh.latest_transaction_in = 'Y' -- q.first_offered_quote_history_sk = qh.quote_history_sk 
 					inner join edw_core.tbroker br on q.broker_id = br.broker_id
 					inner join edw_core.tstate st on q.risk_state_cd = st.state_cd
 					where  q.quote_term = 'New'
