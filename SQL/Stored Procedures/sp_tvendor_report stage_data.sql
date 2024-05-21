@@ -66,15 +66,19 @@ BEGIN
 		merge into edw_stage.tvendor_report_field as target
 		using
 		(
-			select  accr.source, accr.reporttype, accri.Category, accri.[Group], replace(replace(replace(replace(replace(replace(replace(label,'Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)','Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)'),' Toilet Supply Lines That Have Plastic B-nut Connectors and',
-					' Toilet Lines having Plastic B-nut Conn and'),'when construction starts on second floor','construction on 2nd fl'),'[',' - '),']',''),'''',''),',','') Label, 
-					max(accri.CreatedDate) CreatedDate, max(GREATEST(accri.UpdatedDate,accri.CreatedDate)) UpdatedDate 
-			from	edw_stage.Account acc, edw_stage.AccountReport accr, edw_stage.AccountReportItem accri
-			where	accr.AccountId=acc.Id  and source <> 'HazardHub'
-			and		accr.Id =accri.ReportId 
-			AND		GREATEST(accri.UpdatedDate,accri.CreatedDate)>@last_source_extract_ts
-			group by accr.source, accr.reporttype, accri.Category, accri.[Group], replace(replace(replace(replace(replace(replace(replace(label,'Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)','Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)'),' Toilet Supply Lines That Have Plastic B-nut Connectors and',
-					' Toilet Lines having Plastic B-nut Conn and'),'when construction starts on second floor','construction on 2nd fl'),'[',' - '),']',''),'''',''),',','')
+			select a.source, a.reporttype, a.Category, a.[Group], a.Label, 
+					max(a.CreatedDate) CreatedDate, max(a.UpdatedDate) UpdatedDate 
+			from
+			(
+				select  accr.source, accr.reporttype, accri.Category, accri.[Group], replace(replace(replace(replace(replace(replace(replace(label,'Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)','Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)'),' Toilet Supply Lines That Have Plastic B-nut Connectors and',
+						' Toilet Lines having Plastic B-nut Conn and'),'when construction starts on second floor','construction on 2nd fl'),'[',' - '),']',''),'''',''),',','') Label, 
+						accri.CreatedDate, GREATEST(accri.UpdatedDate,accri.CreatedDate) UpdatedDate 
+				from	edw_stage.Account acc, edw_stage.AccountReport accr, edw_stage.AccountReportItem accri
+				where	accr.AccountId=acc.Id  and source <> 'HazardHub'
+				and		accr.Id =accri.ReportId  
+				AND		GREATEST(accri.UpdatedDate,accri.CreatedDate)>@last_source_extract_ts
+			) a
+			group by a.source, a.reporttype, a.Category, a.[Group], a.label
 		) as source 
 		on source.source = target.source 
 		and source.reporttype = target.reporttype 
@@ -117,7 +121,7 @@ BEGIN
 					+ ' select	 acc.policynumber, acc.effectivedate, 
 												GREATEST(accri.UpdatedDate,accri.CreatedDate) UpdatedDate ,  accri.CreatedDate, 
 												accr.dateordered, accr.dateTimeRecieved, accr.dateTimeCompleted, accr.TransactionStatus, accr.[source], accr.reporttype, 
-												case when accri.Category  = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(replace(replace((replace(accri.label,''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
+												case when accri.Category  = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(replace(replace(replace(accri.label,''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
 													when accri.Category <> accri.[Group] then concat(accri.Category, '' - '', accri.[Group], '' - '',replace(replace(replace(replace(replace(replace(accri.label,''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
 													else ''''
 												end field_name,accri.[Value] 
@@ -130,7 +134,7 @@ BEGIN
 					--+  @in_source 
 					+ ''''
 
-		--print @sql
+		print @sql
 		EXECUTE sp_executesql @sql 
 
 		SET @rows_affected=@rows_affected + @@ROWCOUNT;  

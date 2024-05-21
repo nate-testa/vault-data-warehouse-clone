@@ -720,7 +720,7 @@ BEGIN
 						policy_expiring_ct,
 						policy_renewal_ct,
 						policy_renewal_offered_ct,
-						policy_renewal_offered_premium_amt,
+						policy_renewal_offered_premiumm_amt,
 						policy_expiring_premium_amt,
 						policy_renewal_premium_amt, 
 						--
@@ -814,8 +814,8 @@ BEGIN
 						--
 						sum(isnull(r.expiring_ct,0)) policy_expiring_ct,
 						sum(isnull(r.renewal_ct,0)) policy_renewal_ct,
-						sum(isnull(r.renewal_offered_ct,0)) policy_renewal_offered_ct,
-						sum(isnull(r.renewal_offered_premium_amt,0)) renewal_offered_premium_amt,
+						sum(isnull(r.policy_renewal_offered_ct,0)) policy_renewal_offered_ct,
+						sum(isnull(r.policy_renewal_offered_premium_amt,0)) renewal_offered_premium_amt,
 						sum(isnull(r.expiring_prm,0)) policy_expiring_premium_amt,
 						sum(isnull(r.renewal_prm,0)) policy_renewal_premium_amt,
 						--
