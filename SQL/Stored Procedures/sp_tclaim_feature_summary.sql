@@ -7,8 +7,9 @@
 -- 09/28/2023		Yunus Mohammed					1. Procedure created
 -- 10/04/2023		Yunus Mohammed					2. Removed start date & end date param
 -- 12/22/2023		Yunus Mohammed					3. Added try catch block and update end_dt_sk logic for current month
--- 01/05/2023		Yunus Mohammed					4. Added throw statement and updated last_source_extract_ts logic for current month\
--- 05/21/2024		Yunus Mohammed					5. Update logic to calculate start month and end month
+-- 01/05/2023		Yunus Mohammed					4. Added throw statement and updated last_source_extract_ts logic for current month
+-- 05/21/2024		Yunus Mohammed					5. Updates were made to calculate start month and end month
+-- 05/23/2024		Yunus Mohammed					6. Updates were made to select the previous month and obtain the last day's transaction from that month on the 1st of the current month
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_summary]
@@ -44,8 +45,9 @@ BEGIN
 			FROM
 				edw_core.tdate
 			WHERE
-				actual_dt >  @last_source_extract_ts
-				and actual_dt <= EOMONTH(GETDATE())
+				-- If it is the 1st of the month, also select the previous month to obtain the last day's transaction from that month.
+				actual_dt >  CASE DAY(@current_date) WHEN 1 THEN  DATEADD(DD,-1,@last_source_extract_ts) ELSE @last_source_extract_ts END
+				and actual_dt <= EOMONTH(@current_date)
 		) AS ym on td.yearmonth between start_month and end_month
 		GROUP BY yearmonth
 		ORDER BY yearmonth;
