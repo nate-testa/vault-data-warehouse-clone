@@ -5,6 +5,7 @@
 -- Change date			|Author						|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
 -- 05/07/2024 			Yunus Mohammed				1. Created this procedure 
+-- 05/23/2024 			Yunus Mohammed				2. Updated join with AccountPremiumFactor
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
 
@@ -71,9 +72,9 @@ BEGIN
 				inner join edw_stage.Product p on p.Id=acc.ProductId
 				INNER JOIN edw_stage.[AccountObject] AS accvo ON accvo.AccountId = acc.Id
                 INNER JOIN edw_stage.[AccountObjectField] AS accvof ON accvof.ObjectId = accvo.id
-                left join edw_stage.Accountpremium ap on ap.AccountId=acc.id 
-                left join edw_stage.AccountPremiumCoverage accvp on accvp.AccountPremiumId=ap.id --> Accounttransactionversioncoveragepremium
+                left join edw_stage.Accountpremium ap on ap.AccountId=acc.id                
                 left join edw_stage.AccountPremiumFactor accpf on accpf.AccountPremiumId=ap.id and accpf.coverage = ''Homeowners''
+				and accpf.factor is not null
                 left join edw_core.tquote_history tqh on tqh.quote_no=acc.PolicyNumber
 						and tqh.effective_dt=acc.EffectiveDate
 						and tqh.transaction_seq_no = 0
