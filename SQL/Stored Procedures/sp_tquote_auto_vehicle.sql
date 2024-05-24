@@ -11,6 +11,7 @@ GO
 --03/04/2024     Alberto Almario                 3. add 5 new columns
 --05/17/2024     Architha Gudimalla              4. added vehicle_unique_id 
 --05/17/2024     Architha Gudimalla              5. removed join on vehicle_unique_id 
+--05/24/2024     Architha Gudimalla              6. removed join on effective dt in merge 
 -- =================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle]
 AS
@@ -123,7 +124,7 @@ BEGIN
 				[edw_temp].[tquote_auto_vehicle_temp1] AS t1
 		) AS src
 		ON src.quote_no = trg.quote_no
-        AND src.effective_dt = trg.effective_dt
+        --AND src.effective_dt = trg.effective_dt
         --AND src.vehicle_unique_id = trg.vehicle_unique_id
         AND src.vehicle_no = trg.vehicle_no
 		-- For Inserts
