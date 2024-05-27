@@ -12,6 +12,7 @@ GO
 -- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- 05/17/24     Architha Gudimalla              4. Updated join for tquote_auto_vehicle
 -- 05/17/24     Architha Gudimalla              5. Removed unique id join
+-- 05/25/24     Architha Gudimalla              6. Removed join on effective_dt to tquote_auto_vehicle
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip]
@@ -195,7 +196,7 @@ BEGIN
                         AND qh.transaction_seq_no = 0
                     LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                         ON qav.quote_no = acc.PolicyNumber
-                        AND qav.effective_dt = acc.effectivedate
+                        --AND qav.effective_dt = acc.effectivedate
                         --AND qav.vehicle_unique_id = acco.[UniqueId]
                         AND qav.vehicle_no = acco.[Index]
                     WHERE
