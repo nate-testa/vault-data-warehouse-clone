@@ -14,6 +14,7 @@ GO
 -- 03/10/24		Architha Gudimalla				3. Updated the label with replace for some too long labels for LC360
 -- 05/08/24		Architha Gudimalla				4. Updated the label for another long label for LC360
 -- 05/20/24		Architha Gudimalla				5. Added accri.Label = accri.[Group] to table main case statement
+-- 05/28/24		Architha Gudimalla				6. Updated the label for another long label for LC360
 -- ======================================================================================================================= 
 
 CREATE OR ALTER       PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
@@ -71,8 +72,16 @@ BEGIN
 					max(a.CreatedDate) CreatedDate, max(a.UpdatedDate) UpdatedDate 
 			from
 			(
-				select  accr.source, accr.reporttype, accri.Category, accri.[Group], replace(replace(replace(replace(replace(replace(replace(label,'Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)','Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)'),' Toilet Supply Lines That Have Plastic B-nut Connectors and',
-						' Toilet Lines having Plastic B-nut Conn and'),'when construction starts on second floor','construction on 2nd fl'),'[',' - '),']',''),'''',''),',','') Label, 
+				select  accr.source, accr.reporttype, accri.Category, accri.[Group], 
+						replace(replace(replace(replace(replace(replace(replace(replace(label,
+						'Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)','Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)'),
+						' Toilet Supply Lines That Have Plastic B-nut Connectors and',' Toilet Lines having Plastic B-nut Conn and'),
+						'when construction starts on second floor','construction on 2nd fl'),
+						'Centrally Monitor Fire Burglar Low Temp Fire Sprinkler Flow and Water Leak Detection Alarm Systems','Centrally Monitor Fire Burglar Low Temp Fire Sprinkler Flow and Water Leak Detectn Alarm System'),
+						'[',' - '),
+						']',''),
+						'''',''),
+						',','') Label, 
 						accri.CreatedDate, GREATEST(accri.UpdatedDate,accri.CreatedDate) UpdatedDate 
 				from	edw_stage.Account acc, edw_stage.AccountReport accr, edw_stage.AccountReportItem accri
 				where	accr.AccountId=acc.Id  and source <> 'HazardHub'
@@ -122,8 +131,8 @@ BEGIN
 					+ ' select	 acc.policynumber, acc.effectivedate, 
 												GREATEST(accri.UpdatedDate,accri.CreatedDate) UpdatedDate ,  accri.CreatedDate, 
 												accr.dateordered, accr.dateTimeRecieved, accr.dateTimeCompleted, accr.TransactionStatus, accr.[source], accr.reporttype, 
-												case when accri.Category = accri.[Group] or accri.Label = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(replace(replace(replace(accri.label,''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
-													when accri.Category <> accri.[Group] then concat(accri.Category, '' - '', accri.[Group], '' - '',replace(replace(replace(replace(replace(replace(accri.label,''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
+												case when accri.Category = accri.[Group] or accri.Label = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(replace(replace(replace(replace(accri.label,''Centrally Monitor Fire Burglar Low Temp Fire Sprinkler Flow and Water Leak Detection Alarm Systems'',''Centrally Monitor Fire Burglar Low Temp Fire Sprinkler Flow and Water Leak Detectn Alarm System''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
+													when accri.Category <> accri.[Group] then concat(accri.Category, '' - '', accri.[Group], '' - '',replace(replace(replace(replace(replace(replace(replace(accri.label,''Centrally Monitor Fire Burglar Low Temp Fire Sprinkler Flow and Water Leak Detection Alarm Systems'',''Centrally Monitor Fire Burglar Low Temp Fire Sprinkler Flow and Water Leak Detectn Alarm System''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
 													else ''''
 												end field_name,accri.[Value] 
 										from	edw_stage.[Account] acc, edw_stage.[AccountReport] accr, edw_stage.AccountReportItem accri
