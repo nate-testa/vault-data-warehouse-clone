@@ -5,7 +5,8 @@
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 09/05/24		Hernando Gonzalez Garcia		1. Created this procedure 
--- 05/14/24		Architha Gudimalla				3. Corrected errors
+-- 05/14/24		Architha Gudimalla				2. Corrected errors
+-- 05/28/24		Yunus Mohammed					3. Added AccountObject.Id instead of Account.Id
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_class_type_wip]
@@ -45,7 +46,7 @@ BEGIN
 		FROM
 			(
 			SELECT
-				acc.Id, acc.PolicyNumber, acc.EffectiveDate, acc.ExpirationDate, acc.[Number]
+				acco.Id, acc.PolicyNumber, acc.EffectiveDate, acc.ExpirationDate, acc.[Number]
 				,tqcl.quote_collection_location_sk
 				,tqh.quote_history_sk
 				,tqcc.quote_collection_coverage_sk
