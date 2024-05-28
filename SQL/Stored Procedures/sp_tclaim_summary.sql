@@ -37,19 +37,13 @@ BEGIN
 		DECLARE cur_main CURSOR FOR	
 		SELECT td.yearmonth, MIN(td.date_sk) AS begin_dt_sk, MAX(td.date_sk) AS end_dt_sk, MIN(td.actual_dt) AS begin_dt, MAX(td.actual_dt) AS end_dt		
 		FROM edw_core.tdate as td
-		INNER JOIN
-		(
-			SELECT Min(yearmonth) start_month, max(yearmonth) as end_month
-			FROM
-				edw_core.tdate
-			WHERE
-				-- If it is the 1st of the month, also select the previous month to obtain the last day's transaction from that month.
-				actual_dt >  CASE DAY(@current_date) WHEN 1 THEN  DATEADD(DD,-1,@last_source_extract_ts) ELSE @last_source_extract_ts END
-				and actual_dt <= EOMONTH(@current_date)
-		) AS ym on td.yearmonth between start_month and end_month
+		where yearmonth in ( SELECT distinct yearmonth 
+								FROM edw_core.tdate
+								WHERE actual_dt >= @last_source_extract_ts and actual_dt <= EOMONTH(@current_date)
+							) 
 		GROUP BY yearmonth
 		ORDER BY yearmonth;
-
+		
 		OPEN cur_main
 		FETCH NEXT FROM cur_main INTO @yearmonth, @begin_dt_sk ,@end_dt_sk , @begin_dt, @end_dt;
 
