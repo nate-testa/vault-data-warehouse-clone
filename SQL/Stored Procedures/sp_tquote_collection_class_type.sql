@@ -14,6 +14,7 @@ GO
 -- 11/13/23		Architha Gudimalla				2. added tran seq no in the joins
 -- 11/14/23		Sandeep Gundreddy				3. modified quote_collection_location_sk join
 -- 11/15/23		Sandeep Gundreddy				4. modified LEFT joins to INNER joins
+-- 05/28/24		Alberto Almario					5. Integrate Premium Adjustments data into EDW - Collection
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_class_type]
@@ -40,103 +41,201 @@ BEGIN
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tquote_collection_class_type_temp1];
-		SELECT 
-			Id, PolicyNumber as quote_no, EffectiveDate, ExpirationDate, [Number]
-			,quote_collection_location_sk, quote_history_sk, quote_collection_coverage_sk, quote_home_coverage_sk
-			,[ClassType], [ScheduledCoverage], [ScheduledHighestValueLimit], [BlanketCoverage], [BlanketHighestValue], [BlanketSingleArticleLimit], ScheduledItemAppraisalDate
-			--,4 as [source_system_sk] --20230717 removed
-			,source_system_sk --20230717 added
-			,CreatedDate, UpdatedDate
-		INTO [edw_temp].[tquote_collection_class_type_temp1]
-		FROM
-			(
-			SELECT
-				acct.Id, acc.PolicyNumber, acc.EffectiveDate, acc.ExpirationDate, acc.[Number]
-				,tqcl.quote_collection_location_sk
-				,tqh.quote_history_sk
-				,tqcc.quote_collection_coverage_sk
-				,tqhc.quote_home_coverage_sk
-				,accto.[Field], accto.[Value]
-				,acc.CreatedDate, acc.UpdatedDate
-				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
-					  Else 4 --(Metal)
-				 end as [source_system_sk] --20230717 added
+
+		WITH 
+        acct AS (
+            SELECT
+                *
+            FROM [edw_stage].[AccountTransaction]
+            WHERE [Stage] IN ('QUOTE','POLICY')
+			AND CreatedDate > @last_source_extract_ts
+			AND PolicyNumber IS NOT NULL
+        )
+        ,acctvpf AS (
+            SELECT  
+                acct.PolicyNumber, acct.EffectiveDate, acct.CreatedDate, acct.[Number],
+                acctvpf.AccountTransactionVersionPremiumId,
+                acctvpf.Coverage,
+                CONCAT(
+					CASE 
+						WHEN acctvpf.[Group] like '%Blanket%' THEN 'blanket'
+						WHEN acctvpf.[Group] like '%Scheduled%' THEN 'scheduled'
+					END
+                    ,'_premium_adjustment'
+                ) AS FinalColumnName,
+                acctvpf.FactorMethod AS method,
+                CONVERT(nvarchar(3000), acctvpf.Factor) AS amount,
+                acctvpf.Retention AS [retention],
+                acctvpf.Reason AS reason
+            FROM acct
+            INNER JOIN [edw_stage].[Product] p ON p.Id = acct.ProductId
+            INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
+            INNER JOIN [edw_stage].[AccountTransactionVersionPremium] AS acctvp ON acctv.id = acctvp.AccountTransactionVersionId
+            INNER JOIN [edw_stage].[AccountTransactionVersionPremiumFactor] AS acctvpf ON acctvp.id = acctvpf.AccountTransactionVersionPremiumId
+            WHERE acctvpf.Coverage = 'Collections'
+            AND p.[Name] = 'Collections'
+            AND p.ProductLine = 'PersonalLines'
+        )
+        ,acctvpf_unpivot AS (
+            SELECT PolicyNumber, EffectiveDate, CreatedDate, [Number], CONCAT(FinalColumnName, '_method') AS FinalColumnName, method           as FinalValue FROM acctvpf WHERE method IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, CreatedDate, [Number], CONCAT(FinalColumnName, '_factor') AS FinalColumnName, amount           as FinalValue FROM acctvpf WHERE amount IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, CreatedDate, [Number], CONCAT(FinalColumnName, '_retention') AS FinalColumnName, [retention]   as FinalValue FROM acctvpf WHERE [retention] IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, CreatedDate, [Number], CONCAT(FinalColumnName, '_retention_reason') AS FinalColumnName, reason           as FinalValue FROM acctvpf WHERE reason IS NOT NULL
+        )
+        ,FinalTablePremAdj AS (
+            SELECT
+                PolicyNumber, EffectiveDate, CreatedDate, [Number]
+                ,blanket_premium_adjustment_method
+                ,blanket_premium_adjustment_factor
+                ,blanket_premium_adjustment_retention
+                ,blanket_premium_adjustment_retention_reason
+                ,scheduled_premium_adjustment_method
+                ,scheduled_premium_adjustment_factor
+                ,scheduled_premium_adjustment_retention
+                ,scheduled_premium_adjustment_retention_reason
+            FROM acctvpf_unpivot
+            PIVOT 
+            (
+                MAX(FinalValue) FOR FinalColumnName IN (
+                    blanket_premium_adjustment_method
+					,blanket_premium_adjustment_factor
+					,blanket_premium_adjustment_retention
+					,blanket_premium_adjustment_retention_reason
+					,scheduled_premium_adjustment_method
+					,scheduled_premium_adjustment_factor
+					,scheduled_premium_adjustment_retention
+					,scheduled_premium_adjustment_retention_reason
+                )
+            ) AS pvt
+        )
+		,FinalTable AS (
+			SELECT 
+				Id, PolicyNumber as quote_no, EffectiveDate, ExpirationDate, [Number]
+				,quote_collection_location_sk, quote_history_sk, quote_collection_coverage_sk, quote_home_coverage_sk
+				,[ClassType], [ScheduledCoverage], [ScheduledHighestValueLimit], [BlanketCoverage], [BlanketHighestValue], [BlanketSingleArticleLimit], ScheduledItemAppraisalDate
+				--,4 as [source_system_sk] --20230717 removed
+				,source_system_sk --20230717 added
+				,CreatedDate, UpdatedDate
 			FROM
-				(SELECT
-					acct.*
-				FROM [edw_stage].[AccountTransaction] acct
+				(
+				SELECT
+					acct.Id, acc.PolicyNumber, acc.EffectiveDate, acc.ExpirationDate, acc.[Number]
+					,tqcl.quote_collection_location_sk
+					,tqh.quote_history_sk
+					,tqcc.quote_collection_coverage_sk
+					,tqhc.quote_home_coverage_sk
+					,accto.[Field], accto.[Value]
+					,acc.CreatedDate, acc.UpdatedDate
+					,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
+						Else 4 --(Metal)
+					end as [source_system_sk] --20230717 added
+				FROM
+					acct as acc
+					INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
+					INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
+					INNER JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
+					INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
+					LEFT JOIN edw_core.tquote_history tqh on tqh.quote_no=acc.PolicyNumber
+							and tqh.effective_dt=acc.EffectiveDate
+							and tqh.transaction_seq_no = acc.number
+					LEFT JOIN edw_core.tquote_collection_location tqcl on tqcl.quote_no=acc.PolicyNumber			
+					LEFT JOIN edw_core.tquote_collection_coverage tqcc on tqcc.quote_no=acc.PolicyNumber
+							and tqcc.effective_dt=acc.EffectiveDate and tqcc.transaction_seq_no = acc.number
+					LEFT JOIN edw_core.tquote_home_coverage tqhc on tqhc.quote_no=acc.PolicyNumber
+							and tqhc.effective_dt=acc.EffectiveDate and tqhc.transaction_seq_no = acc.number
 				WHERE
-					acct.[Stage] IN ('QUOTE','POLICY')
-					--AND GREATEST(acct.CreatedDate)>@last_source_extract_ts --20230717 removed
-					AND GREATEST(acct.CreatedDate)>@last_source_extract_ts --20230717 added
-				) acc
-				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
-				INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
-				INNER JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
-				INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
-				LEFT JOIN edw_core.tquote_history tqh on tqh.quote_no=acc.PolicyNumber
-						and tqh.effective_dt=acc.EffectiveDate
-						and tqh.transaction_seq_no = acc.number
-				LEFT JOIN edw_core.tquote_collection_location tqcl on tqcl.quote_no=acc.PolicyNumber			
-				LEFT JOIN edw_core.tquote_collection_coverage tqcc on tqcc.quote_no=acc.PolicyNumber
-						and tqcc.effective_dt=acc.EffectiveDate and tqcc.transaction_seq_no = acc.number
-				LEFT JOIN edw_core.tquote_home_coverage tqhc on tqhc.quote_no=acc.PolicyNumber
-						and tqhc.effective_dt=acc.EffectiveDate and tqhc.transaction_seq_no = acc.number
-				
-				
-			WHERE
-				p.[Name] in ('Collections','Homeowners')
-				AND acct.ObjectType = 'CollectionClass'
-				AND p.ProductLine='PersonalLines' --20230717 added
-			) t
-		PIVOT 
-			(
-				MAX([Value]) FOR [Field] IN (
-					[ClassType], [ScheduledCoverage], [ScheduledHighestValueLimit], [BlanketCoverage], [BlanketHighestValue], [BlanketSingleArticleLimit], ScheduledItemAppraisalDate
-					)
-			) pivottable
+					p.[Name] in ('Collections','Homeowners')
+					AND acct.ObjectType = 'CollectionClass'
+					AND p.ProductLine='PersonalLines' --20230717 added
+				) t
+			PIVOT 
+				(
+					MAX([Value]) FOR [Field] IN (
+						[ClassType], [ScheduledCoverage], [ScheduledHighestValueLimit], [BlanketCoverage], [BlanketHighestValue], [BlanketSingleArticleLimit], ScheduledItemAppraisalDate
+						)
+				) pivottable
+		)
+
+		SELECT 
+            a.*
+            ,b.blanket_premium_adjustment_method
+			,b.blanket_premium_adjustment_factor
+			,b.blanket_premium_adjustment_retention
+			,b.blanket_premium_adjustment_retention_reason
+			,b.scheduled_premium_adjustment_method
+			,b.scheduled_premium_adjustment_factor
+			,b.scheduled_premium_adjustment_retention
+			,b.scheduled_premium_adjustment_retention_reason
+		INTO [edw_temp].[tquote_collection_class_type_temp1]
+        FROM FinalTable AS a 
+        LEFT JOIN FinalTablePremAdj AS b
+        ON a.quote_no = b.PolicyNumber
+        AND a.EffectiveDate = b.EffectiveDate
+        AND a.CreatedDate = b.CreatedDate
+        AND a.[Number] = b.[Number]
+
 			
 		-- Start Insert process
 		INSERT INTO [edw_core].[tquote_collection_class_type] (
 			[quote_no]
-           ,[effective_dt]
-           ,[expiration_dt]
-           ,[transaction_seq_no]
-           ,[quote_collection_location_sk]
-		   ,[quote_history_sk]
-		   ,[quote_home_coverage_sk]
-		   ,[quote_collection_coverage_sk]
-           ,[class_type]
-           ,[scheduled_limit_amt]
-           ,[scheduled_highest_value_limit_amt] --
-           ,[blanket_limit_amt]
-           ,[blanket_highest_value_limit_amt]
-           ,[blanket_single_article_limit_amt]
-           ,[highest_value_scheduled_item_appraisal_dt]
-           ,[source_system_sk]
-           ,[create_ts]
-           ,[update_ts]
-           ,[etl_audit_sk]
+			,[effective_dt]
+			,[expiration_dt]
+			,[transaction_seq_no]
+			,[quote_collection_location_sk]
+			,[quote_history_sk]
+			,[quote_home_coverage_sk]
+			,[quote_collection_coverage_sk]
+			,[class_type]
+			,[scheduled_limit_amt]
+			,[scheduled_highest_value_limit_amt] --
+			,[blanket_limit_amt]
+			,[blanket_highest_value_limit_amt]
+			,[blanket_single_article_limit_amt]
+			,[highest_value_scheduled_item_appraisal_dt]
+			,[source_system_sk]
+			,[create_ts]
+			,[update_ts]
+			,[etl_audit_sk]
+		   	,[blanket_premium_adjustment_method]
+			,[blanket_premium_adjustment_factor]
+			,[blanket_premium_adjustment_retention]
+			,[blanket_premium_adjustment_retention_reason]
+			,[scheduled_premium_adjustment_method]
+			,[scheduled_premium_adjustment_factor]
+			,[scheduled_premium_adjustment_retention]
+			,[scheduled_premium_adjustment_retention_reason]
 		)
-		SELECT [quote_no]
-           ,[EffectiveDate]
-           ,[ExpirationDate]
-           ,[Number]
-           ,[quote_collection_location_sk]
-           ,[quote_history_sk]
-		   ,[quote_home_coverage_sk]
-		   ,[quote_collection_coverage_sk]
-           ,[ClassType]
-           ,[ScheduledCoverage]
-           ,[ScheduledHighestValueLimit]
-           ,[BlanketCoverage]
-           ,[BlanketHighestValue]
-           ,[BlanketSingleArticleLimit]
-           ,[ScheduledItemAppraisalDate]
-           ,[source_system_sk]
-           ,getdate()
-           ,getdate()
-		   ,@etl_audit_sk
+		SELECT 
+			[quote_no]
+			,[EffectiveDate]
+			,[ExpirationDate]
+			,[Number]
+			,[quote_collection_location_sk]
+			,[quote_history_sk]
+			,[quote_home_coverage_sk]
+			,[quote_collection_coverage_sk]
+			,[ClassType]
+			,[ScheduledCoverage]
+			,[ScheduledHighestValueLimit]
+			,[BlanketCoverage]
+			,[BlanketHighestValue]
+			,[BlanketSingleArticleLimit]
+			,[ScheduledItemAppraisalDate]
+			,[source_system_sk]
+			,getdate()
+			,getdate()
+			,@etl_audit_sk
+		   	,[blanket_premium_adjustment_method]
+			,[blanket_premium_adjustment_factor]
+			,[blanket_premium_adjustment_retention]
+			,[blanket_premium_adjustment_retention_reason]
+			,[scheduled_premium_adjustment_method]
+			,[scheduled_premium_adjustment_factor]
+			,[scheduled_premium_adjustment_retention]
+			,[scheduled_premium_adjustment_retention_reason]
 		FROM 
 			[edw_temp].[tquote_collection_class_type_temp1]
 
