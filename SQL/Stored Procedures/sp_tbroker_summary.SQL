@@ -289,7 +289,7 @@ BEGIN
 						   	sum(r.renewal_non_flat_cancelled_ct) renewal_ct,  
 							sum(renewal_ct) policy_renewal_offered_ct, 
 							sum(case when renewal_ct > 0 then renewal_initial_written_premium_amt else 0 end) policy_renewal_offered_premium_amt, 
-							sum(case when renewal_ct > 0 then r.expiring_written_premium_amt else 0 end) prm,
+							sum(case when renewal_ct > 0 then r.expiring_written_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,
 							sum(r.non_flat_cancelled_ct-r.mid_term_cancelled_ct) expiring_ct,
 							sum(isnull(r.expiring_sixty_day_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) ) expiring_prm,
 							sum(isnull(r.renewal_sixty_day_written_premium_amt,0)) renewal_prm
@@ -304,7 +304,8 @@ BEGIN
 						--  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_ct else 0 end) renewal_ct,  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_ct else 0 end) policy_renewal_offered_ct,   
-						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_premium_amt else 0 end) policy_renewal_offered_premium_amt,   
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_premium_amt else 0 end) policy_renewal_offered_premium_amt,  
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_expiring_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,   
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_ct else 0 end) expiring_ct,
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_prm else 0 end) renewal_prm,   
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_prm else 0 end) expiring_prm  
@@ -724,6 +725,7 @@ BEGIN
 						policy_renewal_ct,
 						policy_renewal_offered_ct,
 						policy_renewal_offered_premiumm_amt,
+						policy_renewal_offered_expiring_premium_amt,
 						policy_expiring_premium_amt,
 						policy_renewal_premium_amt, 
 						--
@@ -818,7 +820,8 @@ BEGIN
 						sum(isnull(r.expiring_ct,0)) policy_expiring_ct,
 						sum(isnull(r.renewal_ct,0)) policy_renewal_ct,
 						sum(isnull(r.policy_renewal_offered_ct,0)) policy_renewal_offered_ct,
-						sum(isnull(r.policy_renewal_offered_premium_amt,0)) renewal_offered_premium_amt,
+						sum(isnull(r.policy_renewal_offered_premium_amt,0)) policy_renewal_offered_premium_amt,
+						sum(isnull(r.policy_renewal_offered_expiring_premium_amt,0)) policy_renewal_offered_expiring_premium_amt, 
 						sum(isnull(r.expiring_prm,0)) policy_expiring_premium_amt,
 						sum(isnull(r.renewal_prm,0)) policy_renewal_premium_amt,
 						--
