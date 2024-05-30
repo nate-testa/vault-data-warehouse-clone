@@ -32,6 +32,7 @@ BEGIN
 
  		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp2];
 
         WITH 
         location_address AS (
@@ -274,7 +275,55 @@ BEGIN
         WHERE p.product_cd IN ('HO','CO','LUX','PEL')
         ;
 
-        
+        --------------------------------------------------
+        --*** Start Insert rows with ReportingStatus R ***
+        --------------------------------------------------
+        --Create temp table whit last causeOfLoss in claim_clue_property_feed table by claimNumber
+        SELECT ccpf.contribCompany, ccpf.claimNumber, ccpf.causeOfLoss
+        INTO [edw_temp].[claim_clue_property_feed_temp2] 
+        FROM [edw_integration].[claim_clue_property_feed] AS ccpf
+        INNER JOIN 
+        (
+            SELECT claimNumber, MAX(report_start_date) AS max_report_start_date
+            FROM [edw_integration].[claim_clue_property_feed] AS cc
+            GROUP BY claimNumber
+        ) AS ccpfm
+        ON ccpf.claimNumber = ccpfm.claimNumber
+        AND ccpf.report_start_date = ccpfm.max_report_start_date
+
+        --Select and Insert rows that have changed the causeOfLoss
+        INSERT INTO [edw_temp].[claim_clue_property_feed_temp1] 
+        (
+            [contribCompany],
+            [claimNumber],
+            [causeOfLoss],
+            [claimReportingStatus],
+            [create_ts],
+            [update_ts],
+            [etl_audit_sk],
+            [report_start_date],
+            [report_end_date]
+        )
+        SELECT 
+            b.contribCompany, 
+            b.claimNumber, 
+            b.causeOfLoss, 
+            'R' AS claimReportingStatus,
+            a.[create_ts],
+            a.[update_ts],
+            a.[etl_audit_sk],
+            a.[report_start_date],
+            a.[report_end_date]
+        FROM [edw_temp].[claim_clue_property_feed_temp1] AS a
+        INNER JOIN [edw_temp].[claim_clue_property_feed_temp2] AS b
+        ON a.claimNumber = b.claimNumber
+        WHERE a.causeOfLoss <> b.causeOfLoss
+        ;
+        ------------------------------------------------
+        --*** End Insert rows with ReportingStatus R ***
+        ------------------------------------------------
+
+
         -- Start Insert process
         INSERT INTO [edw_integration].[claim_clue_property_feed](
             [contribCompany],
@@ -444,7 +493,8 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
         -- Drop temp table
-        DROP TABLE IF EXISTS edw_temp.[claim_clue_property_feed_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp2];
 
 	END TRY
 	BEGIN CATCH
