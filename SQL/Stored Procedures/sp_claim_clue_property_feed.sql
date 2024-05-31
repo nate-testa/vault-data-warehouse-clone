@@ -31,7 +31,8 @@ BEGIN
 		--************Start************
 
  		-- Step1 limit amount of rows.
-		DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp0];
+        DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp1];
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp2];
 
         WITH 
@@ -263,7 +264,7 @@ BEGIN
             END AS [report_start_date],
             CONVERT(datetime, CONVERT(date, DATEADD(day, -1, GETDATE()))) AS [report_end_date],
             transaction_ts
-        INTO [edw_temp].[claim_clue_property_feed_temp1] 
+        INTO [edw_temp].[claim_clue_property_feed_temp0]
         FROM claims AS c 
         INNER JOIN edw_core.tpolicy AS p ON p.policy_sk = c.policy_sk
         LEFT JOIN customer AS cu ON p.customer_id = cu.customer_id
@@ -275,9 +276,24 @@ BEGIN
         WHERE p.product_cd IN ('HO','CO','LUX','PEL')
         ;
 
+        --Create empty temp table to allow nulls
+        SELECT TOP 0 
+            B.*
+        INTO [edw_temp].[claim_clue_property_feed_temp1]
+        FROM [edw_temp].[claim_clue_property_feed_temp0] AS A
+        LEFT JOIN [edw_temp].[claim_clue_property_feed_temp0] AS B
+        ON 1=0
+        ;
+
+        --Insert all values into new table that now accepts nulls
+        INSERT INTO [edw_temp].[claim_clue_property_feed_temp1]
+        SELECT * FROM [edw_temp].[claim_clue_property_feed_temp0]
+        ;
+
+
         --------------------------------------------------
         --*** Start Insert rows with ReportingStatus R ***
-        --------------------------------------------------
+        --------------------------------------------------       
         --Create temp table whit last causeOfLoss in claim_clue_property_feed table by claimNumber
         SELECT ccpf.contribCompany, ccpf.claimNumber, ccpf.causeOfLoss
         INTO [edw_temp].[claim_clue_property_feed_temp2] 
@@ -493,6 +509,7 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
         -- Drop temp table
+        DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp0];
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp1];
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp2];
 
