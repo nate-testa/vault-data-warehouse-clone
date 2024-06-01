@@ -132,10 +132,10 @@ BEGIN
             FROM edw_core.tclaim_feature AS a
             INNER JOIN 
                 (
-                    SELECT claim_sk, MAX(transaction_ts) AS transaction_ts
+                    SELECT claim_feature_sk, MAX(transaction_ts) AS transaction_ts
                     FROM edw_core.tclaim_transaction
-                    GROUP BY claim_sk
-                ) AS b ON a.claim_sk = b.claim_sk
+                    GROUP BY claim_feature_sk
+                ) AS b ON a.claim_feature_sk = b.claim_feature_sk
             WHERE a.source_system_sk = 3
             AND a.product_sk = 3
             AND cast(b.transaction_ts as datetime2(7)) > @last_source_extract_ts
