@@ -51,6 +51,7 @@ BEGIN
                 acct.PolicyNumber, acct.EffectiveDate, acct.IssuedDate, acct.policychangenumber,
                 acctvpf.AccountTransactionVersionPremiumId,
                 acctvpf.Coverage,
+				TRIM(REPLACE(REPLACE(acctvpf.[Group],'(Scheduled)',''),'(Blanket)','')) AS class_type,
                 CONCAT(
 					CASE 
 						WHEN acctvpf.[Group] like '%Blanket%' THEN 'blanket'
@@ -72,17 +73,17 @@ BEGIN
             AND p.ProductLine = 'PersonalLines'
         )
         ,acctvpf_unpivot AS (
-            SELECT PolicyNumber, EffectiveDate, IssuedDate, policychangenumber, CONCAT(FinalColumnName, '_method') AS FinalColumnName, method           as FinalValue FROM acctvpf WHERE method IS NOT NULL
+            SELECT PolicyNumber, EffectiveDate, IssuedDate, class_type, policychangenumber, CONCAT(FinalColumnName, '_method') AS FinalColumnName, method           as FinalValue FROM acctvpf WHERE method IS NOT NULL
             UNION ALL
-            SELECT PolicyNumber, EffectiveDate, IssuedDate, policychangenumber, CONCAT(FinalColumnName, '_factor') AS FinalColumnName, amount           as FinalValue FROM acctvpf WHERE amount IS NOT NULL
+            SELECT PolicyNumber, EffectiveDate, IssuedDate, class_type, policychangenumber, CONCAT(FinalColumnName, '_factor') AS FinalColumnName, amount           as FinalValue FROM acctvpf WHERE amount IS NOT NULL
             UNION ALL
-            SELECT PolicyNumber, EffectiveDate, IssuedDate, policychangenumber, CONCAT(FinalColumnName, '_retention') AS FinalColumnName, [retention]   as FinalValue FROM acctvpf WHERE [retention] IS NOT NULL
+            SELECT PolicyNumber, EffectiveDate, IssuedDate, class_type, policychangenumber, CONCAT(FinalColumnName, '_retention') AS FinalColumnName, [retention]   as FinalValue FROM acctvpf WHERE [retention] IS NOT NULL
             UNION ALL
-            SELECT PolicyNumber, EffectiveDate, IssuedDate, policychangenumber, CONCAT(FinalColumnName, '_retention_reason') AS FinalColumnName, reason           as FinalValue FROM acctvpf WHERE reason IS NOT NULL
+            SELECT PolicyNumber, EffectiveDate, IssuedDate, class_type, policychangenumber, CONCAT(FinalColumnName, '_retention_reason') AS FinalColumnName, reason	as FinalValue FROM acctvpf WHERE reason IS NOT NULL
         )
         ,FinalTablePremAdj AS (
             SELECT
-                PolicyNumber, EffectiveDate, IssuedDate, policychangenumber
+                PolicyNumber, EffectiveDate, IssuedDate, class_type, policychangenumber
                 ,blanket_premium_adjustment_method
                 ,blanket_premium_adjustment_factor
                 ,blanket_premium_adjustment_retention
@@ -165,6 +166,7 @@ BEGIN
         ON a.PolicyNumber = b.PolicyNumber
         AND a.EffectiveDate = b.EffectiveDate
         AND a.IssuedDate = b.IssuedDate
+		AND a.ClassType = b.class_type
         AND a.policychangenumber = b.policychangenumber
 
 			
