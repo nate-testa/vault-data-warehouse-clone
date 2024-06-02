@@ -2,11 +2,15 @@
 -- Author:		Yunus Mohammed
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert pel driver data
+-----------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+-----------------------------------------------------------------------------------------------------------
+-- 05/28/24		Alberto Almario					1. Integrate Premium Adjustments data into EDW - PEL 
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_coverage]
 
 AS
-BEGIN
+BEGIN	
     -- SET NOCOUNT ON added to prevent extra result sets from
     -- interfering with SELECT statements.
     SET NOCOUNT ON
@@ -25,75 +29,52 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
 		declare @sql nvarchar(max)
-		drop table if exists edw_temp.tpel_coverage_temp1
-		select 
-			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,policy_history_sk,source_system_sk,
-			IssuedDate,CoverageLimit,UnderinsuredMotoristLiability,UnderinsuredLiability,EmploymentPracticesLiabilityLimit,
-			DomesticEmployeeCount,IncludeEmploymentPracticesLiability,DONotForProfitLimit,DOContinuityDate,DOContinuityDateOverride,CustomerHasPublicProfile,
-			LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
-			HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
-			PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
-			CriminalTrafficViolationField,SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
-			AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit
-			into edw_temp.tpel_coverage_temp1
-		from
-		(
-		select * 
-		from
-			(
-			 
-			select
-			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
-			CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.policy_history_sk,
-			act.policychangenumber AS transaction_seq_no, 
-			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
-			act.IssuedDate as TransactionDate,atvo.[Index],act.IssuedDate,
-			atvof.Field,NULLIF(TRIM(atvof.[Value]),'') AS [Value]
-			from
-				edw_stage.AccountTransaction act
-				inner join edw_stage.Product p on p.Id=act.ProductId
-				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
-				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
-				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
-				left join [edw_core].[tpolicy_history] tph on tph.policy_no=act.PolicyNumber
-						and tph.effective_dt=act.EffectiveDate
-						and tph.transaction_seq_no = act.policychangenumber
-				left join edw_stage.Product pr on act.ProductId = pr.id
-			where
-			act.PolicyNumber is not null and
-				act.[State] ='ISSUED'
-				and p.[Name]='Personal Excess Liability'
-				and atvo.ObjectType='PersonalExcessLiability'
-				and pr.ProductLine = 'PersonalLines'
-				and atvof.Field IN 
-				(
-					'CoverageLimit','UnderinsuredMotoristLiability','UnderinsuredLiability','EmploymentPracticesLiabilityLimit',
-					'DomesticEmployeeCount','IncludeEmploymentPracticesLiability','DONotForProfitLimit','DOContinuityDate','DOContinuityDateOverride',
-					'CustomerHasPublicProfile','LevelOfAttention','LibelSlanderExclusion','PoliticalExclusion','AnimalRelatedLiabilityExclusion',
-					'HigherUnderlyingLimitsEndorsement','AILimitedLiability','MinimumEarnedPremiumEndorsement','MinimumEarnedPremiumEndorsementLimit',
-					'PremisesLiabilityLimitation','DeletionofCosmeticMarringExclusion','Manuscript','ProfileAdjustment','CriminalTrafficViolation',
-					'CriminalTrafficViolationField','SecondaryInsuredCoverageAmount','UnderinsuredMotoristLiabilityForSecondaryInsured','DefenseInsideLimits','AutoLiabilityExclusion',
-					'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit'
-				)
-				and act.IssuedDate>@last_source_extract_ts
-			) as t
-		) as t
-		pivot 
-		(
-			max(Value) FOR Field IN 
-			(
-				CoverageLimit,UnderinsuredMotoristLiability,UnderinsuredLiability,EmploymentPracticesLiabilityLimit,
-				DomesticEmployeeCount,IncludeEmploymentPracticesLiability,DONotForProfitLimit,DOContinuityDate,DOContinuityDateOverride,CustomerHasPublicProfile,
-				LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
-				HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
-				PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
-				CriminalTrafficViolationField,SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
-				AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit
-				)
-		) as pivottable;
+		drop table if exists edw_temp.tpel_coverage_temp1;
 
-		WITH driver_age AS
-		(
+		WITH 
+        acct AS (
+            SELECT
+                *
+            FROM [edw_stage].[AccountTransaction]
+            WHERE [State] = 'ISSUED'
+			AND PolicyNumber IS NOT NULL
+            AND IssuedDate > @last_source_extract_ts
+        )
+        ,acctvpf AS (
+            SELECT  
+                acct.PolicyNumber, acct.EffectiveDate, acct.IssuedDate, acct.policychangenumber,
+                acctvpf.AccountTransactionVersionPremiumId,
+                acctvpf.Coverage,
+                CONCAT(
+                    CASE 
+                        WHEN Coverage = 'Excess Liability' THEN 'excess_coverage'
+                        ELSE LOWER(REPLACE(Coverage,' ','_'))
+                    END
+                    ,'_premium_adjustment'
+                ) AS FinalColumnName,
+                acctvpf.FactorMethod AS method,
+                CONVERT(nvarchar(3000), acctvpf.Factor) AS amount,
+                acctvpf.Retention AS [retention],
+                acctvpf.Reason AS reason
+            FROM acct
+            INNER JOIN [edw_stage].[Product] p ON p.Id = acct.ProductId
+            INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
+            INNER JOIN [edw_stage].[AccountTransactionVersionPremium] AS acctvp ON acctv.id = acctvp.AccountTransactionVersionId
+            INNER JOIN [edw_stage].[AccountTransactionVersionPremiumFactor] AS acctvpf ON acctvp.id = acctvpf.AccountTransactionVersionPremiumId
+            WHERE acctvpf.Coverage IN ('Excess Liability')
+            AND p.[Name] = 'Personal Excess Liability'
+            AND p.ProductLine = 'PersonalLines'
+        )
+        ,acctvpf_unpivot AS (
+            SELECT PolicyNumber, EffectiveDate, IssuedDate, policychangenumber, CONCAT(FinalColumnName, '_method') AS FinalColumnName, method           as FinalValue FROM acctvpf WHERE method IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, IssuedDate, policychangenumber, CONCAT(FinalColumnName, '_factor') AS FinalColumnName, amount           as FinalValue FROM acctvpf WHERE amount IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, IssuedDate, policychangenumber, CONCAT(FinalColumnName, '_retention') AS FinalColumnName, [retention]   as FinalValue FROM acctvpf WHERE [retention] IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, IssuedDate, policychangenumber, CONCAT(FinalColumnName, '_retention_reason') AS FinalColumnName, reason	as FinalValue FROM acctvpf WHERE reason IS NOT NULL
+        )
+		,driver_age AS (
 			select
 				policy_no, effective_dt, transaction_seq_no,
 				sum(case driver when 'Youthful' then 1 else 0 end) as youthful_drivers_ct,
@@ -114,6 +95,106 @@ BEGIN
 			) as a
 			group by policy_no, effective_dt, transaction_seq_no
 		)
+        ,FinalTablePremAdj AS (
+            SELECT
+                PolicyNumber, EffectiveDate, IssuedDate, policychangenumber
+                ,excess_coverage_premium_adjustment_method
+                ,excess_coverage_premium_adjustment_factor
+                ,excess_coverage_premium_adjustment_retention
+                ,excess_coverage_premium_adjustment_retention_reason
+            FROM acctvpf_unpivot
+            PIVOT 
+            (
+                MAX(FinalValue) FOR FinalColumnName IN (
+                    excess_coverage_premium_adjustment_method
+					,excess_coverage_premium_adjustment_factor
+					,excess_coverage_premium_adjustment_retention
+					,excess_coverage_premium_adjustment_retention_reason
+                )
+            ) AS pvt
+        )
+		,FinalTable AS (	
+			select 
+				PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,policy_history_sk,source_system_sk,
+				IssuedDate,CoverageLimit,UnderinsuredMotoristLiability,UnderinsuredLiability,EmploymentPracticesLiabilityLimit,
+				DomesticEmployeeCount,IncludeEmploymentPracticesLiability,DONotForProfitLimit,DOContinuityDate,DOContinuityDateOverride,CustomerHasPublicProfile,
+				LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
+				HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
+				PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
+				CriminalTrafficViolationField,SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
+				AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit
+			from
+				(
+					select * 
+					from
+						(
+						
+						select
+						act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
+						CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.policy_history_sk,
+						act.policychangenumber AS transaction_seq_no, 
+						CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
+						act.IssuedDate as TransactionDate,atvo.[Index],act.IssuedDate,
+						atvof.Field,NULLIF(TRIM(atvof.[Value]),'') AS [Value]
+						from
+							acct as act
+							inner join edw_stage.Product p on p.Id=act.ProductId
+							inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
+							inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
+							inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
+							left join [edw_core].[tpolicy_history] tph on tph.policy_no=act.PolicyNumber
+									and tph.effective_dt=act.EffectiveDate
+									and tph.transaction_seq_no = act.policychangenumber
+							left join edw_stage.Product pr on act.ProductId = pr.id
+						where p.[Name]='Personal Excess Liability'
+							and atvo.ObjectType='PersonalExcessLiability'
+							and pr.ProductLine = 'PersonalLines'
+							and atvof.Field IN 
+							(
+								'CoverageLimit','UnderinsuredMotoristLiability','UnderinsuredLiability','EmploymentPracticesLiabilityLimit',
+								'DomesticEmployeeCount','IncludeEmploymentPracticesLiability','DONotForProfitLimit','DOContinuityDate','DOContinuityDateOverride',
+								'CustomerHasPublicProfile','LevelOfAttention','LibelSlanderExclusion','PoliticalExclusion','AnimalRelatedLiabilityExclusion',
+								'HigherUnderlyingLimitsEndorsement','AILimitedLiability','MinimumEarnedPremiumEndorsement','MinimumEarnedPremiumEndorsementLimit',
+								'PremisesLiabilityLimitation','DeletionofCosmeticMarringExclusion','Manuscript','ProfileAdjustment','CriminalTrafficViolation',
+								'CriminalTrafficViolationField','SecondaryInsuredCoverageAmount','UnderinsuredMotoristLiabilityForSecondaryInsured','DefenseInsideLimits','AutoLiabilityExclusion',
+								'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit'
+							)
+						) as t
+					) as t
+					pivot 
+					(
+						max(Value) FOR Field IN 
+						(
+							CoverageLimit,UnderinsuredMotoristLiability,UnderinsuredLiability,EmploymentPracticesLiabilityLimit,
+							DomesticEmployeeCount,IncludeEmploymentPracticesLiability,DONotForProfitLimit,DOContinuityDate,DOContinuityDateOverride,CustomerHasPublicProfile,
+							LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
+							HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
+							PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
+							CriminalTrafficViolationField,SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
+							AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit
+							)
+					) as pivottable
+		)
+
+		SELECT 
+            a.*
+			,drv.youthful_drivers_ct
+			,drv.adult_drivers_ct
+            ,b.excess_coverage_premium_adjustment_method
+			,b.excess_coverage_premium_adjustment_factor
+			,b.excess_coverage_premium_adjustment_retention
+			,b.excess_coverage_premium_adjustment_retention_reason
+		INTO [edw_temp].[tpel_coverage_temp1]
+        FROM FinalTable AS a 
+        LEFT JOIN FinalTablePremAdj AS b
+			ON a.PolicyNumber = b.PolicyNumber
+			AND a.EffectiveDate = b.EffectiveDate
+			AND a.IssuedDate = b.IssuedDate
+			AND a.transaction_seq_no = b.policychangenumber
+		LEFT JOIN driver_age AS drv 
+			ON drv.policy_no = a.PolicyNumber 
+			AND drv.effective_dt = cast(a.EffectiveDate as date)
+			AND drv.transaction_seq_no = a.transaction_seq_no
 
 		INSERT INTO [edw_core].[tpel_coverage]
 		(
@@ -128,10 +209,14 @@ BEGIN
 			source_system_sk,create_ts,update_ts,etl_audit_sk,
 			secondary_insured_coverage_amt,underinsured_motorist_liability_for_secondary_insured_amt,defense_inside_limits_in,auto_liability_exclusion_in,
 			auto_underlying_limit_type,auto_underlying_limit_per_occurence_amt,auto_underlying_limit_for_property_damage_amt,home_underlying_limit_amt
+			,excess_coverage_premium_adjustment_method
+			,excess_coverage_premium_adjustment_factor
+			,excess_coverage_premium_adjustment_retention
+			,excess_coverage_premium_adjustment_retention_reason
 		)
 		SELECT
-			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
-			ExpirationDate AS expiration_dt,TransactionDate AS transaction_dt,ttlc.transaction_seq_no AS transaction_seq_no,policy_history_sk,
+			PolicyNumber AS policy_no,EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
+			ExpirationDate AS expiration_dt,TransactionDate AS transaction_dt,transaction_seq_no AS transaction_seq_no,policy_history_sk,
 			CoverageLimit AS pel_limit_amt,UnderinsuredMotoristLiability AS uninsured_underinsured_motorist_liability_amt,
 			UnderinsuredLiability AS uninsured_underinsured_liability_amt,
 			EmploymentPracticesLiabilityLimit AS employment_practices_liability_amt,
@@ -149,17 +234,18 @@ BEGIN
 			DeletionofCosmeticMarringExclusion AS deletion_of_cosmetic_marring_exclusion_in,Manuscript AS manuscript_in,
 			ProfileAdjustment AS profile_adjustment,CriminalTrafficViolation AS criminal_traffic_violation_in,
 			CriminalTrafficViolationField AS criminal_traffic_violation_desc,
-			drv.youthful_drivers_ct,
-			drv.adult_drivers_ct,
+			youthful_drivers_ct,
+			adult_drivers_ct,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,
 			SecondaryInsuredCoverageAmount AS secondary_insured_coverage_amt,UnderinsuredMotoristLiabilityForSecondaryInsured AS underinsured_motorist_liability_for_secondary_insured_amt,
 			DefenseInsideLimits AS defense_inside_limits_in,AutoLiabilityExclusion AS auto_liability_exclusion_in,
 			AutoUnderlyingLimitType AS auto_underlying_limit_type,AutoUnderlyingLimitAmountPerOccurrence AS auto_underlying_limit_per_occurence_amt,
 			AutoUnderlyingLimitAmountForPropertyDamage AS auto_underlying_limit_for_property_damage_amt,HomeUnderlyingLimit AS home_underlying_limit_amt
-		FROM
-			edw_temp.tpel_coverage_temp1 AS ttlc
-			LEFT JOIN driver_age drv ON drv.policy_no = ttlc.PolicyNumber and drv.effective_dt = cast(ttlc.EffectiveDate as date)
-				 and drv.transaction_seq_no = ttlc.transaction_seq_no
+			,excess_coverage_premium_adjustment_method
+			,excess_coverage_premium_adjustment_factor
+			,excess_coverage_premium_adjustment_retention
+			,excess_coverage_premium_adjustment_retention_reason
+		FROM edw_temp.tpel_coverage_temp1
 
 		SET @rows_affected=@@ROWCOUNT;
 
