@@ -37,16 +37,11 @@ BEGIN
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tcollection_class_type_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[tcollection_class_type_temp2];
+		DROP TABLE IF EXISTS [edw_temp].[tcollection_class_type_temp3];
 
 		WITH 
-        acct AS (
-            SELECT
-                *
-            FROM [edw_stage].[AccountTransaction]
-            WHERE [State] = 'ISSUED'
-            AND IssuedDate > @last_source_extract_ts
-        )
-        ,acctvpf AS (
+        acctvpf AS (
             SELECT  
                 acct.PolicyNumber, acct.EffectiveDate, acct.IssuedDate, acct.policychangenumber,
                 acctvpf.AccountTransactionVersionPremiumId,
@@ -63,12 +58,14 @@ BEGIN
                 CONVERT(nvarchar(3000), acctvpf.Factor) AS amount,
                 acctvpf.Retention AS [retention],
                 acctvpf.Reason AS reason
-            FROM acct
+            FROM [edw_stage].[AccountTransaction] as acct
             INNER JOIN [edw_stage].[Product] p ON p.Id = acct.ProductId
             INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
             INNER JOIN [edw_stage].[AccountTransactionVersionPremium] AS acctvp ON acctv.id = acctvp.AccountTransactionVersionId
             INNER JOIN [edw_stage].[AccountTransactionVersionPremiumFactor] AS acctvpf ON acctvp.id = acctvpf.AccountTransactionVersionPremiumId
-            WHERE acctvpf.Coverage = 'Collections'
+            WHERE acct.[State] = 'ISSUED'
+            AND acct.IssuedDate > @last_source_extract_ts
+			AND acctvpf.Coverage = 'Collections'
             AND p.[Name] = 'Collections'
             AND p.ProductLine = 'PersonalLines'
         )
@@ -81,74 +78,75 @@ BEGIN
             UNION ALL
             SELECT PolicyNumber, EffectiveDate, IssuedDate, class_type, policychangenumber, CONCAT(FinalColumnName, '_retention_reason') AS FinalColumnName, reason	as FinalValue FROM acctvpf WHERE reason IS NOT NULL
         )
-        ,FinalTablePremAdj AS (
-            SELECT
-                PolicyNumber, EffectiveDate, IssuedDate, class_type, policychangenumber
-                ,blanket_premium_adjustment_method
-                ,blanket_premium_adjustment_factor
-                ,blanket_premium_adjustment_retention
-                ,blanket_premium_adjustment_retention_reason
-                ,scheduled_premium_adjustment_method
-                ,scheduled_premium_adjustment_factor
-                ,scheduled_premium_adjustment_retention
-                ,scheduled_premium_adjustment_retention_reason
-            FROM acctvpf_unpivot
-            PIVOT 
-            (
-                MAX(FinalValue) FOR FinalColumnName IN (
-                    blanket_premium_adjustment_method
-					,blanket_premium_adjustment_factor
-					,blanket_premium_adjustment_retention
-					,blanket_premium_adjustment_retention_reason
-					,scheduled_premium_adjustment_method
-					,scheduled_premium_adjustment_factor
-					,scheduled_premium_adjustment_retention
-					,scheduled_premium_adjustment_retention_reason
-                )
-            ) AS pvt
-        )
-		,FinalTable AS (
-			SELECT 
-				Id, PolicyNumber, EffectiveDate, IssuedDate, ExpirationDate, transaction_dt, PolicyChangeNumber
-				,collection_location_sk, policy_history_sk, collection_coverage_sk, home_coverage_sk
-				,[ClassType], [ScheduledCoverage], [ScheduledHighestValueLimit], [BlanketCoverage], [BlanketHighestValue], [BlanketSingleArticleLimit], ScheduledItemAppraisalDate
-				--,4 as [source_system_sk] --20230717 removed
-				,source_system_sk --20230717 added
-				,CreatedDate, UpdatedDate
-				,class_deleted_in
-			FROM
-				(
-				SELECT
-					acctvo.Id, acct.PolicyNumber, acct.EffectiveDate, acct.IssuedDate, acct.ExpirationDate, acct.TransactionEffectiveDate as transaction_dt, acct.PolicyChangeNumber
-					,loc.[collection_location_sk] as [collection_location_sk], his.[policy_history_sk] as [policy_history_sk],
-					cov.collection_coverage_sk, hcov.home_coverage_sk
-					,acctvof.[Field], acctvof.[Value]
-					,acct.CreatedDate, acct.UpdatedDate
-					,case when acct.ExternalSourceId is not NULL then 2--(AV2) 
-						Else 4 --(Metal)
-					end as [source_system_sk] --20230717 added
-					,acctvo.IsdeletedOnPolicyChange as class_deleted_in
-				FROM acct
-					INNER JOIN [edw_stage].[Product] p on p.Id = acct.ProductId
-					INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
-					INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
-					INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof ON acctvof.VersionObjectId = acctvo.id
-					LEFT JOIN [edw_core].[tcollection_location] loc ON loc.policy_no = acct.PolicyNumber and loc.effective_dt = acct.EffectiveDate
-					LEFT JOIN [edw_core].[tcollection_coverage] cov on cov.policy_no = acct.PolicyNumber and cov.effective_dt = acct.EffectiveDate and cov.transaction_seq_no = acct.policychangenumber
-					LEFT JOIN [edw_core].[thome_coverage] hcov on hcov.policy_no = acct.PolicyNumber and hcov.effective_dt = acct.EffectiveDate and hcov.transaction_seq_no = acct.policychangenumber
-					LEFT JOIN [edw_core].[tpolicy_history] his ON his.policy_no = acct.PolicyNumber AND his.effective_dt=acct.EffectiveDate AND his.transaction_seq_no = acct.policychangenumber
-				WHERE
-					p.[Name] in ('Collections','Homeowners')
-					AND acctvo.ObjectType = 'CollectionClass'
-					AND p.ProductLine='PersonalLines' --20230717 added
-				) t
-			PIVOT 
-				(
-					MAX([Value]) FOR [Field] IN (
-						[ClassType], [ScheduledCoverage], [ScheduledHighestValueLimit], [BlanketCoverage], [BlanketHighestValue], [BlanketSingleArticleLimit], ScheduledItemAppraisalDate
-						)
-				) pivottable
-		)
+
+		SELECT
+			PolicyNumber, EffectiveDate, IssuedDate, class_type, policychangenumber
+			,blanket_premium_adjustment_method
+			,blanket_premium_adjustment_factor
+			,blanket_premium_adjustment_retention
+			,blanket_premium_adjustment_retention_reason
+			,scheduled_premium_adjustment_method
+			,scheduled_premium_adjustment_factor
+			,scheduled_premium_adjustment_retention
+			,scheduled_premium_adjustment_retention_reason
+		INTO [edw_temp].[tcollection_class_type_temp2]
+		FROM acctvpf_unpivot
+		PIVOT 
+		(
+			MAX(FinalValue) FOR FinalColumnName IN (
+				blanket_premium_adjustment_method
+				,blanket_premium_adjustment_factor
+				,blanket_premium_adjustment_retention
+				,blanket_premium_adjustment_retention_reason
+				,scheduled_premium_adjustment_method
+				,scheduled_premium_adjustment_factor
+				,scheduled_premium_adjustment_retention
+				,scheduled_premium_adjustment_retention_reason
+			)
+		) AS pvt
+        
+		SELECT 
+			Id, PolicyNumber, EffectiveDate, IssuedDate, ExpirationDate, transaction_dt, PolicyChangeNumber
+			,collection_location_sk, policy_history_sk, collection_coverage_sk, home_coverage_sk
+			,[ClassType], [ScheduledCoverage], [ScheduledHighestValueLimit], [BlanketCoverage], [BlanketHighestValue], [BlanketSingleArticleLimit], ScheduledItemAppraisalDate
+			--,4 as [source_system_sk] --20230717 removed
+			,source_system_sk --20230717 added
+			,CreatedDate, UpdatedDate
+			,class_deleted_in
+		FROM
+			(
+			SELECT
+				acctvo.Id, acct.PolicyNumber, acct.EffectiveDate, acct.IssuedDate, acct.ExpirationDate, acct.TransactionEffectiveDate as transaction_dt, acct.PolicyChangeNumber
+				,loc.[collection_location_sk] as [collection_location_sk], his.[policy_history_sk] as [policy_history_sk],
+				cov.collection_coverage_sk, hcov.home_coverage_sk
+				,acctvof.[Field], acctvof.[Value]
+				,acct.CreatedDate, acct.UpdatedDate
+				,case when acct.ExternalSourceId is not NULL then 2--(AV2) 
+					Else 4 --(Metal)
+				end as [source_system_sk] --20230717 added
+				,acctvo.IsdeletedOnPolicyChange as class_deleted_in
+			INTO [edw_temp].[tcollection_class_type_temp3]
+			FROM [edw_stage].[AccountTransaction] as acct
+				INNER JOIN [edw_stage].[Product] p on p.Id = acct.ProductId
+				INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
+				INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
+				INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof ON acctvof.VersionObjectId = acctvo.id
+				LEFT JOIN [edw_core].[tcollection_location] loc ON loc.policy_no = acct.PolicyNumber and loc.effective_dt = acct.EffectiveDate
+				LEFT JOIN [edw_core].[tcollection_coverage] cov on cov.policy_no = acct.PolicyNumber and cov.effective_dt = acct.EffectiveDate and cov.transaction_seq_no = acct.policychangenumber
+				LEFT JOIN [edw_core].[thome_coverage] hcov on hcov.policy_no = acct.PolicyNumber and hcov.effective_dt = acct.EffectiveDate and hcov.transaction_seq_no = acct.policychangenumber
+				LEFT JOIN [edw_core].[tpolicy_history] his ON his.policy_no = acct.PolicyNumber AND his.effective_dt=acct.EffectiveDate AND his.transaction_seq_no = acct.policychangenumber
+			WHERE acct.[State] = 'ISSUED'
+				AND acct.IssuedDate > @last_source_extract_ts
+				p.[Name] in ('Collections','Homeowners')
+				AND acctvo.ObjectType = 'CollectionClass'
+				AND p.ProductLine='PersonalLines' --20230717 added
+			) t
+		PIVOT 
+			(
+				MAX([Value]) FOR [Field] IN (
+					[ClassType], [ScheduledCoverage], [ScheduledHighestValueLimit], [BlanketCoverage], [BlanketHighestValue], [BlanketSingleArticleLimit], ScheduledItemAppraisalDate
+					)
+			) pivottable
 
 		SELECT 
             a.*
@@ -161,8 +159,8 @@ BEGIN
 			,b.scheduled_premium_adjustment_retention
 			,b.scheduled_premium_adjustment_retention_reason
         INTO [edw_temp].[tcollection_class_type_temp1]
-        FROM FinalTable AS a 
-        LEFT JOIN FinalTablePremAdj AS b
+        FROM [edw_temp].[tcollection_class_type_temp3] AS a 
+        LEFT JOIN [edw_temp].[tcollection_class_type_temp2] AS b
         ON a.PolicyNumber = b.PolicyNumber
         AND a.EffectiveDate = b.EffectiveDate
         AND a.IssuedDate = b.IssuedDate
@@ -241,7 +239,9 @@ BEGIN
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.IssuedDate) FROM edw_temp.[tcollection_class_type_temp1] t1),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS edw_temp.[tcollection_class_type_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[tcollection_class_type_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[tcollection_class_type_temp2];
+		DROP TABLE IF EXISTS [edw_temp].[tcollection_class_type_temp3];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
