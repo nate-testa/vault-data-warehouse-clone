@@ -6,6 +6,7 @@
 ------------------------------------------------------------------------------------------------------------------------------
 -- 05/07/2024 			Yunus Mohammed				1. Created this procedure 
 -- 05/23/2024 			Yunus Mohammed				2. Updated join with AccountPremiumFactor
+-- 05/24/2024 			Sandeep Gundreddy			3. Added logic to read latest row from AccountPremiumFactor to avoid dups
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
 
@@ -73,8 +74,14 @@ BEGIN
 				INNER JOIN edw_stage.[AccountObject] AS accvo ON accvo.AccountId = acc.Id
                 INNER JOIN edw_stage.[AccountObjectField] AS accvof ON accvof.ObjectId = accvo.id
                 left join edw_stage.Accountpremium ap on ap.AccountId=acc.id                
-                left join edw_stage.AccountPremiumFactor accpf on accpf.AccountPremiumId=ap.id and accpf.coverage = ''Homeowners''
-				and accpf.factor is not null
+                left join (     select * from 
+                (
+                select AccountPremiumId,FactorMethod, Factor, Retention, Reason, createddate,
+                ROW_NUMBER() over (partition by AccountPremiumId order by CreatedDate desc) as rnk
+                from edw_stage.AccountPremiumFactor
+                where coverage = ''Homeowners''
+                )a where a.rnk=1
+                ) accpf on accpf.AccountPremiumId=ap.id 
                 left join edw_core.tquote_history tqh on tqh.quote_no=acc.PolicyNumber
 						and tqh.effective_dt=acc.EffectiveDate
 						and tqh.transaction_seq_no = 0

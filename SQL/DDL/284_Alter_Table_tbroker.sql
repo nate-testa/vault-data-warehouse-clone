@@ -1,0 +1,1 @@
+ALTER table edw_core.tbroker ADD contract_dt date;
