@@ -1,0 +1,1 @@
+ALTER table edw_stage.brokerage ADD ContractDate datetime2(7);
