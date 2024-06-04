@@ -7,6 +7,7 @@
 -- 09/05/24		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 05/14/24		Architha Gudimalla				2. Corrected errors
 -- 05/28/24		Yunus Mohammed					3. Added AccountObject.Id instead of Account.Id
+-- 05/29/24		Alberto Almario					4. Integrate Premium Adjustments data into EDW - Collection
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_class_type_wip]
@@ -33,6 +34,73 @@ BEGIN
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tquote_collection_class_type_wip_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[tquote_collection_class_type_wip_temp2];
+		DROP TABLE IF EXISTS [edw_temp].[tquote_collection_class_type_wip_temp3];
+
+		WITH 
+		acctvpf AS (
+            SELECT  
+                acct.PolicyNumber, acct.EffectiveDate, acct.CreatedDate, acct.[Number],
+                acctvpf.Coverage,
+				TRIM(REPLACE(REPLACE(acctvpf.[Group],'(Scheduled)',''),'(Blanket)','')) AS class_type,
+                CONCAT(
+					CASE 
+						WHEN acctvpf.[Group] like '%Blanket%' THEN 'blanket'
+						WHEN acctvpf.[Group] like '%Scheduled%' THEN 'scheduled'
+					END
+                    ,'_premium_adjustment'
+                ) AS FinalColumnName,
+                acctvpf.FactorMethod AS method,
+                CONVERT(nvarchar(3000), acctvpf.Factor) AS amount,
+                acctvpf.Retention AS [retention],
+                acctvpf.Reason AS reason
+            FROM [edw_stage].[Account] AS acct
+            INNER JOIN [edw_stage].[Product] p ON p.Id = acct.ProductId
+            INNER JOIN [edw_stage].[AccountPremium] AS acctvp ON acctvp.AccountId = acct.id
+            INNER JOIN [edw_stage].[AccountPremiumFactor] AS acctvpf ON acctvpf.AccountPremiumId = acctvp.id
+            WHERE NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where b.AccountId=acct.id)
+			AND GREATEST(acct.CreatedDate,acct.UpdatedDate) > @last_source_extract_ts
+			AND acct.PolicyNumber IS NOT NULL
+			AND acctvpf.Coverage = 'Collections'
+            AND p.[Name] = 'Collections'
+            AND p.ProductLine = 'PersonalLines'
+        )
+        ,acctvpf_unpivot AS (
+            SELECT PolicyNumber, EffectiveDate, CreatedDate, class_type, [Number], CONCAT(FinalColumnName, '_method') AS FinalColumnName, method           	as FinalValue FROM acctvpf WHERE method IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, CreatedDate, class_type, [Number], CONCAT(FinalColumnName, '_factor') AS FinalColumnName, amount           	as FinalValue FROM acctvpf WHERE amount IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, CreatedDate, class_type, [Number], CONCAT(FinalColumnName, '_retention') AS FinalColumnName, [retention]   	as FinalValue FROM acctvpf WHERE [retention] IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, CreatedDate, class_type, [Number], CONCAT(FinalColumnName, '_retention_reason') AS FinalColumnName, reason	as FinalValue FROM acctvpf WHERE reason IS NOT NULL
+        )
+
+		SELECT
+			PolicyNumber, EffectiveDate, CreatedDate, class_type, [Number]
+			,blanket_premium_adjustment_method
+			,blanket_premium_adjustment_factor
+			,blanket_premium_adjustment_retention
+			,blanket_premium_adjustment_retention_reason
+			,scheduled_premium_adjustment_method
+			,scheduled_premium_adjustment_factor
+			,scheduled_premium_adjustment_retention
+			,scheduled_premium_adjustment_retention_reason
+		INTO [edw_temp].[tquote_collection_class_type_wip_temp2]
+		FROM acctvpf_unpivot
+		PIVOT 
+		(
+			MAX(FinalValue) FOR FinalColumnName IN (
+				blanket_premium_adjustment_method
+				,blanket_premium_adjustment_factor
+				,blanket_premium_adjustment_retention
+				,blanket_premium_adjustment_retention_reason
+				,scheduled_premium_adjustment_method
+				,scheduled_premium_adjustment_factor
+				,scheduled_premium_adjustment_retention
+				,scheduled_premium_adjustment_retention_reason
+			)
+		) AS pvt
+
 		SELECT 
 			Id, PolicyNumber as quote_no, EffectiveDate, ExpirationDate 
 			--,[Number]
@@ -42,7 +110,7 @@ BEGIN
 			--,4 as [source_system_sk] --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
-		INTO [edw_temp].[tquote_collection_class_type_wip_temp1]
+		INTO [edw_temp].[tquote_collection_class_type_wip_temp3]
 		FROM
 			(
 			SELECT
@@ -54,16 +122,10 @@ BEGIN
 				,accof.[Field], accof.[Value]
 				,acc.CreatedDate, acc.UpdatedDate
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
-					  Else 4 --(Metal)
-				 end as [source_system_sk] --20230717 added
+					Else 4 --(Metal)
+				end as [source_system_sk] --20230717 added
 			FROM
-				(
-				    SELECT *
-				    FROM [edw_stage].[Account] AS a
-				    WHERE NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where b.AccountId=a.id)
-				    AND GREATEST(CreatedDate,UpdatedDate) > @last_source_extract_ts
-					AND a.PolicyNumber IS NOT NULL
-				) acc
+				[edw_stage].[Account] as acc
 				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
 				inner join [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
 				inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
@@ -75,8 +137,10 @@ BEGIN
 						and tqcc.effective_dt=acc.EffectiveDate and tqcc.transaction_seq_no = 0
 				LEFT JOIN edw_core.tquote_home_coverage tqhc on tqhc.quote_no=acc.PolicyNumber
 						and tqhc.effective_dt=acc.EffectiveDate and tqhc.transaction_seq_no = 0
-			WHERE
-				p.[Name] in ('Collections','Homeowners')
+			WHERE NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where b.AccountId=acc.id)
+				AND GREATEST(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
+				AND acc.PolicyNumber IS NOT NULL
+				AND p.[Name] in ('Collections','Homeowners')
 				AND acco.ObjectType = 'CollectionClass'
 				AND p.ProductLine='PersonalLines' --20230717 added
 			) t
@@ -86,6 +150,25 @@ BEGIN
 					[ClassType], [ScheduledCoverage], [ScheduledHighestValueLimit], [BlanketCoverage], [BlanketHighestValue], [BlanketSingleArticleLimit], ScheduledItemAppraisalDate
 					)
 			) pivottable
+
+		SELECT 
+            a.*
+            ,b.blanket_premium_adjustment_method
+			,b.blanket_premium_adjustment_factor
+			,b.blanket_premium_adjustment_retention
+			,b.blanket_premium_adjustment_retention_reason
+			,b.scheduled_premium_adjustment_method
+			,b.scheduled_premium_adjustment_factor
+			,b.scheduled_premium_adjustment_retention
+			,b.scheduled_premium_adjustment_retention_reason
+		INTO [edw_temp].[tquote_collection_class_type_wip_temp1]
+        FROM [edw_temp].[tquote_collection_class_type_wip_temp3] AS a 
+        LEFT JOIN [edw_temp].[tquote_collection_class_type_wip_temp2] AS b
+        ON a.quote_no = b.PolicyNumber
+        AND a.EffectiveDate = b.EffectiveDate
+		AND a.ClassType = b.class_type
+        AND a.[Number] = b.[Number]
+
 			
 		MERGE INTO [edw_core].[tquote_collection_class_type] AS TARGET
 		USING (
@@ -109,6 +192,14 @@ BEGIN
 		        GETDATE() AS create_ts,
 		        GETDATE() AS update_ts,
 		        @etl_audit_sk AS etl_audit_sk
+			   	,[blanket_premium_adjustment_method]
+				,[blanket_premium_adjustment_factor]
+				,[blanket_premium_adjustment_retention]
+				,[blanket_premium_adjustment_retention_reason]
+				,[scheduled_premium_adjustment_method]
+				,[scheduled_premium_adjustment_factor]
+				,[scheduled_premium_adjustment_retention]
+				,[scheduled_premium_adjustment_retention_reason]
 		    FROM
 		        [edw_temp].[tquote_collection_class_type_wip_temp1]
 				where [ClassType] is not null
@@ -134,7 +225,15 @@ BEGIN
 		        TARGET.highest_value_scheduled_item_appraisal_dt = SOURCE.highest_value_scheduled_item_appraisal_dt,
 		        TARGET.source_system_sk = SOURCE.source_system_sk,
 		        TARGET.update_ts = SOURCE.update_ts,
-		        TARGET.etl_audit_sk = SOURCE.etl_audit_sk
+		        TARGET.etl_audit_sk = SOURCE.etl_audit_sk,
+				TARGET.blanket_premium_adjustment_method = SOURCE.blanket_premium_adjustment_method,
+				TARGET.blanket_premium_adjustment_factor = SOURCE.blanket_premium_adjustment_factor,
+				TARGET.blanket_premium_adjustment_retention = SOURCE.blanket_premium_adjustment_retention,
+				TARGET.blanket_premium_adjustment_retention_reason = SOURCE.blanket_premium_adjustment_retention_reason,
+				TARGET.scheduled_premium_adjustment_method = SOURCE.scheduled_premium_adjustment_method,
+				TARGET.scheduled_premium_adjustment_factor = SOURCE.scheduled_premium_adjustment_factor,
+				TARGET.scheduled_premium_adjustment_retention = SOURCE.scheduled_premium_adjustment_retention,
+				TARGET.scheduled_premium_adjustment_retention_reason = SOURCE.scheduled_premium_adjustment_retention_reason
 
 		WHEN NOT MATCHED BY TARGET THEN
 		    INSERT (
@@ -157,6 +256,14 @@ BEGIN
 		        create_ts,
 		        update_ts,
 		        etl_audit_sk
+				,[blanket_premium_adjustment_method]
+				,[blanket_premium_adjustment_factor]
+				,[blanket_premium_adjustment_retention]
+				,[blanket_premium_adjustment_retention_reason]
+				,[scheduled_premium_adjustment_method]
+				,[scheduled_premium_adjustment_factor]
+				,[scheduled_premium_adjustment_retention]
+				,[scheduled_premium_adjustment_retention_reason]
 		    )
 		    VALUES (
 		        SOURCE.quote_no,
@@ -178,13 +285,23 @@ BEGIN
 		        SOURCE.create_ts,
 		        SOURCE.update_ts,
 		        SOURCE.etl_audit_sk
+				,SOURCE.[blanket_premium_adjustment_method]
+				,SOURCE.[blanket_premium_adjustment_factor]
+				,SOURCE.[blanket_premium_adjustment_retention]
+				,SOURCE.[blanket_premium_adjustment_retention_reason]
+				,SOURCE.[scheduled_premium_adjustment_method]
+				,SOURCE.[scheduled_premium_adjustment_factor]
+				,SOURCE.[scheduled_premium_adjustment_retention]
+				,SOURCE.[scheduled_premium_adjustment_retention_reason]
 		);
 
 		SET @rows_affected=@@ROWCOUNT;
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest(t1.CreatedDate, t1.UpdatedDate)) FROM edw_temp.[tquote_collection_class_type_wip_temp1] t1),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS edw_temp.[tquote_collection_class_type_wip_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[tquote_collection_class_type_wip_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[tquote_collection_class_type_wip_temp2];
+		DROP TABLE IF EXISTS [edw_temp].[tquote_collection_class_type_wip_temp3];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
