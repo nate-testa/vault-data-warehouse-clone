@@ -245,14 +245,14 @@ BEGIN
             END AS [contribCompany],
             p.policy_no AS [PolicyNumber],
             CASE 
-                WHEN av.vehicle_type = 'Collector Car' THEN '??'
-                WHEN av.vehicle_type = 'Dune Buggy' THEN '??'
+                WHEN av.vehicle_type = 'Collector Car' THEN 'PA'
+                WHEN av.vehicle_type = 'Dune Buggy' THEN 'CY'
                 WHEN av.vehicle_type = 'Motor Home' THEN 'MH'
                 WHEN av.vehicle_type = 'Motorcycles / Mopeds / Scooter / Go Karts' THEN 'CY'
                 WHEN av.vehicle_type = 'Private Passenger Auto' THEN 'PA'
-                WHEN av.vehicle_type = 'Recreational Trailer' THEN '??'
-                WHEN av.vehicle_type = 'Snowmobile / ATV' THEN '??'
-                WHEN av.vehicle_type = 'Golf Cart' THEN '??'
+                WHEN av.vehicle_type = 'Recreational Trailer' THEN 'PA'
+                WHEN av.vehicle_type = 'Snowmobile / ATV' THEN 'CY'
+                WHEN av.vehicle_type = 'Golf Cart' THEN 'PA'
             END AS [PolicyType],
             '' AS [Filler_reservedForFutureUse6],
             c.claim_no AS [ClaimNumber],
