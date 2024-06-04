@@ -113,6 +113,7 @@ BEGIN
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
 			,class_deleted_in
+		INTO [edw_temp].[tcollection_class_type_temp3]
 		FROM
 			(
 			SELECT
@@ -125,7 +126,6 @@ BEGIN
 					Else 4 --(Metal)
 				end as [source_system_sk] --20230717 added
 				,acctvo.IsdeletedOnPolicyChange as class_deleted_in
-			INTO [edw_temp].[tcollection_class_type_temp3]
 			FROM [edw_stage].[AccountTransaction] as acct
 				INNER JOIN [edw_stage].[Product] p on p.Id = acct.ProductId
 				INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
@@ -137,7 +137,7 @@ BEGIN
 				LEFT JOIN [edw_core].[tpolicy_history] his ON his.policy_no = acct.PolicyNumber AND his.effective_dt=acct.EffectiveDate AND his.transaction_seq_no = acct.policychangenumber
 			WHERE acct.[State] = 'ISSUED'
 				AND acct.IssuedDate > @last_source_extract_ts
-				p.[Name] in ('Collections','Homeowners')
+				AND p.[Name] in ('Collections','Homeowners')
 				AND acctvo.ObjectType = 'CollectionClass'
 				AND p.ProductLine='PersonalLines' --20230717 added
 			) t
@@ -147,6 +147,7 @@ BEGIN
 					[ClassType], [ScheduledCoverage], [ScheduledHighestValueLimit], [BlanketCoverage], [BlanketHighestValue], [BlanketSingleArticleLimit], ScheduledItemAppraisalDate
 					)
 			) pivottable
+
 
 		SELECT 
             a.*
