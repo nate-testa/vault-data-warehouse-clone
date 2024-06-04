@@ -356,8 +356,9 @@ BEGIN
 						AND pt.transaction_seq_no = thc.transaction_seq_no
 						LEFT JOIN edw_core.tcollection_location tcl
 						on tcc.collection_location_sk = tcl.collection_location_sk
-						LEFT JOIN edw_core.tcollection_class_type tcct
+						INNER JOIN edw_core.tcollection_class_type tcct
 						on thc.home_coverage_sk = tcct.home_coverage_sk
+						and pt.collection_class_type_sk = tcct.collection_class_type_sk
 						LEFT JOIN edw_core.tinternal_coverage as ic
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
 						INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
@@ -422,8 +423,9 @@ BEGIN
 						AND pt.transaction_seq_no = thc.transaction_seq_no
 						LEFT JOIN edw_core.tcollection_location tcl
 						on tcc.collection_location_sk = tcl.collection_location_sk
-						LEFT JOIN edw_core.tcollection_class_type tcct
+						INNER JOIN edw_core.tcollection_class_type tcct
 						on thc.home_coverage_sk = tcct.home_coverage_sk
+						and pt.collection_class_type_sk = tcct.collection_class_type_sk
 						LEFT JOIN edw_core.tinternal_coverage as ic
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
 						INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
