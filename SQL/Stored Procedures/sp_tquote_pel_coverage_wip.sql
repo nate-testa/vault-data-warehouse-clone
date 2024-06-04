@@ -30,7 +30,9 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
 		declare @sql nvarchar(max)
-		drop table if exists edw_temp.tquote_pel_coverage_wip_temp1;
+		DROP TABLE IF EXISTS edw_temp.tquote_pel_coverage_wip_temp1;
+		DROP TABLE IF EXISTS edw_temp.tquote_pel_coverage_wip_temp2;
+		DROP TABLE IF EXISTS edw_temp.tquote_pel_coverage_wip_temp3;
 
 		WITH 
         acct AS (
@@ -55,11 +57,14 @@ BEGIN
                 CONVERT(nvarchar(3000), acctvpf.Factor) AS amount,
                 acctvpf.Retention AS [retention],
                 acctvpf.Reason AS reason
-            FROM acct
+            FROM [edw_stage].[Account] AS acct
             INNER JOIN [edw_stage].[Product] p ON p.Id = acct.ProductId
             INNER JOIN [edw_stage].[AccountPremium] AS acctvp ON acctvp.AccountId = acct.id
             INNER JOIN [edw_stage].[AccountPremiumFactor] AS acctvpf ON acctvpf.AccountPremiumId = acctvp.id
-            WHERE acctvpf.Coverage = 'Excess Liability'
+            WHERE NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where b.AccountId=acct.id)
+			AND GREATEST(acct.CreatedDate,acct.UpdatedDate) > @last_source_extract_ts
+			AND acct.PolicyNumber IS NOT NULL
+			AND acctvpf.Coverage = 'Excess Liability'
             AND p.[Name] = 'Personal Excess Liability'
             AND p.ProductLine = 'PersonalLines'
         )
@@ -72,89 +77,97 @@ BEGIN
             UNION ALL
             SELECT PolicyNumber, EffectiveDate, CreatedDate, [Number], CONCAT(FinalColumnName, '_retention_reason') AS FinalColumnName, reason	as FinalValue FROM acctvpf WHERE reason IS NOT NULL
         )
-        ,FinalTablePremAdj AS (
-            SELECT
-                PolicyNumber, EffectiveDate, CreatedDate, [Number]
-                ,excess_coverage_premium_adjustment_method
-                ,excess_coverage_premium_adjustment_factor
-                ,excess_coverage_premium_adjustment_retention
-                ,excess_coverage_premium_adjustment_retention_reason
-            FROM acctvpf_unpivot
-            PIVOT 
-            (
-                MAX(FinalValue) FOR FinalColumnName IN (
-                    excess_coverage_premium_adjustment_method
-					,excess_coverage_premium_adjustment_factor
-					,excess_coverage_premium_adjustment_retention
-					,excess_coverage_premium_adjustment_retention_reason
-                )
-            ) AS pvt
-        )
-		,FinalTable AS (
-			select 
-				PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,policy_history_sk,source_system_sk,
-				CreatedDate,UpdatedDate,CoverageLimit,UnderinsuredMotoristLiability,UnderinsuredLiability,EmploymentPracticesLiabilityLimit,
-				DomesticEmployeeCount,IncludeEmploymentPracticesLiability,DONotForProfitLimit,DOContinuityDate,DOContinuityDateOverride,CustomerHasPublicProfile,
-				LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
+
+
+		SELECT
+			PolicyNumber, EffectiveDate, CreatedDate, [Number]
+			,excess_coverage_premium_adjustment_method
+			,excess_coverage_premium_adjustment_factor
+			,excess_coverage_premium_adjustment_retention
+			,excess_coverage_premium_adjustment_retention_reason
+		INTO edw_temp.tquote_pel_coverage_wip_temp2
+		FROM acctvpf_unpivot
+		PIVOT 
+		(
+			MAX(FinalValue) FOR FinalColumnName IN (
+				excess_coverage_premium_adjustment_method
+				,excess_coverage_premium_adjustment_factor
+				,excess_coverage_premium_adjustment_retention
+				,excess_coverage_premium_adjustment_retention_reason
+			)
+		) AS pvt
+
+
+		select 
+			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,policy_history_sk,source_system_sk,
+			CreatedDate,UpdatedDate,CoverageLimit,UnderinsuredMotoristLiability,UnderinsuredLiability,EmploymentPracticesLiabilityLimit,
+			DomesticEmployeeCount,IncludeEmploymentPracticesLiability,DONotForProfitLimit,DOContinuityDate,DOContinuityDateOverride,CustomerHasPublicProfile,
+			LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
+			HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
+			PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
+			CriminalTrafficViolationField,YouthfulOperatorCount,AdultOperatorCount,
+			SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
+			AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,
+			EmergencyExtensionNotice
+		INTO edw_temp.tquote_pel_coverage_wip_temp3
+		from
+		(
+		select * 
+		from
+			(
+			
+			select
+			acc.PolicyNumber,CAST(acc.EffectiveDate AS DATE) AS EffectiveDate,CAST(acc.ExpirationDate AS DATE) AS ExpirationDate,
+			CAST(acc.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.quote_history_sk policy_history_sk,
+			0 AS transaction_seq_no, 
+			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
+			acco.[Index],acc.CreatedDate,acc.UpdatedDate,
+			accof.Field,NULLIF(TRIM(accof.[Value]),'') AS [Value]
+			from
+				[edw_stage].[Account] as acc
+				inner join [edw_stage].[Product] p on acc.ProductId = p.id
+				inner join [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
+				inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
+				left join [edw_core].[tquote_history] tph on tph.quote_no = acc.PolicyNumber
+						and tph.effective_dt = acc.EffectiveDate
+						and tph.transaction_seq_no = 0
+				left join edw_stage.Product pr on acc.ProductId = pr.id
+			WHERE NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where b.AccountId=acc.id)
+				AND GREATEST(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
+				AND acc.PolicyNumber IS NOT NULL
+				AND p.[Name] = 'Personal Excess Liability'
+				and acco.ObjectType = 'PersonalExcessLiability'
+				and pr.ProductLine = 'PersonalLines'
+				and accof.Field IN 
+				(
+					'CoverageLimit','UnderinsuredMotoristLiability','UnderinsuredLiability','EmploymentPracticesLiabilityLimit',
+					'DomesticEmployeeCount','IncludeEmploymentPracticesLiability','DONotForProfitLimit','DOContinuityDate','DOContinuityDateOverride',
+					'CustomerHasPublicProfile','LevelOfAttention','LibelSlanderExclusion','PoliticalExclusion','AnimalRelatedLiabilityExclusion',
+					'HigherUnderlyingLimitsEndorsement','AILimitedLiability','MinimumEarnedPremiumEndorsement','MinimumEarnedPremiumEndorsementLimit',
+					'PremisesLiabilityLimitation','DeletionofCosmeticMarringExclusion','Manuscript','ProfileAdjustment','CriminalTrafficViolation',
+					'CriminalTrafficViolationField','YouthfulOperatorCount','AdultOperatorCount',
+					'SecondaryInsuredCoverageAmount','UnderinsuredMotoristLiabilityForSecondaryInsured','DefenseInsideLimits','AutoLiabilityExclusion',
+					'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit',
+					'EmergencyExtensionNotice'
+				)
+			) as t
+		) as t
+		pivot 
+		(
+			max(Value) FOR Field IN 
+			(
+				CoverageLimit,UnderinsuredMotoristLiability,UnderinsuredLiability,EmploymentPracticesLiabilityLimit,
+				DomesticEmployeeCount,IncludeEmploymentPracticesLiability,DONotForProfitLimit,DOContinuityDate,DOContinuityDateOverride,
+				CustomerHasPublicProfile,LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
 				HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
 				PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
 				CriminalTrafficViolationField,YouthfulOperatorCount,AdultOperatorCount,
 				SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
-				AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit
-			from
-			(
-			select * 
-			from
-				(
-				
-				select
-				acc.PolicyNumber,CAST(acc.EffectiveDate AS DATE) AS EffectiveDate,CAST(acc.ExpirationDate AS DATE) AS ExpirationDate,
-				CAST(acc.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.quote_history_sk policy_history_sk,
-				0 AS transaction_seq_no, 
-				CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
-				acco.[Index],acc.CreatedDate,acc.UpdatedDate,
-				accof.Field,NULLIF(TRIM(accof.[Value]),'') AS [Value]
-				from
-					acct as acc
-					inner join [edw_stage].[Product] p on acc.ProductId = p.id
-					inner join [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
-					inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
-					left join [edw_core].[tquote_history] tph on tph.quote_no = acc.PolicyNumber
-							and tph.effective_dt = acc.EffectiveDate
-							and tph.transaction_seq_no = 0
-					left join edw_stage.Product pr on acc.ProductId = pr.id
-				where
-					p.[Name] = 'Personal Excess Liability'
-					and acco.ObjectType = 'PersonalExcessLiability'
-					and pr.ProductLine = 'PersonalLines'
-					and accof.Field IN 
-					(
-						'CoverageLimit','UnderinsuredMotoristLiability','UnderinsuredLiability','EmploymentPracticesLiabilityLimit',
-						'DomesticEmployeeCount','IncludeEmploymentPracticesLiability','DONotForProfitLimit','DOContinuityDate','DOContinuityDateOverride',
-						'CustomerHasPublicProfile','LevelOfAttention','LibelSlanderExclusion','PoliticalExclusion','AnimalRelatedLiabilityExclusion',
-						'HigherUnderlyingLimitsEndorsement','AILimitedLiability','MinimumEarnedPremiumEndorsement','MinimumEarnedPremiumEndorsementLimit',
-						'PremisesLiabilityLimitation','DeletionofCosmeticMarringExclusion','Manuscript','ProfileAdjustment','CriminalTrafficViolation',
-						'CriminalTrafficViolationField','YouthfulOperatorCount','AdultOperatorCount',
-						'SecondaryInsuredCoverageAmount','UnderinsuredMotoristLiabilityForSecondaryInsured','DefenseInsideLimits','AutoLiabilityExclusion',
-						'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit'
-					)
-				) as t
-			) as t
-			pivot 
-			(
-				max(Value) FOR Field IN 
-				(
-					CoverageLimit,UnderinsuredMotoristLiability,UnderinsuredLiability,EmploymentPracticesLiabilityLimit,
-					DomesticEmployeeCount,IncludeEmploymentPracticesLiability,DONotForProfitLimit,DOContinuityDate,DOContinuityDateOverride,
-					CustomerHasPublicProfile,LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
-					HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
-					PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
-					CriminalTrafficViolationField,YouthfulOperatorCount,AdultOperatorCount,
-					SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
-					AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit
-					)
-			) as pivottable
-		)
+				AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,
+				EmergencyExtensionNotice
+				)
+		) as pivottable
+
 
 		SELECT 
             a.*
@@ -163,8 +176,8 @@ BEGIN
 			,b.excess_coverage_premium_adjustment_retention
 			,b.excess_coverage_premium_adjustment_retention_reason
 		INTO [edw_temp].[tquote_pel_coverage_wip_temp1]
-        FROM FinalTable AS a 
-        LEFT JOIN FinalTablePremAdj AS b
+        FROM [edw_temp].[tquote_pel_coverage_wip_temp3] AS a 
+        LEFT JOIN [edw_temp].[tquote_pel_coverage_wip_temp2] AS b
         ON a.PolicyNumber = b.PolicyNumber
         AND a.EffectiveDate = b.EffectiveDate
         AND a.transaction_seq_no = b.[Number]
@@ -215,6 +228,7 @@ BEGIN
 				,ttlc.excess_coverage_premium_adjustment_factor
 				,ttlc.excess_coverage_premium_adjustment_retention
 				,ttlc.excess_coverage_premium_adjustment_retention_reason
+				,ttlc.EmergencyExtensionNotice AS emergency_extension_notice_in
 		    FROM
 		        edw_temp.tquote_pel_coverage_wip_temp1 AS ttlc
 		) AS SOURCE
@@ -261,7 +275,8 @@ BEGIN
 				TARGET.excess_coverage_premium_adjustment_method = SOURCE.excess_coverage_premium_adjustment_method,
 				TARGET.excess_coverage_premium_adjustment_factor = SOURCE.excess_coverage_premium_adjustment_factor,
 				TARGET.excess_coverage_premium_adjustment_retention = SOURCE.excess_coverage_premium_adjustment_retention,
-				TARGET.excess_coverage_premium_adjustment_retention_reason = SOURCE.excess_coverage_premium_adjustment_retention_reason
+				TARGET.excess_coverage_premium_adjustment_retention_reason = SOURCE.excess_coverage_premium_adjustment_retention_reason,
+				TARGET.emergency_extension_notice_in = SOURCE.emergency_extension_notice_in
 
 		WHEN NOT MATCHED BY TARGET THEN
 		    INSERT (
@@ -278,6 +293,7 @@ BEGIN
 				,excess_coverage_premium_adjustment_factor
 				,excess_coverage_premium_adjustment_retention
 				,excess_coverage_premium_adjustment_retention_reason
+				,emergency_extension_notice_in
 		    )
 		    VALUES (
 		        SOURCE.quote_no, SOURCE.effective_dt, SOURCE.expiration_dt, SOURCE.transaction_seq_no,
@@ -293,6 +309,7 @@ BEGIN
 				,SOURCE.[excess_coverage_premium_adjustment_factor]
 				,SOURCE.[excess_coverage_premium_adjustment_retention]
 				,SOURCE.[excess_coverage_premium_adjustment_retention_reason]
+				,SOURCE.emergency_extension_notice_in
 		);
 
 		SET @rows_affected=@@ROWCOUNT;
@@ -306,7 +323,10 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
 		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tquote_pel_coverage_wip_temp1
+		DROP TABLE IF EXISTS edw_temp.tquote_pel_coverage_wip_temp1;
+		DROP TABLE IF EXISTS edw_temp.tquote_pel_coverage_wip_temp2;
+		DROP TABLE IF EXISTS edw_temp.tquote_pel_coverage_wip_temp3;
+
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
