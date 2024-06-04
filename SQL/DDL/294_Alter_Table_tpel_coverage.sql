@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tpel_coverage ADD emergency_extension_notice_in varchar(255);
