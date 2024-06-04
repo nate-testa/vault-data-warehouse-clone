@@ -63,7 +63,7 @@ BEGIN
     		END AS annual_premium_amt
 			,coverage_sk
 		INTO [edw_temp].[policy_ivans_home_temp1]
-        FROM edw_core.tpolicy_transaction as pt
+        FROM edw_core.tpolicy_transaction as pt	
 		INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
 		WHERE pt.product_sk in (1, 5) -- Home
             AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
@@ -82,7 +82,15 @@ BEGIN
 						ic.internal_coverage_desc as coverageDesc,
 						--ic.internal_coverage_desc as IVANS_coverage_desc,
 						pt.premium_amt AS changeAmount,
-						pt.annual_premium_amt AS currentAmount,
+						--pt.annual_premium_amt AS currentAmount,
+						(
+                            SELECT SUM(subpt.annual_premium_amt)
+                            FROM edw_core.tpolicy_transaction subpt
+                            WHERE subpt.policy_sk = pt.policy_sk
+                            AND subpt.effective_dt_sk = pt.effective_dt_sk
+                            AND subpt.internal_coverage_sk = pt.internal_coverage_sk
+                            AND subpt.transaction_seq_no <= pt.transaction_seq_no
+                        ) AS currentAmount,
 						CASE
 						    WHEN ic.internal_coverage_cd = 'Systems Protection'
 						        THEN CAST(hac.home_systems_protection_limit_amt as NVARCHAR(255))
