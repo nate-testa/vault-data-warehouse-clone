@@ -1,1 +1,1 @@
-ALTER TABLE edw_core.tbroker ADD is_national_agency_in varchar(255);
+ALTER TABLE edw_core.tbroker add national_agency_in varchar(255);
