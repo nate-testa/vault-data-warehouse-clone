@@ -71,28 +71,6 @@ BEGIN
             UNION ALL
             SELECT PolicyNumber, EffectiveDate, IssuedDate, policychangenumber, CONCAT(FinalColumnName, '_retention_reason') AS FinalColumnName, reason	as FinalValue FROM acctvpf WHERE reason IS NOT NULL
         )
-		,driver_age AS (
-			select
-				policy_no, effective_dt, transaction_seq_no,
-				sum(case driver when 'Youthful' then 1 else 0 end) as youthful_drivers_ct,
-				sum(case driver when 'Adult' then 1 else 0 end) as adult_drivers_ct
-			from
-			(
-				SELECT
-				tp.policy_no,tp.effective_dt, tph.transaction_seq_no,
-				CASE
-				    WHEN tp.risk_state_cd in ('AZ', 'CO', 'GA', 'LA') AND DATEDIFF(year, peld.birth_dt, GETDATE()) <= 24 THEN 'Youthful'
-				    WHEN tp.risk_state_cd = 'MA' AND (YEAR(GETDATE()) - peld.license_year) <= 4 THEN 'Youthful'
-				    WHEN DATEDIFF(year, peld.birth_dt, GETDATE()) <= 25 THEN 'Youthful'
-				    ELSE 'Adult'
-				END AS driver
-				FROM edw_core.tpolicy tp
-				INNER JOIN edw_core.tpolicy_history tph on tph.policy_sk = tp.policy_sk
-				INNER JOIN edw_core.tpel_driver peld on peld.policy_history_sk = tph.policy_history_sk 
-			) as a
-			group by policy_no, effective_dt, transaction_seq_no
-		)
-
 
 		SELECT
 			PolicyNumber, EffectiveDate, IssuedDate, policychangenumber
@@ -111,7 +89,6 @@ BEGIN
 				,excess_coverage_premium_adjustment_retention_reason
 			)
 		) AS pvt
-	
 
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,policy_history_sk,source_system_sk,
@@ -178,6 +155,28 @@ BEGIN
 						)
 				) as pivottable
 
+
+		WITH driver_age AS (
+			select
+				policy_no, effective_dt, transaction_seq_no,
+				sum(case driver when 'Youthful' then 1 else 0 end) as youthful_drivers_ct,
+				sum(case driver when 'Adult' then 1 else 0 end) as adult_drivers_ct
+			from
+			(
+				SELECT
+				tp.policy_no,tp.effective_dt, tph.transaction_seq_no,
+				CASE
+				    WHEN tp.risk_state_cd in ('AZ', 'CO', 'GA', 'LA') AND DATEDIFF(year, peld.birth_dt, GETDATE()) <= 24 THEN 'Youthful'
+				    WHEN tp.risk_state_cd = 'MA' AND (YEAR(GETDATE()) - peld.license_year) <= 4 THEN 'Youthful'
+				    WHEN DATEDIFF(year, peld.birth_dt, GETDATE()) <= 25 THEN 'Youthful'
+				    ELSE 'Adult'
+				END AS driver
+				FROM edw_core.tpolicy tp
+				INNER JOIN edw_core.tpolicy_history tph on tph.policy_sk = tp.policy_sk
+				INNER JOIN edw_core.tpel_driver peld on peld.policy_history_sk = tph.policy_history_sk 
+			) as a
+			group by policy_no, effective_dt, transaction_seq_no
+		)
 
 		SELECT 
             a.*
