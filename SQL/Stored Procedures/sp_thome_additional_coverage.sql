@@ -49,7 +49,7 @@ BEGIN
 			WHERE 
 			pd.[Name]='Homeowners'
 			AND pdo.ObjectType IN ('Homeowner')
-		) AS temps
+		) AS temp
 
 		-- remove last comma
 		SET @ColumnsToPivot = LEFT(@ColumnsToPivot, LEN(@ColumnsToPivot) - 1);
