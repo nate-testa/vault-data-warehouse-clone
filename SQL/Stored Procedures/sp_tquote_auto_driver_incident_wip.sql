@@ -123,7 +123,7 @@ BEGIN
                 target.source_system_sk = source.source_system_sk,
                 target.update_ts = GETDATE(),
                 target.etl_audit_sk = @etl_audit_sk,
-                target.lending_loss_in = source.[LendingLoss]
+                target.lending_loss_in = source.[LendingLoss],
                 target.pip_claim_override_in = source.[pip_claim_override_in]
         WHEN NOT MATCHED THEN
             INSERT (
