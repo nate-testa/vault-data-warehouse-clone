@@ -8,7 +8,7 @@ DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
             "schema": "edw_stage"
         },
         "CopySourceSettings": {
-            "query": "SELECT dd.dmsDocumentId, dd.claimNumber, ddd.type AS document_type, ddd.subType, dd.documentName, dd.fileName as document_fileName, dda.name as attachedTo, dd.createDate, dd.documentDate, dd.createBy,\r\nnow() as queryRunDate, \"Unknown\" as paymentStatus\r\nFROM dms_core.DmsDocument dd,\r\ndms_core.DmsDocumentDetail ddd,\r\ndms_core.DmsDocumentAttachTo dda\r\nWHERE dd.dmsDocumentId = dda.dmsDocumentId \r\nand ddd.dmsDocumentId = dda.dmsDocumentId\r\nand ddd.type = ''Claim''\r\nand ddd.subType IN (''Estimate of Damages'',''BI/UM Demand'')\r\norder by dd.createDate desc"
+            "query": "SELECT dd.dmsDocumentId, dd.claimNumber, ddd.type AS document_type, ddd.subType, dd.documentName, dd.fileName as document_fileName, dda.name as attachedTo, dd.createDate, dd.documentDate, dd.createBy,\"Unknown\" as paymentStatus, \r\nnow() as create_ts\r\nFROM dms_core.DmsDocument dd,\r\ndms_core.DmsDocumentDetail ddd,\r\ndms_core.DmsDocumentAttachTo dda\r\nWHERE dd.dmsDocumentId = dda.dmsDocumentId \r\nand ddd.dmsDocumentId = dda.dmsDocumentId\r\nand ddd.type = ''Claim''\r\nand ddd.subType IN (''Estimate of Damages'',''BI/UM Demand'')\r\norder by dd.createDate desc"
         },
         "CopySinkSettings": {
             "preCopyScript": null,
@@ -100,17 +100,6 @@ DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
                     },
                     {
                         "source": {
-                            "name": "createDate",
-                            "type": "DateTime"
-                        },
-                        "sink": {
-                            "name": "createDate",
-                            "type": "DateTime",
-                            "physicalType": "datetime2"
-                        }
-                    },
-                    {
-                        "source": {
                             "name": "documentDate",
                             "type": "DateTime"
                         },
@@ -152,7 +141,18 @@ DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
                             "type": "String",
                             "physicalType": "nvarchar"
                         }
-                    }
+                    },
+                    {
+                        "source": {
+                            "name": "create_ts",
+                            "type": "DateTime"
+                        },
+                        "sink": {
+                            "name": "create_ts",
+                            "type": "DateTime",
+                            "physicalType": "datetime2"
+                        }
+                    },
                 ],
                 "typeConversion": true,
                 "typeConversionSettings": {
