@@ -45,7 +45,7 @@ BEGIN
             [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
             [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
             [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior],
+            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [PIPClaimOverride],
 			source_system_sk
 		
         INTO [edw_temp].[tquote_auto_driver_temp1]
@@ -91,7 +91,7 @@ BEGIN
                     [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
                     [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
                     [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior]
+                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [PIPClaimOverride]
                 )
 			) pivottable
 
@@ -155,6 +155,7 @@ BEGIN
             min_prior_ct,
             maj_prior_ct,
             spd_prior_ct,
+            pip_claim_override_in,
             source_system_sk,
             create_ts,
             update_ts,
@@ -218,6 +219,7 @@ BEGIN
             t1.[MINPrior] as min_prior_ct,
             t1.[MAJPrior] as maj_prior_ct,
             t1.[SPDPrior] as spd_prior_ct,
+            t1.[PIPClaimOverride] as pip_claim_override_in,
             t1.source_system_sk,
             getdate() AS create_ts,
             getdate() AS update_ts,
