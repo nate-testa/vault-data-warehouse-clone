@@ -274,6 +274,7 @@ BEGIN
 				,LocalBurglarAlarmSystem as local_burglar_alarm_system_in
 				,AutomaticSmokeDetectors as automatic_smoke_detectors_in
 				,AutomaticSprinklerSystem as automatic_sprinkler_system
+				,EmergencyExtensionNotice as emergency_extension_notice_in
 				,source_system_sk
 				,GETDATE() AS create_ts
 				,GETDATE() AS update_ts
@@ -363,7 +364,7 @@ BEGIN
 			gated_community_patrol_service, extended_liability_location_ct,
 			roof_exclusion_with_ensuing_loss_in,roof_coverage_endorsement_wh_in,roof_coverage_endorsement_ap_in,roof_coverage_endorsement_rv_in,
 			fire_station_connected_fire_alarm_in, police_station_connected_burglar_alarm_in, local_fire_alarm_system_in, 
-			local_burglar_alarm_system_in, automatic_smoke_detectors_in, automatic_sprinkler_system,
+			local_burglar_alarm_system_in, automatic_smoke_detectors_in, automatic_sprinkler_system, emergency_extension_notice_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
@@ -442,7 +443,7 @@ BEGIN
 				gated_community_patrol_service, extended_liability_location_ct,
 				roof_exclusion_with_ensuing_loss_in,roof_coverage_endorsement_wh_in,roof_coverage_endorsement_ap_in,roof_coverage_endorsement_rv_in,
 				fire_station_connected_fire_alarm_in, police_station_connected_burglar_alarm_in, local_fire_alarm_system_in, local_burglar_alarm_system_in,
-				automatic_smoke_detectors_in, automatic_sprinkler_system,
+				automatic_smoke_detectors_in, automatic_sprinkler_system, emergency_extension_notice_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			WHEN MATCHED THEN UPDATE
@@ -611,7 +612,8 @@ BEGIN
 			[target].local_fire_alarm_system_in = [source].local_fire_alarm_system_in,
 			[target].local_burglar_alarm_system_in = [source].local_burglar_alarm_system_in,
 			[target].automatic_smoke_detectors_in = [source].automatic_smoke_detectors_in,
-			[target].automatic_sprinkler_system = [source].automatic_sprinkler_system
+			[target].automatic_sprinkler_system = [source].automatic_sprinkler_system,
+			[target].emergency_extension_notice_in = [source].emergency_extension_notice_in
 			;
 
 			SET @rows_affected=@@ROWCOUNT;

@@ -51,7 +51,8 @@ BEGIN
             [NumberofTotalVehiclesonPolicy], [TotalNumberofPPAs], [TotalOwnedPPAs], [NumberofPPAwithPhysDam], [NumberofCollectorCars], [TotalInsuredLocations], [HOClaims], [NumberofDriversonPolicy], 
             [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
             [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], [RaterPIPDiscount],
-			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay]
+			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay], 
+                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice]
 		
         INTO [edw_temp].[tquote_auto_policy_coverage_wip_temp1]
 		
@@ -102,7 +103,8 @@ BEGIN
                     [NumberofTotalVehiclesonPolicy], [TotalNumberofPPAs], [TotalOwnedPPAs], [NumberofPPAwithPhysDam], [NumberofCollectorCars], [TotalInsuredLocations], [HOClaims], [NumberofDriversonPolicy], 
                     [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
                     [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], 
-                    [RaterPIPDiscount], [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay]
+                    [RaterPIPDiscount], [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay], 
+                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice]
                 )
 			) pivottable
 
@@ -253,7 +255,12 @@ BEGIN
                 target.otc_ncrb_premium_amt = source.[NCRBPPAOTCTotal],
                 target.transportation_expense_amt = source.[TransportationExpense],
                 target.transportation_expense_daily_limit_amt = source.[TransportationExpenseDailyLimit],
-                target.transportation_expense_copay_amt = source.[TransportationExpenseCoPay]
+                target.transportation_expense_copay_amt = source.[TransportationExpenseCoPay],
+                target.permissive_driver_unique_liability_limits_in = source.PermissiveDriverUniqueLiabilityLimits,
+                target.permissive_driver_unique_combined_single_limit_amt = source.PermissiveDriverUniqueCombinedSingleLimit,
+                target.permissive_driver_unique_bi_limit_amt = source.PermissiveDriverUniqueBILimit,
+                target.permissive_driver_unique_pd_limit_amt = source.PermissiveDriverUniquePDLimit,
+                target.emergency_extension_notice_in = source.EmergencyExtensionNotice
         WHEN NOT MATCHED THEN
             INSERT (
                 quote_no,
@@ -361,7 +368,12 @@ BEGIN
                 otc_ncrb_premium_amt,
                 transportation_expense_amt,
                 transportation_expense_daily_limit_amt,
-                transportation_expense_copay_amt
+                transportation_expense_copay_amt,
+                permissive_driver_unique_liability_limits_in,
+                permissive_driver_unique_combined_single_limit_amt,
+                permissive_driver_unique_bi_limit_amt,
+                permissive_driver_unique_pd_limit_amt,
+                emergency_extension_notice_in
             )
             VALUES (
                 source.quote_no,
@@ -469,7 +481,12 @@ BEGIN
                 source.[NCRBPPAOTCTotal],
                 source.[TransportationExpense],
                 source.[TransportationExpenseDailyLimit],
-                source.[TransportationExpenseCoPay]
+                source.[TransportationExpenseCoPay],
+                source.PermissiveDriverUniqueLiabilityLimits,
+                source.PermissiveDriverUniqueCombinedSingleLimit,
+                source.PermissiveDriverUniqueBILimit,
+                source.PermissiveDriverUniquePDLimit,
+                source.EmergencyExtensionNotice
             );
 
 
