@@ -8,7 +8,7 @@ DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
             "schema": "edw_stage"
         },
         "CopySourceSettings": {
-            "query": "SELECT dd.dmsDocumentId, dd.claimNumber, ddd.type, ddd.subType, dd.documentName, dd.fileName, dda.name as attachedTo, dd.createDate, dd.documentDate, dd.createBy,\r\nnow() as queryRunDate, \"Unknown\" as paymentStatus\r\nFROM dms_core.DmsDocument dd,\r\ndms_core.DmsDocumentDetail ddd,\r\ndms_core.DmsDocumentAttachTo dda\r\nWHERE dd.dmsDocumentId = dda.dmsDocumentId \r\nand ddd.dmsDocumentId = dda.dmsDocumentId\r\nand ddd.type = ''Claim''\r\nand ddd.subType IN (''Estimate of Damages'',''BI/UM Demand'')\r\norder by dd.createDate desc"
+            "query": "SELECT dd.dmsDocumentId, dd.claimNumber, ddd.type AS document_type, ddd.subType, dd.documentName, dd.fileName as document_fileName, dda.name as attachedTo, dd.createDate, dd.documentDate, dd.createBy,\r\nnow() as queryRunDate, \"Unknown\" as paymentStatus\r\nFROM dms_core.DmsDocument dd,\r\ndms_core.DmsDocumentDetail ddd,\r\ndms_core.DmsDocumentAttachTo dda\r\nWHERE dd.dmsDocumentId = dda.dmsDocumentId \r\nand ddd.dmsDocumentId = dda.dmsDocumentId\r\nand ddd.type = ''Claim''\r\nand ddd.subType IN (''Estimate of Damages'',''BI/UM Demand'')\r\norder by dd.createDate desc"
         },
         "CopySinkSettings": {
             "preCopyScript": null,
@@ -45,11 +45,11 @@ DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
                     },
                     {
                         "source": {
-                            "name": "type",
+                            "name": "document_type",
                             "type": "String"
                         },
                         "sink": {
-                            "name": "type",
+                            "name": "document_type",
                             "type": "String",
                             "physicalType": "nvarchar"
                         }
@@ -78,11 +78,11 @@ DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
                     },
                     {
                         "source": {
-                            "name": "fileName",
+                            "name": "document_fileName",
                             "type": "String"
                         },
                         "sink": {
-                            "name": "fileName",
+                            "name": "document_fileName",
                             "type": "String",
                             "physicalType": "nvarchar"
                         }
