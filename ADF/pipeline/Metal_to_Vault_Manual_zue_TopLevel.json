@@ -56,6 +56,9 @@
 							"description": "Execute another pipeline to copy one batch of objects. The objects belonging to this batch will be copied parallelly.",
 							"type": "ExecutePipeline",
 							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
 							"userProperties": [],
 							"typeProperties": {
 								"pipeline": {

@@ -1,6 +1,7 @@
 {
 	"name": "AWS-UAT",
 	"properties": {
-		"type": "SelfHosted"
+		"type": "SelfHosted",
+		"description": "Ebao Integration Runtime using AWS UAT Gateway to Ebao"
 	}
 }

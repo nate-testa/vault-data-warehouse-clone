@@ -1,0 +1,24 @@
+{
+	"name": "Trigger_2wt",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DILDRUP_2wt_TopLevel",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 24,
+				"startTime": "2024-02-02T13:51:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}
