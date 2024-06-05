@@ -176,7 +176,7 @@ BEGIN
             [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
             [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
             [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-            [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in
+            [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate]
         INTO [edw_temp].[tauto_vehicle_coverage_temp3]
         FROM
             (
@@ -225,7 +225,7 @@ BEGIN
                     [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
                     [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
                     [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-                    [MotorHomeClass],[PassengerHazardExclusion]
+                    [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate]
                 )
             ) pivottable
 
@@ -430,6 +430,8 @@ BEGIN
             ,extended_towing_labor_premium_adjustment_amount
             ,extended_towing_labor_premium_adjustment_retention
             ,extended_towing_labor_premium_adjustment_reason
+            ,newly_purchased_vehicle_override_in
+            ,newly_purchased_vehicle_dt
 		)
         SELECT 
             t1.policy_no,
@@ -594,6 +596,8 @@ BEGIN
             ,t1.extended_towing_labor_premium_adjustment_amount
             ,t1.extended_towing_labor_premium_adjustment_retention
             ,t1.extended_towing_labor_premium_adjustment_reason
+            ,t1.[NewlyPurchasedVehicle] as newly_purchased_vehicle_override_in
+            ,t1.[NewlyPurchasedVehicleDate] as newly_purchased_vehicle_dt
         FROM 
             [edw_temp].[tauto_vehicle_coverage_temp1] AS t1
         left join [edw_stage].[AccountTransactionVersionObject] AS atvo ON atvo.id = t1.GaragingLocationId
