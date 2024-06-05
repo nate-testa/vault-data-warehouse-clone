@@ -1,0 +1,26 @@
+{
+	"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_SourceDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_PREPROD",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"cw_tableName": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
+		},
+		"annotations": [],
+		"type": "MySqlTable",
+		"schema": [],
+		"typeProperties": {
+			"tableName": {
+				"value": "@dataset().cw_tableName",
+				"type": "Expression"
+			}
+		}
+	}
+}
