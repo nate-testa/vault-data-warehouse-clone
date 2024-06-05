@@ -124,7 +124,7 @@ BEGIN
                 target.update_ts = GETDATE(),
                 target.etl_audit_sk = @etl_audit_sk,
                 target.lending_loss_in = source.[LendingLoss],
-                target.pip_claim_override_in = source.[pip_claim_override_in]
+                target.pip_claim_override_in = source.[PIPClaimOverride]
         WHEN NOT MATCHED THEN
             INSERT (
                 quote_no,
@@ -197,7 +197,7 @@ BEGIN
                 source.[TowingAndLaborPayment],
                 source.[UninsuredMotoristPayment],
                 source.[UnderinsuredMotoristPayment],
-                source.[pip_claim_override_in],
+                source.[PIPClaimOverride],
                 source.source_system_sk,
                 GETDATE(),
                 GETDATE(),
