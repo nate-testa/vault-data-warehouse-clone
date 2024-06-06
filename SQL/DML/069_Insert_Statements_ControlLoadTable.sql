@@ -4,7 +4,7 @@ DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
             "tableName": "`DmsDocument`"
         },
         "SinkObjectSettings": {
-            "table": "DmsDocument",
+            "table": "dms_claim_payment_estimate",
             "schema": "edw_stage"
         },
         "CopySourceSettings": {
