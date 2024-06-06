@@ -102,58 +102,59 @@ BEGIN
 		INTO edw_temp.tpel_coverage_temp3
 		from
 			(
-				select * 
-				from
-					(
-					
-					select
-					act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
-					CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.policy_history_sk,
-					act.policychangenumber AS transaction_seq_no, 
-					CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
-					act.IssuedDate as TransactionDate,atvo.[Index],act.IssuedDate,
-					atvof.Field,NULLIF(TRIM(atvof.[Value]),'') AS [Value]
-					from
-						[edw_stage].[AccountTransaction] as act
-						inner join edw_stage.Product p on p.Id=act.ProductId
-						inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
-						inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
-						inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
-						left join [edw_core].[tpolicy_history] tph on tph.policy_no=act.PolicyNumber
-								and tph.effective_dt=act.EffectiveDate
-								and tph.transaction_seq_no = act.policychangenumber
-						left join edw_stage.Product pr on act.ProductId = pr.id
-					where act.[State] = 'ISSUED'
-						AND act.PolicyNumber IS NOT NULL
-						AND act.IssuedDate > @last_source_extract_ts
-						AND p.[Name]='Personal Excess Liability'
-						and atvo.ObjectType='PersonalExcessLiability'
-						and pr.ProductLine = 'PersonalLines'
-						and atvof.Field IN 
-						(
-							'CoverageLimit','UnderinsuredMotoristLiability','UnderinsuredLiability','EmploymentPracticesLiabilityLimit',
-							'DomesticEmployeeCount','IncludeEmploymentPracticesLiability','DONotForProfitLimit','DOContinuityDate','DOContinuityDateOverride',
-							'CustomerHasPublicProfile','LevelOfAttention','LibelSlanderExclusion','PoliticalExclusion','AnimalRelatedLiabilityExclusion',
-							'HigherUnderlyingLimitsEndorsement','AILimitedLiability','MinimumEarnedPremiumEndorsement','MinimumEarnedPremiumEndorsementLimit',
-							'PremisesLiabilityLimitation','DeletionofCosmeticMarringExclusion','Manuscript','ProfileAdjustment','CriminalTrafficViolation',
-							'CriminalTrafficViolationField','SecondaryInsuredCoverageAmount','UnderinsuredMotoristLiabilityForSecondaryInsured','DefenseInsideLimits','AutoLiabilityExclusion',
-							'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit','EmergencyExtensionNotice'
-						)
-					) as t
-				) as t
-				pivot 
+			select * 
+			from
 				(
-					max(Value) FOR Field IN 
+				
+				select
+				act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
+				CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.policy_history_sk,
+				act.policychangenumber AS transaction_seq_no, 
+				CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
+				act.IssuedDate as TransactionDate,atvo.[Index],act.IssuedDate,
+				atvof.Field,NULLIF(TRIM(atvof.[Value]),'') AS [Value]
+				from
+					[edw_stage].[AccountTransaction] as act
+					inner join edw_stage.Product p on p.Id=act.ProductId
+					inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
+					inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
+					inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
+					left join [edw_core].[tpolicy_history] tph on tph.policy_no=act.PolicyNumber
+							and tph.effective_dt=act.EffectiveDate
+							and tph.transaction_seq_no = act.policychangenumber
+					left join edw_stage.Product pr on act.ProductId = pr.id
+				where act.[State] = 'ISSUED'
+					AND act.PolicyNumber IS NOT NULL
+					AND act.IssuedDate > @last_source_extract_ts
+					AND p.[Name]='Personal Excess Liability'
+					and atvo.ObjectType='PersonalExcessLiability'
+					and pr.ProductLine = 'PersonalLines'
+					and atvof.Field IN 
 					(
-						CoverageLimit,UnderinsuredMotoristLiability,UnderinsuredLiability,EmploymentPracticesLiabilityLimit,
-						DomesticEmployeeCount,IncludeEmploymentPracticesLiability,DONotForProfitLimit,DOContinuityDate,DOContinuityDateOverride,CustomerHasPublicProfile,
-						LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
-						HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
-						PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
-						CriminalTrafficViolationField,SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
-						AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,EmergencyExtensionNotice
-						)
-				) as pivottable
+						'CoverageLimit','UnderinsuredMotoristLiability','UnderinsuredLiability','EmploymentPracticesLiabilityLimit',
+						'DomesticEmployeeCount','IncludeEmploymentPracticesLiability','DONotForProfitLimit','DOContinuityDate','DOContinuityDateOverride',
+						'CustomerHasPublicProfile','LevelOfAttention','LibelSlanderExclusion','PoliticalExclusion','AnimalRelatedLiabilityExclusion',
+						'HigherUnderlyingLimitsEndorsement','AILimitedLiability','MinimumEarnedPremiumEndorsement','MinimumEarnedPremiumEndorsementLimit',
+						'PremisesLiabilityLimitation','DeletionofCosmeticMarringExclusion','Manuscript','ProfileAdjustment','CriminalTrafficViolation',
+						'CriminalTrafficViolationField','SecondaryInsuredCoverageAmount','UnderinsuredMotoristLiabilityForSecondaryInsured','DefenseInsideLimits','AutoLiabilityExclusion',
+						'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit','EmergencyExtensionNotice'
+					)
+				) as t
+			) as t
+			pivot 
+			(
+				max(Value) FOR Field IN 
+				(
+					CoverageLimit,UnderinsuredMotoristLiability,UnderinsuredLiability,EmploymentPracticesLiabilityLimit,
+					DomesticEmployeeCount,IncludeEmploymentPracticesLiability,DONotForProfitLimit,DOContinuityDate,DOContinuityDateOverride,CustomerHasPublicProfile,
+					LevelOfAttention,LibelSlanderExclusion,PoliticalExclusion,AnimalRelatedLiabilityExclusion,
+					HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
+					PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
+					CriminalTrafficViolationField,SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
+					AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,EmergencyExtensionNotice
+					)
+			) as pivottable
+		;
 
 
 		WITH driver_age AS (
