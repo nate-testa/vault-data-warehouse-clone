@@ -40,7 +40,7 @@ BEGIN
 			CreatedDate, UpdatedDate, quote_no, effective_dt, expiration_dt, 0 as transaction_seq_no, quote_history_sk, quote_auto_driver_sk, driver_no, incident_no,
             [IncidentSource], [IncidentDate], [IncidentType], [IncidentDescription], [TotalPayout], [IsDisputed], [IncludeInRate], [IncidentCode], [IncidentStatus], [BodilyInjuryPayment], 
             [CollisionPayment], [ComprehensivePayment], [GlassPayment], [MedicalExpensePayment], [MedicalPaymentPayment], [OtherPayment], [PropertyDamagePayment], [PersonalInjuryProtectionPayment], 
-            [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss],
+            [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss], [PIPClaimOverride],
 			source_system_sk  
 		
         INTO [edw_temp].[tquote_auto_driver_incident_wip_temp1]
@@ -80,7 +80,7 @@ BEGIN
                 (
                     [IncidentSource], [IncidentDate], [IncidentType], [IncidentDescription], [TotalPayout], [IsDisputed], [IncludeInRate], [IncidentCode], [IncidentStatus], [BodilyInjuryPayment], 
                     [CollisionPayment], [ComprehensivePayment], [GlassPayment], [MedicalExpensePayment], [MedicalPaymentPayment], [OtherPayment], [PropertyDamagePayment], [PersonalInjuryProtectionPayment], 
-                    [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss]
+                    [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss], [PIPClaimOverride]
                 )
 			) pivottable
 
@@ -123,7 +123,8 @@ BEGIN
                 target.source_system_sk = source.source_system_sk,
                 target.update_ts = GETDATE(),
                 target.etl_audit_sk = @etl_audit_sk,
-                target.lending_loss_in = source.[LendingLoss]
+                target.lending_loss_in = source.[LendingLoss],
+                target.pip_claim_override_in = source.[PIPClaimOverride]
         WHEN NOT MATCHED THEN
             INSERT (
                 quote_no,
@@ -161,7 +162,8 @@ BEGIN
                 create_ts,
                 update_ts,
                 etl_audit_sk,
-                lending_loss_in
+                lending_loss_in,
+                pip_claim_override_in
             )
             VALUES (
                 source.quote_no,
@@ -195,6 +197,7 @@ BEGIN
                 source.[TowingAndLaborPayment],
                 source.[UninsuredMotoristPayment],
                 source.[UnderinsuredMotoristPayment],
+                source.[PIPClaimOverride],
                 source.source_system_sk,
                 GETDATE(),
                 GETDATE(),
