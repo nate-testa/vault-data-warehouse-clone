@@ -100,6 +100,17 @@ DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
                     },
                     {
                         "source": {
+                            "name": "createDate",
+                            "type": "DateTime"
+                        },
+                        "sink": {
+                            "name": "createDate",
+                            "type": "DateTime",
+                            "physicalType": "datetime2"
+                        }
+                    },
+                    {
+                        "source": {
                             "name": "documentDate",
                             "type": "DateTime"
                         },
@@ -118,17 +129,6 @@ DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
                             "name": "createBy",
                             "type": "String",
                             "physicalType": "nvarchar"
-                        }
-                    },
-                    {
-                        "source": {
-                            "name": "queryRunDate",
-                            "type": "DateTime"
-                        },
-                        "sink": {
-                            "name": "queryRunDate",
-                            "type": "DateTime",
-                            "physicalType": "datetime2"
                         }
                     },
                     {
