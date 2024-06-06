@@ -152,7 +152,7 @@ DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
                             "type": "DateTime",
                             "physicalType": "datetime2"
                         }
-                    },
+                    }
                 ],
                 "typeConversion": true,
                 "typeConversionSettings": {
