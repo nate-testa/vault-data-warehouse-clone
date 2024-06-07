@@ -1,0 +1,10 @@
+{
+    "name": "azrvaultmetaluat001-privateMetal-pep01",
+    "properties": {
+        "privateLinkResourceId": "/subscriptions/61591278-f31e-4706-ac18-ebb142d84d24/resourceGroups/AZR-INFRA-RG/providers/Microsoft.Sql/servers/azrvaultmetaluat001",
+        "groupId": "sqlServer",
+        "fqdns": [
+            "azrvaultmetaluat001.database.windows.net"
+        ]
+    }
+}
