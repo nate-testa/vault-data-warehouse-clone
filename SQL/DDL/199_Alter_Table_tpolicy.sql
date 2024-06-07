@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.tpolicy ADD oneshield_migrated_in varchar(255);

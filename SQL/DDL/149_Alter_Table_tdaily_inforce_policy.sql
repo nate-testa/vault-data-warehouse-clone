@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.tdaily_inforce_policy add annual_net_premium_amt decimal(15,2) null;

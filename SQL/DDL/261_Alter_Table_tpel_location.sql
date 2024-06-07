@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.tpel_location ADD location_limit_type varchar(255);

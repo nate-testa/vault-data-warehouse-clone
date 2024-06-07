@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.tclaim_payment ADD party_subtype_role_nm varchar(255);

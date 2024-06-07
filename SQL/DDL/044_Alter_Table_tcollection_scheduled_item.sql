@@ -1,2 +1,0 @@
-ALTER TABLE edw_core.tcollection_scheduled_item
-ADD scheduled_item_no int;

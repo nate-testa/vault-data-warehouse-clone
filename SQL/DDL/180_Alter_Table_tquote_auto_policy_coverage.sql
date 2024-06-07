@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.tquote_auto_policy_coverage ADD rater_pip_discount varchar(255);

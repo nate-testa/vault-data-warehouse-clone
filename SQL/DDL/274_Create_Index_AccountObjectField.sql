@@ -1,1 +1,0 @@
-CREATE INDEX [IX_AccountObjectField_Field] ON [edw_stage].AccountObjectField (field);  

@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.tauto_driver_incident ADD lending_loss_in varchar(255);
