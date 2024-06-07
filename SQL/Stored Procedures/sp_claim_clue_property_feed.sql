@@ -31,7 +31,9 @@ BEGIN
 		--************Start************
 
  		-- Step1 limit amount of rows.
-		DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp0];
+        DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp2];
 
         WITH 
         location_address AS (
@@ -262,7 +264,7 @@ BEGIN
             END AS [report_start_date],
             CONVERT(datetime, CONVERT(date, DATEADD(day, -1, GETDATE()))) AS [report_end_date],
             transaction_ts
-        INTO [edw_temp].[claim_clue_property_feed_temp1] 
+        INTO [edw_temp].[claim_clue_property_feed_temp0]
         FROM claims AS c 
         INNER JOIN edw_core.tpolicy AS p ON p.policy_sk = c.policy_sk
         LEFT JOIN customer AS cu ON p.customer_id = cu.customer_id
@@ -274,7 +276,72 @@ BEGIN
         WHERE p.product_cd IN ('HO','CO','LUX','PEL')
         ;
 
-        
+        --Create empty temp table to allow nulls
+        SELECT TOP 0 
+            B.*
+        INTO [edw_temp].[claim_clue_property_feed_temp1]
+        FROM [edw_temp].[claim_clue_property_feed_temp0] AS A
+        LEFT JOIN [edw_temp].[claim_clue_property_feed_temp0] AS B
+        ON 1=0
+        ;
+
+        --Insert all values into new table that now accepts nulls
+        INSERT INTO [edw_temp].[claim_clue_property_feed_temp1]
+        SELECT * FROM [edw_temp].[claim_clue_property_feed_temp0]
+        ;
+
+
+        --------------------------------------------------
+        --*** Start Insert rows with ReportingStatus R ***
+        --------------------------------------------------       
+        --Create temp table whit last causeOfLoss in claim_clue_property_feed table by claimNumber
+        SELECT ccpf.contribCompany, ccpf.claimNumber, ccpf.causeOfLoss
+        INTO [edw_temp].[claim_clue_property_feed_temp2] 
+        FROM [edw_integration].[claim_clue_property_feed] AS ccpf
+        INNER JOIN 
+        (
+            SELECT claimNumber, MAX(report_start_date) AS max_report_start_date
+            FROM [edw_integration].[claim_clue_property_feed] AS cc
+            GROUP BY claimNumber
+        ) AS ccpfm
+        ON ccpf.claimNumber = ccpfm.claimNumber
+        AND ccpf.report_start_date = ccpfm.max_report_start_date
+
+        --Select and Insert rows that have changed the causeOfLoss
+        INSERT INTO [edw_temp].[claim_clue_property_feed_temp1] 
+        (
+            [contribCompany],
+            [claimNumber],
+            [causeOfLoss],
+            [claimReportingStatus],
+            [recordVersionNumber],
+            [create_ts],
+            [update_ts],
+            [etl_audit_sk],
+            [report_start_date],
+            [report_end_date]
+        )
+        SELECT 
+            b.contribCompany, 
+            b.claimNumber, 
+            b.causeOfLoss, 
+            'R' AS claimReportingStatus,
+            '2' AS recordVersionNumber,
+            a.[create_ts],
+            a.[update_ts],
+            a.[etl_audit_sk],
+            a.[report_start_date],
+            a.[report_end_date]
+        FROM [edw_temp].[claim_clue_property_feed_temp1] AS a
+        INNER JOIN [edw_temp].[claim_clue_property_feed_temp2] AS b
+        ON a.claimNumber = b.claimNumber
+        WHERE a.causeOfLoss <> b.causeOfLoss
+        ;
+        ------------------------------------------------
+        --*** End Insert rows with ReportingStatus R ***
+        ------------------------------------------------
+
+
         -- Start Insert process
         INSERT INTO [edw_integration].[claim_clue_property_feed](
             [contribCompany],
@@ -355,75 +422,75 @@ BEGIN
         )
         SELECT 
             RIGHT('00000' + ISNULL([contribCompany],'0'), 5) AS [contribCompany],
-            ISNULL([claimNumber],'') AS [claimNumber],
-            ISNULL([policyNumber],'') AS [policyNumber],
-            ISNULL([policyType],'') AS [policyType],
+            UPPER(ISNULL([claimNumber],'')) AS [claimNumber],
+            UPPER(ISNULL([policyNumber],'')) AS [policyNumber],
+            UPPER(ISNULL([policyType],'')) AS [policyType],
             RIGHT('00000000' + ISNULL([claimDate],'0'), 8) AS [claimDate],
-            ISNULL([causeOfLoss],'') AS [causeOfLoss],
-            ISNULL([locationOfLoss],'') AS [locationOfLoss],
+            UPPER(ISNULL([causeOfLoss],'')) AS [causeOfLoss],
+            UPPER(ISNULL([locationOfLoss],'')) AS [locationOfLoss],
             RIGHT('000000000' + CAST(ISNULL([claimAmount],'0') AS nvarchar(9)), 9) AS [claimAmount],
-            ISNULL([claimReportingStatus],'') AS [claimReportingStatus],
-            ISNULL([claimDisposition],'') AS [claimDisposition],
-            ISNULL([catastropheRelated],'') AS [catastropheRelated],
-            ISNULL([mortgageName],'') AS [mortgageName],
-            ISNULL([mortgageLoanNumber],'') AS [mortgageLoanNumber],
-            ISNULL([filler_reservedforFutureUse],'') AS [filler_reservedforFutureUse],
-            ISNULL([riskAddressHseNum],'') AS [riskAddressHseNum],
-            ISNULL([riskAddressStreetName],'') AS [riskAddressStreetName],
-            ISNULL([riskAddressAptNum],'') AS [riskAddressAptNum],
-            ISNULL([riskAddressCity],'') AS [riskAddressCity],
-            ISNULL([riskAddressState],'') AS [riskAddressState],
+            UPPER(ISNULL([claimReportingStatus],'')) AS [claimReportingStatus],
+            UPPER(ISNULL([claimDisposition],'')) AS [claimDisposition],
+            UPPER(ISNULL([catastropheRelated],'')) AS [catastropheRelated],
+            UPPER(ISNULL([mortgageName],'')) AS [mortgageName],
+            UPPER(ISNULL([mortgageLoanNumber],'')) AS [mortgageLoanNumber],
+            UPPER(ISNULL([filler_reservedforFutureUse],'')) AS [filler_reservedforFutureUse],
+            UPPER(ISNULL([riskAddressHseNum],'')) AS [riskAddressHseNum],
+            UPPER(ISNULL([riskAddressStreetName],'')) AS [riskAddressStreetName],
+            UPPER(ISNULL([riskAddressAptNum],'')) AS [riskAddressAptNum],
+            UPPER(ISNULL([riskAddressCity],'')) AS [riskAddressCity],
+            UPPER(ISNULL([riskAddressState],'')) AS [riskAddressState],
             RIGHT('00000' + ISNULL([riskAddressZip],'0'), 5) AS [riskAddressZip],
             RIGHT('0000' + ISNULL([riskAddressZipPlus4],'0'), 4) AS [riskAddressZipPlus4],
-            ISNULL([policyHolderMailAddrHseNum],'') AS [policyHolderMailAddrHseNum],
-            ISNULL([policyHolderMailAddressStreetName],'') AS [policyHolderMailAddressStreetName],
-            ISNULL([policyHolderMailAddressAptNum],'') AS [policyHolderMailAddressAptNum],
-            ISNULL([policyHolderMailAddressCity],'') AS [policyHolderMailAddressCity],
-            ISNULL([policyHolderMailAddressState],'') AS [policyHolderMailAddressState],
+            UPPER(ISNULL([policyHolderMailAddrHseNum],'')) AS [policyHolderMailAddrHseNum],
+            UPPER(ISNULL([policyHolderMailAddressStreetName],'')) AS [policyHolderMailAddressStreetName],
+            UPPER(ISNULL([policyHolderMailAddressAptNum],'')) AS [policyHolderMailAddressAptNum],
+            UPPER(ISNULL([policyHolderMailAddressCity],'')) AS [policyHolderMailAddressCity],
+            UPPER(ISNULL([policyHolderMailAddressState],'')) AS [policyHolderMailAddressState],
             RIGHT('00000' + ISNULL([policyHolderMailAddressZip],'0'), 5) AS [policyHolderMailAddressZip],
             RIGHT('0000' + ISNULL([policyHolderMailAddressZipPlus4],'0'), 4) AS [policyHolderMailAddressZipPlus4],
             RIGHT('000' + ISNULL([policyHolderTelAreaCode],'0'), 3) AS [policyHolderTelAreaCode],
             RIGHT('0000000' + ISNULL([policyHolderTelNumber],'0'), 7) AS [policyHolderTelNumber],
-            ISNULL([filler_reservedforFutureUse1],'') AS [filler_reservedforFutureUse1],
-            ISNULL([policyHolderNamePrefix],'') AS [policyHolderNamePrefix],
-            ISNULL([policyHolderNameLast],'') AS [policyHolderNameLast],
-            ISNULL([policyHolderNameFirst],'') AS [policyHolderNameFirst],
-            ISNULL([policyHolderNameMiddle],'') AS [policyHolderNameMiddle],
-            ISNULL([policyHolderNameSuffix],'') AS [policyHolderNameSuffix],
+            UPPER(ISNULL([filler_reservedforFutureUse1],'')) AS [filler_reservedforFutureUse1],
+            UPPER(ISNULL([policyHolderNamePrefix],'')) AS [policyHolderNamePrefix],
+            UPPER(ISNULL([policyHolderNameLast],'')) AS [policyHolderNameLast],
+            UPPER(ISNULL([policyHolderNameFirst],'')) AS [policyHolderNameFirst],
+            UPPER(ISNULL([policyHolderNameMiddle],'')) AS [policyHolderNameMiddle],
+            UPPER(ISNULL([policyHolderNameSuffix],'')) AS [policyHolderNameSuffix],
             RIGHT('000000000' + ISNULL([policyHolderSSN],'0'), 9) AS [policyHolderSSN],
             RIGHT('00000000' + ISNULL([policyHolderDOB],'0'), 8) AS [policyHolderDOB],
-            ISNULL([policyHolderSex],'') AS [policyHolderSex],
-            ISNULL([filler_reservedforFutureUse2],'') AS [filler_reservedforFutureUse2],
-            ISNULL([policyHolder2NamePrefix],'') AS [policyHolder2NamePrefix],
-            ISNULL([policyHolder2NameLast],'') AS [policyHolder2NameLast],
-            ISNULL([policyHolder2NameFirst],'') AS [policyHolder2NameFirst],
-            ISNULL([policyHolder2NameMiddle],'') AS [policyHolder2NameMiddle],
-            ISNULL([policyHolder2NameSuffix],'') AS [policyHolder2NameSuffix],
+            UPPER(ISNULL([policyHolderSex],'')) AS [policyHolderSex],
+            UPPER(ISNULL([filler_reservedforFutureUse2],'')) AS [filler_reservedforFutureUse2],
+            UPPER(ISNULL([policyHolder2NamePrefix],'')) AS [policyHolder2NamePrefix],
+            UPPER(ISNULL([policyHolder2NameLast],'')) AS [policyHolder2NameLast],
+            UPPER(ISNULL([policyHolder2NameFirst],'')) AS [policyHolder2NameFirst],
+            UPPER(ISNULL([policyHolder2NameMiddle],'')) AS [policyHolder2NameMiddle],
+            UPPER(ISNULL([policyHolder2NameSuffix],'')) AS [policyHolder2NameSuffix],
             RIGHT('000000000' + ISNULL([policyHolder2SSN],'0'), 9) AS [policyHolder2SSN],
             RIGHT('00000000' + ISNULL([policyHolder2DOB],'0'), 8) AS [policyHolder2DOB],
-            ISNULL([policyHolder2Sex],'') AS [policyHolder2Sex],
-            ISNULL([filler_reservedforFutureUse3],'') AS [filler_reservedforFutureUse3],
-            ISNULL([claimantNamePrefix],'') AS [claimantNamePrefix],
-            ISNULL([claimantNameLast],'') AS [claimantNameLast],
-            ISNULL([claimantNameFirst],'') AS [claimantNameFirst],
-            ISNULL([claimantNameMiddle],'') AS [claimantNameMiddle],
-            ISNULL([claimantNameSuffix],'') AS [claimantNameSuffix],
+            UPPER(ISNULL([policyHolder2Sex],'')) AS [policyHolder2Sex],
+            UPPER(ISNULL([filler_reservedforFutureUse3],'')) AS [filler_reservedforFutureUse3],
+            UPPER(ISNULL([claimantNamePrefix],'')) AS [claimantNamePrefix],
+            UPPER(ISNULL([claimantNameLast],'')) AS [claimantNameLast],
+            UPPER(ISNULL([claimantNameFirst],'')) AS [claimantNameFirst],
+            UPPER(ISNULL([claimantNameMiddle],'')) AS [claimantNameMiddle],
+            UPPER(ISNULL([claimantNameSuffix],'')) AS [claimantNameSuffix],
             RIGHT('000000000' + ISNULL([claimantSSN],'0'), 9) AS [claimantSSN],
             RIGHT('00000000' + ISNULL([claimantDOB],'0'), 8) AS [claimantDOB],
-            ISNULL([claimantSex],'') AS [claimantSex],
-            ISNULL([claimantAddressHseNum],'') AS [claimantAddressHseNum],
-            ISNULL([claimantAddressStreetName],'') AS [claimantAddressStreetName],
-            ISNULL([claimantAddressAptNum],'') AS [claimantAddressAptNum],
-            ISNULL([claimantAddressCity],'') AS [claimantAddressCity],
-            ISNULL([claimantAddressState],'') AS [claimantAddressState],
+            UPPER(ISNULL([claimantSex],'')) AS [claimantSex],
+            UPPER(ISNULL([claimantAddressHseNum],'')) AS [claimantAddressHseNum],
+            UPPER(ISNULL([claimantAddressStreetName],'')) AS [claimantAddressStreetName],
+            UPPER(ISNULL([claimantAddressAptNum],'')) AS [claimantAddressAptNum],
+            UPPER(ISNULL([claimantAddressCity],'')) AS [claimantAddressCity],
+            UPPER(ISNULL([claimantAddressState],'')) AS [claimantAddressState],
             RIGHT('00000' + ISNULL([claimantAddressZip],'0'), 5) AS [claimantAddressZip],
             RIGHT('0000' + ISNULL([claimantAddressZipPlus4],'0'), 4) AS [claimantAddressZipPlus4],
             RIGHT('000' + ISNULL([claimantTelephoneAreaCode],'0'), 3) AS [claimantTelephoneAreaCode],
             RIGHT('0000000' + ISNULL([claimantTelephoneNumber],'0'), 7) AS [claimantTelephoneNumber],
-            ISNULL([filler_reservedforFutureUse4],'') AS [filler_reservedforFutureUse4],
-            ISNULL([clueControlArea],'') AS [clueControlArea],
-            ISNULL([filler_reservedforFutureUse5],'') AS [filler_reservedforFutureUse5],
-            ISNULL([recordVersionNumber],'') AS [recordVersionNumber],
+            UPPER(ISNULL([filler_reservedforFutureUse4],'')) AS [filler_reservedforFutureUse4],
+            UPPER(ISNULL([clueControlArea],'')) AS [clueControlArea],
+            UPPER(ISNULL([filler_reservedforFutureUse5],'')) AS [filler_reservedforFutureUse5],
+            UPPER(ISNULL([recordVersionNumber],'')) AS [recordVersionNumber],
             [create_ts],
             [update_ts],
             [etl_audit_sk],
@@ -444,7 +511,9 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
         -- Drop temp table
-        DROP TABLE IF EXISTS edw_temp.[claim_clue_property_feed_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp0];
+        DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp2];
 
 	END TRY
 	BEGIN CATCH

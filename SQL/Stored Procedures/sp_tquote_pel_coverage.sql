@@ -2,6 +2,10 @@
 -- Author:		Yunus Mohammed
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert pel quote driver data
+-----------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+-----------------------------------------------------------------------------------------------------------
+-- 05/28/24		Alberto Almario					1. Integrate Premium Adjustments data into EDW - PEL 
 -- =============================================
 CREATE or alter  PROCEDURE [edw_core].[sp_tquote_pel_coverage]
 
@@ -25,7 +29,77 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
 		declare @sql nvarchar(max)
-		drop table if exists edw_temp.tquote_pel_coverage_temp1
+		DROP TABLE IF EXISTS edw_temp.tquote_pel_coverage_temp1;
+		DROP TABLE IF EXISTS edw_temp.tquote_pel_coverage_temp2;
+		DROP TABLE IF EXISTS edw_temp.tquote_pel_coverage_temp3;
+
+		WITH 
+        acct AS (
+            SELECT
+                *
+            FROM [edw_stage].[AccountTransaction]
+            WHERE Stage IN ('QUOTE','POLICY')
+			AND PolicyNumber IS NOT NULL
+            AND CreatedDate > @last_source_extract_ts
+        )
+        ,acctvpf AS (
+            SELECT  
+                acct.PolicyNumber, acct.EffectiveDate, acct.CreatedDate, acct.[Number],
+                acctvpf.AccountTransactionVersionPremiumId,
+                acctvpf.Coverage,
+                CONCAT(
+                    CASE 
+                        WHEN Coverage = 'Excess Liability' THEN 'excess_coverage'
+                        ELSE LOWER(REPLACE(Coverage,' ','_'))
+                    END
+                    ,'_premium_adjustment'
+                ) AS FinalColumnName,
+                acctvpf.FactorMethod AS method,
+                CONVERT(nvarchar(3000), acctvpf.Factor) AS amount,
+                acctvpf.Retention AS [retention],
+                acctvpf.Reason AS reason
+            FROM [edw_stage].[AccountTransaction] as acct
+            INNER JOIN [edw_stage].[Product] p ON p.Id = acct.ProductId
+            INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
+            INNER JOIN [edw_stage].[AccountTransactionVersionPremium] AS acctvp ON acctv.id = acctvp.AccountTransactionVersionId
+            INNER JOIN [edw_stage].[AccountTransactionVersionPremiumFactor] AS acctvpf ON acctvp.id = acctvpf.AccountTransactionVersionPremiumId
+            WHERE acct.Stage IN ('QUOTE','POLICY')
+			AND acct.PolicyNumber IS NOT NULL
+            AND acct.CreatedDate > @last_source_extract_ts
+			AND acctvpf.Coverage IN ('Excess Liability')
+            AND p.[Name] = 'Personal Excess Liability'
+            AND p.ProductLine = 'PersonalLines'
+        )
+        ,acctvpf_unpivot AS (
+            SELECT PolicyNumber, EffectiveDate, CreatedDate, [Number], CONCAT(FinalColumnName, '_method') AS FinalColumnName, method           	as FinalValue FROM acctvpf WHERE method IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, CreatedDate, [Number], CONCAT(FinalColumnName, '_factor') AS FinalColumnName, amount           	as FinalValue FROM acctvpf WHERE amount IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, CreatedDate, [Number], CONCAT(FinalColumnName, '_retention') AS FinalColumnName, [retention]   	as FinalValue FROM acctvpf WHERE [retention] IS NOT NULL
+            UNION ALL
+            SELECT PolicyNumber, EffectiveDate, CreatedDate, [Number], CONCAT(FinalColumnName, '_retention_reason') AS FinalColumnName, reason	as FinalValue FROM acctvpf WHERE reason IS NOT NULL
+        )
+
+
+		SELECT
+			PolicyNumber, EffectiveDate, CreatedDate, [Number]
+			,excess_coverage_premium_adjustment_method
+			,excess_coverage_premium_adjustment_factor
+			,excess_coverage_premium_adjustment_retention
+			,excess_coverage_premium_adjustment_retention_reason
+		INTO edw_temp.tquote_pel_coverage_temp2
+		FROM acctvpf_unpivot
+		PIVOT 
+		(
+			MAX(FinalValue) FOR FinalColumnName IN (
+				excess_coverage_premium_adjustment_method
+				,excess_coverage_premium_adjustment_factor
+				,excess_coverage_premium_adjustment_retention
+				,excess_coverage_premium_adjustment_retention_reason
+			)
+		) AS pvt
+
+
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,policy_history_sk,source_system_sk,
 			CreatedDate,CoverageLimit,UnderinsuredMotoristLiability,UnderinsuredLiability,EmploymentPracticesLiabilityLimit,
@@ -35,14 +109,15 @@ BEGIN
 			PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
 			CriminalTrafficViolationField,YouthfulOperatorCount,AdultOperatorCount,
 			SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
-			AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit
-			into edw_temp.tquote_pel_coverage_temp1
+			AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,
+			EmergencyExtensionNotice
+		INTO edw_temp.tquote_pel_coverage_temp3
 		from
 		(
 		select * 
 		from
 			(
-			 
+			
 			select
 			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
 			CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.quote_history_sk policy_history_sk,
@@ -51,7 +126,7 @@ BEGIN
 			atvo.[Index],act.CreatedDate,
 			atvof.Field,NULLIF(TRIM(atvof.[Value]),'') AS [Value]
 			from
-				edw_stage.AccountTransaction act
+				[edw_stage].[AccountTransaction] as act
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
@@ -60,10 +135,10 @@ BEGIN
 						and tph.effective_dt=act.EffectiveDate
 						and tph.transaction_seq_no = act.number
 				left join edw_stage.Product pr on act.ProductId = pr.id
-			where
-				act.PolicyNumber is not null and
-				act.Stage IN ('QUOTE','POLICY')
-				and p.[Name]='Personal Excess Liability'
+			WHERE act.Stage IN ('QUOTE','POLICY')
+				AND act.PolicyNumber IS NOT NULL
+				AND act.CreatedDate > @last_source_extract_ts
+				AND p.[Name]='Personal Excess Liability'
 				and atvo.ObjectType='PersonalExcessLiability'
 				and pr.ProductLine = 'PersonalLines'
 				and atvof.Field IN 
@@ -75,9 +150,9 @@ BEGIN
 					'PremisesLiabilityLimitation','DeletionofCosmeticMarringExclusion','Manuscript','ProfileAdjustment','CriminalTrafficViolation',
 					'CriminalTrafficViolationField','YouthfulOperatorCount','AdultOperatorCount',
 					'SecondaryInsuredCoverageAmount','UnderinsuredMotoristLiabilityForSecondaryInsured','DefenseInsideLimits','AutoLiabilityExclusion',
-					'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit'
+					'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit',
+					'EmergencyExtensionNotice'
 				)
-				and act.CreatedDate>@last_source_extract_ts
 			) as t
 		) as t
 		pivot 
@@ -91,9 +166,26 @@ BEGIN
 				PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
 				CriminalTrafficViolationField,YouthfulOperatorCount,AdultOperatorCount,
 				SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
-				AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit
+				AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,
+				EmergencyExtensionNotice
 				)
 		) as pivottable
+
+
+		SELECT 
+            a.*
+            ,b.excess_coverage_premium_adjustment_method
+			,b.excess_coverage_premium_adjustment_factor
+			,b.excess_coverage_premium_adjustment_retention
+			,b.excess_coverage_premium_adjustment_retention_reason
+		INTO [edw_temp].[tquote_pel_coverage_temp1]
+        FROM [edw_temp].[tquote_pel_coverage_temp3] AS a 
+        LEFT JOIN [edw_temp].[tquote_pel_coverage_temp2] AS b
+			ON a.PolicyNumber = b.PolicyNumber
+			AND a.EffectiveDate = b.EffectiveDate
+			AND a.CreatedDate = b.CreatedDate
+			AND a.transaction_seq_no = b.[Number]
+
 
 		INSERT INTO [edw_core].[tquote_pel_coverage]
 		(
@@ -110,6 +202,11 @@ BEGIN
 			source_system_sk,create_ts,update_ts,etl_audit_sk,
 			secondary_insured_coverage_amt,underinsured_motorist_liability_for_secondary_insured_amt,defense_inside_limits_in,auto_liability_exclusion_in,
 			auto_underlying_limit_type,auto_underlying_limit_per_occurence_amt,auto_underlying_limit_for_property_damage_amt,home_underlying_limit_amt
+			,excess_coverage_premium_adjustment_method
+			,excess_coverage_premium_adjustment_factor
+			,excess_coverage_premium_adjustment_retention
+			,excess_coverage_premium_adjustment_retention_reason
+			,emergency_extension_notice_in
 		)
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,
@@ -139,6 +236,11 @@ BEGIN
 			DefenseInsideLimits AS defense_inside_limits_in,AutoLiabilityExclusion AS auto_liability_exclusion_in,
 			AutoUnderlyingLimitType AS auto_underlying_limit_type,AutoUnderlyingLimitAmountPerOccurrence AS auto_underlying_limit_per_occurence_amt,
 			AutoUnderlyingLimitAmountForPropertyDamage AS auto_underlying_limit_for_property_damage_amt,HomeUnderlyingLimit AS home_underlying_limit_amt
+			,excess_coverage_premium_adjustment_method
+			,excess_coverage_premium_adjustment_factor
+			,excess_coverage_premium_adjustment_retention
+			,excess_coverage_premium_adjustment_retention_reason
+			,EmergencyExtensionNotice AS emergency_extension_notice_in
 		FROM
 			edw_temp.tquote_pel_coverage_temp1 AS ttlc
 
@@ -153,7 +255,10 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
 		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tquote_pel_coverage_temp1
+		DROP TABLE IF EXISTS edw_temp.tquote_pel_coverage_temp1;
+		DROP TABLE IF EXISTS edw_temp.tquote_pel_coverage_temp2;
+		DROP TABLE IF EXISTS edw_temp.tquote_pel_coverage_temp3;
+
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)

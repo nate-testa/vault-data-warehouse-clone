@@ -15,7 +15,7 @@ GO
 -- 04/19/24     Architha Gudimalla              5. Added limit converion to front end display value
 -- ===================================================================================================================== 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage] 
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -54,7 +54,8 @@ BEGIN
             [NumberofTotalVehiclesonPolicy], [TotalNumberofPPAs], [TotalOwnedPPAs], [NumberofPPAwithPhysDam], [NumberofCollectorCars], [TotalInsuredLocations], [HOClaims], [NumberofDriversonPolicy], 
             [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
             [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], [RaterPIPDiscount],
-			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay]
+			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay],
+            [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice]
 		
         INTO [edw_temp].[tquote_auto_policy_coverage_temp1]
 		
@@ -105,7 +106,8 @@ BEGIN
                     [NumberofTotalVehiclesonPolicy], [TotalNumberofPPAs], [TotalOwnedPPAs], [NumberofPPAwithPhysDam], [NumberofCollectorCars], [TotalInsuredLocations], [HOClaims], [NumberofDriversonPolicy], 
                     [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
                     [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], 
-                    [RaterPIPDiscount], [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay]
+                    [RaterPIPDiscount], [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay],
+                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice]
                 )
 			) pivottable
 
@@ -256,6 +258,11 @@ BEGIN
             ,transportation_expense_amt
             ,transportation_expense_daily_limit_amt
             ,transportation_expense_copay_amt
+            ,permissive_driver_unique_liability_limits_in
+            ,permissive_driver_unique_combined_single_limit_amt
+            ,permissive_driver_unique_bi_limit_amt
+            ,permissive_driver_unique_pd_limit_amt
+            ,emergency_extension_notice_in
 		)
         SELECT 
             t1.quote_no,
@@ -364,6 +371,11 @@ BEGIN
             ,t1.[TransportationExpense] as transportation_expense_amt
             ,t1.[TransportationExpenseDailyLimit] as transportation_expense_daily_limit_amt
             ,t1.[TransportationExpenseCoPay] as transportation_expense_copay_amt
+            ,t1.[PermissiveDriverUniqueLiabilityLimits] as permissive_driver_unique_liability_limits_in
+            ,t1.[PermissiveDriverUniqueCombinedSingleLimit] as permissive_driver_unique_combined_single_limit_amt
+            ,t1.[PermissiveDriverUniqueBILimit] as permissive_driver_unique_bi_limit_amt
+            ,t1.[PermissiveDriverUniquePDLimit] as permissive_driver_unique_pd_limit_amt
+            ,t1.[EmergencyExtensionNotice] as emergency_extension_notice_in
         FROM 
             [edw_temp].[tquote_auto_policy_coverage_temp1] AS t1
         ;

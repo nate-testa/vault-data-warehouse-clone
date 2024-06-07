@@ -90,7 +90,10 @@ BEGIN
                 ROUND(pt.ceded_premium_amt,2) as hcp_net_premium_amt,
                 hac.home_cyber_protection_coverage_deductible as hcp_deductible_amt,
                 hc.dwelling_limit_amt as coverage_a_value,
-                REPLACE(hac.home_cyber_protection_coverage_limit_amt,',','') as hcp_limit_amt,
+                CASE 
+                    WHEN REPLACE(hac.home_cyber_protection_coverage_limit_amt,',','') IN ('','0','25000','50000','100000') OR hac.home_cyber_protection_coverage_limit_amt IS NULL THEN '500'
+                    WHEN REPLACE(hac.home_cyber_protection_coverage_limit_amt,',','') IN ('250000','500000') THEN '1000'
+                END as hcp_limit_amt,
                 '' as homeowner_policy_form_no,
                 '' as product_form_no,
                 '' as client_product_nm,
@@ -101,9 +104,9 @@ BEGIN
                 '' as base_homeowner_premium,
                 ROUND(pt.net_premium_amt,2) as final_homeowner_premium,
                 CASE 
-                    WHEN ISNUMERIC(hc.aop_deductible) = 0 THEN NULL 
-                    ELSE ROUND(hc.aop_deductible,0,1)
-                END AS policy_deductible,
+                    WHEN REPLACE(hac.home_cyber_protection_coverage_limit_amt,',','') IN ('','0','25000','50000','100000') OR hac.home_cyber_protection_coverage_limit_amt IS NULL THEN '500'
+                    WHEN REPLACE(hac.home_cyber_protection_coverage_limit_amt,',','') IN ('250000','500000') THEN '1000'
+                END as policy_deductible,
                 hc.built_year as year_build,
                 hc.total_finished_square_feet as total_living_area,
                 '' as no_of_units_in_dwelling,
@@ -145,7 +148,12 @@ BEGIN
             LEFT JOIN 
                 (
                     select 
-                        policy_no, effective_dt, transaction_seq_no, aop_deductible, dwelling_limit_amt, other_structures_limit_amt, contents_limit_amt, residence_type, 
+                        policy_no, effective_dt, transaction_seq_no, 
+                        CASE 
+                            WHEN ISNUMERIC(aop_deductible) = 0 THEN NULL 
+                            ELSE ROUND(aop_deductible,0,1)
+                        END AS aop_deductible, 
+                        dwelling_limit_amt, other_structures_limit_amt, contents_limit_amt, residence_type, 
                         occupancy_type, built_year, total_finished_square_feet, hvac_updated_year, electrical_updated_year, plumbing_updated_year,
                         ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt ORDER BY transaction_seq_no DESC) AS RN
                     from edw_core.thome_coverage 

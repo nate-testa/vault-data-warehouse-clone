@@ -117,7 +117,14 @@ BEGIN
                             (
                                 SELECT 
                                     pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk,
-                                    SUM(pt.annual_premium_amt) AS annual_premium_amt, 
+                                    (
+                                        SELECT SUM(subpt.annual_premium_amt)
+                                        FROM edw_core.tpolicy_transaction subpt 
+                                        WHERE subpt.policy_sk = pt.policy_sk
+                                        AND subpt.effective_dt_sk = pt.effective_dt_sk
+                                        AND subpt.internal_coverage_sk = pt.internal_coverage_sk
+                                        AND subpt.transaction_seq_no <= pt.transaction_seq_no
+                                    ) as annual_premium_amt,
                                     SUM(pt.premium_amt) AS premium_amt 
                                 FROM edw_core.tpolicy_transaction as pt
                                 INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
@@ -159,12 +166,31 @@ BEGIN
                     WHEN ic.internal_coverage_desc IN ('Underinsured Motorist','Uninsured Motorist') THEN 'um_uim_Prem'
                     ELSE ic.internal_coverage_desc
                 END AS coverageDesc,
+                CASE 
+                    WHEN apc.limit_type = 'Combined' then apc.combined_single_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Added First Party' then apc.added_first_party_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Bodily Injury' then apc.bodily_injury_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Basic First Party' then apc.combination_fpb_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Auto Death Disability' then apc.accidental_death_benefit_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Medical Payments' then apc.medical_payment_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Personal Injury Protection' then apc.pip_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Property Damage' then apc.property_damage_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Underinsured Motorist' AND apc.limit_type = 'Combined' then apc.combined_underinsured_motorist_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Underinsured Motorist' AND apc.limit_type = 'Split' then apc.underinsured_motorist_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Uninsured Motorist' AND apc.limit_type = 'Combined' then apc.combined_uninsured_motorist_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Uninsured Bodily Injury' AND apc.limit_type = 'Combined' then apc.combined_um_bi_policy_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Uninsured Property Damage' AND apc.limit_type = 'Combined' then apc.combined_um_pd_policy_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Uninsured Motorist' AND apc.limit_type = 'Split' then apc.uninsured_motorist_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Uninsured Bodily Injury' AND apc.limit_type = 'Split' then apc.um_bi_policy_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Uninsured Property Damage' AND apc.limit_type = 'Split' then apc.um_pd_policy_limit_amt 
+                    ELSE '' 
+                END 	AS limits,
                 pt.premium_amt as netChangeAmt,
                 pt.annual_premium_amt as currentTermAmt
             FROM 
                 (
                     SELECT 
-                        pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.vehicle_coverage_sk, pt.internal_coverage_sk,
+                        pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.vehicle_coverage_sk, pt.internal_coverage_sk,
                         SUM(pt.annual_premium_amt) AS annual_premium_amt, 
                         SUM(pt.premium_amt) AS premium_amt 
                     FROM edw_core.tpolicy_transaction as pt
@@ -175,10 +201,11 @@ BEGIN
                     WHERE 1=1
                         AND pr.product_cd = 'AU'
                     AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
-                    GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.vehicle_coverage_sk, pt.internal_coverage_sk
+                    GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.vehicle_coverage_sk, pt.internal_coverage_sk
                 ) as pt 
                 INNER JOIN edw_core.tauto_vehicle_coverage as avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
                 INNER JOIN edw_core.tinternal_coverage as ic ON pt.internal_coverage_sk = ic.internal_coverage_sk
+                INNER JOIN edw_core.tauto_policy_coverage as apc ON pt.coverage_sk = apc.auto_policy_coverage_sk
         ),
         json_au_vehicles AS (
 			SELECT avcf.policy_no, avcf.effective_dt, avcf.transaction_seq_no,
@@ -192,7 +219,7 @@ BEGIN
 						avc.annual_miles as numUnits,
 						'Vehicle' as riskType,
 						(
-							SELECT coverageCd, deductibles, coverageDesc, netChangeAmt, currentTermAmt
+							SELECT coverageCd, deductibles, coverageDesc, limits, netChangeAmt, currentTermAmt
 							FROM json_au_vehicles_sub_coverages AS javsc
 							WHERE javsc.policy_no = avc.policy_no 
 								AND javsc.effective_dt = avc.effective_dt

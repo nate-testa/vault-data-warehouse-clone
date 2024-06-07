@@ -6,6 +6,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 09/05/24		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 05/14/24		Architha Gudimalla				3. Corrected errors
+-- 05/30/24		Yunus Mohammed					3. Added AccountObject.Id instead of Account.Id
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_scheduled_item_wip]
@@ -51,7 +52,7 @@ BEGIN
 		FROM
 			(
 			SELECT
-				acc.Id,
+				acco.Id,
 				acc.PolicyNumber, acc.EffectiveDate,acc.ExpirationDate, acc.[Number]
 				,tqh.[quote_history_sk]
 				,tqcct.[quote_collection_class_type_sk]
@@ -180,7 +181,7 @@ BEGIN
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
+
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200)) --20230717 added
 		--EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected; --20230717 removed

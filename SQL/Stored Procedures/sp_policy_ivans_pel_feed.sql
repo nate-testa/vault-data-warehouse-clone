@@ -135,7 +135,14 @@ BEGIN
                             (
                                 SELECT 
                                     pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk,
-                                    SUM(pt.annual_premium_amt) AS annual_premium_amt, 
+                                    (
+                                        SELECT SUM(subpt.annual_premium_amt)
+                                        FROM edw_core.tpolicy_transaction subpt 
+                                        WHERE subpt.policy_sk = pt.policy_sk
+                                        AND subpt.effective_dt_sk = pt.effective_dt_sk
+                                        AND subpt.internal_coverage_sk = pt.internal_coverage_sk
+                                        AND subpt.transaction_seq_no <= pt.transaction_seq_no
+                                    ) as annual_premium_amt,
                                     SUM(pt.premium_amt) AS premium_amt 
                                 FROM edw_core.tpolicy_transaction as pt
                                 INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
