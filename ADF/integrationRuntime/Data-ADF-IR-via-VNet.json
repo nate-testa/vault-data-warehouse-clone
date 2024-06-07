@@ -1,0 +1,28 @@
+{
+	"name": "Data-ADF-IR-via-VNet",
+	"properties": {
+		"type": "Managed",
+		"description": "Used to comm privately with SQL server DATA-CORE01",
+		"typeProperties": {
+			"computeProperties": {
+				"location": "East US",
+				"dataFlowProperties": {
+					"computeType": "General",
+					"coreCount": 8,
+					"timeToLive": 10,
+					"cleanup": false,
+					"customProperties": []
+				},
+				"pipelineExternalComputeScaleProperties": {
+					"timeToLive": 60,
+					"numberOfPipelineNodes": 1,
+					"numberOfExternalNodes": 1
+				}
+			}
+		},
+		"managedVirtualNetwork": {
+			"type": "ManagedVirtualNetworkReference",
+			"referenceName": "default"
+		}
+	}
+}

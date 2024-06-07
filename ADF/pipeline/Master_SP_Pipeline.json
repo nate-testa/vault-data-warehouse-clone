@@ -1,0 +1,109 @@
+{
+	"name": "Master_SP_Pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Master_Home",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Master_Ref",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Master_Home_Procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Master_Ref",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Master_Ref_Procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Master_Collections",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Master_Home",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Master_Collections_Procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "LogicApp Email Notification",
+				"type": "WebActivity",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
+				"dependsOn": [
+					{
+						"activity": "Master_Ref",
+						"dependencyConditions": [
+							"Failed"
+						]
+					},
+					{
+						"activity": "Master_Home",
+						"dependencyConditions": [
+							"Failed"
+						]
+					},
+					{
+						"activity": "Master_Collections",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": []
+			}
+		],
+		"folder": {
+			"name": "StoredProcedure EXEC"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-11-16T22:48:54Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

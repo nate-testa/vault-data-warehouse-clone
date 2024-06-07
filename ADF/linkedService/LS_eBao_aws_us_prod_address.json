@@ -1,0 +1,17 @@
+{
+	"name": "LS_eBao_aws_us_prod_address",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"description": "Linked Services with eBao PROD",
+		"annotations": [],
+		"type": "MySql",
+		"typeProperties": {
+			"connectionString": "server=aws-us-gi-prod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com;port=3306;database=aws_us_prod_address;user=dms_repl_read;sslmode=2;usesystemtruststore=1",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiIzOTZhNGVjNy02ZTE5LTQ1MzctYmE2Mi05YTY1ZmZhM2JhYzciLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "AWS-PROD",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
