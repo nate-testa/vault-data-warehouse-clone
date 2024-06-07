@@ -1,0 +1,10 @@
+{
+	"name": "azr-uat-metal-db-core01-pep01",
+	"properties": {
+		"privateLinkResourceId": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-METAL-DB-RG/providers/Microsoft.Sql/servers/azr-uat-metal-db-core01",
+		"groupId": "sqlServer",
+		"fqdns": [
+			"azr-uat-metal-db-core01.database.windows.net"
+		]
+	}
+}
