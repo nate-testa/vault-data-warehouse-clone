@@ -5,6 +5,9 @@
 		"factoryName": {
 			"value": "AZR-PROD-DATA-ADF-CORE01"
 		},
+		"LS_AWS_DMS_PROD_connectionString": {
+			"value": ""
+		},
 		"LS_EDW_PROD_connectionString": {
 			"value": ""
 		},

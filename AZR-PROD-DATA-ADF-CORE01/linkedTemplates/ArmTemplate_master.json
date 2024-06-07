@@ -7,6 +7,10 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "AZR-PROD-DATA-ADF-CORE01"
 		},
+		"LS_AWS_DMS_PROD_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_AWS_DMS_PROD'"
+		},
 		"LS_EDW_PROD_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_EDW_PROD'"
@@ -89,6 +93,9 @@
 				"parameters": {
 					"factoryName": {
 						"value": "[parameters('factoryName')]"
+					},
+					"LS_AWS_DMS_PROD_connectionString": {
+						"value": "[parameters('LS_AWS_DMS_PROD_connectionString')]"
 					},
 					"LS_eBao_aws_us_prod_address_connectionString": {
 						"value": "[parameters('LS_eBao_aws_us_prod_address_connectionString')]"
