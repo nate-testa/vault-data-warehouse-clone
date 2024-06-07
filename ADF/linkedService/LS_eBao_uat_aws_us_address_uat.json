@@ -6,7 +6,7 @@
 		"type": "MySql",
 		"typeProperties": {
 			"connectionString": "server=aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com;port=3306;database=aws_us_address_uat;user=awac_readonly;sslmode=0",
-			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiJlMDYyZDhiYS1mOTI1LTQwNDctYWY1Mi1jMjE2MDg2OTVkYmQiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiJhM2VjMzMzZi0zYTE0LTQ2MmItYjc2Mi03M2FjNTFhMGFkZWQiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
 		},
 		"connectVia": {
 			"referenceName": "AWS-UAT",

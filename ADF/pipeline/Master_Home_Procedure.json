@@ -5,6 +5,8 @@
 			{
 				"name": "sp_thome_location",
 				"type": "SqlServerStoredProcedure",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
 				"dependsOn": [],
 				"policy": {
 					"timeout": "0.12:00:00",
@@ -18,7 +20,7 @@
 					"storedProcedureName": "[edw_core].[sp_thome_location]"
 				},
 				"linkedServiceName": {
-					"referenceName": "AzureSqlDatabase_edw_dev",
+					"referenceName": "LS_EDW_UAT",
 					"type": "LinkedServiceReference"
 				}
 			},
@@ -45,7 +47,7 @@
 					"storedProcedureName": "[edw_core].[sp_thome_coverage]"
 				},
 				"linkedServiceName": {
-					"referenceName": "AzureSqlDatabase_edw_dev",
+					"referenceName": "LS_EDW_UAT",
 					"type": "LinkedServiceReference"
 				}
 			},
@@ -72,7 +74,7 @@
 					"storedProcedureName": "[edw_core].[sp_thome_additional_coverage]"
 				},
 				"linkedServiceName": {
-					"referenceName": "AzureSqlDatabase_edw_dev",
+					"referenceName": "LS_EDW_UAT",
 					"type": "LinkedServiceReference"
 				}
 			}
@@ -81,7 +83,7 @@
 			"name": "StoredProcedure EXEC"
 		},
 		"annotations": [],
-		"lastPublishTime": "2023-07-11T13:42:22Z"
+		"lastPublishTime": "2023-09-19T15:26:04Z"
 	},
 	"type": "Microsoft.DataFactory/factories/pipelines"
 }

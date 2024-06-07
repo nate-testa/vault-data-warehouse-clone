@@ -2,7 +2,7 @@
 	"name": "DROP2_yex_DestinationDS",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "AzureSqlDatabase_edw_dev",
+			"referenceName": "LS_EDW_UAT",
 			"type": "LinkedServiceReference"
 		},
 		"parameters": {

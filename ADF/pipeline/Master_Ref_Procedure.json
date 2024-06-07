@@ -18,7 +18,7 @@
 					"storedProcedureName": "[edw_core].[sp_tbroker]"
 				},
 				"linkedServiceName": {
-					"referenceName": "AzureSqlDatabase_edw_dev",
+					"referenceName": "LS_EDW_UAT",
 					"type": "LinkedServiceReference"
 				}
 			},
@@ -38,7 +38,7 @@
 					"storedProcedureName": "[edw_core].[sp_tcustomer]"
 				},
 				"linkedServiceName": {
-					"referenceName": "AzureSqlDatabase_edw_dev",
+					"referenceName": "LS_EDW_UAT",
 					"type": "LinkedServiceReference"
 				}
 			},
@@ -58,7 +58,7 @@
 					"storedProcedureName": "[edw_core].[sp_tinternal_coverage]"
 				},
 				"linkedServiceName": {
-					"referenceName": "AzureSqlDatabase_edw_dev",
+					"referenceName": "LS_EDW_UAT",
 					"type": "LinkedServiceReference"
 				}
 			}
@@ -67,7 +67,7 @@
 			"name": "StoredProcedure EXEC"
 		},
 		"annotations": [],
-		"lastPublishTime": "2023-07-11T13:42:22Z"
+		"lastPublishTime": "2023-09-19T15:26:04Z"
 	},
 	"type": "Microsoft.DataFactory/factories/pipelines"
 }

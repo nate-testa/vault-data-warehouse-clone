@@ -340,7 +340,7 @@
 												},
 												"userProperties": [],
 												"typeProperties": {
-													"storedProcedureName": "[UpdateWatermarkColumnValue_zue]",
+													"storedProcedureName": "[edw_stage].[UpdateWatermarkColumnValue_1i1]",
 													"storedProcedureParameters": {
 														"Id": {
 															"value": {
@@ -359,7 +359,7 @@
 													}
 												},
 												"linkedServiceName": {
-													"referenceName": "AzureSqlDatabase_edw_dev",
+													"referenceName": "LS_EDW_UAT",
 													"type": "LinkedServiceReference"
 												}
 											}
@@ -503,7 +503,7 @@
 			"name": "Metal_to_Vault_Manual_zue_20230705"
 		},
 		"annotations": [],
-		"lastPublishTime": "2023-07-05T21:52:15Z"
+		"lastPublishTime": "2023-09-19T15:26:05Z"
 	},
 	"type": "Microsoft.DataFactory/factories/pipelines"
 }
