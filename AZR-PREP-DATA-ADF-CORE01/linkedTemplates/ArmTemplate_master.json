@@ -7,6 +7,10 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "AZR-PREP-DATA-ADF-CORE01"
 		},
+		"LS_AWS_DMS_PREPROD_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_AWS_DMS_PREPROD'"
+		},
 		"LS_EDW_PREPROD_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_EDW_PREPROD'"
@@ -90,6 +94,9 @@
 					"factoryName": {
 						"value": "[parameters('factoryName')]"
 					},
+					"LS_AWS_DMS_PREPROD_connectionString": {
+						"value": "[parameters('LS_AWS_DMS_PREPROD_connectionString')]"
+					},
 					"LS_eBao_preProd_aws_us_preprod_address_connectionString": {
 						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_address_connectionString')]"
 					},
@@ -151,6 +158,26 @@
 			},
 			"dependsOn": [
 				"[resourceId('Microsoft.Resources/deployments', 'AZR-PREP-DATA-ADF-CORE01_ArmTemplate_0')]"
+			]
+		},
+		{
+			"name": "AZR-PREP-DATA-ADF-CORE01_ArmTemplate_2",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_2.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Resources/deployments', 'AZR-PREP-DATA-ADF-CORE01_ArmTemplate_1')]"
 			]
 		}
 	]

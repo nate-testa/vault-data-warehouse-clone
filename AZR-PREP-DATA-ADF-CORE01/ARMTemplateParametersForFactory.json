@@ -5,6 +5,9 @@
 		"factoryName": {
 			"value": "AZR-PREP-DATA-ADF-CORE01"
 		},
+		"LS_AWS_DMS_PREPROD_connectionString": {
+			"value": ""
+		},
 		"LS_EDW_PREPROD_connectionString": {
 			"value": ""
 		},

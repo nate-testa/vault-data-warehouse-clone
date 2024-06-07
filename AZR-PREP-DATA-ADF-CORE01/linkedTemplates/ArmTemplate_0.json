@@ -7,6 +7,10 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "AZR-PREP-DATA-ADF-CORE01"
 		},
+		"LS_AWS_DMS_PREPROD_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_AWS_DMS_PREPROD'"
+		},
 		"LS_eBao_preProd_aws_us_preprod_address_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_address'"
@@ -104,6 +108,25 @@
 			"apiVersion": "2018-06-01",
 			"properties": {},
 			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_AWS_DMS_PREPROD')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "MySql",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_AWS_DMS_PREPROD_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AWS-PREPROD",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-PREPROD')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/LS_eBao_preProd_aws_us_preprod_address')]",
@@ -422,7 +445,7 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_ControlDS')]",
+			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_LS_AWS_DMS_dd8_ControlDS')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
 			"properties": {
@@ -431,7 +454,7 @@
 					"type": "LinkedServiceReference"
 				},
 				"folder": {
-					"name": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_20230530"
+					"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
 				},
 				"annotations": [],
 				"type": "AzureSqlTable",
@@ -446,7 +469,7 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_DestinationDS')]",
+			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_LS_AWS_DMS_dd8_DestinationDS')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
 			"properties": {
@@ -455,15 +478,15 @@
 					"type": "LinkedServiceReference"
 				},
 				"parameters": {
-					"cw_schema": {
+					"cw_table": {
 						"type": "String"
 					},
-					"cw_table": {
+					"cw_schema": {
 						"type": "String"
 					}
 				},
 				"folder": {
-					"name": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_20230530"
+					"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
 				},
 				"annotations": [],
 				"type": "AzureSqlTable",
@@ -481,44 +504,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_PREPROD')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_SourceDS')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_METALDB_PREPROD",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"cw_schema": {
-						"type": "String"
-					},
-					"cw_table": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_20230530"
-				},
-				"annotations": [],
-				"type": "AzureSqlTable",
-				"schema": [],
-				"typeProperties": {
-					"schema": {
-						"value": "@dataset().cw_schema",
-						"type": "Expression"
-					},
-					"table": {
-						"value": "@dataset().cw_table",
-						"type": "Expression"
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_METALDB_PREPROD')]"
 			]
 		}
 	]
