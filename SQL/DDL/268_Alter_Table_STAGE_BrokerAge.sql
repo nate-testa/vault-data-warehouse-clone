@@ -1,7 +1,0 @@
-IF NOT EXISTS (SELECT *
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE lower(TABLE_NAME) = 'Brokerage'
-        AND LOWER(COLUMN_NAME) = 'Tier')
-BEGIN
-    ALTER TABLE edw_stage.Brokerage ADD Tier INT NULL;
-END

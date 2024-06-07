@@ -1,1 +1,0 @@
-CREATE INDEX idx_titem_inforce_month_sk on edw_core.titem_inforce (month_sk);

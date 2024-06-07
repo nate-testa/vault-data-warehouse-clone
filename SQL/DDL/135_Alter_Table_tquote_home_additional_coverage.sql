@@ -1,4 +1,0 @@
-ALTER TABLE edw_core.tquote_home_additional_coverage ADD roof_exclusion_with_ensuing_loss_in varchar(255);
-ALTER TABLE edw_core.tquote_home_additional_coverage ADD roof_coverage_endorsement_wh_in varchar(255);
-ALTER TABLE edw_core.tquote_home_additional_coverage ADD roof_coverage_endorsement_ap_in varchar(255);
-ALTER TABLE edw_core.tquote_home_additional_coverage ADD roof_coverage_endorsement_rv_in varchar(255);

@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.tpel_driver ADD driver_deleted_in VARCHAR(255);

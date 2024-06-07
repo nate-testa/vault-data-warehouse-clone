@@ -1,3 +1,0 @@
-ALTER TABLE edw_core.tinternal_coverage_summary
-ADD
-vehicle_coverage_sk int;

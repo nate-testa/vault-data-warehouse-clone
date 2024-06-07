@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.tcollection_coverage ADD home_coverage_sk int;

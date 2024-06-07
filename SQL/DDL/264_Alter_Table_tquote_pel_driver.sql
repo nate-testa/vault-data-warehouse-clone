@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.tquote_pel_driver ADD driver_limit_type varchar(255);

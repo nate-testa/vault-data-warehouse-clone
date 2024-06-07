@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.tquote_history ADD insurance_score_last_run_dt date;

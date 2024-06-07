@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.tauto_driver ADD lending_loss_amt varchar(255);

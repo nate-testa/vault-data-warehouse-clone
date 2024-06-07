@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.tpolicy_transaction ADD collection_class_type_sk int DEFAULT 0;

@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.thome_coverage ALTER COLUMN bceg_credit_pc varchar(255);

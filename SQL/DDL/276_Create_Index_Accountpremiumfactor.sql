@@ -1,1 +1,0 @@
-CREATE INDEX [IX_Accountpremiumfactor_coverage] ON [edw_stage].Accountpremiumfactor(coverage);

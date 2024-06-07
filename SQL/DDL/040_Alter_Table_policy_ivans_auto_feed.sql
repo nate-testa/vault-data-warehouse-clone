@@ -1,1 +1,0 @@
-ALTER TABLE [edw_integration].[policy_ivans_auto_feed] ADD CommercialName_100 varchar(255);

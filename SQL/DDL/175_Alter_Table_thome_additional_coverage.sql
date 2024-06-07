@@ -1,6 +1,0 @@
-ALTER TABLE edw_core.thome_additional_coverage ADD fire_station_connected_fire_alarm_in varchar(255);
-ALTER TABLE edw_core.thome_additional_coverage ADD police_station_connected_burglar_alarm_in varchar(255);
-ALTER TABLE edw_core.thome_additional_coverage ADD local_fire_alarm_system_in varchar(255);
-ALTER TABLE edw_core.thome_additional_coverage ADD local_burglar_alarm_system_in varchar(255);
-ALTER TABLE edw_core.thome_additional_coverage ADD automatic_smoke_detectors_in varchar(255);
-ALTER TABLE edw_core.thome_additional_coverage ADD automatic_sprinkler_system varchar(255);
