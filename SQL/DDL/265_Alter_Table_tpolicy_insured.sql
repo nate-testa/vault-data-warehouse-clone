@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.tpolicy_insured ADD named_insured_limit_type varchar(255);

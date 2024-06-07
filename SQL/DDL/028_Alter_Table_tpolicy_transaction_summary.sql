@@ -1,3 +1,0 @@
-ALTER TABLE edw_core.tpolicy_transaction_summary
-ADD
-vehicle_coverage_sk int;

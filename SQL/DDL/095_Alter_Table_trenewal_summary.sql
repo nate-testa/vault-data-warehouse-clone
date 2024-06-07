@@ -1,1 +1,0 @@
-ALTER TABLE edw_core.trenewal_summary ADD uw_company_cd varchar(255);
