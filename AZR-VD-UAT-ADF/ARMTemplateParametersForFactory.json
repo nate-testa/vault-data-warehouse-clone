@@ -1,0 +1,69 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "AZR-VD-UAT-ADF"
+		},
+		"LS_AWS_DMS_UAT_connectionString": {
+			"value": ""
+		},
+		"LS_EDW_UAT_connectionString": {
+			"value": ""
+		},
+		"LS_METAL_UAT_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_uat_aw_uat_pub_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_uat_aws_us_address_uat_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_uat_aws_us_diary_uat_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_connectionString": {
+			"value": ""
+		},
+		"LS_eBao_uat_aws_us_uat_vault_connectionString": {
+			"value": ""
+		},
+		"AWS-UAT_properties_typeProperties_linkedInfo_resourceId": {
+			"value": "/subscriptions/6c8f1314-e2b0-43e5-87b0-0538a6a6ca04/resourcegroups/AZR-DEV-DATA-ADF/providers/Microsoft.DataFactory/factories/AZR-VD-Metal-ADF/integrationruntimes/AWS-UAT"
+		},
+		"azr-uat-metal-db-core01-pep01_properties_privateLinkResourceId": {
+			"value": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-METAL-DB-RG/providers/Microsoft.Sql/servers/azr-uat-metal-db-core01"
+		},
+		"azr-uat-metal-db-core01-pep01_properties_groupId": {
+			"value": "sqlServer"
+		},
+		"azr-uat-metal-db-core01-pep01_properties_fqdns": {
+			"value": [
+				"azr-uat-metal-db-core01.database.windows.net"
+			]
+		},
+		"azrvaultdatauat001-privateData-pep01_properties_privateLinkResourceId": {
+			"value": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-DATA-DB-RG/providers/Microsoft.Sql/servers/azrvaultdatauat001"
+		},
+		"azrvaultdatauat001-privateData-pep01_properties_groupId": {
+			"value": "sqlServer"
+		},
+		"azrvaultdatauat001-privateData-pep01_properties_fqdns": {
+			"value": [
+				"azrvaultdatauat001.database.windows.net"
+			]
+		},
+		"azrvaultmetaluat001-privateMetal-pep01_properties_privateLinkResourceId": {
+			"value": "/subscriptions/61591278-f31e-4706-ac18-ebb142d84d24/resourceGroups/AZR-INFRA-RG/providers/Microsoft.Sql/servers/azrvaultmetaluat001"
+		},
+		"azrvaultmetaluat001-privateMetal-pep01_properties_groupId": {
+			"value": "sqlServer"
+		},
+		"azrvaultmetaluat001-privateMetal-pep01_properties_fqdns": {
+			"value": [
+				"azrvaultmetaluat001.database.windows.net"
+			]
+		}
+	}
+}
