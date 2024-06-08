@@ -34,6 +34,7 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp0];
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp1];
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp2];
+        
 
         WITH 
         location_address AS (
@@ -145,7 +146,7 @@ BEGIN
             CASE 
                 WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '20564'
                 WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '20586'
-                ELSE ' ' 
+                ELSE '00000' 
             END AS [contribCompany],
             c.claim_no AS [claimNumber],
             p.policy_no AS [policyNumber],
@@ -155,7 +156,7 @@ BEGIN
                 WHEN p.product_cd = 'PEL' THEN 'J'
                 ELSE ''
             END AS [policyType],
-            FORMAT(c.loss_dt, 'MMddyyyy') AS [claimDate],
+            RIGHT('00000000' + FORMAT(c.loss_dt, 'MMddyyyy'), 8) AS [claimDate],
             CASE cof.cause_of_loss_desc
                 WHEN 'Collapse' THEN 'OTHER'
                 WHEN 'Damage by Animals' THEN 'PHYDA'
@@ -192,7 +193,7 @@ BEGIN
                 ELSE 'OTHER'
             END AS [causeOfLoss],
             'U' AS [locationOfLoss],
-            CAST(c.[claimAmount] AS INT) AS [claimAmount],
+            RIGHT('000000000' + CAST(c.[claimAmount] AS nvarchar(9)), 9) AS [claimAmount],
             'A' AS [claimReportingStatus],
             c.[claimDisposition],
             CASE WHEN cat.catastrophe_nm  IS NULL THEN 'N' ELSE 'Y' END AS [catastropheRelated],
@@ -204,25 +205,25 @@ BEGIN
             la.unit_no AS [riskAddressAptNum],
             la.city_nm AS [riskAddressCity],
             la.state_cd AS [riskAddressState],
-            la.zip_cd AS [riskAddressZip],
-            '' AS [riskAddressZipPlus4], 
+            RIGHT('00000' + la.zip_cd, 5) AS [riskAddressZip],
+            '0000' AS [riskAddressZipPlus4], 
             SUBSTRING(p.mailing_address_line1, 1, PATINDEX('%[^0-9]%', p.mailing_address_line1 + 'x') - 1) AS [policyHolderMailAddrHseNum],
             LEFT(TRIM(SUBSTRING(p.mailing_address_line1, PATINDEX('%[^0-9]%', p.mailing_address_line1), 30)),20) AS [policyHolderMailAddressStreetName],
             p.mailing_address_unit_no AS [policyHolderMailAddressAptNum],
             p.mailing_address_city_nm AS [policyHolderMailAddressCity],
             p.mailing_address_state_cd AS [policyHolderMailAddressState],
-            LEFT(p.mailing_address_zip_cd,5) AS [policyHolderMailAddressZip],
-            '' AS [policyHolderMailAddressZipPlus4],
-            SUBSTRING(cu.home_phone_no,1,3) AS [policyHolderTelAreaCode],
-            SUBSTRING(cu.home_phone_no,4,7) AS [policyHolderTelNumber],
+            RIGHT('00000' + LEFT(p.mailing_address_zip_cd,5), 5) AS [policyHolderMailAddressZip],
+            '0000' AS [policyHolderMailAddressZipPlus4],
+            RIGHT('000' + SUBSTRING(cu.home_phone_no,1,3), 3) AS [policyHolderTelAreaCode],
+            RIGHT('0000000' + SUBSTRING(cu.home_phone_no,4,7), 7) AS [policyHolderTelNumber],
             '' AS [filler_reservedforFutureUse1],
             '' AS [policyHolderNamePrefix],
             CASE WHEN cu.insured_type = 'Individual' THEN cu.last_nm ELSE cu.customer_nm END AS [policyHolderNameLast],
             CASE WHEN cu.insured_type = 'Individual' THEN cu.first_nm ELSE cu.customer_nm END AS [policyHolderNameFirst],
             '' AS [policyHolderNameMiddle],
             '' AS [policyHolderNameSuffix],
-            '' AS [policyHolderSSN],
-            FORMAT(cu.birth_dt, 'MMddyyyy') AS [policyHolderDOB],
+            '000000000' AS [policyHolderSSN],
+            RIGHT('00000000' + FORMAT(cu.birth_dt, 'MMddyyyy'), 8) AS [policyHolderDOB],
             '' AS [policyHolderSex],
             '' AS [filler_reservedforFutureUse2],
             '' AS [policyHolder2NamePrefix],
@@ -230,8 +231,8 @@ BEGIN
             CASE WHEN cu.insured_type = 'Individual' THEN pi2.first_nm ELSE pi2.insured_nm END AS [policyHolder2NameFirst],
             '' AS [policyHolder2NameMiddle],
             '' AS [policyHolder2NameSuffix],
-            '' AS [policyHolder2SSN],
-            '' AS [policyHolder2DOB],
+            '000000000' AS [policyHolder2SSN],
+            '00000000' AS [policyHolder2DOB],
             '' AS [policyHolder2Sex],
             '' AS [filler_reservedforFutureUse3],
             '' AS [claimantNamePrefix],
@@ -239,24 +240,24 @@ BEGIN
             '' AS [claimantNameFirst],
             '' AS [claimantNameMiddle],
             '' AS [claimantNameSuffix],
-            '' AS [claimantSSN],
-            '' AS [claimantDOB],
+            '000000000' AS [claimantSSN],
+            '00000000' AS [claimantDOB],
             '' AS [claimantSex],
             '' AS [claimantAddressHseNum],
             '' AS [claimantAddressStreetName],
             '' AS [claimantAddressAptNum],
             '' AS [claimantAddressCity],
             '' AS [claimantAddressState],
-            '' AS [claimantAddressZip],
-            '' AS [claimantAddressZipPlus4],
-            '' AS [claimantTelephoneAreaCode],
-            '' AS [claimantTelephoneNumber],
+            '00000' AS [claimantAddressZip],
+            '0000' AS [claimantAddressZipPlus4],
+            '000' AS [claimantTelephoneAreaCode],
+            '0000000' AS [claimantTelephoneNumber],
             '' AS [filler_reservedforFutureUse4],
             '' AS [clueControlArea],
             '' AS [filler_reservedforFutureUse5],
             '2' AS [recordVersionNumber],
-            getdate() AS create_ts,
-            getdate() AS update_ts,
+            @current_date AS create_ts,
+            @current_date AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
             CASE 
                 WHEN (SELECT MAX(report_end_date) FROM [edw_integration].[claim_clue_property_feed]) IS NULL THEN '2020-06-29 00:00:00'
@@ -291,23 +292,67 @@ BEGIN
         ;
 
 
-        --------------------------------------------------
-        --*** Start Insert rows with ReportingStatus R ***
-        --------------------------------------------------       
-        --Create temp table whit last causeOfLoss in claim_clue_property_feed table by claimNumber
-        SELECT ccpf.contribCompany, ccpf.claimNumber, ccpf.causeOfLoss
-        INTO [edw_temp].[claim_clue_property_feed_temp2] 
-        FROM [edw_integration].[claim_clue_property_feed] AS ccpf
-        INNER JOIN 
+        ----------------------------------------------------
+        --*** Start Insert rows with causeOfLoss changed ***
+        ----------------------------------------------------    
+        --Create temp table whit causeOfLoss that has changed in tclaim table
+        SELECT 
+            cp.*, cl.causeOfLoss AS new_causeOfLoss
+        INTO [edw_temp].[claim_clue_property_feed_temp2]
+        FROM [edw_integration].[claim_clue_property_feed] AS cp
+        INNER JOIN
         (
-            SELECT claimNumber, MAX(report_start_date) AS max_report_start_date
-            FROM [edw_integration].[claim_clue_property_feed] AS cc
+            SELECT claimNumber, max(create_ts) as max_create_ts
+            FROM [edw_integration].[claim_clue_property_feed]
             GROUP BY claimNumber
-        ) AS ccpfm
-        ON ccpf.claimNumber = ccpfm.claimNumber
-        AND ccpf.report_start_date = ccpfm.max_report_start_date
-
-        --Select and Insert rows that have changed the causeOfLoss
+        ) AS mcp
+        ON cp.claimNumber = mcp.claimNumber
+        AND cp.create_ts = mcp.max_create_ts
+        INNER JOIN edw_core.tclaim AS c
+        ON cp.claimNumber = c.claim_no
+        INNER JOIN (
+                SELECT *,
+                    CASE cause_of_loss_desc
+                        WHEN 'Collapse' THEN 'OTHER'
+                        WHEN 'Damage by Animals' THEN 'PHYDA'
+                        WHEN 'Equipment Breakdown' THEN 'APPL'
+                        WHEN 'Fire' THEN 'FIRE'
+                        WHEN 'Flood' THEN 'FLOOD'
+                        WHEN 'Freezing' THEN 'FREEZ'
+                        WHEN 'Fungi/Mold' THEN 'MOLD'
+                        WHEN 'Glass Breakage' THEN 'PHYDA'
+                        WHEN 'Hail' THEN 'HAIL'
+                        WHEN 'Hurricane' THEN 'WIND'
+                        WHEN 'Ice Dam' THEN 'OTHER'
+                        WHEN 'Liability' THEN 'LIAB'
+                        WHEN 'Lightning' THEN 'LIGHT'
+                        WHEN 'Loss Assessment' THEN 'OTHER'
+                        WHEN 'Mysterious Disappearance' THEN 'DISAP'
+                        WHEN 'Named Storms Other than Hurricanes' THEN 'WIND'
+                        WHEN 'Power Outage' THEN 'OTHER'
+                        WHEN 'Service Line' 	 THEN 'EXTEN'
+                        WHEN 'Sewer and Drain' THEN 'ACCDL'
+                        WHEN 'Smoke' THEN 'SMOKE'
+                        WHEN 'Theft' THEN 'THEFT'
+                        WHEN 'Vandalism' THEN 'VMM'
+                        WHEN 'Water' THEN 'WATER'
+                        WHEN 'Wind' THEN 'WIND'
+                        WHEN 'Workers Compensation' THEN 'WC'
+                        WHEN 'Collision' THEN 'COLL'
+                        WHEN 'Other' THEN 'OTHER'
+                        WHEN 'Libel, Slander, Defamation of Character' THEN 'LIAB'
+                        WHEN 'Hit and Run' THEN 'COLL'
+                        WHEN 'Property Damage' THEN 'DAMAG'
+                        WHEN 'Fall, Slip, or Trip on Insured''s Exterior Premises' THEN 'SLIP'
+                        WHEN 'Boat / Jet Ski' THEN 'CRAFT' 
+                        ELSE 'OTHER'
+                    END AS [causeOfLoss] 
+                FROM edw_core.tcause_of_loss
+            ) AS cl
+        ON c.cause_of_loss_sk = cl.cause_of_loss_sk
+        WHERE cp.causeOfLoss <> cl.causeOfLoss
+        
+        --Insert R row
         INSERT INTO [edw_temp].[claim_clue_property_feed_temp1] 
         (
             [contribCompany],
@@ -322,24 +367,113 @@ BEGIN
             [report_end_date]
         )
         SELECT 
-            b.contribCompany, 
-            b.claimNumber, 
-            b.causeOfLoss, 
+            contribCompany, 
+            claimNumber, 
+            causeOfLoss, 
             'R' AS claimReportingStatus,
             '2' AS recordVersionNumber,
-            a.[create_ts],
-            a.[update_ts],
-            a.[etl_audit_sk],
-            a.[report_start_date],
-            a.[report_end_date]
-        FROM [edw_temp].[claim_clue_property_feed_temp1] AS a
-        INNER JOIN [edw_temp].[claim_clue_property_feed_temp2] AS b
-        ON a.claimNumber = b.claimNumber
-        WHERE a.causeOfLoss <> b.causeOfLoss
+            @current_date AS create_ts,
+            @current_date AS update_ts,
+            @etl_audit_sk AS etl_audit_sk,
+            CASE 
+                WHEN (SELECT MAX(report_end_date) FROM [edw_integration].[claim_clue_property_feed]) IS NULL THEN '2020-06-29 00:00:00'
+                ELSE (SELECT DATEADD(day, 1, MAX(report_end_date)) FROM [edw_integration].[claim_clue_property_feed])
+            END AS [report_start_date],
+            CONVERT(datetime, CONVERT(date, DATEADD(day, -1, GETDATE()))) AS [report_end_date]
+        FROM [edw_temp].[claim_clue_property_feed_temp2]
+
+        --Insert A row if it doesn't have a transaction, but the causeOfLoss has changed
+        INSERT INTO [edw_temp].[claim_clue_property_feed_temp1]
+        SELECT 
+            contribCompany,
+            claimNumber,
+            policyNumber,
+            policyType,
+            claimDate,
+            new_causeOfLoss AS causeOfLoss,
+            locationOfLoss,
+            claimAmount,
+            claimReportingStatus,
+            claimDisposition,
+            catastropheRelated,
+            mortgageName,
+            mortgageLoanNumber,
+            filler_reservedforFutureUse,
+            riskAddressHseNum,
+            riskAddressStreetName,
+            riskAddressAptNum,
+            riskAddressCity,
+            riskAddressState,
+            riskAddressZip,
+            riskAddressZipPlus4, 
+            policyHolderMailAddrHseNum,
+            policyHolderMailAddressStreetName,
+            policyHolderMailAddressAptNum,
+            policyHolderMailAddressCity,
+            policyHolderMailAddressState,
+            policyHolderMailAddressZip,
+            policyHolderMailAddressZipPlus4,
+            policyHolderTelAreaCode,
+            policyHolderTelNumber,
+            filler_reservedforFutureUse1,
+            policyHolderNamePrefix,
+            policyHolderNameLast,
+            policyHolderNameFirst,
+            policyHolderNameMiddle,
+            policyHolderNameSuffix,
+            policyHolderSSN,
+            policyHolderDOB,
+            policyHolderSex,
+            filler_reservedforFutureUse2,
+            policyHolder2NamePrefix,
+            policyHolder2NameLast,
+            policyHolder2NameFirst,
+            policyHolder2NameMiddle,
+            policyHolder2NameSuffix,
+            policyHolder2SSN,
+            policyHolder2DOB,
+            policyHolder2Sex,
+            filler_reservedforFutureUse3,
+            claimantNamePrefix,
+            claimantNameLast,
+            claimantNameFirst,
+            claimantNameMiddle,
+            claimantNameSuffix,
+            claimantSSN,
+            claimantDOB,
+            claimantSex,
+            claimantAddressHseNum,
+            claimantAddressStreetName,
+            claimantAddressAptNum,
+            claimantAddressCity,
+            claimantAddressState,
+            claimantAddressZip,
+            claimantAddressZipPlus4,
+            claimantTelephoneAreaCode,
+            claimantTelephoneNumber,
+            filler_reservedforFutureUse4,
+            clueControlArea,
+            filler_reservedforFutureUse5,
+            recordVersionNumber,
+            @current_date AS create_ts,
+            @current_date AS update_ts,
+            @etl_audit_sk AS etl_audit_sk,
+            CASE 
+                WHEN (SELECT MAX(report_end_date) FROM [edw_integration].[claim_clue_property_feed]) IS NULL THEN '2020-06-29 00:00:00'
+                ELSE (SELECT DATEADD(day, 1, MAX(report_end_date)) FROM [edw_integration].[claim_clue_property_feed])
+            END AS [report_start_date],
+            CONVERT(datetime, CONVERT(date, DATEADD(day, -1, GETDATE()))) AS [report_end_date],
+            NULL AS transaction_ts
+        FROM [edw_temp].[claim_clue_property_feed_temp2] AS t2
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM [edw_temp].[claim_clue_property_feed_temp1] AS t1
+            WHERE t1.claimNumber = t2.claimNumber AND t1.claimReportingStatus <> 'R'
+        )
         ;
-        ------------------------------------------------
-        --*** End Insert rows with ReportingStatus R ***
-        ------------------------------------------------
+        ----------------------------------------------------
+        --*** Start Insert rows with causeOfLoss changed ***
+        ----------------------------------------------------
 
 
         -- Start Insert process
