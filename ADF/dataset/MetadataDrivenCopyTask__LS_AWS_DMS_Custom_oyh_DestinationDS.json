@@ -1,0 +1,33 @@
+{
+	"name": "MetadataDrivenCopyTask__LS_AWS_DMS_Custom_oyh_DestinationDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_PROD",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"cw_table": {
+				"type": "String"
+			},
+			"cw_schema": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "MetadataDrivenCopyTask__LS_AWS_DMS_Custom_oyh_20240609"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().cw_schema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().cw_table",
+				"type": "Expression"
+			}
+		}
+	}
+}
