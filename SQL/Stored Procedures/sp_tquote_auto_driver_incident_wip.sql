@@ -10,6 +10,7 @@ GO
 -- 05/06/24		Alberto Almario					1. Created the proc
 -- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
 -- 05/14/24		Architha Gudimalla				3. Corrected errors
+-- 06/09/2024   Yunus Mohammed                  4. Corrcted insert statement
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_driver_incident_wip]
 AS
@@ -196,13 +197,13 @@ BEGIN
                 source.[SpousalLiabilityPayment],
                 source.[TowingAndLaborPayment],
                 source.[UninsuredMotoristPayment],
-                source.[UnderinsuredMotoristPayment],
-                source.[PIPClaimOverride],
+                source.[UnderinsuredMotoristPayment],                
                 source.source_system_sk,
                 GETDATE(),
                 GETDATE(),
                 @etl_audit_sk,
-                source.[LendingLoss]
+                source.[LendingLoss],
+                source.[PIPClaimOverride]
             );
 
 
