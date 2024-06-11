@@ -2,7 +2,7 @@
 	"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_SourceDS",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "LS_EDW_PROD",
+			"referenceName": "LS_AWS_DMS_PROD",
 			"type": "LinkedServiceReference"
 		},
 		"parameters": {
