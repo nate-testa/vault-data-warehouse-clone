@@ -307,6 +307,37 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_LS_AWS_DMS_dd8_SourceDS')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_AWS_DMS_PROD",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"cw_tableName": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": {
+						"value": "@dataset().cw_tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_AWS_DMS_PROD')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_SourceDS')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -466,129 +497,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/integrationRuntimes/Data-ADF-IR-via-VNet')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/Master_Collections_Procedure')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "sp_tcollections_location",
-						"type": "SqlServerStoredProcedure",
-						"state": "Inactive",
-						"onInactiveMarkAs": "Succeeded",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[edw_core].[sp_tcollection_location]"
-						},
-						"linkedServiceName": {
-							"referenceName": "LS_EDW_PROD",
-							"type": "LinkedServiceReference"
-						}
-					},
-					{
-						"name": "sp_tcollections_coverage",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "sp_tcollections_location",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[edw_core].[sp_tcollection_coverage]"
-						},
-						"linkedServiceName": {
-							"referenceName": "LS_EDW_PROD",
-							"type": "LinkedServiceReference"
-						}
-					},
-					{
-						"name": "sp_tcollection_additional_coverage",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "sp_tcollections_coverage",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[edw_core].[sp_tcollection_additional_coverage]"
-						},
-						"linkedServiceName": {
-							"referenceName": "LS_EDW_PROD",
-							"type": "LinkedServiceReference"
-						}
-					},
-					{
-						"name": "sp_tcollection_scheduled_item_detail",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "sp_tcollection_additional_coverage",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[edw_core].[sp_tcollection_scheduled_item_detail]"
-						},
-						"linkedServiceName": {
-							"referenceName": "LS_EDW_PROD",
-							"type": "LinkedServiceReference"
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"folder": {
-					"name": "StoredProcedure EXEC"
-				},
-				"annotations": [],
-				"lastPublishTime": "2023-07-11T13:42:22Z"
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_PROD')]"
 			]
 		}
 	]
