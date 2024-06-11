@@ -1,13 +1,12 @@
+import os
+import time
+import gnupg
+from datetime import datetime
+from airflow.models import Variable
 from airflow.models import BaseOperator
 from airflow.providers.sftp.hooks.sftp import SFTPHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
-from datetime import datetime
-from airflow.models import Variable
-import gnupg
-import pandas as pd
-import time
-import os
-import platform
+
 
 ENVIRONMENT = Variable.get("environment")
 
@@ -103,10 +102,12 @@ QRY_CLUE_START_END_DATE = """
         CAST(create_ts AS DATE) = (SELECT MAX(CAST(create_ts AS DATE)) AS create_ts FROM [edw_integration].[claim_clue_auto_feed])
 """
 
+
 def get_start_end_date():
     df = CONN_STR.get_pandas_df(QRY_CLUE_START_END_DATE)
     start_end_date = df['start_end_date'].iloc[0]
     return start_end_date
+
 
 def create_directory_if_not_exists(directory_path):
     if not os.path.exists(directory_path):
@@ -165,22 +166,21 @@ def PGP_encrypt_file(file_to_encrypt, recipient_public_key):
 
 def generate_auto_txt_file_and_encrypt(**kwargs):
 
-    print(f"**** Start file generation for CLUE Data")
+    print(f"**** Start file generation for CLUE Auto Data")
     
-    kwargs['ti'].xcom_push(key='clue_data_present', value=True)
+    kwargs['ti'].xcom_push(key='clue_auto_data_present', value=True)
 
     FILE_DATE = datetime.now().strftime('%Y%m%d%H%M%S')
     if ENVIRONMENT == 'PRODUCTION':
-        TXT_FILE_NAME = f'clua_history_vaulthd1_{FILE_DATE}.txt'
+        TXT_FILE_NAME = f'clue_history_vaulthd1_{FILE_DATE}.txt'
     else:
-        TXT_FILE_NAME = f'clua_history_test_vaulthd1_{FILE_DATE}.txt'
+        TXT_FILE_NAME = f'clue_history_test_vaulthd1_{FILE_DATE}.txt'
 
     df = CONN_STR.get_pandas_df(QRY_CLUE)
     if df.empty:
-        kwargs['ti'].xcom_push(key='clue_data_present', value=False)
+        kwargs['ti'].xcom_push(key='clue_auto_data_present', value=False)
         print("**** !!!There is no data to send. File generation will not proceed.!!!")
         return
-
 
     create_directory_if_not_exists(TXT_FOLDER_PATH)
     TXT_FILE_PATH = os.path.join(TXT_FOLDER_PATH, TXT_FILE_NAME)
@@ -194,15 +194,16 @@ def generate_auto_txt_file_and_encrypt(**kwargs):
     # Parameter to be included into the file
     record_count = str(df.shape[0]).zfill(6) #should be 6 digits, like 002578
     start_end_date = get_start_end_date()
-    header = f"##!!SAC#231740906CLUA          E10736FTPE11967000Vault Insurance                                          CLUP_HISTORY                  {start_end_date}                                                                                                        "
-    triler = f"##!!SAT#231740906CLUA          E10736FTP{record_count}                                                                                                                                                                                                                  "
+    yydddhhmm = datetime.now().strftime('%y%j%H%M')
+    header = f"##!!SAC#{yydddhhmm}CLUE          A12345678E11967000Vault Insurance                                          CLUE_HISTORY                  {start_end_date}                                                                                                        "
+    footer = f"##!!SAT#{yydddhhmm}CLUE          A12345678{record_count}                                                                                                                                                                                                                  "
 
     # Read all rows
     with open(TXT_FILE_PATH, 'r') as f:
         file_content = f.read()
 
     # Add extra line to the begin and end of the file
-    file_new_content = header + "\n" + file_content + "\n" + triler + "\n"
+    file_new_content = header + "\n" + file_content + "\n" + footer + "\n"
 
     # Write all rows
     with open(TXT_FILE_PATH, 'w') as f:
@@ -211,11 +212,10 @@ def generate_auto_txt_file_and_encrypt(**kwargs):
     # vacum to tmp folder
     delete_old_files(TXT_FOLDER_PATH,30)
 
-
     # ******************
     # ****Encryption****
     # ******************
-    print(f"**** CLUE Data, written to {TXT_FILE_PATH}")
+    print(f"**** CLUE Auto Data, written to {TXT_FILE_PATH}")
     
     # Encrypt file
     print(f"**** Start file encryption")
@@ -226,8 +226,8 @@ def generate_auto_txt_file_and_encrypt(**kwargs):
     file_local_clue_file_name = TXT_FILE_PATH + '.pgp'
     file_remote_clue_file_name = f'/vaulthd1/{TXT_FILE_NAME}.pgp'
 
-    kwargs['ti'].xcom_push(key='file_local_clue_file_name', value=file_local_clue_file_name)
-    kwargs['ti'].xcom_push(key='file_remote_clue_file_name', value=file_remote_clue_file_name)
+    kwargs['ti'].xcom_push(key='file_local_clue_auto_file_name', value=file_local_clue_file_name)
+    kwargs['ti'].xcom_push(key='file_remote_clue_auto_file_name', value=file_remote_clue_file_name)
 
 
 class SFTPUploadClueAutoFileOperator(BaseOperator):
@@ -238,11 +238,11 @@ class SFTPUploadClueAutoFileOperator(BaseOperator):
 
     def execute(self, context):
         if ENVIRONMENT == 'PRODUCTION':
-            clue_data_present = context['ti'].xcom_pull(task_ids='CLUE_files_to_SFTP_group.generate_clue_auto_txt_file', key='clue_auto_data_present')
+            clue_data_present = context['ti'].xcom_pull(task_ids='CLUE_Auto_group.generate_clue_auto_txt_file', key='clue_auto_data_present')
 
             if clue_data_present == True:
-                local_filepath = context['ti'].xcom_pull(task_ids='CLUE_files_to_SFTP_group.generate_clue_auto_txt_file', key='file_local_clue_auto_file_name')
-                remote_filepath = context['ti'].xcom_pull(task_ids='CLUE_files_to_SFTP_group.generate_clue_auto_txt_file', key='file_remote_clue_auto_file_name')
+                local_filepath = context['ti'].xcom_pull(task_ids='CLUE_Auto_group.generate_clue_auto_txt_file', key='file_local_clue_auto_file_name')
+                remote_filepath = context['ti'].xcom_pull(task_ids='CLUE_Auto_group.generate_clue_auto_txt_file', key='file_remote_clue_auto_file_name')
                 
                 hook = SFTPHook(ftp_conn_id=self.sftp_conn_id)
                 self.log.info(f"**** Starting to transfer {local_filepath} to {remote_filepath}")
