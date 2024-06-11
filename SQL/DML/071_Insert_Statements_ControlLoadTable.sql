@@ -4,7 +4,7 @@ DELETE FROM [edw_stage].[ControlLoadTable] WHERE SourceObjectSettings like '%Dms
 DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
     {
         "SourceObjectSettings": {
-            "tableName": "`c`"
+            "tableName": "`DmsDocument`"
         },
         "SinkObjectSettings": {
             "table": "dms_claim_payment_estimate",
