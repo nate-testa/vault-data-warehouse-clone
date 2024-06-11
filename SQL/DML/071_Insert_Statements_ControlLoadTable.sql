@@ -14,7 +14,7 @@ DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
             "query": "SELECT \r\n  dd.dmsDocumentId, \r\n  dd.claimNumber, \r\n  ddd.type AS document_type, \r\n  ddd.subType, \r\n  dd.documentName, \r\n  dd.fileName as document_fileName, \r\n  dda.name as attached_To, \r\n  dd.createDate, \r\n  dd.documentDate, \r\n  dd.createBy, \r\n  \"Unknown\" as paymentStatus, \r\n  now() as create_ts \r\nFROM \r\n  dms_core.DmsDocument dd, \r\n  dms_core.DmsDocumentDetail ddd, \r\n  dms_core.DmsDocumentAttachTo dda \r\nWHERE \r\n  dd.dmsDocumentId = dda.dmsDocumentId \r\n  and ddd.dmsDocumentId = dda.dmsDocumentId \r\n  and ddd.type = ''Claim'' \r\n  and ddd.subType IN (\r\n    ''Estimate of Damages'', ''BI/UM Demand''\r\n  ) \r\norder by \r\n  dd.createDate desc\r\n"
         },
         "CopySinkSettings": {
-            "preCopyScript": null,
+            "preCopyScript": "{              "preCopyScript": "TRUNCATE TABLE edw_stage.dms_claim_payment_estimate",              "tableOption": "autoCreate",              "writeBehavior": "insert",              "sqlWriterUseTableLock": true,              "disableMetricsCollection": false          }",
             "tableOption": null
         },
         "CopyActivitySettings": {
