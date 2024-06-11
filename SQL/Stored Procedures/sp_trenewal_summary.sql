@@ -33,6 +33,8 @@ GO
 -- 04/26/24		Architha Gudimalla				18. Added cancellation_reason_desc
 -- 05/15/24		Architha Gudimalla				19. Updated 365 to use exp_dt-eff_dt - VI-31715 
 -- 05/15/24		Architha Gudimalla				20. Added new cols - VI-31715
+-- 06/04/24		Architha Gudimalla				21. Added CTE for quotes, soeme policies up for renewal have renewal quotes with same pol no and also as a cancel rewrite
+--												    Olivia wants to prioritize the same pol no quote instead of cancel rewrite
 -- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -155,6 +157,24 @@ BEGIN
 				and inf.policy_sk  = pol.policy_sk 
 				and td.actual_dt between @begin_dt and @end_dt
 				and customer_sk is not null; 
+				
+				DROP TABLE IF EXISTS edw_temp.tren_summ_quotes;
+				
+				with q as
+				(
+					select  quote_sk, quote_no, effective_dt, original_policy_no, quote_Status,  
+							case when prior_policy_no is null and original_policy_no is null then quote_no
+							 	 when prior_policy_no is null  							  then original_policy_no
+								 when CHARINDEX('-',prior_policy_no) = 0 					  then prior_policy_no 
+								else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
+							end prior_policy_no 
+					from edw_core.tquote q 
+					where	effective_dt between @begin_dt and @end_dt 
+					--and quote_Status <> 'Issued'
+				)
+				select *, case when original_policy_no= prior_policy_no then 0 else 1 end pol_no_changed_in				
+				into edw_temp.tren_summ_quotes 
+				from q;
 
 				DROP TABLE IF EXISTS edw_temp.tren_summ;
 
@@ -207,22 +227,12 @@ BEGIN
 					select *
 					FROM
 					(
-						SELECT quote_sk, quote_no, effective_dt, original_policy_no,  
-								case when prior_policy_no is null and original_policy_no is null then quote_no
-									when prior_policy_no is null  							  then original_policy_no
-									when CHARINDEX('-',prior_policy_no) = 0 					  then prior_policy_no 
-									else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
-								end prior_policy_no, quote_Status,
-								rank() over (partition by case when prior_policy_no is null and original_policy_no is null then quote_no
-															when prior_policy_no is null  							  then original_policy_no
-															when CHARINDEX('-',prior_policy_no) = 0 					  then prior_policy_no 
-															else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
-														end order by quote_sk) rnk  
-						from edw_core.tquote q 
-						where	effective_dt between @begin_dt and @end_dt  
-						--and quote_Status <> 'Issued'
+						SELECT *, 
+								rank() over (partition by prior_policy_no order by pol_no_changed_in, quote_sk) rnk  
+						from edw_temp.tren_summ_quotes
 					) A
 				 	where rnk = 1
+
 				),
 				/*ren_pols as
 				--pols renewing in current month
@@ -597,6 +607,7 @@ BEGIN
 				
 				DROP TABLE IF EXISTS edw_temp.tren_summ_oth_cust_inf_temp;
 				DROP TABLE IF EXISTS edw_temp.tren_summ;
+				DROP TABLE IF EXISTS edw_temp.tren_summ_quotes;
 				 
 				FETCH NEXT FROM c1_rec INTO @yearmonth;
 			END; 
