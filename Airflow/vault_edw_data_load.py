@@ -163,7 +163,7 @@ with DAG(
         adf_etl_load_ls_aws_dms: BaseOperator = AzureDataFactoryRunPipelineOperator(
             task_id="adf_etl_load_ls_aws_dms",
             azure_data_factory_conn_id='azure_data_factory_vault_data',
-            pipeline_name="MetadataDrivenCopy_LS_AWS_DMS_dd8_TopLevel",
+            pipeline_name="LS_AWS_DMS_dmsDocument",
             # parameters={"myParam": "value"},
         )        
 
