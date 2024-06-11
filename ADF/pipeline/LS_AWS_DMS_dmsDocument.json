@@ -17,7 +17,7 @@
 				"typeProperties": {
 					"source": {
 						"type": "MySqlSource",
-						"query": "SELECT dd.dmsDocumentId, dd.claimNumber, ddd.type as document_type, ddd.subType, dd.documentName, dd.fileName as document_fileName, dda.name as attached_To, dd.createDate, dd.documentDate, dd.createBy,\n\"Unknown\" as paymentStatus, now() as create_ts\nFROM dms_core.DmsDocument dd,\ndms_core.DmsDocumentDetail ddd,\ndms_core.DmsDocumentAttachTo dda\nWHERE dd.dmsDocumentId = dda.dmsDocumentId \nand ddd.dmsDocumentId = dda.dmsDocumentId\nand ddd.type = 'Claim'\nand ddd.subType IN ('Estimate of Damages','BI/UM Demand')\norder by dd.createDate desc"
+						"query": "SELECT dd.dmsDocumentId, dd.claimNumber, ddd.type as document_type, ddd.subType as subtype, dd.documentName, dd.fileName as document_fileName, dda.name as attached_To, dd.createDate, dd.documentDate, dd.createBy,\n\"Unknown\" as paymentStatus, now() as create_ts\nFROM dms_core.DmsDocument dd,\ndms_core.DmsDocumentDetail ddd,\ndms_core.DmsDocumentAttachTo dda\nWHERE dd.dmsDocumentId = dda.dmsDocumentId \nand ddd.dmsDocumentId = dda.dmsDocumentId\nand ddd.type = 'Claim'\nand ddd.subType IN ('Estimate of Damages','BI/UM Demand')\norder by dd.createDate desc"
 					},
 					"sink": {
 						"type": "AzureSqlSink",
@@ -50,7 +50,7 @@
 								"sink": {
 									"name": "claimNumber",
 									"type": "String",
-									"physicalType": "nvarchar"
+									"physicalType": "varchar"
 								}
 							},
 							{
@@ -61,18 +61,18 @@
 								"sink": {
 									"name": "document_type",
 									"type": "String",
-									"physicalType": "nvarchar"
+									"physicalType": "varchar"
 								}
 							},
 							{
 								"source": {
-									"name": "subType",
+									"name": "subtype",
 									"type": "String"
 								},
 								"sink": {
-									"name": "subType",
+									"name": "subtype",
 									"type": "String",
-									"physicalType": "nvarchar"
+									"physicalType": "varchar"
 								}
 							},
 							{
@@ -83,7 +83,7 @@
 								"sink": {
 									"name": "documentName",
 									"type": "String",
-									"physicalType": "nvarchar"
+									"physicalType": "varchar"
 								}
 							},
 							{
@@ -103,9 +103,9 @@
 									"type": "String"
 								},
 								"sink": {
-									"name": "attached_To",
+									"name": "attached_to",
 									"type": "String",
-									"physicalType": "nvarchar"
+									"physicalType": "varchar"
 								}
 							},
 							{
@@ -116,7 +116,7 @@
 								"sink": {
 									"name": "createDate",
 									"type": "DateTime",
-									"physicalType": "datetime2"
+									"physicalType": "datetime"
 								}
 							},
 							{
@@ -127,7 +127,7 @@
 								"sink": {
 									"name": "documentDate",
 									"type": "DateTime",
-									"physicalType": "datetime2"
+									"physicalType": "datetime"
 								}
 							},
 							{
@@ -138,7 +138,7 @@
 								"sink": {
 									"name": "createBy",
 									"type": "String",
-									"physicalType": "nvarchar"
+									"physicalType": "varchar"
 								}
 							},
 							{
@@ -149,7 +149,7 @@
 								"sink": {
 									"name": "paymentStatus",
 									"type": "String",
-									"physicalType": "nvarchar"
+									"physicalType": "varchar"
 								}
 							},
 							{
@@ -160,13 +160,13 @@
 								"sink": {
 									"name": "create_ts",
 									"type": "DateTime",
-									"physicalType": "datetime2"
+									"physicalType": "datetime"
 								}
 							}
 						],
 						"typeConversion": true,
 						"typeConversionSettings": {
-							"allowDataTruncation": true,
+							"allowDataTruncation": false,
 							"treatBooleanAsNumber": false
 						}
 					}
