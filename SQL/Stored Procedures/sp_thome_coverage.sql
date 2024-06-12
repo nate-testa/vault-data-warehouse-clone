@@ -14,6 +14,7 @@
 -- 12/06/23		Alberto Almario					9. Added new field WindstormOrHailDeductibleManual
 -- 22/02/24		Hernando Gonzalez				10. Added new fields aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt
 -- 04/02/24		Ynunus Mohammed					11. Updated wind_derived_deductible logic
+-- 12/06/24		Alberto Almario					12. Added new filed nc_bureau_rate
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -138,7 +139,7 @@ BEGIN
 				wildfire_threat, wildfire_hazard_severity,aop_deductible_manual,water_deductible_manual,wildfire_deductible_manual,wind_or_hailstorm_deductible_manual,
 				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt,
 				waive_inspection_in, waive_inspection_reason, inspection_note, rms_reviewed_in,
-				source_system_sk,create_ts,update_ts,etl_audit_sk
+				source_system_sk,create_ts,update_ts,etl_audit_sk,nc_bureau_rate
 			)
 			SELECT
 				tthc.PolicyNumber AS policy_no,tthc.EffectiveDate AS effective_dt,tthc.ExpirationDate AS expiration_dt,
@@ -260,7 +261,7 @@ BEGIN
 				tthc.AOPDeductiblemanual, tthc.Waterdeductiblemanual,tthc.wildfiredeductiblemanual, tthc.WindstormOrHailDeductibleManual,
 				tthc.CATModeling_CATScore, tthc.CATModeling_ReinsuranceMargin, tthc.CATModeling_CededLoss, tthc.CATModeling_ReinsurancePremium, tthc.CATModeling_CapitalCost, tthc.CATModeling_CATScoreToPremiumRatio_Hurricane, tthc.CATModeling_AALToPremium, tthc.AAL, 
 				tthc.WaiveInspection as waive_inspection_in, tthc.WaiveReason as waive_inspection_reason, tthc.InspectionNotes as inspection_note, tthc.RMSReviewed as rms_reviewed_in,
-				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
+				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk, tthc.NCRBManualRate as nc_bureau_rate
 			FROM
 				edw_temp.thome_coverage_temp1 AS tthc
 
