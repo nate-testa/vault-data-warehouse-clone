@@ -16,6 +16,7 @@ GO
 -- 05/20/24		Architha Gudimalla				5. Added accri.Label = accri.[Group] to table main case statement
 -- 05/28/24		Architha Gudimalla				6. Updated the label for another long label for LC360
 -- 06/11/24		Architha Gudimalla				7. Updated the label for another long label for LC360
+-- 06/12/24		Architha Gudimalla				8. Excluded null label for LC360
 -- ======================================================================================================================= 
 
 CREATE OR ALTER       PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
@@ -89,6 +90,7 @@ BEGIN
 				and		accr.Id =accri.ReportId  
 				AND		GREATEST(accri.UpdatedDate,accri.CreatedDate)>@last_source_extract_ts
 			) a
+			where isnull(label,'') <> ''
 			group by a.source, a.reporttype, a.Category, a.[Group], a.label
 		) as source 
 		on source.source = target.source 
