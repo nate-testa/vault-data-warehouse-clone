@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote_auto_vehicle_coverage ADD newly_purchased_vehicle_final_in Varchar(255);
