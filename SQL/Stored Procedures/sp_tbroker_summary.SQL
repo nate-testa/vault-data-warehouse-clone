@@ -37,8 +37,8 @@ GO
 --													from	q.first_offered_quote_history_sk = qh.quote_history_sk 
 --													to 		q.quote_sk = qh.quote_sk and qh.latest_transaction_in = 'Y' 
 -- 06/12/24		Architha Gudimalla				25. Added
---													prior_mtd_gross_net_premium_amt
---													mtd_gross_net_premium_amt 
+--													prior_mtd_net_premium_amt
+--													mtd_net_premium_amt 
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -700,8 +700,8 @@ BEGIN
 						prior_mtd_gross_new_business_net_premium_amt, 
 						mtd_gross_new_business_net_premium_amt,
 						--
-						prior_mtd_gross_net_premium_amt, 
-						mtd_gross_net_premium_amt, 
+						prior_mtd_net_premium_amt, 
+						mtd_net_premium_amt, 
 						--
 						prior_mtd_written_premium_amt, 
 						mtd_written_premium_amt,  
@@ -801,8 +801,8 @@ BEGIN
 						sum(summ.prior_mtd_gross_new_business_net_premium_amt) prior_mtd_gross_new_business_net_premium_amt, 
 						sum(summ.mtd_gross_new_business_net_premium_amt) mtd_gross_new_business_net_premium_amt, 
 						--
-						sum(summ.prior_mtd_gross_net_premium_amt) prior_mtd_gross_net_premium_amt, 
-						sum(summ.mtd_gross_net_premium_amt) mtd_gross_net_premium_amt, 
+						sum(summ.prior_mtd_gross_net_premium_amt) prior_mtd_net_premium_amt, 
+						sum(summ.mtd_gross_net_premium_amt) mtd_net_premium_amt, 
 						--
 						sum(summ.prior_mtd_written_premium_amt) prior_mtd_written_premium_amt, 
 						sum(summ.mtd_written_premium_amt) mtd_written_premium_amt,  
