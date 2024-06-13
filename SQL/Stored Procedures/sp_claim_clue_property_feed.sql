@@ -359,9 +359,21 @@ BEGIN
         INSERT INTO [edw_temp].[claim_clue_property_feed_temp1] 
         (
             [contribCompany],
+            [policyNumber],
+            [policyType],
             [claimNumber],
             [causeOfLoss],
+            [claimDate],
+            [claimAmount],
             [claimReportingStatus],
+            [policyHolderNameLast],
+            [policyHolderNameFirst],
+            [riskAddressHseNum],
+            [riskAddressStreetName],
+            [riskAddressAptNum],
+            [riskAddressCity],
+            [riskAddressState],
+            [riskAddressZip],
             [recordVersionNumber],
             [create_ts],
             [update_ts],
@@ -371,9 +383,21 @@ BEGIN
         )
         SELECT 
             contribCompany, 
+            policyNumber,
+            policyType,
             claimNumber, 
-            causeOfLoss, 
+            causeOfLoss,
+            claimDate, 
+            '000000000' AS claimAmount,            
             'R' AS claimReportingStatus,
+            policyHolderNameLast,
+            policyHolderNameFirst,
+            riskAddressHseNum,
+            riskAddressStreetName,
+            riskAddressAptNum,
+            riskAddressCity,
+            riskAddressState,
+            riskAddressZip,
             '2' AS recordVersionNumber,
             @current_date AS create_ts,
             @current_date AS update_ts,
@@ -477,7 +501,7 @@ BEGIN
         ----------------------------------------------------
         --*** Start Insert rows with causeOfLoss changed ***
         ----------------------------------------------------
-
+        
 
         -- Start Insert process
         INSERT INTO [edw_integration].[claim_clue_property_feed](
