@@ -4,4 +4,4 @@ IF NOT EXISTS (
     WHERE   TABLE_SCHEMA='edw_core'
     AND     TABLE_NAME = 'tquote_home_coverage'
     AND     COLUMN_NAME = 'rate_on_line'
-) BEGIN ALTER TABLE edw_core.tquote_home_coverage ADD rate_on_line varchar(255) null END;  
+) BEGIN ALTER TABLE edw_core.tquote_home_coverage ADD rate_on_line decimal(15,2) null END;  
