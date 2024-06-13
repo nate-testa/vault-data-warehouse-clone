@@ -15,7 +15,7 @@ GO
 -- 05/25/24     Architha Gudimalla              6. Removed join on effective_dt to tquote_auto_vehicle
 -- ================================================================================================================================================
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip] 
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -172,7 +172,7 @@ BEGIN
                 [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
                 [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
                 [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-                [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, vehicle_unique_id, NewlyPurchasedVehicle, NewlyPurchasedVehicleDate
+                [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, vehicle_unique_id, NewlyPurchasedVehicle, NewlyPurchasedVehicleDate, [NewlyPurchasedVehicleFinal]
             
             FROM
                 (
@@ -220,7 +220,7 @@ BEGIN
                         [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
                         [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
                         [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-                        [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate]
+                        [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal]
                     )
                 ) pivottable
         )
@@ -438,7 +438,8 @@ BEGIN
                 t1.extended_towing_labor_premium_adjustment_retention,
                 t1.extended_towing_labor_premium_adjustment_reason,
                 t1.NewlyPurchasedVehicle as newly_purchased_vehicle_override_in,
-                t1.NewlyPurchasedVehicleDate as newly_purchased_vehicle_dt
+                t1.NewlyPurchasedVehicleDate as newly_purchased_vehicle_dt,
+                t1.[NewlyPurchasedVehicleFinal] as newly_purchased_vehicle_final_in
             FROM 
                 [edw_temp].[tquote_auto_vehicle_coverage_wip_temp1] AS t1
             LEFT JOIN 
@@ -606,7 +607,8 @@ BEGIN
                 target.extended_towing_labor_premium_adjustment_retention = source.extended_towing_labor_premium_adjustment_retention,
                 target.extended_towing_labor_premium_adjustment_reason = source.extended_towing_labor_premium_adjustment_reason,
                 target.newly_purchased_vehicle_override_in = source.newly_purchased_vehicle_override_in,
-                target.newly_purchased_vehicle_dt = source.newly_purchased_vehicle_dt
+                target.newly_purchased_vehicle_dt = source.newly_purchased_vehicle_dt,
+                target.newly_purchased_vehicle_final_in = source.newly_purchased_vehicle_final_in
         WHEN NOT MATCHED THEN
             INSERT (
                 quote_no,
@@ -759,7 +761,8 @@ BEGIN
                 extended_towing_labor_premium_adjustment_retention,
                 extended_towing_labor_premium_adjustment_reason,
                 newly_purchased_vehicle_override_in,
-                newly_purchased_vehicle_dt
+                newly_purchased_vehicle_dt,
+                newly_purchased_vehicle_final_in
             )
             VALUES (
                 source.quote_no,
@@ -912,7 +915,8 @@ BEGIN
                 source.extended_towing_labor_premium_adjustment_retention,
                 source.extended_towing_labor_premium_adjustment_reason,
                 source.newly_purchased_vehicle_override_in,
-                source.newly_purchased_vehicle_dt
+                source.newly_purchased_vehicle_dt,
+                source.newly_purchased_vehicle_final_in
             );
 
 
