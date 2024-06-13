@@ -36,6 +36,9 @@ GO
 -- 05/21/24		Architha Gudimalla				24. Upong olivia'as request, Changed quote history join 
 --													from	q.first_offered_quote_history_sk = qh.quote_history_sk 
 --													to 		q.quote_sk = qh.quote_sk and qh.latest_transaction_in = 'Y' 
+-- 06/12/24		Architha Gudimalla				25. Added
+--													prior_mtd_net_premium_amt
+--													mtd_net_premium_amt 
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -448,7 +451,10 @@ BEGIN
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco,   
 							--
 							sum(case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and prior_inf.policy_sk is not null then ph.net_premium_amt else 0 end) prior_mtd_gross_new_business_net_premium_amt,   
-							sum(case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	    @month_begin_dt and 			 	 @end_dt and curr_inf.policy_sk is not null then ph.net_premium_amt else 0 end) 	  mtd_gross_new_business_net_premium_amt 
+							sum(case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	    @month_begin_dt and 			 	 @end_dt and curr_inf.policy_sk is not null then ph.net_premium_amt else 0 end) 	  mtd_gross_new_business_net_premium_amt, 
+							--
+							sum(case when greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and prior_inf.policy_sk is not null then ph.net_premium_amt else 0 end) prior_mtd_gross_net_premium_amt,   
+							sum(case when greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	    @month_begin_dt and 			 	 @end_dt and curr_inf.policy_sk is not null then ph.net_premium_amt else 0 end) 	  mtd_gross_net_premium_amt 
 							--
 				into edw_temp.tbroker_summ_pols1
 				FROM	edw_core.tpolicy pol
@@ -583,7 +589,10 @@ BEGIN
 						sum(isnull(ps.mtd_new_business_net_premium_amt,0)) mtd_new_business_net_premium_amt, 
 						--
 						sum(isnull(ps1.prior_mtd_gross_new_business_net_premium_amt,0)) prior_mtd_gross_new_business_net_premium_amt, 
-						sum(isnull(ps1.mtd_gross_new_business_net_premium_amt,0)) mtd_gross_new_business_net_premium_amt, 
+						sum(isnull(ps1.mtd_gross_new_business_net_premium_amt,0)) mtd_gross_new_business_net_premium_amt,
+						--
+						sum(isnull(ps1.prior_mtd_gross_net_premium_amt,0)) prior_mtd_gross_net_premium_amt, 
+						sum(isnull(ps1.mtd_gross_net_premium_amt,0)) mtd_gross_net_premium_amt, 
 						--
 						sum(isnull(ps.prior_mtd_written_premium_amt,0)) prior_mtd_written_premium_amt, 
 						sum(isnull(ps.mtd_written_premium_amt,0)) mtd_written_premium_amt,  
@@ -689,7 +698,10 @@ BEGIN
 						mtd_new_business_net_premium_amt, 
 						--
 						prior_mtd_gross_new_business_net_premium_amt, 
-						mtd_gross_new_business_net_premium_amt, 
+						mtd_gross_new_business_net_premium_amt,
+						--
+						prior_mtd_net_premium_amt, 
+						mtd_net_premium_amt, 
 						--
 						prior_mtd_written_premium_amt, 
 						mtd_written_premium_amt,  
@@ -788,6 +800,9 @@ BEGIN
 						--
 						sum(summ.prior_mtd_gross_new_business_net_premium_amt) prior_mtd_gross_new_business_net_premium_amt, 
 						sum(summ.mtd_gross_new_business_net_premium_amt) mtd_gross_new_business_net_premium_amt, 
+						--
+						sum(summ.prior_mtd_gross_net_premium_amt) prior_mtd_net_premium_amt, 
+						sum(summ.mtd_gross_net_premium_amt) mtd_net_premium_amt, 
 						--
 						sum(summ.prior_mtd_written_premium_amt) prior_mtd_written_premium_amt, 
 						sum(summ.mtd_written_premium_amt) mtd_written_premium_amt,  
