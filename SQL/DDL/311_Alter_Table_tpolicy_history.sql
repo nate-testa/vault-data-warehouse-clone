@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tpolicy_history ADD prorate_factor Decimal(16,4);
