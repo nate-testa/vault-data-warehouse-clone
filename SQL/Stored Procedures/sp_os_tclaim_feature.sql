@@ -8,6 +8,7 @@
 -- 11/08/23		Yunus Mohammed				1. Created the procedure
 -- 12/12/23		Yunus Mohammed				2. Added update stmts for aslob and sub_claim_type_nm
 -- 01/30/24		Yunus Mohammed				3. Changed name of temp table for aslob and added drop table stmt
+-- 06/13/24		Yunus Mohammed				4. Added update stmts for sub_claim_type_nm and claim_coverage_desc
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tclaim_feature]
 
@@ -107,6 +108,65 @@ BEGIN
 		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-983303223';
 		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-987005375';
 		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='VT Dwelling Limit',claim_coverage_desc='VT Dwelling Limit' WHERE claim_no='CL-987008324';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-1018048728';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='VT Dwelling Limit',claim_coverage_desc='VT Dwelling Limit' WHERE claim_no='CL-1019944085';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='VT Dwelling Limit',claim_coverage_desc='VT Dwelling Limit' WHERE claim_no='CL-1021152039';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-1024084741';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Glass',claim_coverage_desc='Glass' WHERE claim_no='CL-1035015641';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Glass',claim_coverage_desc='Glass' WHERE claim_no='CL-1047189155';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Towing',claim_coverage_desc='Towing' WHERE claim_no='CL-1047193616';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Property Damage',claim_coverage_desc='Property Damage' WHERE claim_no='CL-1050359398';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-1056322893';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Uninsured / Underinsured Motorist',claim_coverage_desc='Uninsured / Underinsured Motorist' WHERE claim_no='CL-1056616428';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Glass',claim_coverage_desc='Glass' WHERE claim_no='CL-1080181947';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Comprehensive',claim_coverage_desc='Comprehensive' WHERE claim_no='CL-1085331944';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-1087169364';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Towing',claim_coverage_desc='Towing' WHERE claim_no='CL-1088687951';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-1095019225';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-1098139449';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Comprehensive',claim_coverage_desc='Comprehensive' WHERE claim_no='CL-1101307751';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Comprehensive',claim_coverage_desc='Comprehensive' WHERE claim_no='CL-1109170699';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Comprehensive',claim_coverage_desc='Comprehensive' WHERE claim_no='CL-1112768664';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Uninsured / Underinsured Motorist',claim_coverage_desc='Uninsured / Underinsured Motorist' WHERE claim_no='CL-1114381234';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Glass',claim_coverage_desc='Glass' WHERE claim_no='CL-1119013864';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-1119015971';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Glass',claim_coverage_desc='Glass' WHERE claim_no='CL-1120330800';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Glass',claim_coverage_desc='Glass' WHERE claim_no='CL-1121893522';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Glass',claim_coverage_desc='Glass' WHERE claim_no='CL-1121893616';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Comprehensive',claim_coverage_desc='Comprehensive' WHERE claim_no='CL-1127522044';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Excess Liability Coverage',claim_coverage_desc='Excess Liability Coverage' WHERE claim_no='CL-1129073265';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Glass',claim_coverage_desc='Glass' WHERE claim_no='CL-1130485091';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Towing',claim_coverage_desc='Towing' WHERE claim_no='CL-1130485401';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-1133889617';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Uninsured / Underinsured Motorist',claim_coverage_desc='Uninsured / Underinsured Motorist' WHERE claim_no='CL-1133890558';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-1138337645';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-1141773433';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Towing',claim_coverage_desc='Towing' WHERE claim_no='CL-1161301179';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-1167936751';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='VT Dwelling Limit',claim_coverage_desc='VT Dwelling Limit' WHERE claim_no='CL-478753011';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='VT Dwelling Limit',claim_coverage_desc='VT Dwelling Limit' WHERE claim_no='CL-767009506';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Property Damage',claim_coverage_desc='Property Damage' WHERE claim_no='CL-814259127';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='VT Dwelling Limit',claim_coverage_desc='VT Dwelling Limit' WHERE claim_no='CL-816803818';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='VT Dwelling Limit',claim_coverage_desc='VT Dwelling Limit' WHERE claim_no='CL-850899681';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Comprehensive',claim_coverage_desc='Comprehensive' WHERE claim_no='CL-896845956';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='VT Dwelling Limit',claim_coverage_desc='VT Dwelling Limit' WHERE claim_no='CL-898598354';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Comprehensive',claim_coverage_desc='Comprehensive' WHERE claim_no='CL-906169842';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Towing',claim_coverage_desc='Towing' WHERE claim_no='CL-912758938';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Glass',claim_coverage_desc='Glass' WHERE claim_no='CL-917207093';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Property Damage',claim_coverage_desc='Property Damage' WHERE claim_no='CL-935537010';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='VT Dwelling Limit',claim_coverage_desc='VT Dwelling Limit' WHERE claim_no='CL-940637022';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='VT Dwelling Limit',claim_coverage_desc='VT Dwelling Limit' WHERE claim_no='CL-948754869';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='VT Personal Liability',claim_coverage_desc='VT Personal Liability' WHERE claim_no='CL-948759188';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Bodily Injury',claim_coverage_desc='Bodily Injury'  WHERE claim_no='CL-950231904';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='VT Dwelling Limit',claim_coverage_desc='VT Dwelling Limit' WHERE claim_no='CL-951755571';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Towing',claim_coverage_desc='Towing' WHERE claim_no='CL-956048039';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='VT Loss Of Use Limit',claim_coverage_desc='VT Loss Of Use Limit' WHERE claim_no='CL-974402364';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Glass',claim_coverage_desc='Glass' WHERE claim_no='CL-977644349';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-983303223';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='Collision',claim_coverage_desc='Collision' WHERE claim_no='CL-987005375';
+		UPDATE edw_core.tclaim_feature SET subclaim_type_nm='VT Dwelling Limit',claim_coverage_desc='VT Dwelling Limit' WHERE claim_no='CL-987008324';
+
+
 
 		UPDATE edw_core.taslob SET product_cd = 'Auto' WHERE aslob_sk = 93	
 
