@@ -356,25 +356,78 @@ BEGIN
         WHERE cp.causeOfLoss <> cl.causeOfLoss
         
         --Insert R row
-        INSERT INTO [edw_temp].[claim_clue_property_feed_temp1] 
-        (
-            [contribCompany],
-            [claimNumber],
-            [causeOfLoss],
-            [claimReportingStatus],
-            [recordVersionNumber],
-            [create_ts],
-            [update_ts],
-            [etl_audit_sk],
-            [report_start_date],
-            [report_end_date]
-        )
+        INSERT INTO [edw_temp].[claim_clue_property_feed_temp1]
         SELECT 
-            contribCompany, 
-            claimNumber, 
-            causeOfLoss, 
+            contribCompany,
+            claimNumber,
+            policyNumber,
+            policyType,
+            claimDate,
+            causeOfLoss,
+            locationOfLoss,
+            '000000000' AS claimAmount,
             'R' AS claimReportingStatus,
-            '2' AS recordVersionNumber,
+            claimDisposition,
+            catastropheRelated,
+            mortgageName,
+            mortgageLoanNumber,
+            filler_reservedforFutureUse,
+            riskAddressHseNum,
+            riskAddressStreetName,
+            riskAddressAptNum,
+            riskAddressCity,
+            riskAddressState,
+            riskAddressZip,
+            riskAddressZipPlus4, 
+            policyHolderMailAddrHseNum,
+            policyHolderMailAddressStreetName,
+            policyHolderMailAddressAptNum,
+            policyHolderMailAddressCity,
+            policyHolderMailAddressState,
+            policyHolderMailAddressZip,
+            policyHolderMailAddressZipPlus4,
+            policyHolderTelAreaCode,
+            policyHolderTelNumber,
+            filler_reservedforFutureUse1,
+            policyHolderNamePrefix,
+            policyHolderNameLast,
+            policyHolderNameFirst,
+            policyHolderNameMiddle,
+            policyHolderNameSuffix,
+            policyHolderSSN,
+            policyHolderDOB,
+            policyHolderSex,
+            filler_reservedforFutureUse2,
+            policyHolder2NamePrefix,
+            policyHolder2NameLast,
+            policyHolder2NameFirst,
+            policyHolder2NameMiddle,
+            policyHolder2NameSuffix,
+            policyHolder2SSN,
+            policyHolder2DOB,
+            policyHolder2Sex,
+            filler_reservedforFutureUse3,
+            claimantNamePrefix,
+            claimantNameLast,
+            claimantNameFirst,
+            claimantNameMiddle,
+            claimantNameSuffix,
+            claimantSSN,
+            claimantDOB,
+            claimantSex,
+            claimantAddressHseNum,
+            claimantAddressStreetName,
+            claimantAddressAptNum,
+            claimantAddressCity,
+            claimantAddressState,
+            claimantAddressZip,
+            claimantAddressZipPlus4,
+            claimantTelephoneAreaCode,
+            claimantTelephoneNumber,
+            filler_reservedforFutureUse4,
+            clueControlArea,
+            filler_reservedforFutureUse5,
+            recordVersionNumber,
             @current_date AS create_ts,
             @current_date AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
@@ -382,7 +435,8 @@ BEGIN
                 WHEN (SELECT MAX(report_end_date) FROM [edw_integration].[claim_clue_property_feed]) IS NULL THEN '2020-06-29 00:00:00'
                 ELSE (SELECT DATEADD(day, 1, MAX(report_end_date)) FROM [edw_integration].[claim_clue_property_feed])
             END AS [report_start_date],
-            CONVERT(datetime, CONVERT(date, DATEADD(day, -1, GETDATE()))) AS [report_end_date]
+            CONVERT(datetime, CONVERT(date, DATEADD(day, -1, GETDATE()))) AS [report_end_date],
+            NULL AS transaction_ts
         FROM [edw_temp].[claim_clue_property_feed_temp2]
 
         --Insert A row if it doesn't have a transaction, but the causeOfLoss has changed
@@ -477,7 +531,6 @@ BEGIN
         ----------------------------------------------------
         --*** Start Insert rows with causeOfLoss changed ***
         ----------------------------------------------------
-
 
         -- Start Insert process
         INSERT INTO [edw_integration].[claim_clue_property_feed](
