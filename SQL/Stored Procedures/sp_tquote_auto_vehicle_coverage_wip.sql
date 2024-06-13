@@ -13,6 +13,7 @@ GO
 -- 05/17/24     Architha Gudimalla              4. Updated join for tquote_auto_vehicle
 -- 05/17/24     Architha Gudimalla              5. Removed unique id join
 -- 05/25/24     Architha Gudimalla              6. Removed join on effective_dt to tquote_auto_vehicle
+-- 13/06/24     Hernando Gonzalez               7. Added NewlyPurchasedVehicleFinal
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip] 

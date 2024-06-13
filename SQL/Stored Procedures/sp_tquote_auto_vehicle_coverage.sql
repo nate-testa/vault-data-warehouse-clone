@@ -18,6 +18,7 @@ GO
 -- 02/04/24     Alberto Almario                 8. add 62 new columns
 -- 05/17/24     Architha Gudimalla              9. Updated join for tquote_auto_vehicle
 -- 05/17/24     Architha Gudimalla              10. Removed join on unique id for tquote_auto_vehicle
+-- 13/06/24     Hernando Gonzalez               11. Added NewlyPurchasedVehicleFinal
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
