@@ -532,8 +532,6 @@ BEGIN
         --*** Start Insert rows with causeOfLoss changed ***
         ----------------------------------------------------
 
-        DELETE FROM [edw_temp].[claim_clue_property_feed_temp1] where claimNumber <> 'C24HOA00030';
-
         -- Start Insert process
         INSERT INTO [edw_integration].[claim_clue_property_feed](
             [contribCompany],
