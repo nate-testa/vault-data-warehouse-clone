@@ -9,6 +9,7 @@ GO
 -----------------------------------------------------------------------------------------------------------------
 -- 11/13/23		Architha Gudimalla		    1. Created this procedure to update TIV and loss_of_use_derived_pc
 -- 05/17/23		Architha Gudimalla		    2. Updated logic for loss_of_use_derived_pc
+-- 06/14/24		Yunus Mohammed 				5. Removed error for rate_on_line
 -- =============================================================================================================== 
 
 
@@ -147,7 +148,7 @@ BEGIN
 		from [edw_core].[tquote_home_coverage] hc
 		inner join edw_temp.thome_cov_upd_rate_on_line a on hc.quote_no = a.quote_no and hc.transaction_seq_no = a.transaction_seq_no
 		where update_ts > @last_source_extract_ts
-		or rate_on_line is null; 
+		or hc.rate_on_line is null; 
 		
 		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line; 
 
