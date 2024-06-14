@@ -17,6 +17,7 @@ GO
 -- 02/22/24     Hernando Gonzalez               5. Added new fields carfax_wholesale_value_amt
 -- 02/27/24     Architha Gudimalla              6. Added case for antitheft
 -- 02/04/24     Alberto Almario                 7. add 62 new columns
+-- 13/06/24     Hernando Gonzalez               8. Added NewlyPurchasedVehicleFinal
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
