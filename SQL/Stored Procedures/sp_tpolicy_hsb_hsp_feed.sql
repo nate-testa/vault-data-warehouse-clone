@@ -90,7 +90,10 @@ BEGIN
                 c.mailing_address_city_nm as dwelling_city,
                 c.mailing_address_state_cd as dwelling_state,
                 c.mailing_address_zip_cd as dwelling_zip_cd,
-                ROUND(pt.ceded_premium_amt,2) as hsp_net_premium_amt,
+                CASE 
+                    WHEN pt.ceded_premium_amt = 0 THEN ROUND((pt.net_premium_amt * 0.74), 2)
+                    ELSE ROUND(pt.ceded_premium_amt,2) 
+                END as hsp_net_premium_amt,
                 CASE 
                     WHEN REPLACE(hac.home_systems_protection_limit_amt,',','') IN ('','0','25000','50000','100000') OR hac.home_systems_protection_limit_amt IS NULL THEN '500'
                     WHEN REPLACE(hac.home_systems_protection_limit_amt,',','') IN ('250000','500000') THEN '1000'
@@ -125,20 +128,20 @@ BEGIN
                 END AS occupancy,
                 hc.built_year as year_build,
                 hc.total_finished_square_feet as total_living_area,
-                NULL as no_of_units_in_dwelling,
+                '' as no_of_units_in_dwelling,
                 hc.hvac_updated_year as heating_system_updated_yr,
                 hc.electrical_updated_year as electrical_system_updated_yr,
                 hc.plumbing_updated_year as plumbing_system_updated_yr,
-                NULL as distance_to_hydrant,
+                '' as distance_to_hydrant,
                 '' as pricing_tier,
-                NULL as insurance_score,
+                '' as insurance_score,
                 '' as rating_territory_cd,
                 '' as protection_class_cd,
                 CASE 
                     WHEN CHARINDEX('-', p.policy_no) > 0 THEN LEFT(p.policy_no, CHARINDEX('-', p.policy_no) - 1)
                     ELSE p.policy_no
                 END AS previous_policy_number,
-                c.agency_id as agent_code,
+                ISNULL(c.agency_id,'') as agent_code,
                 '' as branch_code,
                 ss.source_system_nm,
                 getdate() as create_ts,
@@ -153,6 +156,9 @@ BEGIN
                     inner join edw_core.tdate as d ON i.inforce_dt_sk = d.date_sk
                     where p.product_cd in ('HO','CO')
                     and d.actual_dt = @CurrentLastDayOfMonth
+                    and p.policy_status <> 'Cancelled' 
+                    and p.effective_dt < GETDATE() 
+                    and p.expiration_dt > GETDATE()
                 ) AS p
             INNER JOIN
                 (
