@@ -1,16 +1,15 @@
 import os
 import pendulum
-from datetime import datetime, timedelta
+from datetime import timedelta
 from airflow import DAG
 from airflow.utils.task_group import TaskGroup
-from airflow.operators.bash import BashOperator
 from airflow.operators.mssql_operator import MsSqlOperator
 from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
-from airflow.providers.microsoft.azure.operators.data_factory import AzureDataFactoryRunPipelineOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format
-from clue_txt_generation import generate_txt_file_and_encrypt, SFTPUploadClueFileOperator
+from clue_property_txt_generation import generate_property_txt_file_and_encrypt, SFTPUploadCluePropertyFileOperator
+from clue_auto_txt_generation import generate_auto_txt_file_and_encrypt, SFTPUploadClueAutoFileOperator
 
 to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
@@ -70,11 +69,8 @@ with DAG(
         task_id='start',
     )
 
-
     
-    with TaskGroup("CLUE_group") as HSB_group:
-
-        hsb_group_items = ['sp_claim_clue_property_feed']
+    with TaskGroup("CLUE_Property_group") as CLUE_Property_group:
 
         sp_claim_clue_property_feed = MsSqlOperator(
             task_id='sp_claim_clue_property_feed',
@@ -84,33 +80,61 @@ with DAG(
             autocommit=True,
         )
 
-        send_CLUE_email = EmailOperator(
-            task_id='send_CLUE_email',
-            to=to_email,
-            subject='Airflow - CLUE tables loaded successfully',
-            html_content=get_sp_success_data_HTML(hsb_group_items, 'All stored procedures executed successfully for all the CLUE tables'),
-        )
-
-        sp_claim_clue_property_feed >> send_CLUE_email
-
-
-    with TaskGroup("CLUE_files_to_SFTP_group") as CLUE_files_to_SFTP_group:
-
-        generate_clue_txt_file = PythonOperator(
-            task_id='generate_clue_txt_file',
-            python_callable=generate_txt_file_and_encrypt,
+        generate_clue_property_txt_file = PythonOperator(
+            task_id='generate_clue_property_txt_file',
+            python_callable=generate_property_txt_file_and_encrypt,
             dag=dag,
         )
 
-        upload_clue_txt_to_sftp = SFTPUploadClueFileOperator(
-            task_id='upload_clue_txt_to_sftp',
+        upload_clue_property_txt_to_sftp = SFTPUploadCluePropertyFileOperator(
+            task_id='upload_clue_property_txt_to_sftp',
             sftp_conn_id='Vault_CLUE_sftp',
             dag=dag,
         )
-        generate_clue_txt_file >> upload_clue_txt_to_sftp
+
+        send_clue_property_email = EmailOperator(
+            task_id='send_clue_property_email',
+            to=to_email,
+            subject='Airflow - CLUE tables loaded successfully',
+            html_content=get_sp_success_data_HTML('sp_claim_clue_property_feed', 'The Clue Property process (e) finished successfully.'),
+        )
+
+        sp_claim_clue_property_feed >> generate_clue_property_txt_file >> upload_clue_property_txt_to_sftp >> send_clue_property_email
+
+
+    with TaskGroup("CLUE_Auto_group") as CLUE_Auto_group:
+
+        sp_claim_clue_auto_feed = MsSqlOperator(
+            task_id='sp_claim_clue_auto_feed',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_claim_clue_auto_feed",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        generate_clue_auto_txt_file = PythonOperator(
+            task_id='generate_clue_auto_txt_file',
+            python_callable=generate_auto_txt_file_and_encrypt,
+            dag=dag,
+        )
+
+        upload_clue_auto_txt_to_sftp = SFTPUploadClueAutoFileOperator(
+            task_id='upload_clue_auto_txt_to_sftp',
+            sftp_conn_id='Vault_CLUE_sftp',
+            dag=dag,
+        )
+
+        send_clue_auto_email = EmailOperator(
+            task_id='send_clue_auto_email',
+            to=to_email,
+            subject='Airflow - CLUE tables loaded successfully',
+            html_content=get_sp_success_data_HTML('sp_claim_clue_auto_feed', 'The Clue Auto process (e) finished successfully.'),
+        )
+
+        sp_claim_clue_auto_feed >> generate_clue_auto_txt_file >> upload_clue_auto_txt_to_sftp >> send_clue_auto_email
 
     end = DummyOperator(
         task_id='end',
     )
 
-start >> HSB_group >> CLUE_files_to_SFTP_group >> end
+start >> CLUE_Property_group >> CLUE_Auto_group >> end

@@ -117,7 +117,6 @@ with DAG(
             'sp_tquote_home_location_wip',
             'sp_tquote_home_coverage',
             'sp_tquote_home_coverage_wip',
-            'sp_tquote_home_coverage_update',
             'sp_tquote_home_additional_coverage',
             'sp_tquote_home_additional_coverage_wip'
             ]
@@ -154,14 +153,6 @@ with DAG(
             autocommit=True,
         )
 
-        sp_tquote_home_coverage_update = MsSqlOperator(
-            task_id='sp_tquote_home_coverage_update',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tquote_home_coverage_update",
-            database="vault_edw",
-            autocommit=True,
-        )
-
         sp_tquote_home_additional_coverage = MsSqlOperator(
             task_id='sp_tquote_home_additional_coverage',
             mssql_conn_id='Vault_EDW',
@@ -185,7 +176,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(quote_home_group_items, 'All stored procedures executed successfully for all the Quote Home tables'),
         )
 
-        sp_tquote_home_location_wip >> sp_tquote_home_location >> sp_tquote_home_coverage_wip >> sp_tquote_home_coverage >> sp_tquote_home_coverage_update >> sp_tquote_home_additional_coverage_wip >> sp_tquote_home_additional_coverage >> send_quote_home_email
+        sp_tquote_home_location_wip >> sp_tquote_home_location >> sp_tquote_home_coverage_wip >> sp_tquote_home_coverage >> sp_tquote_home_additional_coverage_wip >> sp_tquote_home_additional_coverage >> send_quote_home_email
 
 
     with TaskGroup("quote_collection_group") as quote_collection_group:
@@ -741,7 +732,8 @@ with DAG(
 
         quote_transaction_group_items = [
             'sp_tquote_transaction',
-            'sp_tquote_transaction_wip'
+            'sp_tquote_transaction_wip',
+            'sp_tquote_home_coverage_update'
         ]
 
         sp_tquote_transaction = MsSqlOperator(
@@ -760,6 +752,14 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tquote_home_coverage_update = MsSqlOperator(
+            task_id='sp_tquote_home_coverage_update',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tquote_home_coverage_update",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_quote_transaction_email = EmailOperator(
             task_id='send_quote_transaction_email',
             to=to_email,
@@ -767,7 +767,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(quote_transaction_group_items, 'All stored procedures executed successfully for all the Quote transaction tables'),
         )
 
-        sp_tquote_transaction_wip >> sp_tquote_transaction >> send_quote_transaction_email
+        sp_tquote_transaction_wip >> sp_tquote_transaction >> sp_tquote_home_coverage_update >> send_quote_transaction_email
 
 
     with TaskGroup("quote_broker_group") as quote_broker_group:

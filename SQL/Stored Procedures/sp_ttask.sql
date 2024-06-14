@@ -17,6 +17,7 @@ GO
 -- 02/23/24		Architha Gudimalla				5. Updated source query to Include rows where policy number is null
 --												   Added customer id
 -- 05/03/24		Architha Gudimalla				6. Added filter on ProductLine
+-- 06/11/24		Architha Gudimalla				7. Added user_sk
 -- ==================================================================================================================== 
 
 CREATE or ALTER PROCEDURE edw_core.sp_ttask
@@ -54,6 +55,9 @@ BEGIN
             ,cu.name created_by_nm
             ,au.name assigned_to_nm
             ,fu.name completed_by_nm
+            ,tcu.user_sk created_by_sk
+            ,tau.user_sk assigned_to_sk
+            ,tfu.user_sk completed_by_sk
             ,wt.WorkTaskState as task_status
             ,wt.Priority task_priority
             ,wt.CreatedDate task_created_dt
@@ -84,6 +88,9 @@ BEGIN
         left join edw_stage.[User] cu on wt.CreatedById = cu.Id
         left join edw_stage.[User] fu on wt.FinishedById = fu.Id
         left join edw_stage.[User] u on wt.AssignedUserId = u.Id
+        left join edw_core.[tUser] tcu on wt.CreatedById = tcu.user_id
+        left join edw_core.[tUser] tfu on wt.FinishedById = tfu.user_id
+        left join edw_core.[tUser] tau on wt.AssignedUserId = tau.user_id
         left join edw_stage.Workflow wf on wt.WorkflowId = wf.id
         left join edw_stage.WorkflowStep wfs on wt.WorkflowStepId = wfs.id 
         left join edw_core.ttask_workflow twf on wf.name = twf.task_workflow_nm 
@@ -99,7 +106,7 @@ BEGIN
 		USING 
 		(	
 			 SELECT 	policy_no, effective_dt, transaction_effective_dt, transaction_seq_no, 
-						task_nm, workflow_nm, workflow_step_nm, created_by_nm, assigned_to_nm, completed_by_nm, task_status, 
+						task_nm, workflow_nm, workflow_step_nm, created_by_nm, assigned_to_nm, completed_by_nm, task_status, created_by_sk, assigned_to_sk, completed_by_sk,
 						task_priority, task_created_dt, task_due_dt, task_completed_dt, 
 						task_completion_time_in_days, task_completion_time_in_minutes, task_updated_dt, task_closed_in, 
 						task_due_days, task_suspended_until_dt, task_abandoned_reason_desc, task_workflow_sk, task_workflow_step_sk, 
@@ -120,7 +127,10 @@ BEGIN
 				workflow_step_nm,
 				created_by_nm,
 				assigned_to_nm,
-				completed_by_nm,    
+				completed_by_nm,   
+				created_by_user_sk,
+				assigned_to_user_sk,
+				completed_by_user_sk,    
 				task_status,
 				task_priority,
 				task_created_dt,    
@@ -143,7 +153,7 @@ BEGIN
 			)
 		VALUES (Source.policy_no, Source.effective_dt, Source.transaction_effective_dt, Source.transaction_seq_no, 
 						Source.task_nm, Source.workflow_nm, Source.workflow_step_nm, 
-						Source.created_by_nm, Source.assigned_to_nm, Source.completed_by_nm, Source.task_status, 
+						Source.created_by_nm, Source.assigned_to_nm, Source.completed_by_nm, Source.created_by_sk, Source.assigned_to_sk, Source.completed_by_sk, Source.task_status, 
 						Source.task_priority, Source.task_created_dt, Source.task_due_dt, Source.task_completed_dt, 
 						Source.task_completion_time_in_days, Source.task_completion_time_in_minutes, Source.task_updated_dt, Source.task_closed_in, 
 						Source.task_due_days, Source.task_suspended_until_dt, Source.task_abandoned_reason_desc, Source.task_workflow_sk, source.task_workflow_step_sk,
@@ -153,6 +163,8 @@ BEGIN
 		SET
         Target.assigned_to_nm 					= Source.assigned_to_nm,
 		Target.completed_by_nm 					= Source.completed_by_nm,
+		Target.assigned_to_user_sk 				= Source.assigned_to_sk,
+		Target.completed_by_user_sk 			= Source.completed_by_sk,
 		Target.task_status 						= Source.task_status,
 		Target.task_priority 					= Source.task_priority,
 		Target.task_due_dt 						= Source.task_due_dt,

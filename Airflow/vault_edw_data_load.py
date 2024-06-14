@@ -163,7 +163,7 @@ with DAG(
         adf_etl_load_ls_aws_dms: BaseOperator = AzureDataFactoryRunPipelineOperator(
             task_id="adf_etl_load_ls_aws_dms",
             azure_data_factory_conn_id='azure_data_factory_vault_data',
-            pipeline_name="MetadataDrivenCopy_LS_AWS_DMS_dd8_TopLevel",
+            pipeline_name="LS_AWS_DMS_dmsDocument",
             # parameters={"myParam": "value"},
         )        
 
@@ -179,7 +179,7 @@ with DAG(
 
     with TaskGroup("home_group") as home_group:
 
-        home_group_items = ['sp_thome_location','sp_thome_coverage','sp_thome_coverage_update','sp_tmortgagee','sp_thome_additional_coverage']
+        home_group_items = ['sp_thome_location','sp_thome_coverage','sp_tmortgagee','sp_thome_additional_coverage']
 
         sp_thome_location = MsSqlOperator(
             task_id='sp_thome_location',
@@ -193,14 +193,6 @@ with DAG(
             task_id='sp_thome_coverage',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_thome_coverage",
-            database="vault_edw",
-            autocommit=True,
-        )
-
-        sp_thome_coverage_update = MsSqlOperator(
-            task_id='sp_thome_coverage_update',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_thome_coverage_update",
             database="vault_edw",
             autocommit=True,
         )
@@ -228,7 +220,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(home_group_items, 'All stored procedures executed successfully for all the Home tables'),
         )
 
-        sp_thome_location >> sp_thome_coverage >> sp_thome_coverage_update >> sp_tmortgagee >> sp_thome_additional_coverage >> send_home_email
+        sp_thome_location >> sp_thome_coverage >> sp_tmortgagee >> sp_thome_additional_coverage >> send_home_email
 
 
     with TaskGroup("collection_group") as collection_group:
@@ -444,7 +436,7 @@ with DAG(
 
     with TaskGroup("policy_transaction_group") as policy_transaction_group:
 
-        policy_transaction_group_items = ['sp_tpolicy_transaction','sp_tpolicy_transaction_update','sp_tpolicy_update_cancels','sp_treconciliation']
+        policy_transaction_group_items = ['sp_tpolicy_transaction','sp_tpolicy_transaction_update','sp_thome_coverage_update','sp_tpolicy_update_cancels','sp_treconciliation']
 
         sp_tpolicy_transaction = MsSqlOperator(
             task_id='sp_tpolicy_transaction',
@@ -458,6 +450,14 @@ with DAG(
             task_id='sp_tpolicy_transaction_update',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tpolicy_transaction_update",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_thome_coverage_update = MsSqlOperator(
+            task_id='sp_thome_coverage_update',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_thome_coverage_update",
             database="vault_edw",
             autocommit=True,
         )
@@ -492,7 +492,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(policy_transaction_group_items, 'All stored procedures executed successfully for all the Policy Transaction tables'),
         )
 
-        sp_tpolicy_transaction >> sp_tpolicy_transaction_update >> sp_tpolicy_update_cancels >> sp_treconciliation >> treconciliation_email >> send_policy_transaction_email
+        sp_tpolicy_transaction >> sp_tpolicy_transaction_update >> sp_thome_coverage_update >> sp_tpolicy_update_cancels >> sp_treconciliation >> treconciliation_email >> send_policy_transaction_email
 
 
     with TaskGroup("claim_group") as claim_group:

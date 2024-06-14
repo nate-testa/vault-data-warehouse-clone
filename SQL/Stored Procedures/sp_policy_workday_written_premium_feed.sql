@@ -9,6 +9,7 @@
 -- 12/01/23		Yunus Mohammed				2. Updated  product name and company name
 -- 12/05/23		Yunus Mohammed				3. Removed distinct and added contribcutoffdate date
 -- 03/20/24		Yunus Mohammed				4. Added condo in aslob
+-- 06/14/24		Yunus Mohammed				5. Updated aslob logic for commission query
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
@@ -169,15 +170,11 @@ BEGIN
 				as subcategory,
 				-1 as financial_category_id,
 				'Commission Amount' AS [financial_category_name],
-				CASE 
-				WHEN tp.product_cd IN('HO','CO') THEN '40'				
-				WHEN tp.product_cd = 'AU' THEN '192'
-				WHEN tp.product_cd = 'PEL' THEN '171'
-				WHEN tp.product_cd = 'LUX' THEN '090'
-				END AS [aslob],
+				tic.aslob_cd AS [aslob],
 				tpt.commission_amt AS premium_amt
 				FROM
 				edw_core.tpolicy_transaction tpt
+				INNER JOIN edw_core.tinternal_coverage tic ON tic.internal_coverage_sk=tpt.internal_coverage_sk
 				inner join edw_core.tpolicy tp on tp.policy_sk=tpt.policy_sk
 				INNER JOIN edw_core.tdate tdeff on tdeff.date_sk=tpt.transaction_effective_dt_sk
 				INNER JOIN edw_core.tdate tdpro on tdpro.date_sk=tpt.transaction_dt_sk

@@ -9,6 +9,7 @@ GO
 -----------------------------------------------------------------------------------------------------------------
 -- 11/13/23		Architha Gudimalla		    1. Created this procedure to update TIV and loss_of_use_derived_pc
 -- 05/17/23		Architha Gudimalla		    2. Updated logic for loss_of_use_derived_pc
+-- 06/14/24		Yunus Mohammed 				5. Removed error for rate_on_line
 -- =============================================================================================================== 
 
 
@@ -101,7 +102,7 @@ BEGIN
 													else 0
 												--else loss_of_use_pc
 											END ,4)
-		where [update_ts] > @last_source_extract_ts;
+		where [update_ts] >= @last_source_extract_ts;
 		
 		update [edw_core].[tquote_home_coverage]
 			set total_insured_value_amt = 	isnull(dwelling_limit_amt,0) + isnull(other_structures_limit_amt,0) + isnull(contents_limit_amt,0) +
@@ -113,7 +114,43 @@ BEGIN
 											    then round(cast(loss_of_use_derived_pc as float) * cast(iif(residence_type = 'Homeowners', dwelling_limit_amt, contents_limit_amt) as int),0)
 											else 0
 											end*/
-		where [update_ts] > @last_source_extract_ts;
+		where [update_ts] >= @last_source_extract_ts; 
+		
+		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line; 
+
+		with hc as
+		(
+			SELECT  quote_no, effective_Dt, transaction_seq_no, total_insured_value_amt, source_system_Sk --select *
+			FROM    edw_core.tquote_home_coverage 
+			where rate_on_line is null
+			or update_ts >= @last_source_extract_ts
+		), tr as
+		(
+			select pol.quote_no, pol.effective_Dt, tr.transaction_seq_no, tr.quote_sk, sum(annual_premium_amt) annual_premium_amt  
+			from  edw_core.tquote pol, edw_core.tquote_transaction tr, edw_core.tinternal_coverage ic
+			where tr.quote_sk = pol.quote_sk 
+			and ic.internal_coverage_sk = tr.internal_coverage_sk and ic.primary_coverage_cd in ('Hurricane','Wildfire','AOP','Wind/Hail','Lux')
+			and exists (select 'x' from hc where hc.quote_no = pol.quote_no) 
+			group by pol.quote_no, pol.effective_Dt, tr.transaction_seq_no, tr.quote_sk
+		), tr_run_total as
+		(
+			select quote_no, effective_Dt, transaction_seq_no, quote_sk, annual_premium_amt
+				, SUM(annual_premium_amt ) OVER (partition by tr.quote_sk ORDER BY tr.transaction_seq_no ASC) prm_run_total
+			from  tr
+		)
+		select hc.*,  annual_premium_amt, prm_run_total, round(prm_run_total*100/total_insured_value_amt,2) rate_on_line
+		into edw_temp.thome_cov_upd_rate_on_line
+		from hc, tr_run_total a
+		where hc.quote_no = a.quote_no and hc.transaction_seq_no = a.transaction_seq_no;
+
+		update hc 
+			set hc.rate_on_line = a.rate_on_line
+		from [edw_core].[tquote_home_coverage] hc
+		inner join edw_temp.thome_cov_upd_rate_on_line a on hc.quote_no = a.quote_no and hc.transaction_seq_no = a.transaction_seq_no
+		where update_ts > @last_source_extract_ts
+		or hc.rate_on_line is null; 
+		
+		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line; 
 
 		SET @rows_affected=@@ROWCOUNT;
 	
