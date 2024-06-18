@@ -90,7 +90,10 @@ BEGIN
                 c.mailing_address_city_nm as dwelling_city,
                 c.mailing_address_state_cd as dwelling_state,
                 c.mailing_address_zip_cd as dwelling_zip_cd,
-                ROUND(pt.ceded_premium_amt,2) as hsp_net_premium_amt,
+                CASE 
+                    WHEN pt.ceded_premium_amt = 0 THEN ROUND((pt.net_premium_amt * 0.74), 2)
+                    ELSE ROUND(pt.ceded_premium_amt,2) 
+                END as hsp_net_premium_amt,
                 CASE 
                     WHEN REPLACE(hac.home_systems_protection_limit_amt,',','') IN ('','0','25000','50000','100000') OR hac.home_systems_protection_limit_amt IS NULL THEN '500'
                     WHEN REPLACE(hac.home_systems_protection_limit_amt,',','') IN ('250000','500000') THEN '1000'
@@ -153,6 +156,9 @@ BEGIN
                     inner join edw_core.tdate as d ON i.inforce_dt_sk = d.date_sk
                     where p.product_cd in ('HO','CO')
                     and d.actual_dt = @CurrentLastDayOfMonth
+                    and p.policy_status <> 'Cancelled' 
+                    and p.effective_dt < GETDATE() 
+                    and p.expiration_dt > GETDATE()
                 ) AS p
             INNER JOIN
                 (
