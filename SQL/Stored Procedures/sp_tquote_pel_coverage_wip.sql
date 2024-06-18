@@ -67,6 +67,8 @@ BEGIN
 			AND acctvpf.Coverage = 'Excess Liability'
             AND p.[Name] = 'Personal Excess Liability'
             AND p.ProductLine = 'PersonalLines'
+			AND acctvpf.field = 'Adjustment'
+			AND acctvpf.FactorMethod <> 'None'
         )
         ,acctvpf_unpivot AS (
             SELECT PolicyNumber, EffectiveDate, CreatedDate, [Number], CONCAT(FinalColumnName, '_method') AS FinalColumnName, method           	as FinalValue FROM acctvpf WHERE method IS NOT NULL
