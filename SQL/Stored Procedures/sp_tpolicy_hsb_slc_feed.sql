@@ -90,10 +90,7 @@ BEGIN
                 c.mailing_address_city_nm as dwelling_city,
                 c.mailing_address_state_cd as dwelling_state,
                 c.mailing_address_zip_cd as dwelling_zip_cd,
-                CASE 
-                    WHEN pt.ceded_premium_amt = 0 THEN ROUND((pt.net_premium_amt * 0.74), 2)
-                    ELSE ROUND(pt.ceded_premium_amt,2) 
-                END as slc_net_premium_amt,
+                ROUND(pt.ceded_premium_amt,2) as slc_net_premium_amt,
                 '50000' as slc_limit_amt,
                 '500' as slc_deductible_amt,
                 '' as base_homeowner_premium,
@@ -150,9 +147,6 @@ BEGIN
                     inner join edw_core.tdate as d ON i.inforce_dt_sk = d.date_sk
                     where p.product_cd in ('HO','CO')
                     and d.actual_dt = @CurrentLastDayOfMonth
-                    and p.policy_status <> 'Cancelled' 
-                    and p.effective_dt < GETDATE() 
-                    and p.expiration_dt > GETDATE()
                 ) AS p
             INNER JOIN
                 (
