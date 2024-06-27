@@ -86,11 +86,14 @@ BEGIN
                 a.claim_sk,
                 a.item_sk,
                 b.transaction_ts,
-                CASE 
-                    WHEN (a.subro_expense_paid_amt + a.subro_recovery_amt) < 0 THEN 'S'
-                    WHEN a.claim_feature_status ='CLOSED' THEN 'C' 
-                    ELSE 'O' 
-                END AS [claimDisposition],
+                SUM(a.subro_expense_paid_amt + a.subro_recovery_amt) AS sum_subro_exp_rec_amt,
+                MAX(
+                    CASE 
+                        WHEN a.claim_feature_status = 'CLOSED' THEN 1
+                        ELSE 2
+                    END
+                )
+                AS claim_feature_status_no,
                 CASE
                     WHEN claim_coverage_desc = 'Bodily Injury' THEN 'BI'
                     WHEN claim_coverage_desc = 'Collision' THEN 'CO'
@@ -112,7 +115,7 @@ BEGIN
                     WHEN claim_coverage_desc = 'Uninsured Motorist' THEN 'UM'
                     WHEN claim_coverage_desc = 'Underinsured Motorist' THEN 'UN'
                     WHEN claim_coverage_desc = 'Uninsured / Underinsured Motorist' THEN 'UN'
-                    WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TI'
+                    WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TL'
                     ELSE 'OT'
                 END AS [ClaimType],
                 SUM(
@@ -121,10 +124,6 @@ BEGIN
                                 a.loss_paid_amt             + 
                                 a.expense_paid_amt          + 
                                 a.adjusting_other_paid_amt  + 
-                                a.subro_recovery_amt        + 
-                                a.salvage_recovery_amt      + 
-                                a.salvage_expense_paid_amt  + 
-                                a.subro_expense_paid_amt    + 
                                 a.refund_indemnity_paid_amt + 
                                 a.refund_expense_paid_amt
                             ), 0)
@@ -143,11 +142,6 @@ BEGIN
                 a.claim_sk,
                 a.item_sk,
                 b.transaction_ts,
-                CASE 
-                    WHEN (a.subro_expense_paid_amt + a.subro_recovery_amt) < 0 THEN 'S'
-                    WHEN a.claim_feature_status ='CLOSED' THEN 'C' 
-                    ELSE 'O' 
-                END,
                 CASE
                     WHEN claim_coverage_desc = 'Bodily Injury' THEN 'BI'
                     WHEN claim_coverage_desc = 'Collision' THEN 'CO'
@@ -169,7 +163,7 @@ BEGIN
                     WHEN claim_coverage_desc = 'Uninsured Motorist' THEN 'UM'
                     WHEN claim_coverage_desc = 'Underinsured Motorist' THEN 'UN'
                     WHEN claim_coverage_desc = 'Uninsured / Underinsured Motorist' THEN 'UN'
-                    WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TI'
+                    WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TL'
                     ELSE 'OT'
                 END
         )
@@ -182,9 +176,9 @@ BEGIN
             '' AS [PolicyHolderNameSuffix],
             SUBSTRING(p.mailing_address_line1, 1, PATINDEX('%[^0-9]%', p.mailing_address_line1 + 'x') - 1) AS [PolicyHolderMailAddrHseNum],
             LEFT(TRIM(SUBSTRING(p.mailing_address_line1, PATINDEX('%[^0-9]%', p.mailing_address_line1), 30)),20) AS [PolicyHolderMailAddressStreetName],
-            p.mailing_address_unit_no AS [PolicyHolderMailAddressAptNum],
-            p.mailing_address_city_nm AS [PolicyHolderMailAddressCity],
-            p.mailing_address_state_cd AS [PolicyHolderMailAddressState],
+            LEFT(p.mailing_address_unit_no, 5) AS [PolicyHolderMailAddressAptNum],
+            LEFT(p.mailing_address_city_nm, 20) AS [PolicyHolderMailAddressCity],
+            LEFT(p.mailing_address_state_cd, 2) AS [PolicyHolderMailAddressState],
             LEFT(p.mailing_address_zip_cd,5) AS [PolicyHolderMailAddressZip],
             '' AS [PolicyHolderMailAddressZipPlus4],
             '' AS [Filler_reservedForFutureUse1],
@@ -204,19 +198,6 @@ BEGIN
             '' AS [PolicyHolder2DriversLicenseNum],
             '' AS [PolicyHolder2DriversLicenseState],
             '' AS [PolicyHolder2Sex],
-            -- pi2.prefix AS [PolicyHolder2NamePrefix],
-            -- CASE WHEN cu.insured_type = 'Individual' THEN pi2.last_nm ELSE pi2.insured_nm END AS [PolicyHolder2NameLast],
-            -- CASE WHEN cu.insured_type = 'Individual' THEN pi2.first_nm ELSE pi2.insured_nm END AS [PolicyHolder2NameFirst],
-            -- CASE WHEN cu.insured_type = 'Individual' THEN pi2.middle_nm ELSE pi2.insured_nm END AS [PolicyHolder2NameMiddle],
-            -- pi2.suffix AS [PolicyHolder2NameSuffix],
-            -- '' AS [PolicyHolder2SSN],
-            -- FORMAT(pi2.birth_dt, 'MMddyyyy') AS [PolicyHolder2DOB],
-            -- ad.license_no AS [PolicyHolder2DriversLicenseNum],
-            -- ad.license_state_nm AS [PolicyHolder2DriversLicenseState],
-            -- CASE 
-            --     WHEN ad.gender = 'Male' THEN 'M'
-            --     WHEN ad.gender = 'Female' THEN 'F' 
-            -- END AS [PolicyHolder2Sex],
             '' AS [Filler_reservedForFutureUse3],
             '' AS [VehicleOperatorNamePrefix],
             '' AS [VehicleOperatorNameLast],
@@ -258,7 +239,10 @@ BEGIN
             c.claim_no AS [ClaimNumber],
             cf.[ClaimType],
             FORMAT(c.loss_dt, 'MMddyyyy') AS [ClaimDate],
-            CAST(cf.[claimAmount] AS INT) AS [ClaimAmount],
+            CASE 
+                WHEN cf.[claimAmount] < 0 THEN '000000000'
+                ELSE RIGHT('000000000' + REPLACE(CAST(cf.[claimAmount] AS VARCHAR(10)), '.', ''), 9)
+            END AS [ClaimAmount],
             'A' AS [ClaimReportingStatus],
             av.vehicle_vin AS [InsuredVehicleVIN],
             av.vehicle_model_year AS [InsuredVehicleModelYear],
@@ -266,7 +250,11 @@ BEGIN
                 WHEN av.vehicle_make IS NOT NULL AND av.vehicle_model IS NOT NULL THEN LEFT(CONCAT(av.vehicle_make, '-' ,av.vehicle_model),20)
             END AS [InsuredVehicleMakeModel],
             '' AS [InsuredVehicleDisposition],
-            cf.[claimDisposition] AS [ClaimDisposition],
+            CASE 
+                WHEN cf.sum_subro_exp_rec_amt < 0 THEN 'S'
+                WHEN cf.claim_feature_status_no = 1 THEN 'C' --1 = Closed
+                ELSE 'O' 
+            END AS [ClaimDisposition],
             '' AS [FaultIndicator],
             '' AS [DateofFirstPayment],
             '' AS [CAIndicator1],
@@ -289,7 +277,6 @@ BEGIN
         INNER JOIN claims AS c ON cf.claim_sk = c.claim_sk
         INNER JOIN edw_core.tpolicy AS p ON p.policy_sk = c.policy_sk
         LEFT JOIN edw_core.tauto_vehicle AS av ON cf.item_sk = av.auto_vehicle_sk
-        -- LEFT JOIN edw_core.tauto_driver AS ad ON p.policy_no = ad.policy_no AND p.effective_dt = ad.effective_dt
         LEFT JOIN customer AS cu ON p.customer_id = cu.customer_id
         LEFT JOIN policy_insured_2 AS pi2 ON c.policy_no = pi2.policy_no
         WHERE p.product_cd IN ('AU')
@@ -434,7 +421,7 @@ BEGIN
             UPPER(ISNULL([ClaimNumber],'')) AS [ClaimNumber],
             UPPER(ISNULL([ClaimType],'')) AS [ClaimType],
             RIGHT('00000000' + ISNULL([claimDate],'0'), 8) AS [claimDate],
-            RIGHT('000000000' + CAST(ISNULL([claimAmount],'0') AS nvarchar(9)), 9) AS [claimAmount],
+            ISNULL([claimAmount],'0') AS [claimAmount],
             UPPER(ISNULL([ClaimReportingStatus],'')) AS [ClaimReportingStatus],
             UPPER(ISNULL([InsuredVehicleVIN],'')) AS [InsuredVehicleVIN],
             RIGHT('0000' + ISNULL([InsuredVehicleModelYear],'0'), 4) AS [InsuredVehicleModelYear],

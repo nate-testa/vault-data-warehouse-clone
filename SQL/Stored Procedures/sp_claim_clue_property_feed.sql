@@ -118,10 +118,6 @@ BEGIN
                         c.loss_paid_amt             + 
                         c.expense_paid_amt          + 
                         c.adjusting_other_paid_amt  + 
-                        c.subro_recovery_amt        + 
-                        c.salvage_recovery_amt      + 
-                        c.salvage_expense_paid_amt  + 
-                        c.subro_expense_paid_amt    + 
                         c.refund_indemnity_paid_amt + 
                         c.refund_expense_paid_amt
                     ), 0
@@ -194,7 +190,7 @@ BEGIN
             END AS [causeOfLoss],
             'U' AS [locationOfLoss],
             CASE 
-                WHEN c.[claimAmount] < 0 THEN '-' + RIGHT('00000000' + REPLACE(CAST(ABS(c.[claimAmount]) AS VARCHAR(9)), '.', ''), 8)
+                WHEN c.[claimAmount] < 0 THEN '000000000'
                 ELSE RIGHT('000000000' + REPLACE(CAST(c.[claimAmount] AS VARCHAR(10)), '.', ''), 9)
             END AS [claimAmount],
             'A' AS [claimReportingStatus],
