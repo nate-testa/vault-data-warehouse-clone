@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tpolicy_transaction ADD policy_history_sk int null;

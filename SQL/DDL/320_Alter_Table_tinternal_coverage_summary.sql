@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tinternal_coverage_summary ADD policy_history_sk int null;

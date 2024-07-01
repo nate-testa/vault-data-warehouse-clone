@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tdaily_inforce_policy ADD policy_history_sk int null;
