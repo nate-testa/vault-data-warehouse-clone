@@ -7,6 +7,7 @@
 -- 06/16/23		Architha Gudimalla				1. Created this procedure 
 -- 02/07/24		Architha Gudimalla				2. Added annual net prm  
 -- 03/20/24		Architha Gudimalla				3. Added commission_amt
+-- 07/03/24		Yunus Mohammed					4. Added policy_history_sk
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tdaily_inforce_policy]
@@ -76,12 +77,12 @@ BEGIN
 				)
 				INSERT INTO edw_core.tdaily_inforce_policy
 					( 
-						policy_sk, customer_sk, broker_sk, product_sk, source_system_sk, inforce_dt_sk, 
+						policy_sk, policy_history_sk, customer_sk, broker_sk, product_sk, source_system_sk, inforce_dt_sk, 
 						premium_amt, annual_premium_amt, net_premium_amt , update_ts, etl_audit_sk
 						,annual_net_premium_amt
 						,commission_amt
 			        )
-			    select 	tr.policy_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.sourcE_system_sk, 
+			    select 	tr.policy_sk, tr.policy_history_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.sourcE_system_sk, 
 						@var_date_sk, 
 						max_tr.prm, max_tr.ann_prm, max_tr.prm-max_tr.tfs, getdate(), @etl_audit_sk
 						,max_tr.annual_net_premium_amt

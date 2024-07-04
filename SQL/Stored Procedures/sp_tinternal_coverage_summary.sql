@@ -7,18 +7,19 @@ GO
 -- Author:		Architha Gudimalla 
 -- Description: This procedure summarizes data at the internal coverages level for each month
 ---------------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author							 |	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
--- 07/18/23		Architha Gudimalla				1. Created this procedure 
--- 08/24/23		Architha Gudimalla				2. Updated EP logic
--- 10/05/23		Architha Gudimalla				3. Fixed division by 0 error for EP calculation
--- 10/16/23		Architha Gudimalla				4. Used source_system_sk from tpolicy instead of tpolicy_transaction in prm subquery  
--- 10/17/23		Architha Gudimalla				5. Used source_system_sk, customer_sk, broker-sk, prudct_sk from max_tr
--- 10/24/23		Architha Gudimalla				6. Fixed division by 0 error for EP calculation  
--- 11/10/23		Architha Gudimalla				7. Corrected net ep code
--- 12/06/23		Architha Gudimalla				8. Fixed exposure calculation
--- 02/07/24		Architha Gudimalla				9. Added annual net prm
+-- 07/18/23		Architha Gudimalla				 1. Created this procedure 
+-- 08/24/23		Architha Gudimalla				 2. Updated EP logic
+-- 10/05/23		Architha Gudimalla				 3. Fixed division by 0 error for EP calculation
+-- 10/16/23		Architha Gudimalla				 4. Used source_system_sk from tpolicy instead of tpolicy_transaction in prm subquery  
+-- 10/17/23		Architha Gudimalla				 5. Used source_system_sk, customer_sk, broker-sk, prudct_sk from max_tr
+-- 10/24/23		Architha Gudimalla				 6. Fixed division by 0 error for EP calculation  
+-- 11/10/23		Architha Gudimalla				 7. Corrected net ep code
+-- 12/06/23		Architha Gudimalla				 8. Fixed exposure calculation
+-- 02/07/24		Architha Gudimalla				 9. Added annual net prm
 -- 03/26/24		Architha Gudimalla				10. Added collection_class_type_sk
+-- 07/03/24		Yunus Mohammed					11. Added policy_history_sk
 -- ========================================================================================================================================= 
 
 create or ALTER      PROCEDURE [edw_core].[sp_tinternal_coverage_summary]
@@ -124,7 +125,9 @@ BEGIN
 				 and	calendar_month_sk = @month_end_dt_sk 
 				and   expiration_dt_sk > @month_begin_dt_sk
 				 group by policy_sk, item_sk, internal_coverage_sk, policy_transaction_type_sk, transaction_seq_no 
+				 
 				 union all
+				 
 				 SELECT policy_sk, item_sk, internal_coverage_sk, policy_transaction_type_sk , transaction_seq_no 
 				 FROM	edw_core.tpolicy_transaction
 				 where	isnull(internal_coverage_sk,0) <> 0 
@@ -348,7 +351,7 @@ BEGIN
 				),
 				prm as
 				(
-				 SELECT tr.policy_sk, tr.item_sk, tr.internal_coverage_sk, tr.product_sk, --tr.customer_sk, tr.broker_sk, pol.source_system_sk,
+				 SELECT tr.policy_sk, tr.policy_history_sk, tr.item_sk, tr.internal_coverage_sk, tr.product_sk, --tr.customer_sk, tr.broker_sk, pol.source_system_sk,
 				 		max(tr.transaction_seq_no) transaction_seq_no,
 						max(tr.collection_class_type_sk) collection_class_type_sk,
 						--max(tr.product_sk)  product_sk,
@@ -438,11 +441,11 @@ BEGIN
 				 and   tr.transaction_effective_dt_sk <> tr.expiration_dt_sk
 				 and   (pol.expiration_dt > @month_begin_dt --or (tr.transaction_dt_sk - tr.expiration_dt_sk) <= 60
 						) --dateadd(month,-2,@month_begin_dt)
-				 group by tr.policy_sk, tr.item_sk, tr.internal_coverage_sk, tr.product_sk--, tr.customer_sk, tr.broker_sk, pol.source_system_sk
+				 group by tr.policy_sk, tr.policy_history_sk, tr.item_sk, tr.internal_coverage_sk, tr.product_sk--, tr.customer_sk, tr.broker_sk, pol.source_system_sk
 				)
 				INSERT INTO edw_core.tinternal_coverage_summary
 					( 
-						month_sk, policy_sk, item_sk, internal_coverage_sk, 
+						month_sk, policy_sk, policy_history_sk, item_sk, internal_coverage_sk, 
 						coverage_sk, vehicle_coverage_sk, customer_sk, broker_sk, product_sk, source_system_sk, 
 						inforce_ct, inforce_premium_amt, inforce_net_premium_amt,
 						mtd_premium_amt, mtd_commission_amt, mtd_tax_fee_surcharge_amt, mtd_net_premium_amt, 
@@ -455,7 +458,7 @@ BEGIN
 						written_exposure, earned_exposure, update_ts, etl_audit_sk
 						,collection_class_type_sk
 					) 
-				select 	@month_end_dt_sk, prm.policy_sk, prm.item_sk, prm.internal_coverage_sk,
+				select 	@month_end_dt_sk, prm.policy_sk, prm.policy_history_sk, prm.item_sk, prm.internal_coverage_sk,
 						case when inf.coverage_sk is not null then inf.coverage_sk else prm.coverage_sk end coverage_sk, 
 						case when inf.vehicle_coverage_sk is not null then inf.vehicle_coverage_sk else prm.vehicle_coverage_sk end vehicle_coverage_sk, 
 						max_tr.customer_sk, max_tr.broker_sk, max_tr.product_sk, max_tr.sourcE_system_sk, 
