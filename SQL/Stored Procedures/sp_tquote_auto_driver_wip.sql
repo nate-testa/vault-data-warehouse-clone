@@ -44,7 +44,7 @@ BEGIN
             [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
             [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
             [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior],
+            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor],
 			source_system_sk
 		
         INTO [edw_temp].[tquote_auto_driver_wip_temp1]
@@ -90,7 +90,7 @@ BEGIN
                     [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
                     [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
                     [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior]
+                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor]
                 )
 			) pivottable
 
@@ -156,6 +156,13 @@ BEGIN
                 target.min_prior_ct = source.[MINPrior],
                 target.maj_prior_ct = source.[MAJPrior],
                 target.spd_prior_ct = source.[SPDPrior],
+                target.aaf_factor = source.[AAFFactor],
+                target.afb_factor = source.[AFBFactor],
+                target.naf_factor = source.[NAFFactor],
+                target.cpa_factor = source.[CPAFactor],
+                target.min_factor = source.[MINFactor],
+                target.maj_factor = source.[MAJFactor],
+                target.sdp_factor = source.[SPDFactor],
                 target.source_system_sk = source.source_system_sk,
                 target.update_ts = GETDATE(),
                 target.etl_audit_sk = @etl_audit_sk
@@ -218,6 +225,13 @@ BEGIN
                 min_prior_ct,
                 maj_prior_ct,
                 spd_prior_ct,
+                aaf_factor,
+                afb_factor,
+                naf_factor,
+                cpa_factor,
+                min_factor,
+                maj_factor,
+                sdp_factor,
                 source_system_sk,
                 create_ts,
                 update_ts,
@@ -281,6 +295,13 @@ BEGIN
                 source.[MINPrior],
                 source.[MAJPrior],
                 source.[SPDPrior],
+                source.[AAFFactor],
+                source.[AFBFactor],
+                source.[NAFFactor],
+                source.[CPAFactor],
+                source.[MINFactor],
+                source.[MAJFactor],
+                source.[SPDFactor],
                 source.source_system_sk,
                 GETDATE(),
                 GETDATE(),

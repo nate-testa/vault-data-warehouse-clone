@@ -47,12 +47,9 @@ BEGIN
             [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
             [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
             [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior],
+            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor],
 			source_system_sk,CASE IsDeletedOnPolicyChange WHEN 0 THEN 'No' WHEN 1 THEN 'Yes' END AS IsDeletedOnPolicyChange
-            
-		
         INTO [edw_temp].[tauto_driver_temp1]
-		
         FROM
 			(
                 SELECT
@@ -95,7 +92,7 @@ BEGIN
                     [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
                     [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
                     [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior]
+                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor]
                 )
 			) pivottable
 
@@ -162,6 +159,13 @@ BEGIN
             maj_prior_ct,
             spd_prior_ct,
             driver_deleted_in,
+            aaf_factor,
+            afb_factor,
+            naf_factor,
+            cpa_factor,
+            min_factor,
+            maj_factor,
+            sdp_factor,
             source_system_sk,
             create_ts,
             update_ts,
@@ -228,6 +232,13 @@ BEGIN
             t1.[MAJPrior] as maj_prior_ct,
             t1.[SPDPrior] as spd_prior_ct,
             t1.IsDeletedOnPolicyChange as driver_deleted_in,
+            t1.[AAFFactor] as aaf_factor,
+            t1.[AFBFactor] as afb_factor,
+            t1.[NAFFactor] as naf_factor,
+            t1.[CPAFactor] as cpa_factor,
+            t1.[MINFactor] as min_factor,
+            t1.[MAJFactor] as maj_factor,
+            t1.[SPDFactor] as sdp_factor,
             t1.source_system_sk,
             getdate() AS create_ts,
             getdate() AS update_ts,
