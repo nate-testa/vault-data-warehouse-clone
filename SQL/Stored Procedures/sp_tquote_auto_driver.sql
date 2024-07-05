@@ -11,6 +11,7 @@ GO
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 22/02/24		Hernnando Gonzalez		    1. Added new field lending_loss_amt
+-- 04/07/24		Hernnando Gonzalez		    2. Added new fields AAFFactor, AFBFactor, NAFFactor, CPAFactor, MINFactor, MAJFactor, SPDFactor
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_driver]
 AS
@@ -45,7 +46,7 @@ BEGIN
             [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
             [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
             [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior],
+            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor],
 			source_system_sk
 		
         INTO [edw_temp].[tquote_auto_driver_temp1]
@@ -91,7 +92,7 @@ BEGIN
                     [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
                     [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
                     [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior]
+                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor]
                 )
 			) pivottable
 
@@ -155,6 +156,13 @@ BEGIN
             min_prior_ct,
             maj_prior_ct,
             spd_prior_ct,
+            aaf_factor,
+            afb_factor,
+            naf_factor,
+            cpa_factor,
+            min_factor,
+            maj_factor,
+            sdp_factor,
             source_system_sk,
             create_ts,
             update_ts,
@@ -218,6 +226,13 @@ BEGIN
             t1.[MINPrior] as min_prior_ct,
             t1.[MAJPrior] as maj_prior_ct,
             t1.[SPDPrior] as spd_prior_ct,
+            t1.[AAFFactor] as aaf_factor,
+            t1.[AFBFactor] as afb_factor,
+            t1.[NAFFactor] as naf_factor,
+            t1.[CPAFactor] as cpa_factor,
+            t1.[MINFactor] as min_factor,
+            t1.[MAJFactor] as maj_factor,
+            t1.[SPDFactor] as sdp_factor,
             t1.source_system_sk,
             getdate() AS create_ts,
             getdate() AS update_ts,
