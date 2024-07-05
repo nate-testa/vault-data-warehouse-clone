@@ -1,4 +1,4 @@
-﻿
+﻿ 
 -- =============================================
 -- Author:		Yunus Mohammed
 -- Create Date: <Create Date, , >
@@ -11,6 +11,7 @@
 -- 11/24/23				Yunus Mohammed					3. Removed bug. Only one pel location was showing for a policy.
 -- 04/29/24				Hernando Gonzalez				4. add new columns SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental
 -- 02/05/24				Hernando Gonzalez				5. Added Limits Indicator
+-- 07/03/24				Alberto Almario					6. Added primary_location_in
 -- =========================================================================================================================== 
 CREATE or alter  PROCEDURE [edw_core].[sp_tquote_pel_location]
 
@@ -39,7 +40,7 @@ BEGIN
 			rownum as [index],
 			CreatedDate,AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,
 			NumberOfSwimmingPools,MultiFamilyDwelling,VacantOrUnoccupied,ForSale,
-			SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator
+			SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator,primary_location_in
 			into edw_temp.tquote_pel_location_temp1
 		from
 		(
@@ -56,12 +57,14 @@ BEGIN
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			act.[Number] AS transaction_seq_no, atvo.[index],
 			act.CreatedDate,atvof.Field,atvof.[Value] -- ,atvo.Id
+			,CASE WHEN atvof_2.Field = 'PrimaryLocationId' THEN 'Y' ELSE NULL END AS primary_location_in
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
 				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
+				left join edw_stage.AccountTransactionVersionObjectField atvof_2 on atvof_2.ReferenceObjectId = atvo.id and atvof_2.Field = 'PrimaryLocationId'
 				left join [edw_core].[tquote_history] tph on tph.quote_no=act.PolicyNumber
 						and tph.effective_dt=act.EffectiveDate
 						and tph.transaction_seq_no = act.[Number]
@@ -88,13 +91,13 @@ BEGIN
 					AddressState,AddressZipCode,AddressCounty,AddressCountry,NumberOfSwimmingPools,MultiFamilyDwelling,
 					VacantOrUnoccupied,ForSale,SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator)
 		) as pivottable
-		
+
 		INSERT INTO [edw_core].[tquote_pel_location]
 		(
 			quote_no,effective_dt,expiration_dt,transaction_seq_no,quote_history_sk,
 			location_no,address_line_1,address_line_2,unit_no,city_nm,state_cd,zip_cd,county_nm,country_nm,longitude,latitude,
 			swimming_pool_ct,multi_family_dwelling_in,vacant_unoccupied_in,for_sale_in,source_system_sk,create_ts,update_ts,etl_audit_sk,
-			square_feet,no_of_athletic_structures,short_term_rental_in,long_term_rental_in,location_limit_type
+			square_feet,no_of_athletic_structures,short_term_rental_in,long_term_rental_in,location_limit_type,primary_location_in
 		)
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,
@@ -105,6 +108,7 @@ BEGIN
 			VacantOrUnoccupied AS vacant_unoccupied_in,ForSale AS for_sale_in,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,
 			SquareFootage AS square_feet,NumberofAthleticStructures AS no_of_athletic_structures,ShortTermRental AS short_term_rental_in,LongTermRental AS long_term_rental_in,LocationsLimitsIndicator as location_limit_type
+			,primary_location_in
 		FROM
 			edw_temp.tquote_pel_location_temp1 AS ttlc
 
