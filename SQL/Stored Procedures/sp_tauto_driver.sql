@@ -13,6 +13,7 @@ GO
 -- 09/14/23		Alberto Almario			    1. Created this procedure
 -- 01/08/24		Yunus Mohammed			    2. Added driver_deleted_in flag
 -- 22/02/24		Hernnando Gonzalez		    3. Added new field lending_loss_amt
+-- 04/07/24		Hernnando Gonzalez		    4. Added new fields AAFFactor, AFBFactor, NAFFactor, CPAFactor, MINFactor, MAJFactor, SPDFactor
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_driver]
 AS
