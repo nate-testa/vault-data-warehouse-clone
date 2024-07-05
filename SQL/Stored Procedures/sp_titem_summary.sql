@@ -187,13 +187,13 @@ BEGIN
 				),
 				max_tr as
 				(
-					select policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
+					select policy_sk, policy_history_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 					from edw_core.tpolicy_transaction 
 					where isnull(item_sk,0) <> 0 
 				 	and  effective_dt_sk <= @end_dt_sk
 					and   transaction_effective_dt_sk <= @end_dt_sk
 					and   transaction_dt_sk <= @end_dt_sk 
-					group by policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
+					group by policy_sk, policy_history_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 				),  
 				min_tr as
 				(
@@ -355,7 +355,7 @@ BEGIN
 				),
 				prm as
 				(
-				 SELECT tr.policy_sk, tr.policy_history_sk, tr.item_sk, tr.product_sk, --tr.customer_sk, tr.broker_sk, pol.source_system_sk,
+				 SELECT tr.policy_sk, tr.item_sk, tr.product_sk, --tr.customer_sk, tr.broker_sk, pol.source_system_sk,
 				 		max(tr.transaction_seq_no) transaction_seq_no,
 						max(tr.coverage_sk)  coverage_sk,
 						max(tr.vehicle_coverage_sk)  vehicle_coverage_sk, 
@@ -443,7 +443,7 @@ BEGIN
 				 and   tr.transaction_effective_dt_sk <> tr.expiration_dt_sk
 				 and   (pol.expiration_dt > @month_begin_dt --or (tr.transaction_dt_sk - tr.expiration_dt_sk) <= 60
 						) --dateadd(month,-2,@month_begin_dt)
-				 group by tr.policy_sk, tr.policy_history_sk, tr.item_sk, tr.product_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk  
+				 group by tr.policy_sk, tr.item_sk, tr.product_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk  
 				)
 				INSERT INTO edw_core.titem_summary
 					( 
@@ -463,7 +463,7 @@ BEGIN
 						written_total_insured_value_amt,
 						ceded_premium_amt
 					)
-				select 	@month_end_dt_sk, prm.policy_sk, prm.policy_history_sk, prm.item_sk,
+				select 	@month_end_dt_sk, prm.policy_sk, max_tr.policy_history_sk, prm.item_sk,
 						case when inf.coverage_sk is not null then inf.coverage_sk else prm.coverage_sk end coverage_sk, 
 						case when inf.vehicle_coverage_sk is not null then inf.vehicle_coverage_sk else prm.vehicle_coverage_sk end vehicle_coverage_sk, 
 						max_tr.customer_sk, max_tr.broker_sk, max_tr.product_sk, max_tr.sourcE_system_sk,   

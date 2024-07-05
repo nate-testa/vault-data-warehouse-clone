@@ -177,12 +177,12 @@ BEGIN
 				),
 				max_tr as
 				(
-					select policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
+					select policy_sk, policy_history_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 					from edw_core.tpolicy_transaction 
 					where effective_dt_sk <= @end_dt_sk
 					and   transaction_effective_dt_sk <= @end_dt_sk
 					and   transaction_dt_sk <= @end_dt_sk 
-					group by policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
+					group by policy_sk,policy_history_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 				),  
 				min_tr as
 				(
@@ -337,7 +337,7 @@ BEGIN
 				),
 				prm as
 				(
-				 SELECT tr.policy_sk, tr.policy_history_sk, --tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk,
+				 SELECT tr.policy_sk,  --tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk,
 				 		max(tr.transaction_seq_no) transaction_seq_no,
 		 				sum(case when tr.calendar_month_sk = @month_end_dt_sk THEN tr.premium_amt ELSE 0 END) mtd_premium_amt,
 		 				sum(case when tr.calendar_month_sk = @month_end_dt_sk THEN tr.commission_amt ELSE 0 END) mtd_commission_amt,
@@ -444,7 +444,7 @@ BEGIN
 				 and   tr.transaction_effective_dt_sk <> tr.expiration_dt_sk
 				 and   (pol.expiration_dt > @month_begin_dt --or (tr.transaction_dt_sk - tr.expiration_dt_sk) <= 60
 						) --dateadd(month,-2,@month_begin_dt)
-				 group by tr.policy_sk, tr.policy_history_sk --, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk
+				 group by tr.policy_sk --, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk
 				)
 				INSERT INTO edw_core.tpolicy_summary
 					( 
@@ -458,7 +458,7 @@ BEGIN
 						earned_net_premium_amt, unearned_net_premium_amt, 
 						written_exposure, earned_exposure, update_ts, etl_audit_sk
 					)
-				select 	@month_end_dt_sk, prm.policy_sk, prm.policy_history_sk, max_tr.customer_sk, max_tr.broker_sk, max_tr.product_sk, max_tr.sourcE_system_sk, 
+				select 	@month_end_dt_sk, prm.policy_sk, max_tr.policy_history_sk, max_tr.customer_sk, max_tr.broker_sk, max_tr.product_sk, max_tr.sourcE_system_sk, 
 						iif(inf.policy_sk is null,0,1) inforce_ct, 
 						iif(inf.policy_sk is null,0,inf.inforce_premium_amt) inforce_premium_amt, 
 						iif(inf.policy_sk is null,0,inf.inforce_premium_amt-itd_tax_fee_surcharge_amt) inforce_net_premium_amt, 
