@@ -7,28 +7,23 @@ insert into edw_core.tvalidation_sql
 		, create_ts
 		, update_ts)
 select	 'tclaim_feature - negative paid' as validation_sql_desc
-		,'    select claim_feature_sk,SUM(
-                    COALESCE(
-                            (
-                                a.loss_paid_amt             +
-                                a.expense_paid_amt          +
-                                a.adjusting_other_paid_amt  +
-                                a.refund_indemnity_paid_amt +
-                                a.refund_expense_paid_amt
-                            ), 0)
-                    ) AS [claimAmount]
-  from edw_core.tclaim_feature  a
-  group by claim_feature_sk
-  having SUM(
-                    COALESCE(
-                            (
-                                a.loss_paid_amt             +
-                                a.expense_paid_amt          +
-                                a.adjusting_other_paid_amt  +
-                                a.refund_indemnity_paid_amt +
-                                a.refund_expense_paid_amt
-                            ), 0)
-                    )<0' as source_sql
+		,' select count(*)
+from
+(
+select claim_feature_sk
+from edw_core.tclaim_feature  a
+group by claim_feature_sk
+having SUM(
+COALESCE(
+(
+a.loss_paid_amt             +
+a.expense_paid_amt          +
+a.adjusting_other_paid_amt  +
+a.refund_indemnity_paid_amt +
+a.refund_expense_paid_amt
+), 0)
+)<0
+) a' as source_sql
 		,'select 0' as target_sql
 		,'Y' as active_in
 		,'Daily' as frequency_desc
