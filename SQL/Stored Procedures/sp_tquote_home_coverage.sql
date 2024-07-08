@@ -140,7 +140,8 @@ BEGIN
 				aop_deductible_manual,water_deductible_manual,wildfire_deductible_manual,wind_or_hailstorm_deductible_manual,
 				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt, 
 				waive_inspection_in, waive_inspection_reason, inspection_note, rms_reviewed_in,
-				source_system_sk,create_ts,update_ts,etl_audit_sk,nc_bureau_rate
+				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,
+				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			OUTPUT inserted.quote_home_coverage_sk INTO edw_temp.tquote_home_coverage_temp2
 			SELECT
@@ -250,8 +251,8 @@ BEGIN
 				tthc.AOPDeductiblemanual, tthc.Waterdeductiblemanual,tthc.wildfiredeductiblemanual,tthc.WindstormOrHailDeductibleManual,
 				tthc.CATModeling_CATScore, tthc.CATModeling_ReinsuranceMargin, tthc.CATModeling_CededLoss, tthc.CATModeling_ReinsurancePremium, tthc.CATModeling_CapitalCost, tthc.CATModeling_CATScoreToPremiumRatio_Hurricane, tthc.CATModeling_AALToPremium, tthc.AAL, 
 				tthc.WaiveInspection as waive_inspection_in, tthc.WaiveReason as waive_inspection_reason, tthc.InspectionNotes as inspection_note, tthc.RMSReviewed as rms_reviewed_in,
-				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,
-				tthc.NCRBManualRate AS nc_bureau_rate
+				tthc.NCRBManualRate AS nc_bureau_rate, StatedLimitsPolicy as stated_limits_policy_in , RiskSharingPolicy as risk_sharing_policy_in,
+				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk				
 			FROM
 				edw_temp.tquote_home_coverage_temp1 AS tthc
 
