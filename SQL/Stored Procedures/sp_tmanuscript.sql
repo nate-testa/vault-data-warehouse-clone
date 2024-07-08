@@ -46,8 +46,8 @@ BEGIN
 				,his.[policy_history_sk]
 				,accto.[Field], 
 				case
-					when Field in ('ManuscriptDescription','ManuscriptTitle') and len(accto.[Value])= 0 then isnull(accto.[ValueBlob],'')
-				else isnull(accto.[Value], '') end as [Value]
+					when Field in ('ManuscriptDescription','ManuscriptTitle') and len(accto.[Value])= 0 then NULLIF(accto.[ValueBlob],'')
+				else NULLIF(accto.[Value], '') end as [Value]
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
 				 end as [source_system_sk] --20230717 added
