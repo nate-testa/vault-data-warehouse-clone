@@ -2,7 +2,12 @@
 -- Author:		Hernando Gonzalez Garcia
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert and update info related to Manuscript
--- =============================================
+------------------------------------------------------------------------------------------------------------------------------------------
+-- Change date 			|Author								Change Description
+------------------------------------------------------------------------------------------------------------------------------------------
+-- 						Hernando Gonzalez Garcia			1. Created this procedure 
+-- 08/07/24				Yunus Mohammed						2. Use ValueBlob if Value field is null for manuscript_title an desc
+-- ======================================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tmanuscript]
 AS
 BEGIN
@@ -39,7 +44,10 @@ BEGIN
 			SELECT
 				acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, acc.PolicyChangeNumber
 				,his.[policy_history_sk]
-				,accto.[Field], NULLIF(accto.[Value], '') as [Value]
+				,accto.[Field], 
+				case
+					when Field in ('ManuscriptDescription','ManuscriptTitle') and len(accto.[Value])= 0 then isnull(accto.[ValueBlob],'')
+				else isnull(accto.[Value], '') end as [Value]
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
 				 end as [source_system_sk] --20230717 added
