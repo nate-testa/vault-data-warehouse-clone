@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tauto_policy_coverage drop column rater_pip_discount; 
