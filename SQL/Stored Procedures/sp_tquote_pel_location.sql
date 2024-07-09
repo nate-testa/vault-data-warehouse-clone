@@ -57,7 +57,7 @@ BEGIN
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			act.[Number] AS transaction_seq_no, atvo.[index],
 			act.CreatedDate,atvof.Field,atvof.[Value] -- ,atvo.Id
-			,CASE WHEN atvof_2.Field = 'PrimaryLocationId' THEN 'Y' ELSE NULL END AS primary_location_in
+			,CASE WHEN atvof_2.Field = 'PrimaryLocationId' THEN 'Yes' ELSE 'No' END AS primary_location_in
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId

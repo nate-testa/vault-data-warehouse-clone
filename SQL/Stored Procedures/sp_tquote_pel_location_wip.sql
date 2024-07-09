@@ -52,7 +52,7 @@ BEGIN
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			0 AS transaction_seq_no, acco.[index],
 			acc.CreatedDate,acc.UpdatedDate,accof.Field,accof.[Value] -- ,atvo.Id
-			,CASE WHEN accof_2.Field = 'PrimaryLocationId' THEN 'Y' ELSE NULL END AS primary_location_in
+			,CASE WHEN accof_2.Field = 'PrimaryLocationId' THEN 'Yes' ELSE 'No' END AS primary_location_in
 			from
 				(
 				    SELECT *
