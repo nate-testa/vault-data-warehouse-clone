@@ -48,8 +48,8 @@ BEGIN
 				,tqh.[quote_history_sk]
 				,accof.[Field]
 				,case
-					when Field in ('ManuscriptDescription','ManuscriptTitle') and len(accto.[Value])= 0 then NULLIF(accto.[ValueBlob],'')
-				else NULLIF(accto.[Value], '') end as [Value]
+					when Field in ('ManuscriptDescription','ManuscriptTitle') and len(accof.[Value])= 0 then NULLIF(accof.[ValueBlob],'')
+				else NULLIF(accof.[Value], '') end as [Value]
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
 				 end as [source_system_sk] --20230717 added
