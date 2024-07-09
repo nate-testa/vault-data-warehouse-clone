@@ -5,6 +5,7 @@
 ------------------------------------------------------------------------------------------------------------------------------
 -- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
+-- 07/03/2024			Alberto Almario						3. Added primary_location_in
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_location_wip]
 
@@ -34,6 +35,7 @@ BEGIN
 			CreatedDate,UpdatedDate,AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,
 			NumberOfSwimmingPools,MultiFamilyDwelling,VacantOrUnoccupied,ForSale,
 			SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator
+			,primary_location_in
 			into edw_temp.tquote_pel_location_wip_temp1
 		from
 		(
@@ -50,6 +52,7 @@ BEGIN
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			0 AS transaction_seq_no, acco.[index],
 			acc.CreatedDate,acc.UpdatedDate,accof.Field,accof.[Value] -- ,atvo.Id
+			,CASE WHEN accof_2.Field = 'PrimaryLocationId' THEN 'Yes' ELSE 'No' END AS primary_location_in
 			from
 				(
 				    SELECT *
@@ -61,6 +64,7 @@ BEGIN
 				inner join edw_stage.Product p on p.Id=acc.ProductId
 				inner join [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
 				inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
+				left join [edw_stage].[AccountObjectField] accof_2 on accof_2.ReferenceObjectId = acco.id and accof_2.Field = 'PrimaryLocationId'
 				left join [edw_core].[tquote_history] tph on tph.quote_no=acc.PolicyNumber
 						and tph.effective_dt=acc.EffectiveDate
 						and tph.transaction_seq_no = 0
@@ -118,7 +122,8 @@ BEGIN
 		        ttlc.NumberofAthleticStructures AS no_of_athletic_structures,
 		        ttlc.ShortTermRental AS short_term_rental_in,
 		        ttlc.LongTermRental AS long_term_rental_in,
-		        ttlc.LocationsLimitsIndicator AS location_limit_type
+		        ttlc.LocationsLimitsIndicator AS location_limit_type,
+				ttlc.primary_location_in
 		    FROM
 		        edw_temp.tquote_pel_location_wip_temp1 AS ttlc
 		) AS SOURCE
@@ -153,20 +158,23 @@ BEGIN
 		        TARGET.no_of_athletic_structures = SOURCE.no_of_athletic_structures,
 		        TARGET.short_term_rental_in = SOURCE.short_term_rental_in,
 		        TARGET.long_term_rental_in = SOURCE.long_term_rental_in,
-		        TARGET.location_limit_type = SOURCE.location_limit_type
+		        TARGET.location_limit_type = SOURCE.location_limit_type,
+				TARGET.primary_location_in = SOURCE.primary_location_in
 
 		WHEN NOT MATCHED BY TARGET THEN
 		    INSERT (
 		        quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_history_sk,
 		        location_no, address_line_1, address_line_2, unit_no, city_nm, state_cd, zip_cd, county_nm, country_nm, longitude, latitude,
 		        swimming_pool_ct, multi_family_dwelling_in, vacant_unoccupied_in, for_sale_in, source_system_sk, create_ts, update_ts, etl_audit_sk,
-		        square_feet, no_of_athletic_structures, short_term_rental_in, long_term_rental_in, location_limit_type
+		        square_feet, no_of_athletic_structures, short_term_rental_in, long_term_rental_in, location_limit_type,
+				primary_location_in
 		    )
 		    VALUES (
 		        SOURCE.quote_no, SOURCE.effective_dt, SOURCE.expiration_dt, SOURCE.transaction_seq_no, SOURCE.quote_history_sk,
 		        SOURCE.location_no, SOURCE.address_line_1, SOURCE.address_line_2, SOURCE.unit_no, SOURCE.city_nm, SOURCE.state_cd, SOURCE.zip_cd, SOURCE.county_nm, SOURCE.country_nm, SOURCE.longitude, SOURCE.latitude,
 		        SOURCE.swimming_pool_ct, SOURCE.multi_family_dwelling_in, SOURCE.vacant_unoccupied_in, SOURCE.for_sale_in, SOURCE.source_system_sk, SOURCE.create_ts, SOURCE.update_ts, SOURCE.etl_audit_sk,
-		        SOURCE.square_feet, SOURCE.no_of_athletic_structures, SOURCE.short_term_rental_in, SOURCE.long_term_rental_in, SOURCE.location_limit_type
+		        SOURCE.square_feet, SOURCE.no_of_athletic_structures, SOURCE.short_term_rental_in, SOURCE.long_term_rental_in, SOURCE.location_limit_type,
+				SOURCE.primary_location_in
 		);
 
 		SET @rows_affected=@@ROWCOUNT;
