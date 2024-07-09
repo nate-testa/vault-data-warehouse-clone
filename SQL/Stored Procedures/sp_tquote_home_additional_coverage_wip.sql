@@ -10,6 +10,7 @@ GO
 -- Change date			|Author						|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
 -- 05/07/2024 			Yunus Mohammed				1. Created this procedure
+-- 09/07/24				Hernando Gonzalez			2. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage_wip]
@@ -275,6 +276,14 @@ BEGIN
 				,AutomaticSmokeDetectors as automatic_smoke_detectors_in
 				,AutomaticSprinklerSystem as automatic_sprinkler_system
 				,EmergencyExtensionNotice as emergency_extension_notice_in
+				,TrampolineExclusion as trampoline_liability_exclusion_in
+		   		,FineArtsExclusion as fine_arts_exclusion_in
+		   		,ScreenEnclosureCoverage as screen_enclosure_coverage_in
+	       		,ScreenEnclosureLimit as screen_enclosure_limit_amt
+		   		,MatchingUndamagedProperty as matching_undamaged_property_in 
+		   		,MatchingUndamagedPropertyLimit as matching_undamaged_property_limit_amt
+		   		,RoofCoveringCoverageLimitationCW as roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in
+		   		,AllPerilRoofCoveringCoverageSP as all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
 				,source_system_sk
 				,GETDATE() AS create_ts
 				,GETDATE() AS update_ts
@@ -365,6 +374,7 @@ BEGIN
 			roof_exclusion_with_ensuing_loss_in,roof_coverage_endorsement_wh_in,roof_coverage_endorsement_ap_in,roof_coverage_endorsement_rv_in,
 			fire_station_connected_fire_alarm_in, police_station_connected_burglar_alarm_in, local_fire_alarm_system_in, 
 			local_burglar_alarm_system_in, automatic_smoke_detectors_in, automatic_sprinkler_system, emergency_extension_notice_in,
+			trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
@@ -444,6 +454,7 @@ BEGIN
 				roof_exclusion_with_ensuing_loss_in,roof_coverage_endorsement_wh_in,roof_coverage_endorsement_ap_in,roof_coverage_endorsement_rv_in,
 				fire_station_connected_fire_alarm_in, police_station_connected_burglar_alarm_in, local_fire_alarm_system_in, local_burglar_alarm_system_in,
 				automatic_smoke_detectors_in, automatic_sprinkler_system, emergency_extension_notice_in,
+				trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			WHEN MATCHED THEN UPDATE
@@ -613,7 +624,15 @@ BEGIN
 			[target].local_burglar_alarm_system_in = [source].local_burglar_alarm_system_in,
 			[target].automatic_smoke_detectors_in = [source].automatic_smoke_detectors_in,
 			[target].automatic_sprinkler_system = [source].automatic_sprinkler_system,
-			[target].emergency_extension_notice_in = [source].emergency_extension_notice_in
+			[target].emergency_extension_notice_in = [source].emergency_extension_notice_in,
+			[target].trampoline_liability_exclusion_in = [source].trampoline_liability_exclusion_in,
+			[target].fine_arts_exclusion_in = [source].fine_arts_exclusion_in,
+			[target].screen_enclosure_coverage_in = [source].screen_enclosure_coverage_in,
+			[target].screen_enclosure_limit_amt = [source].screen_enclosure_limit_amt,
+			[target].matching_undamaged_property_in = [source].matching_undamaged_property_in,
+			[target].matching_undamaged_property_limit_amt = [source].matching_undamaged_property_limit_amt,
+			[target].roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in = [source].roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in,
+			[target].all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in  = [source].all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
 			;
 
 			SET @rows_affected=@@ROWCOUNT;
