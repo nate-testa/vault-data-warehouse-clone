@@ -208,7 +208,7 @@ BEGIN
 		LEFT JOIN edw_core.tdate dt4 on dt4.actual_dt = cast(source.IssuedDate as date)
 		LEFT JOIN edw_core.tdate dt5 on dt5.actual_dt = cast(source.cal_mn as date)
 		LEFT JOIN edw_core.tpolicy pol on source.PolicyNumber = pol.policy_no and cast(source.EffectiveDate as date) = pol.effective_dt
-		LEFT JOIN edw_core.tpolicy_history polh on polh.policy_sk = pol.policy_sk and polh.transaction_seq_no = source.transaction_seq_no
+		LEFT JOIN edw_core.tpolicy_history polh on polh.policy_sk = pol.policy_sk and polh.transaction_seq_no = source.PolicyChangeNumber
 		LEFT JOIN edw_core.thome_coverage ho on source.PolicyNumber = ho.policy_no and cast(source.EffectiveDate as date) = ho.effective_dt and source.PolicyChangeNumber = ho.transaction_seq_no
 		LEFT JOIN edw_core.tcollection_coverage coll on source.PolicyNumber = coll.policy_no and cast(source.EffectiveDate as date) = coll.effective_dt and source.PolicyChangeNumber = coll.transaction_seq_no
 		LEFT JOIN edw_core.tpel_coverage pel_cov on source.PolicyNumber = pel_cov.policy_no and cast(source.EffectiveDate as date) = pel_cov.effective_dt and source.PolicyChangeNumber = pel_cov.transaction_seq_no
