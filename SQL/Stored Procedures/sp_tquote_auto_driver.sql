@@ -235,6 +235,7 @@ BEGIN
             t1.[MINFactor] as min_factor,
             t1.[MAJFactor] as maj_factor,
             t1.[SPDFactor] as sdp_factor,
+            t1.[IncreasePremiumOnRenewal] as increase_premium_on_renewal_in,
             t1.source_system_sk,
             getdate() AS create_ts,
             getdate() AS update_ts,
