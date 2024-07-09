@@ -12,6 +12,7 @@ GO
 -- Change date |Author						|	Change Description
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- 01/04/24		Hernando Gonzalez			1. Initial Version
+-- 07/10/24     Alberto Almario             2. added vehicle_unique_id 
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_rapa]
