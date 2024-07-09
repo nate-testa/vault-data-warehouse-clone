@@ -205,9 +205,9 @@ BEGIN
                             AND qh.transaction_seq_no = acct.number
                         LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                             ON qav.quote_no = acct.PolicyNumber
-                            --AND qav.effective_dt = acct.effectivedate
+                            AND qav.effective_dt = acct.effectivedate
                             AND qav.vehicle_unique_id = acctvo.[UniqueId]
-                            AND qav.vehicle_no = acctvo.[Index]
+                            -- AND qav.vehicle_no = acctvo.[Index]
                         WHERE
                             p.[Name] = 'Automobile'
                             AND p.ProductLine = 'PersonalLines'

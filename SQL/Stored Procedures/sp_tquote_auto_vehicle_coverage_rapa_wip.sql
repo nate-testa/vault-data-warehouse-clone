@@ -81,12 +81,14 @@ BEGIN
                 INNER JOIN [edw_core].[tquote_auto_vehicle] AS qav
                     ON qav.quote_no = acc.PolicyNumber
 					AND qav.effective_dt = acc.EffectiveDate
-                    AND qav.vehicle_no = acco.[Index]
+                    -- AND qav.vehicle_no = acco.[Index]
+					AND qav.vehicle_unique_id = acco.[UniqueId]
 				INNER JOIN [edw_core].[tquote_auto_vehicle_coverage] AS qavc
 					ON qavc.quote_no = acc.PolicyNumber
                     AND qavc.effective_dt = CAST(acc.EffectiveDate AS DATE)
                     AND qavc.transaction_seq_no = 0
-					AND qavc.vehicle_no = qav.vehicle_no
+					-- AND qavc.vehicle_no = qav.vehicle_no
+					AND qavc.vehicle_unique_id = qav.vehicle_unique_id
 				LEFT JOIN [edw_core].[tquote_history] AS qh 
                     ON qh.quote_no = acc.PolicyNumber
                     AND qh.effective_dt = acc.EffectiveDate
@@ -121,7 +123,8 @@ BEGIN
 		USING [edw_temp].[tquote_auto_vehicle_coverage_rapa_wip_temp1] AS source
 			ON target.quote_no = source.quote_no
 			AND target.effective_dt = source.effective_dt
-			AND target.vehicle_no = source.vehicle_no
+			AND target.vehicle_unique_id = source.vehicle_unique_id
+			-- AND target.vehicle_no = source.vehicle_no
 			AND target.transaction_seq_no = source.transaction_seq_no
 		WHEN MATCHED THEN
 			UPDATE SET 
@@ -185,7 +188,7 @@ BEGIN
 				target.comprehensive_symbol_capping_in = source.RAPASymbolCappingIndicatorCP,
 				target.single_limit_symbol_capping_in = source.RAPASymbolCappingIndicatorSL,
 				target.comprehensive_non_glass_symbol_capping_in = source.RAPASymbolCappingIndicatorCN,
-				target.vehicle_unique_id = source.vehicle_unique_id,
+				target.vehicle_no = source.vehicle_no,
 				target.source_system_sk = source.source_system_sk,
 				target.update_ts = GETDATE(),
 				target.etl_audit_sk = @etl_audit_sk

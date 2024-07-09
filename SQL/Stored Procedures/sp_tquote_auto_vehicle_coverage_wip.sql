@@ -198,9 +198,9 @@ BEGIN
                         AND qh.transaction_seq_no = 0
                     LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                         ON qav.quote_no = acc.PolicyNumber
-                        --AND qav.effective_dt = acc.effectivedate
+                        AND qav.effective_dt = acc.effectivedate
                         AND qav.vehicle_unique_id = acco.[UniqueId]
-                        AND qav.vehicle_no = acco.[Index]
+                        -- AND qav.vehicle_no = acco.[Index]
                     WHERE
                         p.[Name] = 'Automobile'
                         AND p.ProductLine = 'PersonalLines'
@@ -458,12 +458,12 @@ BEGIN
         ) AS source 
             ON target.quote_no = source.quote_no 
             AND target.effective_dt = source.effective_dt 
-            AND target.vehicle_no = source.vehicle_no 
+            -- AND target.vehicle_no = source.vehicle_no 
             AND target.transaction_seq_no = source.transaction_seq_no
             AND target.vehicle_unique_id = source.vehicle_unique_id 
         WHEN MATCHED THEN
             UPDATE SET 
-                --target.vehicle_unique_id = source.vehicle_unique_id,
+                target.vehicle_no = source.vehicle_no,
                 target.expiration_dt = source.expiration_dt,
                 target.quote_history_sk = source.quote_history_sk,
                 target.quote_auto_vehicle_sk = source.quote_auto_vehicle_sk,

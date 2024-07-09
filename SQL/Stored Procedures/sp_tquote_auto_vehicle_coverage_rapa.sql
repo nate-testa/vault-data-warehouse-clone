@@ -70,12 +70,14 @@ BEGIN
                 INNER JOIN [edw_core].[tquote_auto_vehicle] AS qav
                     ON qav.quote_no = acct.PolicyNumber
 					AND qav.effective_dt = acct.EffectiveDate
-                    AND qav.vehicle_no = acctvo.[Index]
+                    -- AND qav.vehicle_no = acctvo.[Index]
+					AND qav.vehicle_unique_id = acctvo.[UniqueId]
 				INNER JOIN [edw_core].[tquote_auto_vehicle_coverage] AS qavc
 					ON qavc.quote_no = acct.PolicyNumber
                     AND qavc.effective_dt = CAST(acct.EffectiveDate AS DATE)
                     AND qavc.transaction_seq_no = acct.[Number]
-					AND qavc.vehicle_no = qav.vehicle_no
+					-- AND qavc.vehicle_no = qav.vehicle_no
+					AND qavc.vehicle_unique_id = qav.vehicle_unique_id
 				LEFT JOIN [edw_core].[tquote_history] AS qh 
                     ON qh.quote_no = acct.PolicyNumber
                     AND qh.effective_dt = acct.EffectiveDate

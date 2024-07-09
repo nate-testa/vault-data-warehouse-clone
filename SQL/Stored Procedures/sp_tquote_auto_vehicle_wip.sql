@@ -122,9 +122,9 @@ BEGIN
 				[edw_temp].[tquote_auto_vehicle_wip_temp1] AS t1
 		) AS src
 		ON src.quote_no = trg.quote_no
-        --AND src.effective_dt = trg.effective_dt
+        AND src.effective_dt = trg.effective_dt
         AND src.vehicle_unique_id = trg.vehicle_unique_id
-        AND src.vehicle_no = trg.vehicle_no
+        -- AND src.vehicle_no = trg.vehicle_no
 		-- For Inserts
 		WHEN NOT MATCHED BY TARGET THEN
 		INSERT (
