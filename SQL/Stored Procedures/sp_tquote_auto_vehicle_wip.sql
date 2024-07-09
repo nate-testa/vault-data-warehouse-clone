@@ -12,6 +12,7 @@ GO
 -- 05/17/24		Architha Gudimalla				3. Added vehicle unique index
 -- 05/17/24		Architha Gudimalla				4. Removed vehicle unique join
 --05/24/2024     Architha Gudimalla              6. removed join on effective dt in merge 
+--07/10/2024     Alberto Almario                 7. added vehicle_unique_id 
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_wip]
 AS
@@ -122,7 +123,7 @@ BEGIN
 		) AS src
 		ON src.quote_no = trg.quote_no
         --AND src.effective_dt = trg.effective_dt
-        --AND src.vehicle_unique_id = trg.vehicle_unique_id
+        AND src.vehicle_unique_id = trg.vehicle_unique_id
         AND src.vehicle_no = trg.vehicle_no
 		-- For Inserts
 		WHEN NOT MATCHED BY TARGET THEN
@@ -149,7 +150,7 @@ BEGIN
             etl_audit_sk,
             vehicle_vin_invalid_in,
             vehicle_vin_invalid_message
-            --,vehicle_unique_id
+            ,vehicle_unique_id
             ,vehicle_vin_change_in
             ,vehicle_engine_cylinders
             ,vehicle_height
@@ -179,7 +180,7 @@ BEGIN
             @etl_audit_sk,
             src.vehicle_vin_invalid_in,
             src.vehicle_vin_invalid_message
-            --,src.vehicle_unique_id
+            ,src.vehicle_unique_id
             ,src.vehicle_vin_change_in
             ,src.vehicle_engine_cylinders
             ,src.vehicle_height

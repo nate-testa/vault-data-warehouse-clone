@@ -19,6 +19,7 @@ GO
 -- 05/17/24     Architha Gudimalla              9. Updated join for tquote_auto_vehicle
 -- 05/17/24     Architha Gudimalla              10. Removed join on unique id for tquote_auto_vehicle
 -- 13/06/24     Hernando Gonzalez               11. Added NewlyPurchasedVehicleFinal
+-- 07/10/24     Alberto Almario                 11. added vehicle_unique_id 
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
@@ -205,7 +206,7 @@ BEGIN
                         LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                             ON qav.quote_no = acct.PolicyNumber
                             --AND qav.effective_dt = acct.effectivedate
-                            --AND qav.vehicle_unique_id = acctvo.[UniqueId]
+                            AND qav.vehicle_unique_id = acctvo.[UniqueId]
                             AND qav.vehicle_no = acctvo.[Index]
                         WHERE
                             p.[Name] = 'Automobile'
@@ -366,7 +367,8 @@ BEGIN
             create_ts,
             update_ts,
             etl_audit_sk,
-            vehicle_deleted_in, --vehicle_unique_id,
+            vehicle_deleted_in, 
+            vehicle_unique_id,
             carfax_wholesale_value_amt
             ,basic_model_nm
             ,vehicle_distribution_dt
@@ -530,7 +532,8 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
-            CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in, --t1.vehicle_unique_id,
+            CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in, 
+            t1.vehicle_unique_id,
             t1.[VendorReportedWholesaleAmount] as carfax_wholesale_value_amt
             ,t1.[BasicModelName] as basic_model_nm
             ,t1.[DistributionDate] as vehicle_distribution_dt

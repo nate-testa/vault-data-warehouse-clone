@@ -14,6 +14,7 @@ GO
 -- 05/17/24     Architha Gudimalla              5. Removed unique id join
 -- 05/25/24     Architha Gudimalla              6. Removed join on effective_dt to tquote_auto_vehicle
 -- 13/06/24     Hernando Gonzalez               7. Added NewlyPurchasedVehicleFinal
+-- 07/10/24     Alberto Almario                 8. added vehicle_unique_id 
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip] 
@@ -198,7 +199,7 @@ BEGIN
                     LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                         ON qav.quote_no = acc.PolicyNumber
                         --AND qav.effective_dt = acc.effectivedate
-                        --AND qav.vehicle_unique_id = acco.[UniqueId]
+                        AND qav.vehicle_unique_id = acco.[UniqueId]
                         AND qav.vehicle_no = acco.[Index]
                     WHERE
                         p.[Name] = 'Automobile'
@@ -374,7 +375,7 @@ BEGIN
                     WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' 
                     ELSE 'No' 
                 END AS vehicle_deleted_in,
-                --t1.vehicle_unique_id,
+                t1.vehicle_unique_id,
                 t1.[VendorReportedWholesaleAmount] AS carfax_wholesale_value_amt,
                 t1.[BasicModelName] AS basic_model_nm,
                 t1.[DistributionDate] AS vehicle_distribution_dt,
@@ -459,7 +460,7 @@ BEGIN
             AND target.effective_dt = source.effective_dt 
             AND target.vehicle_no = source.vehicle_no 
             AND target.transaction_seq_no = source.transaction_seq_no
-            --AND target.vehicle_unique_id = source.vehicle_unique_id 
+            AND target.vehicle_unique_id = source.vehicle_unique_id 
         WHEN MATCHED THEN
             UPDATE SET 
                 --target.vehicle_unique_id = source.vehicle_unique_id,
@@ -698,6 +699,7 @@ BEGIN
                 update_ts,
                 etl_audit_sk,
                 vehicle_deleted_in,
+                vehicle_unique_id,
                 carfax_wholesale_value_amt,
                 basic_model_nm,
                 vehicle_distribution_dt,
@@ -852,6 +854,7 @@ BEGIN
                 GETDATE(),
                 @etl_audit_sk,
                 source.vehicle_deleted_in,
+                source.vehicle_unique_id,
                 source.carfax_wholesale_value_amt,
                 source.basic_model_nm,
                 source.vehicle_distribution_dt,
