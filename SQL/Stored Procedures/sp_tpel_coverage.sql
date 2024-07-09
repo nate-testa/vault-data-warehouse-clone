@@ -6,6 +6,7 @@
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 05/28/24		Alberto Almario					1. Integrate Premium Adjustments data into EDW - PEL 
+-- 07/09/24		Alberto Almario					2. Add 7 new columns
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_coverage]
 
@@ -100,7 +101,9 @@ BEGIN
 			HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
 			PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
 			CriminalTrafficViolationField,SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
-			AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,EmergencyExtensionNotice
+			AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,EmergencyExtensionNotice,
+			CoverageLimitDeductible,AdditionalCoverageLimitDeductible,UnderinsuredMotoristDeductible,UnderinsuredDeductible,EmploymentPracticesLiabilityDeductible,
+			AutoInsuranceCompany,HomeInsuranceCompany
 		INTO edw_temp.tpel_coverage_temp3
 		from
 			(
@@ -139,7 +142,9 @@ BEGIN
 						'HigherUnderlyingLimitsEndorsement','AILimitedLiability','MinimumEarnedPremiumEndorsement','MinimumEarnedPremiumEndorsementLimit',
 						'PremisesLiabilityLimitation','DeletionofCosmeticMarringExclusion','Manuscript','ProfileAdjustment','CriminalTrafficViolation',
 						'CriminalTrafficViolationField','SecondaryInsuredCoverageAmount','UnderinsuredMotoristLiabilityForSecondaryInsured','DefenseInsideLimits','AutoLiabilityExclusion',
-						'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit','EmergencyExtensionNotice'
+						'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit','EmergencyExtensionNotice',
+						'CoverageLimitDeductible','AdditionalCoverageLimitDeductible','UnderinsuredMotoristDeductible','UnderinsuredDeductible','EmploymentPracticesLiabilityDeductible',
+                    	'AutoInsuranceCompany','HomeInsuranceCompany'
 					)
 				) as t
 			) as t
@@ -153,7 +158,9 @@ BEGIN
 					HigherUnderlyingLimitsEndorsement,AILimitedLiability,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,
 					PremisesLiabilityLimitation,DeletionofCosmeticMarringExclusion,Manuscript,ProfileAdjustment,CriminalTrafficViolation,
 					CriminalTrafficViolationField,SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
-					AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,EmergencyExtensionNotice
+					AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,EmergencyExtensionNotice,
+					CoverageLimitDeductible,AdditionalCoverageLimitDeductible,UnderinsuredMotoristDeductible,UnderinsuredDeductible,EmploymentPracticesLiabilityDeductible,
+					AutoInsuranceCompany,HomeInsuranceCompany
 					)
 			) as pivottable
 		;
@@ -220,6 +227,13 @@ BEGIN
 			,excess_coverage_premium_adjustment_retention
 			,excess_coverage_premium_adjustment_retention_reason
 			,emergency_extension_notice_in
+			,coverage_deductible_amt
+			,additional_coverage_deductible_amt
+			,underinsured_motorist_deductible_amt
+			,underinsured_deductible_amt
+			,employment_practices_liability_deductible_amt
+			,current_underlying_auto_insurance_company_nm
+			,current_underlying_home_insurance_company_nm
 		)
 		SELECT
 			PolicyNumber AS policy_no,EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
@@ -253,6 +267,13 @@ BEGIN
 			,excess_coverage_premium_adjustment_retention
 			,excess_coverage_premium_adjustment_retention_reason
 			,EmergencyExtensionNotice AS emergency_extension_notice_in
+			,CoverageLimitDeductible AS coverage_deductible_amt
+			,AdditionalCoverageLimitDeductible AS additional_coverage_deductible_amt
+			,UnderinsuredMotoristDeductible AS underinsured_motorist_deductible_amt
+			,UnderinsuredDeductible AS underinsured_deductible_amt
+			,EmploymentPracticesLiabilityDeductible AS employment_practices_liability_deductible_amt
+			,AutoInsuranceCompany AS current_underlying_auto_insurance_company_nm
+			,HomeInsuranceCompany AS current_underlying_home_insurance_company_nm
 		FROM edw_temp.tpel_coverage_temp1
 
 		SET @rows_affected=@@ROWCOUNT;
