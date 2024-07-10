@@ -11,6 +11,7 @@ GO
 -- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
 -- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- 06/09/2024   Yunus Mohammed                  4. Corrcted insert statement
+-- 08/07/24		Hernnando Gonzalez		        5. Added new field IncreasePremiumOnRenewal
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_driver_incident_wip]
 AS
@@ -41,7 +42,7 @@ BEGIN
 			CreatedDate, UpdatedDate, quote_no, effective_dt, expiration_dt, 0 as transaction_seq_no, quote_history_sk, quote_auto_driver_sk, driver_no, incident_no,
             [IncidentSource], [IncidentDate], [IncidentType], [IncidentDescription], [TotalPayout], [IsDisputed], [IncludeInRate], [IncidentCode], [IncidentStatus], [BodilyInjuryPayment], 
             [CollisionPayment], [ComprehensivePayment], [GlassPayment], [MedicalExpensePayment], [MedicalPaymentPayment], [OtherPayment], [PropertyDamagePayment], [PersonalInjuryProtectionPayment], 
-            [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss], [PIPClaimOverride],
+            [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss], [PIPClaimOverride], [IncreasePremiumOnRenewal],
 			source_system_sk  
 		
         INTO [edw_temp].[tquote_auto_driver_incident_wip_temp1]
@@ -81,7 +82,7 @@ BEGIN
                 (
                     [IncidentSource], [IncidentDate], [IncidentType], [IncidentDescription], [TotalPayout], [IsDisputed], [IncludeInRate], [IncidentCode], [IncidentStatus], [BodilyInjuryPayment], 
                     [CollisionPayment], [ComprehensivePayment], [GlassPayment], [MedicalExpensePayment], [MedicalPaymentPayment], [OtherPayment], [PropertyDamagePayment], [PersonalInjuryProtectionPayment], 
-                    [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss], [PIPClaimOverride]
+                    [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss], [PIPClaimOverride], [IncreasePremiumOnRenewal]
                 )
 			) pivottable
 
@@ -125,7 +126,8 @@ BEGIN
                 target.update_ts = GETDATE(),
                 target.etl_audit_sk = @etl_audit_sk,
                 target.lending_loss_in = source.[LendingLoss],
-                target.pip_claim_override_in = source.[PIPClaimOverride]
+                target.pip_claim_override_in = source.[PIPClaimOverride],
+                target.increase_premium_on_renewal_in = source.[IncreasePremiumOnRenewal]
         WHEN NOT MATCHED THEN
             INSERT (
                 quote_no,
@@ -164,7 +166,8 @@ BEGIN
                 update_ts,
                 etl_audit_sk,
                 lending_loss_in,
-                pip_claim_override_in
+                pip_claim_override_in,
+                increase_premium_on_renewal_in
             )
             VALUES (
                 source.quote_no,
@@ -203,7 +206,8 @@ BEGIN
                 GETDATE(),
                 @etl_audit_sk,
                 source.[LendingLoss],
-                source.[PIPClaimOverride]
+                source.[PIPClaimOverride],
+                source.[IncreasePremiumOnRenewal]
             );
 
 

@@ -11,7 +11,6 @@ GO
 -- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
 -- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- 04/07/24		Hernnando Gonzalez		        4. Added new fields AAFFactor, AFBFactor, NAFFactor, CPAFactor, MINFactor, MAJFactor, SPDFactor
--- 08/07/24		Hernnando Gonzalez		    4. Added new field IncreasePremiumOnRenewal
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_driver_wip]
 AS
@@ -46,7 +45,7 @@ BEGIN
             [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
             [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
             [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor], [IncreasePremiumOnRenewal],
+            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor],
 			source_system_sk
 		
         INTO [edw_temp].[tquote_auto_driver_wip_temp1]
@@ -92,7 +91,7 @@ BEGIN
                     [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
                     [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
                     [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor], [IncreasePremiumOnRenewal]
+                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor]
                 )
 			) pivottable
 
@@ -165,7 +164,6 @@ BEGIN
                 target.min_factor = source.[MINFactor],
                 target.maj_factor = source.[MAJFactor],
                 target.sdp_factor = source.[SPDFactor],
-                target.increase_premium_on_renewal_in = source.[IncreasePremiumOnRenewal],
                 target.source_system_sk = source.source_system_sk,
                 target.update_ts = GETDATE(),
                 target.etl_audit_sk = @etl_audit_sk
@@ -235,7 +233,6 @@ BEGIN
                 min_factor,
                 maj_factor,
                 sdp_factor,
-                increase_premium_on_renewal_in,
                 source_system_sk,
                 create_ts,
                 update_ts,
@@ -306,7 +303,6 @@ BEGIN
                 source.[MINFactor],
                 source.[MAJFactor],
                 source.[SPDFactor],
-                source.[IncreasePremiumOnRenewal],
                 source.source_system_sk,
                 GETDATE(),
                 GETDATE(),
