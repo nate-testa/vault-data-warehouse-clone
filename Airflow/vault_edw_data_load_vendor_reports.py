@@ -195,7 +195,7 @@ with DAG(
             autocommit=True,
         )
 
-        sp_tvendor_report_refresh_views = MsSqlOperator(
+        sp_refresh_views = MsSqlOperator(
             task_id='sp_refresh_views',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_refresh_views",
