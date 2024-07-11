@@ -210,7 +210,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(vendor_report_group_items, 'All executions of stored procedure vendor report executed successfully'),
         )
 
-        sp_tvendor_report_stage_data >> sp_tvendor_report_AonCatStore >> sp_tvendor_report_CarfaxMileage >> sp_tvendor_report_CarfaxValue >> sp_tvendor_report_CLUEAuto >> sp_tvendor_report_GuyCarpenter >> sp_tvendor_report_IsoVehicle >> sp_tvendor_report_IsoProperty >> sp_tvendor_report_LC360 >> sp_tvendor_report_MVR >> sp_tvendor_report_NHTSA >> sp_tvendor_report_SAQ >> sp_tvendor_report_TransUnion >> sp_tvendor_report_capeanalytics >> sp_tvendor_report_hazardhub >> sp_tvendor_report_clue_property >> send_vendor_report_email >> sp_refresh_views
+        sp_tvendor_report_stage_data >> sp_tvendor_report_AonCatStore >> sp_tvendor_report_CarfaxMileage >> sp_tvendor_report_CarfaxValue >> sp_tvendor_report_CLUEAuto >> sp_tvendor_report_GuyCarpenter >> sp_tvendor_report_IsoVehicle >> sp_tvendor_report_IsoProperty >> sp_tvendor_report_LC360 >> sp_tvendor_report_MVR >> sp_tvendor_report_NHTSA >> sp_tvendor_report_SAQ >> sp_tvendor_report_TransUnion >> sp_tvendor_report_capeanalytics >> sp_tvendor_report_hazardhub >> sp_tvendor_report_clue_property >> sp_refresh_views >> send_vendor_report_email
 
 
     end = DummyOperator(
