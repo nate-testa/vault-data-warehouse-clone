@@ -8,6 +8,7 @@
 -- 08/30/23		Architha Gudimalla				1. Created this procedure  
 -- 10/05/23		Architha Gudimalla				2. Fixed division by 0 error for EP calculation  
 -- 03/20/24		Architha Gudimalla				3. Added commission_amt
+-- 07/03/24		Yunus Mohammed					4. Added policy_history_sk
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction_summary]
@@ -97,7 +98,7 @@ BEGIN
 				with
 				prm as
 				(
-				 SELECT tr.policy_sk, tr.item_sk, tr.internal_coverage_sk, tr.transaction_seq_no, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk,
+				 SELECT tr.policy_sk, tr.policy_history_sk, tr.item_sk, tr.internal_coverage_sk, tr.transaction_seq_no, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk,
 						tr.effective_dt_sk,
 						tr.transaction_effective_dt_sk,
 						tr.expiration_dt_sk,
@@ -124,7 +125,7 @@ BEGIN
 				 and   transaction_effective_dt_sk <= @end_dt_sk
 				 and   transaction_dt_sk <= @end_dt_sk
 				 and   expiration_dt > @month_begin_dt
-				 group by tr.policy_sk, tr.item_sk, tr.internal_coverage_sk, tr.transaction_seq_no, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk,
+				 group by tr.policy_sk, tr.policy_history_sk, tr.item_sk, tr.internal_coverage_sk, tr.transaction_seq_no, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk,
 						tr.effective_dt_sk,
 						tr.transaction_effective_dt_sk,
 						tr.expiration_dt_sk,
@@ -133,7 +134,7 @@ BEGIN
 				)
 				INSERT INTO edw_core.tpolicy_transaction_summary
 					( 
-						month_sk, policy_sk, item_sk, transaction_seq_no, internal_coverage_sk, coverage_sk, vehicle_coverage_sk, customer_sk, broker_sk, product_sk, 
+						month_sk, policy_sk,policy_history_sk, item_sk, transaction_seq_no, internal_coverage_sk, coverage_sk, vehicle_coverage_sk, customer_sk, broker_sk, product_sk, 
 						effective_dt_sk,
 						transaction_effective_dt_sk,
 						expiration_dt_sk,
@@ -142,7 +143,7 @@ BEGIN
 						earned_premium_amt, unearned_premium_amt,  source_system_sk, update_ts, etl_audit_sk
 						,commission_amt
 					)
-				select 	@month_end_dt_sk, prm.policy_sk, prm.item_sk, prm.transaction_seq_no,  prm.internal_coverage_sk,
+				select 	@month_end_dt_sk, prm.policy_sk,prm.policy_history_sk, prm.item_sk, prm.transaction_seq_no,  prm.internal_coverage_sk,
 						prm.coverage_sk, prm.vehicle_coverage_sk, 
 						prm.customer_sk, prm.broker_sk, prm.product_sk,  
 						prm.effective_dt_sk,

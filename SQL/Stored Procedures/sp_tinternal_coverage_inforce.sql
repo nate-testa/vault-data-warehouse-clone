@@ -10,7 +10,8 @@
 -- 02/13/24		Architha Gudimalla				4. For AU, added filter on vehicle_deleted_in 
 -- 03/20/24		Architha Gudimalla				5. Added commission_amt
 -- 03/26/24		Architha Gudimalla				6. Added collection_class_type_sk
--- 03/26/24		Architha Gudimalla				7. For coll, added filter on class_deleted_in 
+-- 03/26/24		Architha Gudimalla				7. For coll, added filter on class_deleted_in
+-- 07/03/24		Yunus Mohammed					8. Added policy_history_sk
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tinternal_coverage_inforce]
@@ -90,13 +91,13 @@ BEGIN
 				)
 				INSERT INTO edw_core.tinternal_coverage_inforce
 					( 
-						policy_sk, item_sk, internal_coverage_sk, coverage_sk, vehicle_coverage_sk, customer_sk, broker_sk, product_sk, source_system_sk, month_sk, 
+						policy_sk, policy_history_sk, item_sk, internal_coverage_sk, coverage_sk, vehicle_coverage_sk, customer_sk, broker_sk, product_sk, source_system_sk, month_sk, 
 						premium_amt, net_premium_amt, annual_premium_amt, update_ts, etl_audit_sk
 						,annual_net_premium_amt
 						,commission_amt
 						,collection_class_type_sk
 			        )
-			    select 	tr.policy_sk, tr.item_sk, tr.internal_coverage_sk, tr.coverage_sk, tr.vehicle_coverage_sk, 
+			    select 	tr.policy_sk, tr.policy_history_sk, tr.item_sk, tr.internal_coverage_sk, tr.coverage_sk, tr.vehicle_coverage_sk, 
 			    		tr.customer_sk, tr.broker_sk, tr.product_sk, tr.sourcE_system_sk, @month_end_sk, 
 						max_tr.prm, (max_tr.prm - max_tr.tfs), max_tr.ann_prm, getdate(), @etl_audit_sk
 						,max_tr.annual_net_premium_amt

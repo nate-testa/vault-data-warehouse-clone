@@ -2,12 +2,13 @@
 -- Author:		Architha Gudimalla 
 -- Description: This procedures loads inforce at item level 
 ---------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author							|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 07/18/23		Architha Gudimalla				1. Created this procedure 
 -- 02/07/24		Architha Gudimalla				2. Added annual net prm
 -- 02/13/24		Architha Gudimalla				3. For AU, Added filter on vehicle_deleted_in 
 -- 03/20/24		Architha Gudimalla				4. Added commission_amt
+-- 07/03/24		Yunus Mohammed					5. Added policy_history_sk
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_titem_inforce]
@@ -85,13 +86,13 @@ BEGIN
 				)
 				INSERT INTO edw_core.titem_inforce
 					( 
-						policy_sk, item_sk, coverage_sk, vehicle_coverage_sk,
+						policy_sk, policy_history_sk, item_sk, coverage_sk, vehicle_coverage_sk,
 						customer_sk, broker_sk, product_sk, source_system_sk, month_sk, 
 						premium_amt, net_premium_amt, annual_premium_amt, update_ts, etl_audit_sk
 						,annual_net_premium_amt
 						,commission_amt
 			        )
-			    select 	tr.policy_sk, tr.item_sk, tr.coverage_sk, tr.vehicle_coverage_sk, 
+			    select 	tr.policy_sk, tr.policy_history_sk, tr.item_sk, tr.coverage_sk, tr.vehicle_coverage_sk, 
 						tr.customer_sk, tr.broker_sk, tr.product_sk, tr.sourcE_system_sk, @month_end_sk, 
 						max_tr.prm, (max_tr.prm - max_tr.tfs), max_tr.ann_prm, getdate(), @etl_audit_sk
 						,max_tr.annual_net_premium_amt

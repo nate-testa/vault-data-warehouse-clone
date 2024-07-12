@@ -5,11 +5,12 @@ GO
 -- ================================================================================================================================================
 -- Description: This stored procedure inserts and updates info related to quote auto policy coverage - wip
 --------------------------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date      |Author						|	Change Description
 --------------------------------------------------------------------------------------------------------------------------------------------------
--- 05/06/24		Alberto Almario					1. Created the proc
--- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
--- 05/14/24		Architha Gudimalla				3. Corrected errors
+-- 05/06/24		    Alberto Almario					1. Created the proc
+-- 05/08/24		    Architha Gudimalla				2. Updated @last_source_extract_ts
+-- 05/14/24		    Architha Gudimalla				3. Corrected errors
+-- 07/10/24         Yunus Mohammed                  4. Removed rater_pip_discount
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage_wip]
@@ -50,7 +51,7 @@ BEGIN
             [AutoLockCoverageEnhancementEndorsement], [SparePartsEnhancementEndorsement], [CoverageforAccidentalDeployAirbagEnhancementEndorsement], [IsthisOneYearPolicy], [Tier], 
             [NumberofTotalVehiclesonPolicy], [TotalNumberofPPAs], [TotalOwnedPPAs], [NumberofPPAwithPhysDam], [NumberofCollectorCars], [TotalInsuredLocations], [HOClaims], [NumberofDriversonPolicy], 
             [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
-            [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], [RaterPIPDiscount],
+            [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied],
 			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay], 
                     [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice]
 		
@@ -103,7 +104,7 @@ BEGIN
                     [NumberofTotalVehiclesonPolicy], [TotalNumberofPPAs], [TotalOwnedPPAs], [NumberofPPAwithPhysDam], [NumberofCollectorCars], [TotalInsuredLocations], [HOClaims], [NumberofDriversonPolicy], 
                     [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
                     [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], 
-                    [RaterPIPDiscount], [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay], 
+                    [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay], 
                     [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice]
                 )
 			) pivottable
@@ -249,8 +250,7 @@ BEGIN
                 target.update_ts = GETDATE(),
                 target.etl_audit_sk = @etl_audit_sk,
                 target.change_in_terms_summary_in = source.[IncludeChangeInTermsSummary],
-                target.year_clean_discount_applied = source.[YearCleanDiscountApplied],
-                target.rater_pip_discount = source.[RaterPIPDiscount],
+                target.year_clean_discount_applied = source.[YearCleanDiscountApplied],                
                 target.collision_ncrb_premium_amt = source.[NCRBPPACOLLTotal],
                 target.otc_ncrb_premium_amt = source.[NCRBPPAOTCTotal],
                 target.transportation_expense_amt = source.[TransportationExpense],
@@ -362,8 +362,7 @@ BEGIN
                 update_ts,
                 etl_audit_sk,
                 change_in_terms_summary_in,
-                year_clean_discount_applied,
-                rater_pip_discount,
+                year_clean_discount_applied,                
                 collision_ncrb_premium_amt,
                 otc_ncrb_premium_amt,
                 transportation_expense_amt,
@@ -475,8 +474,7 @@ BEGIN
                 GETDATE(),
                 @etl_audit_sk,
                 source.[IncludeChangeInTermsSummary],
-                source.[YearCleanDiscountApplied],
-                source.[RaterPIPDiscount],
+                source.[YearCleanDiscountApplied],                
                 source.[NCRBPPACOLLTotal],
                 source.[NCRBPPAOTCTotal],
                 source.[TransportationExpense],

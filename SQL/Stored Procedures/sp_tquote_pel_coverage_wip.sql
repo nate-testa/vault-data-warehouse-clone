@@ -7,6 +7,7 @@
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
 -- 05/14/2024 			Architha Gudimalla					3. Corrected errors
 -- 05/28/2024			Alberto Almario						4. Integrate Premium Adjustments data into EDW - PEL 
+-- 07/09/2024			Alberto Almario						5. Add 7 new columns
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_coverage_wip]
 
@@ -110,7 +111,8 @@ BEGIN
 			CriminalTrafficViolationField,YouthfulOperatorCount,AdultOperatorCount,
 			SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
 			AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,
-			EmergencyExtensionNotice
+			EmergencyExtensionNotice,CoverageLimitDeductible,AdditionalCoverageLimitDeductible,UnderinsuredMotoristDeductible,UnderinsuredDeductible,
+			EmploymentPracticesLiabilityDeductible,AutoInsuranceCompany,HomeInsuranceCompany
 		INTO edw_temp.tquote_pel_coverage_wip_temp3
 		from
 		(
@@ -150,7 +152,8 @@ BEGIN
 					'CriminalTrafficViolationField','YouthfulOperatorCount','AdultOperatorCount',
 					'SecondaryInsuredCoverageAmount','UnderinsuredMotoristLiabilityForSecondaryInsured','DefenseInsideLimits','AutoLiabilityExclusion',
 					'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit',
-					'EmergencyExtensionNotice'
+					'EmergencyExtensionNotice','CoverageLimitDeductible','AdditionalCoverageLimitDeductible','UnderinsuredMotoristDeductible','UnderinsuredDeductible',
+					'EmploymentPracticesLiabilityDeductible','AutoInsuranceCompany','HomeInsuranceCompany'
 				)
 			) as t
 		) as t
@@ -166,7 +169,8 @@ BEGIN
 				CriminalTrafficViolationField,YouthfulOperatorCount,AdultOperatorCount,
 				SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
 				AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,
-				EmergencyExtensionNotice
+				EmergencyExtensionNotice,CoverageLimitDeductible,AdditionalCoverageLimitDeductible,UnderinsuredMotoristDeductible,UnderinsuredDeductible,
+				EmploymentPracticesLiabilityDeductible,AutoInsuranceCompany,HomeInsuranceCompany
 				)
 		) as pivottable
 
@@ -231,6 +235,13 @@ BEGIN
 				,ttlc.excess_coverage_premium_adjustment_retention
 				,ttlc.excess_coverage_premium_adjustment_retention_reason
 				,ttlc.EmergencyExtensionNotice AS emergency_extension_notice_in
+				,ttlc.CoverageLimitDeductible AS coverage_deductible_amt
+				,ttlc.AdditionalCoverageLimitDeductible AS additional_coverage_deductible_amt
+				,ttlc.UnderinsuredMotoristDeductible AS underinsured_motorist_deductible_amt
+				,ttlc.UnderinsuredDeductible AS underinsured_deductible_amt
+				,ttlc.EmploymentPracticesLiabilityDeductible AS employment_practices_liability_deductible_amt
+				,ttlc.AutoInsuranceCompany AS current_underlying_auto_insurance_company_nm
+				,ttlc.HomeInsuranceCompany AS current_underlying_home_insurance_company_nm
 		    FROM
 		        edw_temp.tquote_pel_coverage_wip_temp1 AS ttlc
 		) AS SOURCE
@@ -278,7 +289,14 @@ BEGIN
 				TARGET.excess_coverage_premium_adjustment_factor = SOURCE.excess_coverage_premium_adjustment_factor,
 				TARGET.excess_coverage_premium_adjustment_retention = SOURCE.excess_coverage_premium_adjustment_retention,
 				TARGET.excess_coverage_premium_adjustment_retention_reason = SOURCE.excess_coverage_premium_adjustment_retention_reason,
-				TARGET.emergency_extension_notice_in = SOURCE.emergency_extension_notice_in
+				TARGET.emergency_extension_notice_in = SOURCE.emergency_extension_notice_in,
+				TARGET.coverage_deductible_amt = SOURCE.coverage_deductible_amt,
+				TARGET.additional_coverage_deductible_amt = SOURCE.additional_coverage_deductible_amt,
+				TARGET.underinsured_motorist_deductible_amt = SOURCE.underinsured_motorist_deductible_amt,
+				TARGET.underinsured_deductible_amt = SOURCE.underinsured_deductible_amt,
+				TARGET.employment_practices_liability_deductible_amt = SOURCE.employment_practices_liability_deductible_amt,
+				TARGET.current_underlying_auto_insurance_company_nm = SOURCE.current_underlying_auto_insurance_company_nm,
+				TARGET.current_underlying_home_insurance_company_nm = SOURCE.current_underlying_home_insurance_company_nm
 
 		WHEN NOT MATCHED BY TARGET THEN
 		    INSERT (
@@ -296,6 +314,13 @@ BEGIN
 				,excess_coverage_premium_adjustment_retention
 				,excess_coverage_premium_adjustment_retention_reason
 				,emergency_extension_notice_in
+				,coverage_deductible_amt
+				,additional_coverage_deductible_amt
+				,underinsured_motorist_deductible_amt
+				,underinsured_deductible_amt
+				,employment_practices_liability_deductible_amt
+				,current_underlying_auto_insurance_company_nm
+				,current_underlying_home_insurance_company_nm
 		    )
 		    VALUES (
 		        SOURCE.quote_no, SOURCE.effective_dt, SOURCE.expiration_dt, SOURCE.transaction_seq_no,
@@ -312,6 +337,13 @@ BEGIN
 				,SOURCE.[excess_coverage_premium_adjustment_retention]
 				,SOURCE.[excess_coverage_premium_adjustment_retention_reason]
 				,SOURCE.emergency_extension_notice_in
+				,SOURCE.coverage_deductible_amt
+				,SOURCE.additional_coverage_deductible_amt
+				,SOURCE.underinsured_motorist_deductible_amt
+				,SOURCE.underinsured_deductible_amt
+				,SOURCE.employment_practices_liability_deductible_amt
+				,SOURCE.current_underlying_auto_insurance_company_nm
+				,SOURCE.current_underlying_home_insurance_company_nm
 		);
 
 		SET @rows_affected=@@ROWCOUNT;

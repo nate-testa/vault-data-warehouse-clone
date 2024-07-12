@@ -9,6 +9,7 @@ GO
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- 10/23/23		Alberto Almario					1. Created the proc
 -- 03/01/24     Architha Gudimalla              2. Updated the logic to use parent object id to get the correct driver no with the incidents
+-- 08/07/24		Hernnando Gonzalez		        3. Added new field IncreasePremiumOnRenewal
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_driver_incident]
 AS
@@ -39,7 +40,7 @@ BEGIN
 			CreatedDate, quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_history_sk, quote_auto_driver_sk, driver_no, incident_no,
             [IncidentSource], [IncidentDate], [IncidentType], [IncidentDescription], [TotalPayout], [IsDisputed], [IncludeInRate], [IncidentCode], [IncidentStatus], [BodilyInjuryPayment], 
             [CollisionPayment], [ComprehensivePayment], [GlassPayment], [MedicalExpensePayment], [MedicalPaymentPayment], [OtherPayment], [PropertyDamagePayment], [PersonalInjuryProtectionPayment], 
-            [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss], [PIPClaimOverride],
+            [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss], [PIPClaimOverride], [IncreasePremiumOnRenewal],
 			source_system_sk  
 		
         INTO [edw_temp].[tquote_auto_driver_incident_temp1]
@@ -78,7 +79,7 @@ BEGIN
                 (
                     [IncidentSource], [IncidentDate], [IncidentType], [IncidentDescription], [TotalPayout], [IsDisputed], [IncludeInRate], [IncidentCode], [IncidentStatus], [BodilyInjuryPayment], 
                     [CollisionPayment], [ComprehensivePayment], [GlassPayment], [MedicalExpensePayment], [MedicalPaymentPayment], [OtherPayment], [PropertyDamagePayment], [PersonalInjuryProtectionPayment], 
-                    [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss], [PIPClaimOverride]
+                    [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss], [PIPClaimOverride], [IncreasePremiumOnRenewal]
                 )
 			) pivottable
 
@@ -115,13 +116,14 @@ BEGIN
             spousal_liability_payment, 
             towing_and_labor_payment, 
             uninsured_motorist_payment, 
-            underinsured_motorist_payment, 
+            underinsured_motorist_payment,
             source_system_sk, 
             create_ts, 
             update_ts, 
             etl_audit_sk,
             lending_loss_in,
-            pip_claim_override_in
+            pip_claim_override_in,
+            increase_premium_on_renewal_in
 		)
         SELECT 
             t1.quote_no, 
@@ -160,7 +162,8 @@ BEGIN
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
             t1.[LendingLoss] as lending_loss_in,
-            t1.PIPClaimOverride as pip_claim_override_in
+            t1.PIPClaimOverride as pip_claim_override_in,
+            t1.[IncreasePremiumOnRenewal] as increase_premium_on_renewal_in
         FROM 
             [edw_temp].[tquote_auto_driver_incident_temp1] AS t1
         ;
