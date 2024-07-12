@@ -4,13 +4,14 @@
 ------------------------------------------------------------------------------------------------------------------------------
 -- Change date			|Author						|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
--- 10/23/2023 			Yunus Mohammed				1. Created this procedure 
+-- 10/23/23 			Yunus Mohammed				1. Created this procedure 
 -- 11/11/23				Sandeep Gundreddy		    2. modified  logic
 -- 11/13/23				Sandeep Gundreddy		    3. modified quote_home_location_sk logic
 -- 11/30/23				Yunus Mohammed		        3. added new columns
 -- 12/06/23				Alberto Almario				4. Added new field WindstormOrHailDeductibleManual
 -- 22/02/24		        Hernando Gonzalez			5. Added new fields aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt
 -- 12/06/24			    Alberto Almario				6. Added new filed nc_bureau_rate
+-- 07/12/24				Yunus Mohammed				7. Added new fields stated_limits_policy_in and risk_sharing_policy_in
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage]
 
