@@ -23,6 +23,9 @@
 -- 02/14/24		Architha Gudimalla				15. Updated logic for Lux subscriber contributoin on ho
 -- 03/20/24		Architha Gudimalla				16. Added logic for class_type_sk
 -- 07/03/24		Yunus Mohammed					17. Added policy_history_sk
+-- 07/12/24		Architha Gudimalla				18. Added these to timternal_coverage table join along with subscriber contributoin
+--										   			Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S
+-- 										   			Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S
 -- ====================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -220,10 +223,16 @@ BEGIN
 		LEFT JOIN edw_core.tbroker br on pol.broker_id = br.broker_id
 		LEFT JOIN edw_core.tcustomer cust on pol.customer_id = cust.customer_id
 		LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) 
-												and (case when source.coverage = 'Subscriber Contribution' and source.covID = 'Lux' then 'LUX' else pr.product_cd end) = ic.product_cd  
+												and (case when source.coverage in ('Subscriber Contribution',
+																				   'Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S',
+																				   'Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S'
+																				  ) and source.covID = 'Lux' then 'LUX' else pr.product_cd end) = ic.product_cd  
 		--LEFT JOIN edw_core.tinternal_coverage tfs on tfs.internal_coverage_desc = source.coverage and source.typ <> 'prm' and (pr.product_cd = tfs.product_cd)    
 		LEFT JOIN edw_core.tinternal_coverage tfs on tfs.internal_coverage_desc = source.coverage and source.typ <> 'prm' 
-													and (case when source.coverage = 'Subscriber Contribution' and source.covID = 'Lux' then 'LUX' else pr.product_cd end = tfs.product_cd)    
+													and (case when source.coverage in ('Subscriber Contribution',
+																						'Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S',
+																						'Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S'
+																						) and source.covID = 'Lux' then 'LUX' else pr.product_cd end = tfs.product_cd)    
 		LEFT JOIN edw_core.tpolicy_transaction_type tt on tt.policy_transaction_type_cd = source.stage  
 		left join edw_core.tcollection_class_type cc on 	pol.policy_no = cc.policy_no and pol.effective_dt = cc.effective_dt and Source.PolicyChangeNumber = cc.transaction_seq_no 
 														and case 	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Music' then 'Musical Instruments' 

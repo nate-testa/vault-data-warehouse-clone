@@ -9,7 +9,9 @@
 -- 12/11/23		Architha Gudimalla		4. modified logic for stage pol term
 -- 02/27/24		Architha Gudimalla		5. Updated logic for Lux subscriber contributoin on ho
 -- 03/20/24		Architha Gudimalla		6. Added logic for class_type_sk
-
+-- 07/12/24		Architha Gudimalla		7. Added these to timternal_coverage table join along with subscriber contributoin
+--										   Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S
+-- 										   Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction]
@@ -197,7 +199,10 @@ BEGIN
 		LEFT JOIN edw_core.tcustomer cust on q.customer_id = cust.customer_id
 		--LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) and pr.product_cd = ic.product_cd  
 		LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) 
-												and (case when source.coverage = 'Subscriber Contribution' and source.covID = 'Lux' then 'LUX' else pr.product_cd end) = ic.product_cd  
+												and (case when source.coverage in ('Subscriber Contribution',
+																				   'Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S',
+																				   'Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S'
+																				  ) and source.covID = 'Lux' then 'LUX' else pr.product_cd end) = ic.product_cd  
 		--LEFT JOIN edw_core.ttax_fee_surcharge ttfs on ttfs.tax_fee_surcharge_desc = source.coverage  
 		left join edw_core.tquote_collection_class_type cc on 	q.quote_no = cc.quote_no and q.effective_dt = cc.effective_dt and Source.number = cc.transaction_seq_no 
 														and case 	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Music' then 'Musical Instruments' 
