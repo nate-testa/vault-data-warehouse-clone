@@ -109,10 +109,9 @@ BEGIN
         FROM edw_stage.AccountTransaction acct
         inner join edw_stage.Product pr on pr.Id=acct.ProductId
         inner join edw_stage.AccountTransactionTaxAndFee accttf on acct.id = accttf.accounttransactionid
-        inner join edw_stage.coverage c on accttf.coverageid=c.id
-        and accttf.[name] in	('Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S',
-								'Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S')
-        --WHERE GREATEST(acct.CreatedDate,acct.UpdatedDate)>@last_source_extract_ts
+        inner join edw_stage.coverage c on accttf.coverageid=c.id	and accttf.[name] in	('Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S',
+																							'Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S')
+        WHERE GREATEST(acct.CreatedDate,acct.UpdatedDate)>@last_source_extract_ts
         and     nullif(trim(replace(accttf.name, '  ',' ')),'') is not null
         and pr.ProductLine='PersonalLines'
         group by trim(accttf.name), pr.ProductCode,  c.aslob;
