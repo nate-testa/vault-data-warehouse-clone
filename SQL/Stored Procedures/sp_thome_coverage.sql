@@ -13,6 +13,9 @@
 -- 11/30/23		Yunus Mohammed					8. Added new fields
 -- 12/06/23		Alberto Almario					9. Added new field WindstormOrHailDeductibleManual
 -- 22/02/24		Hernando Gonzalez				10. Added new fields aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt
+-- 04/02/24		Ynunus Mohammed					11. Updated wind_derived_deductible logic
+-- 12/06/24		Alberto Almario					12. Added new filed nc_bureau_rate
+-- 07/09/24		Yunus Mohammed					13. Added new fields stated_limits_policy_in and risk_sharing_policy_in
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -53,9 +56,9 @@ BEGIN
 			INNER JOIN edw_stage.[ProductObject] pdo on pd.Id=pdo.ProductId
 			INNER JOIN edw_stage.[ProductObjectField] pdof on pdo.Id=pdof.ProductObjectId 
 			--AG - added condo on 20230823
-			WHERE pd.[Name] in ('Homeowners','Condo')
+			WHERE pd.[Name] in ('Homeowners','Condo','Inspection')
 			--AG - added condo on 20230823
-			AND pdo.ObjectType in ('Homeowner','Condo')
+			AND pdo.ObjectType in ('Homeowner','Condo','Inspection')
 		) as temp
 
 		-- remove last comma
@@ -92,7 +95,7 @@ BEGIN
 			where
 				act.PolicyNumber is not null and
 				act.[State] =''ISSUED''
-				and atvo.ObjectType in (''Homeowner'',''Condo'')
+				and atvo.ObjectType in (''Homeowner'',''Condo'',''Inspection'')
 				and pr.ProductLine = ''PersonalLines''
 				and act.IssuedDate > @last_source_extract_ts
 			) as t
@@ -135,8 +138,10 @@ BEGIN
 				premium_adjustment_method, premium_adjustment_factor, premium_adjustment_retention, premium_adjustment_retention_reason,
 				reinsurance_designation, reinsurance_layered_program_in, reinsurance_attachment_limit_amt, reinsurance_total_tiv_amt,
 				wildfire_threat, wildfire_hazard_severity,aop_deductible_manual,water_deductible_manual,wildfire_deductible_manual,wind_or_hailstorm_deductible_manual,
-				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt
-				,source_system_sk,create_ts,update_ts,etl_audit_sk
+				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt,
+				waive_inspection_in, waive_inspection_reason, inspection_note, rms_reviewed_in,
+				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,
+				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
 				tthc.PolicyNumber AS policy_no,tthc.EffectiveDate AS effective_dt,tthc.ExpirationDate AS expiration_dt,
@@ -163,21 +168,21 @@ BEGIN
 				tthc.WildfireDeductible AS wildfire_deductible,
 				CASE
 					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' AND tthc.HurricaneDeductible like '%Exclude Wind%' THEN 'Exclude'
-						WHEN ISNULL(tthc.HurricaneDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
 					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' AND tthc.HurricaneOrNamedStormDeductible like '%Exclude Wind%' THEN 'Exclude'
-						WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' AND (tthc.HurricaneOrNamedStormDeductible like '%aop applies%' or tthc.HurricaneOrNamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' AND (tthc.HurricaneOrNamedStormDeductible like '%aop applies%' or tthc.HurricaneOrNamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
 					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' AND tthc.NamedStormDeductible like '%Exclude Wind%' THEN 'Exclude'
-						WHEN ISNULL(tthc.NamedStormDeductible,'') != '' AND (tthc.NamedStormDeductible like '%aop applies%' or tthc.NamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' AND (tthc.NamedStormDeductible like '%aop applies%' or tthc.NamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
 					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND tthc.TornadoorHailstormDeductible like '%Exclude Wind%' THEN 'Exclude'
-						WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND (tthc.TornadoorHailstormDeductible like '%aop applies%' or tthc.TornadoorHailstormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND (tthc.TornadoorHailstormDeductible like '%aop applies%' or tthc.TornadoorHailstormDeductible like '%aopApplies%') THEN 'AOP Applies'
 					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') != '' AND tthc.WindStormOrHailDeductible like '%Exclude Wind%' THEN 'Exclude'
-						WHEN ISNULL(tthc.WindStormOrHailDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.WindStormOrHailDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
 					--
-					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' THEN HurricaneDeductible
-					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' THEN HurricaneOrNamedStormDeductible
-					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' THEN NamedStormDeductible
-					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' THEN TornadoorHailstormDeductible
-					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') != '' THEN WindStormOrHailDeductible
+					WHEN ISNULL(tthc.HurricaneDeductible,'')  NOT IN ('','0') THEN HurricaneDeductible
+					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') NOT IN ('','0') THEN HurricaneOrNamedStormDeductible
+					WHEN ISNULL(tthc.NamedStormDeductible,'') NOT IN ('','0') THEN NamedStormDeductible
+					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') NOT IN ('','0') THEN TornadoorHailstormDeductible
+					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') NOT IN ('','0') THEN WindStormOrHailDeductible
 				END AS wind_derived_deductible,
 				tthc.NumberOfMortgagees AS no_of_mortgagees,
 				tthc.PriorClaims AS prior_claim_last5yr_in,tthc.PriorNonWaterClaims AS prior_nonwater_claim_ct,
@@ -256,7 +261,11 @@ BEGIN
 				,tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit, tthc.ReinsuranceTotalTIV, 
 				tthc.WildfireThreat, tthc.WildfireHazardSeverity,
 				tthc.AOPDeductiblemanual, tthc.Waterdeductiblemanual,tthc.wildfiredeductiblemanual, tthc.WindstormOrHailDeductibleManual,
-				tthc.CATModeling_CATScore, tthc.CATModeling_ReinsuranceMargin, tthc.CATModeling_CededLoss, tthc.CATModeling_ReinsurancePremium, tthc.CATModeling_CapitalCost, tthc.CATModeling_CATScoreToPremiumRatio_Hurricane, tthc.CATModeling_AALToPremium, tthc.AAL, 
+				tthc.CATModeling_CATScore, tthc.CATModeling_ReinsuranceMargin, tthc.CATModeling_CededLoss, tthc.CATModeling_ReinsurancePremium, 
+				tthc.CATModeling_CapitalCost, tthc.CATModeling_CATScoreToPremiumRatio_Hurricane, tthc.CATModeling_AALToPremium, tthc.AAL, 
+				tthc.WaiveInspection as waive_inspection_in, tthc.WaiveReason as waive_inspection_reason, tthc.InspectionNotes as inspection_note, 
+				tthc.RMSReviewed as rms_reviewed_in, 
+				tthc.NCRBManualRate as nc_bureau_rate,StatedLimitsPolicy as stated_limits_policy_in, RiskSharingPolicy as risk_sharing_policy_in,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_coverage_temp1 AS tthc

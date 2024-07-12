@@ -13,6 +13,8 @@
 -- 10/17/23		Architha Gudimalla				7. Updated logic for producer_nm
 -- 10/26/23		Yunus Mohammed					8. Made changes to fix error on customer_id and broker_id
 -- 02/08/24		Alberto Almario					9. Added new column producer_sk
+-- 04/29/24		Hernando Gonzalez				10. Added new column insurance_score_last_run_dt
+-- 06/14/24		Alberto Almario					11. Added new column prorate_factor
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -75,7 +77,8 @@ BEGIN
 				end ssk,
 				nullif(trim(pr.ProductCode),'') product_cd,
 				usr.name uw_nm, nullif(trim(acct.note),'') note,
-			pd.producer_sk
+			pd.producer_sk,
+			acct.ProRateFactor
 		INTO edw_temp.tpolicy_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
@@ -130,7 +133,8 @@ BEGIN
 				InsuranceScoreCode3,
 				InsuranceScoreCode3Description,
 				InsuranceScoreCode4,
-				InsuranceScoreCode4Description
+				InsuranceScoreCode4Description,
+				InsuranceScoreLastRunDate
 		INTO edw_temp.tpolicy_history_temp2
 		FROM
 			(
@@ -152,7 +156,7 @@ BEGIN
 										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
 										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
-										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description)
+										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate)
 			) pivottable 
 
 		-- Start Inserting records
@@ -203,6 +207,8 @@ BEGIN
 		   ,insurance_score_cd4
 		   ,insurance_score_desc4
 		   ,producer_sk
+		   ,insurance_score_last_run_dt
+		   ,prorate_factor
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.PolicyChangeNumber, 
 				pol.policy_sk, br.broker_sk, cust.customer_sk, br.Broker_Id, Source.customer_id, 
@@ -234,6 +240,8 @@ BEGIN
 				,source1.InsuranceScoreCode4
 				,source1.InsuranceScoreCode4Description
 				,source.producer_sk
+				,source1.InsuranceScoreLastRunDate
+				,source.ProRateFactor
 		FROM edw_temp.tpolicy_history_temp1 source
 		LEFT JOIN edw_temp.tpolicy_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tpolicy_history_temp2 source1 on source.id = source1.AccountTransactionId

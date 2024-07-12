@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote_auto_driver_incident ADD pip_claim_override_in  varchar(255);

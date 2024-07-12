@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tauto_vehicle_coverage ADD rater_pip_discount varchar(255); 

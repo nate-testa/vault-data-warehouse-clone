@@ -3,17 +3,19 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =============================================================================================================
+-- =========================================================================================================================================================
 -- Description: This procedures inserts task workflow step names 
-------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
-------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 02/06/24		Architha Gudimalla				1. Created this procedure   
 -- 02/07/24		Architha Gudimalla				2. Added update on task_workflow_step_category_nm
 -- 02/14/24		Architha Gudimalla				3. Added 2 updates on task_workflow_step_category_nm
 -- 02/23/24		Architha Gudimalla				4. Added group by to source query
 -- 02/26/24		Architha Gudimalla				5. Added 9 updates on task_workflow_step_category_nm
--- ============================================================================================================= 
+-- 03/08/24		Architha Gudimalla				6. Added 1 updates on task_workflow_step_category_nm
+-- 06/03/24		Architha Gudimalla				7. Updated GREATEST(wfs.CreatedDate,wf.UpdatedDate) to GREATEST(wfs.CreatedDate,wfs.UpdatedDate)
+-- ========================================================================================================================================================= 
 
 CREATE or ALTER   PROCEDURE edw_core.sp_ttask_workflow_step
 
@@ -47,7 +49,7 @@ BEGIN
         INTO 	edw_temp.ttask_workflow_step_temp1 
         from  edw_stage.Workflow wf 
         inner join edw_stage.WorkflowStep wfs on wf.id = wfs.WorkflowId 
-		WHERE 	GREATEST(wfs.CreatedDate,wf.UpdatedDate)>@last_source_extract_ts 
+		WHERE 	GREATEST(wfs.CreatedDate,wfs.UpdatedDate)>@last_source_extract_ts 
 		group by  wf.name
 				 ,wfs.name  
 
@@ -202,7 +204,9 @@ BEGIN
 		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'Non-Admitted Option (From Admitted)' and task_workflow_step_nm  =  'Non-Admitted Renewal Option Underwriting Review';
 		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'VRE to VES' where task_workflow_nm = 'Non-Admitted Option (From Admitted)' and task_workflow_step_nm  =  'Quote Non-Admitted Renewal Option';
 
-		
+		--added below on 20240308
+		update edw_core.ttask_workflow_step set task_workflow_step_category_nm  = 'Inspections' where task_workflow_nm = 'Inspection Requirements' and task_workflow_step_nm  =  'Review Inspection Requirements';
+				
 		SET @rows_affected=@@ROWCOUNT;
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(t1.CreatedDate,t1.UpdatedDate)) FROM edw_temp.ttask_workflow_step_temp1 t1),@last_source_extract_ts)

@@ -12,6 +12,7 @@ GO
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 11/06/23		Alberto Almario					1. change to use UniqueId instead of Index and change name from vehicle_no to vehicle_unique_id
 -- 11/07/23     Sandeep Gundreddy               2. replaced index with uniqueid in the partition by clause
+-- 03/04/24     Alberto Almario                 3. add 5 new columns
 -- ====================================================================================================================================
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tauto_vehicle]
 AS
@@ -43,6 +44,7 @@ BEGIN
                 ROW_NUMBER() OVER (PARTITION BY PolicyNumber, EffectiveDate, [UniqueId] ORDER BY policychangenumber DESC) AS RN, 
                 PolicyNumber, EffectiveDate, [Index] as vehicle_no, [UniqueId] as vehicle_unique_id, IssuedDate,
                 [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage],
+                [VINChangeIndicator],[EngineCylinders],[Height],[Length],[Width],
                 source_system_sk
             
             FROM
@@ -75,7 +77,8 @@ BEGIN
                 (
                     MAX([Value]) FOR [Field] IN 
                     (
-                        [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage]
+                        [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],[HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage],
+                        [VINChangeIndicator],[EngineCylinders],[Height],[Length],[Width]
                     )
                 ) pivottable
 
@@ -110,6 +113,12 @@ BEGIN
                 t1.VinIsInvalid as vehicle_vin_invalid_in,
                 t1.VinInvalidMessage as vehicle_vin_invalid_message,
                 t1.source_system_sk
+                ,t1.VINChangeIndicator as vehicle_vin_change_in
+                ,t1.EngineCylinders as vehicle_engine_cylinders
+                ,t1.Height as vehicle_height
+                ,t1.Length as vehicle_length
+                ,t1.Width as vehicle_width
+
 			FROM 
 				[edw_temp].[tauto_vehicle_temp1] AS t1
 		) AS src
@@ -142,6 +151,11 @@ BEGIN
             vehicle_vin_invalid_in,
             vehicle_vin_invalid_message,
             vehicle_unique_id
+            ,vehicle_vin_change_in
+            ,vehicle_engine_cylinders
+            ,vehicle_height
+            ,vehicle_length
+            ,vehicle_width
 			)
 		VALUES (
             src.policy_no,
@@ -167,6 +181,11 @@ BEGIN
             src.vehicle_vin_invalid_in,
             src.vehicle_vin_invalid_message,
             src.vehicle_unique_id
+            ,src.vehicle_vin_change_in
+            ,src.vehicle_engine_cylinders
+            ,src.vehicle_height
+            ,src.vehicle_length
+            ,src.vehicle_width
             )
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -188,6 +207,11 @@ BEGIN
             trg.vehicle_vin_invalid_message = src.vehicle_vin_invalid_message,
             trg.update_ts = getdate(),
             trg.vehicle_no = src.vehicle_no
+            ,trg.vehicle_vin_change_in = src.vehicle_vin_change_in
+            ,trg.vehicle_engine_cylinders = src.vehicle_engine_cylinders
+            ,trg.vehicle_height = src.vehicle_height
+            ,trg.vehicle_length = src.vehicle_length
+            ,trg.vehicle_width = src.vehicle_width
         ;
 
         --************End************

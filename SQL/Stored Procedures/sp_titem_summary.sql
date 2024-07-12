@@ -7,7 +7,7 @@ GO
 -- Author:		Architha Gudimalla 
 -- Description: This procedures inserts summarized data at item level for each month
 -----------------------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author							|	Change Description
 -----------------------------------------------------------------------------------------------------------------------------------------------
 -- 07/18/23		Architha Gudimalla				1. Created this procedure  
 -- 08/24/23		Architha Gudimalla				2. Updated EP logic
@@ -22,9 +22,10 @@ GO
 -- 11/16/23		Architha Gudimalla				10. Updated TIV calc
 -- 12/12/23		Architha Gudimalla				11. Corrected exposures
 -- 02/07/24		Architha Gudimalla				12. Added annual net prm
+-- 07/03/24		Yunus Mohammed					13. Added policy_history_sk
 -- ==================================================================================================================================================== 
 
-CREATE OR ALTER    PROCEDURE [edw_core].[sp_titem_summary]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_titem_summary]
 @in_month_end_dt date = null
 AS 
 BEGIN
@@ -127,7 +128,7 @@ BEGIN
 				 and   transaction_effective_dt_sk <> expiration_dt_sk
 				 and	calendar_month_sk = @month_end_dt_sk 
 				and   expiration_dt_sk > @month_begin_dt_sk
-				 group by policy_sk, item_sk, policy_transaction_type_sk, transaction_seq_no 
+				 group by policy_sk, item_sk, policy_transaction_type_sk, transaction_seq_no
 				 union all
 				 SELECT policy_sk, item_sk, policy_transaction_type_sk , transaction_seq_no 
 				 FROM	edw_core.tpolicy_transaction
@@ -186,13 +187,13 @@ BEGIN
 				),
 				max_tr as
 				(
-					select policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
+					select policy_sk, policy_history_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 					from edw_core.tpolicy_transaction 
 					where isnull(item_sk,0) <> 0 
 				 	and  effective_dt_sk <= @end_dt_sk
 					and   transaction_effective_dt_sk <= @end_dt_sk
 					and   transaction_dt_sk <= @end_dt_sk 
-					group by policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
+					group by policy_sk, policy_history_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 				),  
 				min_tr as
 				(
@@ -446,7 +447,7 @@ BEGIN
 				)
 				INSERT INTO edw_core.titem_summary
 					( 
-						month_sk, policy_sk, item_sk, coverage_sk, vehicle_coverage_sk,
+						month_sk, policy_sk, policy_history_sk, item_sk, coverage_sk, vehicle_coverage_sk,
 						customer_sk, broker_sk, product_sk, source_system_sk, 
 						inforce_ct, inforce_premium_amt,inforce_net_premium_amt,
 						mtd_premium_amt, mtd_commission_amt, mtd_tax_fee_surcharge_amt, mtd_net_premium_amt, 
@@ -460,9 +461,9 @@ BEGIN
 						inforce_total_insured_value_amt,
 						earned_total_insured_value_amt,
 						written_total_insured_value_amt,
-						ceded_premium_amt					
+						ceded_premium_amt
 					)
-				select 	@month_end_dt_sk, prm.policy_sk, prm.item_sk,
+				select 	@month_end_dt_sk, prm.policy_sk, max_tr.policy_history_sk, prm.item_sk,
 						case when inf.coverage_sk is not null then inf.coverage_sk else prm.coverage_sk end coverage_sk, 
 						case when inf.vehicle_coverage_sk is not null then inf.vehicle_coverage_sk else prm.vehicle_coverage_sk end vehicle_coverage_sk, 
 						max_tr.customer_sk, max_tr.broker_sk, max_tr.product_sk, max_tr.sourcE_system_sk,   

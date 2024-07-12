@@ -4,12 +4,12 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
  
--- =====================================================================================================================================
+-- ==================================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the broker data for each month
-------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
-------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------------
 -- 06/20/23		Architha Gudimalla				1. Created this procedure 
 -- 10/13/23		Architha Gudimalla				2. Added risk state
 -- 10/20/23		Architha Gudimalla				3. Removed source_system_sk
@@ -27,7 +27,19 @@ GO
 -- 01/10/24		Architha Gudimalla				15. Used cast as date for quote dates to remove timestamp
 -- 01/11/24		Architha Gudimalla				16. Added one and three year written prms
 -- 02/29/24		Architha Gudimalla				17. Added one and three year non cat earned prms
--- ===================================================================================================================================== 
+-- 03/07/24		Architha Gudimalla				18. Added KPI calculations
+-- 03/10/24		Architha Gudimalla				19. Updated KPI calculations to multiply by 100
+-- 03/19/24		Architha Gudimalla				20. Exluded wind/hail from non cat prms 
+-- 05/15/24		Architha Gudimalla				21. Removed from retention - expiring prm --> + isnull(r.expiring_non_renewal_written_premium_amt,0)
+-- 05/15/24		Architha Gudimalla				22. Removed from retention - expiring ct --> -r.non_renewal_ct
+-- 05/15/24		Architha Gudimalla				23. Added renewal offered count and premium - VI-30737
+-- 05/21/24		Architha Gudimalla				24. Upong olivia'as request, Changed quote history join 
+--													from	q.first_offered_quote_history_sk = qh.quote_history_sk 
+--													to 		q.quote_sk = qh.quote_sk and qh.latest_transaction_in = 'Y' 
+-- 06/12/24		Architha Gudimalla				25. Added
+--													prior_mtd_net_premium_amt
+--													mtd_net_premium_amt 
+-- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
 @in_end_dt date = null
@@ -248,7 +260,7 @@ BEGIN
 					from edw_core.tquote q 
 					inner join edw_core.tcustomer cust on cust.customer_id = q.customer_id
 					inner join edw_core.tproduct p on p.product_cd = q.product_cd
-					left join edw_core.tquote_history qh on q.first_offered_quote_history_sk = qh.quote_history_sk 
+					left join edw_core.tquote_history qh on q.quote_sk = qh.quote_sk and qh.latest_transaction_in = 'Y' -- q.first_offered_quote_history_sk = qh.quote_history_sk 
 					inner join edw_core.tbroker br on q.broker_id = br.broker_id
 					inner join edw_core.tstate st on q.risk_state_cd = st.state_cd
 					where  q.quote_term = 'New'
@@ -277,9 +289,13 @@ BEGIN
 					select 	r.month_sk,
 							r.broker_sk, r.product_sk, r.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco, 
-						   	sum(r.renewal_non_flat_cancelled_ct) renewal_ct, sum(r.non_flat_cancelled_ct-r.mid_term_cancelled_ct-r.non_renewal_ct) expiring_ct,
-							sum(isnull(r.renewal_sixty_day_written_premium_amt,0)) renewal_prm, 
-							sum(isnull(r.expiring_sixty_day_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) + isnull(r.expiring_non_renewal_written_premium_amt,0)) expiring_prm
+						   	sum(r.renewal_non_flat_cancelled_ct) renewal_ct,  
+							sum(renewal_ct) policy_renewal_offered_ct, 
+							sum(case when renewal_ct > 0 then renewal_initial_written_premium_amt else 0 end) policy_renewal_offered_premium_amt, 
+							sum(case when renewal_ct > 0 then r.expiring_written_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,
+							sum(r.non_flat_cancelled_ct-r.mid_term_cancelled_ct) expiring_ct,
+							sum(isnull(r.expiring_sixty_day_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) ) expiring_prm,
+							sum(isnull(r.renewal_sixty_day_written_premium_amt,0)) renewal_prm
 					from edw_core.trenewal_summary r, edw_core.tpolicy pol, edw_core.tstate st  
 					where r.policy_sk = pol.policy_sk 
 					and  pol.risk_state_cd = st.state_cd
@@ -289,7 +305,10 @@ BEGIN
 				)
 				select broker_sk,product_sk, customer_sk, uwco, state_sk,
 						--  
-						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_ct else 0 end) renewal_ct,   
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_ct else 0 end) renewal_ct,  
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_ct else 0 end) policy_renewal_offered_ct,   
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_premium_amt else 0 end) policy_renewal_offered_premium_amt,  
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_expiring_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,   
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_ct else 0 end) expiring_ct,
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_prm else 0 end) renewal_prm,   
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_prm else 0 end) expiring_prm  
@@ -401,7 +420,7 @@ BEGIN
 					 and 	pol.risk_state_cd = st.state_cd
 					 and 	summ.policy_sk = ph.policy_sk 
 					 and 	ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
-					 and ic.internal_coverage_sk = summ.internal_coverage_sk and ic.primary_coverage_cd not in ('Hurricane','Wildfire')
+					 and ic.internal_coverage_sk = summ.internal_coverage_sk and ic.primary_coverage_cd not in ('Hurricane','Wildfire','Wind/Hail')
 					 group by summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 					union all
@@ -432,7 +451,10 @@ BEGIN
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco,   
 							--
 							sum(case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and prior_inf.policy_sk is not null then ph.net_premium_amt else 0 end) prior_mtd_gross_new_business_net_premium_amt,   
-							sum(case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	    @month_begin_dt and 			 	 @end_dt and curr_inf.policy_sk is not null then ph.net_premium_amt else 0 end) 	  mtd_gross_new_business_net_premium_amt 
+							sum(case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	    @month_begin_dt and 			 	 @end_dt and curr_inf.policy_sk is not null then ph.net_premium_amt else 0 end) 	  mtd_gross_new_business_net_premium_amt, 
+							--
+							sum(case when greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and prior_inf.policy_sk is not null then ph.net_premium_amt else 0 end) prior_mtd_gross_net_premium_amt,   
+							sum(case when greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	    @month_begin_dt and 			 	 @end_dt and curr_inf.policy_sk is not null then ph.net_premium_amt else 0 end) 	  mtd_gross_net_premium_amt 
 							--
 				into edw_temp.tbroker_summ_pols1
 				FROM	edw_core.tpolicy pol
@@ -567,7 +589,10 @@ BEGIN
 						sum(isnull(ps.mtd_new_business_net_premium_amt,0)) mtd_new_business_net_premium_amt, 
 						--
 						sum(isnull(ps1.prior_mtd_gross_new_business_net_premium_amt,0)) prior_mtd_gross_new_business_net_premium_amt, 
-						sum(isnull(ps1.mtd_gross_new_business_net_premium_amt,0)) mtd_gross_new_business_net_premium_amt, 
+						sum(isnull(ps1.mtd_gross_new_business_net_premium_amt,0)) mtd_gross_new_business_net_premium_amt,
+						--
+						sum(isnull(ps1.prior_mtd_gross_net_premium_amt,0)) prior_mtd_gross_net_premium_amt, 
+						sum(isnull(ps1.mtd_gross_net_premium_amt,0)) mtd_gross_net_premium_amt, 
 						--
 						sum(isnull(ps.prior_mtd_written_premium_amt,0)) prior_mtd_written_premium_amt, 
 						sum(isnull(ps.mtd_written_premium_amt,0)) mtd_written_premium_amt,  
@@ -673,7 +698,10 @@ BEGIN
 						mtd_new_business_net_premium_amt, 
 						--
 						prior_mtd_gross_new_business_net_premium_amt, 
-						mtd_gross_new_business_net_premium_amt, 
+						mtd_gross_new_business_net_premium_amt,
+						--
+						prior_mtd_net_premium_amt, 
+						mtd_net_premium_amt, 
 						--
 						prior_mtd_written_premium_amt, 
 						mtd_written_premium_amt,  
@@ -707,6 +735,9 @@ BEGIN
 						--
 						policy_expiring_ct,
 						policy_renewal_ct,
+						policy_renewal_offered_ct,
+						policy_renewal_offered_premiumm_amt,
+						policy_renewal_offered_expiring_premium_amt,
 						policy_expiring_premium_amt,
 						policy_renewal_premium_amt, 
 						--
@@ -714,7 +745,8 @@ BEGIN
 						etl_audit_sk,
 						--
 						one_year_non_cat_earned_net_premium_amt, 
-						three_year_non_cat_earned_net_premium_amt 
+						three_year_non_cat_earned_net_premium_amt
+						-- 
 					)
 				select @month_end_dt_sk, 
 						coalesce(summ.broker_sk, r.broker_sk), 
@@ -769,6 +801,9 @@ BEGIN
 						sum(summ.prior_mtd_gross_new_business_net_premium_amt) prior_mtd_gross_new_business_net_premium_amt, 
 						sum(summ.mtd_gross_new_business_net_premium_amt) mtd_gross_new_business_net_premium_amt, 
 						--
+						sum(summ.prior_mtd_gross_net_premium_amt) prior_mtd_net_premium_amt, 
+						sum(summ.mtd_gross_net_premium_amt) mtd_net_premium_amt, 
+						--
 						sum(summ.prior_mtd_written_premium_amt) prior_mtd_written_premium_amt, 
 						sum(summ.mtd_written_premium_amt) mtd_written_premium_amt,  
 						--
@@ -799,6 +834,9 @@ BEGIN
 						--
 						sum(isnull(r.expiring_ct,0)) policy_expiring_ct,
 						sum(isnull(r.renewal_ct,0)) policy_renewal_ct,
+						sum(isnull(r.policy_renewal_offered_ct,0)) policy_renewal_offered_ct,
+						sum(isnull(r.policy_renewal_offered_premium_amt,0)) policy_renewal_offered_premium_amt,
+						sum(isnull(r.policy_renewal_offered_expiring_premium_amt,0)) policy_renewal_offered_expiring_premium_amt, 
 						sum(isnull(r.expiring_prm,0)) policy_expiring_premium_amt,
 						sum(isnull(r.renewal_prm,0)) policy_renewal_premium_amt,
 						--
@@ -806,6 +844,7 @@ BEGIN
 						--
 						sum(summ.one_year_non_cat_earned_net_premium_amt), 
 						sum(summ.three_year_non_cat_earned_net_premium_amt) 
+						--
 				from edw_temp.tbroker_summary_temp summ
 				LEFT join edw_temp.tbroker_summ_retention r on summ.broker_sk = r.broker_sk and summ.product_sk = r.product_sk and summ.customer_sk = r.customer_sk and summ.uwco = r.uwco and summ.state_sk = r.state_sk  
 				group by  
@@ -817,6 +856,27 @@ BEGIN
        
 				SET @rows_affected=@@ROWCOUNT;
 
+				UPDATE edw_core.tbroker_summary
+				set				
+						one_year_loss_ratio  				= case when [one_year_earned_net_premium_amt]			= 0 then 0 else 100.0*[one_year_loss_incurred_amt]/[one_year_earned_net_premium_amt] end,
+						one_year_loss_ratio_capped 			= case when [one_year_earned_net_premium_amt]			= 0 then 0 else 100.0*[one_year_loss_incurred_capped_amt]/[one_year_earned_net_premium_amt] end,
+						one_year_non_cat_loss_ratio 		= case when [one_year_non_cat_earned_net_premium_amt]	= 0 then 0 else 100.0*[one_year_non_cat_loss_incurred_amt]/[one_year_non_cat_earned_net_premium_amt] end,
+						one_year_non_cat_loss_ratio_capped 	= case when [one_year_non_cat_earned_net_premium_amt]	= 0 then 0 else 100.0*[one_year_non_cat_loss_incurred_capped_amt]/[one_year_non_cat_earned_net_premium_amt] end,
+						one_year_frequency 					= case when [one_year_earned_exposure]					= 0 then 0 else 100.0*[one_year_claim_ct]/[one_year_earned_exposure] end,
+						one_year_non_cat_frequency 			= case when [one_year_earned_exposure]					= 0 then 0 else 100.0*[one_year_non_cat_claim_ct]/[one_year_earned_exposure] end,
+						one_year_severity 					= case when [one_year_claim_ct]							= 0 then 0 else 1.0*[one_year_loss_incurred_amt]/[one_year_claim_ct] end,
+						one_year_non_cat_severity 			= case when [one_year_non_cat_claim_ct]					= 0 then 0 else 1.0*[one_year_non_cat_loss_incurred_amt]/[one_year_non_cat_claim_ct] end,
+						--
+						three_year_loss_ratio 				= case when [three_year_earned_net_premium_amt]			= 0 then 0 else 100.0*[three_year_loss_incurred_amt]/[three_year_earned_net_premium_amt] end,
+						three_year_loss_ratio_capped 		= case when [three_year_earned_net_premium_amt]			= 0 then 0 else 100.0*[three_year_loss_incurred_capped_amt]/[three_year_earned_net_premium_amt] end, 
+						three_year_non_cat_loss_ratio 		= case when [three_year_non_cat_earned_net_premium_amt]	= 0 then 0 else 100.0*[three_year_non_cat_loss_incurred_amt]/[three_year_non_cat_earned_net_premium_amt] end,
+						three_year_non_cat_loss_ratio_capped = case when [three_year_non_cat_earned_net_premium_amt]= 0 then 0 else 100.0*[three_year_non_cat_loss_incurred_capped_amt]/[three_year_non_cat_earned_net_premium_amt] end,
+						three_year_frequency 				= case when [three_year_earned_exposure]				= 0 then 0 else 100.0*[three_year_claim_ct]/[three_year_earned_exposure] end,
+						three_year_non_cat_frequency 		= case when [three_year_earned_exposure]				= 0 then 0 else 100.0*[three_year_non_cat_claim_ct]/[three_year_earned_exposure] end, 
+						three_year_severity 				= case when [three_year_claim_ct]						= 0 then 0 else 1.0*[three_year_loss_incurred_amt]/[three_year_claim_ct] end,
+						three_year_non_cat_severity 		= case when [three_year_non_cat_claim_ct]				= 0 then 0 else 1.0*[three_year_non_cat_loss_incurred_amt]/[three_year_non_cat_claim_ct] end 
+						--
+				where month_sk  = @month_end_dt_sk;
 				
 				-- Update control table
 				SET @new_last_source_extract_ts=COALESCE(@end_dt,@last_source_extract_ts);	

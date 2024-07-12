@@ -102,6 +102,18 @@ BEGIN
 		update edw_core.tclaim set cause_of_loss_sk = 23 where claim_no = 'CL-1336345173';
 		update edw_core.tclaim set cause_of_loss_sk = 1 where claim_no = 'CL-1372618270';
 
+		-- update catastriphe_sk for below claims
+		DECLARE @catastrophe_sk_2030 INT = (SELECT catastrophe_sk FROM edw_core.tcatastrophe WHERE catastrophe_cd = '2030')
+		DECLARE @catastrophe_sk_2063 INT = (SELECT catastrophe_sk FROM edw_core.tcatastrophe WHERE catastrophe_cd = '2063')
+		DECLARE @catastrophe_sk_2076 INT = (SELECT catastrophe_sk FROM edw_core.tcatastrophe WHERE catastrophe_cd = '2076')
+		DECLARE @catastrophe_sk_1954 INT = (SELECT catastrophe_sk FROM edw_core.tcatastrophe WHERE catastrophe_cd = '1954')
+
+		update edw_core.tclaim set catastrophe_sk = @catastrophe_sk_2030 where claim_no = 'CL-1030492334';
+		update edw_core.tclaim set catastrophe_sk = @catastrophe_sk_2063 where claim_no IN ('CL-1167935587','CL-1208329762');
+		update edw_core.tclaim set catastrophe_sk = @catastrophe_sk_2076 where claim_no IN ('CL-1223668608', 'CL-1226900023', 'CL-1231362490','CL-1231363304','CL-1236477921')
+		update edw_core.tclaim set catastrophe_sk = @catastrophe_sk_1954 where claim_no 
+		IN('CL-1236837967','CL-764254350','CL-764255891','CL-765445306','CL-765447540') 
+
 		SET @rows_affected=@@ROWCOUNT;	
 
 		-- Update audit table

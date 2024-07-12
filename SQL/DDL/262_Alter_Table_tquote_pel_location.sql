@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote_pel_location ADD location_limit_type varchar(255);

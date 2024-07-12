@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tauto_policy_coverage ADD sdip_points_no Varchar(255);

@@ -7,6 +7,7 @@
 -- 10/12/23		Mohammed Yunus					1. Created this procedure 
 -- 10/27/23		Architha Gudimalla				2. Added cast on broker_id
 -- 02/08/24		Alberto Almario					3. Added new column producer_id and change to use merge
+-- 07/06/24		Alberto Almario					4. Change logic for producer_status column
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tproducer]
@@ -45,7 +46,11 @@ BEGIN
 			br.CreatedDate,
 			br.UpdatedDate,
 			br.ID AS producer_id,
-			CASE WHEN br.UserEmailConfirmed = 1 Then 'Active' Else 'Pending' end as producer_status
+			CASE 
+				WHEN br.[Disabled] = 1 THEN 'Disabled'
+				ELSE
+					CASE WHEN br.UserEmailConfirmed = 1 THEN 'Active' ELSE 'Pending' END
+			END AS producer_status
 		INTO edw_temp.tproducer_temp1
 		FROM
 			edw_stage.[Broker] br

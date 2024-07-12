@@ -1,0 +1,5 @@
+ALTER TABLE edw_core.tauto_policy_coverage ADD permissive_driver_unique_liability_limits_in varchar(255);
+ALTER TABLE edw_core.tauto_policy_coverage ADD permissive_driver_unique_combined_single_limit_amt varchar(255);
+ALTER TABLE edw_core.tauto_policy_coverage ADD permissive_driver_unique_bi_limit_amt varchar(255);
+ALTER TABLE edw_core.tauto_policy_coverage ADD permissive_driver_unique_pd_limit_amt varchar(255);
+ALTER TABLE edw_core.tauto_policy_coverage ADD emergency_extension_notice_in varchar(255);

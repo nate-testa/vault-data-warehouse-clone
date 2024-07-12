@@ -2,6 +2,13 @@
 -- Author:		Mohammed Yunus
 -- Description: This procedures insert broker commission data 
 ---------------------------------------------------------------------------------------------------
+-- Change date 			|Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 08/20/23				Yunus Mohammed				1. Create the proc
+-- 03/15/24				Rushin Shah					2. Addition of broker_tier column
+-- 03/20/24				Rushin Shah					3. Updated the join to inner from left
+-- 06/19/24				Yunus Mohammed				4. Corrected bug in broker_commission_status
+-- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker_commission]
 
 AS
@@ -29,40 +36,44 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.tbroker_commission_temp
 
 		SELECT
-			tbrk.broker_id,tbrk.broker_sk,brkc.[State] AS state_cd,prd.[Name] AS product_nm,cov.[Name] AS coverage_cd,
-			brkc.ProgramType AS program_type,
-			brkc.BusinessType AS business_type,
-			brkc.EffectiveDate AS effective_dt,dateadd(year,1,brkc.EffectiveDate) AS expiration_dt,CommissionPercent commission_pc,
-			CASE brkc.IsExpired
-				WHEN 1 THEN 'Active'
-				WHEN 0 THEN 'Expired'
-			END AS broker_commission_status,brkc.CreatedDate,brkc.UpdatedDate
+			tbrk.broker_id,tbrk.broker_sk,ctp.[State] AS state_cd,prd.[Name] AS product_nm,cov.[Name] AS coverage_cd,
+			ctp.ProgramType AS program_type,
+			ctp.BusinessType AS business_type,
+			ctp.EffectiveDate AS effective_dt,ctp.ExpirationDate AS expiration_dt,CommissionPercent commission_pc,
+			ct.Name as broker_tier,
+			CASE ctp.IsExpired
+				WHEN 0 THEN 'Active'
+				WHEN 1 THEN 'Expired'
+			END AS broker_commission_status,ctp.CreatedDate,ctp.UpdatedDate
 		INTO edw_temp.tbroker_commission_temp
 		FROM
 			edw_stage.Brokerage as brk
 			inner join edw_core.tbroker tbrk on CAST(brk.ProducerId AS VARCHAR(255))=tbrk.broker_id
-			inner join edw_stage.BrokerageCommission brkc on brk.Id=brkc.BrokerageId
-			left join edw_stage.Product prd on brkc.ProductId=prd.Id
-			left join [edw_stage].[Coverage] cov on brkc.CoverageId=cov.Id
+			--	inner join edw_stage.BrokerageCommission brkc on brk.Id=brkc.BrokerageId -- This needs to be removed because the table has been decommissioned
+			inner join edw_stage.CommissionTierBrokerage ctb on ctb.BrokerageId = brk.Id
+			inner join edw_stage.CommissionTierPercentage ctp on  ctp.CommissionTierID = ctb.CommissionTierID
+			inner join edw_stage.CommissionTier ct on ct.Id = ctp.CommissionTierId
+			inner join edw_stage.Product prd on ctp.ProductId=prd.Id
+			left join [edw_stage].[Coverage] cov on ctp.CoverageId=cov.Id
 		WHERE
-			GREATEST(brkc.CreatedDate,brkc.UpdatedDate) > @last_source_extract_ts
+			GREATEST(ctp.CreatedDate,ctp.UpdatedDate) > @last_source_extract_ts
 
 		-- Delete from tbroker_commission table
 		DELETE FROM edw_core.tbroker_commission;
 		
 		-- Reset identity column
 		DBCC CHECKIDENT('edw_core.tbroker_commission',RESEED,0);
-
+		
 		INSERT INTO edw_core.tbroker_commission
 		(
 			broker_id,broker_sk,state_cd,product_nm,coverage_cd,program_type,
-			business_type,effective_dt,expiration_dt,commission_pc,broker_commission_status,
+			business_type,effective_dt,expiration_dt,commission_pc,broker_commission_status,broker_tier,
 			create_ts,update_ts,etl_audit_sk
 		)
 		SELECT
 			broker_id,broker_sk,state_cd,product_nm,coverage_cd,program_type,
-			business_type,effective_dt,expiration_dt,commission_pc,broker_commission_status
-			,GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk
+			business_type,effective_dt,expiration_dt,commission_pc,broker_commission_status,broker_tier,
+			GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk
 		FROM
 			edw_temp.tbroker_commission_temp
 		
@@ -91,4 +102,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-

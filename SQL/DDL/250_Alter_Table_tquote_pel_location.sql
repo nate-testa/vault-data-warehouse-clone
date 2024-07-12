@@ -1,0 +1,4 @@
+ALTER TABLE edw_core.tquote_pel_location ADD square_feet varchar(255);
+ALTER TABLE edw_core.tquote_pel_location ADD no_of_athletic_structures varchar(255);
+ALTER TABLE edw_core.tquote_pel_location ADD short_term_rental_in varchar(255);
+ALTER TABLE edw_core.tquote_pel_location ADD long_term_rental_in varchar(255);

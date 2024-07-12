@@ -1,18 +1,25 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_tvendor_report_stage_data]    Script Date: 2/27/2024 11:09:14 AM ******/
+﻿/****** Object:  StoredProcedure [edw_core].[sp_tvendor_report_stage_data]    Script Date: 5/8/2024 11:56:21 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
--- =================================================================================================
+-- =======================================================================================================================
 -- Author:	Architha Gudimalla		
 -- Description: This procedures loads vendor reports data
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
 -- 11/28/23		Architha Gudimalla				1. Created this procedure  
--- ================================================================================================= 
+-- 03/10/23		Architha Gudimalla				2. Updated the label in merge
+-- 03/10/24		Architha Gudimalla				3. Updated the label with replace for some too long labels for LC360
+-- 05/08/24		Architha Gudimalla				4. Updated the label for another long label for LC360
+-- 05/20/24		Architha Gudimalla				5. Added accri.Label = accri.[Group] to table main case statement
+-- 05/28/24		Architha Gudimalla				6. Updated the label for another long label for LC360
+-- 06/11/24		Architha Gudimalla				7. Updated the label for another long label for LC360
+-- 06/12/24		Architha Gudimalla				8. Excluded null label for LC360
+-- ======================================================================================================================= 
 
-CREATE OR ALTER     PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
+CREATE OR ALTER       PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
 @in_source varchar(255) = null
 AS
 BEGIN
@@ -63,13 +70,28 @@ BEGIN
 		merge into edw_stage.tvendor_report_field as target
 		using
 		(
-			select  accr.source, accr.reporttype, accri.Category, accri.[Group], accri.Label, 
-					max(accri.CreatedDate) CreatedDate, max(GREATEST(accri.UpdatedDate,accri.CreatedDate)) UpdatedDate 
-			from	edw_stage.Account acc, edw_stage.AccountReport accr, edw_stage.AccountReportItem accri
-			where	accr.AccountId=acc.Id  and source <> 'HazardHub'
-			and		accr.Id =accri.ReportId 
-			AND		GREATEST(accri.UpdatedDate,accri.CreatedDate)>@last_source_extract_ts
-			group by accr.source, accr.reporttype, accri.Category, accri.[Group], accri.Label
+			select a.source, a.reporttype, a.Category, a.[Group], a.Label, 
+					max(a.CreatedDate) CreatedDate, max(a.UpdatedDate) UpdatedDate 
+			from
+			(
+				select  accr.source, accr.reporttype, accri.Category, accri.[Group], 
+						replace(replace(replace(replace(replace(replace(replace(replace(label,
+						',',''),
+						'Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)','Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)'),
+						' Toilet Supply Lines That Have Plastic B-nut Connectors and',' Toilet Lines having Plastic B-nut Conn and'),
+						'when construction starts on second floor','construction on 2nd fl'),
+						'Water Leak Detection Alarm Systems','Water Leak Detectn Alarm Sys'),
+						'[',' - '),
+						']',''),
+						'''','') Label, 
+						accri.CreatedDate, GREATEST(accri.UpdatedDate,accri.CreatedDate) UpdatedDate 
+				from	edw_stage.Account acc, edw_stage.AccountReport accr, edw_stage.AccountReportItem accri
+				where	accr.AccountId=acc.Id  and source <> 'HazardHub'
+				and		accr.Id =accri.ReportId  
+				AND		GREATEST(accri.UpdatedDate,accri.CreatedDate)>@last_source_extract_ts
+			) a
+			where isnull(label,'') <> ''
+			group by a.source, a.reporttype, a.Category, a.[Group], a.label
 		) as source 
 		on source.source = target.source 
 		and source.reporttype = target.reporttype 
@@ -112,8 +134,8 @@ BEGIN
 					+ ' select	 acc.policynumber, acc.effectivedate, 
 												GREATEST(accri.UpdatedDate,accri.CreatedDate) UpdatedDate ,  accri.CreatedDate, 
 												accr.dateordered, accr.dateTimeRecieved, accr.dateTimeCompleted, accr.TransactionStatus, accr.[source], accr.reporttype, 
-												case when accri.Category  = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(accri.Label,''['','' - ''),'']'',''''),'''''''',''''))
-													when accri.Category <> accri.[Group] then concat(accri.Category, '' - '', accri.[Group], '' - '',replace(replace(replace(accri.Label,''['','' - ''),'']'',''''),'''''''',''''))
+												case when accri.Category = accri.[Group] or accri.Label = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(replace(replace(replace(replace(accri.label,''Water Leak Detection Alarm Systems'',''Water Leak Detectn Alarm Sys''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
+													when accri.Category <> accri.[Group] then concat(accri.Category, '' - '', accri.[Group], '' - '',replace(replace(replace(replace(replace(replace(replace(accri.label,''Water Leak Detection Alarm Systems'',''Water Leak Detectn Alarm Sys''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
 													else ''''
 												end field_name,accri.[Value] 
 										from	edw_stage.[Account] acc, edw_stage.[AccountReport] accr, edw_stage.AccountReportItem accri
@@ -125,7 +147,7 @@ BEGIN
 					--+  @in_source 
 					+ ''''
 
-		--print @sql
+		print @sql
 		EXECUTE sp_executesql @sql 
 
 		SET @rows_affected=@rows_affected + @@ROWCOUNT;  
