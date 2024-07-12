@@ -3,12 +3,12 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- ========================================================================================================================================
+-- ==================================================================================================================================================
 -- Author:		
 -- Description: This procedures loads inforce at item level 
-------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
-------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------------
 -- 06/02/23										1. Created this procedure 
 -- 06/28/23		Architha Gudimalla				2. Modified after first run errors
 -- 07/25/23		Architha Gudimalla				3. Added TFS to internal coverages
@@ -18,7 +18,8 @@ GO
 -- 11/08/23     Architha Gudimalla				7. Updated logic for primary_coverage_cd for taxes
 -- 11/16/23     Architha Gudimalla				8. Added update statement becuase of dupe issue for optional coverages
 -- 11/30/23     Sandeep Gundreddy				9. Added Aslob logic for Condo- CO
--- ======================================================================================================================================== 
+-- 07/12/24     Architha Gudimalla				10.Added another union all to the main selet into tinternal_coverage_temp1 for legislatinve coverages
+-- ================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tinternal_coverage]
 
@@ -94,7 +95,27 @@ BEGIN
 		WHERE	GREATEST(acct.CreatedDate,acct.UpdatedDate)>@last_source_extract_ts 
 		and		nullif(trim(replace(accttf.name, '  ',' ')),'') is not null
 		and pr.ProductLine='PersonalLines'
-		group by trim(accttf.name), pr.ProductCode;
+		and  accttf.[name] not in	('Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S',
+									'Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S')
+		group by trim(accttf.name), pr.ProductCode
+		union all
+		SELECT  nullif(trim(accttf.name),'') as tax_fee_surcharge_name,
+                CASE WHEN c.aslob ='090' THEN 'LUX' ELSE pr.ProductCode END as product_cd,
+                c.aslob as aslob,
+                max(nullif(trim(accttf.Type),'')) as tax_fee_surcharge_type,
+                max(nullif(trim(accttf.Type),'')) as coverage,
+                max(acct.CreatedDate)  as CreatedDate,
+                max(acct.UpdatedDate) as  UpdatedDate
+        FROM edw_stage.AccountTransaction acct
+        inner join edw_stage.Product pr on pr.Id=acct.ProductId
+        inner join edw_stage.AccountTransactionTaxAndFee accttf on acct.id = accttf.accounttransactionid
+        inner join edw_stage.coverage c on accttf.coverageid=c.id
+        and accttf.[name] in	('Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S',
+								'Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S')
+        --WHERE GREATEST(acct.CreatedDate,acct.UpdatedDate)>@last_source_extract_ts
+        and     nullif(trim(replace(accttf.name, '  ',' ')),'') is not null
+        and pr.ProductLine='PersonalLines'
+        group by trim(accttf.name), pr.ProductCode,  c.aslob;
 			
 		-- Insert and Update tinternal_coverage table
 		MERGE edw_core.tinternal_coverage AS Target
