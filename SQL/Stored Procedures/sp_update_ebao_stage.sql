@@ -4,9 +4,10 @@
 -- Change date		    |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 07/09/24			    Yunus Mohammed				1. Created this procedure
+-- 07/12/24			    Architha Gudimalla			2. Updated to edw_core instead of temp
 -- ================================================================================================= 
 
-CREATE OR ALTER PROCEDURE [edw_temp].[sp_update_ebao_stage]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_update_ebao_stage]
 
 AS
 BEGIN
