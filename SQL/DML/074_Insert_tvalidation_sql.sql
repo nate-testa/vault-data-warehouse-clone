@@ -43,11 +43,11 @@ select	 'thome_coverage - multiple deductibles' as validation_sql_desc
 		,'SELECT count(*)
 FROM edw_core.thome_coverage
 WHERE
-  (CASE WHEN NULLIF(wind_or_hailstorm_deductible, '') IS NOT NULL THEN 1 ELSE 0 END +
-   CASE WHEN NULLIF(hurricane_or_named_storm_deductible, '') IS NOT NULL THEN 1 ELSE 0 END +
-   CASE WHEN NULLIF(hurricane_deductible, '') IS NOT NULL THEN 1 ELSE 0 END +
-   CASE WHEN NULLIF(named_storm_deductible, '') IS NOT NULL THEN 1 ELSE 0 END +
-   CASE WHEN NULLIF(tornado_or_hailstorm_deductible, '') IS NOT NULL THEN 1 ELSE 0 END) > 1' as source_sql
+  (CASE WHEN NULLIF(wind_or_hailstorm_deductible, '''') IS NOT NULL THEN 1 ELSE 0 END +
+   CASE WHEN NULLIF(hurricane_or_named_storm_deductible, '''') IS NOT NULL THEN 1 ELSE 0 END +
+   CASE WHEN NULLIF(hurricane_deductible, '''') IS NOT NULL THEN 1 ELSE 0 END +
+   CASE WHEN NULLIF(named_storm_deductible, '''') IS NOT NULL THEN 1 ELSE 0 END +
+   CASE WHEN NULLIF(tornado_or_hailstorm_deductible, '''') IS NOT NULL THEN 1 ELSE 0 END) > 1' as source_sql
 		,'select 0' as target_sql
 		,'Y' as active_in
 		,'Daily' as frequency_desc
