@@ -5,6 +5,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 07/09/24			    Yunus Mohammed				1. Created this procedure
 -- 07/12/24			    Architha Gudimalla			2. Updated to edw_core instead of temp
+-- 07/16/24			    Yunus Mohammed				3. Vin number updated
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_update_ebao_stage]
@@ -26,7 +27,7 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
         update edw_stage.t_clm_pol_insured set INSURED_NAME = '4JGDA5JB5JB070266' where INSURED_ID = 18635017  
-        update edw_stage.t_clm_pol_insured set INSURED_NAME = '1F66FSDN1M0A01047' where INSURED_ID = 17885597
+        update edw_stage.t_clm_pol_insured set INSURED_NAME = '1F66F5DN1M0A01047' where INSURED_ID = 17885597
 
 		SET @rows_affected=@@ROWCOUNT
         
