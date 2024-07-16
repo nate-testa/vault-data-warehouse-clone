@@ -10,6 +10,7 @@
 -- 12/19/23		Yunus Mohammed				4. Update calculation logic for expense_reserve_amt and refund_expense_paid_amt
 -- 12/27/23		Yunus Mohammed				5. Reverted calculation logic for expense_reserve_amt and refund_expense_paid_amt
 -- 03/01/24		Yunus Mohammed				6. Update calculation logic for refund_expense_paid_amt
+-- 07/16/24		Yunus Mohammed				6. Update calculation logic for refund_expense_paid_amt
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction]
@@ -95,7 +96,13 @@ BEGIN
 					WHEN t1.reserve_type ='RC_01' AND t1.claim_type LIKE '%SAL%' AND CAST(t1.payee_name AS VARCHAR(MAX)) NOT IN ('Copart') THEN settle_changed
 					ELSE 0 END
 				) AS refund_indemnity_paid_amt,
-			SUM(CASE WHEN t1.reserve_type='RC_02' AND t1.claim_type IN ('LOS','LOS,SAL,SUB') AND settle_changed < 0 THEN settle_changed ELSE 0 END) AS refund_expense_paid_amt,
+			SUM(CASE WHEN t1.reserve_type='RC_02' AND 
+			(
+				(t1.claim_type = 'LOS' AND settle_changed < 0)
+				OR
+				(t1.claim_type ='LOS,SAL,SUB'  AND settle_changed != 0 )
+			)
+			THEN settle_changed ELSE 0 END) AS refund_expense_paid_amt,
 			MAX(CASE WHEN t1.ROLE_NAME = 'Lawyer' OR t1.ROLE_NAME  = 'Legal Firm' THEN 'Y' ELSE 'N' END) AS dcc_in
 			FROM
 			(
