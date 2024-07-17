@@ -1,8 +1,12 @@
 ﻿-- =============================================
 -- Author:		Hernando Gonzalez
--- Create Date: 2024-07-17
 -- Description: This stored procedure insert info related to Broker parent child relation
--- =============================================
+---------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 17/07/24		Hernando Gonzalez			1. Created this procedure 
+-- ================================================================================================= 
+
 CREATE OR ALTER PROCEDURE [edw_core].[broker_relation_hubspot_feed]
 AS
 BEGIN
