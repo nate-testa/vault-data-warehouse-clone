@@ -213,8 +213,8 @@ BEGIN
 
 		
 		-- Update control table
-		-- SET @new_last_source_extract_ts=COALESCE((SELECT MAX(filter_dt) FROM edw_temp.[policy_redzone_feed_temp1]),@last_source_extract_ts);
-        -- EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
+        SET @new_last_source_extract_ts=COALESCE(dateadd("dd",-1, getdate()),@last_source_extract_ts);
+        EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
