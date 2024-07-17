@@ -64,8 +64,8 @@ BEGIN
 			AND isnull(bvt.state_cd,pol.risk_state_cd)=pol.risk_state_cd
 		WHERE
 			greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
-			AND br.broker_nm IN (' Marsh USA Inc.',' HUB International Insurance Services Inc.')	
-			AND pol.policy_status = 'Active'
+			--AND br.broker_nm IN (' Marsh USA Inc.',' HUB International Insurance Services Inc.')	
+			--AND pol.policy_status = 'Active'
 
 		MERGE [edw_integration].[customer_hubspot_feed] as TARGET
 		USING (
