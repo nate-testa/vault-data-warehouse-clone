@@ -1,0 +1,217 @@
+-- =================================================================================================
+-- Author:		Yunus Mohammed
+-- Description: This procedures inserts and updates quote hubspot data
+-----------------------------------------------------------------------------------------------------------
+-- Change date          |Author						|	Change Description
+-----------------------------------------------------------------------------------------------------------
+-- 07/17/24		        Yunus Mohammed				1. Created this procedure
+-- ======================================================================================================== 
+
+CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
+
+AS
+BEGIN
+	DECLARE @ProcedureName NVARCHAR(120)
+    SET @ProcedureName = OBJECT_NAME(@@PROCID)
+    -- SET NOCOUNT ON added to prevent extra result sets from
+    -- interfering with SELECT statements.
+    SET NOCOUNT ON
+		BEGIN TRY
+		DECLARE @last_source_extract_ts DATETIME2(7)
+		DECLARE @etl_audit_sk INT
+		DECLARE @new_last_source_extract_ts DATETIME2(7)
+		DECLARE @rows_affected INT
+		DECLARE @process_nm VARCHAR(255)=@ProcedureName
+		DECLARE @current_date DATETIME2(7)=GETDATE()
+		DECLARE @parameter_desc VARCHAR(255)
+
+		-- Get last source extract date
+		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
+
+		DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp1;
+
+		
+        with quote_collection_class_type as
+        (
+        select
+        quote_no,		
+        sum(blanket_limit_amt) as total_blanket_limit_amt,
+        sum(scheduled_limit_amt) as total_scheduled_limit_amt
+        from
+        edw_core.tquote_collection_class_type
+        group by quote_no
+        )
+
+        select
+        q.quote_no,q.effective_dt,q.expiration_dt,h.transaction_type,
+        br.broker_id, br.broker_nm, br.broker_tier, br.national_agency_in,
+        bvt.team_member_nm as bdm_nm,cust.vip_in,i.first_nm as insured_first_nm, i.last_nm as insured_last_nm,
+        h.underwriter_nm, q.uw_company_nm,
+        CASE
+        WHEN pr.product_cd IN ('HO','CO') THEN tqhl.address_line_1
+        WHEN pr.product_cd = 'LUX'  THEN tqcl.address_line_1
+        WHEN pr.product_cd = 'PEL' THEN tqpl.address_line_1
+        END AS [risk_address_line_1], 
+        CASE
+        WHEN pr.product_cd IN ('HO','CO') THEN tqhl.address_line_2
+        WHEN pr.product_cd = 'LUX'  THEN tqcl.address_line_2
+        WHEN pr.product_cd = 'PEL' THEN tqpl.address_line_2
+        END as [risk_address_line_2], 
+        CASE
+        WHEN pr.product_cd IN ('HO','CO') THEN tqhl.city_nm
+        WHEN pr.product_cd = 'LUX'  THEN tqcl.city_nm
+        WHEN pr.product_cd = 'PEL' THEN tqpl.city_nm
+        END as risk_city_nm,
+        CASE
+        WHEN pr.product_cd IN ('HO','CO') THEN tqhl.state_cd
+        WHEN pr.product_cd = 'LUX'  THEN tqcl.state_cd
+        WHEN pr.product_cd = 'PEL' THEN tqpl.state_cd
+        END as risk_state_cd,
+        CASE
+        WHEN pr.product_cd IN ('HO','CO') THEN tqhl.zip_cd
+        WHEN pr.product_cd = 'LUX'  THEN tqcl.zip_cd
+        WHEN pr.product_cd = 'PEL' THEN tqpl.zip_cd
+        END [risk_zip_cd],
+        h.premium_amt,
+        q.quote_status,
+        (ISNULL(tqhc.prior_nonwater_claim_ct,0) + ISNULL(tqhc.prior_water_claim_ct,0)) as claim_ct,
+        (select top 1 note_desc from edw_core.tnote tn where tn.policy_no = q.quote_no order by coalesce(note_updated_ts,note_created_ts) desc) as note_desc,
+        NULL AS recampaign_in,
+        NULL AS rol_on_lost_business,
+        NULL AS lost_company,
+        h.not_taken_reason_desc as reason_quote_not_taken,
+        NULL AS construction,
+        tqhc.[dwelling_limit_amt],
+        tqhc.[contents_limit_amt], 
+        tqhc.[other_structures_limit_amt],
+        tqhc.[loss_of_use_limit_amt],
+        tqhc.total_insured_value_amt,
+        tqhc.[roof_covering],
+        tqhc.[roof_updated_year],
+        CASE WHEN q.product_cd in ('HO','CO') then h.insurance_score ELSE NULL END AS insurance_score,
+        tqapc.bodily_injury_limit_amt as auto_liability_limit_amt,
+        tqpc.pel_limit_amt,
+        case when total_blanket_limit_amt > 0 and total_scheduled_limit_amt > 0 then 'Both'
+        when total_blanket_limit_amt > 0 then 'Blanket'
+        when total_scheduled_limit_amt > 0 then 'Scheduled'
+        end as collections_coverage_type,
+        tcct.total_blanket_limit_amt,
+        tcct.total_scheduled_limit_amt,
+        q.create_ts,
+        q.update_ts
+        into edw_temp.quote_hubspot_feed_temp1
+
+        from edw_core.tquote q
+        inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
+        inner join edw_core.tquote_history h on h.quote_sk = q.quote_sk and h.latest_transaction_in = 'Y'	
+        left join edw_core.tquote_insured i	on i.quote_history_sk = h.quote_history_sk and h.latest_transaction_in = 'Y' and i.primary_insured_in = 'Yes'
+        left join edw_core.tcustomer cust on cust.customer_id = q.customer_id
+        left join edw_core.tbroker br on br.broker_id = q.broker_id
+        left join edw_core.tbroker_vault_team bvt on br.broker_id = bvt.broker_id and bvt.product_nm = pr.product_nm
+        and bvt.team_member_type = 'BusinessDevelopmentManager' and q.program_type = bvt.program_type
+        and  isnull(bvt.state_cd,q.risk_state_cd)=q.risk_state_cd
+        left join edw_core.tquote_home_location tqhl on tqhl.quote_no = q.quote_no
+        left join edw_core.tquote_collection_location tqcl on tqcl.quote_no = q.quote_no
+        left join edw_core.tquote_pel_location tqpl on tqpl.quote_no = q.quote_no and tqpl.effective_dt = q.effective_dt
+        and tqpl.transaction_seq_no = h.transaction_seq_no and tqpl.primary_location_in = 'Yes'
+        left join edw_core.tquote_home_coverage tqhc on tqhc.quote_history_sk=h.quote_history_sk
+        left join edw_core.tquote_auto_policy_coverage tqapc on tqapc.quote_history_sk=h.quote_history_sk
+        left join edw_core.tquote_pel_coverage tqpc on tqpc.quote_history_sk=h.quote_history_sk
+        left join quote_collection_class_type as tcct on tcct.quote_no = q.quote_no
+
+        where  h.latest_transaction_in = 'Y'
+		and greatest(q.create_ts,q.update_ts) > @last_source_extract_ts
+
+        -- Start Merge process
+		MERGE INTO [edw_integration].[quote_hubspot_feed] AS target
+        USING [edw_temp].[quote_hubspot_feed_temp1] AS source on target.quote_no = source.quote_no
+        WHEN NOT MATCHED BY Target THEN
+        insert
+        (
+            quote_no , effective_dt ,expiration_dt , transaction_type , broker_id , broker_nm ,broker_tier ,national_agency_in, bdm_nm, 
+            vip_in, insured_first_nm, insured_last_nm, underwriter_nm, uw_company_nm ,risk_address_line_1 , risk_address_line_2 ,risk_city_nm ,
+            risk_state_cd ,risk_zip_cd , premium_amt, quote_status , claim_ct , note_desc , recampaign_in , rol_on_lost_business, 
+            lost_company , reason_quote_not_taken, construction , dwelling_limit_amt ,contents_limit_amt , other_structures_limit_amt , 
+            loss_of_use_limit_amt, total_insured_value_amt ,roof_covering , roof_updated_year , insurance_score , 
+            auto_liability_limit_amt, pel_limit_amt, collections_coverage_type, total_blanket_limit_amt , total_scheduled_limit_amt ,
+            create_ts, update_ts ,etl_audit_sk 
+        )
+        VALUES
+        (
+         quote_no , effective_dt ,expiration_dt , transaction_type , broker_id , broker_nm ,broker_tier ,national_agency_in, bdm_nm, 
+            vip_in, insured_first_nm, insured_last_nm, underwriter_nm, uw_company_nm ,risk_address_line_1 , risk_address_line_2 ,risk_city_nm ,
+            risk_state_cd ,risk_zip_cd , premium_amt, quote_status , claim_ct , note_desc , recampaign_in , rol_on_lost_business, 
+            lost_company , reason_quote_not_taken, construction , dwelling_limit_amt ,contents_limit_amt , other_structures_limit_amt , 
+            loss_of_use_limit_amt, total_insured_value_amt ,roof_covering , roof_updated_year , insurance_score , 
+            auto_liability_limit_amt, pel_limit_amt, collections_coverage_type, total_blanket_limit_amt , total_scheduled_limit_amt ,
+            getdate(), getdate(), @etl_audit_sk 
+        )
+        WHEN MATCHED THEN UPDATE
+        SET
+        [target].quote_no	=	[source].quote_no,
+        [target].effective_dt	=	[source].effective_dt,
+        [target].expiration_dt	=	[source].expiration_dt,
+        [target].transaction_type	=	[source].transaction_type,
+        [target].broker_id	=	[source].broker_id,
+        [target].broker_nm	=	[source].broker_nm,
+        [target].broker_tier	=	[source].broker_tier,
+        [target].national_agency_in	=	[source].national_agency_in,
+        [target].bdm_nm	=	[source].bdm_nm,
+        [target].vip_in	=	[source].vip_in,
+        [target].insured_first_nm	=	[source].insured_first_nm,
+        [target].insured_last_nm	=	[source].insured_last_nm,
+        [target].underwriter_nm	=	[source].underwriter_nm,
+        [target].uw_company_nm	=	[source].uw_company_nm,
+        [target].risk_address_line_1	=	[source].risk_address_line_1,
+        [target].risk_address_line_2	=	[source].risk_address_line_2,
+        [target].risk_city_nm	=	[source].risk_city_nm,
+        [target].risk_state_cd	=	[source].risk_state_cd,
+        [target].risk_zip_cd	=	[source].risk_zip_cd,
+        [target].premium_amt	=	[source].premium_amt,
+        [target].quote_status	=	[source].quote_status,
+        [target].claim_ct	=	[source].claim_ct,
+        [target].note_desc	=	[source].note_desc,
+        [target].recampaign_in	=	[source].recampaign_in,
+        [target].rol_on_lost_business	=	[source].rol_on_lost_business,
+        [target].lost_company	=	[source].lost_company,
+        [target].reason_quote_not_taken	=	[source].reason_quote_not_taken,
+        [target].construction	=	[source].construction,
+        [target].dwelling_limit_amt	=	[source].dwelling_limit_amt,
+        [target].contents_limit_amt	=	[source].contents_limit_amt,
+        [target].other_structures_limit_amt	=	[source].other_structures_limit_amt,
+        [target].loss_of_use_limit_amt	=	[source].loss_of_use_limit_amt,
+        [target].total_insured_value_amt	=	[source].total_insured_value_amt,
+        [target].roof_covering	=	[source].roof_covering,
+        [target].roof_updated_year	=	[source].roof_updated_year,
+        [target].insurance_score	=	[source].insurance_score,
+        [target].auto_liability_limit_amt	=	[source].auto_liability_limit_amt,
+        [target].pel_limit_amt	=	[source].pel_limit_amt,
+        [target].collections_coverage_type	=	[source].collections_coverage_type,
+        [target].total_blanket_limit_amt	=	[source].total_blanket_limit_amt,
+        [target].total_scheduled_limit_amt	=	[source].total_scheduled_limit_amt,
+        [target].update_ts	=	GETDATE(),
+        [target].etl_audit_sk	=	@etl_audit_sk;
+        
+        SET @rows_affected=@@ROWCOUNT;
+        -- Update control table
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(Greatest(create_ts,update_ts)) FROM edw_temp.[quote_hubspot_feed_temp1]),@last_source_extract_ts);
+		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
+
+		-- Update audit table
+		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
+		
+		-- Drop temp table
+		DROP TABLE IF EXISTS edw_temp.quote_hubspot_feed_temp1
+	END TRY
+	BEGIN CATCH
+		DECLARE @error_message nvarchar(4000)
+		SET @error_message = 'Error Number:' + CAST(ERROR_NUMBER() AS NVARCHAR(100)) + ' Error State:' + CAST(ERROR_STATE() AS NVARCHAR(100))
+							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
+							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
+							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
+	END CATCH
+END
