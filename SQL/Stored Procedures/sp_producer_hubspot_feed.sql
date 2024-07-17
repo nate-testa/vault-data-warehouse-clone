@@ -1,8 +1,12 @@
 -- =============================================
 -- Author:		Hernando Gonzalez
--- Create Date: 2024-07-17
 -- Description: This stored procedure insert info related to Hubspot - Contact
--- =============================================
+---------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 17/07/24		Hernando Gonzalez			1. Created this procedure 
+-- ================================================================================================= 
+
 CREATE OR ALTER PROCEDURE [edw_core].[producer_hubspot_feed]
 AS
 BEGIN
@@ -50,8 +54,7 @@ BEGIN
 		FROM edw_core.tproducer p	
 		INNER JOIN edw_core.tbroker br
 			ON p.broker_sk = br.broker_sk
-		WHERE p.broker_id IN ('56796','56555')
-		ORDER BY 6,3,2
+		--WHERE p.broker_id IN ('56796','56555') ORDER BY 6,3,2
 
         -- Start Insert process
         INSERT INTO [edw_integration].[producer_hubspot_feed](
