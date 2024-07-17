@@ -112,22 +112,14 @@ BEGIN
 						        THEN CAST(hac.loss_assessment_increase_limit_amt as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Workers Compensation'
 						        THEN CAST(hac.workercompensation_liability_occurance_limit_amt as NVARCHAR(255))
-						    WHEN ic.internal_coverage_cd = 'Dwelling Reconstruction Cost'
-						        THEN CAST(hc.dwelling_limit_amt as NVARCHAR(255))
-						    WHEN (ic.internal_coverage_cd = 'Other')
-						        THEN CAST(hc.other_structures_limit_amt as NVARCHAR(255))
-							WHEN (ic.internal_coverage_cd = 'Other Structures Away Residence Premises')
-						        THEN CAST(hc.other_structures_limit_amt as NVARCHAR(255))
-						    WHEN (ic.internal_coverage_cd = 'Contents Extended')
-						        THEN CAST(hc.contents_limit_amt as NVARCHAR(255))
-							WHEN (ic.internal_coverage_cd = 'Contents Off Premises Loss Exclusion')
-						        THEN CAST(hc.contents_limit_amt as NVARCHAR(255))
-						    WHEN ic.internal_coverage_cd = 'Loss of Use'
-						        THEN CAST(hc.loss_of_use_limit_amt as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Liability Coverage'
 						        THEN CAST(hc.personal_liability_limit_amt as NVARCHAR(255))
-							WHEN ic.internal_coverage_cd = 'Liability Extension'
-						        THEN CAST(hc.personal_liability_limit_amt as NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Deductible Waiver for Large Losses'
+						        THEN CAST(hac.deductible_waiver_large_losses_limit_amt as NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Damage To Property Of Others'
+						        THEN CAST(hac.damage_to_property_of_others_increased_limit_amt as NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Mine Subsidence'
+						        THEN CAST(hac.mine_subsidence_coverage_limit_amt as NVARCHAR(255))
 						    ELSE NULL 
 						END AS [limit],
 						CASE 
@@ -138,7 +130,9 @@ BEGIN
 						    WHEN ic.internal_coverage_cd = 'Earthquake Coverage Extended for Loss Assessment'
 						        THEN CAST(hac.earthquake_coverage_extension_loss_assessment_limit_amt as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Hurricane'
-						        THEN CAST(hc.hurricane_deductible as NVARCHAR(255))
+						        THEN CAST(hc.wind_derived_deductible as NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Wind/Hail'
+						        THEN CAST(hc.wind_derived_deductible as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Wildfire'
 						        THEN CAST(hc.wildfire_deductible AS NVARCHAR(255))
 						    ELSE NULL 
@@ -170,6 +164,81 @@ BEGIN
 						,0.0 as changeAmount
 						,0.0 as currentAmount
 						,CAST(hc.medical_payments_limit_amt as NVARCHAR(255)) as [limit]
+						,'0.0' as deductible
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
+					INNER JOIN edw_core.thome_coverage as hc
+					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
+					UNION ALL
+					SELECT DISTINCT
+						hc.policy_no as policyNumber
+						,'WATERDED' as coverageCd
+						,'Waterdeductible' as coverageDesc
+						,0.0 as changeAmount
+						,0.0 as currentAmount
+						,CAST(hac.waterdamage_sublimit_amt as NVARCHAR(255)) as [limit]
+						,CAST(hc.water_deductible as NVARCHAR(255)) as [deductible]
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
+					INNER JOIN edw_core.thome_coverage as hc ON pt.coverage_sk = hc.home_coverage_sk
+					LEFT JOIN edw_core.thome_additional_coverage as hac ON hc.home_coverage_sk = hac.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
+					UNION ALL
+					SELECT DISTINCT
+						hc.policy_no as policyNumber
+						,'DWELL' as coverageCd
+						,'Dwelling' as coverageDesc
+						,0.0 as changeAmount
+						,0.0 as currentAmount
+						,CAST(hc.dwelling_limit_amt as NVARCHAR(255)) as [limit]
+						,'0.0' as deductible
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
+					INNER JOIN edw_core.thome_coverage as hc
+					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
+					UNION ALL
+					SELECT DISTINCT
+						hc.policy_no as policyNumber
+						,'OS' as coverageCd
+						,'Other Structures' as coverageDesc
+						,0.0 as changeAmount
+						,0.0 as currentAmount
+						,CAST(hc.other_structures_limit_amt as NVARCHAR(255)) as [limit]
+						,'0.0' as deductible
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
+					INNER JOIN edw_core.thome_coverage as hc
+					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
+					UNION ALL
+					SELECT DISTINCT
+						hc.policy_no as policyNumber
+						,'CONTENTS' as coverageCd
+						,'Contents' as coverageDesc
+						,0.0 as changeAmount
+						,0.0 as currentAmount
+						,CAST(hc.contents_limit_amt as NVARCHAR(255)) as [limit]
+						,'0.0' as deductible
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
+					INNER JOIN edw_core.thome_coverage as hc
+					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
+					UNION ALL
+					SELECT DISTINCT
+						hc.policy_no as policyNumber
+						,'LOU' as coverageCd
+						,'Loss of Use' as coverageDesc
+						,0.0 as changeAmount
+						,0.0 as currentAmount
+						,CAST(hc.loss_of_use_limit_amt as NVARCHAR(255)) as [limit]
 						,'0.0' as deductible
 					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
 					INNER JOIN edw_core.thome_coverage as hc
@@ -297,8 +366,8 @@ BEGIN
 			    (
 					SELECT 
 						policyNumber
-						,CONCAT('L', ROW_NUMBER() OVER (PARTITION BY policyNumber, transaction_seq_no ORDER BY policyNumber, transaction_seq_no, (CONCAT(address1, '-', city, '-', [state], '-', RIGHT('00000' + zip, 5), '-', county)))) as location_no
-						,coverageType, coverageCd, coverageTypeDesc, scheduledInd, inVaultInd, classType, [limit], premium, saLimit, hviLimit, address1, address2, city, county, [state], zip, riskType
+						,'L1' as location_no
+						,coverageType, coverageCd, coverageTypeDesc, scheduledInd, inVaultInd, classType, [limit], premium, currentAmount, saLimit, hviLimit, address1, address2, city, county, [state], zip, riskType
 					FROM
 					(
 						SELECT 
@@ -331,6 +400,14 @@ BEGIN
 							,tcct.class_type as classType
 							,floor(tcct.scheduled_limit_amt) as [limit]
 							,pt.premium_amt as premium
+							,(
+                            	SELECT SUM(subpt.annual_premium_amt)
+                            	FROM edw_core.tpolicy_transaction subpt
+                            	WHERE subpt.policy_sk = pt.policy_sk
+                            	AND subpt.effective_dt_sk = pt.effective_dt_sk
+                            	AND subpt.internal_coverage_sk = pt.internal_coverage_sk
+                            	AND subpt.transaction_seq_no <= pt.transaction_seq_no
+                        	) AS currentAmount
 							,0 as saLimit
 							,floor(tcct.scheduled_highest_value_limit_amt) as hviLimit
 							,tcl.address_line_1 as address1
@@ -398,6 +475,14 @@ BEGIN
 							,tcct.class_type as classType
 							,floor(tcct.blanket_limit_amt) as [limit]
 							,pt.premium_amt as premium
+							,(
+                            	SELECT SUM(subpt.annual_premium_amt)
+                            	FROM edw_core.tpolicy_transaction subpt
+                            	WHERE subpt.policy_sk = pt.policy_sk
+                            	AND subpt.effective_dt_sk = pt.effective_dt_sk
+                            	AND subpt.internal_coverage_sk = pt.internal_coverage_sk
+                            	AND subpt.transaction_seq_no <= pt.transaction_seq_no
+                        	) AS currentAmount
 							,floor(tcct.blanket_single_article_limit_amt) as saLimit
 							,floor(tcct.blanket_highest_value_limit_amt) as hviLimit
 							,tcl.address_line_1 as address1
@@ -572,7 +657,7 @@ BEGIN
 			WHEN LOWER(hc.residence_type) = 'tenant' THEN '04'
 			WHEN LOWER(hc.residence_type) = 'homeowners' THEN '05'
 			WHEN LOWER(hc.residence_type) IN (
-				'condominium', 'condminium', 'condo'
+				'condominium', 'condminium', 'condo', 'condo/co-op'
 			) THEN '06'
 			ELSE 'NA'
 			END as [092_PolicyTypeCd]
