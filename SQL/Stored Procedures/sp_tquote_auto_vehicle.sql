@@ -13,6 +13,7 @@ GO
 --05/17/2024     Architha Gudimalla              5. removed join on vehicle_unique_id 
 --05/24/2024     Architha Gudimalla              6. removed join on effective dt in merge 
 --07/10/2024     Alberto Almario                 7. added again vehicle_unique_id 
+--07/16/2024     Architha Gudimalla              8. Corrected row num for vehicle_unique_id 
 -- =================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle]
 AS
@@ -41,8 +42,8 @@ BEGIN
 
 		WITH FinalTable AS (
             SELECT
-                --  ROW_NUMBER() OVER (PARTITION BY PolicyNumber, effectivedate, [UniqueId] ORDER BY [number] DESC) AS RN, 
-                ROW_NUMBER() OVER (PARTITION BY PolicyNumber, [Index]    ORDER BY policychangenumber DESC) AS RN, 
+                ROW_NUMBER() OVER (PARTITION BY PolicyNumber, effectivedate, [UniqueId] ORDER BY [number] DESC) AS RN, 
+                --ROW_NUMBER() OVER (PARTITION BY PolicyNumber, [Index]    ORDER BY policychangenumber DESC) AS RN, 
                 PolicyNumber, EffectiveDate, [Index] as vehicle_no, [UniqueId] as vehicle_unique_id, CreatedDate,
                 [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],
 				[HighPerformanceVehicle],[PurchaseDate],[VinIsInvalid],[VinInvalidMessage],
@@ -52,7 +53,7 @@ BEGIN
             FROM
                 (
                     SELECT
-                        acct.PolicyNumber, acct.EffectiveDate, acct.CreatedDate, acct.policychangenumber,
+                        acct.PolicyNumber, acct.EffectiveDate, acct.CreatedDate, acct.policychangenumber, acct.[number],
                         acctvo.[Index], acctvo.[UniqueId], acctvof.[Field], acctvof.[Value],
                         CASE 
                             WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
