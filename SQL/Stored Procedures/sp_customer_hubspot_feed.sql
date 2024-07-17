@@ -119,7 +119,7 @@ BEGIN
   			,target.[broker_nm] = source.broker_nm
   			,target.[broker_phone_no] = source.broker_phone_no
   			,target.[policy_status] = source.policy_status
-            ,target.[create_ts] = source.create_ts
+            --,target.[create_ts] = source.create_ts
             ,target.[update_ts] = source.update_ts
             ,target.[etl_audit_sk] = source.etl_audit_sk
 		;
