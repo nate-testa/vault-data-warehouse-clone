@@ -367,7 +367,7 @@ BEGIN
 					SELECT 
 						policyNumber
 						,'L1' as location_no
-						,coverageType, coverageCd, coverageTypeDesc, scheduledInd, inVaultInd, classType, [limit], premium, currentAmount, saLimit, hviLimit, address1, address2, city, county, [state], zip, riskType
+						,coverageType, coverageCd, coverageTypeDesc, scheduledInd, inVaultInd, classType, [limit], premium, saLimit, hviLimit, address1, address2, city, county, [state], zip, riskType
 					FROM
 					(
 						SELECT 
@@ -399,7 +399,7 @@ BEGIN
 							,CASE WHEN tcct.class_type = 'Bank Vaulted Jewelry' THEN 1 ELSE 0 END AS inVaultInd
 							,tcct.class_type as classType
 							,floor(tcct.scheduled_limit_amt) as [limit]
-							,pt.premium_amt as premium
+							--,pt.premium_amt as premium
 							,(
                             	SELECT SUM(subpt.annual_premium_amt)
                             	FROM edw_core.tpolicy_transaction subpt
@@ -407,7 +407,7 @@ BEGIN
                             	AND subpt.effective_dt_sk = pt.effective_dt_sk
                             	AND subpt.internal_coverage_sk = pt.internal_coverage_sk
                             	AND subpt.transaction_seq_no <= pt.transaction_seq_no
-                        	) AS currentAmount
+                        	) AS premium
 							,0 as saLimit
 							,floor(tcct.scheduled_highest_value_limit_amt) as hviLimit
 							,tcl.address_line_1 as address1
@@ -474,7 +474,7 @@ BEGIN
 							,0 as inVaultInd
 							,tcct.class_type as classType
 							,floor(tcct.blanket_limit_amt) as [limit]
-							,pt.premium_amt as premium
+							--,pt.premium_amt as premium
 							,(
                             	SELECT SUM(subpt.annual_premium_amt)
                             	FROM edw_core.tpolicy_transaction subpt
@@ -482,7 +482,7 @@ BEGIN
                             	AND subpt.effective_dt_sk = pt.effective_dt_sk
                             	AND subpt.internal_coverage_sk = pt.internal_coverage_sk
                             	AND subpt.transaction_seq_no <= pt.transaction_seq_no
-                        	) AS currentAmount
+                        	) AS premium
 							,floor(tcct.blanket_single_article_limit_amt) as saLimit
 							,floor(tcct.blanket_highest_value_limit_amt) as hviLimit
 							,tcl.address_line_1 as address1
