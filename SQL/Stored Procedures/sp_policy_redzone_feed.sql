@@ -1,14 +1,12 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- =============================================
--- Author:		Alberto Almario
--- Create Date: 2024-07-17
--- Description: This stored procedure insert info related to policy_redzone_feed.
--- =============================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_redzone_feed]
+-- =================================================================================================
+-- Description: This stored procedure insert info related to policy_redzone_feed
+---------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 07/17/23		Alberto Almario					1. Created this procedure
+-- 07/18/23		Architha Gudimalla				2. Made changes to fix the errors on first run  
+-- ================================================================================================= 
+CREATE OR ALTER   PROCEDURE [edw_core].[sp_policy_redzone_feed]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -38,7 +36,7 @@ BEGIN
 
         --HO Data
         SELECT	 
-            '' as unique_id, 
+            pol.policy_no as unique_id, 
             pol.policy_no, 
             pr.product_nm, 		
             loc.[latitude], 
@@ -78,9 +76,9 @@ BEGIN
         INNER JOIN edw_core.tproduct AS pr ON summ.product_sk = pr.product_sk		
         INNER JOIN edw_core.tbroker AS br ON summ.broker_sk = br.broker_sk		
         LEFT JOIN edw_core.tpolicy_insured AS ins ON summ.policy_history_sk = ins.policy_history_sk AND ins.primary_insured_in = 'Yes'		
-        WHERE pr.product_cd = 'HO'
+        WHERE pr.product_cd in ('HO','CO')
         AND td.yearmonth = (select max(yearmonth) from edw_core.tdate where actual_dt < cast(getdate() as date))
-        ;
+        ; 
 
 
         --Collection Data
@@ -94,14 +92,14 @@ BEGIN
                 INNER JOIN edw_core.tdate AS td ON td.date_sk = summ.month_sk
                 INNER JOIN edw_core.tproduct AS pr ON summ.product_sk = pr.product_sk
                 INNER JOIN edw_core.tcollection_class_type AS ct ON ct.collection_class_type_sk = summ.collection_class_type_sk
-                WHERE pr.product_cd = 'LUX'
-                AND summ.collection_class_type_sk <> 0
+                WHERE pr.product_cd = 'LUX' and
+                 summ.collection_class_type_sk <> 0
                 AND td.yearmonth = (select max(yearmonth) from edw_core.tdate where actual_dt < cast(getdate() as date))
                 GROUP BY summ.policy_sk, summ.item_sk, summ.policy_history_sk, summ.broker_sk, pr.product_nm
             )
 
         SELECT 
-            '' as unique_id,
+            pol.policy_no as unique_id,
             pol.policy_no,
             coll_limit.product_nm,
             loc.[latitude],
@@ -143,11 +141,10 @@ BEGIN
             UNION ALL
             SELECT * FROM [edw_temp].[policy_redzone_feed_temp2]
         ) AS tbl
-        ;
-
+        ; 
 
         -- Delete target table
-        DELETE FROM [edw_integration].[policy_redzone_feed];
+        TRUNCATE TABLE [edw_integration].[policy_redzone_feed];
 
         -- Start Insert process
         INSERT INTO [edw_integration].[policy_redzone_feed](
@@ -213,7 +210,7 @@ BEGIN
 
 		
 		-- Update control table
-        SET @new_last_source_extract_ts=COALESCE(dateadd("dd",-1, getdate()),@last_source_extract_ts);
+        SET @new_last_source_extract_ts=COALESCE(dateadd("dd",-1, cast(getdate() as date)),@last_source_extract_ts);
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
