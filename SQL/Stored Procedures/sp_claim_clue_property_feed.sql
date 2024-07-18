@@ -43,7 +43,7 @@ BEGIN
                 LEFT(TRIM(SUBSTRING(address_line_1, PATINDEX('%[^0-9]%', address_line_1), 30)),20) as address_line_1, 
                 address_line_2, 
                 SUBSTRING(address_line_1, 1, PATINDEX('%[^0-9]%', address_line_1 + 'x') - 1) as home_no, 
-                unit_no, city_nm, state_cd, zip_cd 
+                unit_no, city_nm, state_cd, LEFT(zip_cd,5) as zip_cd
             FROM edw_core.tpel_location
                 UNION
             SELECT 
@@ -51,7 +51,7 @@ BEGIN
                 LEFT(TRIM(SUBSTRING(address_line_1, PATINDEX('%[^0-9]%', address_line_1), 30)),20) as address_line_1, 
                 address_line_2, 
                 SUBSTRING(address_line_1, 1, PATINDEX('%[^0-9]%', address_line_1 + 'x') - 1) as home_no, 
-                unit_no, city_nm, state_cd, zip_cd
+                unit_no, city_nm, state_cd, LEFT(zip_cd,5) as zip_cd
             FROM edw_core.thome_location
                 UNION
             SELECT 
@@ -59,7 +59,7 @@ BEGIN
                 LEFT(TRIM(SUBSTRING(address_line_1, PATINDEX('%[^0-9]%', address_line_1), 30)),20) as address_line_1, 
                 address_line_2, 
                 SUBSTRING(address_line_1, 1, PATINDEX('%[^0-9]%', address_line_1 + 'x') - 1) as home_no, 
-                unit_no, city_nm, state_cd, zip_cd
+                unit_no, city_nm, state_cd, LEFT(zip_cd,5) as zip_cd
             FROM edw_core.tcollection_location
         )
         ,mortagee AS (
