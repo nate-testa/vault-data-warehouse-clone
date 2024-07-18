@@ -35,12 +35,12 @@ BEGIN
         with quote_collection_class_type as
         (
         select
-        quote_no,		
+        quote_history_sk,
         sum(blanket_limit_amt) as total_blanket_limit_amt,
         sum(scheduled_limit_amt) as total_scheduled_limit_amt
         from
         edw_core.tquote_collection_class_type
-        group by quote_no
+        group by quote_history_sk
         )
 
         select
@@ -104,8 +104,8 @@ BEGIN
 
         from edw_core.tquote q
         inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
-        inner join edw_core.tquote_history h on h.quote_sk = q.quote_sk and h.latest_transaction_in = 'Y'	
-        left join edw_core.tquote_insured i	on i.quote_history_sk = h.quote_history_sk and h.latest_transaction_in = 'Y' and i.primary_insured_in = 'Yes'
+        inner join edw_core.tquote_history h on h.quote_sk = q.quote_sk
+        left join edw_core.tquote_insured i	on i.quote_history_sk = h.quote_history_sk and i.primary_insured_in = 'Yes'
         left join edw_core.tcustomer cust on cust.customer_id = q.customer_id
         left join edw_core.tbroker br on br.broker_id = q.broker_id
         left join edw_core.tbroker_vault_team bvt on br.broker_id = bvt.broker_id and bvt.product_nm = pr.product_nm
@@ -113,12 +113,11 @@ BEGIN
         and  isnull(bvt.state_cd,q.risk_state_cd)=q.risk_state_cd
         left join edw_core.tquote_home_location tqhl on tqhl.quote_no = q.quote_no
         left join edw_core.tquote_collection_location tqcl on tqcl.quote_no = q.quote_no
-        left join edw_core.tquote_pel_location tqpl on tqpl.quote_no = q.quote_no and tqpl.effective_dt = q.effective_dt
-        and tqpl.transaction_seq_no = h.transaction_seq_no and tqpl.primary_location_in = 'Yes'
+        left join edw_core.tquote_pel_location tqpl on tqpl.quote_no =  q.quote_no and tqpl.effective_dt = q.effective_dt and tqpl.primary_location_in = 'Yes'
         left join edw_core.tquote_home_coverage tqhc on tqhc.quote_history_sk=h.quote_history_sk
         left join edw_core.tquote_auto_policy_coverage tqapc on tqapc.quote_history_sk=h.quote_history_sk
         left join edw_core.tquote_pel_coverage tqpc on tqpc.quote_history_sk=h.quote_history_sk
-        left join quote_collection_class_type as tcct on tcct.quote_no = q.quote_no
+        left join quote_collection_class_type as tcct on tcct.quote_history_sk = h.quote_history_sk
 
         where  h.latest_transaction_in = 'Y'
 		and greatest(q.create_ts,q.update_ts) > @last_source_extract_ts
@@ -127,7 +126,7 @@ BEGIN
 		MERGE INTO [edw_integration].[quote_hubspot_feed] AS target
         USING [edw_temp].[quote_hubspot_feed_temp1] AS source on target.quote_no = source.quote_no
         WHEN NOT MATCHED BY Target THEN
-        insert
+        INSERT
         (
             quote_no , effective_dt ,expiration_dt , transaction_type , broker_id , broker_nm ,broker_tier ,national_agency_in, bdm_nm, 
             vip_in, insured_first_nm, insured_last_nm, underwriter_nm, uw_company_nm ,risk_address_line_1 , risk_address_line_2 ,risk_city_nm ,
@@ -148,8 +147,7 @@ BEGIN
             getdate(), getdate(), @etl_audit_sk 
         )
         WHEN MATCHED THEN UPDATE
-        SET
-        [target].quote_no	=	[source].quote_no,
+        SET        
         [target].effective_dt	=	[source].effective_dt,
         [target].expiration_dt	=	[source].expiration_dt,
         [target].transaction_type	=	[source].transaction_type,
