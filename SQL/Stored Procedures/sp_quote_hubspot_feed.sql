@@ -44,7 +44,7 @@ BEGIN
         )
 
         select
-        q.quote_no,q.effective_dt,q.expiration_dt,h.transaction_type,
+        q.quote_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,
         br.broker_id, br.broker_nm, br.broker_tier, br.national_agency_in,
         bvt.team_member_nm as bdm_nm,cust.vip_in,i.first_nm as insured_first_nm, i.last_nm as insured_last_nm,
         h.underwriter_nm, q.uw_company_nm,
@@ -113,7 +113,7 @@ BEGIN
         and  isnull(bvt.state_cd,q.risk_state_cd)=q.risk_state_cd
         left join edw_core.tquote_home_location tqhl on tqhl.quote_no = q.quote_no
         left join edw_core.tquote_collection_location tqcl on tqcl.quote_no = q.quote_no
-        left join edw_core.tquote_pel_location tqpl on tqpl.quote_no =  q.quote_no and tqpl.effective_dt = q.effective_dt and tqpl.primary_location_in = 'Yes'
+        left join edw_core.tquote_pel_location tqpl on tqpl.quote_history_sk = h.quote_history_sk and tqpl.primary_location_in = 'Yes'
         left join edw_core.tquote_home_coverage tqhc on tqhc.quote_history_sk=h.quote_history_sk
         left join edw_core.tquote_auto_policy_coverage tqapc on tqapc.quote_history_sk=h.quote_history_sk
         left join edw_core.tquote_pel_coverage tqpc on tqpc.quote_history_sk=h.quote_history_sk
@@ -133,7 +133,7 @@ BEGIN
             risk_state_cd ,risk_zip_cd , premium_amt, quote_status , claim_ct , note_desc , recampaign_in , rol_on_lost_business, 
             lost_company , reason_quote_not_taken, construction , dwelling_limit_amt ,contents_limit_amt , other_structures_limit_amt , 
             loss_of_use_limit_amt, total_insured_value_amt ,roof_covering , roof_updated_year , insurance_score , 
-            auto_liability_limit_amt, pel_limit_amt, collections_coverage_type, total_blanket_limit_amt , total_scheduled_limit_amt ,
+            auto_liability_limit_amt, pel_limit_amt, collections_coverage_type, total_blanket_limit_amt , total_scheduled_limit_amt ,producer_nm,
             create_ts, update_ts ,etl_audit_sk 
         )
         VALUES
@@ -143,7 +143,7 @@ BEGIN
             risk_state_cd ,risk_zip_cd , premium_amt, quote_status , claim_ct , note_desc , recampaign_in , rol_on_lost_business, 
             lost_company , reason_quote_not_taken, construction , dwelling_limit_amt ,contents_limit_amt , other_structures_limit_amt , 
             loss_of_use_limit_amt, total_insured_value_amt ,roof_covering , roof_updated_year , insurance_score , 
-            auto_liability_limit_amt, pel_limit_amt, collections_coverage_type, total_blanket_limit_amt , total_scheduled_limit_amt ,
+            auto_liability_limit_amt, pel_limit_amt, collections_coverage_type, total_blanket_limit_amt , total_scheduled_limit_amt ,producer_nm,
             getdate(), getdate(), @etl_audit_sk 
         )
         WHEN MATCHED THEN UPDATE
@@ -188,6 +188,7 @@ BEGIN
         [target].collections_coverage_type	=	[source].collections_coverage_type,
         [target].total_blanket_limit_amt	=	[source].total_blanket_limit_amt,
         [target].total_scheduled_limit_amt	=	[source].total_scheduled_limit_amt,
+        [target].producer_nm =   [source].producer_nm,
         [target].update_ts	=	GETDATE(),
         [target].etl_audit_sk	=	@etl_audit_sk;
         
