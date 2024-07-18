@@ -20,6 +20,7 @@ GO
 -- 02/07/24		Architha Gudimalla				 9. Added annual net prm
 -- 03/26/24		Architha Gudimalla				10. Added collection_class_type_sk
 -- 07/03/24		Yunus Mohammed					11. Added policy_history_sk
+-- 07/18/24		Architha Gudimalla				12. Updated logic for @last_source_extract_ts
 -- ========================================================================================================================================= 
 
 create or ALTER  PROCEDURE [edw_core].[sp_tinternal_coverage_summary]
@@ -66,8 +67,8 @@ BEGIN
 		union 
 		select	yearmonth, max(calendar_year) year 
 		from	edw_core.tdate
-		where	actual_dt >  case when @in_month_end_dt is not null then @in_month_end_dt else @last_source_extract_ts end
-		  and   actual_dt <= case when @in_month_end_dt is not null then @in_month_end_dt else getdate() end
+		where	actual_dt >= case when @in_month_end_dt is not null then @in_month_end_dt else @last_source_extract_ts end
+		  and   actual_dt <  case when @in_month_end_dt is not null then @in_month_end_dt else cast(getdate() as date) end
 		group by yearmonth
 		order by 1;   
 

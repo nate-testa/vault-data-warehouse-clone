@@ -12,6 +12,7 @@
 -- 03/26/24		Architha Gudimalla				6. Added collection_class_type_sk
 -- 03/26/24		Architha Gudimalla				7. For coll, added filter on class_deleted_in
 -- 07/03/24		Yunus Mohammed					8. Added policy_history_sk
+-- 07/18/24		Architha Gudimalla				9. Updated logic for @last_source_extract_ts
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tinternal_coverage_inforce]
@@ -42,8 +43,8 @@ BEGIN
 		union 
 		select	yearmonth, max(calendar_year) year, max(date_sk) date_sk, max(actual_dt) actual_dt 
 		from	edw_core.tdate
-		where	actual_dt >  case when @in_inforce_dt is not null then @in_inforce_dt else @last_source_extract_ts end
-		  and   actual_dt <= case when @in_inforce_dt is not null then @in_inforce_dt else getdate() end
+		where	actual_dt >= case when @in_inforce_dt is not null then @in_inforce_dt else @last_source_extract_ts end
+		  and   actual_dt <  case when @in_inforce_dt is not null then @in_inforce_dt else cast(getdate() as date) end
 		group by yearmonth
 		order by 1;  
 
