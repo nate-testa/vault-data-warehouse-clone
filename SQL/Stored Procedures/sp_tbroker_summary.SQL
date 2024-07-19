@@ -39,6 +39,7 @@ GO
 -- 06/12/24		Architha Gudimalla				25. Added
 --													prior_mtd_net_premium_amt
 --													mtd_net_premium_amt 
+-- 07/18/24		Architha Gudimalla				26. Updated logic for @last_source_extract_ts
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -100,8 +101,8 @@ BEGIN
 		union 
 		select	yearmonth, max(calendar_year) year 
 		from	edw_core.tdate
-		where	actual_dt >  case when @in_end_dt is not null then @in_end_dt else @last_source_extract_ts end
-		  and   actual_dt <= case when @in_end_dt is not null then @in_end_dt else getdate() end
+		where	actual_dt >=  case when @in_end_dt is not null then @in_end_dt else @last_source_extract_ts end
+		  and   actual_dt < case when @in_end_dt is not null then @in_end_dt else cast(getdate() as date) end
 		group by yearmonth
 		order by 1;  
 		
@@ -221,7 +222,7 @@ BEGIN
 				BEGIN  
 						select 	@end_dt = max(actual_dt) , @end_dt_sk = max(date_sk) 
 						from edw_core.tdate
-						where yearmonth = @yearmonth and actual_dt <= cast(getdate() as date); 
+						where yearmonth = @yearmonth and actual_dt < cast(getdate() as date); 
 				END   
 				
 

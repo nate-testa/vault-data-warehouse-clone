@@ -6,6 +6,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 06/22/23		Architha Gudimalla				1. Created this procedure 
 -- 10/17/23		Architha Gudimalla				2. Removed group by on source system 
+-- 07/18/24		Architha Gudimalla				3. Updated logic for @last_source_extract_ts
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcustomer_summary] 
@@ -35,9 +36,9 @@ BEGIN
 		group by yearmonth
 		union 
 		select	yearmonth, max(calendar_year) year, max(date_sk), max(actual_dt)
-		from	edw_core.tdate
-		where	actual_dt >  case when 	@in_end_dt is not null then @in_end_dt else @last_source_extract_ts end
-		  and   actual_dt <= case when 	@in_end_dt is not null then @in_end_dt else getdate() end
+		from	edw_core.tdate 
+		where	actual_dt >= case when @in_end_dt is not null then @in_end_dt else @last_source_extract_ts end
+		  and   actual_dt <  case when @in_end_dt is not null then @in_end_dt else cast(getdate() as date) end
 		group by yearmonth
 		order by 1;  
 	

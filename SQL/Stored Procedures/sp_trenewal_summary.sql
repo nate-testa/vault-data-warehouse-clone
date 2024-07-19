@@ -35,6 +35,7 @@ GO
 -- 05/15/24		Architha Gudimalla				20. Added new cols - VI-31715
 -- 06/04/24		Architha Gudimalla				21. Added CTE for quotes, soeme policies up for renewal have renewal quotes with same pol no and also as a cancel rewrite
 --												    Olivia wants to prioritize the same pol no quote instead of cancel rewrite
+-- 07/18/24		Architha Gudimalla				22. Updated logic for @last_source_extract_ts
 -- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -97,12 +98,10 @@ BEGIN
 		union 
 		select	yearmonth
 		from	edw_core.tdate
-		where	yearmonth >  case when @in_yearmonth is null then @last_source_yearmonth end
-		  and   yearmonth <= case when @in_yearmonth is null then concat(datepart(yyyy,getdate()),iif(datepart(mm,getdate()) < 10,'0','') ,datepart(mm,getdate()) ) end
+		where	yearmonth >=  case when @in_yearmonth is null then @last_source_yearmonth end
+		  and   yearmonth < case when @in_yearmonth is null then concat(datepart(yyyy,getdate()),iif(datepart(mm,getdate()) < 10,'0','') ,datepart(mm,getdate()) ) end
 		group by yearmonth
-		order by 1; 
-
-		print 'aa'   
+		order by 1;  
 
 		DECLARE @parameter_desc VARCHAR(255) 
 
