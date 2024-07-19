@@ -7,7 +7,7 @@
 -- 17/07/24		Hernando Gonzalez			1. Created this procedure 
 -- ================================================================================================= 
 
-CREATE OR ALTER PROCEDURE [edw_core].[producer_hubspot_feed]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_producer_hubspot_feed]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
