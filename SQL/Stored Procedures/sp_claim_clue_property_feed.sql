@@ -44,14 +44,6 @@ BEGIN
                 address_line_2, 
                 SUBSTRING(address_line_1, 1, PATINDEX('%[^0-9]%', address_line_1 + 'x') - 1) as home_no, 
                 unit_no, city_nm, state_cd, LEFT(zip_cd,5) as zip_cd
-            FROM edw_core.tpel_location
-                UNION
-            SELECT 
-                policy_no, 
-                LEFT(TRIM(SUBSTRING(address_line_1, PATINDEX('%[^0-9]%', address_line_1), 30)),20) as address_line_1, 
-                address_line_2, 
-                SUBSTRING(address_line_1, 1, PATINDEX('%[^0-9]%', address_line_1 + 'x') - 1) as home_no, 
-                unit_no, city_nm, state_cd, LEFT(zip_cd,5) as zip_cd
             FROM edw_core.thome_location
                 UNION
             SELECT 
@@ -273,7 +265,7 @@ BEGIN
         LEFT JOIN mortagee AS m ON m.policy_no = c.policy_no 
         LEFT JOIN location_address AS la ON c.policy_no = la.policy_no
         LEFT JOIN policy_insured_2 AS pi2 ON c.policy_no = pi2.policy_no
-        WHERE p.product_cd IN ('HO','CO','LUX','PEL')
+        WHERE p.product_cd IN ('HO','CO','LUX')
         ;
 
         --Create empty temp table to allow nulls
