@@ -39,6 +39,14 @@ BEGIN
         WITH 
         location_address AS (
             SELECT 
+                policy_no,
+                LEFT(TRIM(address_nm),20) as address_line_1,
+                '' as address_line_2,
+                home_no, 
+                unit_no, city_nm, state_cd, LEFT(zip_cd,5) as zip_cd
+            FROM edw_stage.OneShieldPolicy_clue
+                UNION
+            SELECT 
                 policy_no, 
                 LEFT(TRIM(SUBSTRING(address_line_1, PATINDEX('%[^0-9]%', address_line_1), 30)),20) as address_line_1, 
                 address_line_2, 
@@ -263,7 +271,7 @@ BEGIN
         LEFT JOIN edw_core.tcause_of_loss AS cof ON cof.cause_of_loss_sk = c.cause_of_loss_sk
         LEFT JOIN edw_core.tcatastrophe AS cat ON cat.catastrophe_sk=c.catastrophe_sk
         LEFT JOIN mortagee AS m ON m.policy_no = c.policy_no 
-        LEFT JOIN location_address AS la ON c.policy_no = la.policy_no
+        INNER JOIN location_address AS la ON c.policy_no = la.policy_no
         LEFT JOIN policy_insured_2 AS pi2 ON c.policy_no = pi2.policy_no
         WHERE p.product_cd IN ('HO','CO','LUX')
         ;
