@@ -1,4 +1,4 @@
-CREATE TABLE [edw_stage].[policy_workday_written_premium_feed](
+CREATE TABLE [edw_stage].[policy_workday_written_premium_reported](
 [accounting_date] [date] NOT NULL,
 [policy_image_id] [int] NULL,
 [policy_image_identifier_id] [varchar](255) NULL,
