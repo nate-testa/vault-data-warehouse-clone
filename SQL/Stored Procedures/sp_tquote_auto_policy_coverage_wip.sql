@@ -11,6 +11,7 @@ GO
 -- 05/08/24		    Architha Gudimalla				2. Updated @last_source_extract_ts
 -- 05/14/24		    Architha Gudimalla				3. Corrected errors
 -- 07/10/24         Yunus Mohammed                  4. Removed rater_pip_discount
+-- 07/25/24         Tuba Mohsin                     5. Added New coverage EnhancedUIM
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage_wip]
@@ -53,7 +54,7 @@ BEGIN
             [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
             [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied],
 			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay], 
-                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice]
+                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM]
 		
         INTO [edw_temp].[tquote_auto_policy_coverage_wip_temp1]
 		
@@ -105,7 +106,7 @@ BEGIN
                     [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
                     [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], 
                     [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay], 
-                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice]
+                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM]
                 )
 			) pivottable
 
@@ -260,7 +261,8 @@ BEGIN
                 target.permissive_driver_unique_combined_single_limit_amt = source.PermissiveDriverUniqueCombinedSingleLimit,
                 target.permissive_driver_unique_bi_limit_amt = source.PermissiveDriverUniqueBILimit,
                 target.permissive_driver_unique_pd_limit_amt = source.PermissiveDriverUniquePDLimit,
-                target.emergency_extension_notice_in = source.EmergencyExtensionNotice
+                target.emergency_extension_notice_in = source.EmergencyExtensionNotice,
+                target.enhanced_underinsured_motorist_coverage_in = source.EnhancedUIM
         WHEN NOT MATCHED THEN
             INSERT (
                 quote_no,
@@ -372,7 +374,8 @@ BEGIN
                 permissive_driver_unique_combined_single_limit_amt,
                 permissive_driver_unique_bi_limit_amt,
                 permissive_driver_unique_pd_limit_amt,
-                emergency_extension_notice_in
+                emergency_extension_notice_in,
+                enhanced_underinsured_motorist_coverage_in
             )
             VALUES (
                 source.quote_no,
@@ -484,7 +487,8 @@ BEGIN
                 source.PermissiveDriverUniqueCombinedSingleLimit,
                 source.PermissiveDriverUniqueBILimit,
                 source.PermissiveDriverUniquePDLimit,
-                source.EmergencyExtensionNotice
+                source.EmergencyExtensionNotice,
+                source.EnhancedUIM
             );
 
 
