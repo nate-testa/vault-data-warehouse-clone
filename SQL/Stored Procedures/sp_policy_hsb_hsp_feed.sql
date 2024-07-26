@@ -3,7 +3,7 @@
 -- Create Date: 2023-08-30
 -- Description: This procedures insert and update info related to HSB - HSP
 -- =============================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_hsb_hsp_feed]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_hsb_hsp_feed]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -22,7 +22,7 @@ BEGIN
 		DECLARE @parameter_desc VARCHAR(255)
 		-- Get last source extract date
 		SELECT @last_source_extract_ts = CASE 
-                                            WHEN edw_core.fn_get_last_source_extract_ts(@process_nm) < '2020-01-01 00:00:00' THEN '2020-01-01 00:00:00'
+                                            WHEN edw_core.fn_get_last_source_extract_ts(@process_nm) < '2020-01-01 00:00:00' THEN '2024-05-31 00:00:00'
                                             ELSE edw_core.fn_get_last_source_extract_ts(@process_nm)
                                          END;
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;
@@ -49,13 +49,18 @@ BEGIN
 
         -- Create tmp table for last day of months
         SELECT * INTO #LastDaysOfMonthTmpTbl 
-        FROM LastDaysOfMonthCTE OPTION (MAXRECURSION 0);
+        FROM LastDaysOfMonthCTE OPTION (MAXRECURSION 200);-- Allow a maximum of 200 recursions for the CTE.
 
         DECLARE @CurrentLastDayOfMonth DATE;
 
         -- Declare the cursor
         DECLARE LastDaysCursor CURSOR FOR
-        SELECT LastDayOfMonth FROM #LastDaysOfMonthTmpTbl;
+        SELECT LastDayOfMonth FROM #LastDaysOfMonthTmpTbl ORDER BY LastDayOfMonth ASC;
+
+        --Drop and Create the temp2 table. This will store the last reporting_date and row_count for every iteration in the cursor.
+        DROP TABLE IF EXISTS [edw_temp].[policy_hsb_hsp_feed_temp2];
+        SELECT * INTO [edw_temp].[policy_hsb_hsp_feed_temp2] FROM (SELECT @last_source_extract_ts AS reporting_date, 0 AS row_count) AS t;
+
 
         -- Open the cursor
         OPEN LastDaysCursor;
@@ -64,7 +69,7 @@ BEGIN
         BEGIN
 
             -- Step1 limit amount of rows.
-            DROP TABLE IF EXISTS [edw_temp].[tpolicy_hsb_hsp_feed_temp1];
+            DROP TABLE IF EXISTS [edw_temp].[policy_hsb_hsp_feed_temp1];
             SELECT 
                 p.inforce_dt as reporting_date,
                 CASE 
@@ -144,7 +149,7 @@ BEGIN
                 getdate() as create_ts,
                 getdate() as update_ts,
                 @etl_audit_sk as etl_audit_sk
-            INTO [edw_temp].[tpolicy_hsb_hsp_feed_temp1] 
+            INTO [edw_temp].[policy_hsb_hsp_feed_temp1] 
             FROM 
                 (
                     select p.*, d.actual_dt as inforce_dt
@@ -157,11 +162,11 @@ BEGIN
             INNER JOIN
                 (
                     select 
-                        pt.policy_sk, d.actual_dt as effective_dt, SUM(pt.net_premium_amt) as net_premium_amt, SUM(pt.ceded_premium_amt) as ceded_premium_amt
+                        pt.policy_sk, d.actual_dt as effective_dt, SUM(pt.annual_premium_amt) as net_premium_amt, SUM(pt.ceded_premium_amt) as ceded_premium_amt
                     from edw_core.tpolicy_transaction as pt
                     inner join edw_core.tdate d on pt.effective_dt_sk = d.date_sk
                     inner join edw_core.tinternal_coverage as ic on pt.internal_coverage_sk = ic.internal_coverage_sk
-                    where ic.internal_coverage_cd in ('System Protection', 'Systems Protection')
+                    -- where ic.internal_coverage_cd in ('System Protection', 'Systems Protection')
                     group by pt.policy_sk, d.actual_dt
                 ) AS pt 
                 ON pt.policy_sk = p.policy_sk
@@ -304,7 +309,12 @@ BEGIN
                 create_ts,
                 update_ts,
                 etl_audit_sk
-            FROM [edw_temp].[tpolicy_hsb_hsp_feed_temp1];
+            FROM [edw_temp].[policy_hsb_hsp_feed_temp1];
+
+            --Insert max_date and row_count
+            INSERT INTO [edw_temp].[policy_hsb_hsp_feed_temp2]
+            SELECT MAX(reporting_date) AS reporting_date, COUNT(1) AS row_count  FROM [edw_temp].[policy_hsb_hsp_feed_temp1]
+            ;
 
             FETCH NEXT FROM LastDaysCursor INTO @CurrentLastDayOfMonth;
             
@@ -318,11 +328,12 @@ BEGIN
         -- CLOSE CURSOR TO ITERATE EVERY MONTH TO PROCESS --
         ----------------------------------------------------
 
-		SET @rows_affected=@@ROWCOUNT;
+		SET @rows_affected = (SELECT SUM(row_count) AS row_count FROM [edw_temp].[policy_hsb_hsp_feed_temp2]);
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.reporting_date) FROM [edw_temp].[tpolicy_hsb_hsp_feed_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t2.reporting_date) FROM [edw_temp].[policy_hsb_hsp_feed_temp2] t2),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS [edw_temp].[tpolicy_hsb_hsp_feed_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[policy_hsb_hsp_feed_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[policy_hsb_hsp_feed_temp2];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;

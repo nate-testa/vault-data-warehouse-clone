@@ -44,6 +44,7 @@ QRY_HCP = f"""
         CAST([home_business] AS NVARCHAR) AS 'Home Business',
         CAST([previous_policy_number] AS NVARCHAR) AS 'Previous Policy Number'
     FROM [edw_integration].[policy_hsb_cyber_feed]
+    WHERE reporting_date = (select max(reporting_date) AS max_reporting_date from [edw_integration].[policy_hsb_cyber_feed])
 """
 QRY_HSP = f"""
     SELECT 
@@ -92,6 +93,7 @@ QRY_HSP = f"""
         CAST([agent_code] AS NVARCHAR) AS 'Agent_Code',
         CAST([branch_code] AS NVARCHAR) AS 'Branch_Code'
     FROM [edw_integration].[policy_hsb_hsp_feed]
+    WHERE reporting_date = (select max(reporting_date) AS max_reporting_date from [edw_integration].[policy_hsb_hsp_feed])
 """
 QRY_SLC = f"""
     SELECT 
@@ -140,6 +142,7 @@ QRY_SLC = f"""
         CAST([agent_code] AS NVARCHAR) AS 'Agent_Code',
         CAST([branch_code] AS NVARCHAR) AS 'Branch_Code'
     FROM [edw_integration].[policy_hsb_slc_feed]
+    WHERE reporting_date = (select max(reporting_date) AS max_reporting_date from [edw_integration].[policy_hsb_slc_feed])
 """
 
 
