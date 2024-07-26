@@ -40,6 +40,7 @@ GO
 --													prior_mtd_net_premium_amt
 --													mtd_net_premium_amt 
 -- 07/18/24		Architha Gudimalla				26. Updated logic for @last_source_extract_ts
+-- 07/26/24		Architha Gudimalla				27. Added changes for hubspot
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -89,6 +90,12 @@ BEGIN
 		DECLARE @yearmonth INT  
 		DECLARE @prior_quarter VARCHAR(255) 
 		DECLARE @quarter VARCHAR(255)  
+		DECLARE @prior_year_two_month_end_dt_sk INT
+		DECLARE @prior_year_two_month_end_dt DATETIME 
+		DECLARE @prior_two_year INT 
+		DECLARE @prior_year_five_month_end_dt_sk INT
+		DECLARE @prior_year_five_month_end_dt DATETIME 
+		DECLARE @prior_five_year INT 
 	
 		DECLARE @parameter_desc VARCHAR(255)  
 		
@@ -211,11 +218,53 @@ BEGIN
 					set	@prior_three_year = datepart(yyyy,@prior_year_three_month_end_dt) 
 				end;
 
+				select 	@prior_year_two_month_end_dt_sk = date_sk ,
+						@prior_year_two_month_end_dt = actual_dt,
+						@prior_two_year = calendar_year
+				from edw_core.tdate
+				where actual_Dt = dateadd(year,-2,@end_dt);
+
+				--need to do this because tdate only has data from 2017
+				if @prior_year_two_month_end_dt_sk is null 
+				begin
+					set @prior_year_two_month_end_dt_sk = 0
+					set @prior_year_two_month_end_dt = dateadd(year,-2,@end_dt)
+					set	@prior_two_year = datepart(yyyy,@prior_year_two_month_end_dt) 
+				end;
+
+				select 	@prior_year_five_month_end_dt_sk = date_sk ,
+						@prior_year_five_month_end_dt = actual_dt,
+						@prior_five_year = calendar_year
+				from edw_core.tdate
+				where actual_Dt = dateadd(year,-5,@end_dt);
+
+				--need to do this because tdate only has data from 2017
+				if @prior_year_five_month_end_dt_sk is null 
+				begin
+					set @prior_year_five_month_end_dt_sk = 0
+					set @prior_year_five_month_end_dt = dateadd(year,-5,@end_dt)
+					set	@prior_five_year = datepart(yyyy,@prior_year_five_month_end_dt) 
+				end;
+
 				--if prior year is a leap year, add one day to month end data to change it to 2/29 instead of 2/28
 				if @prior_three_year%4 = 0 and datepart(mm,@prior_year_three_month_end_dt) = 2
 				begin
 					set @prior_year_three_month_end_dt_sk = @prior_year_three_month_end_dt_sk + 1
 					set @prior_year_three_month_end_dt = dateadd(dd,+1,@prior_year_three_month_end_dt)
+				end 				
+
+				--if prior year is a leap year, add one day to month end data to change it to 2/29 instead of 2/28
+				if @prior_two_year%4 = 0 and datepart(mm,@prior_year_two_month_end_dt) = 2
+				begin
+					set @prior_year_two_month_end_dt_sk = @prior_year_two_month_end_dt_sk + 1
+					set @prior_year_two_month_end_dt = dateadd(dd,+1,@prior_year_two_month_end_dt)
+				end				
+
+				--if prior year is a leap year, add one day to month end data to change it to 2/29 instead of 2/28
+				if @prior_five_year%4 = 0 and datepart(mm,@prior_year_five_month_end_dt) = 2
+				begin
+					set @prior_year_five_month_end_dt_sk = @prior_year_five_month_end_dt_sk + 1
+					set @prior_year_five_month_end_dt = dateadd(dd,+1,@prior_year_five_month_end_dt)
 				end
 				
 				 IF @yearmonth = concat(datepart(yyyy,getdate()),iif(datepart(mm,getdate()) < 10,'0','') ,datepart(mm,getdate()) )
@@ -242,6 +291,9 @@ BEGIN
 							count(distinct case when CAST(q.quote_create_ts AS DATE) between @prior_year_month_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_mtd_submission_ct, 
 							count(distinct case when CAST(q.quote_create_ts AS DATE) between 		 	  @month_begin_dt and 				   @end_dt then q.quote_sk end) 	  mtd_submission_ct, 
 							--
+							count(distinct case when CAST(q.quote_create_ts AS DATE) between 	dateadd("dd",-30,@end_dt) and 				   @end_dt then q.quote_sk end) 	  last30_days_submission_ct, 
+							count(distinct case when CAST(q.quote_create_ts AS DATE)  <= @end_dt and q.quote_status not in ('Declined','Issued','Not taken') then q.quote_sk end) 	  open_submission_ct, 							
+							--
 							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 		@prior_year_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_ytd_quote_ct, 
 							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 			  @year_begin_dt and 				  @end_dt then q.quote_sk end) 		 ytd_quote_ct, 
 							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 	 @prior_quarter_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_qtd_quote_ct, 
@@ -257,7 +309,15 @@ BEGIN
 							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 			  @month_begin_dt and 				   @end_dt 	then qh.net_premium_amt end)		mtd_quote_net_premium_amt, 
 							--
 							max(CAST(q.first_offered_quote_ts AS DATE)) max_quoted_dt, 
-							max(q.bind_dt) max_bind_dt
+							max(q.bind_dt) max_bind_dt, 
+							--
+							sum(case when q.bind_dt between 		 @prior_year_begin_dt and @prior_year_month_end_dt 	then q.quote_sk end) prior_ytd_bind_ct, 
+							sum(case when q.bind_dt between 		 	   @year_begin_dt and 				   @end_dt 	then q.quote_sk end) 	   ytd_bind_ct, 
+							sum(case when q.bind_dt between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt 	then q.quote_sk end) prior_qtd_bind_ct, 
+							sum(case when q.bind_dt between 		 	@quarter_begin_dt and 				   @end_dt 	then q.quote_sk end) 	   qtd_bind_ct, 
+							sum(case when q.bind_dt between    @prior_year_month_begin_dt and @prior_year_month_end_dt 	then q.quote_sk end) prior_mtd_bind_ct, 
+							sum(case when q.bind_dt between 			  @month_begin_dt and 				   @end_dt 	then q.quote_sk end)	   mtd_bind_ct
+							--
 					from edw_core.tquote q 
 					inner join edw_core.tcustomer cust on cust.customer_id = q.customer_id
 					inner join edw_core.tproduct p on p.product_cd = q.product_cd
@@ -274,6 +334,7 @@ BEGIN
 				where      prior_ytd_submission_ct <> 0 or ytd_submission_ct <> 0 
 						or prior_qtd_submission_ct <> 0 or qtd_submission_ct <> 0 
 						or prior_mtd_submission_ct <> 0 or mtd_submission_ct <> 0 
+						or last30_days_submission_ct <> 0 or open_submission_ct <> 0 
 						or      prior_ytd_quote_ct <> 0 or      ytd_quote_ct <> 0 
 						or      prior_qtd_quote_ct <> 0 or      qtd_quote_ct <> 0 
 						or      prior_mtd_quote_ct <> 0 or      mtd_quote_ct <> 0 
@@ -281,7 +342,11 @@ BEGIN
 						or prior_qtd_quote_net_premium_amt <> 0 or qtd_quote_net_premium_amt <> 0 
 						or prior_mtd_quote_net_premium_amt <> 0 or mtd_quote_net_premium_amt <> 0 
 						or max_quoted_dt  is not null  
-						or max_bind_dt is not null; ; 
+						or max_bind_dt is not null
+						or prior_ytd_bind_ct <> 0 or ytd_bind_ct <> 0 
+						or prior_qtd_bind_ct <> 0 or qtd_bind_ct <> 0 
+						or prior_mtd_bind_ct <> 0 or mtd_bind_ct <> 0 
+						;  
 
 				--retention data
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_retention;
@@ -384,7 +449,10 @@ BEGIN
 							sum(case when  summ.month_sk >       @prior_year_month_end_dt_sk then summ.earned_net_premium_amt else 0 end)   one_year_earned_net_premium_amt,
 							sum(case when  summ.month_sk > @prior_year_three_month_end_dt_sk then summ.earned_net_premium_amt else 0 end) three_year_earned_net_premium_amt, 
 							sum(case when  summ.month_sk >       @prior_year_month_end_dt_sk then summ.earned_exposure 		  else 0 end)   one_year_earned_exposure,
-							sum(case when  summ.month_sk > @prior_year_three_month_end_dt_sk then summ.earned_exposure 		  else 0 end) three_year_earned_exposure
+							sum(case when  summ.month_sk > @prior_year_three_month_end_dt_sk then summ.earned_exposure 		  else 0 end) three_year_earned_exposure,
+							--
+							sum(case when  summ.month_sk >  @prior_year_two_month_end_dt_sk then summ.earned_net_premium_amt else 0 end)  two_year_earned_net_premium_amt,
+							sum(case when  summ.month_sk > @prior_year_five_month_end_dt_sk then summ.earned_net_premium_amt else 0 end) five_year_earned_net_premium_amt
 							--
 				 into edw_temp.tbroker_summ_pols
 				 FROM	edw_core.tpolicy_summary summ, edw_core.tpolicy pol, edw_core.tstate st,  edw_core.tdate td,
@@ -392,7 +460,7 @@ BEGIN
 				 		(select policy_sk, min(transaction_seq_no) transaction_seq_no
 							from edw_core.tpolicy_history
 							group by policy_sk ) min_ph
-					 where	summ.month_sk between  @prior_year_three_month_end_dt_sk and  @month_end_dt_sk
+					 where	summ.month_sk between  @prior_year_five_month_end_dt_sk and  @month_end_dt_sk
 					 and td.date_sk = summ.month_sk
 					 and 	summ.policy_sk = pol.policy_sk
 					 and 	pol.risk_state_cd = st.state_cd
@@ -407,7 +475,10 @@ BEGIN
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco,    
 							--
 							sum(case when  summ.month_sk >       @prior_year_month_end_dt_sk then summ.earned_net_premium_amt else 0 end)   one_year_earned_net_premium_amt,
-							sum(case when  summ.month_sk > @prior_year_three_month_end_dt_sk then summ.earned_net_premium_amt else 0 end) three_year_earned_net_premium_amt
+							sum(case when  summ.month_sk > @prior_year_three_month_end_dt_sk then summ.earned_net_premium_amt else 0 end) three_year_earned_net_premium_amt, 
+							--
+							sum(case when  summ.month_sk >  @prior_year_two_month_end_dt_sk then summ.earned_net_premium_amt else 0 end)   two_year_earned_net_premium_amt,
+							sum(case when  summ.month_sk > @prior_year_five_month_end_dt_sk then summ.earned_net_premium_amt else 0 end) five_year_earned_net_premium_amt
 							--
 				 into edw_temp.tbroker_summ_int_cov_pols
 				 FROM	edw_core.tinternal_coverage_summary summ, edw_core.tpolicy pol, edw_core.tstate st,  edw_core.tdate td,
@@ -415,7 +486,7 @@ BEGIN
 				 		(select policy_sk, min(transaction_seq_no) transaction_seq_no
 							from edw_core.tpolicy_history
 							group by policy_sk ) min_ph
-					 where	summ.month_sk between  @prior_year_three_month_end_dt_sk and @month_end_dt_sk
+					 where	summ.month_sk between  @prior_year_five_month_end_dt_sk and @month_end_dt_sk
 					 and td.date_sk = summ.month_sk
 					 and 	summ.policy_sk = pol.policy_sk
 					 and 	pol.risk_state_cd = st.state_cd
@@ -429,14 +500,17 @@ BEGIN
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco,    
 							--
 							sum(case when  summ.month_sk >       @prior_year_month_end_dt_sk then summ.earned_net_premium_amt else 0 end)   one_year_earned_net_premium_amt,
-							sum(case when  summ.month_sk > @prior_year_three_month_end_dt_sk then summ.earned_net_premium_amt else 0 end) three_year_earned_net_premium_am
+							sum(case when  summ.month_sk > @prior_year_three_month_end_dt_sk then summ.earned_net_premium_amt else 0 end) three_year_earned_net_premium_am,
+							-- 
+							sum(case when  summ.month_sk >  @prior_year_two_month_end_dt_sk then summ.earned_net_premium_amt else 0 end)   two_year_earned_net_premium_amt,
+							sum(case when  summ.month_sk > @prior_year_five_month_end_dt_sk then summ.earned_net_premium_amt else 0 end) five_year_earned_net_premium_am
 							--
 				 FROM	edw_core.tpolicy_summary summ, edw_core.tpolicy pol, edw_core.tstate st,  edw_core.tdate td,
 				 		edw_core.tpolicy_history ph,
 				 		(select policy_sk, min(transaction_seq_no) transaction_seq_no
 							from edw_core.tpolicy_history
 							group by policy_sk ) min_ph
-					 where	summ.month_sk between  @prior_year_three_month_end_dt_sk and @month_end_dt_sk
+					 where	summ.month_sk between  @prior_year_five_month_end_dt_sk and @month_end_dt_sk
 					 and td.date_sk = summ.month_sk
 					 and 	summ.policy_sk = pol.policy_sk
 					 and 	pol.risk_state_cd = st.state_cd
@@ -474,6 +548,7 @@ BEGIN
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_claims;
 				select  cs.broker_sk, cs.product_sk, cs.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco, 
+							--
 							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt then 1 else 0 end) one_year_claim_ct, 
 							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt then [itd_total_incurred_amt] else 0 end) one_year_loss_incurred_amt, 
 							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt 
@@ -489,6 +564,7 @@ BEGIN
 									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
 									 else 0 end
 							) one_year_non_cat_loss_incurred_capped_amt, 
+							--
 							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt then 1 else 0 end) three_year_claim_ct, 
 							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt then [itd_total_incurred_amt] else 0 end) three_year_loss_incurred_amt, 
 							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt 
@@ -503,7 +579,39 @@ BEGIN
 							sum(case when c.loss_dt between dateadd(yy,-3,@end_dt) and @end_dt and c.catastrophe_sk is null
 									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
 									 else 0 end
-							) three_year_non_cat_loss_incurred_capped_amt
+							) three_year_non_cat_loss_incurred_capped_amt,
+							--
+							sum(case when c.loss_dt between dateadd(yy,-2,@end_dt) and @end_dt then 1 else 0 end) two_year_claim_ct, 
+							sum(case when c.loss_dt between dateadd(yy,-2,@end_dt) and @end_dt then [itd_total_incurred_amt] else 0 end) two_year_loss_incurred_amt, 
+							sum(case when c.loss_dt between dateadd(yy,-2,@end_dt) and @end_dt 
+									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
+									 else 0 end
+							) two_year_loss_incurred_capped_amt, 
+							sum(case when c.loss_dt between dateadd(yy,-2,@end_dt) and @end_dt and c.catastrophe_sk is null then 1 else 0 end) two_year_non_cat_claim_ct, 
+							sum(case when c.loss_dt between dateadd(yy,-2,@end_dt) and @end_dt and c.catastrophe_sk is null 
+									 then [itd_total_incurred_amt] 
+									 else 0 
+							end) two_year_non_cat_loss_incurred_amt, 
+							sum(case when c.loss_dt between dateadd(yy,-2,@end_dt) and @end_dt and c.catastrophe_sk is null
+									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
+									 else 0 end
+							) two_year_non_cat_loss_incurred_capped_amt, 
+							--
+							sum(case when c.loss_dt between dateadd(yy,-5,@end_dt) and @end_dt then 1 else 0 end) five_year_claim_ct, 
+							sum(case when c.loss_dt between dateadd(yy,-5,@end_dt) and @end_dt then [itd_total_incurred_amt] else 0 end) five_year_loss_incurred_amt, 
+							sum(case when c.loss_dt between dateadd(yy,-5,@end_dt) and @end_dt 
+									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
+									 else 0 end
+							) five_year_loss_incurred_capped_amt, 
+							sum(case when c.loss_dt between dateadd(yy,-5,@end_dt) and @end_dt and c.catastrophe_sk is null then 1 else 0 end) five_year_non_cat_claim_ct, 
+							sum(case when c.loss_dt between dateadd(yy,-5,@end_dt) and @end_dt and c.catastrophe_sk is null 
+									 then [itd_total_incurred_amt] 
+									 else 0 
+							end) five_year_non_cat_loss_incurred_amt , 
+							sum(case when c.loss_dt between dateadd(yy,-5,@end_dt) and @end_dt and c.catastrophe_sk is null
+									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
+									 else 0 end
+							) five_year_non_cat_loss_incurred_capped_amt
 					into edw_temp.tbroker_summ_claims
 					from edw_core.tclaim_summary cs, edw_core.tclaim c,  edw_core.tpolicy pol, edw_core.tstate st 
 					where	cs.claim_sk  = c.claim_sk
@@ -552,6 +660,9 @@ BEGIN
 						sum(isnull(q.qtd_submission_ct,0)) qtd_submission_ct,
 						sum(isnull(q.prior_mtd_submission_ct,0)) prior_mtd_submission_ct,
 						sum(isnull(q.mtd_submission_ct,0)) mtd_submission_ct,
+						--  
+						sum(isnull(q.last30_days_submission_ct,0)) last30_days_submission_ct,
+						sum(isnull(q.open_submission_ct,0)) open_submission_ct,
 						--
 						sum(isnull(q.prior_ytd_quote_ct,0)) prior_ytd_quote_ct,
 						sum(isnull(q.ytd_quote_ct,0)) ytd_quote_ct,
@@ -569,6 +680,13 @@ BEGIN
 						-- avg lines per account - can be calculated
 						max(cast(case when q.max_quoted_dt is not null then q.max_quoted_dt end as date)) last_quote_dt,
 						max(case when q.max_bind_dt is not null then q.max_bind_dt end) last_bound_dt,
+						--
+						sum(isnull(q.prior_ytd_bind_ct,0)) prior_ytd_bind_ct,
+						sum(isnull(q.ytd_bind_ct,0)) ytd_bind_ct,  
+						sum(isnull(q.prior_qtd_bind_ct,0)) prior_qtd_bind_ct,
+						sum(isnull(q.qtd_bind_ct,0)) qtd_bind_ct,  
+						sum(isnull(q.prior_mtd_bind_ct,0)) prior_mtd_bind_ct,
+						sum(isnull(q.mtd_bind_ct,0)) mtd_bind_ct,  
 						--
 						sum(isnull(ps.prior_customer_ct,0)) prior_customer_ct, 
 						sum(isnull(ps.customer_ct,0)) customer_ct, 
@@ -609,10 +727,16 @@ BEGIN
 						sum(isnull(ps.one_year_earned_net_premium_amt,0)) one_year_earned_net_premium_amt, 
 						sum(isnull(ps.three_year_earned_net_premium_amt,0)) three_year_earned_net_premium_amt, 
 						sum(isnull(ps.one_year_earned_exposure,0)) one_year_earned_exposure, 
-						sum(isnull(ps.three_year_earned_exposure,0)) three_year_earned_exposure,   
+						sum(isnull(ps.three_year_earned_exposure,0)) three_year_earned_exposure, 
+						-- 
+						sum(isnull(ps.two_year_earned_net_premium_amt,0)) two_year_earned_net_premium_amt, 
+						sum(isnull(ps.five_year_earned_net_premium_amt,0)) five_year_earned_net_premium_amt,   
 						--
 						sum(isnull(ps2.one_year_earned_net_premium_amt,0)) one_year_non_cat_earned_net_premium_amt, 
 						sum(isnull(ps2.three_year_earned_net_premium_amt,0)) three_year_non_cat_earned_net_premium_amt,  
+						--
+						sum(isnull(ps2.two_year_earned_net_premium_amt,0)) two_year_non_cat_earned_net_premium_amt, 
+						sum(isnull(ps2.five_year_earned_net_premium_amt,0)) five_year_non_cat_earned_net_premium_amt,  
 						--
 						sum(isnull(cs.one_year_claim_ct,0)) one_year_claim_ct, 
 						sum(isnull(cs.one_year_loss_incurred_amt,0)) one_year_loss_incurred_amt,
@@ -627,6 +751,16 @@ BEGIN
 						sum(isnull(cs.three_year_non_cat_claim_ct,0)) three_year_non_cat_claim_ct, 
 						sum(isnull(cs.three_year_non_cat_loss_incurred_amt,0)) three_year_non_cat_loss_incurred_amt, 
 						sum(isnull(cs.three_year_non_cat_loss_incurred_capped_amt,0)) three_year_non_cat_loss_incurred_capped_amt, 
+						-- 
+						sum(isnull(cs.two_year_claim_ct,0)) two_year_claim_ct, 
+						sum(isnull(cs.two_year_loss_incurred_amt,0)) two_year_loss_incurred_amt, 
+						sum(isnull(cs.two_year_non_cat_claim_ct,0)) two_year_non_cat_claim_ct, 
+						sum(isnull(cs.two_year_non_cat_loss_incurred_amt,0)) two_year_non_cat_loss_incurred_amt, 
+						--
+						sum(isnull(cs.five_year_claim_ct,0)) five_year_claim_ct, 
+						sum(isnull(cs.five_year_loss_incurred_amt,0)) five_year_loss_incurred_amt, 
+						sum(isnull(cs.five_year_non_cat_claim_ct,0)) five_year_non_cat_claim_ct, 
+						sum(isnull(cs.five_year_non_cat_loss_incurred_amt,0)) five_year_non_cat_loss_incurred_amt,  
 						-- 
 						getdate() update_ts, @etl_audit_sk etl_audit_sk
 				into edw_temp.tbroker_summary_temp
@@ -662,6 +796,9 @@ BEGIN
 						prior_mtd_submission_ct,
 						mtd_submission_ct,
 						--
+						last30_days_submission_ct,
+						open_submission_ct,
+						-- 
 						prior_ytd_quote_ct,
 						ytd_quote_ct,
 						prior_qtd_quote_ct,
@@ -683,6 +820,13 @@ BEGIN
 						--
 						last_quote_dt,
 						last_bound_dt,
+						-- 
+						prior_ytd_bind_ct,
+						ytd_bind_ct,
+						prior_qtd_bind_ct,
+						qtd_bind_ct,
+						prior_mtd_bind_ct,
+						mtd_bind_ct,
 						--
 						prior_ytd_new_business_ct, 
 						prior_ytd_new_business_net_premium_amt, 
@@ -718,7 +862,10 @@ BEGIN
 						one_year_earned_net_premium_amt, 
 						three_year_earned_net_premium_amt, 
 						one_year_earned_exposure, 
-						three_year_earned_exposure, 
+						three_year_earned_exposure,
+						--
+						two_year_earned_net_premium_amt, 
+						five_year_earned_net_premium_amt,  
 						--
 						one_year_claim_ct, 
 						one_year_loss_incurred_amt,
@@ -734,6 +881,16 @@ BEGIN
 						three_year_non_cat_loss_incurred_amt, 
 						three_year_non_cat_loss_incurred_capped_amt,  
 						--
+						two_year_claim_ct, 
+						two_year_loss_incurred_amt, 
+						two_year_non_cat_claim_ct, 
+						two_year_non_cat_loss_incurred_amt, 
+						--
+						five_year_claim_ct, 
+						five_year_loss_incurred_amt, 
+						five_year_non_cat_claim_ct, 
+						five_year_non_cat_loss_incurred_amt,  
+						--
 						policy_expiring_ct,
 						policy_renewal_ct,
 						policy_renewal_offered_ct,
@@ -746,7 +903,10 @@ BEGIN
 						etl_audit_sk,
 						--
 						one_year_non_cat_earned_net_premium_amt, 
-						three_year_non_cat_earned_net_premium_amt
+						three_year_non_cat_earned_net_premium_amt,
+						--
+						two_year_non_cat_earned_net_premium_amt, 
+						five_year_non_cat_earned_net_premium_amt
 						-- 
 					)
 				select @month_end_dt_sk, 
@@ -762,6 +922,9 @@ BEGIN
 						sum(summ.qtd_submission_ct), 
 						sum(summ.prior_mtd_submission_ct), 
 						sum(summ.mtd_submission_ct), 
+						--
+						sum(summ.last30_days_submission_ct), 
+						sum(summ.open_submission_ct), 
 						--
 						sum(summ.prior_ytd_quote_ct), 
 						sum(summ.ytd_quote_ct), 
@@ -784,6 +947,13 @@ BEGIN
 						--
 						max(summ.last_quote_dt), 
 						max(summ.last_bound_dt), 
+						--
+						sum(summ.prior_ytd_bind_ct), 
+						sum(summ.ytd_bind_ct), 
+						sum(summ.prior_qtd_bind_ct), 
+						sum(summ.qtd_bind_ct), 
+						sum(summ.prior_mtd_bind_ct), 
+						sum(summ.mtd_bind_ct), 
 						--
 						sum(summ.prior_ytd_new_business_ct), 
 						sum(summ.prior_ytd_new_business_net_premium_amt), 
@@ -819,6 +989,9 @@ BEGIN
 						sum(summ.one_year_earned_exposure), 
 						sum(summ.three_year_earned_exposure), 
 						--
+						sum(summ.two_year_earned_net_premium_amt), 
+						sum(summ.five_year_earned_net_premium_amt), 
+						--
 						sum(summ.one_year_claim_ct),
 						sum(summ.one_year_loss_incurred_amt), 
 						sum(summ.one_year_loss_incurred_capped_amt), 
@@ -831,7 +1004,17 @@ BEGIN
 						sum(summ.three_year_loss_incurred_capped_amt),
 						sum(summ.three_year_non_cat_claim_ct), 
 						sum(summ.three_year_non_cat_loss_incurred_amt), 
-						sum(summ. three_year_non_cat_loss_incurred_capped_amt), 
+						sum(summ.three_year_non_cat_loss_incurred_capped_amt), 
+						--
+						sum(summ.two_year_claim_ct),
+						sum(summ.two_year_loss_incurred_amt),  
+						sum(summ.two_year_non_cat_claim_ct), 
+						sum(summ.two_year_non_cat_loss_incurred_amt),  
+						--
+						sum(summ.five_year_claim_ct), 
+						sum(summ.five_year_loss_incurred_amt),  
+						sum(summ.five_year_non_cat_claim_ct), 
+						sum(summ.five_year_non_cat_loss_incurred_amt),  
 						--
 						sum(isnull(r.expiring_ct,0)) policy_expiring_ct,
 						sum(isnull(r.renewal_ct,0)) policy_renewal_ct,
@@ -844,7 +1027,10 @@ BEGIN
 						max(summ.update_ts), max(summ.etl_audit_sk),
 						--
 						sum(summ.one_year_non_cat_earned_net_premium_amt), 
-						sum(summ.three_year_non_cat_earned_net_premium_amt) 
+						sum(summ.three_year_non_cat_earned_net_premium_amt), 
+						--
+						sum(summ.two_year_non_cat_earned_net_premium_amt), 
+						sum(summ.five_year_non_cat_earned_net_premium_amt) 
 						--
 				from edw_temp.tbroker_summary_temp summ
 				LEFT join edw_temp.tbroker_summ_retention r on summ.broker_sk = r.broker_sk and summ.product_sk = r.product_sk and summ.customer_sk = r.customer_sk and summ.uwco = r.uwco and summ.state_sk = r.state_sk  
@@ -875,7 +1061,7 @@ BEGIN
 						three_year_frequency 				= case when [three_year_earned_exposure]				= 0 then 0 else 100.0*[three_year_claim_ct]/[three_year_earned_exposure] end,
 						three_year_non_cat_frequency 		= case when [three_year_earned_exposure]				= 0 then 0 else 100.0*[three_year_non_cat_claim_ct]/[three_year_earned_exposure] end, 
 						three_year_severity 				= case when [three_year_claim_ct]						= 0 then 0 else 1.0*[three_year_loss_incurred_amt]/[three_year_claim_ct] end,
-						three_year_non_cat_severity 		= case when [three_year_non_cat_claim_ct]				= 0 then 0 else 1.0*[three_year_non_cat_loss_incurred_amt]/[three_year_non_cat_claim_ct] end 
+						three_year_non_cat_severity 		= case when [three_year_non_cat_claim_ct]				= 0 then 0 else 1.0*[three_year_non_cat_loss_incurred_amt]/[three_year_non_cat_claim_ct] end  
 						--
 				where month_sk  = @month_end_dt_sk;
 				
