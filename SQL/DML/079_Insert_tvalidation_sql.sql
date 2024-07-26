@@ -3,7 +3,7 @@ INSERT INTO edw_core.tvalidation_sql (validation_sql_desc , source_sql , target_
 SELECT
 		'Metal Validation - Account - Duplicates' AS validation_sql_desc ,
        'select count(*) from (
-select policynumber, count(*) 
+select policynumber 
 from edw_stage.account where PolicyNumber is not null
 group by policynumber
 having count(*)>1 ) a' AS source_sql ,
@@ -31,7 +31,7 @@ INSERT INTO edw_core.tvalidation_sql (validation_sql_desc , source_sql , target_
 SELECT 'Metal Validation - AccountTransaction - Issued transaction with prorated premium' AS validation_sql_desc ,
        'select count(*) from (
 select PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,IssuedDate
-from edw_stage.AccountTransaction a, Product b 
+from edw_stage.AccountTransaction a, edw_stage.Product b 
 where 
 state=''ISSUED'' and stage=''POLICY'' and NetPremiumDeltaProRated is not null 
 and a.ProductId=b.id and ProductLine=''PersonalLines''
@@ -47,9 +47,9 @@ and a.ProductId=b.id and ProductLine=''PersonalLines''
 INSERT INTO edw_core.tvalidation_sql (validation_sql_desc , source_sql , target_sql , active_in , frequency_desc , create_ts , update_ts)
 SELECT 'Metal Validation - AccountTransaction - Duplicates' AS validation_sql_desc ,
        'select count(*) from (
-select PolicyNumber,EffectiveDate,PolicyChangeNumber,count(*) 
+select PolicyNumber,EffectiveDate,PolicyChangeNumber
 from edw_stage.AccountTransaction 
-where state=''ISSUED'' -- and policynumber is not null
+where state=''ISSUED''
 group by PolicyNumber,EffectiveDate,PolicyChangeNumber
 having count(*)>1) a' AS source_sql ,
        'select 0' AS target_sql ,
@@ -63,7 +63,7 @@ having count(*)>1) a' AS source_sql ,
 INSERT INTO edw_core.tvalidation_sql (validation_sql_desc , source_sql , target_sql , active_in , frequency_desc , create_ts , update_ts)
 SELECT 'Metal Validation - AccountTransaction - Duplicate EffectiveDate' AS validation_sql_desc ,
        'select count(*) from (
-select policynumber, count(*) from 
+select policynumber from 
 (
 select distinct PolicyNumber,EffectiveDate
 from edw_stage.AccountTransaction 
@@ -85,7 +85,7 @@ having count(*)>1
 INSERT INTO edw_core.tvalidation_sql (validation_sql_desc , source_sql , target_sql , active_in , frequency_desc , create_ts , update_ts)
 SELECT 'Metal Validation - Insured - Duplicates' AS validation_sql_desc ,
        'select count(*) from (
-select referencecode, count(*) from edw_stage.Insured
+select referencecode from edw_stage.Insured
 where ReferenceCode!=0
 group by ReferenceCode
 having count(*)>1
@@ -101,7 +101,7 @@ having count(*)>1
 INSERT INTO edw_core.tvalidation_sql (validation_sql_desc , source_sql , target_sql , active_in , frequency_desc , create_ts , update_ts)
 SELECT 'Metal Validation - BillingAccount - Duplicates' AS validation_sql_desc ,
        'select count(*) from (
-select referencecode, count(*) from edw_stage.BillingAccount
+select referencecode from edw_stage.BillingAccount
 group by ReferenceCode
 having count(*)>1
 ) a' AS source_sql ,
@@ -115,7 +115,7 @@ having count(*)>1
 INSERT INTO edw_core.tvalidation_sql (validation_sql_desc , source_sql , target_sql , active_in , frequency_desc , create_ts , update_ts)
 SELECT 'Metal Validation - AccountTransaction - Duplicate transactions' AS validation_sql_desc ,
        'select count(*) from (
-select PolicyNumber,EffectiveDate,Number,COUNT(*) from edw_stage.AccountTransaction 
+select PolicyNumber,EffectiveDate,Number from edw_stage.AccountTransaction 
 where PolicyNumber is not null and [stage] in (''POLICY'',''QUOTE'')
 GROUP BY PolicyNumber,EffectiveDate,Number
 having count(*)>1
@@ -142,10 +142,10 @@ where not exists (select * from edw_stage.insured b where a.PrimaryInsuredId=b.i
 INSERT INTO edw_core.tvalidation_sql (validation_sql_desc , source_sql , target_sql , active_in , frequency_desc , create_ts , update_ts)
 SELECT 'Metal Validation - Insured - Missing insured' AS validation_sql_desc ,
        'select count(*) from (
-select acct.Id ,acct.PolicyNumber,  *
+select acct.Id ,acct.PolicyNumber
 		FROM edw_stage.AccountTransaction acct   
 		left JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id  
-		WHERE acct.Stage in (''QUOTE'',''POLICY'') --- Review BOUND transactions
+		WHERE acct.Stage in (''QUOTE'',''POLICY'')
 		and	acctv.id is null
 ) a' AS source_sql ,
        'select 0' AS target_sql ,
@@ -191,8 +191,7 @@ and a.[State]=''ISSUED'' and not exists (Select * from edw_stage.AccountTransact
 --
 INSERT INTO edw_core.tvalidation_sql (validation_sql_desc , source_sql , target_sql , active_in , frequency_desc , create_ts , update_ts)
 SELECT 'Metal Validation - AccountTransaction - IssuedDate is null' AS validation_sql_desc ,
-       'source_sql = 
-select count(*) from (
+       'select count(*) from (
 select id,PolicyNumber,EffectiveDate,Stage,[State],IssuedDate,BindDate,NetPremiumDeltaProRated 
 from edw_stage.AccountTransaction 
 where STATE=''ISSUED'' and issueddate is null and PolicyNumber is not null
