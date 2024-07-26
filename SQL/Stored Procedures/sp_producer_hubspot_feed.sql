@@ -4,7 +4,8 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 17/07/24		Hernando Gonzalez			1. Created this procedure 
+-- 07/17/24		Hernando Gonzalez			1. Created this procedure 
+-- 07/26/24		Hernando Gonzalez			2. Updated logic for @last_source_extract_ts
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_producer_hubspot_feed]
@@ -50,11 +51,11 @@ BEGIN
 			getdate() as create_ts,
 			getdate() as update_ts,
 			@etl_audit_sk AS etl_audit_sk
-		INTO [edw_temp].[producer_hubspot_feed_temp1]
+		INTO [edw_temp].[producer_hubspot_feed_temp1] 
 		FROM edw_core.tproducer p	
 		INNER JOIN edw_core.tbroker br
 			ON p.broker_sk = br.broker_sk
-		--WHERE p.broker_id IN ('56796','56555') ORDER BY 6,3,2
+		and greatest(p.create_ts, p.update_ts) > @last_source_extract_ts;
 
         -- Start Insert process
         INSERT INTO [edw_integration].[producer_hubspot_feed](
@@ -92,7 +93,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 		
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(create_ts) FROM edw_temp.[producer_hubspot_feed_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts = '2017-01-01'
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
