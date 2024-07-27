@@ -87,14 +87,14 @@ BEGIN
                 END AS policy_no,
                 CONVERT(VARCHAR(8), p.effective_dt, 112) as homeowner_policy_effective_dt,
                 CONVERT(VARCHAR(8), p.expiration_dt, 112) as homeowner_policy_expiration_dt,
-                CONVERT(VARCHAR(8), p.effective_dt, 112) as coverage_effective_dt,
-                CONVERT(VARCHAR(8), p.effective_dt, 112) as original_homeowner_policy_effective_dt,
+                CONVERT(VARCHAR(8), pt.transaction_effective_dt, 112) as coverage_effective_dt,
+                CONVERT(VARCHAR(8), p.original_policy_effective_dt, 112) as original_homeowner_policy_effective_dt,
                 '' as prior_homeowner_insurance_ind,
-                c.customer_nm as insured_nm,
-                c.mailing_address_line1 as dwelling_address,
-                c.mailing_address_city_nm as dwelling_city,
-                c.mailing_address_state_cd as dwelling_state,
-                c.mailing_address_zip_cd as dwelling_zip_cd,
+                p.insured_nm,
+                hl.address_line_1 as dwelling_address,
+                hl.city_nm as dwelling_city,
+                hl.state_cd as dwelling_state,
+                hl.zip_cd as dwelling_zip_cd,
                 ROUND(pt.ceded_premium_amt,2) as hsp_net_premium_amt,
                 CASE 
                     WHEN REPLACE(hac.home_systems_protection_limit_amt,',','') IN ('','0','25000','50000','100000') OR hac.home_systems_protection_limit_amt IS NULL THEN '500'
@@ -102,7 +102,7 @@ BEGIN
                 END as hsp_limit_amt,
                 '500' as hsp_deductible_amt,
                 '' as base_homeowner_premium,
-                ROUND(pt.net_premium_amt,2) as final_homeowner_premium,
+                ROUND(p.annual_premium_amt,2) as final_homeowner_premium,
                 CASE 
                     WHEN REPLACE(hac.home_systems_protection_limit_amt,',','') IN ('','0','25000','50000','100000') OR hac.home_systems_protection_limit_amt IS NULL THEN '500'
                     WHEN REPLACE(hac.home_systems_protection_limit_amt,',','') IN ('250000','500000') THEN '1000'
@@ -152,7 +152,7 @@ BEGIN
             INTO [edw_temp].[policy_hsb_hsp_feed_temp1] 
             FROM 
                 (
-                    select p.*, d.actual_dt as inforce_dt
+                    select p.*, d.actual_dt as inforce_dt, i.annual_premium_amt
                     from edw_core.tdaily_inforce_policy as i
                     inner join edw_core.tpolicy as p ON i.policy_sk = p.policy_sk
                     inner join edw_core.tdate as d ON i.inforce_dt_sk = d.date_sk
@@ -162,16 +162,21 @@ BEGIN
             INNER JOIN
                 (
                     select 
-                        pt.policy_sk, d.actual_dt as effective_dt, SUM(pt.annual_premium_amt) as net_premium_amt, SUM(pt.ceded_premium_amt) as ceded_premium_amt
+                        pt.policy_sk, d.actual_dt as effective_dt, SUM(pt.net_premium_amt) as net_premium_amt, SUM(pt.ceded_annual_premium_amt) as ceded_premium_amt, Min(d2.actual_dt) as transaction_effective_dt
                     from edw_core.tpolicy_transaction as pt
                     inner join edw_core.tdate d on pt.effective_dt_sk = d.date_sk
+                    inner join edw_core.tdate d2 on pt.transaction_effective_dt_sk = d2.date_sk
                     inner join edw_core.tinternal_coverage as ic on pt.internal_coverage_sk = ic.internal_coverage_sk
-                    -- where ic.internal_coverage_cd in ('System Protection', 'Systems Protection')
+                    where ic.internal_coverage_cd in ('System Protection', 'Systems Protection')
                     group by pt.policy_sk, d.actual_dt
                 ) AS pt 
                 ON pt.policy_sk = p.policy_sk
             LEFT JOIN 
                 edw_core.tcustomer AS c ON c.customer_id = p.customer_id
+            LEFT JOIN 
+                edw_core.thome_location AS hl 
+                ON p.policy_no = hl.policy_no
+                AND p.effective_dt = hl.effective_dt
             LEFT JOIN 
                 edw_core.tproduct AS pr ON pr.product_cd = p.product_cd
             LEFT JOIN 
