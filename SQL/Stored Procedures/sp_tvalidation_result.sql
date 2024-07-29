@@ -1,13 +1,14 @@
-﻿-- =================================================================================================
+﻿-- =========================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This procedures loads the vlidation result table
----------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------
 -- 08/15/23		Architha Gudimalla				1. Created this procedure 
 -- 11/03/23		Architha Gudimalla				2. Added date filter for inforce
--- 12/07/23		Architha Gudimalla				2. Updated var_actual_dt
--- ================================================================================================= 
+-- 12/07/23		Architha Gudimalla				3. Updated var_actual_dt
+-- 07/29/24		Architha Gudimalla				4. Updated the code to work when target sql is not select 0 but a defualt count
+-- ========================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tvalidation_result]
 @in_process_dt DATE = null
@@ -60,7 +61,12 @@ BEGIN
 				SET @process_run_start_ts = getdate(); 
 
 				set @source_sql = replace(@source_sql , 'select count(','SELECT @source_ct=count(') 
-				set @target_sql = replace(@target_sql , 'select count(','SELECT @target_ct=count(')  
+				set @target_sql = replace(@target_sql , 'select count(','SELECT @target_ct=count(')
+
+				if @target_sql not like 'SELECT @target_ct=count(%' 
+				begin 
+				 set @target_sql= replace(@target_sql,'select ','select @target_ct=')
+				end;  
 
 				set @source_sql = replace(@source_sql , 'var_actual_dt',cast(getdate() as date)) 
 				set @target_sql = replace(@target_sql , 'var_actual_dt',cast(getdate() as date)) 
@@ -71,7 +77,7 @@ BEGIN
 				EXECUTE sp_executesql @source_sql, N'@source_ct NVARCHAR(10) OUTPUT', @source_ct=@out1 OUTPUT
 				EXECUTE sp_executesql @target_sql, N'@target_ct NVARCHAR(10) OUTPUT', @target_ct=@out2 OUTPUT 
 
-				set @out2 = case when @target_sql = 'select 0' then 0 else @out2 end 
+				--set @out2 = case when @target_sql = 'select 0' then 0 else @out2 end 
 
 				INSERT INTO edw_core.tvalidation_result
 				(
