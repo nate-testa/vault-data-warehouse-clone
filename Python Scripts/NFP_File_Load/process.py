@@ -252,7 +252,7 @@ def process_files(source_directory, processed_directory, log_directory, server, 
         with log_file.open('a') as log_f:
             log_f.write(f"{datetime.now()} - Processed file: {file_path.name}\n")
 
-def main():
+def main(server=None):
     # Load configuration
     config = ConfigParser()
     config.read('config.ini')
@@ -260,7 +260,7 @@ def main():
     source_directory = config.get('DEFAULT', 'source_directory')
     processed_directory = config.get('DEFAULT', 'processed_directory')
     log_directory = config.get('DEFAULT', 'log_directory')
-    server = config.get('DEFAULT', 'server')
+    server = server if server is not None else config.get('DEFAULT', 'server')
     database = config.get('DEFAULT', 'database')
     table_name = config.get('DEFAULT', 'table_name')
     schema = config.get('DEFAULT', 'schema')
@@ -280,4 +280,11 @@ def main():
     process_files(source_directory, processed_directory, log_directory, server, database, table_name, schema, chunksize, auth_method, username, password, column_mapping, validate_column_empty, column_to_validate, show_records)
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Process files and insert data into Azure SQL.')
+    parser.add_argument('--server', type=str, help='Azure SQL server')
+
+    args = parser.parse_args()
+
+    main(server=args.server)
