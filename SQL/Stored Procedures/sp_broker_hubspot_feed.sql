@@ -96,10 +96,10 @@ BEGIN
         bs.offered_renewal_ct,
         bs.offered_renewal_over50k_ct,
         bs.inforce_ct as inforce_policy_ct,
-        null as commission_tier,  -- Yunus: Not clear to Me 
+        null as commission_tier, 
         bs.inforce_premium_amt,
-        null as target_yoy_inforce_premium_pcm,
-        null as target_yoy_ytd_nb_prem_pcm,
+        null as target_yoy_inforce_premium_pc,
+        null as target_yoy_ytd_nb_prem_pc,
         null as target_ytd_nb_premium_pc,
         null as target_ytd_renewal_retention_pc
         into [edw_temp].[broker_hubspot_feed_temp1]
@@ -171,7 +171,6 @@ BEGIN
         target.target_yoy_ytd_nb_prem_pc	=	source.target_yoy_ytd_nb_prem_pc,
         target.target_ytd_nb_premium_pc	=	source.target_ytd_nb_premium_pc,
         target.target_ytd_renewal_retention_pc	=	source.target_ytd_renewal_retention_pc,
-
         target.update_ts	=	getdate(),
         target.etl_audit_sk	=	@etl_audit_sk;
 
