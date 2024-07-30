@@ -101,17 +101,21 @@ BEGIN
         null as target_yoy_inforce_premium_pc,
         null as target_yoy_ytd_nb_prem_pc,
         null as target_ytd_nb_premium_pc,
-        null as target_ytd_renewal_retention_pc
+        null as target_ytd_renewal_retention_pc,
+        tb.create_ts,
+        tb.update_ts
         into [edw_temp].[broker_hubspot_feed_temp1]
         FROM
         edw_core.tbroker tb
         left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
         inner join br_summ as bs on bs.broker_sk = tb.broker_sk
+		WHERE
+			GREATEST(tb.create_ts,tb.update_ts)>@last_source_extract_ts
 		
        
         MERGE INTO edw_integration.broker_hubspot_feed AS target
         USING [edw_temp].[broker_hubspot_feed_temp1] AS source on target.broker_id = source.broker_id
-        WHEN NOT MATCHED BY Target THEN
+        WHEN NOT MATCHED BY target THEN
         INSERT
         (
             broker_id,broker_nm,mailing_address_line_1,mailing_address_line_2,mailing_address_city_nm,mailing_address_state_nm,
