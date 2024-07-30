@@ -1,10 +1,10 @@
 -- =================================================================================================
--- Author:		Yunus Mohammed
 -- Description: This procedures inserts and updates quote hubspot data
 -----------------------------------------------------------------------------------------------------------
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 07/17/24		        Yunus Mohammed				1. Created this procedure
+-- 07/29/24		        Architha Gudimalla			2. Excluded quotes with broker_id = 0
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -121,6 +121,7 @@ BEGIN
 
         where  h.latest_transaction_in = 'Y'
 		and greatest(q.create_ts,q.update_ts) > @last_source_extract_ts
+        and q.broker_id <> '0'
 
         -- Start Merge process
 		MERGE INTO [edw_integration].[quote_hubspot_feed] AS target
