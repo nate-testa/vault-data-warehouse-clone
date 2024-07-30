@@ -4,6 +4,7 @@
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 07/23/24		        Architha Gudimalla			1. Created this procedure
+-- 07/29/24		        Architha Gudimalla			2. Corrections after first run
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_note_hubspot_feed]
@@ -34,11 +35,12 @@ BEGIN
         into edw_temp.quote_note_hubspot_feed_temp1
         from [edw_core].[tnote]
         where object_type = 'Account' 
-		and greatest(note_created_ts, note_updated_ts) > @last_source_extract_ts;
+		and greatest(note_created_ts, note_updated_ts) > @last_source_extract_ts
+		and policy_no is not null;
 
         -- Start Merge process
 		MERGE INTO [edw_integration].[quote_note_hubspot_feed] AS target
-        USING [edw_temp].[quote_hubspot_feed_temp1] AS source on target.note_id = source.note_id
+        USING [edw_temp].[quote_note_hubspot_feed_temp1] AS source on target.note_id = source.note_id
         WHEN NOT MATCHED BY Target THEN
         INSERT
         (
@@ -57,7 +59,7 @@ BEGIN
         
         SET @rows_affected=@@ROWCOUNT;
         -- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(Greatest(create_ts,update_ts)) FROM edw_temp.[quote_hubspot_feed_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(Greatest(create_ts,update_ts)) FROM edw_temp.[quote_note_hubspot_feed_temp1]),@last_source_extract_ts);
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
