@@ -6,6 +6,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 07/17/24		Hernando Gonzalez			1. Created this procedure 
 -- 07/23/24		Architha Gudimalla			2. Updated to use data from tpolicy_insured
+-- 07/29/24		Architha Gudimalla			3. Corrections after first runs
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -124,9 +125,20 @@ BEGIN
 			,mailing_address_state_cd
 			,mailing_address_zip_cd
 			)
-		VALUES (source.policy_no,source.first_nm,source.last_nm,source.email,source.risk_state_cd,source.product_nm,
-				source.broker_id,source.bdm_nm,source.broker_nm,source.broker_phone_no,source.policy_status,
-				getdate(). getdate(),@etl_audit_sk
+		VALUES (source.policy_no,
+				source.first_nm,
+				source.last_nm,
+				source.email,
+				source.risk_state_cd,
+				source.product_nm,
+				source.broker_id,
+				source.bdm_nm,
+				source.broker_nm,source.
+				broker_phone_no,
+				source.policy_status,
+				getdate(),
+				getdate(),
+				@etl_audit_sk
             	,source.mailing_address_line_1
 				,source.mailing_address_line_2
 				,source.mailing_address_unit_no
@@ -147,7 +159,7 @@ BEGIN
   			,target.broker_phone_no 		= source.broker_phone_no
   			,target.policy_status 			= source.policy_status 
             ,target.update_ts 				= getdate()
-            ,target.etl_audit_sk 			= source.etl_audit_sk 
+            ,target.etl_audit_sk 			= @etl_audit_sk 
   			,target.mailing_address_line_1 	= source.mailing_address_line_1
   			,target.mailing_address_line_2 	= source.mailing_address_line_2
   			,target.mailing_address_unit_no = source.mailing_address_unit_no
