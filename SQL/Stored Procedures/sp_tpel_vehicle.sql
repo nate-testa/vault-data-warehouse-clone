@@ -7,6 +7,7 @@
 ------------------------------------------------------------------------------------------------------------------------------
 -- 10/24/2023 			Yunus Mohammed					1. Created this procedure 
 -- 07/19/2024 			Alberto Almario					2. Add new column vehicle_deleted_in 
+-- 07/31/2024 			Alberto Almario					3. Add new column vehicle_unique_id
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_vehicle]
 
@@ -39,6 +40,7 @@ BEGIN
 			CollectorCarType, MotorHomeClass,
 			GaragingAddressLine1, GaragingAddressLine2, GaragingAddressLineUnit, GaragingAddressCity, GaragingAddressZipCode, GaragingAddressState, GaragingAddressCounty, GaragingAddressCountry
 			,vehicle_deleted_in
+			,vehicle_unique_id
 			into edw_temp.tpel_vehicle_temp1
 		from
 		(
@@ -54,6 +56,7 @@ BEGIN
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			atvof.Field,atvof.[Value]
 			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END AS vehicle_deleted_in
+			,atvo.[UniqueId] as vehicle_unique_id
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
@@ -96,6 +99,7 @@ BEGIN
 			[source_system_sk],[create_ts],[update_ts],[etl_audit_sk], collector_car_type, motor_home_class,
 			garage_address_line1,garage_address_line2,garage_address_unit_no,garage_address_city_nm,garage_address_zip_cd,garage_address_state_cd,garage_address_county_nm,garage_address_country_nm
 			,vehicle_deleted_in
+			,vehicle_unique_id
 		)
 		SELECT
 			PolicyNumber AS policy_no,EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
@@ -107,6 +111,7 @@ BEGIN
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk, CollectorCarType AS collector_car_type, MotorHomeClass AS motor_home_class,
 			GaragingAddressLine1 AS garage_address_line1, GaragingAddressLine2 AS garage_address_line2, GaragingAddressLineUnit AS garage_address_unit_no, GaragingAddressCity AS garage_address_city_nm, GaragingAddressZipCode AS garage_address_zip_cd, GaragingAddressState AS garage_address_state_cd, GaragingAddressCounty AS garage_address_county_nm, GaragingAddressCountry AS garage_address_country_nm
 			,vehicle_deleted_in
+			,vehicle_unique_id
 		FROM
 			edw_temp.tpel_vehicle_temp1 AS ttpv
 
