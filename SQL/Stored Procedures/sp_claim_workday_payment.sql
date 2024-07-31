@@ -8,6 +8,7 @@
 -- 07/28/23		Yunus Mohammed				1. Created this procedure 
 -- 11/29/23		Yunus Mohammed				2. Update logic to get begin and end date
 -- 03/21/24		Yunus Mohammed				3. Added party_subtype_role_nm in output
+-- 07/31/24		Yunus Mohammed				4. Updated Loss (Expense A&O) to Loss (Expense - A&O)
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_payment]
@@ -134,7 +135,7 @@ BEGIN
 						UNION
 							
 						SELECT
-							claim_feature_sk,claim_payment_sk,SUM(expense_paid_amt+adjusting_other_paid_amt+refund_expense_paid_amt) AS amt, 'Loss (Expense A&O)' AS cat_name
+							claim_feature_sk,claim_payment_sk,SUM(expense_paid_amt+adjusting_other_paid_amt+refund_expense_paid_amt) AS amt, 'Loss (Expense - A&O)' AS cat_name
 						FROM edw_core.tclaim_transaction t
 						WHERE t.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
 						AND t.defense_cost_in = 'N'
