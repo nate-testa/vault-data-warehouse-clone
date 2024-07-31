@@ -182,7 +182,7 @@ def generate_txt_files(COMPANY_PRODUCTS, DATA_TYPE, QRY):
         else:
             TXT_FILE_NAME = f'{DATA_TYPE}{COMPANY_PRODUCT_CD}INF_test.txt'
 
-        FINAL_QRY = QRY + f" WHERE [company_product_cd] = '{COMPANY_PRODUCT_CD}'"
+        FINAL_QRY = QRY + f" AND [company_product_cd] = '{COMPANY_PRODUCT_CD}'"
         df = CONN_STR.get_pandas_df(FINAL_QRY)
         create_directory_if_not_exists(TXT_FOLDER_PATH)
         txt_path = os.path.join(TXT_FOLDER_PATH, TXT_FILE_NAME)
