@@ -23,8 +23,12 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 	
 		DECLARE @parameter_desc VARCHAR(255)
-		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))   
+		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
+
+        -- Drop temp table
+		DROP TABLE IF EXISTS edw_temp.tpolicy_insured_update_temp1
+        
         select policy_no, effective_dt, transaction_seq_no, primary_insured_in,row_count,has_email_in,
         case when policy_insured_sk is null then policy_insured_sk_without_null
         else policy_insured_sk end policy_insured_sk_final

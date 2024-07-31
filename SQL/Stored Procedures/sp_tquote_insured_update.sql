@@ -25,6 +25,9 @@ BEGIN
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))   
 
+        -- Drop temp table
+		DROP TABLE IF EXISTS edw_temp.tquote_insured_update_temp1
+        
         select quote_no, effective_dt, transaction_seq_no, primary_insured_in,row_count,has_email_in,
         case when quote_insured_sk is null then quote_insured_sk_without_null
         else quote_insured_sk end quote_insured_sk_final
