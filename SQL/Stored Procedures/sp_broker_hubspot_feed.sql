@@ -101,22 +101,16 @@ BEGIN
         null as target_yoy_inforce_premium_pc,
         null as target_yoy_ytd_nb_prem_pc,
         null as target_ytd_nb_premium_pc,
-        null as target_ytd_renewal_retention_pc,
-        tb.create_ts,
-        tb.update_ts
-        into [edw_temp].[broker_hubspot_feed_temp1]
+        null as target_ytd_renewal_retention_pc        
+        into edw_temp.broker_hubspot_feed_temp1
         FROM
         edw_core.tbroker tb
         left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
         inner join br_summ as bs on bs.broker_sk = tb.broker_sk
-		WHERE
-			GREATEST(tb.create_ts,tb.update_ts)>@last_source_extract_ts
-		
-       
-        MERGE INTO edw_integration.broker_hubspot_feed AS target
-        USING [edw_temp].[broker_hubspot_feed_temp1] AS source on target.broker_id = source.broker_id
-        WHEN NOT MATCHED BY target THEN
-        INSERT
+
+        truncate table edw_integration.broker_hubspot_feed       
+    
+        INSERT edw_integration.broker_hubspot_feed
         (
             broker_id,broker_nm,mailing_address_line_1,mailing_address_line_2,mailing_address_city_nm,mailing_address_state_nm,
             mailing_address_zip_cd,broker_tier,broker_tier_nm,national_agency_in,broker_type,broker_status,contract_dt,primary_contact_nm,
@@ -127,8 +121,7 @@ BEGIN
             create_ts,update_ts,etl_audit_sk
 
         )
-        VALUES
-        (
+        SELECT        
             broker_id,broker_nm,mailing_address_line_1,mailing_address_line_2,mailing_address_city_nm,mailing_address_state_cd,
             mailing_address_zip_cd,broker_tier,broker_tier_nm,national_agency_in,broker_type,broker_status,contract_dt,primary_contact_nm,
             broker_email,broker_phone_no,bdm_nm,bdm_email,new_business_uw_nm,renewal_uw_nm,open_submissions_ct,one_year_actual_non_cat_loss_ratio,
@@ -136,52 +129,12 @@ BEGIN
             offered_renewal_ct,offered_renewal_over50k_ct,inforce_policy_ct,commission_tier,inforce_premium_amt,target_yoy_inforce_premium_pc,
             target_yoy_ytd_nb_prem_pc,target_ytd_nb_premium_pc,target_ytd_renewal_retention_pc,
             getdate(), getdate(), @etl_audit_sk 
-        )
-        WHEN MATCHED THEN UPDATE
-        SET        
-        target.broker_nm	=	source.broker_nm,
-        target.mailing_address_line_1	=	source.mailing_address_line_1,
-        target.mailing_address_line_2	=	source.mailing_address_line_2,
-        target.mailing_address_city_nm	=	source.mailing_address_city_nm,
-        target.mailing_address_state_nm	=	source.mailing_address_state_cd,
-        target.mailing_address_zip_cd	=	source.mailing_address_zip_cd,
-        target.broker_tier	=	source.broker_tier,
-        target.broker_tier_nm	=	source.broker_tier_nm,
-        target.national_agency_in	=	source.national_agency_in,
-        target.broker_type	=	source.broker_type,
-        target.broker_status	=	source.broker_status,
-        target.contract_dt	=	source.contract_dt,
-        target.primary_contact_nm	=	source.primary_contact_nm,
-        target.broker_email	=	source.broker_email,
-        target.broker_phone_no	=	source.broker_phone_no,
-        target.bdm_nm	=	source.bdm_nm,
-        target.bdm_email	=	source.bdm_email,
-        target.new_business_uw_nm	=	source.new_business_uw_nm,
-        target.renewal_uw_nm	=	source.renewal_uw_nm,
-        target.open_submissions_ct	=	source.open_submissions_ct,
-        target.one_year_actual_non_cat_loss_ratio	=	source.one_year_actual_non_cat_loss_ratio,
-        target.two_year_ultimate_non_cat_loss_ratio	=	source.two_year_ultimate_non_cat_loss_ratio,
-        target.five_year_non_cat_loss_ratio	=	source.five_year_non_cat_loss_ratio,
-        target.ytd_bind_ct	=	source.ytd_bind_ct,
-        target.ytd_submission_ct	=	source.ytd_submission_ct,
-        target.last30_days_submission_ct	=	source.last30_days_submission_ct,
-        target.hit_ratio	=	source.hit_ratio,
-        target.offered_renewal_ct	=	source.offered_renewal_ct,
-        target.offered_renewal_over50k_ct	=	source.offered_renewal_over50k_ct,
-        target.inforce_policy_ct	=	source.inforce_policy_ct,
-        target.commission_tier	=	source.commission_tier,
-        target.inforce_premium_amt	=	source.inforce_premium_amt,
-        target.target_yoy_inforce_premium_pc	=	source.target_yoy_inforce_premium_pc,
-        target.target_yoy_ytd_nb_prem_pc	=	source.target_yoy_ytd_nb_prem_pc,
-        target.target_ytd_nb_premium_pc	=	source.target_ytd_nb_premium_pc,
-        target.target_ytd_renewal_retention_pc	=	source.target_ytd_renewal_retention_pc,
-        target.update_ts	=	getdate(),
-        target.etl_audit_sk	=	@etl_audit_sk;
-
+        FROM edw_temp.broker_hubspot_feed_temp1
+        
         
         SET @rows_affected=@@ROWCOUNT;
         -- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(Greatest(create_ts,update_ts)) FROM edw_temp.[broker_hubspot_feed_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts = '2017-01-01'
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
