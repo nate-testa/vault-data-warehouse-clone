@@ -20,6 +20,7 @@ GO
 --																		 roof_coverage_endorsement_ap_in,
 --																		 roof_coverage_endorsement_rv_in
 -- 09/07/24				Hernando Gonzalez			7. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
+-- 08/01/24             Tuba Mohsin                 8. added contents_extended_replacement_cost_limit_amt
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage]
