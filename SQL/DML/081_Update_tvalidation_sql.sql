@@ -25,3 +25,12 @@ where validation_sql_desc  = 'tpolicy_transaction - item_sk= 0 for AU' ;
 update edw_core.tvalidation_sql 
 set target_sql = 'select 217'
 where validation_sql_desc  = 'tpolicy - billingaccount_sk = 0'; 
+
+update edw_core.tvalidation_sql 
+set active_in = 'N'
+where validation_sql_desc  = 'Metal Validation - AccountTransactionVersionObjectField - Bad data like value';
+
+update edw_core.tvalidation_sql 
+set active_in = 'N'
+where validation_sql_desc  = 'Metal Validation - AccountobjectField - Bad data like value or NaN';
+	   
