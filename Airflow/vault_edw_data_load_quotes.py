@@ -281,6 +281,7 @@ with DAG(
             'sp_tquote_transaction_status_history',
             'sp_tquote_insured_wip',
             'sp_tquote_insured',
+            'sp_tquote_insured_update',
             'sp_tquote_history_update',
             'sp_tquote_update',
             'sp_tquote_referral_message'
@@ -360,6 +361,12 @@ with DAG(
             )
             operators.append(operator)
 
+        exec_vault_edw_data_load_hubspot = TriggerDagRunOperator(
+            task_id="exec_vault_edw_data_load_hubspot",
+            trigger_dag_id="vault_edw_data_load_hubspot",
+            dag=dag,
+        )
+
         send_quote_broker_email = EmailOperator(
             task_id='send_quote_broker_email',
             to=to_email,
@@ -370,7 +377,7 @@ with DAG(
         for i in range(len(operators) - 1):
             operators[i] >> operators[i + 1]
 
-        operators[-1] >> send_quote_broker_email
+        operators[-1] >> exec_vault_edw_data_load_hubspot >> send_quote_broker_email
 
 
     exec_vault_edw_data_load_vendor_reports = TriggerDagRunOperator(
