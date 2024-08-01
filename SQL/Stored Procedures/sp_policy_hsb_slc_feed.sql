@@ -1,9 +1,9 @@
 ﻿-- =============================================
 -- Author:		Alberto Almario Valbuena
--- Create Date: 2023-09-01
--- Description: This procedures insert info related to HSB - Cyber
+-- Create Date: 2023-09-05
+-- Description: This procedures insert info related to HSB - SLC
 -- =============================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_hsb_cyber_feed]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_hsb_slc_feed]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -22,7 +22,7 @@ BEGIN
 		DECLARE @parameter_desc VARCHAR(255)
 		-- Get last source extract date
 		SELECT @last_source_extract_ts = CASE 
-                                            WHEN edw_core.fn_get_last_source_extract_ts(@process_nm) < '2020-01-01 00:00:00' THEN '2020-01-01 00:00:00'
+                                            WHEN edw_core.fn_get_last_source_extract_ts(@process_nm) < '2020-01-01 00:00:00' THEN '2024-05-31 00:00:00'
                                             ELSE edw_core.fn_get_last_source_extract_ts(@process_nm)
                                          END;
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;
@@ -49,13 +49,17 @@ BEGIN
 
         -- Create tmp table for last day of months
         SELECT * INTO #LastDaysOfMonthTmpTbl 
-        FROM LastDaysOfMonthCTE OPTION (MAXRECURSION 0);
+        FROM LastDaysOfMonthCTE OPTION (MAXRECURSION 200);-- Allow a maximum of 200 recursions for the CTE.
 
         DECLARE @CurrentLastDayOfMonth DATE;
 
         -- Declare the cursor
         DECLARE LastDaysCursor CURSOR FOR
-        SELECT LastDayOfMonth FROM #LastDaysOfMonthTmpTbl;
+        SELECT LastDayOfMonth FROM #LastDaysOfMonthTmpTbl ORDER BY LastDayOfMonth ASC;
+
+        --Drop and Create the temp2 table. This will store the last reporting_date and row_count for every iteration in the cursor.
+        DROP TABLE IF EXISTS [edw_temp].[policy_hsb_slc_feed_temp2];
+        SELECT * INTO [edw_temp].[policy_hsb_slc_feed_temp2] FROM (SELECT @last_source_extract_ts AS reporting_date, 0 AS row_count) AS t;
 
         -- Open the cursor
         OPEN LastDaysCursor;
@@ -64,66 +68,84 @@ BEGIN
         BEGIN
 
             -- Step1 limit amount of rows.
-            DROP TABLE IF EXISTS [edw_temp].[tpolicy_hsb_cyber_feed_temp1];
+            DROP TABLE IF EXISTS [edw_temp].[policy_hsb_slc_feed_temp1];
             SELECT 
                 p.inforce_dt as reporting_date,
                 CASE 
-                    WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '4404'
-                    WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '4854'
+                    WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '4280'
+                    WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '4852'
                 END as company_product_cd,
-                'HCP' as product_nm,
+                'SLC' as product_nm,
                 CASE 
-                    WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '1004100'
-                    WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '1004610'
-                END AS contract_no,
+                    WHEN p.uw_company_nm = 'Vault Reciprocal Exchange' THEN '1004013'
+                    WHEN p.uw_company_nm = 'Vault E & S Insurance Company' THEN '1004609'
+                END as contract_no,
                 CASE 
                     WHEN CHARINDEX('-', p.policy_no) > 0 THEN LEFT(p.policy_no, CHARINDEX('-', p.policy_no) - 1)
                     ELSE p.policy_no
                 END AS policy_no,
-                CONVERT(VARCHAR(8), p.effective_dt, 112) as coverage_effective_dt,
-                CONVERT(VARCHAR(8), p.expiration_dt, 112) as coverage_expiration_dt,
-                c.customer_nm as insured_nm,
-                c.mailing_address_line1 as dwelling_address,
-                c.mailing_address_city_nm as dwelling_city,
-                c.mailing_address_state_cd as dwelling_state,
-                c.mailing_address_zip_cd as dwelling_zip_cd,
-                ROUND(pt.ceded_premium_amt,2) as hcp_net_premium_amt,
-                hac.home_cyber_protection_coverage_deductible as hcp_deductible_amt,
+                CONVERT(VARCHAR(8), p.effective_dt, 112) as homeowner_policy_effective_dt,
+                CONVERT(VARCHAR(8), p.expiration_dt, 112) as homeowner_policy_expiration_dt,
+                CONVERT(VARCHAR(8), pt.transaction_effective_dt, 112) as coverage_effective_dt,
+                CONVERT(VARCHAR(8), p.original_policy_effective_dt, 112) as original_homeowner_policy_effective_dt,
+                '' as prior_homeowner_insurance_ind,
+                p.insured_nm,
+                hl.address_line_1 as dwelling_address,
+                hl.city_nm as dwelling_city,
+                hl.state_cd as dwelling_state,
+                hl.zip_cd as dwelling_zip_cd,
+                ROUND(pt.ceded_premium_amt,2) as slc_net_premium_amt,
+                '50000' as slc_limit_amt,
+                '500' as slc_deductible_amt,
+                '' as base_homeowner_premium,
+                ROUND(p.annual_premium_amt,2) as final_homeowner_premium,
+                '500' as policy_deductible,
                 hc.dwelling_limit_amt as coverage_a_value,
-                CASE 
-                    WHEN REPLACE(hac.home_cyber_protection_coverage_limit_amt,',','') IN ('','0','25000','50000','100000') OR hac.home_cyber_protection_coverage_limit_amt IS NULL THEN '500'
-                    WHEN REPLACE(hac.home_cyber_protection_coverage_limit_amt,',','') IN ('250000','500000') THEN '1000'
-                END as hcp_limit_amt,
+                hc.other_structures_limit_amt as coverage_b_value,
+                hc.contents_limit_amt as coverage_c_value,
                 '' as homeowner_policy_form_no,
+                '' as homeowners_or_dwelling_fire_policy_form_type,
                 '' as product_form_no,
                 '' as client_product_nm,
                 CASE 
-                    WHEN p.product_cd = 'HO' THEN 280
-                    WHEN p.product_cd = 'CO' THEN 282
-                END AS dwelling_type,
-                '' as base_homeowner_premium,
-                ROUND(pt.net_premium_amt,2) as final_homeowner_premium,
+                    WHEN p.product_cd = 'HO' THEN 'Dwelling'
+                    WHEN p.product_cd = 'CO' THEN 'Condo'
+                END AS residence_type,
                 CASE 
-                    WHEN REPLACE(hac.home_cyber_protection_coverage_limit_amt,',','') IN ('','0','25000','50000','100000') OR hac.home_cyber_protection_coverage_limit_amt IS NULL THEN '500'
-                    WHEN REPLACE(hac.home_cyber_protection_coverage_limit_amt,',','') IN ('250000','500000') THEN '1000'
-                END as policy_deductible,
+                    WHEN hc.occupancy_type IN ('Primary','Vacant') THEN 'Primary'
+                    WHEN hc.occupancy_type IN ('Rented to others','Partially Rented to Others') THEN 'Secondary'
+                    WHEN hc.occupancy_type LIKE 'Seasonal%' THEN 'Season'
+                END AS usage_type,
+                CASE 
+                    WHEN hc.occupancy_type = 'Vacant' THEN 'Vacant'
+                    WHEN hc.residence_type = 'Tenant' THEN 'Tenant'
+                    ELSE 'owner'
+                END AS occupancy,
                 hc.built_year as year_build,
                 hc.total_finished_square_feet as total_living_area,
                 '' as no_of_units_in_dwelling,
-                '' as email_address,
-                '' as home_business,
+                hc.hvac_updated_year as heating_system_updated_yr,
+                hc.electrical_updated_year as electrical_system_updated_yr,
+                hc.plumbing_updated_year as plumbing_system_updated_yr,
+                '' as distance_to_hydrant,
+                '' as pricing_tier,
+                '' as insurance_score,
+                '' as rating_territory_cd,
+                '' as protection_class_cd,
                 CASE 
                     WHEN CHARINDEX('-', p.policy_no) > 0 THEN LEFT(p.policy_no, CHARINDEX('-', p.policy_no) - 1)
                     ELSE p.policy_no
                 END AS previous_policy_number,
+                ISNULL(c.agency_id,'') as agent_code,
+                '' as branch_code,
                 ss.source_system_nm,
                 getdate() as create_ts,
                 getdate() as update_ts,
                 @etl_audit_sk as etl_audit_sk
-            INTO [edw_temp].[tpolicy_hsb_cyber_feed_temp1] 
+            INTO [edw_temp].[policy_hsb_slc_feed_temp1] 
             FROM 
                 (
-                    select p.*, d.actual_dt as inforce_dt
+                    select p.*, d.actual_dt as inforce_dt, i.annual_premium_amt
                     from edw_core.tdaily_inforce_policy as i
                     inner join edw_core.tpolicy as p ON i.policy_sk = p.policy_sk
                     inner join edw_core.tdate as d ON i.inforce_dt_sk = d.date_sk
@@ -133,16 +155,21 @@ BEGIN
             INNER JOIN
                 (
                     select 
-                        pt.policy_sk, d.actual_dt as effective_dt, SUM(pt.net_premium_amt) as net_premium_amt, SUM(pt.ceded_premium_amt) as ceded_premium_amt
+                        pt.policy_sk, d.actual_dt as effective_dt, SUM(pt.net_premium_amt) as net_premium_amt, SUM(pt.ceded_annual_premium_amt) as ceded_premium_amt, Min(d2.actual_dt) as transaction_effective_dt
                     from edw_core.tpolicy_transaction as pt
                     inner join edw_core.tdate d on pt.effective_dt_sk = d.date_sk
+                    inner join edw_core.tdate d2 on pt.transaction_effective_dt_sk = d2.date_sk
                     inner join edw_core.tinternal_coverage as ic on pt.internal_coverage_sk = ic.internal_coverage_sk
-                    where ic.internal_coverage_cd = 'Cyber Protection'
+                    where ic.internal_coverage_cd = 'Service Line'
                     group by pt.policy_sk, d.actual_dt
                 ) AS pt 
                 ON pt.policy_sk = p.policy_sk 
             LEFT JOIN 
                 edw_core.tcustomer AS c ON c.customer_id = p.customer_id
+            LEFT JOIN 
+                edw_core.thome_location AS hl 
+                ON p.policy_no = hl.policy_no
+                AND p.effective_dt = hl.effective_dt
             LEFT JOIN 
                 edw_core.tproduct AS pr ON pr.product_cd = p.product_cd
             LEFT JOIN 
@@ -152,7 +179,7 @@ BEGIN
                         CASE 
                             WHEN ISNUMERIC(aop_deductible) = 0 THEN NULL 
                             ELSE ROUND(aop_deductible,0,1)
-                        END AS aop_deductible, 
+                        END AS aop_deductible,
                         dwelling_limit_amt, other_structures_limit_amt, contents_limit_amt, residence_type, 
                         occupancy_type, built_year, total_finished_square_feet, hvac_updated_year, electrical_updated_year, plumbing_updated_year,
                         ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt ORDER BY transaction_seq_no DESC) AS RN
@@ -164,7 +191,7 @@ BEGIN
             LEFT JOIN 
                 (
                     select 
-                        policy_no, effective_dt, transaction_seq_no, home_systems_protection_limit_amt, home_cyber_protection_coverage_deductible, home_cyber_protection_coverage_limit_amt, home_cyber_protection_coverage_in,
+                        policy_no, effective_dt, transaction_seq_no, home_systems_protection_limit_amt, serviceline_protection_in,
                         ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt ORDER BY transaction_seq_no DESC) AS RN
                     from edw_core.thome_additional_coverage
                 ) AS hac
@@ -173,43 +200,59 @@ BEGIN
                 AND hac.RN = 1
             LEFT JOIN 
                 edw_core.tsource_system AS ss ON ss.source_system_sk = p.source_system_sk
-            WHERE hac.home_cyber_protection_coverage_in = 'Yes'
+            WHERE hac.serviceline_protection_in = 'Yes'
             ;
 
             -- Delete previous data for the date that we are processing
-            DELETE FROM [edw_integration].[policy_hsb_cyber_feed] WHERE reporting_date = @CurrentLastDayOfMonth
+            DELETE FROM [edw_integration].[policy_hsb_slc_feed] WHERE reporting_date = @CurrentLastDayOfMonth
 
             -- Start Insert process
-            INSERT INTO [edw_integration].[policy_hsb_cyber_feed](
+            INSERT INTO [edw_integration].[policy_hsb_slc_feed](
                 reporting_date,
                 company_product_cd,
                 product_nm,
                 contract_no,
                 policy_no,
+                homeowner_policy_effective_dt,
+                homeowner_policy_expiration_dt,
                 coverage_effective_dt,
-                coverage_expiration_dt,
+                original_homeowner_policy_effective_dt,
+                prior_homeowner_insurance_ind,
                 insured_nm,
                 dwelling_address,
                 dwelling_city,
                 dwelling_state,
                 dwelling_zip_cd,
-                hcp_net_premium_amt,
-                hcp_deductible_amt,
-                coverage_a_value,
-                hcp_limit_amt,
-                homeowner_policy_form_no,
-                product_form_no,
-                client_product_nm,
-                dwelling_type,
+                slc_net_premium_amt,
+                slc_limit_amt,
+                slc_deductible_amt,
                 base_homeowner_premium,
                 final_homeowner_premium,
                 policy_deductible,
+                coverage_a_value,
+                coverage_b_value,
+                coverage_c_value,
+                homeowner_policy_form_no,
+                homeowners_or_dwelling_fire_policy_form_type,
+                product_form_no,
+                client_product_nm,
+                residence_type,
+                usage_type,
+                occupancy,
                 year_build,
                 total_living_area,
                 no_of_units_in_dwelling,
-                email_address,
-                home_business,
+                heating_system_updated_yr,
+                electrical_system_updated_yr,
+                plumbing_system_updated_yr,
+                distance_to_hydrant,
+                pricing_tier,
+                insurance_score,
+                rating_territory_cd,
+                protection_class_cd,
                 previous_policy_number,
+                agent_code,
+                branch_code,
                 source_system_nm,
                 create_ts,
                 update_ts,
@@ -221,35 +264,56 @@ BEGIN
                 product_nm,
                 contract_no,
                 policy_no,
+                homeowner_policy_effective_dt,
+                homeowner_policy_expiration_dt,
                 coverage_effective_dt,
-                coverage_expiration_dt,
+                original_homeowner_policy_effective_dt,
+                prior_homeowner_insurance_ind,
                 insured_nm,
                 dwelling_address,
                 dwelling_city,
                 dwelling_state,
                 dwelling_zip_cd,
-                hcp_net_premium_amt,
-                hcp_deductible_amt,
-                coverage_a_value,
-                hcp_limit_amt,
-                homeowner_policy_form_no,
-                product_form_no,
-                client_product_nm,
-                dwelling_type,
+                slc_net_premium_amt,
+                slc_limit_amt,
+                slc_deductible_amt,
                 base_homeowner_premium,
                 final_homeowner_premium,
                 policy_deductible,
+                coverage_a_value,
+                coverage_b_value,
+                coverage_c_value,
+                homeowner_policy_form_no,
+                homeowners_or_dwelling_fire_policy_form_type,
+                product_form_no,
+                client_product_nm,
+                residence_type,
+                usage_type,
+                occupancy,
                 year_build,
                 total_living_area,
                 no_of_units_in_dwelling,
-                email_address,
-                home_business,
+                heating_system_updated_yr,
+                electrical_system_updated_yr,
+                plumbing_system_updated_yr,
+                distance_to_hydrant,
+                pricing_tier,
+                insurance_score,
+                rating_territory_cd,
+                protection_class_cd,
                 previous_policy_number,
+                agent_code,
+                branch_code,
                 source_system_nm,
                 create_ts,
                 update_ts,
                 etl_audit_sk
-            FROM [edw_temp].[tpolicy_hsb_cyber_feed_temp1];
+            FROM [edw_temp].[policy_hsb_slc_feed_temp1];
+
+            --Insert max_date and row_count
+            INSERT INTO [edw_temp].[policy_hsb_slc_feed_temp2]
+            SELECT MAX(reporting_date) AS reporting_date, COUNT(1) AS row_count  FROM [edw_temp].[policy_hsb_slc_feed_temp1]
+            ;
 
             FETCH NEXT FROM LastDaysCursor INTO @CurrentLastDayOfMonth;
             
@@ -263,11 +327,12 @@ BEGIN
         -- CLOSE CURSOR TO ITERATE EVERY MONTH TO PROCESS --
         ----------------------------------------------------
 
-		SET @rows_affected=@@ROWCOUNT;
+		SET @rows_affected = (SELECT SUM(row_count) AS row_count FROM [edw_temp].[policy_hsb_slc_feed_temp2]);
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.reporting_date) FROM [edw_temp].[tpolicy_hsb_cyber_feed_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t2.reporting_date) FROM [edw_temp].[policy_hsb_slc_feed_temp2] t2),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS [edw_temp].[tpolicy_hsb_cyber_feed_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[policy_hsb_slc_feed_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[policy_hsb_slc_feed_temp2];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
