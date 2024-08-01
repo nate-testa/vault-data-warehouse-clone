@@ -1,0 +1,3 @@
+
+ALTER TABLE edw_core.tquote_home_additional_coverage 
+ADD contents_extended_replacement_cost_limit varchar(255);
