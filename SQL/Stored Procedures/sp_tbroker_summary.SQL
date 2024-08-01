@@ -41,6 +41,7 @@ GO
 --													mtd_net_premium_amt 
 -- 07/18/24		Architha Gudimalla				26. Updated logic for @last_source_extract_ts
 -- 07/26/24		Architha Gudimalla				27. Added changes for hubspot
+-- 08/01/24		Architha Gudimalla				28. Added logic for policy_renewal_offered_over_50k_ct
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -357,6 +358,7 @@ BEGIN
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco, 
 						   	sum(r.renewal_non_flat_cancelled_ct) renewal_ct,  
 							sum(renewal_ct) policy_renewal_offered_ct, 
+							sum(case when renewal_ct > 0 and renewal_initial_written_premium_amt > 50000 then 1 else 0 end) policy_renewal_offered_over_50k_ct, 
 							sum(case when renewal_ct > 0 then renewal_initial_written_premium_amt else 0 end) policy_renewal_offered_premium_amt, 
 							sum(case when renewal_ct > 0 then r.expiring_written_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,
 							sum(r.non_flat_cancelled_ct-r.mid_term_cancelled_ct) expiring_ct,
@@ -372,7 +374,8 @@ BEGIN
 				select broker_sk,product_sk, customer_sk, uwco, state_sk,
 						--  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_ct else 0 end) renewal_ct,  
-						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_ct else 0 end) policy_renewal_offered_ct,   
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_ct else 0 end) policy_renewal_offered_ct,  
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_over_50k_ct else 0 end) policy_renewal_offered_over_50k_ct,   
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_premium_amt else 0 end) policy_renewal_offered_premium_amt,  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_expiring_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,   
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_ct else 0 end) expiring_ct,
@@ -894,6 +897,7 @@ BEGIN
 						policy_expiring_ct,
 						policy_renewal_ct,
 						policy_renewal_offered_ct,
+						policy_renewal_offered_over_50k_ct,
 						policy_renewal_offered_premiumm_amt,
 						policy_renewal_offered_expiring_premium_amt,
 						policy_expiring_premium_amt,
@@ -1019,6 +1023,7 @@ BEGIN
 						sum(isnull(r.expiring_ct,0)) policy_expiring_ct,
 						sum(isnull(r.renewal_ct,0)) policy_renewal_ct,
 						sum(isnull(r.policy_renewal_offered_ct,0)) policy_renewal_offered_ct,
+						sum(isnull(r.policy_renewal_offered_over_50k_ct,0)) policy_renewal_offered_over_50k_ct, 
 						sum(isnull(r.policy_renewal_offered_premium_amt,0)) policy_renewal_offered_premium_amt,
 						sum(isnull(r.policy_renewal_offered_expiring_premium_amt,0)) policy_renewal_offered_expiring_premium_amt, 
 						sum(isnull(r.expiring_prm,0)) policy_expiring_premium_amt,
