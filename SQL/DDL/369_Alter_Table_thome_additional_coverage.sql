@@ -1,2 +1,2 @@
 ALTER TABLE edw_core.thome_additional_coverage
-ADD contents_extended_replacement_cost_limit varchar(255);
+ADD contents_extended_replacement_cost_limit_amt varchar(255);
