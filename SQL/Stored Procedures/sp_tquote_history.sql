@@ -8,6 +8,7 @@
 -- 02/08/24		Alberto Almario					3. Added new column producer_sk
 -- 04/29/24		Hernando Gonzalez				4. Added new column insurance_score_last_run_dt
 -- 05/15/24		Architha Gudimalla				5. Removed effecivedate from partiion in rnk used for latest_transaction_ind
+-- 07/31/24		Architha Gudimalla				6. Added number desc to the rank in main query
 -- ============================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history]
@@ -44,7 +45,7 @@ BEGIN
 			CAST(ins.ReferenceCode AS VARCHAR(255)) as customer_id,
 			ins.id as MasterInsuredId,
 			acct.Number,
-			DENSE_RANK()OVER(PARTITION BY acct.PolicyNumber                                  ORDER BY acct.UpdatedDate DESC) AS rnk, 
+			DENSE_RANK()OVER(PARTITION BY acct.PolicyNumber                                  ORDER BY acct.UpdatedDate DESC, acct.Number DESC) AS rnk, 
 			case when acct.TransactionEffectiveDate is null then acct.EffectiveDate else acct.TransactionEffectiveDate end TransactionEffectiveDate,
 			acct.CancellationReason, 
 			acct.CreatedDate,
