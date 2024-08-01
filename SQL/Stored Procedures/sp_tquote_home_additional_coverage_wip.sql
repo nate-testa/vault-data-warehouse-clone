@@ -171,6 +171,7 @@ BEGIN
 				,AgreedValue AS agreed_value_in
 					,BackUpOfSewersLimit AS backup_of_sewers_limit_in
 				,ContentsExtendedReplacementCost AS contents_extended_replacement_cost_in
+				,ContentsExtendedReplacementCostLimit as contents_extended_replacement_cost_limit_amt
 				,CoverageForPiersWharvesAndDocksDueToWeightOfIceOrSnow AS coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_in
 				,CoverageForPiersWharvesAndDocksDueToWeightOfIceOrSnowLimit AS coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_limit_amt
 				,NULL AS damage_to_property_of_others_increased_limit_amt
@@ -321,7 +322,7 @@ BEGIN
 			,home_cyber_protection_coverage_deductible,home_cyber_protection_coverage_limit_amt
 			,offpremises_other_permanent_structures_extension_in,offpremises_other_permanent_structures_extension_desc
 			,agreed_value_in
-			,backup_of_sewers_limit_in,contents_extended_replacement_cost_in
+			,backup_of_sewers_limit_in,contents_extended_replacement_cost_in,contents_extended_replacement_cost_limit_amt
 			,coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_in
 			,coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_limit_amt
 			,damage_to_property_of_others_increased_limit_amt,debris_removal_broadaned_tree_removal_in
@@ -401,7 +402,7 @@ BEGIN
 				,home_cyber_protection_coverage_deductible,home_cyber_protection_coverage_limit_amt
 				,offpremises_other_permanent_structures_extension_in,offpremises_other_permanent_structures_extension_desc
 				,agreed_value_in
-				,backup_of_sewers_limit_in,contents_extended_replacement_cost_in
+				,backup_of_sewers_limit_in,contents_extended_replacement_cost_in,contents_extended_replacement_cost_limit_amt
 				,coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_in
 				,coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_limit_amt
 				,damage_to_property_of_others_increased_limit_amt,debris_removal_broadaned_tree_removal_in
@@ -521,6 +522,7 @@ BEGIN
 			[target].agreed_value_in = [source].agreed_value_in,
 			[target].backup_of_sewers_limit_in = [source].backup_of_sewers_limit_in,
 			[target].contents_extended_replacement_cost_in = [source].contents_extended_replacement_cost_in,
+			[target].contents_extended_replacement_cost_limit_amt = [source].contents_extended_replacement_cost_limit_amt,
 			[target].coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_in = [source].coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_in,
 			[target].coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_limit_amt = [source].coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_limit_amt,
 			[target].damage_to_property_of_others_increased_limit_amt = [source].damage_to_property_of_others_increased_limit_amt,

@@ -144,7 +144,7 @@ BEGIN
 			,home_cyber_protection_coverage_deductible,home_cyber_protection_coverage_limit_amt
 			,offpremises_other_permanent_structures_extension_in,offpremises_other_permanent_structures_extension_desc
 			,agreed_value_in
-			,backup_of_sewers_limit_in,contents_extended_replacement_cost_in
+			,backup_of_sewers_limit_in,contents_extended_replacement_cost_in,contents_extended_replacement_cost_limit_amt
 			,coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_in
 			,coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_limit_amt
 			,damage_to_property_of_others_increased_limit_amt,debris_removal_broadaned_tree_removal_in
@@ -260,6 +260,7 @@ BEGIN
            ,AgreedValue AS agreed_value_in
 			,BackUpOfSewersLimit AS backup_of_sewers_limit_in
            ,ContentsExtendedReplacementCost AS contents_extended_replacement_cost_in
+		   ,ContentsExtendedReplacementCostLimit AS contents_extended_replacement_cost_limit_amt
            ,CoverageForPiersWharvesAndDocksDueToWeightOfIceOrSnow AS coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_in
            ,CoverageForPiersWharvesAndDocksDueToWeightOfIceOrSnowLimit AS coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_limit_amt
            ,NULL AS damage_to_property_of_others_increased_limit_amt
