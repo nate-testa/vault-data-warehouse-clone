@@ -7,6 +7,7 @@
 -- 07/17/24		Hernando Gonzalez			1. Created this procedure 
 -- 07/23/24		Architha Gudimalla			2. Updated to use data from tpolicy_insured
 -- 07/29/24		Architha Gudimalla			3. Corrections after first runs
+-- 08/02/24		Architha Gudimalla			4. Added customer_id
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -54,7 +55,8 @@ BEGIN
 			pi.mailing_address_unit_no, 
 			pi.mailing_address_city_nm, 
 			pi.mailing_address_state_cd, 
-			pi.mailing_address_zip_cd
+			pi.mailing_address_zip_cd,
+			pol.customer_id
 		INTO edw_temp.customer_hubspot_feed_temp1
 		FROM edw_core.tpolicy pol		
 		INNER JOIN edw_core.tcustomer cust
@@ -98,6 +100,7 @@ BEGIN
 				,mailing_address_city_nm
 				,mailing_address_state_cd
 				,mailing_address_zip_cd
+				,customer_id
 				FROM edw_temp.customer_hubspot_feed_temp1
 		) as SOURCE
 		ON Source.policy_no = Target.policy_no
@@ -124,6 +127,7 @@ BEGIN
 			,mailing_address_city_nm
 			,mailing_address_state_cd
 			,mailing_address_zip_cd
+			,customer_id
 			)
 		VALUES (source.policy_no,
 				source.first_nm,
@@ -144,7 +148,8 @@ BEGIN
 				,source.mailing_address_unit_no
 				,source.mailing_address_city_nm
 				,source.mailing_address_state_cd
-				,source.mailing_address_zip_cd)
+				,source.mailing_address_zip_cd
+				,source.customer_id)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
@@ -166,6 +171,7 @@ BEGIN
   			,target.mailing_address_city_nm = source.mailing_address_city_nm 
             ,target.mailing_address_state_cd = source.mailing_address_state_cd
             ,target.mailing_address_zip_cd 	= source.mailing_address_zip_cd
+            ,target.customer_id 			= source.customer_id
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
