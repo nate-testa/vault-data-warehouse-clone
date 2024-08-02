@@ -46,7 +46,7 @@ def check_tvalidation_and_send_email(**kwargs):
                 ON tr.validation_sql_sk = ts.validation_sql_sk
                 WHERE cast(process_run_start_ts as date) = cast(getdate() as date)
                 AND status_desc ='failure'
-                ORDER BY 1 DESC
+                ORDER BY ts.validation_sql_desc
               """
     mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
     result = mssql_hook.get_first(sql_qry)
@@ -879,6 +879,7 @@ with DAG(
             'sp_tpolicy',
             'sp_tpolicy_history', 
             'sp_tpolicy_insured', 
+            'sp_tpolicy_insured_update',
             'sp_tloss_history', 
             'sp_tadditional_interest', 
             'sp_tpolicy_update_non_renwal_billing',
@@ -918,6 +919,14 @@ with DAG(
             task_id='sp_tpolicy_insured',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_tpolicy_insured",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_tpolicy_insured_update  = MsSqlOperator(
+            task_id='sp_tpolicy_insured_update',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_tpolicy_insured_update",
             database="vault_edw",
             autocommit=True,
         )
@@ -993,7 +1002,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(policy_group_items, 'All stored procedures executed successfully for all the Policy tables'),
         )
 
-        sp_tpolicy >> sp_tpolicy_update_non_renwal_billing >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tloss_history >> sp_tadditional_interest >> sp_ttask_workflow >> sp_ttask_workflow_step >> sp_ttask >> sp_tmanuscript >> sp_tnote >> sp_tpolicy_referral_message >> send_policy_email
+        sp_tpolicy >> sp_tpolicy_update_non_renwal_billing >> sp_tpolicy_history >> sp_tpolicy_insured >> sp_tpolicy_insured_update >> sp_tloss_history >> sp_tadditional_interest >> sp_ttask_workflow >> sp_ttask_workflow_step >> sp_ttask >> sp_tmanuscript >> sp_tnote >> sp_tpolicy_referral_message >> send_policy_email
 
 
     # with TaskGroup("vendor_report_group") as vendor_report_group:
@@ -1253,6 +1262,12 @@ with DAG(
             autocommit=True,
         )
 
+        exec_vault_redzone_feed = TriggerDagRunOperator(
+            task_id="exec_vault_redzone_feed",
+            trigger_dag_id="vault_redzone_feed",
+            dag=dag,
+        )
+
         send_integration_email = EmailOperator(
             task_id='send_integration_email',
             to=to_email,
@@ -1260,7 +1275,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
         )
 
-        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_billing_account_customer_portal_api >> sp_policy_customer_portal_api >> sp_policy_ivans_auto_feed >> sp_policy_ivans_home >> sp_policy_ivans_pel_feed >> ivans_api_call >> sp_customer_broker_livevox_feed >> generate_livevox_file >> upload_livevox_file_to_sftp >> sp_claim_renewal_rating_home_collection_api >> sp_claim_renewal_rating_auto_pel_api >> sp_claim_product_search_api >> send_integration_email
+        sp_tclaim_policy_search_api >> sp_tclaim_symbility_api >> sp_billing_account_customer_portal_api >> sp_policy_customer_portal_api >> sp_policy_ivans_auto_feed >> sp_policy_ivans_home >> sp_policy_ivans_pel_feed >> ivans_api_call >> sp_customer_broker_livevox_feed >> generate_livevox_file >> upload_livevox_file_to_sftp >> sp_claim_renewal_rating_home_collection_api >> sp_claim_renewal_rating_auto_pel_api >> sp_claim_product_search_api >> exec_vault_redzone_feed >> send_integration_email
 
     exec_vault_edw_data_load_quotes = TriggerDagRunOperator(
         task_id="exec_vault_edw_data_load_quotes",

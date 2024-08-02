@@ -34,7 +34,7 @@ def check_tedw_release_note_and_send_email(**kwargs):
                 FROM edw_core.tedw_release_note 
                 WHERE send_email_in = 'Yes' 
                 AND send_email_dt = CAST(GETDATE() AS DATE) 
-                ORDER BY TICKET_NO DESC, TICKET_TYPE DESC
+                ORDER BY TICKET_TYPE DESC, TICKET_NO DESC
               """
     mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
     result = mssql_hook.get_first(sql_qry)

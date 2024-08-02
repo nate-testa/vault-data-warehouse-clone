@@ -14,6 +14,7 @@ GO
 -- 02/04/24             Alberto Almario                 4. add 3 new columns
 -- 04/19/24             Architha Gudimalla              5. Added limit converion to front end display value
 -- 07/10/24             Yunus Mohammed                  6. Removed rater_pip_discount
+-- 07/25/24             Tuba Mohsin                     7. Added new coverage EnhancedUIM
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage] 
@@ -56,7 +57,7 @@ BEGIN
             [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
             [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied],
 			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay],
-            [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice]
+            [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM]
 		
         INTO [edw_temp].[tquote_auto_policy_coverage_temp1]
 		
@@ -108,7 +109,7 @@ BEGIN
                     [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
                     [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], 
                     [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay],
-                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice]
+                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM]
                 )
 			) pivottable
 
@@ -263,6 +264,7 @@ BEGIN
             ,permissive_driver_unique_bi_limit_amt
             ,permissive_driver_unique_pd_limit_amt
             ,emergency_extension_notice_in
+            ,enhanced_underinsured_motorist_coverage_in
 		)
         SELECT 
             t1.quote_no,
@@ -375,6 +377,7 @@ BEGIN
             ,t1.[PermissiveDriverUniqueBILimit] as permissive_driver_unique_bi_limit_amt
             ,t1.[PermissiveDriverUniquePDLimit] as permissive_driver_unique_pd_limit_amt
             ,t1.[EmergencyExtensionNotice] as emergency_extension_notice_in
+            ,t1.[EnhancedUIM] as enhanced_underinsured_motorist_coverage_in
         FROM 
             [edw_temp].[tquote_auto_policy_coverage_temp1] AS t1
         ;

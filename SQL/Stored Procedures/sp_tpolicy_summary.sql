@@ -18,6 +18,7 @@ GO
 -- 12/06/23		Architha Gudimalla				6. Fixed exposure calculation
 -- 12/20/23		Architha Gudimalla				7. Added annual_net_premium_amt
 -- 07/03/24		Yunus Mohammed					8. Added policy_history_sk
+-- 07/18/24		Architha Gudimalla				9. Updated logic for @last_source_extract_ts
 -- ======================================================================================================================================== 
 
 CREATE or ALTER    PROCEDURE [edw_core].[sp_tpolicy_summary]
@@ -64,10 +65,10 @@ BEGIN
 		union 
 		select	yearmonth, max(calendar_year) year 
 		from	edw_core.tdate
-		where	actual_dt >  case when @in_end_dt is not null then @in_end_dt else @last_source_extract_ts end
-		  and   actual_dt <= case when @in_end_dt is not null then @in_end_dt else getdate() end
+		where	actual_dt >= case when @in_end_dt is not null then @in_end_dt else @last_source_extract_ts end
+		  and   actual_dt <  case when @in_end_dt is not null then @in_end_dt else cast(getdate() as date)  end
 		group by yearmonth
-		order by 1;   
+		order by 1;  
 	
 		DECLARE @parameter_desc VARCHAR(255) 
 
@@ -101,8 +102,8 @@ BEGIN
 								@begin_dt = min(actual_dt), 
 								@end_dt = max(actual_dt) 
 						from edw_core.tdate
-						where yearmonth = @yearmonth and actual_dt <= cast(getdate() as date); 
-				END 
+						where yearmonth = @yearmonth and actual_dt < cast(getdate() as date); 
+				END  
 
 				select 	@prev_month_end_dt_sk = max(datE_sk) 
 				from edw_core.tdate
