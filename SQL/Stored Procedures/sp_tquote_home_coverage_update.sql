@@ -9,7 +9,8 @@ GO
 -----------------------------------------------------------------------------------------------------------------
 -- 11/13/23		Architha Gudimalla		    1. Created this procedure to update TIV and loss_of_use_derived_pc
 -- 05/17/23		Architha Gudimalla		    2. Updated logic for loss_of_use_derived_pc
--- 06/14/24		Yunus Mohammed 				5. Removed error for rate_on_line
+-- 06/14/24		Yunus Mohammed 				3. Removed error for rate_on_line
+-- 08/04/24		Architha Gudimalla		    4. Updated loss_of_use_amt to float
 -- =============================================================================================================== 
 
 
@@ -82,21 +83,21 @@ BEGIN
 												and case when loss_of_use_pc = '' then '0' else loss_of_use_pc end = '0'
 													then 0
 												WHEN ((isnumeric(trim(loss_of_use_limit_amt)) = 1 
-												and loss_of_use_limit_amt > 100 )  
+												and cast(loss_of_use_limit_amt as float) > 100 )  
 												)
 												and dwelling_limit_amt > 0 
 													then cast(loss_of_use_limit_amt as float)/dwelling_limit_amt
 												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 1 
-												and loss_of_use_limit_amt > 100 
+												and cast(loss_of_use_limit_amt as float) > 100 
 												and contents_limit_amt > 0 
 													then cast(loss_of_use_limit_amt as float)/contents_limit_amt 
 												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 1 
-												and loss_of_use_limit_amt > 100 
+												and cast(loss_of_use_limit_amt as float) > 100 
 												and contents_limit_amt = 0 and dwelling_limit_amt = 0
 													then 0 
 												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 1 
-												and loss_of_use_limit_amt < 100 
-													then loss_of_use_limit_amt
+												and cast(loss_of_use_limit_amt as float) < 100 
+													then cast(loss_of_use_limit_amt as float)
 												WHEN loss_of_use_pc like '%.%' 
 													THEN  cast(loss_of_use_pc as float) 
 													else 0
