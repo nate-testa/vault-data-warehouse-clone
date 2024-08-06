@@ -143,7 +143,7 @@ BEGIN
                     WHEN CHARINDEX('-', p.policy_no) > 0 THEN LEFT(p.policy_no, CHARINDEX('-', p.policy_no) - 1)
                     ELSE p.policy_no
                 END AS previous_policy_number,
-                ISNULL(c.agency_id,'') as agent_code,
+                ISNULL(p.broker_id,'') as agent_code,
                 '' as branch_code,
                 ss.source_system_nm,
                 getdate() as create_ts,
