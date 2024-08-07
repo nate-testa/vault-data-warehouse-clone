@@ -19,7 +19,8 @@ GO
 -- 05/17/24     Architha Gudimalla              9. Updated join for tquote_auto_vehicle
 -- 05/17/24     Architha Gudimalla              10. Removed join on unique id for tquote_auto_vehicle
 -- 13/06/24     Hernando Gonzalez               11. Added NewlyPurchasedVehicleFinal
--- 07/10/24     Alberto Almario                 11. added vehicle_unique_id 
+-- 07/10/24     Alberto Almario                 12. added vehicle_unique_id 
+-- 08/07/24     Yunus Mohammed                  13. Updated logic to get garaging location
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
@@ -189,7 +190,11 @@ BEGIN
                             acct.ExpirationDate as expiration_dt, acct.Number as transaction_seq_no,
                             qh.quote_history_sk, qav.quote_auto_vehicle_sk, 
                             acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
-                            acctvof.[Field], acctvof.[Value],
+                            acctvof.[Field], 
+                             CASE
+                                WHEN acctvof.Field = 'GaragingLocationId' THEN acctvof.ReferenceObjectId
+                                ELSE acctvof.[Value]
+                            END AS [Value],                            
                             CASE 
                                 WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
                                 ELSE 4 --(Metal)
@@ -604,7 +609,7 @@ BEGIN
             [edw_temp].[tquote_auto_vehicle_coverage_temp1] AS t1
         left join [edw_stage].[AccountTransactionVersionObject] AS atvo ON atvo.id = t1.GaragingLocationId
         left join[edw_core].[tquote_auto_garage_location] AS gar 
-					ON gar.quote_no = t1.quote_no and gar.effective_dt = t1.effective_dt and gar.transaction_seq_no = t1.transaction_seq_no and gar.garage_location_no = atvo.[Index]
+					ON gar.quote_no = t1.quote_no and gar.effective_dt = t1.effective_dt and gar.transaction_seq_no = t1.transaction_seq_no and gar.garage_unique_id = atvo.UniqueId
         left join ( select rank() over (partition by quote_no, effective_dt, transaction_seq_no order by quote_no, effective_dt, transaction_seq_no,garage_location_no) rnk, *
 				from [edw_core].[tquote_auto_garage_location] 
 		) gar1 on gar1.rnk = 1 and  gar1.quote_no = t1.quote_no and gar1.effective_dt = t1.effective_dt and t1.transaction_seq_no = gar1.transaction_seq_no
