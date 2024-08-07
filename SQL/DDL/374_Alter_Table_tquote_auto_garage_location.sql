@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote_auto_garage_location ADD garage_unique_id varchar(255);
