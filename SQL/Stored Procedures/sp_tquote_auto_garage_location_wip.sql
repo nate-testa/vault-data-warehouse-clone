@@ -5,11 +5,12 @@ GO
 -- ================================================================================================================================================
 -- Description: This stored procedure inserts and updates info related to quote auto grage - wip
 --------------------------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date              |Author						|	Change Description
 --------------------------------------------------------------------------------------------------------------------------------------------------
--- 05/06/24		Alberto Almario					1. Created the proc
--- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
--- 05/14/24		Architha Gudimalla				3. Corrected errors
+-- 05/06/24		            Alberto Almario					1. Created the proc
+-- 05/08/24		            Architha Gudimalla				2. Updated @last_source_extract_ts
+-- 05/14/24		            Architha Gudimalla				3. Corrected errors
+-- 08/07/24                 Yunus Mohammed                  4. Added garage_unique_id
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_garage_location_wip]
 AS
@@ -37,7 +38,7 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[tquote_auto_garage_location_wip_temp1];
 
 		SELECT 
-			CreatedDate, UpdatedDate, quote_no, effective_dt, expiration_dt, 0 as transaction_seq_no, quote_history_sk, garage_location_no,
+			CreatedDate, UpdatedDate, quote_no, effective_dt, expiration_dt, 0 as transaction_seq_no, quote_history_sk, garage_location_no,garage_unique_id,
             [AddressLine1],[AddressLine2],/*['**Pending garage_address_unit_no'],*/[AddressCity],[AddressZipCode],[AddressState],[AddressCounty],[AddressCountry],
             [CensusTract],[FloodZone],[WildfireThreat],[ProtectionClass],[DistanceToCoast],[CentralReportingFireAlarm],[CentralReportingBurglarAlarm],
 			source_system_sk
@@ -51,6 +52,7 @@ BEGIN
                     acc.ExpirationDate as expiration_dt, --acc.Number as transaction_seq_no, 
                     qh.quote_history_sk,
                     acco.[Index] as garage_location_no,
+                    acco.UniqueId as garage_unique_id,
                     accof.[Field], accof.[Value],
                     CASE 
                         WHEN acc.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
@@ -90,7 +92,7 @@ BEGIN
         USING [edw_temp].[tquote_auto_garage_location_wip_temp1] AS source
             ON target.quote_no = source.quote_no
             AND target.effective_dt = source.effective_dt
-            AND target.garage_location_no = source.garage_location_no
+            AND target.garage_unique_id = source.garage_unique_id            
             AND target.transaction_seq_no = source.transaction_seq_no
         WHEN MATCHED THEN
             UPDATE SET
@@ -111,6 +113,7 @@ BEGIN
                 target.distance_to_coast = source.[DistanceToCoast],
                 target.central_reporting_fire_alarm_in = source.[CentralReportingFireAlarm],
                 target.central_reporting_burglar_alarm_in = source.[CentralReportingBurglarAlarm],
+                target.garage_location_no = source.garage_location_no,
                 target.source_system_sk = source.source_system_sk,
                 target.update_ts = GETDATE(),
                 target.etl_audit_sk = @etl_audit_sk
@@ -122,6 +125,7 @@ BEGIN
                 transaction_seq_no,
                 quote_history_sk,
                 garage_location_no,
+                garage_unique_id,
                 garage_address_line1,
                 garage_address_line2,
                 garage_address_unit_no,
@@ -149,6 +153,7 @@ BEGIN
                 source.transaction_seq_no,
                 source.quote_history_sk,
                 source.garage_location_no,
+                source.garage_unique_id,
                 source.[AddressLine1],
                 source.[AddressLine2],
                 NULL,
