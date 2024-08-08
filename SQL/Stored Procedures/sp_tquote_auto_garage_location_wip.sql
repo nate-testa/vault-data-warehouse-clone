@@ -92,7 +92,7 @@ BEGIN
         USING [edw_temp].[tquote_auto_garage_location_wip_temp1] AS source
             ON target.quote_no = source.quote_no
             AND target.effective_dt = source.effective_dt
-            AND target.garage_location_no = source.garage_location_no
+            AND target.garage_unique_id = source.garage_unique_id            
             AND target.transaction_seq_no = source.transaction_seq_no
         WHEN MATCHED THEN
             UPDATE SET
@@ -113,7 +113,7 @@ BEGIN
                 target.distance_to_coast = source.[DistanceToCoast],
                 target.central_reporting_fire_alarm_in = source.[CentralReportingFireAlarm],
                 target.central_reporting_burglar_alarm_in = source.[CentralReportingBurglarAlarm],
-                target.garage_unique_id = source.garage_unique_id,
+                target.garage_location_no = source.garage_location_no,
                 target.source_system_sk = source.source_system_sk,
                 target.update_ts = GETDATE(),
                 target.etl_audit_sk = @etl_audit_sk
