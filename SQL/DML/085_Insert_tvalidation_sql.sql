@@ -28,3 +28,9 @@ and datediff(day,cast(a.EffectiveDate as date),cast(getdate() as date)) >15' AS 
        'Daily' AS frequency_desc ,
        getdate() AS create_ts ,
        getdate() AS update_ts;
+
+--
+UPDATE edw_core.tvalidation_sql
+SET validation_sql_desc = 'Metal Validation - AccountTransactionVersion - Missing records'
+WHERE validation_sql_desc = 'Metal Validation - Insured - Missing insured'
+AND source_sql like '%acctv%';
