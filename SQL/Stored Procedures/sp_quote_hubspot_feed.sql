@@ -7,6 +7,7 @@
 -- 07/29/24		        Architha Gudimalla			2. Excluded quotes with broker_id = 0
 -- 08/08/24		        Architha Gudimalla			3. Added Customer id
 -- 08/09/24		        Architha Gudimalla			4. Only include quotes with eff dt >= 20230601
+-- 08/09/24		        Architha Gudimalla			5. Excluded test quotes
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -112,8 +113,8 @@ BEGIN
         left join edw_core.tcustomer cust on cust.customer_id = q.customer_id
         left join edw_core.tbroker br on br.broker_id = q.broker_id
         left join edw_core.tbroker_vault_team bvt on br.broker_id = bvt.broker_id and bvt.product_nm = pr.product_nm
-        and bvt.team_member_type = 'BusinessDevelopmentManager' and q.program_type = bvt.program_type
-        and  isnull(bvt.state_cd,q.risk_state_cd)=q.risk_state_cd
+                                                    and bvt.team_member_type = 'BusinessDevelopmentManager' and q.program_type = bvt.program_type
+                                                    and  isnull(bvt.state_cd,q.risk_state_cd)=q.risk_state_cd
         left join edw_core.tquote_home_location tqhl on tqhl.quote_no = q.quote_no
         left join edw_core.tquote_collection_location tqcl on tqcl.quote_no = q.quote_no
         left join edw_core.tquote_pel_location tqpl on tqpl.quote_history_sk = h.quote_history_sk and tqpl.primary_location_in = 'Yes'
@@ -125,7 +126,11 @@ BEGIN
         where  h.latest_transaction_in = 'Y'
 		and greatest(q.create_ts,q.update_ts) > @last_source_extract_ts
         and q.broker_id <> '0'
-        and q.effective_Dt >= '01-jun-2023'
+        and q.effective_Dt >= '01-jun-2023'  
+		and q.insured_nm not like '%test%' 
+		and cust.last_nm not like '%test%'
+		and cust.first_nm not like '%test%' 
+		and cust.customer_nm not like '%test%'
 
         -- Start Merge process
 		MERGE INTO [edw_integration].[quote_hubspot_feed] AS target
