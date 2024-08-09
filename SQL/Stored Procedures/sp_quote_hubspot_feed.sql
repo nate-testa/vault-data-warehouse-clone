@@ -6,6 +6,7 @@
 -- 07/17/24		        Yunus Mohammed				1. Created this procedure
 -- 07/29/24		        Architha Gudimalla			2. Excluded quotes with broker_id = 0
 -- 08/08/24		        Architha Gudimalla			3. Added Customer id
+-- 08/09/24		        Architha Gudimalla			4. Only include quotes with eff dt >= 20230601
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -124,6 +125,7 @@ BEGIN
         where  h.latest_transaction_in = 'Y'
 		and greatest(q.create_ts,q.update_ts) > @last_source_extract_ts
         and q.broker_id <> '0'
+        and q.effective_Dt >= '01-jun-2023'
 
         -- Start Merge process
 		MERGE INTO [edw_integration].[quote_hubspot_feed] AS target
