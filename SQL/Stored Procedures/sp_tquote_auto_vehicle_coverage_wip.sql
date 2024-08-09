@@ -186,7 +186,7 @@ BEGIN
                         acco.IsdeletedOnPolicyChange as vehicle_deleted_in,
                         accof.[Field], 
                         CASE
-                        WHEN accof.Field = 'GaragingLocationId' THEN accof.ReferenceObjectId
+                        WHEN accof.Field = 'GaragingLocationId' THEN CAST(accof.ReferenceObjectId AS NVARCHAR(3800))
                         ELSE accof.[Value]
                         END AS [Value],
                         CASE 
@@ -204,7 +204,7 @@ BEGIN
                     LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                         ON qav.quote_no = acc.PolicyNumber
                         AND qav.effective_dt = acc.effectivedate
-                        AND qav.vehicle_unique_id = acco.[UniqueId]
+                        AND qav.vehicle_unique_id = cast(acco.[UniqueId] as varchar(max))
                         -- AND qav.vehicle_no = acco.[Index]
                     WHERE
                         p.[Name] = 'Automobile'

@@ -1,3 +1,4 @@
+/****** Object:  StoredProcedure [edw_core].[sp_tauto_vehicle_coverage]    Script Date: 09-08-2024 21:41:16 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -21,7 +22,7 @@ GO
 -- 08/07/24     Yunus Mohammed                  9. Updated logic to get garaging location
 -- ================================================================================================================================================
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
+ALTER   PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -189,7 +190,7 @@ BEGIN
                     acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
                     acctvof.[Field],
                     CASE
-                        WHEN acctvof.Field = 'GaragingLocationId' THEN acctvof.ReferenceObjectId
+                        WHEN acctvof.Field = 'GaragingLocationId' THEN CAST(acctvof.ReferenceObjectId AS nvarchar(3800))
                         ELSE acctvof.[Value]
                     END AS [Value],
                     CASE 
@@ -277,9 +278,7 @@ BEGIN
         AND a.effective_dt = b.EffectiveDate
         AND a.IssuedDate = b.IssuedDate
         AND a.transaction_seq_no = b.policychangenumber
-        AND a.vehicle_unique_id = b.ObjectUniqueId
-
-        
+        AND a.vehicle_unique_id = b.ObjectUniqueId        
 
 		-- Start Insert process
 		INSERT INTO [edw_core].[tauto_vehicle_coverage]
@@ -611,7 +610,7 @@ BEGIN
         left join [edw_stage].[AccountTransactionVersionObject] AS atvo ON atvo.id = t1.GaragingLocationId
         left join [edw_core].[tauto_garage_location] AS gar
 					ON gar.policy_no = t1.policy_no and gar.effective_dt = t1.effective_dt and gar.transaction_seq_no = t1.transaction_seq_no
-                    and gar.garage_unique_id = atvo.UniqueId
+                    and gar.garage_unique_id = cast(atvo.UniqueId as varchar(max))
         left join ( select rank() over (partition by policy_no, effective_dt, transaction_seq_no order by policy_no, effective_dt, transaction_seq_no,garage_location_no) rnk, *
 				from [edw_core].[tauto_garage_location]
 		) gar1 on gar1.rnk = 1 and  gar1.policy_no = t1.policy_no and gar1.effective_dt = t1.effective_dt and t1.transaction_seq_no = gar1.transaction_seq_no
@@ -649,4 +648,3 @@ BEGIN
 	
     END CATCH
 END
-GO
