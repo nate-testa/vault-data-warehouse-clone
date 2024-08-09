@@ -192,7 +192,7 @@ BEGIN
                             acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
                             acctvof.[Field], 
                              CASE
-                                WHEN acctvof.Field = 'GaragingLocationId' THEN acctvof.ReferenceObjectId
+                                WHEN acctvof.Field = 'GaragingLocationId' THEN cast(acctvof.ReferenceObjectId as varchar(max))
                                 ELSE acctvof.[Value]
                             END AS [Value],                            
                             CASE 
@@ -211,7 +211,7 @@ BEGIN
                         LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                             ON qav.quote_no = acct.PolicyNumber
                             AND qav.effective_dt = acct.effectivedate
-                            AND qav.vehicle_unique_id = acctvo.[UniqueId]
+                            AND qav.vehicle_unique_id = cast(acctvo.[UniqueId] as varchar(max))
                             -- AND qav.vehicle_no = acctvo.[Index]
                         WHERE
                             p.[Name] = 'Automobile'
@@ -609,7 +609,7 @@ BEGIN
             [edw_temp].[tquote_auto_vehicle_coverage_temp1] AS t1
         left join [edw_stage].[AccountTransactionVersionObject] AS atvo ON atvo.id = t1.GaragingLocationId
         left join[edw_core].[tquote_auto_garage_location] AS gar 
-					ON gar.quote_no = t1.quote_no and gar.effective_dt = t1.effective_dt and gar.transaction_seq_no = t1.transaction_seq_no and gar.garage_unique_id = atvo.UniqueId
+					ON gar.quote_no = t1.quote_no and gar.effective_dt = t1.effective_dt and gar.transaction_seq_no = t1.transaction_seq_no and gar.garage_unique_id = cast(atvo.UniqueId as varchar(max))
         left join ( select rank() over (partition by quote_no, effective_dt, transaction_seq_no order by quote_no, effective_dt, transaction_seq_no,garage_location_no) rnk, *
 				from [edw_core].[tquote_auto_garage_location] 
 		) gar1 on gar1.rnk = 1 and  gar1.quote_no = t1.quote_no and gar1.effective_dt = t1.effective_dt and t1.transaction_seq_no = gar1.transaction_seq_no
