@@ -8,6 +8,7 @@
 -- 07/23/24		Architha Gudimalla			2. Updated to use data from tpolicy_insured
 -- 07/29/24		Architha Gudimalla			3. Corrections after first runs
 -- 08/02/24		Architha Gudimalla			4. Added customer_id
+-- 08/09/24		Archtha Gudimalla			5. Excluded test brokers
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -76,7 +77,12 @@ BEGIN
 		INNER join edw_core.tpolicy_insured pi 
 			on pi.policy_history_sk = ph.policy_history_sk and pi.primary_insured_in = 'Yes'
 		WHERE
-			greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts;
+			greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
+		and pol.insured_nm not like '%test%' 
+		and cust.last_nm not like '%test%'
+		and cust.first_nm not like '%test%' 
+		and cust.customer_nm not like '%test%' 
+		;
 
 		MERGE edw_integration.customer_hubspot_feed as TARGET
 		USING (
