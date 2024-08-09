@@ -22,7 +22,7 @@ GO
 -- 08/07/24     Yunus Mohammed                  9. Updated logic to get garaging location
 -- ================================================================================================================================================
 
-ALTER   PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
