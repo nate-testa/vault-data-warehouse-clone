@@ -5,6 +5,7 @@
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 07/29/24		        Yunus Mohammed				1. Created this procedure
+-- 08/09/24		        Archtha Gudimalla			2. Excluded test brokers
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -107,6 +108,7 @@ BEGIN
         edw_core.tbroker tb
         left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
         inner join br_summ as bs on bs.broker_sk = tb.broker_sk
+        where tb.broker_nm not like '%test%'
 
         truncate table edw_integration.broker_hubspot_feed       
     
