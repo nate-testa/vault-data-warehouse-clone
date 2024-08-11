@@ -2,13 +2,17 @@ SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
-GO
-
--- =============================================
+GO 
+-- ==========================================================================================================================
 -- Author:		Hernando Gonzalez
 -- Create Date: 2024-04-01
 -- Description: This stored procedure insert and update info related to tpel_vehicle_rapa.
--- =============================================
+------------------------------------------------------------------------------------------------------------------------------
+-- Change date			|Author							|	Change Description
+------------------------------------------------------------------------------------------------------------------------------
+-- 10/24/2023 			Hernando Gonzalez					1. Created this procedure 
+-- 08/03/2024 			Architha Gudimalla					2. Updated tpel_vehicle join to use vehicle_unique_id
+-- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_vehicle_rapa]
 
 AS
@@ -69,7 +73,8 @@ BEGIN
 					on tqv.quote_no = act.PolicyNumber
 					and tqv.effective_dt = act.EffectiveDate
 					and tqv.transaction_seq_no = act.[Number]
-					and tqv.vehicle_no = atvo.[Index]
+					--and tqv.vehicle_no = atvo.[Index]
+					and tqv.vehicle_unique_id = atvo.[UniqueId]
 				left join [edw_core].[tquote_pel_coverage] tqc
 					on tqc.quote_no = act.PolicyNumber
 					and tqc.effective_dt = CAST(act.EffectiveDate AS DATE)
