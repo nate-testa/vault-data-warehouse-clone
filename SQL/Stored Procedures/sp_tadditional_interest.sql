@@ -118,7 +118,7 @@ BEGIN
 			) acc
 			INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
 			INNER JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
-			inner join [edw_temp].[tadditional_interest_temp1] a on a.vehicle = acct.id
+			inner join (select distinct vehicle from [edw_temp].[tadditional_interest_temp1]) a on a.vehicle = acct.id
 			LEFT JOIN [edw_core].[tauto_vehicle] AS av
 				ON av.policy_no = acc.PolicyNumber
 				AND av.effective_dt = acc.EffectiveDate
@@ -194,7 +194,7 @@ BEGIN
 	  ,t2.auto_vehicle_sk
 		FROM 
 			[edw_temp].[tadditional_interest_temp1] a
-		LEFT JOIN [edw_temp].[tadditional_interest_temp2] AS t2	ON a.vehicle = t2.ReferenceObjectId
+		LEFT JOIN [edw_temp].[tadditional_interest_temp2] AS t2	ON a.vehicle = t2.ReferenceObjectId;
 
 		SET @rows_affected=@@ROWCOUNT;
 
