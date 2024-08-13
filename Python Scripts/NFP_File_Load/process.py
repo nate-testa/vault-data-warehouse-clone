@@ -11,6 +11,7 @@ from configparser import ConfigParser
 from pathlib import Path
 import pyodbc
 import numpy as np
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -45,11 +46,11 @@ class NFPDataProcessor:
     def process_data(self):
         try:
             # Log original columns
-            logging.info(f"Original columns: {self.df.columns.tolist()}")
+            #logging.info(f"Original columns: {self.df.columns.tolist()}")
 
             # Rename columns
             self.df.rename(columns=self.column_mapping, inplace=True)
-            logging.info(f"Renamed columns: {self.df.columns.tolist()}")
+            #logging.info(f"Renamed columns: {self.df.columns.tolist()}")
 
             if self.validate_column_empty:
                 if self.column_mapping[self.column_to_validate] not in self.df.columns:
@@ -61,6 +62,8 @@ class NFPDataProcessor:
             self.df['update_ts'] = datetime.utcnow()
             self.df['product_type'] = 'Group Umbrella'
             self.df['product_nm'] = 'PEL'
+            # Added Custom
+            self.df['risk_group'] = self.df['insured_cert_no'] +"-"+ self.df["insured_first_name"] +"-"+ self.df["insured_last_name"]
             logging.info("Data processing completed successfully.")
         except Exception as e:
             logging.error("Error processing data: %s", e)
@@ -73,13 +76,13 @@ class NFPDataProcessor:
                 col = row['COLUMN_NAME']
                 dtype = row['DATA_TYPE']
                 if col in self.df.columns:
-                    self.df[col] = self.df[col].replace({pd.NaT: None, 'nan': '', 'NaN': ''})
+                    self.df[col] = self.df[col].replace({pd.NaT: None, 'nan': None, 'NaN': None})
                     
                     if dtype in ['int', 'bigint', 'smallint', 'tinyint']:
                         self.df[col] = pd.to_numeric(self.df[col], errors='coerce').astype('Int64').fillna(0)
                     elif dtype in ['float', 'real', 'decimal', 'numeric']:
                         self.df[col] = pd.to_numeric(self.df[col], errors='coerce').apply(lambda x: round(x, 6) if pd.notnull(x) else 0.0)
-                        logging.info(f"Rounded column {col} to 6 decimal places.")
+                        #logging.info(f"Rounded column {col} to 6 decimal places.")
                     elif dtype == 'bit':
                         self.df[col] = self.df[col].astype('boolean')
                     elif dtype in ['varchar', 'nvarchar', 'text']:
@@ -95,7 +98,7 @@ class NFPDataProcessor:
         return self.df
 
 class AzureSQLConnector:
-    def __init__(self, server, database, auth_method, username=None, password=None):
+    def __init__(self, server, database, auth_method, username=None, password=None, show_records='none'):
         self.server = server
         self.database = database
         self.auth_method = auth_method
@@ -104,6 +107,7 @@ class AzureSQLConnector:
         self.driver = "ODBC Driver 17 for SQL Server"
         self.connection_string = None
         self.engine = None
+        self.show_records = show_records
 
     def create_connection_string(self):
         logging.info(f"Authentication method: {self.auth_method}")
@@ -157,27 +161,45 @@ class AzureSQLConnector:
             connection_string = f"DRIVER={self.driver};SERVER={self.server};DATABASE={self.database};UID={self.username};PWD={self.password};TrustServerCertificate=yes;"
             connection = pyodbc.connect(connection_string)
             cursor = connection.cursor()
-
+    
+            # Rename columns that require special handling
+            data_frame = data_frame.rename(columns={
+                'non_profit_d&o_liability_coverage': '[non_profit_d&o_liability_coverage]',
+                'non_profit_d&o_liability_premium': '[non_profit_d&o_liability_premium]'
+            })
+    
             # Log the columns that will be used in the insert statement
             columns = data_frame.columns.tolist()
-            logging.info(f"Columns to be used in insert statement: {columns}")
-
-            # Convert DataFrame to list of tuples
-            data_tuples = [tuple(x) for x in data_frame.to_numpy()]
+            logging.info(f"Columns to be used in insert statement: {columns}")            
+    
+            # Create the insert query template
             columns_str = ', '.join(columns)
             placeholders = ', '.join(['?' for _ in columns])
-            insert_query = f"INSERT INTO {schema}.{table_name} ({columns_str}) VALUES ({placeholders})"
-            logging.info(f"Insert query: {insert_query}")
-
-            cursor.executemany(insert_query, data_tuples)
+            insert_query_template = f"INSERT INTO {schema}.{table_name} ({columns_str}) VALUES ({placeholders})"
+            logging.info(f"Insert query template: {insert_query_template}")
+    
+            # Convert DataFrame to list of tuples, handling NaN appropriately
+            data_tuples = [
+                tuple(None if (col in columns and pd.isna(value)) else None if pd.isna(value) else value 
+                    for col, value in zip(columns, row)) 
+                for row in data_frame.to_numpy()
+            ]
+    
+            # Execute each query with the actual values
+            for data_tuple in data_tuples:
+                filled_query = insert_query_template
+                for i, value in enumerate(data_tuple):
+                    value_str = 'NULL' if value is None or value == 'None' else repr(value)
+                    filled_query = filled_query.replace('?', value_str, 1)
+                logging.info(f"Executing query: {filled_query}")
+                cursor.execute(filled_query)
+    
             connection.commit()
             cursor.close()
             connection.close()
-
-            logging.info("Data inserted into the database successfully using pyodbc.")
         except Exception as e:
             logging.error(f"Error inserting data into the database with pyodbc: {e}")
-            if show_records in ['all', 'error']:
+            if self.show_records in ['all', 'error']:
                 for i, row in enumerate(data_frame.iterrows()):
                     logging.error(f"Row {i}: {row}")
             raise
@@ -195,7 +217,7 @@ class AzureSQLConnector:
                 logging.info("Data inserted into the database successfully using SQLAlchemy.")
         except Exception as e:
             logging.error("Error inserting data into the database: %s", e)
-            if show_records in ['all', 'error']:
+            if self.show_records in ['all', 'error']:
                 for i, row in enumerate(data_frame.iterrows()):
                     logging.error(f"Row {i}: {row}")
             raise
@@ -217,9 +239,9 @@ def process_files(source_directory, processed_directory, log_directory, server, 
 
     for file_path in files:
         logging.info("Processing file: %s", file_path)
-        
+
         nfp_processor = NFPDataProcessor(file_path, column_mapping, validate_column_empty, column_to_validate)
-        
+
         try:
             nfp_processor.load_data()
             nfp_processor.process_data()
@@ -230,8 +252,8 @@ def process_files(source_directory, processed_directory, log_directory, server, 
             shutil.move(file_path, processed_directory / file_path.name)
             continue  # Skip to the next file
 
-        azure_sql = AzureSQLConnector(server=server, database=database, auth_method=auth_method, username=username, password=password)
-        
+        azure_sql = AzureSQLConnector(server=server, database=database, auth_method=auth_method, username=username, password=password, show_records=show_records)
+
         try:
             azure_sql.create_connection_string()
             schema_info = azure_sql.get_table_schema(table_name, schema)
@@ -254,12 +276,16 @@ def process_files(source_directory, processed_directory, log_directory, server, 
 
 def main(server=None):
     # Load configuration
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(current_dir, 'config.ini')
+    
+    # Read the configuration file
     config = ConfigParser()
-    config.read('config.ini')
-
-    source_directory = config.get('DEFAULT', 'source_directory')
-    processed_directory = config.get('DEFAULT', 'processed_directory')
-    log_directory = config.get('DEFAULT', 'log_directory')
+    config.read(config_path)
+    
+    source_directory = os.path.join(current_dir, config.get('DEFAULT', 'source_directory'))
+    processed_directory = os.path.join(current_dir, config.get('DEFAULT', 'processed_directory'))
+    log_directory = os.path.join(current_dir, config.get('DEFAULT', 'log_directory'))
     server = server if server is not None else config.get('DEFAULT', 'server')
     database = config.get('DEFAULT', 'database')
     table_name = config.get('DEFAULT', 'table_name')
@@ -270,7 +296,7 @@ def main(server=None):
     password = config.get('DEFAULT', 'password')
     validate_column_empty = config.getboolean('DEFAULT', 'validate_column_empty')
     column_to_validate = config.get('DEFAULT', 'column_to_validate')
-    column_mapping_file = config.get('DEFAULT', 'column_mapping_file')
+    column_mapping_file = os.path.join(current_dir, config.get('DEFAULT', 'column_mapping_file'))
     show_records = config.get('DEFAULT', 'show_records')
 
     column_mapping = load_column_mapping(column_mapping_file)
