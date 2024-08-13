@@ -168,7 +168,7 @@ BEGIN
 	  ,veh.auto_vehicle_sk
 		FROM 
 			[edw_temp].[tadditional_interest_temp1] a
-			LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.versionobjectif = a.vehicle
+			LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.id = a.vehicle
 			LEFT JOIN [edw_core].[tauto_vehicle] veh ON veh.vehicle_unique_id = cast(acct.[UniqueId] AS nvarchar(3800))
 
 		SET @rows_affected=@@ROWCOUNT;
