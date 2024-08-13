@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import datetime
 from configparser import ConfigParser
 import shutil
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -29,7 +30,10 @@ class Preprocessor:
             self.df.drop(columns=['Fronting Fee Total', 'Underwriting Year Percentage'], inplace=True)
 
             # Convert 'Reporting Month' to the required date format
-            self.df['Reporting Month'] = pd.to_datetime(self.df['Reporting Month'].str.strip(), format='%b %Y', errors='coerce').dt.strftime('%d-%m-%Y')
+            self.df['Reporting Month'] = pd.to_datetime(self.df['Reporting Month'].str.strip(), format='%b %Y', errors='coerce')
+
+            # Now, ensure it's correctly formatted to 'YYYY-MM-DD 00:00:00.000'
+            self.df['Reporting Month'] = self.df['Reporting Month'].dt.strftime('%Y-%m-%d 00:00:00.000')
 
             logging.info("Data processing completed successfully.")
         except Exception as e:
@@ -56,13 +60,17 @@ class Preprocessor:
 
 def main():
     # Load configuration
-    config = ConfigParser()
-    config.read('config.ini')
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(current_dir, 'config.ini')
 
-    xlsx_directory = config.get('DEFAULT', 'xlsx_directory')
-    source_directory = config.get('DEFAULT', 'source_directory')
-    archive_directory = config.get('DEFAULT', 'archive_directory')
-    log_directory = config.get('DEFAULT', 'log_directory')
+    # Read the configuration file
+    config = ConfigParser()
+    config.read(config_path)
+
+    xlsx_directory = os.path.join(current_dir, config.get('DEFAULT', 'xlsx_directory')
+    source_directory = os.path.join(current_dir, config.get('DEFAULT', 'source_directory'))
+    archive_directory = os.path.join(current_dir, config.get('DEFAULT', 'archive_directory'))
+    log_directory = os.path.join(current_dir, config.get('DEFAULT', 'log_directory'))
 
     # Ensure directories exist
     Path(source_directory).mkdir(parents=True, exist_ok=True)
@@ -77,9 +85,9 @@ def main():
 
     for file_path in files:
         logging.info("Processing file: %s", file_path)
-        
+
         preprocessor = Preprocessor(file_path, source_directory, archive_directory)
-        
+
         try:
             preprocessor.load_data()
             preprocessor.process_data()
@@ -95,3 +103,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+#main()
