@@ -13,9 +13,10 @@
 -- 11/30/23		Yunus Mohammed					8. Added new fields
 -- 12/06/23		Alberto Almario					9. Added new field WindstormOrHailDeductibleManual
 -- 22/02/24		Hernando Gonzalez				10. Added new fields aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt
--- 04/02/24		Ynunus Mohammed					11. Updated wind_derived_deductible logic
+-- 04/02/24		Yunus Mohammed					11. Updated wind_derived_deductible logic
 -- 12/06/24		Alberto Almario					12. Added new filed nc_bureau_rate
 -- 07/09/24		Yunus Mohammed					13. Added new fields stated_limits_policy_in and risk_sharing_policy_in
+-- 08/13/24		Yunus Mohammed					14. Updated wind_derived_deductible logic
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -176,7 +177,13 @@ BEGIN
 					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND tthc.TornadoorHailstormDeductible like '%Exclude Wind%' THEN 'Exclude'
 					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND (tthc.TornadoorHailstormDeductible like '%aop applies%' or tthc.TornadoorHailstormDeductible like '%aopApplies%') THEN 'AOP Applies'
 					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') != '' AND tthc.WindStormOrHailDeductible like '%Exclude Wind%' THEN 'Exclude'
-					WHEN ISNULL(tthc.WindStormOrHailDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.WindStormOrHailDeductible,'') != '' AND
+					(
+						tthc.WindStormOrHailDeductible like '%aop applies%' OR 
+						tthc.WindStormOrHailDeductible like '%aopApplies%' OR
+						tthc.WindStormOrHailDeductible like '%AOP Deductible%'
+
+					) THEN 'AOP Applies'
 					--
 					WHEN ISNULL(tthc.HurricaneDeductible,'')  NOT IN ('','0') THEN HurricaneDeductible
 					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') NOT IN ('','0') THEN HurricaneOrNamedStormDeductible
