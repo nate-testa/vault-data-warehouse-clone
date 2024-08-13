@@ -3,12 +3,16 @@ GO
 
 SET QUOTED_IDENTIFIER ON
 GO
-
--- =============================================
--- Author:		Hernando Gonzalez Garcia
--- Create Date: <Create Date, , >
+ 
+-- ================================================================================================================================================
 -- Description: This procedures insert and update info related to Additional Interest
--- =============================================
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- 09/15/23		Hernando Gonzalez Garcia		1. Created the proc
+-- 08/12/24     Architha Gudimalla              2. Added logic for additional_interest_deleted_in
+-- 08/12/24     Architha Gudimalla              3. Added additional interest vehicle
+-- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tadditional_interest]
 AS
 BEGIN
@@ -39,12 +43,16 @@ BEGIN
 			,[index] as additional_interest_seq_no
 			,InterestType, EntityType
 			,[EntityName] as EntityName
-			,DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew
+			,DescriptionOfProperty, FirstName, LastName
+			,AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry
+			,AnyCommercialExposures, WatercraftOrEmployCrew
 			,[Name]
+			,vehicle
 			--,4 as [source_system_sk] --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
 			,product_cd
+			,IsDeletedOnPolicyChange as additional_interest_deleted_in
 		INTO [edw_temp].[tadditional_interest_temp1]
 		FROM
 			(
@@ -52,12 +60,17 @@ BEGIN
 				acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, acc.PolicyChangeNumber
 				,his.[policy_history_sk] as [policy_history_sk]
 				,acct.[Index]
-				,accto.[Field], accto.[Value]
+				,accto.[Field]
+				,CASE
+                        WHEN accto.Field = 'Vehicle' THEN CAST(accto.ReferenceObjectId AS nvarchar(3800))
+                        ELSE accto.[Value]
+                    END AS [Value]  
 				,acc.CreatedDate, acc.UpdatedDate
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
 				 end as [source_system_sk] --20230717 added
 				 ,ProductCode as product_cd
+				 ,acct.IsDeletedOnPolicyChange
 			FROM
 				(SELECT
 					*
@@ -80,7 +93,9 @@ BEGIN
 		PIVOT 
 			(
 				MAX([Value]) FOR [Field] IN (
-					InterestType, EntityType, EntityName, DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew, [Name]
+					InterestType, EntityType, EntityName, DescriptionOfProperty, FirstName, LastName, 
+					AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, 
+					AnyCommercialExposures, WatercraftOrEmployCrew, [Name], vehicle
 					)
 			) pivottable
 			
@@ -116,6 +131,8 @@ BEGIN
       ,[update_ts]
       ,[etl_audit_sk]
 	  ,[product_cd]
+	  ,additional_interest_deleted_in
+	  ,auto_vehicle_sk
 		)
 		SELECT [PolicyNumber]
       ,[EffectiveDate]
@@ -147,8 +164,12 @@ BEGIN
       ,getdate()
 	  ,@etl_audit_sk
 	  ,[product_cd]
+	  ,additional_interest_deleted_in
+	  ,veh.auto_vehicle_sk
 		FROM 
-			[edw_temp].[tadditional_interest_temp1]
+			[edw_temp].[tadditional_interest_temp1] a
+			LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.id = a.vehicle
+			LEFT JOIN [edw_core].[tauto_vehicle] veh ON veh.vehicle_unique_id = cast(acct.[UniqueId] AS nvarchar(3800))
 
 		SET @rows_affected=@@ROWCOUNT;
 
