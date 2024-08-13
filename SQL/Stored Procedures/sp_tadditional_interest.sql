@@ -99,6 +99,9 @@ BEGIN
 					)
 			) pivottable 
 
+			
+		drop table [edw_temp].[tadditional_interest_temp2]
+
 		--Get auto_vehicle_sk
 		SELECT 
 			acct.Id AS ReferenceObjectId,
