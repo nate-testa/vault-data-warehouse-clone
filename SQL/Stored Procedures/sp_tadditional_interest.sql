@@ -97,7 +97,33 @@ BEGIN
 					AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, 
 					AnyCommercialExposures, WatercraftOrEmployCrew, [Name], vehicle
 					)
-			) pivottable
+			) pivottable 
+
+			
+		drop table [edw_temp].[tadditional_interest_temp2]
+
+		--Get auto_vehicle_sk
+		SELECT 
+			acct.Id AS ReferenceObjectId,
+			acct.UniqueId,
+			av.auto_vehicle_sk
+		INTO [edw_temp].[tadditional_interest_temp2]
+		FROM
+			(
+				SELECT
+				*
+				FROM [edw_stage].[AccountTransaction]
+				WHERE [State] ='ISSUED'
+				AND PolicyNumber in (SELECT DISTINCT PolicyNumber FROM [edw_temp].[tadditional_interest_temp1])
+			) acc
+			INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
+			INNER JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
+			inner join (select distinct vehicle from [edw_temp].[tadditional_interest_temp1]) a on a.vehicle = acct.id
+			LEFT JOIN [edw_core].[tauto_vehicle] AS av
+				ON av.policy_no = acc.PolicyNumber
+				AND av.effective_dt = acc.EffectiveDate
+				AND av.vehicle_unique_id = acct.[UniqueId]
+			WHERE acct.ObjectType = 'Vehicle'
 			
 		-- Start Insert process
 		INSERT INTO [edw_core].[tadditional_interest] (
@@ -159,17 +185,16 @@ BEGIN
       ,[AddressCountry]
       ,[AnyCommercialExposures]
       ,[WatercraftOrEmployCrew]
-      ,[source_system_sk]
+      ,a.[source_system_sk]
       ,getdate()
       ,getdate()
 	  ,@etl_audit_sk
 	  ,[product_cd]
 	  ,additional_interest_deleted_in
-	  ,veh.auto_vehicle_sk
+	  ,t2.auto_vehicle_sk
 		FROM 
 			[edw_temp].[tadditional_interest_temp1] a
-			LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.id = a.vehicle
-			LEFT JOIN [edw_core].[tauto_vehicle] veh ON veh.vehicle_unique_id = cast(acct.[UniqueId] AS nvarchar(3800))
+		LEFT JOIN [edw_temp].[tadditional_interest_temp2] AS t2	ON a.vehicle = t2.ReferenceObjectId;
 
 		SET @rows_affected=@@ROWCOUNT;
 
