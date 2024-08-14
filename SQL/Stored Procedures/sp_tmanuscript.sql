@@ -7,6 +7,7 @@
 ------------------------------------------------------------------------------------------------------------------------------------------
 -- 						Hernando Gonzalez Garcia			1. Created this procedure 
 -- 08/07/24				Yunus Mohammed						2. Use ValueBlob if Value field is null for manuscript_title an desc
+-- 08/14/24				Yunus Mohammed						3. Used IncludeManuscript indicator
 -- ======================================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tmanuscript]
 AS
@@ -32,46 +33,51 @@ BEGIN
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tmanuscript_temp1];
-		SELECT 
-			PolicyNumber, EffectiveDate, IssuedDate, ExpirationDate, transaction_dt, PolicyChangeNumber as transaction_seq_no
-			,policy_history_sk
-			,ManuscriptTitle, ManuscriptNumber, ManuscriptDescription
-			,source_system_sk --20230717 added
-			,[Index] as manuscript_seq_no
+		SELECT
+		PolicyNumber, EffectiveDate, IssuedDate, ExpirationDate, transaction_dt, PolicyChangeNumber as transaction_seq_no
+		,policy_history_sk
+		,ManuscriptTitle, ManuscriptNumber, ManuscriptDescription
+		,source_system_sk
+		,[Index] as manuscript_seq_no
 		INTO [edw_temp].[tmanuscript_temp1]
 		FROM
-			(
-			SELECT
-				acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, acc.PolicyChangeNumber
-				,his.[policy_history_sk]
-				,accto.[Field], 
-				case
-					when Field in ('ManuscriptDescription','ManuscriptTitle') and len(accto.[Value])= 0 then NULLIF(accto.[ValueBlob],'')
-				else NULLIF(accto.[Value], '') end as [Value]
-				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
-					  Else 4 --(Metal)
-				 end as [source_system_sk] --20230717 added
-				,acct.[Index]
-			FROM
-				(SELECT
-					*
-				FROM [edw_stage].[AccountTransaction]
-				WHERE
-					[State] ='ISSUED' --- Review BOUND transactions
-					AND GREATEST(IssuedDate)>@last_source_extract_ts --20230717 added
-				) acc
-				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
-				LEFT JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
-				INNER JOIN [edw_core].[tpolicy_history] his ON his.policy_no = acc.PolicyNumber AND his.effective_dt=acc.EffectiveDate AND his.transaction_seq_no = acc.policychangenumber
+		(
+		SELECT
+			acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, acc.PolicyChangeNumber
+			,his.[policy_history_sk]
+			,acctvof.[Field], 
+			case
+				when acctvof.Field in ('ManuscriptDescription','ManuscriptTitle') and len(acctvof.[Value])= 0 then NULLIF(acctvof.[ValueBlob],'')
+			else NULLIF(acctvof.[Value], '') end as [Value]
+			,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
+					Else 4 --(Metal)
+			end as [source_system_sk]
+			,acctvo.[Index]
+		FROM
+			(SELECT
+				*
+			FROM [edw_stage].[AccountTransaction]
 			WHERE
-				acct.ObjectType = 'Manuscript'
-			) t
+				[State] ='ISSUED'
+				AND GREATEST(IssuedDate)>@last_source_extract_ts --20230717 added
+			) acc
+			INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
+			INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
+			INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
+			INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof ON acctvof.VersionObjectId = acctvo.id
+			INNER JOIN [edw_core].[tpolicy_history] his ON his.policy_no = acc.PolicyNumber AND his.effective_dt=acc.EffectiveDate AND his.transaction_seq_no = acc.policychangenumber
+
+			INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo_in ON acctvo_in.AccountTransactionVersionId = acctv.Id
+			INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof_in ON acctvof_in.VersionObjectId = acctvo_in.id and acctvof_in.Field = 'IncludeManuscript'
+		WHERE
+			acctvo.ObjectType = 'Manuscript'
+			and acctvo_in.ObjectType = 'Homeowner'
+			and acctvof_in.[Value] = 'Yes'
+		) t
 		PIVOT 
-			(
-				MAX([Value]) FOR [Field] IN (ManuscriptTitle, ManuscriptNumber, ManuscriptDescription)
-			) pivottable
+		(
+			MAX([Value]) FOR [Field] IN (ManuscriptTitle, ManuscriptNumber, ManuscriptDescription)
+		) pivottable
 			
 		-- Start Insert process
 		INSERT INTO [edw_core].[tmanuscript] (
