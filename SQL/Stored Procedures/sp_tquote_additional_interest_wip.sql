@@ -133,7 +133,7 @@ BEGIN
             ,city_nm,county_nm,state_cd,zip_cd,country_nm,commercial_exposures_in,watercraft_or_employ_crew_in
             ,source_system_sk,create_ts,update_ts,etl_audit_sk,product_cd
 			,additional_interest_deleted_in
-	  		,auto_vehicle_sk
+	  		,quote_auto_vehicle_sk
 		)
 		VALUES
 		(
@@ -169,7 +169,7 @@ BEGIN
 			watercraft_or_employ_crew_in = Source.WatercraftOrEmployCrew,
 			product_cd = Source.product_cd,
 			Target.additional_interest_deleted_in = Source.additional_interest_deleted_in,
-			Target.auto_vehicle_sk = Source.quote_auto_vehicle_sk,
+			Target.quote_auto_vehicle_sk = Source.quote_auto_vehicle_sk,
 			update_ts = GETDATE()
 			;
 		
