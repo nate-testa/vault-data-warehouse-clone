@@ -141,7 +141,7 @@ BEGIN
       ,[etl_audit_sk]
 	  ,[product_cd]
 	  ,additional_interest_deleted_in
-	  ,auto_vehicle_sk
+	  ,quote_auto_vehicle_sk
 		)
 		SELECT [PolicyNumber]
    ,[EffectiveDate] 
