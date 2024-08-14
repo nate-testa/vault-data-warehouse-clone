@@ -1,12 +1,13 @@
 
--- =================================================================================================
+-- ====================================================================================================================================
 -- Author:		Yunus Mohammed
 -- Description: This procedures insert and update quote additional interest wip
----------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------
 -- Change date          |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------
 -- 05/09/24		        Mohammed Yunus				1. Created this procedure
--- ================================================================================================= 
+-- 08/14/24     		Alberto Almario	            2. Added logic for additional_interest_deleted_in and additional interest vehicle
+-- ====================================================================================================================================
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_additional_interest_wip]
 AS
 BEGIN
@@ -31,6 +32,8 @@ BEGIN
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.tquote_additional_interest_wip_temp1;
+		DROP TABLE IF EXISTS edw_temp.tquote_additional_interest_wip_temp2;
+
 		SELECT 
 			PolicyNumber, EffectiveDate, ExpirationDate, transaction_dt, [Number]
 			,quote_history_sk
@@ -38,10 +41,12 @@ BEGIN
 			,InterestType, EntityType, EntityName, DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, 
             AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew
 			,Name
+			,vehicle
 			--,4 as source_system_sk --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
 			,product_cd
+			,IsDeletedOnPolicyChange as additional_interest_deleted_in
 		INTO edw_temp.tquote_additional_interest_wip_temp1
 		FROM
 			(
@@ -49,12 +54,17 @@ BEGIN
 				acc.PolicyNumber, acc.EffectiveDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, 0 AS Number
 				,his.quote_history_sk  
 				,accvo.[Index]
-				,accvof.Field, accvof.Value
+				,accvof.Field
+				,CASE
+					WHEN accvof.Field = 'Vehicle' THEN CAST(accvof.ReferenceObjectId AS nvarchar(3800))
+					ELSE accvof.[Value]
+				END AS [Value]
 				,acc.CreatedDate, acc.UpdatedDate
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
 				 end as source_system_sk
 				 ,ProductCode as product_cd
+				,accvo.IsDeletedOnPolicyChange
 			FROM
 				(
                     SELECT *
@@ -76,11 +86,41 @@ BEGIN
 				MAX(Value) FOR Field IN (
 					InterestType, EntityType, EntityName, DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, 
                     AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew, Name
+					,vehicle
 					)
 			) pivottable
+
+		--Get quote_auto_vehicle_sk
+		SELECT 
+			acct.Id AS ReferenceObjectId,
+			acct.UniqueId,
+			av.quote_auto_vehicle_sk
+		INTO [edw_temp].[tquote_additional_interest_wip_temp2]
+		FROM
+			(
+				SELECT
+				*
+				FROM [edw_stage].[Account]
+				WHERE PolicyNumber in (SELECT DISTINCT PolicyNumber FROM [edw_temp].[tquote_additional_interest_wip_temp1])
+			) acc
+		INNER JOIN [edw_stage].[AccountObject] acct ON acct.AccountId = acc.Id
+		INNER JOIN (select distinct vehicle from [edw_temp].[tquote_additional_interest_wip_temp1]) a on a.vehicle = acct.id
+		LEFT JOIN [edw_core].[tquote_auto_vehicle] AS av
+			ON av.quote_no = acc.PolicyNumber
+			AND av.effective_dt = acc.EffectiveDate
+			AND av.vehicle_unique_id = acct.[UniqueId]
+		WHERE acct.ObjectType = 'Vehicle'
+
 		
+		--Merge data
 		MERGE edw_core.tquote_additional_interest AS Target
-		USING edw_temp.tquote_additional_interest_wip_temp1 AS Source
+		USING (
+			SELECT 
+				a.*,
+				t2.quote_auto_vehicle_sk
+			FROM [edw_temp].[tquote_additional_interest_wip_temp1] a
+			LEFT JOIN [edw_temp].[tquote_additional_interest_wip_temp2] AS t2 ON a.vehicle = t2.ReferenceObjectId
+			) AS Source
 		ON Target.quote_no = Source.PolicyNumber and Target.effective_dt= Source.EffectiveDate AND
 		Target.transaction_seq_no = Source.Number and 
 		Source.additional_interest_seq_no = Target.additional_interest_seq_no
@@ -92,6 +132,8 @@ BEGIN
             ,entity_type,entity_nm,property_desc,first_nm,last_nm,loss_payee_nm,additional_interest_nm,address_line_1,address_line_2
             ,city_nm,county_nm,state_cd,zip_cd,country_nm,commercial_exposures_in,watercraft_or_employ_crew_in
             ,source_system_sk,create_ts,update_ts,etl_audit_sk,product_cd
+			,additional_interest_deleted_in
+	  		,auto_vehicle_sk
 		)
 		VALUES
 		(
@@ -101,6 +143,8 @@ BEGIN
             ,CASE WHEN InterestType = 'Additional Interest' OR InterestType like '%Additional Insured%' THEN Name ELSE NULL END
             ,AddressLine1,AddressLine2,AddressCity,AddressCounty,AddressState,AddressZipCode,AddressCountry,AnyCommercialExposures,WatercraftOrEmployCrew
             ,source_system_sk,getdate(),getdate(),@etl_audit_sk,product_cd
+			,additional_interest_deleted_in
+	  		,quote_auto_vehicle_sk
 		)
 		WHEN MATCHED THEN UPDATE
 		SET
@@ -124,7 +168,10 @@ BEGIN
 			commercial_exposures_in = Source.AnyCommercialExposures,
 			watercraft_or_employ_crew_in = Source.WatercraftOrEmployCrew,
 			product_cd = Source.product_cd,
-			update_ts = GETDATE();
+			Target.additional_interest_deleted_in = Source.additional_interest_deleted_in,
+			Target.auto_vehicle_sk = Source.quote_auto_vehicle_sk,
+			update_ts = GETDATE()
+			;
 		
 
 		SET @rows_affected=@@ROWCOUNT;
@@ -132,6 +179,7 @@ BEGIN
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(t1.CreatedDate,t1.UpdatedDate)) FROM edw_temp.tquote_additional_interest_wip_temp1 t1),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS edw_temp.tquote_additional_interest_wip_temp1;
+		DROP TABLE IF EXISTS edw_temp.tquote_additional_interest_wip_temp2;
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
