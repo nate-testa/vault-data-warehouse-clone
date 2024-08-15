@@ -2,8 +2,9 @@
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 --------------------------------------------------------------------------------------------------------------------------------------------------
--- 10/14/23		Architha Gudimalla				1. Created the proc
--- 08/14/24     Alberto Almario		            2. Added logic for additional_interest_deleted_in and additional interest vehicle
+-- 10/14/23		Architha Gudimalla			1. Created the proc
+-- 08/14/24     Alberto Almario		        2. Added logic for additional_interest_deleted_in and additional interest vehicle
+-- 08/15/24     Architha Gudimalla          3. Update additional_interest_deleted_in to use Yes/No instead of 1/0
 -- ================================================================================================================================================
 CREATE or alter  PROCEDURE [edw_core].[sp_tquote_additional_interest]
 AS
@@ -59,8 +60,8 @@ BEGIN
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
 				 end as [source_system_sk] --20230717 added
-				 ,ProductCode as product_cd
-				,acct.IsDeletedOnPolicyChange
+				 ,ProductCode as product_cd 
+				 ,CASE WHEN acct.IsDeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END as IsDeletedOnPolicyChange
 			FROM
 				(SELECT
 					*

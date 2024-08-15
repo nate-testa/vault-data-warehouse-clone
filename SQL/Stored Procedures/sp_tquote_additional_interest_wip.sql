@@ -3,10 +3,11 @@
 -- Author:		Yunus Mohammed
 -- Description: This procedures insert and update quote additional interest wip
 ---------------------------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						|	Change Description
+-- Change date  |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
--- 05/09/24		        Mohammed Yunus				1. Created this procedure
--- 08/14/24     		Alberto Almario	            2. Added logic for additional_interest_deleted_in and additional interest vehicle
+-- 05/09/24		Mohammed Yunus				1. Created this procedure
+-- 08/14/24     Alberto Almario	            2. Added logic for additional_interest_deleted_in and additional interest vehicle
+-- 08/15/24     Architha Gudimalla          3. Update additional_interest_deleted_in to use Yes/No instead of 1/0
 -- ====================================================================================================================================
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_additional_interest_wip]
 AS
@@ -63,8 +64,8 @@ BEGIN
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
 				 end as source_system_sk
-				 ,ProductCode as product_cd
-				,accvo.IsDeletedOnPolicyChange
+				 ,ProductCode as product_cd 
+				 ,CASE WHEN accvo.IsDeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END as IsDeletedOnPolicyChange
 			FROM
 				(
                     SELECT *
