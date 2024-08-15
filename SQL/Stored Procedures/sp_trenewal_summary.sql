@@ -482,6 +482,7 @@ BEGIN
 						 end*/ 
 						 ren_quotes.quote_sk renewal_quote_sk
 						,ren_quotes.note_desc renewal_quote_note_desc
+						,ren_quotes.agency_primary_location_state_cd renewal_quote_agency_primary_location_state_cd 
 						,isnull(ci.oth_inf_ct,0) expiring_customer_other_inforce_ct
 						,case when ren_pols.policy_sk is not null then ren_pols_prm.day_0_TIV else null end renewal_tiv_amt,
 						 case when ren_pols.policy_sk is not null then ren_pols_prm.day_0_COVA else null end renewal_cova_amt,  
@@ -563,7 +564,7 @@ BEGIN
 						,renewal_quote_loss_of_use_limit_amt
 						,product_nm 
 						,renewal_quote_note_desc
-						,agency_primary_location_state_cd
+						,renewal_quote_agency_primary_location_state_cd
 					)
 				select @month_end_dt_sk, 
 						a.policy_sk,   
@@ -641,7 +642,7 @@ BEGIN
 						,qhc.loss_of_use_limit_amt 		renewal_quote_loss_of_use_limit_amt
 						,case when pr.product_nm = 'Condo' then 'Homeowners' else pr.product_nm end product_nm 
 						,a.renewal_quote_note_desc
-						,'' agency_primary_location_state_cd
+						,a.renewal_quote_agency_primary_location_state_cd
 				from edw_temp.tren_summ a
 				left join ( select distinct cancellation_reason_desc, policy_sk, effective_dt 
 							FROM edw_core.tpolicy_history ph

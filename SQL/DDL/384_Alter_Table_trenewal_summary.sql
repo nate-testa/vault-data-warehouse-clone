@@ -5,10 +5,10 @@ alter table edw_core.trenewal_summary
 add renewal_quote_note_desc  nvarchar(max); 
 
 alter table edw_core.trenewal_summary
-add pending_non_renewal_ct int; 
+add pending_non_renewal_ct int;  
 
 alter table edw_core.trenewal_summary
-add agency_primary_location_state_cd  varchar(255);
+add renewal_quote_agency_primary_location_state_cd  varchar(255);
 
 alter table edw_core.trenewal_summary
 add expiring_sixty_day_rate_on_line decimal(15,2);
