@@ -15,7 +15,7 @@ from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HT
 from livevox_csv_generation import SFTPUploadLiveVoxOperator, generate_livevox_csv_file
 from ivans_api import call_ivans_api
 
-to_email = "sandeep.gundreddy@vault.insurance, architha.gudimalla@vault.insurance, yunus.mohammed@vault.insurance, tuba.mohsin@vault.insurance, rushin.shah@vault.insurance, hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
+to_email = "itdatateam@vault.insurance"
 # to_email = "hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
 cc_email = ""
 
