@@ -8,6 +8,7 @@
 -- 08/08/24		        Architha Gudimalla			3. Added Customer id
 -- 08/09/24		        Architha Gudimalla			4. Only include quotes with eff dt >= 20230601
 -- 08/09/24		        Architha Gudimalla			5. Excluded test quotes
+-- 08/16/24		        Architha Gudimalla			6. Added Recampaign indicator
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -80,7 +81,10 @@ BEGIN
             q.quote_status,
             (ISNULL(tqhc.prior_nonwater_claim_ct,0) + ISNULL(tqhc.prior_water_claim_ct,0)) as claim_ct,
             (select top 1 note_desc from edw_core.tnote tn where tn.policy_no = q.quote_no order by coalesce(note_updated_ts,note_created_ts) desc) as note_desc,
-            NULL AS recampaign_in,
+            case when DATEDIFF("d",cast(getdate() as date),q.expiration_dt) between 0 and 90 and q.quote_status  in ('Not taken') 
+					 then 'Y' 
+					 else 'N' 
+				end AS recampaign_in,
             NULL AS rol_on_lost_business,
             NULL AS lost_company,
             h.not_taken_reason_desc as reason_quote_not_taken,
@@ -156,7 +160,7 @@ BEGIN
             loss_of_use_limit_amt, total_insured_value_amt ,roof_covering , roof_updated_year , insurance_score , 
             auto_liability_limit_amt, pel_limit_amt, collections_coverage_type, total_blanket_limit_amt , total_scheduled_limit_amt ,producer_nm,
             getdate(), getdate(), @etl_audit_sk 
-            ,customer_id
+            ,customer_id 
         )
         WHEN MATCHED THEN UPDATE
         SET        
