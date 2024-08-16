@@ -71,7 +71,7 @@ BEGIN
 			INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof_in ON acctvof_in.VersionObjectId = acctvo_in.id and acctvof_in.Field = 'IncludeManuscript'
 		WHERE
 			acctvo.ObjectType = 'Manuscript'
-			and acctvo_in.ObjectType = 'Homeowner'
+			and acctvo_in.ObjectType in ('Homeowner','Condo','Collection','PersonalExcessLiability')
 			and acctvof_in.[Value] = 'Yes'
 		) t
 		PIVOT 
