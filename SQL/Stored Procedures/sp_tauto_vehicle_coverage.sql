@@ -1,3 +1,4 @@
+/****** Object:  StoredProcedure [edw_core].[sp_tauto_vehicle_coverage]    Script Date: 09-08-2024 21:41:16 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -18,6 +19,7 @@ GO
 -- 02/27/24     Architha Gudimalla              6. Added case for antitheft
 -- 02/04/24     Alberto Almario                 7. add 62 new columns
 -- 13/06/24     Hernando Gonzalez               8. Added NewlyPurchasedVehicleFinal
+-- 08/07/24     Yunus Mohammed                  9. Updated logic to get garaging location
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
@@ -186,7 +188,11 @@ BEGIN
                     acct.ExpirationDate as expiration_dt, acct.IssuedDate as transaction_dt, acct.PolicyChangeNumber as transaction_seq_no,
                     ph.policy_history_sk, av.auto_vehicle_sk, 0 auto_garage_location_sk, 
                     acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
-                    acctvof.[Field], acctvof.[Value],
+                    acctvof.[Field],
+                    CASE
+                        WHEN acctvof.Field = 'GaragingLocationId' THEN CAST(acctvof.ReferenceObjectId AS nvarchar(3800))
+                        ELSE acctvof.[Value]
+                    END AS [Value],
                     CASE 
                         WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
                         ELSE 4 --(Metal)
@@ -272,9 +278,7 @@ BEGIN
         AND a.effective_dt = b.EffectiveDate
         AND a.IssuedDate = b.IssuedDate
         AND a.transaction_seq_no = b.policychangenumber
-        AND a.vehicle_unique_id = b.ObjectUniqueId
-
-        
+        AND a.vehicle_unique_id = b.ObjectUniqueId        
 
 		-- Start Insert process
 		INSERT INTO [edw_core].[tauto_vehicle_coverage]
@@ -601,13 +605,14 @@ BEGIN
             ,t1.[NewlyPurchasedVehicle] as newly_purchased_vehicle_override_in
             ,t1.[NewlyPurchasedVehicleDate] as newly_purchased_vehicle_dt
             ,t1.[NewlyPurchasedVehicleFinal] as newly_purchased_vehicle_final_in
-        FROM 
+        FROM
             [edw_temp].[tauto_vehicle_coverage_temp1] AS t1
         left join [edw_stage].[AccountTransactionVersionObject] AS atvo ON atvo.id = t1.GaragingLocationId
-        left join[edw_core].[tauto_garage_location] AS gar 
-					ON gar.policy_no = t1.policy_no and gar.effective_dt = t1.effective_dt and gar.transaction_seq_no = t1.transaction_seq_no and gar.garage_location_no = atvo.[Index]
+        left join [edw_core].[tauto_garage_location] AS gar
+					ON gar.policy_no = t1.policy_no and gar.effective_dt = t1.effective_dt and gar.transaction_seq_no = t1.transaction_seq_no
+                    and gar.garage_unique_id = cast(atvo.UniqueId as varchar(max))
         left join ( select rank() over (partition by policy_no, effective_dt, transaction_seq_no order by policy_no, effective_dt, transaction_seq_no,garage_location_no) rnk, *
-				from [edw_core].[tauto_garage_location] 
+				from [edw_core].[tauto_garage_location]
 		) gar1 on gar1.rnk = 1 and  gar1.policy_no = t1.policy_no and gar1.effective_dt = t1.effective_dt and t1.transaction_seq_no = gar1.transaction_seq_no
         ;
 
@@ -643,4 +648,3 @@ BEGIN
 	
     END CATCH
 END
-GO

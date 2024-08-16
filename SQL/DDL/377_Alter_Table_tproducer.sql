@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tproducer ADD producer_role varchar(255); 

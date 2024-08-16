@@ -2,9 +2,10 @@
 -- Author:		Yunus Mohammed
 -- Description: This procedures inserts and updates notes
 -----------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date      |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 03/22/24		Yunus Mohammed				1. Created this procedure
+-- 03/22/24		    Yunus Mohammed				1. Created this procedure
+-- 08/08/24         Yunus Mohammed              2. Update customer and broker joins
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tnote]
 
@@ -63,13 +64,13 @@ BEGIN
                 when nt.ObjectType IN('WorkTaskComment') then wt.AccountId
                 end
             left join edw_core.tuser u on u.[user_id] = nt.UserId
-            left join edw_core.tpolicy tp on tp.policy_no = acc.PolicyNumber and tp.effective_dt = acc.EffectiveDate
+            left join edw_core.tquote tq on tq.quote_no = acc.PolicyNumber and tq.effective_dt = acc.EffectiveDate
             left join edw_stage.Insured ins on ins.Id = case 
                                                             when nt.ObjectType = 'Insured' then nt.ParentId
                                                             when nt.ObjectType = 'WorkTaskComment' then wt.InsuredId
                                                         end
             left join edw_core.tcustomer cust on cust.customer_id = CASE
-                                                                    when nt.ObjectType IN('Account','AccountClose','PendingNonRenewPolicy') then tp.customer_id
+                                                                    when nt.ObjectType IN('Account','AccountClose','PendingNonRenewPolicy') then tq.customer_id
                                                                     when nt.ObjectType in ('Insured','WorkTaskComment') then cast(ins.ReferenceCode as varchar(255))												
                                                                     end
             left join edw_stage.Brokerage brkg on brkg.Id = case 
@@ -77,7 +78,7 @@ BEGIN
                                                                 when nt.ObjectType = 'WorkTaskComment' then wt.BrokerageId
                                                             end            
             left join edw_core.tbroker tbrk on tbrk.broker_id = case					
-                                                                    when nt.ObjectType IN('Account','AccountClose','PendingNonRenewPolicy') then tp.broker_id
+                                                                    when nt.ObjectType IN('Account','AccountClose','PendingNonRenewPolicy') then tq.broker_id
                                                                     when nt.ObjectType in ('Brokerage','WorkTaskComment') then cast(brkg.ReferenceCode as varchar(255))													
                                                                 end
             left join edw_core.tproducer prd on prd.producer_id = case when nt.ObjectType = 'Broker' then nt.ParentId end

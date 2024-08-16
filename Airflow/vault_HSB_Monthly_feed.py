@@ -12,8 +12,8 @@ from airflow.providers.microsoft.azure.operators.data_factory import AzureDataFa
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format
 from hsb_txt_generation import SFTPUploadAllHsbFilesOperator, generate_hsb_hcp_txt_files, generate_hsb_hsp_txt_files, generate_hsb_slc_txt_files
 
-# to_email = "itdatateam@vault.insurance"
-to_email = "alberto.valbuena@vault.insurance"
+to_email = "itdatateam@vault.insurance"
+# to_email = "alberto.valbuena@vault.insurance"
 cc_email = ""
 
 HOME_PATH = os.path.expanduser('~')

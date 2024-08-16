@@ -46,7 +46,7 @@ BEGIN
 			p.phone_no,
 			br.broker_status,
 			p.title,
-			'' as [producer_role],
+			p.producer_role [producer_role],
 			p.producer_status,
 			getdate() as create_ts,
 			getdate() as update_ts,

@@ -5,6 +5,10 @@
 -----------------------------------------------------------------------------------------------------------
 -- 07/17/24		        Yunus Mohammed				1. Created this procedure
 -- 07/29/24		        Architha Gudimalla			2. Excluded quotes with broker_id = 0
+-- 08/08/24		        Architha Gudimalla			3. Added Customer id
+-- 08/09/24		        Architha Gudimalla			4. Only include quotes with eff dt >= 20230601
+-- 08/09/24		        Architha Gudimalla			5. Excluded test quotes
+-- 08/16/24		        Architha Gudimalla			6. Added Recampaign indicator
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -34,72 +38,76 @@ BEGIN
 		
         with quote_collection_class_type as
         (
-        select
-        quote_history_sk,
-        sum(blanket_limit_amt) as total_blanket_limit_amt,
-        sum(scheduled_limit_amt) as total_scheduled_limit_amt
-        from
-        edw_core.tquote_collection_class_type
-        group by quote_history_sk
+            select  quote_history_sk,
+                    sum(blanket_limit_amt) as total_blanket_limit_amt,
+                    sum(scheduled_limit_amt) as total_scheduled_limit_amt
+            from
+            edw_core.tquote_collection_class_type
+            group by quote_history_sk
         )
 
         select
-        q.quote_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,
-        br.broker_id, br.broker_nm, br.broker_tier, br.national_agency_in,
-        bvt.team_member_nm as bdm_nm,cust.vip_in,i.first_nm as insured_first_nm, i.last_nm as insured_last_nm,
-        h.underwriter_nm, q.uw_company_nm,
-        CASE
-        WHEN pr.product_cd IN ('HO','CO') THEN tqhl.address_line_1
-        WHEN pr.product_cd = 'LUX'  THEN tqcl.address_line_1
-        WHEN pr.product_cd = 'PEL' THEN tqpl.address_line_1
-        END AS [risk_address_line_1], 
-        CASE
-        WHEN pr.product_cd IN ('HO','CO') THEN tqhl.address_line_2
-        WHEN pr.product_cd = 'LUX'  THEN tqcl.address_line_2
-        WHEN pr.product_cd = 'PEL' THEN tqpl.address_line_2
-        END as [risk_address_line_2], 
-        CASE
-        WHEN pr.product_cd IN ('HO','CO') THEN tqhl.city_nm
-        WHEN pr.product_cd = 'LUX'  THEN tqcl.city_nm
-        WHEN pr.product_cd = 'PEL' THEN tqpl.city_nm
-        END as risk_city_nm,
-        CASE
-        WHEN pr.product_cd IN ('HO','CO') THEN tqhl.state_cd
-        WHEN pr.product_cd = 'LUX'  THEN tqcl.state_cd
-        WHEN pr.product_cd = 'PEL' THEN tqpl.state_cd
-        END as risk_state_cd,
-        CASE
-        WHEN pr.product_cd IN ('HO','CO') THEN tqhl.zip_cd
-        WHEN pr.product_cd = 'LUX'  THEN tqcl.zip_cd
-        WHEN pr.product_cd = 'PEL' THEN tqpl.zip_cd
-        END [risk_zip_cd],
-        h.premium_amt,
-        q.quote_status,
-        (ISNULL(tqhc.prior_nonwater_claim_ct,0) + ISNULL(tqhc.prior_water_claim_ct,0)) as claim_ct,
-        (select top 1 note_desc from edw_core.tnote tn where tn.policy_no = q.quote_no order by coalesce(note_updated_ts,note_created_ts) desc) as note_desc,
-        NULL AS recampaign_in,
-        NULL AS rol_on_lost_business,
-        NULL AS lost_company,
-        h.not_taken_reason_desc as reason_quote_not_taken,
-        NULL AS construction,
-        tqhc.[dwelling_limit_amt],
-        tqhc.[contents_limit_amt], 
-        tqhc.[other_structures_limit_amt],
-        tqhc.[loss_of_use_limit_amt],
-        tqhc.total_insured_value_amt,
-        tqhc.[roof_covering],
-        tqhc.[roof_updated_year],
-        CASE WHEN q.product_cd in ('HO','CO') then h.insurance_score ELSE NULL END AS insurance_score,
-        tqapc.bodily_injury_limit_amt as auto_liability_limit_amt,
-        tqpc.pel_limit_amt,
-        case when total_blanket_limit_amt > 0 and total_scheduled_limit_amt > 0 then 'Both'
-        when total_blanket_limit_amt > 0 then 'Blanket'
-        when total_scheduled_limit_amt > 0 then 'Scheduled'
-        end as collections_coverage_type,
-        tcct.total_blanket_limit_amt,
-        tcct.total_scheduled_limit_amt,
-        q.create_ts,
-        q.update_ts
+            q.quote_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,
+            q.customer_id,
+            br.broker_id, br.broker_nm, br.broker_tier, br.national_agency_in,
+            bvt.team_member_nm as bdm_nm,cust.vip_in,i.first_nm as insured_first_nm, i.last_nm as insured_last_nm,
+            h.underwriter_nm, q.uw_company_nm,
+            CASE
+            WHEN pr.product_cd IN ('HO','CO') THEN tqhl.address_line_1
+            WHEN pr.product_cd = 'LUX'  THEN tqcl.address_line_1
+            WHEN pr.product_cd = 'PEL' THEN tqpl.address_line_1
+            END AS [risk_address_line_1], 
+            CASE
+            WHEN pr.product_cd IN ('HO','CO') THEN tqhl.address_line_2
+            WHEN pr.product_cd = 'LUX'  THEN tqcl.address_line_2
+            WHEN pr.product_cd = 'PEL' THEN tqpl.address_line_2
+            END as [risk_address_line_2], 
+            CASE
+            WHEN pr.product_cd IN ('HO','CO') THEN tqhl.city_nm
+            WHEN pr.product_cd = 'LUX'  THEN tqcl.city_nm
+            WHEN pr.product_cd = 'PEL' THEN tqpl.city_nm
+            END as risk_city_nm,
+            CASE
+            WHEN pr.product_cd IN ('HO','CO') THEN tqhl.state_cd
+            WHEN pr.product_cd = 'LUX'  THEN tqcl.state_cd
+            WHEN pr.product_cd = 'PEL' THEN tqpl.state_cd
+            END as risk_state_cd,
+            CASE
+            WHEN pr.product_cd IN ('HO','CO') THEN tqhl.zip_cd
+            WHEN pr.product_cd = 'LUX'  THEN tqcl.zip_cd
+            WHEN pr.product_cd = 'PEL' THEN tqpl.zip_cd
+            END [risk_zip_cd],
+            h.premium_amt,
+            q.quote_status,
+            (ISNULL(tqhc.prior_nonwater_claim_ct,0) + ISNULL(tqhc.prior_water_claim_ct,0)) as claim_ct,
+            (select top 1 note_desc from edw_core.tnote tn where tn.policy_no = q.quote_no order by coalesce(note_updated_ts,note_created_ts) desc) as note_desc,
+            case when DATEDIFF("d",cast(getdate() as date),q.expiration_dt) between 0 and 90 and q.quote_status  in ('Not taken') 
+					 then 'Y' 
+					 else 'N' 
+				end AS recampaign_in,
+            NULL AS rol_on_lost_business,
+            NULL AS lost_company,
+            h.not_taken_reason_desc as reason_quote_not_taken,
+            NULL AS construction,
+            tqhc.[dwelling_limit_amt],
+            tqhc.[contents_limit_amt], 
+            tqhc.[other_structures_limit_amt],
+            tqhc.[loss_of_use_limit_amt],
+            tqhc.total_insured_value_amt,
+            tqhc.[roof_covering],
+            tqhc.[roof_updated_year],
+            CASE WHEN q.product_cd in ('HO','CO') then h.insurance_score ELSE NULL END AS insurance_score,
+            tqapc.bodily_injury_limit_amt as auto_liability_limit_amt,
+            tqpc.pel_limit_amt,
+            case when total_blanket_limit_amt > 0 and total_scheduled_limit_amt > 0 then 'Both'
+            when total_blanket_limit_amt > 0 then 'Blanket'
+            when total_scheduled_limit_amt > 0 then 'Scheduled'
+            end as collections_coverage_type,
+            tcct.total_blanket_limit_amt,
+            tcct.total_scheduled_limit_amt,
+            q.create_ts,
+            q.update_ts
+
         into edw_temp.quote_hubspot_feed_temp1
 
         from edw_core.tquote q
@@ -109,8 +117,8 @@ BEGIN
         left join edw_core.tcustomer cust on cust.customer_id = q.customer_id
         left join edw_core.tbroker br on br.broker_id = q.broker_id
         left join edw_core.tbroker_vault_team bvt on br.broker_id = bvt.broker_id and bvt.product_nm = pr.product_nm
-        and bvt.team_member_type = 'BusinessDevelopmentManager' and q.program_type = bvt.program_type
-        and  isnull(bvt.state_cd,q.risk_state_cd)=q.risk_state_cd
+                                                    and bvt.team_member_type = 'BusinessDevelopmentManager' and q.program_type = bvt.program_type
+                                                    and  isnull(bvt.state_cd,q.risk_state_cd)=q.risk_state_cd
         left join edw_core.tquote_home_location tqhl on tqhl.quote_no = q.quote_no
         left join edw_core.tquote_collection_location tqcl on tqcl.quote_no = q.quote_no
         left join edw_core.tquote_pel_location tqpl on tqpl.quote_history_sk = h.quote_history_sk and tqpl.primary_location_in = 'Yes'
@@ -122,6 +130,11 @@ BEGIN
         where  h.latest_transaction_in = 'Y'
 		and greatest(q.create_ts,q.update_ts) > @last_source_extract_ts
         and q.broker_id <> '0'
+        and q.effective_Dt >= '01-jun-2023'  
+		and q.insured_nm not like '%test%' 
+		and cust.last_nm not like '%test%'
+		and cust.first_nm not like '%test%' 
+		and cust.customer_nm not like '%test%'
 
         -- Start Merge process
 		MERGE INTO [edw_integration].[quote_hubspot_feed] AS target
@@ -135,7 +148,8 @@ BEGIN
             lost_company , reason_quote_not_taken, construction , dwelling_limit_amt ,contents_limit_amt , other_structures_limit_amt , 
             loss_of_use_limit_amt, total_insured_value_amt ,roof_covering , roof_updated_year , insurance_score , 
             auto_liability_limit_amt, pel_limit_amt, collections_coverage_type, total_blanket_limit_amt , total_scheduled_limit_amt ,producer_nm,
-            create_ts, update_ts ,etl_audit_sk 
+            create_ts, update_ts ,etl_audit_sk
+            ,customer_id 
         )
         VALUES
         (
@@ -146,54 +160,58 @@ BEGIN
             loss_of_use_limit_amt, total_insured_value_amt ,roof_covering , roof_updated_year , insurance_score , 
             auto_liability_limit_amt, pel_limit_amt, collections_coverage_type, total_blanket_limit_amt , total_scheduled_limit_amt ,producer_nm,
             getdate(), getdate(), @etl_audit_sk 
+            ,customer_id 
         )
         WHEN MATCHED THEN UPDATE
         SET        
-        [target].effective_dt	=	[source].effective_dt,
-        [target].expiration_dt	=	[source].expiration_dt,
-        [target].transaction_type	=	[source].transaction_type,
-        [target].broker_id	=	[source].broker_id,
-        [target].broker_nm	=	[source].broker_nm,
-        [target].broker_tier	=	[source].broker_tier,
-        [target].national_agency_in	=	[source].national_agency_in,
-        [target].bdm_nm	=	[source].bdm_nm,
-        [target].vip_in	=	[source].vip_in,
-        [target].insured_first_nm	=	[source].insured_first_nm,
-        [target].insured_last_nm	=	[source].insured_last_nm,
-        [target].underwriter_nm	=	[source].underwriter_nm,
-        [target].uw_company_nm	=	[source].uw_company_nm,
-        [target].risk_address_line_1	=	[source].risk_address_line_1,
-        [target].risk_address_line_2	=	[source].risk_address_line_2,
-        [target].risk_city_nm	=	[source].risk_city_nm,
-        [target].risk_state_cd	=	[source].risk_state_cd,
-        [target].risk_zip_cd	=	[source].risk_zip_cd,
-        [target].premium_amt	=	[source].premium_amt,
-        [target].quote_status	=	[source].quote_status,
-        [target].claim_ct	=	[source].claim_ct,
-        [target].note_desc	=	[source].note_desc,
-        [target].recampaign_in	=	[source].recampaign_in,
-        [target].rol_on_lost_business	=	[source].rol_on_lost_business,
-        [target].lost_company	=	[source].lost_company,
-        [target].reason_quote_not_taken	=	[source].reason_quote_not_taken,
-        [target].construction	=	[source].construction,
-        [target].dwelling_limit_amt	=	[source].dwelling_limit_amt,
-        [target].contents_limit_amt	=	[source].contents_limit_amt,
-        [target].other_structures_limit_amt	=	[source].other_structures_limit_amt,
-        [target].loss_of_use_limit_amt	=	[source].loss_of_use_limit_amt,
-        [target].total_insured_value_amt	=	[source].total_insured_value_amt,
-        [target].roof_covering	=	[source].roof_covering,
-        [target].roof_updated_year	=	[source].roof_updated_year,
-        [target].insurance_score	=	[source].insurance_score,
-        [target].auto_liability_limit_amt	=	[source].auto_liability_limit_amt,
-        [target].pel_limit_amt	=	[source].pel_limit_amt,
-        [target].collections_coverage_type	=	[source].collections_coverage_type,
-        [target].total_blanket_limit_amt	=	[source].total_blanket_limit_amt,
-        [target].total_scheduled_limit_amt	=	[source].total_scheduled_limit_amt,
-        [target].producer_nm =   [source].producer_nm,
-        [target].update_ts	=	GETDATE(),
-        [target].etl_audit_sk	=	@etl_audit_sk;
+            [target].effective_dt	=	[source].effective_dt,
+            [target].expiration_dt	=	[source].expiration_dt,
+            [target].transaction_type	=	[source].transaction_type,
+            [target].broker_id	=	[source].broker_id,
+            [target].broker_nm	=	[source].broker_nm,
+            [target].broker_tier	=	[source].broker_tier,
+            [target].national_agency_in	=	[source].national_agency_in,
+            [target].bdm_nm	=	[source].bdm_nm,
+            [target].vip_in	=	[source].vip_in,
+            [target].insured_first_nm	=	[source].insured_first_nm,
+            [target].insured_last_nm	=	[source].insured_last_nm,
+            [target].underwriter_nm	=	[source].underwriter_nm,
+            [target].uw_company_nm	=	[source].uw_company_nm,
+            [target].risk_address_line_1	=	[source].risk_address_line_1,
+            [target].risk_address_line_2	=	[source].risk_address_line_2,
+            [target].risk_city_nm	=	[source].risk_city_nm,
+            [target].risk_state_cd	=	[source].risk_state_cd,
+            [target].risk_zip_cd	=	[source].risk_zip_cd,
+            [target].premium_amt	=	[source].premium_amt,
+            [target].quote_status	=	[source].quote_status,
+            [target].claim_ct	=	[source].claim_ct,
+            [target].note_desc	=	[source].note_desc,
+            [target].recampaign_in	=	[source].recampaign_in,
+            [target].rol_on_lost_business	=	[source].rol_on_lost_business,
+            [target].lost_company	=	[source].lost_company,
+            [target].reason_quote_not_taken	=	[source].reason_quote_not_taken,
+            [target].construction	=	[source].construction,
+            [target].dwelling_limit_amt	=	[source].dwelling_limit_amt,
+            [target].contents_limit_amt	=	[source].contents_limit_amt,
+            [target].other_structures_limit_amt	=	[source].other_structures_limit_amt,
+            [target].loss_of_use_limit_amt	=	[source].loss_of_use_limit_amt,
+            [target].total_insured_value_amt	=	[source].total_insured_value_amt,
+            [target].roof_covering	=	[source].roof_covering,
+            [target].roof_updated_year	=	[source].roof_updated_year,
+            [target].insurance_score	=	[source].insurance_score,
+            [target].auto_liability_limit_amt	=	[source].auto_liability_limit_amt,
+            [target].pel_limit_amt	=	[source].pel_limit_amt,
+            [target].collections_coverage_type	=	[source].collections_coverage_type,
+            [target].total_blanket_limit_amt	=	[source].total_blanket_limit_amt,
+            [target].total_scheduled_limit_amt	=	[source].total_scheduled_limit_amt,
+            [target].producer_nm =   [source].producer_nm,
+            [target].update_ts	=	GETDATE(),
+            [target].etl_audit_sk	=	@etl_audit_sk,
+            [target].customer_id	=	[source].customer_id
+            ;
         
         SET @rows_affected=@@ROWCOUNT;
+
         -- Update control table
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(Greatest(create_ts,update_ts)) FROM edw_temp.[quote_hubspot_feed_temp1]),@last_source_extract_ts);
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;

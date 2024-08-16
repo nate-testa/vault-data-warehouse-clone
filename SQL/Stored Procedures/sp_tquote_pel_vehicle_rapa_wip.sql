@@ -11,6 +11,7 @@ GO
 -- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
 -- 05/14/2024 			Architha Gudimalla					3. Corrected errors
+-- 08/03/2024 			Architha Gudimalla					4. Updated tpel_vehicle join to use vehicle_unique_id
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_vehicle_rapa_wip]
 
@@ -74,7 +75,8 @@ BEGIN
 					on tqv.quote_no = acc.PolicyNumber
 					and tqv.effective_dt = acc.EffectiveDate
 					and tqv.transaction_seq_no = 0
-					and tqv.vehicle_no = acco.[Index]
+					--and tqv.vehicle_no = acco.[Index]
+					and tqv.vehicle_unique_id = acco.[UniqueId]
 				left join [edw_core].[tquote_pel_coverage] tqc
 					on tqc.quote_no = acc.PolicyNumber
 					and tqc.effective_dt = CAST(acc.EffectiveDate AS DATE)

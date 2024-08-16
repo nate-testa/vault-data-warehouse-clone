@@ -5,6 +5,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 07/23/24		        Architha Gudimalla			1. Created this procedure
 -- 07/29/24		        Architha Gudimalla			2. Corrections after first run
+-- 08/09/24		        Architha Gudimalla			3. Exclude notes before 20240601
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_note_hubspot_feed]
@@ -31,12 +32,13 @@ BEGIN
 
 		DROP TABLE IF exists edw_temp.quote_note_hubspot_feed_temp1;
 
-        select policy_no as quote_no, note_desc, note_created_ts, note_updated_ts, note_id, create_ts,update_ts
+        select n.policy_no as quote_no, n.note_desc, n.note_created_ts, n.note_updated_ts, n.note_id, n.create_ts,n.update_ts
         into edw_temp.quote_note_hubspot_feed_temp1
-        from [edw_core].[tnote]
-        where object_type = 'Account' 
-		and greatest(note_created_ts, note_updated_ts) > @last_source_extract_ts
-		and policy_no is not null;
+        from [edw_core].[tnote] n
+        where n.object_type = 'Account' 
+		and n.greatest(note_created_ts, note_updated_ts) > @last_source_extract_ts
+		and n.policy_no is not null 
+		and exists (select quote_no from edw_core.tquote q where n.policy_no = q.quote_no and effective_dt >= '01-jun-2024');
 
         -- Start Merge process
 		MERGE INTO [edw_integration].[quote_note_hubspot_feed] AS target

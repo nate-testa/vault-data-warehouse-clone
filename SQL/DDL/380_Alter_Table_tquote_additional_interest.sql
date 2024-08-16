@@ -1,0 +1,2 @@
+ALTER TABLE edw_core.tquote_additional_interest
+ADD additional_interest_deleted_in varchar(255);

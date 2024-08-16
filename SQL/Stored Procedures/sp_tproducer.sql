@@ -2,12 +2,13 @@
 -- Author:		Mohammed Yunus
 -- Description: This procedures insert and update producer data 
 ---------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date 			|Author							|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 10/12/23		Mohammed Yunus					1. Created this procedure 
--- 10/27/23		Architha Gudimalla				2. Added cast on broker_id
--- 02/08/24		Alberto Almario					3. Added new column producer_id and change to use merge
--- 07/06/24		Alberto Almario					4. Change logic for producer_status column
+-- 10/12/23				Yunus Mohammed					1. Created this procedure 
+-- 10/27/23				Architha Gudimalla				2. Added cast on broker_id
+-- 02/08/24				Alberto Almario					3. Added new column producer_id and change to use merge
+-- 07/06/24				Alberto Almario					4. Change logic for producer_status column
+-- 08/12/24				Yunus Mohammed					5. Added user_role
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tproducer]
@@ -32,8 +33,13 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) 
 
 		-- Create temp table with name as sp_tproducer_temp
-		DROP TABLE IF EXISTS edw_temp.tproducer_temp1 
+		DROP TABLE IF EXISTS edw_temp.tproducer_temp1 ;
 
+		WITH user_role AS
+		(
+			select UserId,RoleName, dense_RANK()over( PARTITION BY userid ORDER BY GREATEST(CreatedDate,UpdatedDate) desc) AS rank_no
+			from edw_stage.[UserRole]
+		)
 		SELECT
 			tbr.broker_id,
 			tbr.broker_sk,
@@ -50,12 +56,14 @@ BEGIN
 				WHEN br.[Disabled] = 1 THEN 'Disabled'
 				ELSE
 					CASE WHEN br.UserEmailConfirmed = 1 THEN 'Active' ELSE 'Pending' END
-			END AS producer_status
+			END AS producer_status,
+			ur.RoleName as producer_role
 		INTO edw_temp.tproducer_temp1
 		FROM
 			edw_stage.[Broker] br
 			INNER JOIN edw_stage.Brokerage brk on brk.id=br.BrokerageId
 			INNER JOIN edw_core.tbroker tbr on tbr.broker_id=cast(brk.ProducerId as varchar)
+			LEFT JOIN user_role ur ON cast(ur.UserId as varchar(255)) = br.UserId and ur.rank_no = 1
 		WHERE
 			GREATEST(br.CreatedDate,br.UpdatedDate)>@last_source_extract_ts
 
@@ -74,8 +82,9 @@ BEGIN
 				national_producer_no,
 				CreatedDate,
 				UpdatedDate,
-				producer_id,
-				producer_status
+				producer_id,				
+				producer_status,
+				producer_role
 			FROM 
 				edw_temp.tproducer_temp1
 		) AS Source
@@ -95,7 +104,8 @@ BEGIN
 			update_ts,
 			etl_audit_sk,
 			producer_id,
-			producer_status
+			producer_status,
+			producer_role
 		)
 		VALUES (
 			Source.broker_id,
@@ -110,7 +120,8 @@ BEGIN
 			getdate(), 
 			@etl_audit_sk,
 			Source.producer_id,
-			producer_status
+			Source.producer_status,
+			Source.producer_role
 		)
 		--For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -124,6 +135,7 @@ BEGIN
 			Target.phone_no = Source.phone_no,
 			Target.national_producer_no = Source.national_producer_no,
 			Target.producer_status = Source.producer_status,
+			Target.producer_role = Source.producer_role,
 			Target.update_ts = getdate()
 		;
 

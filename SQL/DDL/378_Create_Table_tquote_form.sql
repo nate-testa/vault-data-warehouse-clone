@@ -1,0 +1,25 @@
+create table edw_core.tquote_form (
+	quote_form_sk int identity(1,1) not null,
+	quote_no varchar(255) not null,
+	effective_dt date not null,
+	transaction_effective_dt date not null,
+	expiration_dt date not null,
+	transaction_dt date not null,
+	transaction_seq_no int not null,
+	quote_history_sk int not null,
+	form_cd varchar(255) not null,
+	form_edition varchar(255) null,
+    form_desc varchar(255) null,
+    form_type varchar(255) null,
+    document_type varchar(255) null,
+	source_system_sk int not null,
+	create_ts datetime not null,
+	update_ts datetime not null,
+	etl_audit_sk int not null,
+	constraint pk_tquote_form primary key (quote_form_sk),
+	constraint fk_tquote_form_quote_history_sk foreign key (quote_history_sk) references edw_core.tquote_history(quote_history_sk)
+) ;
+
+
+INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts)
+    VALUES ('tquote_form','Type-2 Dimension','Base','Quote','Stored Procedure','Insert','Daily',getdate(),getdate());

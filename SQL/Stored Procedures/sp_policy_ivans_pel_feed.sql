@@ -240,6 +240,7 @@ BEGIN
                     WHERE pw.policy_no = phf.policy_no
                     AND pw.effective_dt = phf.effective_dt
                     AND pw.transaction_seq_no = phf.transaction_seq_no
+                    AND pw.watercraft_deleted_in = 'No'
                     FOR JSON PATH, INCLUDE_NULL_VALUES
                 ) AS PEL_Watercrafts
             FROM edw_core.tpolicy_history AS phf

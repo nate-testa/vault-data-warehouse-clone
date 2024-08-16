@@ -15,6 +15,7 @@ GO
 -- 05/25/24     Architha Gudimalla              6. Removed join on effective_dt to tquote_auto_vehicle
 -- 13/06/24     Hernando Gonzalez               7. Added NewlyPurchasedVehicleFinal
 -- 07/10/24     Alberto Almario                 8. added vehicle_unique_id 
+-- 08/07/24     Yunus Mohammed                  9. Updated logic to get garaging location
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip] 
@@ -183,7 +184,11 @@ BEGIN
                         acc.ExpirationDate as expiration_dt, --acc.Number as transaction_seq_no,
                         qh.quote_history_sk, qav.quote_auto_vehicle_sk, 
                         acco.IsdeletedOnPolicyChange as vehicle_deleted_in,
-                        accof.[Field], accof.[Value],
+                        accof.[Field], 
+                        CASE
+                        WHEN accof.Field = 'GaragingLocationId' THEN CAST(accof.ReferenceObjectId AS NVARCHAR(3800))
+                        ELSE accof.[Value]
+                        END AS [Value],
                         CASE 
                             WHEN acc.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
                             ELSE 4 --(Metal)
@@ -199,7 +204,7 @@ BEGIN
                     LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                         ON qav.quote_no = acc.PolicyNumber
                         AND qav.effective_dt = acc.effectivedate
-                        AND qav.vehicle_unique_id = acco.[UniqueId]
+                        AND qav.vehicle_unique_id = cast(acco.[UniqueId] as varchar(max))
                         -- AND qav.vehicle_no = acco.[Index]
                     WHERE
                         p.[Name] = 'Automobile'
@@ -447,7 +452,8 @@ BEGIN
             LEFT JOIN 
                 [edw_stage].[AccountObject] AS ao ON ao.id = t1.GaragingLocationId
             LEFT JOIN 
-                [edw_core].[tquote_auto_garage_location] AS gar ON gar.quote_no = t1.quote_no AND gar.effective_dt = t1.effective_dt AND gar.transaction_seq_no = t1.transaction_seq_no AND gar.garage_location_no = ao.[Index]
+                [edw_core].[tquote_auto_garage_location] AS gar ON gar.quote_no = t1.quote_no AND gar.effective_dt = t1.effective_dt AND gar.transaction_seq_no = t1.transaction_seq_no 
+                and gar.garage_unique_id = ao.UniqueId
             LEFT JOIN (
                 SELECT 
                     RANK() OVER (PARTITION BY quote_no, effective_dt, transaction_seq_no ORDER BY quote_no, effective_dt, transaction_seq_no, garage_location_no) AS rnk, 

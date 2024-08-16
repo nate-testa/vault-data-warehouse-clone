@@ -273,6 +273,8 @@ BEGIN
 								END AS natureInterestCd
 							FROM edw_core.tadditional_interest as ai 
 							WHERE avc.policy_no = ai.policy_no AND avc.effective_dt = ai.effective_dt AND avc.transaction_seq_no = ai.transaction_seq_no
+                            AND avc.auto_vehicle_sk = ai.auto_vehicle_sk
+                            AND ai.additional_interest_deleted_in = 'No'
 							FOR JSON PATH, INCLUDE_NULL_VALUES 
 						) AS additionalInterests,
 						'' as numDaysDrivenPerWeek,
