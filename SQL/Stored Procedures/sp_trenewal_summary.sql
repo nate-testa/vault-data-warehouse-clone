@@ -48,6 +48,7 @@ GO
 --														agency_primary_location_state_cd 
 -- 08/14/24		Architha Gudimalla				25. updated uw_company_cd logic
 -- 08/14/24		Architha Gudimalla				26. updated offered_or_not_taken_quote_ct logic
+-- 08/15/24		Architha Gudimalla				27. Fixed errors for the code changes done in 23-26
 -- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -122,7 +123,7 @@ BEGIN
 		WHILE @@FETCH_STATUS = 0
 			BEGIN
 
-			print @yearmonth
+			--print @yearmonth
 
 				SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 				EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;  
@@ -344,6 +345,7 @@ BEGIN
 								 else null
 							end) as max_tr_residencetype,
 						max(pol.non_renewal_in) non_renewal_in,
+						max(pol.pending_non_renewal_in) pending_non_renewal_in,
 						max(pol.policy_term) policy_term,
 						max(pol.product_cd) product_cd ,
 						sum(CASE WHEN tr.policy_transaction_sk = max_pol_tr.min_policy_transaction_sk
@@ -433,6 +435,7 @@ BEGIN
 						exp_pols_prm.expiring_TIV, 
 						exp_pols_prm.expiring_TIV * (case when exp_pols_prm.non_renewal_in = 'Yes' then 1 else 0 end)  as expiring_TIV_post_NR,
 						exp_pols_prm.expiring_COVA,
+						exp_pols_prm.expiring_rate_on_line,
 						--1 as policy_ct,
 						case when exp_pols_prm.cancel_sixty_days_ind <> 0 then 1 else 0 end flatcancel_ind, 
 						case when exp_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end non_flatcancel_ind, 
@@ -482,7 +485,7 @@ BEGIN
 						 end*/ 
 						 ren_quotes.quote_sk renewal_quote_sk
 						,ren_quotes.note_desc renewal_quote_note_desc
-						,ren_quotes.agency_primary_location_state_cd renewal_quote_agency_primary_location_state_cd 
+						,ren_quotes.primary_address_state_cd renewal_quote_agency_primary_location_state_cd 
 						,isnull(ci.oth_inf_ct,0) expiring_customer_other_inforce_ct
 						,case when ren_pols.policy_sk is not null then ren_pols_prm.day_0_TIV else null end renewal_tiv_amt,
 						 case when ren_pols.policy_sk is not null then ren_pols_prm.day_0_COVA else null end renewal_cova_amt,  
