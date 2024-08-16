@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.ttask ALTER COLUMN task_priority varchar(255);
