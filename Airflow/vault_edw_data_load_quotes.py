@@ -283,8 +283,10 @@ with DAG(
             'sp_tquote_insured',
             'sp_tquote_insured_update',
             'sp_tquote_history_update',
+            'sp_tquote_history_underwriter_update',
             'sp_tquote_update',
-            'sp_tquote_referral_message'
+            'sp_tquote_referral_message',
+            'sp_tquote_form'
         ]
 
         operators = []
