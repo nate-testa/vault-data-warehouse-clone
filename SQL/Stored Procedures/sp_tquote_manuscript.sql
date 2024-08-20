@@ -10,6 +10,7 @@ GO
 -- 06/20/23				Hernando Gonzalez Garcia		1. Created this procedure 
 -- 01/17/24				Architha Gudimalla				2. Modified for errors after first run  
 -- 09/07/24				Yunus Mohammed					3. Use ValueBlob if Value field is null for manuscript_title an desc
+-- 08/20/24				Yunus Mohammed					4. Used IncludeManuscript indicator
 -- ======================================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_manuscript]
 AS
@@ -50,7 +51,7 @@ BEGIN
 				,tqh.[quote_history_sk]
 				,accto.[Field] 
 				,case
-					when Field in ('ManuscriptDescription','ManuscriptTitle') and len(accto.[Value])= 0 then NULLIF(accto.[ValueBlob],'')
+					when accto.Field in ('ManuscriptDescription','ManuscriptTitle') and len(accto.[Value])= 0 then NULLIF(accto.[ValueBlob],'')
 				else NULLIF(accto.[Value], '') end as [Value]
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
@@ -69,11 +70,13 @@ BEGIN
 				LEFT JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
 				LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
 				LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
-				INNER JOIN [edw_core].[tquote_history] tqh on tqh.quote_no=acc.PolicyNumber
-						and tqh.effective_dt=acc.EffectiveDate
-						and tqh.transaction_seq_no = acc.number
+				INNER JOIN [edw_core].[tquote_history] tqh on tqh.quote_no=acc.PolicyNumber	and tqh.effective_dt=acc.EffectiveDate and tqh.transaction_seq_no = acc.number
+				INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo_in ON acctvo_in.AccountTransactionVersionId = acctv.Id
+				INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof_in ON acctvof_in.VersionObjectId = acctvo_in.id and acctvof_in.Field = 'IncludeManuscript'
 			WHERE
 				acct.ObjectType = 'Manuscript'
+				and acctvo_in.ObjectType in ('Homeowner','Condo','Collection','PersonalExcessLiability')
+				and acctvof_in.[Value] = 'Yes'
 			) t
 		PIVOT 
 			(
@@ -120,7 +123,7 @@ BEGIN
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
+		
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200)) --20230717 added
 		--EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected; --20230717 removed
