@@ -16,6 +16,7 @@ GO
 -- 13/06/24     Hernando Gonzalez               7. Added NewlyPurchasedVehicleFinal
 -- 07/10/24     Alberto Almario                 8. added vehicle_unique_id 
 -- 08/07/24     Yunus Mohammed                  9. Updated logic to get garaging location
+-- 08/20/24     Yunus Mohammed                 10. Used garage_unique_id while assigning defualt garage location
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip] 
@@ -456,7 +457,7 @@ BEGIN
                 and gar.garage_unique_id = ao.UniqueId
             LEFT JOIN (
                 SELECT 
-                    RANK() OVER (PARTITION BY quote_no, effective_dt, transaction_seq_no ORDER BY quote_no, effective_dt, transaction_seq_no, garage_location_no) AS rnk, 
+                    RANK() OVER (PARTITION BY quote_no, effective_dt, transaction_seq_no ORDER BY quote_no, effective_dt, transaction_seq_no, garage_unique_id) AS rnk, 
                     *
                 FROM 
                     [edw_core].[tquote_auto_garage_location]
