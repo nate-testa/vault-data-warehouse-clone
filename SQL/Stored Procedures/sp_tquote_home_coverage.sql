@@ -13,6 +13,7 @@
 -- 12/06/24			    Alberto Almario				6. Added new filed nc_bureau_rate
 -- 07/12/24				Yunus Mohammed				7. Added new fields stated_limits_policy_in and risk_sharing_policy_in
 -- 08/13/24				Yunus Mohammed				8. Updated wind_derived_deductible logic
+-- 08/20/24				Yunus Mohammed				7. Updated wind_derived_deductible logic
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage]
 
@@ -189,7 +190,10 @@ BEGIN
 					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') NOT IN ('','0') THEN HurricaneOrNamedStormDeductible
 					WHEN ISNULL(tthc.NamedStormDeductible,'') NOT IN ('','0') THEN NamedStormDeductible
 					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') NOT IN ('','0') THEN TornadoorHailstormDeductible
-					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') NOT IN ('','0') THEN WindStormOrHailDeductible
+					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') NOT IN ('','0','Other') THEN WindStormOrHailDeductible
+					
+					WHEN ISNULL(tthc.WindstormOrHailDeductibleManual ,'') NOT IN ('','0') THEN WindstormOrHailDeductibleManual
+
 				END AS wind_derived_deductible,
 				tthc.NumberOfMortgagees AS no_of_mortgagees,
 				tthc.PriorClaims AS prior_claim_last5yr_in,tthc.PriorNonWaterClaims AS prior_nonwater_claim_ct,
