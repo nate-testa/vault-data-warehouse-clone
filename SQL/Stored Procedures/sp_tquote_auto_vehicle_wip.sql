@@ -11,8 +11,9 @@ GO
 -- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
 -- 05/17/24		Architha Gudimalla				3. Added vehicle unique index
 -- 05/17/24		Architha Gudimalla				4. Removed vehicle unique join
---05/24/2024     Architha Gudimalla              6. removed join on effective dt in merge 
---07/10/2024     Alberto Almario                 7. added vehicle_unique_id 
+-- 05/24/24     Architha Gudimalla              6. removed join on effective dt in merge 
+-- 07/10/24     Alberto Almario                 7. added vehicle_unique_id 
+-- 08/21/24		Alberto Almario					8. Remove effective_dt from merge join and add into update section
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_wip]
 AS
@@ -122,7 +123,6 @@ BEGIN
 				[edw_temp].[tquote_auto_vehicle_wip_temp1] AS t1
 		) AS src
 		ON src.quote_no = trg.quote_no
-        AND src.effective_dt = trg.effective_dt
         AND src.vehicle_unique_id = trg.vehicle_unique_id
         -- AND src.vehicle_no = trg.vehicle_no
 		-- For Inserts
@@ -190,6 +190,7 @@ BEGIN
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
+            trg.effective_dt = src.effective_dt,
             trg.vehicle_type = src.vehicle_type,
             trg.collector_car_type = src.collector_car_type,
             trg.vehicle_vin = src.vehicle_vin,

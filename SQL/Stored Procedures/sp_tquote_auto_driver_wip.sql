@@ -11,6 +11,7 @@ GO
 -- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
 -- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- 04/07/24		Hernnando Gonzalez		        4. Added new fields AAFFactor, AFBFactor, NAFFactor, CPAFactor, MINFactor, MAJFactor, SPDFactor
+-- 08/21/24		Alberto Almario					5. Remove effective_dt from merge join and add into update section
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_driver_wip]
 AS
@@ -99,11 +100,11 @@ BEGIN
 		MERGE INTO [edw_core].[tquote_auto_driver] AS target
         USING [edw_temp].[tquote_auto_driver_wip_temp1] AS source
             ON target.quote_no = source.quote_no
-            AND target.effective_dt = source.effective_dt
             AND target.driver_no = source.driver_no
             AND target.transaction_seq_no = source.transaction_seq_no
         WHEN MATCHED THEN
             UPDATE SET
+                target.effective_dt = source.effective_dt,
                 target.expiration_dt = source.expiration_dt,
                 target.quote_history_sk = source.quote_history_sk,
                 target.prefix = source.[Prefix],

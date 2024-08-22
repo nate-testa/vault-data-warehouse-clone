@@ -17,6 +17,7 @@ GO
 -- 07/10/24     Alberto Almario                 8. added vehicle_unique_id 
 -- 08/07/24     Yunus Mohammed                  9. Updated logic to get garaging location
 -- 08/20/24     Yunus Mohammed                 10. Used garage_unique_id while assigning defualt garage location
+-- 08/21/24		Alberto Almario				   11. Remove effective_dt from merge join and add into update section
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip] 
@@ -463,13 +464,13 @@ BEGIN
                     [edw_core].[tquote_auto_garage_location]
             ) gar1 ON gar1.rnk = 1 AND gar1.quote_no = t1.quote_no AND gar1.effective_dt = t1.effective_dt AND t1.transaction_seq_no = gar1.transaction_seq_no
         ) AS source 
-            ON target.quote_no = source.quote_no 
-            AND target.effective_dt = source.effective_dt 
+            ON target.quote_no = source.quote_no  
             -- AND target.vehicle_no = source.vehicle_no 
             AND target.transaction_seq_no = source.transaction_seq_no
             AND target.vehicle_unique_id = source.vehicle_unique_id 
         WHEN MATCHED THEN
             UPDATE SET 
+                target.effective_dt = source.effective_dt,
                 target.vehicle_no = source.vehicle_no,
                 target.expiration_dt = source.expiration_dt,
                 target.quote_history_sk = source.quote_history_sk,

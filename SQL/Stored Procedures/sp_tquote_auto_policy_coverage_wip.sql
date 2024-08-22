@@ -12,6 +12,7 @@ GO
 -- 05/14/24		    Architha Gudimalla				3. Corrected errors
 -- 07/10/24         Yunus Mohammed                  4. Removed rater_pip_discount
 -- 07/25/24         Tuba Mohsin                     5. Added New coverage EnhancedUIM
+-- 08/21/24		    Alberto Almario					6. Remove effective_dt from merge join and add into update section
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage_wip]
@@ -152,10 +153,10 @@ BEGIN
 		MERGE INTO [edw_core].[tquote_auto_policy_coverage] AS target
         USING [edw_temp].[tquote_auto_policy_coverage_wip_temp1] AS source
             ON target.quote_no = source.quote_no
-            AND target.effective_dt = source.effective_dt
             AND target.transaction_seq_no = source.transaction_seq_no
         WHEN MATCHED THEN
             UPDATE SET
+                target.effective_dt = source.effective_dt,
                 target.expiration_dt = source.expiration_dt,
                 target.quote_history_sk = source.quote_history_sk,
                 target.limit_type = source.[LimitType],
