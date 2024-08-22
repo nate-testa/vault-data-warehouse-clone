@@ -3,8 +3,10 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 07/17/23		Alberto Almario					1. Created this procedure
--- 07/18/23		Architha Gudimalla				2. Made changes to fix the errors on first run  
+-- 07/17/24		Alberto Almario					1. Created this procedure
+-- 07/18/24		Architha Gudimalla				2. Made changes to fix the errors on first run  
+-- 08/20/24		Architha Gudimalla				3. Added underwriter  
+-- 08/21/24		Architha Gudimalla				4. Added effective_dt
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_policy_redzone_feed]
 AS
@@ -38,6 +40,10 @@ BEGIN
         SELECT	 
             pol.policy_no as unique_id, 
             pol.policy_no, 
+            pol.effective_dt, 
+            pol.risk_state_cd,
+            pol.policy_term, 
+            pol.program_type,
             pr.product_nm, 		
             loc.[latitude], 
             loc.[longitude], 
@@ -101,6 +107,10 @@ BEGIN
         SELECT 
             pol.policy_no as unique_id,
             pol.policy_no,
+            pol.effective_dt, 
+            pol.risk_state_cd,
+            pol.policy_term, 
+            pol.program_type,
             coll_limit.product_nm,
             loc.[latitude],
             loc.[longitude],
@@ -130,17 +140,33 @@ BEGIN
         INNER JOIN edw_core.tcollection_location AS loc ON coll_limit.item_sk = loc.collection_location_sk
         INNER JOIN edw_core.tpolicy AS pol ON coll_limit.policy_sk = pol.policy_sk
         INNER JOIN edw_core.tbroker AS br ON coll_limit.broker_sk = br.broker_sk
-        LEFT JOIN edw_core.tpolicy_insured AS ins ON coll_limit.policy_history_sk = ins.policy_history_sk AND ins.primary_insured_in = 'Yes'
+        LEFT JOIN edw_core.tpolicy_insured AS ins ON coll_limit.policy_history_sk = ins.policy_history_sk AND ins.primary_insured_in = 'Yes';
 
 
         --Union HO and Collection data
-        SELECT * 
+        with br_vault_team as
+        (
+			select broker_id, product_nm,  state_cd, program_type, 
+					max(case when team_member_type = 'BusinessDevelopmentManager' then team_member_nm end) bdm_nm,
+					max(case when team_member_type = 'Underwriter' then team_member_nm end) Underwriter,
+					max(case when team_member_type = 'RenewalUnderwriter' then team_member_nm end) RenewalUnderwriter 
+			from edw_core.tbroker_vault_team bvt
+			group by broker_id , product_nm, state_cd, program_type
+        )  
+		SELECT a.*,
+				bvtm.bdm_nm,
+				bvtm.Underwriter,
+				bvtm.RenewalUnderwriter 
         INTO [edw_temp].[policy_redzone_feed_temp1]
         FROM (
             SELECT * FROM [edw_temp].[policy_redzone_feed_temp0]
             UNION ALL
             SELECT * FROM [edw_temp].[policy_redzone_feed_temp2]
-        ) AS tbl
+        ) AS a
+		left join br_vault_team  bvtm on     bvtm.broker_id = a.broker_id 
+                                         and bvtm.product_nm = a.product_nm 
+                                         and bvtm.program_type = a.program_type 
+								         and isnull(bvtm.state_cd,'') = case when bvtm.state_cd is null then '' else a.risk_state_cd end
         ; 
 
         -- Delete target table
@@ -150,6 +176,7 @@ BEGIN
         INSERT INTO [edw_integration].[policy_redzone_feed](
              [unique_id]
             ,[policy_id]
+            ,effective_dt
             ,[policy_type]
             ,[latitude]
             ,[longitude]
@@ -174,10 +201,14 @@ BEGIN
             ,[create_ts]
             ,[update_ts]
             ,[etl_audit_sk]
+            , bdm_nm
+            , new_business_underwriter_nm
+            , renewal_underwriter_nm
         )
         SELECT 
             unique_id, 
             policy_no, 
+            effective_dt,
             product_nm, 		
             latitude, 
             longitude, 
@@ -202,6 +233,9 @@ BEGIN
             [create_ts],
             [update_ts],
             [etl_audit_sk]
+            , bdm_nm
+            , Underwriter
+            , RenewalUnderwriter 
         FROM [edw_temp].[policy_redzone_feed_temp1];
 
         --************End************
