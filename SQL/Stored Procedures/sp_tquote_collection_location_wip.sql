@@ -92,7 +92,6 @@ BEGIN
 					[edw_temp].[tquote_collection_location_wip_temp1] t1
 		) AS Source
 		ON 	Source.[quote_no] = Target.[quote_no]
-        AND Source.[effective_dt] = Target.[effective_dt]    
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
@@ -120,6 +119,7 @@ BEGIN
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
+		Target.[effective_dt]   = Source.[effective_dt],
         Target.[longitude]		= Source.[longitude],
         Target.[latitude]		= Source.[latitude],
         Target.[address_line_1]	= Source.[address_line_1],

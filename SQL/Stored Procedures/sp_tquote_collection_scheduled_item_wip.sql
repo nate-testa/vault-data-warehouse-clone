@@ -117,7 +117,6 @@ BEGIN
 		) AS SOURCE
 		ON 
 		    TARGET.quote_no = SOURCE.quote_no AND
-		    TARGET.effective_dt = SOURCE.effective_dt AND
 		    --TARGET.expiration_dt = SOURCE.expiration_dt AND
 		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
 		    TARGET.quote_collection_class_type_sk = SOURCE.quote_collection_class_type_sk AND
@@ -125,6 +124,7 @@ BEGIN
 		   -- TARGET.quote_history_sk = SOURCE.quote_history_sk
 		WHEN MATCHED THEN
 		    UPDATE SET
+				TARGET.effective_dt = SOURCE.effective_dt,
 		        --TARGET.scheduled_item_no = SOURCE.scheduled_item_no,
 		        TARGET.item_desc = SOURCE.item_desc,
 		        TARGET.coverage_limit_amt = SOURCE.coverage_limit_amt,

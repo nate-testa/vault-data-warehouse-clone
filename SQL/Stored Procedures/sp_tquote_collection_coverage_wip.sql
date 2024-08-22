@@ -235,11 +235,10 @@ BEGIN
         ) AS SOURCE
         ON
             TARGET.quote_no = SOURCE.quote_no AND
-            TARGET.effective_dt = SOURCE.effective_dt AND
             TARGET.transaction_seq_no = SOURCE.transaction_seq_no
-
         WHEN MATCHED THEN
             UPDATE SET
+                TARGET.effective_dt = SOURCE.effective_dt,
                 TARGET.expiration_dt = SOURCE.expiration_dt,
                 TARGET.quote_collection_location_sk = SOURCE.quote_collection_location_sk,
                 TARGET.quote_history_sk = SOURCE.quote_history_sk,
