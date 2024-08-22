@@ -202,7 +202,7 @@ BEGIN
             ,[update_ts]
             ,[etl_audit_sk]
             , bdm_nm
-            , new_underwriter_nm
+            , new_business_underwriter_nm
             , renewal_underwriter_nm
         )
         SELECT 
