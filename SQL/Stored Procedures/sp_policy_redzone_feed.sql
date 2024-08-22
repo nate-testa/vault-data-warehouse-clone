@@ -42,8 +42,7 @@ BEGIN
             pol.policy_no, 
             pol.effective_dt, 
             pol.risk_state_cd,
-            pol.policy_term,
-            Replace(Replace(pol.uw_company_nm,'Vault E & S Insurance Company','VES'),'Vault Reciprocal Exchange','VRE') as uw_company_nm,
+            pol.policy_term, 
             pol.program_type,
             pr.product_nm, 		
             loc.[latitude], 
@@ -110,8 +109,7 @@ BEGIN
             pol.policy_no,
             pol.effective_dt, 
             pol.risk_state_cd,
-            pol.policy_term,
-            Replace(Replace(pol.uw_company_nm,'Vault E & S Insurance Company','VES'),'Vault Reciprocal Exchange','VRE') as uw_company_nm,
+            pol.policy_term, 
             pol.program_type,
             coll_limit.product_nm,
             loc.[latitude],
@@ -148,14 +146,12 @@ BEGIN
         --Union HO and Collection data
         with br_vault_team as
         (
-			select broker_id, product_nm,  state_cd,
-					Replace(Replace(program_type,'Non-Admitted', 'VES'),'Admitted', 'VRE') uw_company_nm,
+			select broker_id, product_nm,  state_cd, program_type, 
 					max(case when team_member_type = 'BusinessDevelopmentManager' then team_member_nm end) bdm_nm,
 					max(case when team_member_type = 'Underwriter' then team_member_nm end) Underwriter,
 					max(case when team_member_type = 'RenewalUnderwriter' then team_member_nm end) RenewalUnderwriter 
 			from edw_core.tbroker_vault_team bvt
-			group by broker_id , product_nm, state_cd,  
-					Replace(Replace(program_type,'Non-Admitted', 'VES'),'Admitted', 'VRE') 
+			group by broker_id , product_nm, state_cd, program_type
         )  
 		SELECT a.*,
 				bvtm.bdm_nm,
@@ -169,7 +165,7 @@ BEGIN
         ) AS a
 		left join br_vault_team  bvtm on     bvtm.broker_id = a.broker_id 
                                          and bvtm.product_nm = a.product_nm 
-                                         and bvtm.uw_company_nm = a.uw_company_nm 
+                                         and bvtm.program_type = a.program_type 
 								         and isnull(bvtm.state_cd,'') = case when bvtm.state_cd is null then '' else a.risk_state_cd end
         ; 
 
