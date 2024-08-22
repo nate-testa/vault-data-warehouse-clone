@@ -3,11 +3,12 @@
 -- Author:		Yunus Mohammed
 -- Description: This procedures insert and update quote additional interest wip
 ---------------------------------------------------------------------------------------------------------------------------------------
--- Change date  |Author						|	Change Description
+-- Change date  		|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
--- 05/09/24		Mohammed Yunus				1. Created this procedure
--- 08/14/24     Alberto Almario	            2. Added logic for additional_interest_deleted_in and additional interest vehicle
--- 08/15/24     Architha Gudimalla          3. Update additional_interest_deleted_in to use Yes/No instead of 1/0
+-- 05/09/24				Yunus Mohammed				1. Created this procedure
+-- 08/14/24     		Alberto Almario	            2. Added logic for additional_interest_deleted_in and additional interest vehicle
+-- 08/15/24     		Architha Gudimalla          3. Update additional_interest_deleted_in to use Yes/No instead of 1/0
+-- 08/22/24				Yunus Mohammed				4. Removed effective date from merge and added in update clause
 -- ====================================================================================================================================
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_additional_interest_wip]
 AS
@@ -122,7 +123,7 @@ BEGIN
 			FROM [edw_temp].[tquote_additional_interest_wip_temp1] a
 			LEFT JOIN [edw_temp].[tquote_additional_interest_wip_temp2] AS t2 ON a.vehicle = t2.ReferenceObjectId
 			) AS Source
-		ON Target.quote_no = Source.PolicyNumber and Target.effective_dt= Source.EffectiveDate AND
+		ON Target.quote_no = Source.PolicyNumber and
 		Target.transaction_seq_no = Source.Number and 
 		Source.additional_interest_seq_no = Target.additional_interest_seq_no
 		WHEN NOT MATCHED BY Target THEN
@@ -149,6 +150,7 @@ BEGIN
 		)
 		WHEN MATCHED THEN UPDATE
 		SET
+			effective_dt = Source.EffectiveDate ,
 			expiration_dt = Source.ExpirationDate,
 			quote_history_sk = Source.quote_history_sk,
 			interest_type =Source.InterestType,

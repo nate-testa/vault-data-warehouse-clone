@@ -12,6 +12,7 @@ GO
 -- 05/07/2024 			Yunus Mohammed				1. Created this procedure
 -- 09/07/24				Hernando Gonzalez			2. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
 -- 08/01/24             Tuba Mohsin                 3. added contents_extended_replacement_cost_limit_amt
+-- 08/22/24				Yunus Mohammed				4. Removed effective date from merge and added in update clause
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage_wip]
@@ -297,7 +298,7 @@ BEGIN
 						AND a.EffectiveDate = b.eff_dt
 						AND a.transaction_seq_no = b.tran_seq_no
 			) as [Source]
-			ON Source.quote_no = Target.[quote_no] and Source.effective_dt = Target.effective_dt and Source.transaction_seq_no = Target.transaction_seq_no
+			ON Source.quote_no = Target.[quote_no] and Source.transaction_seq_no = Target.transaction_seq_no
 			WHEN NOT MATCHED BY Target THEN	
 			INSERT
 			(
@@ -461,6 +462,7 @@ BEGIN
 			)
 			WHEN MATCHED THEN UPDATE
 			SET
+			[target].effective_dt = [source].effective_dt,
 			[target].expiration_dt = [source].expiration_dt,
 			[target].quote_home_location_sk = [source].quote_home_location_sk,
 			[target].quote_home_coverage_sk = [source].quote_home_coverage_sk,
