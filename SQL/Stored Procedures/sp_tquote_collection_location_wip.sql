@@ -6,6 +6,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 11/10/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 11/14/23		Sandeep Gundreddy       		2. Remove effective date partition by clause
+-- 22/08/24		Hernando Gonzalez				3. Remove effective date from the merge join
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_location_wip]

@@ -7,6 +7,7 @@
 -- 09/05/24		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- 05/30/24		Yunus Mohammed					3. Added AccountObject.Id instead of Account.Id
+-- 22/08/24		Hernando Gonzalez				4. Remove effective date from the merge join
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_scheduled_item_wip]

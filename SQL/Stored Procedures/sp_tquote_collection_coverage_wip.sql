@@ -6,6 +6,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 09/05/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 03/06/24		Alberto Almario 				2. new column emergency_extension_notice_in
+-- 22/08/24		Hernando Gonzalez				3. Remove effective date from the merge join
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_coverage_wip]
