@@ -11,6 +11,7 @@
 -- 07/12/2024			Yunus Mohammed				5. Added new fields stated_limits_policy_in and risk_sharing_policy_in
 -- 08/13/24				Yunus Mohammed				6. Updated wind_derived_deductible logic
 -- 08/20/24				Yunus Mohammed				7. Updated wind_derived_deductible logic
+-- 08/22/24				Yunus Mohammed				8. Removed effective date from merge and added in update clause
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
 
@@ -230,7 +231,7 @@ BEGIN
 			FROM
 				edw_temp.tquote_home_coverage_wip_temp1 AS tthc
 			) AS Source
-			ON Source.quote_no = Target.[quote_no] and Source.effective_dt = Target.effective_dt and Source.transaction_seq_no = Target.transaction_seq_no
+			ON Source.quote_no = Target.[quote_no] and Source.transaction_seq_no = Target.transaction_seq_no
 			WHEN NOT MATCHED BY Target THEN			
 			INSERT
 			(
@@ -312,6 +313,7 @@ BEGIN
 			)
 			WHEN MATCHED THEN UPDATE
 			SET
+			[target].effective_dt = [source].effective_dt,
 			[target].expiration_dt = [source].expiration_dt,
 			[target].quote_home_location_sk = [source].quote_home_location_sk,
 			[target].quote_history_sk = [source].quote_history_sk,

@@ -10,7 +10,8 @@ GO
 -----------------------------------------------------------------------------------------------------
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------
--- 05/09/24		        Yunus Mohammed			     1. Created the proc
+-- 05/09/24		        Yunus Mohammed			    1. Created the proc
+-- 08/22/24				Yunus Mohammed				2. Removed effective date from merge and added in update clause
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_loss_history_wip]
 AS
@@ -89,7 +90,7 @@ BEGIN
 
 		MERGE edw_core.tquote_loss_history AS Target
 		USING edw_temp.tquote_loss_history_wip_temp1 AS Source
-		ON Target.quote_no = Source.quote_no and Target.effective_dt= Source.EffectiveDate AND
+		ON Target.quote_no = Source.quote_no and
 		Target.transaction_seq_no = Source.Number and Source.loss_seq_no = Target.loss_seq_no
 		WHEN NOT MATCHED BY Target THEN
 		-- Start Insert process
@@ -111,6 +112,7 @@ BEGIN
 		)
         WHEN MATCHED THEN UPDATE
 		SET
+		Target.effective_dt= Source.EffectiveDate,
 		Target.expiration_dt = Source.ExpirationDate,
 		Target.quote_history_sk = Source.quote_history_sk,
 		Target.property_or_liability = Source.PropertyOrLiability,
