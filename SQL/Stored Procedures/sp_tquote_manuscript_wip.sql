@@ -101,13 +101,13 @@ BEGIN
 		        [edw_temp].[tquote_manuscript_wip_temp1]
 		) AS SOURCE
 		ON
-		    TARGET.quote_no = SOURCE.quote_no AND
-		    TARGET.effective_dt = SOURCE.effective_dt AND
+		    TARGET.quote_no = SOURCE.quote_no AND		    
 		    TARGET.expiration_dt = SOURCE.expiration_dt AND
 		    TARGET.quote_history_sk = SOURCE.quote_history_sk
 
 		WHEN MATCHED THEN
 		    UPDATE SET
+				TARGET.effective_dt = SOURCE.effective_dt,
 		        TARGET.transaction_seq_no = SOURCE.transaction_seq_no,
 		        TARGET.manuscript_no = SOURCE.manuscript_no,
 		        TARGET.manuscript_title = SOURCE.manuscript_title,
