@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tauto_driver  ADD primary_auto_vehicle_sk int;
