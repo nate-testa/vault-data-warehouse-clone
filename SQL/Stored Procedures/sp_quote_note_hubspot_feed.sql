@@ -36,7 +36,7 @@ BEGIN
         into edw_temp.quote_note_hubspot_feed_temp1
         from [edw_core].[tnote] n
         where n.object_type = 'Account' 
-		and n.greatest(note_created_ts, note_updated_ts) > @last_source_extract_ts
+		and greatest(n.note_created_ts, n.note_updated_ts) > @last_source_extract_ts
 		and n.policy_no is not null 
 		and exists (select quote_no from edw_core.tquote q where n.policy_no = q.quote_no and effective_dt >= '01-jun-2024');
 
