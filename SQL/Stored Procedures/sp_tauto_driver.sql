@@ -78,7 +78,10 @@ BEGIN
                 INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
                 INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] AS acctvof ON acctvof.VersionObjectId = acctvo.id
                 LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acctvo_2 on acctvo_2.Id = acctvof.id and acctvof.Field = 'PrimaryVehicleId'
-                LEFT JOIN [edw_core].[tauto_vehicle] taut on taut.vehicle_unique_id = acctvo_2.UniqueId
+                LEFT JOIN [edw_core].[tauto_vehicle] taut
+                    ON taut.vehicle_unique_id = acctvo_2.UniqueId
+                    AND taut.policy_no = acct.PolicyNumber
+                    AND taut.effective_dt = acct.EffectiveDate
                 LEFT JOIN [edw_core].[tpolicy_history] AS ph 
                     ON ph.policy_no = acct.PolicyNumber
                     AND ph.effective_dt = acct.EffectiveDate
