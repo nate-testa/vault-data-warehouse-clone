@@ -96,10 +96,7 @@ BEGIN
                 hl.state_cd as dwelling_state,
                 hl.zip_cd as dwelling_zip_cd,
                 ROUND(pt.ceded_premium_amt,2) as hsp_net_premium_amt,
-                CASE 
-                    WHEN REPLACE(hac.home_systems_protection_limit_amt,',','') IN ('','0','25000','50000','100000') OR hac.home_systems_protection_limit_amt IS NULL THEN '500'
-                    WHEN REPLACE(hac.home_systems_protection_limit_amt,',','') IN ('250000','500000') THEN '1000'
-                END as hsp_limit_amt,
+                REPLACE(hac.home_systems_protection_limit_amt,',','') as hsp_limit_amt,
                 '500' as hsp_deductible_amt,
                 '' as base_homeowner_premium,
                 ROUND(p.annual_premium_amt,2) as final_homeowner_premium,
