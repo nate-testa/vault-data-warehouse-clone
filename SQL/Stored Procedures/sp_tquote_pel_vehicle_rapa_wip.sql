@@ -12,6 +12,7 @@ GO
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
 -- 05/14/2024 			Architha Gudimalla					3. Corrected errors
 -- 08/03/2024 			Architha Gudimalla					4. Updated tpel_vehicle join to use vehicle_unique_id
+-- 08/22/2024			Architha Gudimalla					5. Removed eff_dt from merge
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_vehicle_rapa_wip]
 
@@ -181,12 +182,13 @@ BEGIN
 		) AS SOURCE
 		ON
 		    TARGET.quote_no = SOURCE.quote_no AND
-		    TARGET.effective_dt = SOURCE.effective_dt AND
+		    --TARGET.effective_dt = SOURCE.effective_dt AND
 		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
 		    TARGET.vehicle_no = SOURCE.vehicle_no
 
 		WHEN MATCHED THEN
 		    UPDATE SET
+		        TARGET.effective_dt = SOURCE.effective_dt,
 		        TARGET.expiration_dt = SOURCE.expiration_dt,
 		        TARGET.quote_history_sk = SOURCE.quote_history_sk,
 		        TARGET.quote_pel_vehicle_sk = SOURCE.quote_pel_vehicle_sk,

@@ -6,6 +6,7 @@
 -- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
 -- 05/14/2024 			Architha Gudimalla					3. Corrected errors
+-- 08/22/2024			Architha Gudimalla					4. Removed eff_dt from merge
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_watercraft_wip]
 
@@ -110,12 +111,13 @@ BEGIN
 		) AS SOURCE
 		ON
 		    TARGET.quote_no = SOURCE.quote_no AND
-		    TARGET.effective_dt = SOURCE.effective_dt AND
+		    --TARGET.effective_dt = SOURCE.effective_dt AND
 		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
 		    TARGET.watercraft_no = SOURCE.watercraft_no
 
 		WHEN MATCHED THEN
 		    UPDATE SET
+		        TARGET.effective_dt = SOURCE.effective_dt,
 		        TARGET.expiration_dt = SOURCE.expiration_dt,
 		        TARGET.quote_history_sk = SOURCE.quote_history_sk,
 		        TARGET.watercraft_year = SOURCE.watercraft_year,
