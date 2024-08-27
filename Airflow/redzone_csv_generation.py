@@ -68,10 +68,10 @@ def generate_redzone_csv_file(**kwargs):
                 [coverage_c] AS coverage_c,
                 [coverage_d] AS coverage_d,
                 [gate_code] AS gate_code,
-                effective_dt,
-                new_business_underwriter_nm,
-                renewal_underwriter_nm,
-                bdm_nm
+                [effective_dt],
+                [new_business_underwriter_nm],
+                [renewal_underwriter_nm],
+                [bdm_nm]
             FROM [edw_integration].[policy_redzone_feed]
             """
 
