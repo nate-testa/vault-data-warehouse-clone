@@ -1,16 +1,18 @@
-﻿-- ================================================================================================
+﻿-- ======================================================================================================
 -- Author:		Hernando Gonzalez
 -- Description: This stored procedure insert info related to Hubspot - Customer
----------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------
 -- 07/17/24		Hernando Gonzalez			1. Created this procedure 
 -- 07/23/24		Architha Gudimalla			2. Updated to use data from tpolicy_insured
 -- 07/29/24		Architha Gudimalla			3. Corrections after first runs
 -- 08/02/24		Architha Gudimalla			4. Added customer_id
 -- 08/09/24		Archtha Gudimalla			5. Excluded test brokers
 -- 08/09/24		Archtha Gudimalla			6. Only included pols with eff dt >= 20230601
--- ================================================================================================ 
+-- 08/29/24		Archtha Gudimalla			7. Updated address to use from customer table to keep it 
+--											   consistent across all policies of the customer
+-- ====================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
 AS
@@ -42,6 +44,7 @@ BEGIN
 			pol.policy_no,
 			pi.first_nm,
 			pi.last_nm,
+			cust.email,
 			pi.email,
 			pol.risk_state_cd,
 			pol.product_cd AS product_nm,
@@ -52,33 +55,26 @@ BEGIN
 			pol.policy_status,
 			pol.create_ts,
 			pol.update_ts,
-			pi.mailing_address_line_1, 
-			pi.mailing_address_line_2 , 
-			pi.mailing_address_unit_no, 
-			pi.mailing_address_city_nm, 
-			pi.mailing_address_state_cd, 
-			pi.mailing_address_zip_cd,
+			cust.mailing_address_line1, 
+			cust.mailing_address_line2, 
+			cust.mailing_address_unit_no, 
+			cust.mailing_address_city_nm, 
+			cust.mailing_address_state_cd, 
+			cust.mailing_address_zip_cd,
 			pol.customer_id
 		INTO edw_temp.customer_hubspot_feed_temp1
 		FROM edw_core.tpolicy pol		
-		INNER JOIN edw_core.tcustomer cust
-			ON cust.customer_id = pol.customer_id	
-		INNER JOIN edw_core.tproduct pr
-			ON pr.product_cd = pol.product_cd
-		INNER JOIN edw_core.tbroker br
-			ON br.broker_id = pol.broker_id
-		LEFT JOIN edw_core.tbroker_vault_team bvt
-			ON br.broker_id = bvt.broker_id
-			AND bvt.product_nm = pr.product_nm
-			AND bvt.team_member_type = 'BusinessDevelopmentManager'
-			AND pol.program_type = bvt.program_type
-			AND isnull(bvt.state_cd,pol.risk_state_cd)=pol.risk_state_cd
-		INNER join edw_core.tpolicy_history ph 
-			on ph.policy_sk = pol.policy_sk and ph.latest_transaction_in = 'Y'
-		INNER join edw_core.tpolicy_insured pi 
-			on pi.policy_history_sk = ph.policy_history_sk and pi.primary_insured_in = 'Yes'
-		WHERE
-			greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
+		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
+		INNER JOIN edw_core.tproduct pr	ON pr.product_cd = pol.product_cd
+		INNER JOIN edw_core.tbroker br	ON br.broker_id = pol.broker_id
+		LEFT JOIN edw_core.tbroker_vault_team bvt	ON br.broker_id = bvt.broker_id
+													AND bvt.product_nm = pr.product_nm
+													AND bvt.team_member_type = 'BusinessDevelopmentManager'
+													AND pol.program_type = bvt.program_type
+													AND isnull(bvt.state_cd,pol.risk_state_cd)=pol.risk_state_cd
+		INNER join edw_core.tpolicy_history ph on ph.policy_sk = pol.policy_sk and ph.latest_transaction_in = 'Y'
+		INNER join edw_core.tpolicy_insured pi on pi.policy_history_sk = ph.policy_history_sk and pi.primary_insured_in = 'Yes'
+		WHERE greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
 		and pol.insured_nm not like '%test%' 
 		and cust.last_nm not like '%test%'
 		and cust.first_nm not like '%test%' 
