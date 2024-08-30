@@ -10,10 +10,11 @@ GO
 ------------------------------------------------------------------------------------------------------------------------------
 -- Change date			|Author							|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
--- 10/23/2023 			Yunus Mohammed					1. Created this procedure 
+-- 10/23/23 			Yunus Mohammed					1. Created this procedure 
 -- 11/11/23				Sandeep Gundreddy		        2. modified source query and transaction_seq_no logic
 -- 11/12/23				Sandeep Gundreddy		        3. removed  EffectiveDate from partition clause
 -- 01/30/24				Yunus Mohammed					4. Added unit no
+-- 08/30/24				Architha Gudimalla				5. Added eff dt in merge-update
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_location]
 
@@ -123,7 +124,8 @@ BEGIN
 		Target.longitude=SOURCE.Longitude,
 		Target.latitude=Source.Latitude,
 		Target.unit_no=Source.RiskAddressLineUnit,
-		TARGET.update_ts=getdate();
+		TARGET.update_ts=getdate(),
+		TARGET.effective_dt=SOURCE.EffectiveDate;
 
 		SET @rows_affected=@@ROWCOUNT;
 

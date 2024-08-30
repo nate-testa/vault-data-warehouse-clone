@@ -14,6 +14,7 @@ GO
 -- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- 07/10/24     Alberto Almario             	4. added vehicle_unique_id
 -- 08/21/24		Alberto Almario					5. Remove effective_dt from merge join and add into update section
+-- 08/30/24	    Architha Gudimalla			    6. Added eff dt in merge-update
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_rapa_wip]
@@ -82,7 +83,7 @@ BEGIN
                 INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
                 INNER JOIN [edw_core].[tquote_auto_vehicle] AS qav
                     ON qav.quote_no = acc.PolicyNumber
-					AND qav.effective_dt = acc.EffectiveDate
+					--AND qav.effective_dt = acc.EffectiveDate
                     -- AND qav.vehicle_no = acco.[Index]
 					AND qav.vehicle_unique_id = acco.[UniqueId]
 				INNER JOIN [edw_core].[tquote_auto_vehicle_coverage] AS qavc

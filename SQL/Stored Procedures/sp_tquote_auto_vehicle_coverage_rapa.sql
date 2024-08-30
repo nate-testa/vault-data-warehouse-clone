@@ -13,6 +13,7 @@ GO
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- 01/04/24		Hernando Gonzalez			1. Initial Version
 -- 07/10/24     Alberto Almario             2. added vehicle_unique_id 
+-- 08/30/24	    Architha Gudimalla			3. Added eff dt in merge-update
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_rapa]
@@ -70,7 +71,7 @@ BEGIN
                 INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] AS acctvof ON acctvof.VersionObjectId = acctvo.id
                 INNER JOIN [edw_core].[tquote_auto_vehicle] AS qav
                     ON qav.quote_no = acct.PolicyNumber
-					AND qav.effective_dt = acct.EffectiveDate
+					--AND qav.effective_dt = acct.EffectiveDate
                     -- AND qav.vehicle_no = acctvo.[Index]
 					AND qav.vehicle_unique_id = acctvo.[UniqueId]
 				INNER JOIN [edw_core].[tquote_auto_vehicle_coverage] AS qavc

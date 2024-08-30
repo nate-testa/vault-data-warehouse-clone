@@ -21,7 +21,8 @@ GO
 -- 13/06/24     Hernando Gonzalez               11. Added NewlyPurchasedVehicleFinal
 -- 07/10/24     Alberto Almario                 12. added vehicle_unique_id 
 -- 08/07/24     Yunus Mohammed                  13. Updated logic to get garaging location
--- 08/20/24     Yunus Mohammed                 10. Used garage_unique_id while assigning defualt garage location
+-- 08/20/24     Yunus Mohammed                  14. Used garage_unique_id while assigning defualt garage location
+-- 08/30/24	    Architha Gudimalla				15. Added eff dt in merge-update
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
@@ -211,7 +212,7 @@ BEGIN
                             AND qh.transaction_seq_no = acct.number
                         LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                             ON qav.quote_no = acct.PolicyNumber
-                            AND qav.effective_dt = acct.effectivedate
+                            --AND qav.effective_dt = acct.effectivedate
                             AND qav.vehicle_unique_id = cast(acctvo.[UniqueId] as varchar(max))
                             -- AND qav.vehicle_no = acctvo.[Index]
                         WHERE
