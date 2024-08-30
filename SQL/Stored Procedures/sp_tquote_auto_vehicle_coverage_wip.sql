@@ -18,6 +18,7 @@ GO
 -- 08/07/24     Yunus Mohammed                  9. Updated logic to get garaging location
 -- 08/20/24     Yunus Mohammed                 10. Used garage_unique_id while assigning defualt garage location
 -- 08/21/24		Alberto Almario				   11. Remove effective_dt from merge join and add into update section
+-- 08/30/24	    Architha Gudimalla			   12. Added eff dt in merge-update
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip] 
@@ -205,7 +206,7 @@ BEGIN
                         AND qh.transaction_seq_no = 0
                     LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                         ON qav.quote_no = acc.PolicyNumber
-                        AND qav.effective_dt = acc.effectivedate
+                        --AND qav.effective_dt = acc.effectivedate
                         AND qav.vehicle_unique_id = cast(acco.[UniqueId] as varchar(max))
                         -- AND qav.vehicle_no = acco.[Index]
                     WHERE
