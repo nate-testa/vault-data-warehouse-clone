@@ -52,9 +52,8 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.thome_coverage_ext_temp1;
 
 		         SELECT
-                    acct.IssuedDate, acct.PolicyNumber as policy_no, acct.EffectiveDate as effective_dt, 
-                    acct.TransactionEffectiveDate as transaction_effective_dt, acct.ExpirationDate as expiration_dt, 
-                    acct.IssuedDate as transaction_dt, acct.PolicyChangeNumber as transaction_seq_no,
+                    acct.IssuedDate, acct.PolicyNumber as policy_no, acct.EffectiveDate as effective_dt,  
+                     acct.PolicyChangeNumber as transaction_seq_no,
                     ph.policy_history_sk,thl.home_location_sk,thc.home_coverage_sk,
                     acctvo.ObjectType as label, acctvof.Field, acctvof.Value,
                     CASE 
@@ -86,22 +85,20 @@ BEGIN
                                                 'ExtendedLiabilityLocation',
                                                 'SpecificNamedStructuresPropertyAndLiabilityExclusion'
                                             ) ;
+        
 		
 		-- Start Insert process
-		INSERT INTO edw_core.thome_coverage_ext
+		INSERT INTO edw_stage.thome_coverage_ext
         (
             policy_no,
-            effective_dt,
-            transaction_effective_dt,
-            expiration_dt,
-            transaction_dt,
+            effective_dt, 
             transaction_seq_no,
             policy_history_sk,
             home_location_sk,
             home_coverage_sk, 
-            home_coverage_ext_label,
-            home_coverage_ext_field,
-            home_coverage_ext_value,            
+            label,
+            field,
+            [value],            
             source_system_sk,
             create_ts,
             update_ts,
@@ -109,10 +106,7 @@ BEGIN
 		)
         SELECT 
             t1.policy_no,
-            t1.effective_dt,
-            t1.transaction_effective_dt,
-            t1.expiration_dt,
-            t1.transaction_dt,
+            t1.effective_dt, 
             t1.transaction_seq_no,
             t1.policy_history_sk, 
             t1.source_system_sk,
