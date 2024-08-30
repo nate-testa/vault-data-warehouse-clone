@@ -1,5 +1,3 @@
-
-            
             DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
     {
         "SourceObjectSettings": {
@@ -13,11 +11,12 @@
             "query": "select * from `t_pty_party_type`"
         },
         "CopySinkSettings": {
-            "preCopyScript": "TRUNCATE TABLE edw_stage.t_pty_party_type",
+            "preCopyScript": null,
             "tableOption": "autoCreate",
             "writeBehavior": "insert",
             "sqlWriterUseTableLock": true,
-            "disableMetricsCollection": false
+            "disableMetricsCollection": false,
+			"upsertSettings": null
         },
         "CopyActivitySettings": {
             "translator": {
@@ -127,11 +126,12 @@
             "query": "select * from `t_pty_party`"
         },
         "CopySinkSettings": {
-            "preCopyScript": "TRUNCATE TABLE edw_stage.t_pty_party",
+            "preCopyScript": null,
             "tableOption": "autoCreate",
             "writeBehavior": "insert",
             "sqlWriterUseTableLock": true,
-            "disableMetricsCollection": false
+            "disableMetricsCollection": false,
+			"upsertSettings": null
         },
         "CopyActivitySettings": {
             "translator": {
