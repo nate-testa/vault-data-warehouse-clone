@@ -19,6 +19,7 @@ GO
 -- 08/20/24     Yunus Mohammed                 10. Used garage_unique_id while assigning defualt garage location
 -- 08/21/24		Alberto Almario				   11. Remove effective_dt from merge join and add into update section
 -- 08/30/24	    Architha Gudimalla			   12. Added eff dt in merge-update
+-- 08/30/24	    Architha Gudimalla			   12. Excluded string in veh purchse dt
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip] 
@@ -412,7 +413,7 @@ BEGIN
                 t1.[RestraintInfo] AS restraint_info,
                 t1.[TransmissionInfo] AS transmission_info,
                 t1.[OtherInfo] AS other_info,
-                t1.[ReleaseDate] AS vehicle_release_dt,
+                case when isdate(t1.[ReleaseDate]) = 1 then t1.[ReleaseDate] else null end   AS vehicle_release_dt,
                 t1.[MotorHomeClass] AS motor_home_class,
                 t1.[PassengerHazardExclusion] AS passenger_hazard_exclusion_in,
                 t1.bodily_injury_premium_adjustment_method,
@@ -448,7 +449,7 @@ BEGIN
                 t1.extended_towing_labor_premium_adjustment_retention,
                 t1.extended_towing_labor_premium_adjustment_reason,
                 t1.NewlyPurchasedVehicle as newly_purchased_vehicle_override_in,
-                t1.NewlyPurchasedVehicleDate as newly_purchased_vehicle_dt,
+                case when isdate(t1.NewlyPurchasedVehicleDate) = 1 then t1.NewlyPurchasedVehicleDate else null end as newly_purchased_vehicle_dt,
                 t1.[NewlyPurchasedVehicleFinal] as newly_purchased_vehicle_final_in
             FROM 
                 [edw_temp].[tquote_auto_vehicle_coverage_wip_temp1] AS t1
