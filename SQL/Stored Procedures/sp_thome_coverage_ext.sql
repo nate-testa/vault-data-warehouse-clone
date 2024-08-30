@@ -53,13 +53,8 @@ BEGIN
 
 		         SELECT
                     acct.IssuedDate, acct.PolicyNumber as policy_no, acct.EffectiveDate as effective_dt,  
-                     acct.PolicyChangeNumber as transaction_seq_no,
-                    ph.policy_history_sk,thl.home_location_sk,thc.home_coverage_sk,
-                    acctvo.ObjectType as label, acctvof.Field, acctvof.Value,
-                    CASE 
-                        WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
-                        ELSE 4 --(Metal)
-                    END as source_system_sk
+                     acct.PolicyChangeNumber as transaction_seq_no, 
+                    acctvo.ObjectType as label, acctvof.Field, acctvof.Value 
                 
                 INTO edw_temp.thome_coverage_ext_temp1
 
@@ -67,13 +62,7 @@ BEGIN
                 INNER JOIN edw_stage.Product AS p on p.Id = acct.ProductId
                 INNER JOIN edw_stage.AccountTransactionVersion AS acctv ON acctv.AccountTransactionId = acct.Id
                 INNER JOIN edw_stage.AccountTransactionVersionObject AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
-                INNER JOIN edw_stage.AccountTransactionVersionObjectField AS acctvof ON acctvof.VersionObjectId = acctvo.id
-                LEFT JOIN edw_core.tpolicy_history AS ph    ON ph.policy_no = acct.PolicyNumber
-                                                            AND ph.effective_dt = acct.EffectiveDate
-                                                            AND ph.transaction_seq_no = acct.policychangenumber
-				left join edw_core.thome_location thl on thl.policy_no=acct.PolicyNumber	and thl.effective_dt=acct.EffectiveDate
-				left join edw_core.thome_coverage thc on thc.policy_no=acct.PolicyNumber	and thc.effective_dt=acct.EffectiveDate 
-                                                         and thc.transaction_seq_no=acct.policychangenumber 
+                INNER JOIN edw_stage.AccountTransactionVersionObjectField AS acctvof ON acctvof.VersionObjectId = acctvo.id 
                 WHERE acct.State = 'ISSUED'
                     and acct.IssuedDate > @last_source_extract_ts
                     and p.name in ('Condo','Homeowners') 
@@ -92,14 +81,10 @@ BEGIN
         (
             policy_no,
             effective_dt, 
-            transaction_seq_no,
-            policy_history_sk,
-            home_location_sk,
-            home_coverage_sk, 
+            transaction_seq_no, 
             label,
             field,
-            [value],            
-            source_system_sk,
+            [value],             
             create_ts,
             update_ts,
             etl_audit_sk 
@@ -107,11 +92,7 @@ BEGIN
         SELECT 
             t1.policy_no,
             t1.effective_dt, 
-            t1.transaction_seq_no,
-            t1.policy_history_sk, 
-            t1.source_system_sk,
-            t1.home_location_sk,
-            t1.home_coverage_sk, 
+            t1.transaction_seq_no, 
             t1.label,
             t1.field,
             t1.value,  
