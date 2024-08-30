@@ -37,8 +37,7 @@ BEGIN
 		--************Start************
 
  		-- Step1 limit amount of rows.
-		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp1;
-        ;
+		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp1; 
 
 		SELECT
 			pol.policy_no,
@@ -54,8 +53,8 @@ BEGIN
 			pol.policy_status,
 			pol.create_ts,
 			pol.update_ts,
-			cust.mailing_address_line1, 
-			cust.mailing_address_line2, 
+			cust.mailing_address_line1 mailing_address_line_1, 
+			cust.mailing_address_line2 mailing_address_line_2, 
 			cust.mailing_address_unit_no, 
 			cust.mailing_address_city_nm, 
 			cust.mailing_address_state_cd, 
