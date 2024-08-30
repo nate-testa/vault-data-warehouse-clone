@@ -44,7 +44,7 @@ BEGIN
 
 		WITH FinalTable AS (
             SELECT
-                ROW_NUMBER() OVER (PARTITION BY PolicyNumber, effectivedate, [UniqueId] ORDER BY [number] DESC) AS RN, 
+                ROW_NUMBER() OVER (PARTITION BY PolicyNumber, [UniqueId] ORDER BY [number] DESC) AS RN, 
                 --ROW_NUMBER() OVER (PARTITION BY PolicyNumber, [Index]    ORDER BY policychangenumber DESC) AS RN, 
                 PolicyNumber, EffectiveDate, [Index] as vehicle_no, [UniqueId] as vehicle_unique_id, CreatedDate,
                 [VehicleType],[CollectorCarType],[VIN],[ModelYear],[Make],[Model],[Body],[Weight],[Horsepower],[EngineSize],[EngineType],
