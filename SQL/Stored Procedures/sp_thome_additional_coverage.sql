@@ -14,6 +14,7 @@
 --																		 roof_coverage_endorsement_rv_in
 -- 09/07/24				Hernando Gonzalez			5. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
 -- 08/01/24             Tuba Mohsin                 6. added contents_extended_replacement_cost_limit_amt
+-- 08/30/24				Yunus Mohammed				7. Added new columns
 -- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
 
@@ -190,8 +191,12 @@ BEGIN
 			firewise_community_credit_in,monitored_heat_sensors_in,builders_defect_exclusion_in,
 			gated_community_patrol_service, extended_liability_location_ct,
 			roof_exclusion_with_ensuing_loss_in,roof_coverage_endorsement_wh_in,roof_coverage_endorsement_ap_in,roof_coverage_endorsement_rv_in,
-			fire_station_connected_fire_alarm_in, police_station_connected_burglar_alarm_in, local_fire_alarm_system_in, local_burglar_alarm_system_in, automatic_smoke_detectors_in, automatic_sprinkler_system, emergency_extension_notice_in,
-			trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in,
+			fire_station_connected_fire_alarm_in, police_station_connected_burglar_alarm_in, local_fire_alarm_system_in, local_burglar_alarm_system_in, 
+			automatic_smoke_detectors_in, automatic_sprinkler_system, emergency_extension_notice_in,trampoline_liability_exclusion_in, 
+			fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, 
+			roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in,
+			wildfire_protection_enrollment_in ,site_scheduling_contact_nm ,site_scheduling_phone_no ,
+			site_scheduling_email ,emergency_contact_nm ,emergency_contact_phone_no ,emergency_contact_email ,gate_code ,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT 
@@ -371,13 +376,20 @@ BEGIN
 		   ,MatchingUndamagedPropertyLimit as matching_undamaged_property_limit_amt
 		   ,RoofCoveringCoverageLimitationCW as roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in
 		   ,AllPerilRoofCoveringCoverageSP as all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
+		   ,WildfireProtectionEnrollment as wildfire_protection_enrollment_in
+			,WFSiteSchedulingContactName as site_scheduling_contact_nm
+			,WFSiteSchedulingPhoneNumber as site_scheduling_phone_no
+			,WFSiteSchedulingEmailAddress as site_scheduling_email
+			,WFEmergencyContactName as emergency_contact_nm
+			,WFEmergencyContactPhoneNumber as emergency_contact_phone_no
+			,WFEmergencyContactEmail as emergency_contact_email,WFGateCodes as gate_code
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts
            ,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_additional_coverage_temp1 AS a
-			LEFT JOIN extended_liability_loc_ct AS b
+				LEFT JOIN extended_liability_loc_ct AS b
 				ON a.PolicyNumber = b.pol_no
 				AND a.EffectiveDate = b.eff_dt
 				AND a.transaction_seq_no = b.tran_seq_no
