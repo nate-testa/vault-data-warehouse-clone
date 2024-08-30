@@ -12,6 +12,7 @@
 -- 07/12/24		Architha Gudimalla		7. Added these to timternal_coverage table join along with subscriber contributoin
 --										   Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S
 -- 										   Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S
+-- 08/30/24		Architha Gudimalla		8. Update product join to inner instead of left
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction]
@@ -194,7 +195,7 @@ BEGIN
 		LEFT JOIN edw_core.tquote_auto_vehicle au_veh on source.PolicyNumber = au_veh.quote_no and source.vehicle_no = au_veh.vehicle_no
 		LEFT JOIN edw_core.tquote_auto_policy_coverage au_pol_cov on source.PolicyNumber = au_pol_cov.quote_no and cast(source.EffectiveDate as date) = au_pol_cov.effective_dt and source.number = au_pol_cov.transaction_seq_no
 		LEFT JOIN edw_core.tquote_auto_vehicle_coverage au_veh_cov on source.PolicyNumber = au_veh_cov.quote_no and cast(source.EffectiveDate as date) = au_veh_cov.effective_dt and source.number = au_veh_cov.transaction_seq_no and source.vehicle_no = au_veh_cov.vehicle_no
-		LEFT JOIN edw_core.tproduct pr on pr.product_cd = q.product_cd
+		inner JOIN edw_core.tproduct pr on pr.product_cd = q.product_cd
 		LEFT JOIN edw_core.tbroker br on q.broker_id = br.broker_id
 		LEFT JOIN edw_core.tcustomer cust on q.customer_id = cust.customer_id
 		--LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) and pr.product_cd = ic.product_cd  
