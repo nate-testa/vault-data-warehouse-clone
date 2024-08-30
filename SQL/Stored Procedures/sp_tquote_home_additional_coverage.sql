@@ -21,7 +21,7 @@ GO
 --																		 roof_coverage_endorsement_rv_in
 -- 09/07/24				Hernando Gonzalez			7. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
 -- 08/01/24             Tuba Mohsin                 8. added contents_extended_replacement_cost_limit_amt
--- 08/30/24				Yunus Mohammed				7. Added new columns
+-- 08/30/24				Yunus Mohammed				9. Added new columns
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage]
@@ -203,6 +203,8 @@ BEGIN
 			roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in,
 			wildfire_protection_enrollment_in ,site_scheduling_contact_nm ,site_scheduling_phone_no ,
 			site_scheduling_email ,emergency_contact_nm ,emergency_contact_phone_no ,emergency_contact_email ,gate_code ,
+			primary_home_risk_address,primary_home_policy_effective_dt,primary_home_policy_expiration_dt,
+			primary_home_carrier_nm,primary_home_coverage_a_threshold,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT 
@@ -387,6 +389,11 @@ BEGIN
 			,WFEmergencyContactName as emergency_contact_nm
 			,WFEmergencyContactPhoneNumber as emergency_contact_phone_no
 			,WFEmergencyContactEmail as emergency_contact_email,WFGateCodes as gate_code
+			,PrimaryHomeRiskAddress as primary_home_risk_address
+			,PrimaryHomePolicyEffectiveDate  as primary_home_policy_effective_dt
+			,PrimaryHomePolicyExpirationDate as primary_home_policy_expiration_dt
+			,PrimaryHomeCarrierName as primary_home_carrier_nm
+			,PrimaryHomeCoverageAThreshold as primary_home_coverage_a_threshold
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts
