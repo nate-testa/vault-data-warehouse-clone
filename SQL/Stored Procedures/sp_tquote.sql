@@ -11,6 +11,7 @@ GO
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- 11/16/23		Architha Gudimalla				2. Updated the prior policy logic
 -- 03/22/24		Rushin Shah						3. Added close_reason_desc column
+-- 08/29/2024	Yunus Mohammed					4. Added expiration_dt in update stmt
 -- ===================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -284,6 +285,7 @@ BEGIN
 		WHEN MATCHED THEN UPDATE 
 		SET
         Target.Effective_dt					= Source.EffectiveDate,
+		Target.expiration_dt				= Source.ExpirationDate,
         Target.broker_id					= Source.BrokerId,
         Target.customer_id					= Source.customer_id,
         Target.risk_state_cd				= Source.RiskStateCode,
