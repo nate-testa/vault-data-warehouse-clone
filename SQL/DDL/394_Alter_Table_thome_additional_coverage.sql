@@ -1,0 +1,13 @@
+ALTER TABLE edw_core.thome_additional_coverage ADD wildfire_protection_enrollment_in VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD site_scheduling_contact_nm VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD site_scheduling_phone_no VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD site_scheduling_email VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD emergency_contact_nm VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD emergency_contact_phone_no VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD emergency_contact_email VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD gate_code VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD primary_home_risk_address VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD primary_home_policy_effective_dt DATE;
+ALTER TABLE edw_core.thome_additional_coverage ADD primary_home_policy_expiration_dt DATE;
+ALTER TABLE edw_core.thome_additional_coverage ADD primary_home_carrier_nm VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD primary_home_coverage_a_threshold VARCHAR(255);
