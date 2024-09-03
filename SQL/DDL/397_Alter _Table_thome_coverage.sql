@@ -1,1 +1,1 @@
-ALTER TABLE vault_edw.edw_core.thome_coverage ADD no_of_family_units_in_structures VARCHAR(255);
+ALTER TABLE edw_core.thome_coverage ADD no_of_family_units_in_structures VARCHAR(255);
