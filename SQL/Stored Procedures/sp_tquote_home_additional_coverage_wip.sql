@@ -14,6 +14,7 @@ GO
 -- 08/01/24             Tuba Mohsin                 3. added contents_extended_replacement_cost_limit_amt
 -- 08/22/24				Yunus Mohammed				4. Removed effective date from merge and added in update clause
 -- 08/30/24				Yunus Mohammed				5. Added new columns
+-- 09/04/24				Yunus Mohammed				6. Removed error from update
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage_wip]
@@ -638,11 +639,7 @@ BEGIN
 			[target].firewise_community_credit_in = [source].firewise_community_credit_in,
 			[target].monitored_heat_sensors_in = [source].monitored_heat_sensors_in,
 			[target].builders_defect_exclusion_in = [source].builders_defect_exclusion_in,
-			[target].gated_community_patrol_service = [source].gated_community_patrol_service,
-			[target].source_system_sk = [source].source_system_sk,
-			[target].create_ts = [source].create_ts,
-			[target].update_ts = [source].update_ts,
-			[target].etl_audit_sk = [source].etl_audit_sk,
+			[target].gated_community_patrol_service = [source].gated_community_patrol_service,			
 			[target].extended_liability_location_ct = [source].extended_liability_location_ct,
 			[target].roof_exclusion_with_ensuing_loss_in = [source].roof_exclusion_with_ensuing_loss_in,
 			[target].roof_coverage_endorsement_wh_in = [source].roof_coverage_endorsement_wh_in,
@@ -675,8 +672,9 @@ BEGIN
 			[target].primary_home_policy_effective_dt = [source].primary_home_policy_effective_dt,
 			[target].primary_home_policy_expiration_dt = [source].primary_home_policy_expiration_dt,
 			[target].primary_home_carrier_nm = [source].primary_home_carrier_nm,
-			[target].primary_home_coverage_a_threshold = [source].primary_home_coverage_a_threshold,
-			[target].update_ts = GETDATE();			
+			[target].primary_home_coverage_a_threshold = [source].primary_home_coverage_a_threshold,					
+			[target].update_ts = [source].update_ts;
+			
 
 			SET @rows_affected=@@ROWCOUNT;
 
