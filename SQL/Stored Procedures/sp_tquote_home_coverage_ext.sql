@@ -40,7 +40,7 @@ BEGIN
             acct.CreatedDate, 
             acct.PolicyNumber as quote_no, 
             acct.EffectiveDate as effective_dt,  
-            acct.PolicyChangeNumber as transaction_seq_no, 
+            acct.Number as transaction_seq_no, 
             acctvo.ObjectType as label, 
             acctvof.Field, 
             acctvof.Value 
