@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote_pel_vehicle_rapa ADD vehicle_unique_id varchar(255);
