@@ -26,6 +26,7 @@ GO
 -- 12/04/23		Architha Gudimalla		        15. updated program to use from AccountTransactionVersionObjectField table
 -- 12/11/23		Architha Gudimalla		        16. Updated policy_term
 -- 03/21/24		Architha Gudimalla		        17. Added rewritten policy as prior policy no and rewritten_in
+-- 09/05/24		Architha Gudimalla		        18. Added term_no
 -- ======================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tpolicy]
@@ -177,6 +178,13 @@ BEGIN
 				,acc.externalsourceid
 				--,case when acc_rw.PolicyNumber is not null then 'Yes' else 'No' end rewritten_in
 				,case when acc.isrewritten = 1 then 'Yes' else 'No' end rewritten_in
+				,'Term ' || case 
+								when charindex('-',tmp1.PolicyNumber) <> 0 then cast(substring(tmp1.PolicyNumber,charindex('-',tmp1.PolicyNumber)+1,len(tmp1.PolicyNumber)) as int)
+								when tmp1.PolicyNumber like '%A'		   then 1
+								when tmp1.PolicyNumber like '%B'		   then 2
+								when tmp1.PolicyNumber like '%C'		   then 3
+							 	else 1
+							end term_no
 				--select *
 			FROM 
 				edw_temp.tpolicy_temp1 tmp1
@@ -230,6 +238,7 @@ BEGIN
            ,update_ts
            ,etl_audit_sk
 		   ,rewritten_in
+		   ,term_no
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, Source.ExpirationDate, Source.BrokerId, Source.customer_id, 
@@ -258,7 +267,9 @@ BEGIN
 		   		,Source.billingaccount_sk, 
 				case when Source.externalsourceid is not null then 'Yes' else 'No' end,
 				getdate(), getdate(), @etl_audit_sk
-				,source.rewritten_in)
+				,source.rewritten_in
+				,term_no
+				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
