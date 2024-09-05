@@ -73,11 +73,11 @@ BEGIN
                 INNER JOIN [edw_stage].[Product] AS p on p.Id = acc.ProductId
                 INNER JOIN [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
                 INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
-                LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acctvo_2 on acctvo_2.Id = acctvof.[Value] and acctvof.Field = 'PrimaryVehicleId'
+                LEFT JOIN [edw_stage].[AccountObject] acco_2 on accof.Field = 'PrimaryVehicleId' AND TRY_CAST(accof.[Value] AS INT) = acco_2.Id
                 LEFT JOIN [edw_core].[tauto_vehicle] taut
-                    ON taut.vehicle_unique_id = acctvo_2.UniqueId
-                    AND taut.policy_no = acct.PolicyNumber
-                    AND taut.effective_dt = acct.EffectiveDate
+                    ON taut.vehicle_unique_id = acco_2.UniqueId
+                    AND taut.policy_no = acc.PolicyNumber
+                    AND taut.effective_dt = acc.EffectiveDate
                 LEFT JOIN [edw_core].[tquote_history] AS qh 
                     ON qh.quote_no = acc.PolicyNumber
                     AND qh.effective_dt = acc.EffectiveDate
