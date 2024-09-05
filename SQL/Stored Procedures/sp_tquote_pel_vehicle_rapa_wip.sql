@@ -188,7 +188,7 @@ BEGIN
 		    TARGET.quote_no = SOURCE.quote_no AND
 		    --TARGET.effective_dt = SOURCE.effective_dt AND
 		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
-		    TARGET.vehicle_no = SOURCE.vehicle_no
+		    TARGET.vehicle_unique_id = SOURCE.vehicle_unique_id
 
 		WHEN MATCHED THEN
 		    UPDATE SET
