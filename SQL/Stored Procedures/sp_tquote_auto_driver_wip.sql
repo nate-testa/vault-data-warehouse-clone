@@ -47,8 +47,7 @@ BEGIN
             [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
             [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
             [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor],
-			source_system_sk
-		
+			source_system_sk,auto_vehicle_sk
         INTO [edw_temp].[tquote_auto_driver_wip_temp1]
 		
         FROM
@@ -61,7 +60,8 @@ BEGIN
                     CASE 
                         WHEN acc.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
                         ELSE 4 --(Metal)
-                    END as [source_system_sk]
+                    END as [source_system_sk],
+                    taut.auto_vehicle_sk
                 FROM
                     (
                         SELECT *
@@ -73,6 +73,11 @@ BEGIN
                 INNER JOIN [edw_stage].[Product] AS p on p.Id = acc.ProductId
                 INNER JOIN [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
                 INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
+                LEFT JOIN [edw_stage].[AccountObject] acco_2 on accof.Field = 'PrimaryVehicleId' AND TRY_CAST(accof.[Value] AS INT) = acco_2.Id
+                LEFT JOIN [edw_core].[tauto_vehicle] taut
+                    ON taut.vehicle_unique_id = acco_2.UniqueId
+                    AND taut.policy_no = acc.PolicyNumber
+                    AND taut.effective_dt = acc.EffectiveDate
                 LEFT JOIN [edw_core].[tquote_history] AS qh 
                     ON qh.quote_no = acc.PolicyNumber
                     AND qh.effective_dt = acc.EffectiveDate
@@ -166,6 +171,7 @@ BEGIN
                 target.maj_factor = source.[MAJFactor],
                 target.sdp_factor = source.[SPDFactor],
                 target.source_system_sk = source.source_system_sk,
+                target.primary_auto_vehicle_sk = source.auto_vehicle_sk,
                 target.update_ts = GETDATE(),
                 target.etl_audit_sk = @etl_audit_sk
         WHEN NOT MATCHED THEN
@@ -235,6 +241,7 @@ BEGIN
                 maj_factor,
                 sdp_factor,
                 source_system_sk,
+                primary_auto_vehicle_sk,
                 create_ts,
                 update_ts,
                 etl_audit_sk
@@ -305,6 +312,7 @@ BEGIN
                 source.[MAJFactor],
                 source.[SPDFactor],
                 source.source_system_sk,
+                source.[auto_vehicle_sk],
                 GETDATE(),
                 GETDATE(),
                 @etl_audit_sk
