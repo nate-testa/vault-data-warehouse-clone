@@ -73,7 +73,7 @@ BEGIN
                 INNER JOIN [edw_stage].[Product] AS p on p.Id = acc.ProductId
                 INNER JOIN [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
                 INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
-+                LEFT JOIN [edw_core].[tquote_history] AS qh 
+                LEFT JOIN [edw_core].[tquote_history] AS qh 
                     ON qh.quote_no = acc.PolicyNumber
                     AND qh.effective_dt = acc.EffectiveDate
                     AND qh.transaction_seq_no = 0
