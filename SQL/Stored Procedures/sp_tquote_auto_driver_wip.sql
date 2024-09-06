@@ -37,6 +37,7 @@ BEGIN
 
         -- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tquote_auto_driver_wip_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[tquote_auto_driver_wip_temp2];
 
 		SELECT 
 			CreatedDate, UpdatedDate, quote_no, effective_dt, expiration_dt, 0 as transaction_seq_no, driver_no, quote_history_sk, 
@@ -46,8 +47,8 @@ BEGIN
             [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
             [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
             [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor],
-			source_system_sk,auto_vehicle_sk
+            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor], [PrimaryVehicleId],
+			source_system_sk
         INTO [edw_temp].[tquote_auto_driver_wip_temp1]
 		
         FROM
@@ -60,8 +61,7 @@ BEGIN
                     CASE 
                         WHEN acc.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
                         ELSE 4 --(Metal)
-                    END as [source_system_sk],
-                    taut.auto_vehicle_sk
+                    END as [source_system_sk]
                 FROM
                     (
                         SELECT *
@@ -73,18 +73,7 @@ BEGIN
                 INNER JOIN [edw_stage].[Product] AS p on p.Id = acc.ProductId
                 INNER JOIN [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
                 INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
-                LEFT JOIN (
-					select acco2.* from [edw_stage].[AccountObject] acco2
-					inner join [edw_stage].[AccountObjectField] accof2
-					on acco2.Id = TRY_CAST(accof2.[Value] AS INT)
-					where accof2.Field = 'PrimaryVehicleId'
-					) acco_f
-				on acco_f.AccountId = acc.Id
-                LEFT JOIN [edw_core].[tauto_vehicle] taut
-                    ON taut.vehicle_unique_id = acco_f.UniqueId
-                    AND taut.policy_no = acc.PolicyNumber
-                    AND taut.effective_dt = acc.EffectiveDate
-                LEFT JOIN [edw_core].[tquote_history] AS qh 
++                LEFT JOIN [edw_core].[tquote_history] AS qh 
                     ON qh.quote_no = acc.PolicyNumber
                     AND qh.effective_dt = acc.EffectiveDate
                     AND qh.transaction_seq_no = 0
@@ -103,13 +92,27 @@ BEGIN
                     [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
                     [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
                     [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor]
+                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor], [PrimaryVehicleId]
                 )
 			) pivottable
 
+        
+        SELECT * 
+        INTO [edw_temp].[tquote_auto_driver_wip_temp2]
+        FROM (
+            SELECT t1.*, taut.auto_vehicle_sk
+            FROM [edw_temp].[tquote_auto_driver_wip_temp1] t1
+            LEFT JOIN [edw_stage].[AccountObject] acco
+			on acco.Id = TRY_CAST(t1.[PrimaryVehicleId] AS INT)
+            LEFT JOIN [edw_core].[tauto_vehicle] taut
+            ON taut.vehicle_unique_id = acco.UniqueId
+            AND taut.policy_no = t1.quote_no
+            AND taut.effective_dt = t1.effective_dt
+        )
+
 		-- Start Merge process
 		MERGE INTO [edw_core].[tquote_auto_driver] AS target
-        USING [edw_temp].[tquote_auto_driver_wip_temp1] AS source
+        USING [edw_temp].[tquote_auto_driver_wip_temp2] AS source
             ON target.quote_no = source.quote_no
             AND target.driver_no = source.driver_no
             AND target.transaction_seq_no = source.transaction_seq_no
@@ -339,6 +342,7 @@ BEGIN
 
         -- Drop temp table
         DROP TABLE IF EXISTS edw_temp.[tquote_auto_driver_wip_temp1];
+        DROP TABLE IF EXISTS edw_temp.[tquote_auto_driver_wip_temp2];
 
 	END TRY
 	BEGIN CATCH

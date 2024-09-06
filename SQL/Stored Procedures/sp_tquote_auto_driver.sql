@@ -47,8 +47,8 @@ BEGIN
             [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
             [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
             [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor],
-			source_system_sk,auto_vehicle_sk
+            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor], [PrimaryVehicleId],
+			source_system_sk
 		
         INTO [edw_temp].[tquote_auto_driver_temp1]
 		
@@ -62,8 +62,7 @@ BEGIN
                     CASE 
                         WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
                         ELSE 4 --(Metal)
-                    END as [source_system_sk],
-                    taut.auto_vehicle_sk
+                    END as [source_system_sk]
                 FROM
                     (SELECT
                         *
@@ -75,17 +74,6 @@ BEGIN
                 INNER JOIN [edw_stage].[AccountTransactionVersion] AS acctv ON acctv.AccountTransactionId = acct.Id
                 INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
                 INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] AS acctvof ON acctvof.VersionObjectId = acctvo.id
-                LEFT JOIN (
-					select acctvo2.* from [edw_stage].[AccountTransactionVersionObject] acctvo2
-					inner join [edw_stage].[AccountTransactionVersionObjectField] acctvof2
-					on acctvo2.Id = TRY_CAST(acctvof2.[Value] AS INT)
-					where acctvof2.Field = 'PrimaryVehicleId'
-					) acctvo_f
-				on acctvo_f.AccountTransactionVersionId = acctv.Id
-                LEFT JOIN [edw_core].[tauto_vehicle] taut
-                    ON taut.vehicle_unique_id = acctvo_f.UniqueId
-                    AND taut.policy_no = acct.PolicyNumber
-                    AND taut.effective_dt = acct.EffectiveDate
                 LEFT JOIN [edw_core].[tquote_history] AS qh 
                     ON qh.quote_no = acct.PolicyNumber
                     AND qh.effective_dt = acct.EffectiveDate
@@ -105,7 +93,7 @@ BEGIN
                     [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
                     [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
                     [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor]
+                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor], [PrimaryVehicleId]
                 )
 			) pivottable
 
@@ -247,13 +235,19 @@ BEGIN
             t1.[MINFactor] as min_factor,
             t1.[MAJFactor] as maj_factor,
             t1.[SPDFactor] as sdp_factor,
-            t1.[auto_vehicle_sk] as primary_auto_vehicle_sk,
+            taut.[auto_vehicle_sk] as primary_auto_vehicle_sk,
             t1.source_system_sk,
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk
         FROM 
             [edw_temp].[tquote_auto_driver_temp1] AS t1
+        LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acctvo
+		on acctvo.Id = TRY_CAST(t1.[PrimaryVehicleId] AS INT)
+        LEFT JOIN [edw_core].[tauto_vehicle] taut
+            ON taut.vehicle_unique_id = acctvo.UniqueId
+            AND taut.policy_no = t1.policy_no
+            AND taut.effective_dt = t1.effective_dt
         ;
 
         --************End************
