@@ -100,7 +100,7 @@ BEGIN
         SELECT * 
         INTO [edw_temp].[tquote_auto_driver_wip_temp2]
         FROM (
-            SELECT t1.*, taut.auto_vehicle_sk
+            SELECT t1.*, taut.quote_auto_vehicle_sk
             FROM [edw_temp].[tquote_auto_driver_wip_temp1] t1
             LEFT JOIN [edw_stage].[AccountObject] acco
 			on acco.Id = TRY_CAST(t1.[PrimaryVehicleId] AS INT)
@@ -180,7 +180,7 @@ BEGIN
                 target.maj_factor = source.[MAJFactor],
                 target.sdp_factor = source.[SPDFactor],
                 target.source_system_sk = source.source_system_sk,
-                target.primary_auto_vehicle_sk = source.auto_vehicle_sk,
+                target.primary_auto_vehicle_sk = source.quote_auto_vehicle_sk,
                 target.update_ts = GETDATE(),
                 target.etl_audit_sk = @etl_audit_sk
         WHEN NOT MATCHED THEN
@@ -321,7 +321,7 @@ BEGIN
                 source.[MAJFactor],
                 source.[SPDFactor],
                 source.source_system_sk,
-                source.[auto_vehicle_sk],
+                source.[quote_auto_vehicle_sk],
                 GETDATE(),
                 GETDATE(),
                 @etl_audit_sk
