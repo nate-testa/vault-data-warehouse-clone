@@ -108,7 +108,7 @@ BEGIN
             ON taut.vehicle_unique_id = acco.UniqueId
             AND taut.quote_no = t1.quote_no
             AND taut.effective_dt = t1.effective_dt
-        )
+        ) as t2
 
 		-- Start Merge process
 		MERGE INTO [edw_core].[tquote_auto_driver] AS target
