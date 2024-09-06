@@ -235,7 +235,7 @@ BEGIN
             t1.[MINFactor] as min_factor,
             t1.[MAJFactor] as maj_factor,
             t1.[SPDFactor] as sdp_factor,
-            taut.[auto_vehicle_sk] as primary_auto_vehicle_sk,
+            taut.[quote_auto_vehicle_sk] as primary_auto_vehicle_sk,
             t1.source_system_sk,
             getdate() AS create_ts,
             getdate() AS update_ts,
