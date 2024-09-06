@@ -180,7 +180,7 @@ BEGIN
                 target.maj_factor = source.[MAJFactor],
                 target.sdp_factor = source.[SPDFactor],
                 target.source_system_sk = source.source_system_sk,
-                target.primary_auto_vehicle_sk = source.quote_auto_vehicle_sk,
+                target.primary_quote_auto_vehicle_sk = source.quote_auto_vehicle_sk,
                 target.update_ts = GETDATE(),
                 target.etl_audit_sk = @etl_audit_sk
         WHEN NOT MATCHED THEN
@@ -250,7 +250,7 @@ BEGIN
                 maj_factor,
                 sdp_factor,
                 source_system_sk,
-                primary_auto_vehicle_sk,
+                primary_quote_auto_vehicle_sk,
                 create_ts,
                 update_ts,
                 etl_audit_sk
