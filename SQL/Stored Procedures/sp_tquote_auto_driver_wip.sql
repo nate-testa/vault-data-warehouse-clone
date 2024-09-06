@@ -104,9 +104,9 @@ BEGIN
             FROM [edw_temp].[tquote_auto_driver_wip_temp1] t1
             LEFT JOIN [edw_stage].[AccountObject] acco
 			on acco.Id = TRY_CAST(t1.[PrimaryVehicleId] AS INT)
-            LEFT JOIN [edw_core].[tauto_vehicle] taut
+            LEFT JOIN [edw_core].[tquote_auto_vehicle] taut
             ON taut.vehicle_unique_id = acco.UniqueId
-            AND taut.policy_no = t1.quote_no
+            AND taut.quote_no = t1.quote_no
             AND taut.effective_dt = t1.effective_dt
         )
 
