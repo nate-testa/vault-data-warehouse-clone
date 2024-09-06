@@ -8,6 +8,7 @@
 -- 05/14/24		Architha Gudimalla				2. Corrected errors
 -- 05/28/24		Yunus Mohammed					3. Added AccountObject.Id instead of Account.Id
 -- 05/29/24		Alberto Almario					4. Integrate Premium Adjustments data into EDW - Collection
+-- 22/08/24		Hernando Gonzalez				5. Remove effective date from the merge join
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_class_type_wip]
@@ -206,12 +207,11 @@ BEGIN
 		) AS SOURCE
 		ON
 		    TARGET.quote_no = SOURCE.quote_no AND
-		    TARGET.effective_dt = SOURCE.effective_dt AND
 		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
 		    TARGET.class_type = SOURCE.class_type
-
 		WHEN MATCHED THEN
 		    UPDATE SET
+				TARGET.effective_dt = SOURCE.effective_dt,
 		        TARGET.expiration_dt = SOURCE.expiration_dt,
 		        TARGET.quote_collection_location_sk = SOURCE.quote_collection_location_sk,
 		        TARGET.quote_history_sk = SOURCE.quote_history_sk,

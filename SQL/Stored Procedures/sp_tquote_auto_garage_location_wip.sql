@@ -11,6 +11,7 @@ GO
 -- 05/08/24		            Architha Gudimalla				2. Updated @last_source_extract_ts
 -- 05/14/24		            Architha Gudimalla				3. Corrected errors
 -- 08/07/24                 Yunus Mohammed                  4. Added garage_unique_id
+-- 08/21/24		            Alberto Almario					5. Remove effective_dt from merge join and add into update section
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_garage_location_wip]
 AS
@@ -91,11 +92,11 @@ BEGIN
 		MERGE INTO [edw_core].[tquote_auto_garage_location] AS target
         USING [edw_temp].[tquote_auto_garage_location_wip_temp1] AS source
             ON target.quote_no = source.quote_no
-            AND target.effective_dt = source.effective_dt
             AND target.garage_unique_id = source.garage_unique_id            
             AND target.transaction_seq_no = source.transaction_seq_no
         WHEN MATCHED THEN
             UPDATE SET
+                target.effective_dt = source.effective_dt,
                 target.expiration_dt = source.expiration_dt,
                 target.quote_history_sk = source.quote_history_sk,
                 target.garage_address_line1 = source.[AddressLine1],

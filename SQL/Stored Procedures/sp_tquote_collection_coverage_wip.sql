@@ -6,6 +6,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 09/05/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 03/06/24		Alberto Almario 				2. new column emergency_extension_notice_in
+-- 22/08/24		Hernando Gonzalez				3. Remove effective date from the merge join
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_coverage_wip]
@@ -235,11 +236,10 @@ BEGIN
         ) AS SOURCE
         ON
             TARGET.quote_no = SOURCE.quote_no AND
-            TARGET.effective_dt = SOURCE.effective_dt AND
             TARGET.transaction_seq_no = SOURCE.transaction_seq_no
-
         WHEN MATCHED THEN
             UPDATE SET
+                TARGET.effective_dt = SOURCE.effective_dt,
                 TARGET.expiration_dt = SOURCE.expiration_dt,
                 TARGET.quote_collection_location_sk = SOURCE.quote_collection_location_sk,
                 TARGET.quote_history_sk = SOURCE.quote_history_sk,

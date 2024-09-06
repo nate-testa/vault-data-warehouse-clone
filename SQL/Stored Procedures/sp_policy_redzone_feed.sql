@@ -3,8 +3,11 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 07/17/23		Alberto Almario					1. Created this procedure
--- 07/18/23		Architha Gudimalla				2. Made changes to fix the errors on first run  
+-- 07/17/24		Alberto Almario					1. Created this procedure
+-- 07/18/24		Architha Gudimalla				2. Made changes to fix the errors on first run  
+-- 08/20/24		Architha Gudimalla				3. Added underwriter  
+-- 08/21/24		Architha Gudimalla				4. Added effective_dt
+-- 09/04/24		Architha Gudimalla				5. Added enrollment_forms
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_policy_redzone_feed]
 AS
@@ -38,6 +41,10 @@ BEGIN
         SELECT	 
             pol.policy_no as unique_id, 
             pol.policy_no, 
+            pol.effective_dt, 
+            pol.risk_state_cd,
+            pol.policy_term, 
+            pol.program_type,
             pr.product_nm, 		
             loc.[latitude], 
             loc.[longitude], 
@@ -63,14 +70,22 @@ BEGIN
                     else cov.[contents_limit_amt]*cov.loss_of_use_derived_pc 
                 end
                 ,0) as cov_d,
-            '' as gate_code,
+            acov.gate_code, 
+            acov.wildfire_protection_enrollment_in,
+            acov.site_scheduling_contact_nm,
+            acov.site_scheduling_phone_no,
+            acov.site_scheduling_email,
+            acov.emergency_contact_nm,
+            acov.emergency_contact_phone_no,
+            acov.emergency_contact_email,
             @current_date AS create_ts,
             @current_date AS update_ts,
             @etl_audit_sk AS etl_audit_sk
         INTO [edw_temp].[policy_redzone_feed_temp0]
         FROM edw_core.titem_inforce AS summ	
         INNER JOIN edw_core.tdate AS td ON td.date_sk = summ.month_sk		
-        INNER JOIN edw_core.thome_coverage AS cov ON summ.coverage_sk = cov.home_coverage_sk		
+        INNER JOIN edw_core.thome_coverage AS cov ON summ.coverage_sk = cov.home_coverage_sk
+        left JOIN edw_core.thome_additional_coverage AS acov ON summ.coverage_sk = acov.home_coverage_sk		
         INNER JOIN edw_core.thome_location AS loc ON summ.item_sk = loc.home_location_sk		
         INNER JOIN edw_core.tpolicy AS pol ON summ.policy_sk = pol.policy_sk		
         INNER JOIN edw_core.tproduct AS pr ON summ.product_sk = pr.product_sk		
@@ -101,6 +116,10 @@ BEGIN
         SELECT 
             pol.policy_no as unique_id,
             pol.policy_no,
+            pol.effective_dt, 
+            pol.risk_state_cd,
+            pol.policy_term, 
+            pol.program_type,
             coll_limit.product_nm,
             loc.[latitude],
             loc.[longitude],
@@ -121,7 +140,14 @@ BEGIN
             CAST(0 AS BIGINT) as cov_b,
             CAST(0 AS BIGINT) as cov_c,
             CAST(0 AS BIGINT) as cov_d,
-            '' as gate_code,
+            '' as gate_code, 
+            '' as wildfire_protection_enrollment_in,
+            '' as site_scheduling_contact_nm,
+            '' as site_scheduling_phone_no,
+            '' as site_scheduling_email,
+            '' as emergency_contact_nm,
+            '' as emergency_contact_phone_no,
+            '' as emergency_contact_email,
             @current_date as create_ts,
             @current_date as update_ts,
             @etl_audit_sk as etl_audit_sk
@@ -130,17 +156,33 @@ BEGIN
         INNER JOIN edw_core.tcollection_location AS loc ON coll_limit.item_sk = loc.collection_location_sk
         INNER JOIN edw_core.tpolicy AS pol ON coll_limit.policy_sk = pol.policy_sk
         INNER JOIN edw_core.tbroker AS br ON coll_limit.broker_sk = br.broker_sk
-        LEFT JOIN edw_core.tpolicy_insured AS ins ON coll_limit.policy_history_sk = ins.policy_history_sk AND ins.primary_insured_in = 'Yes'
+        LEFT JOIN edw_core.tpolicy_insured AS ins ON coll_limit.policy_history_sk = ins.policy_history_sk AND ins.primary_insured_in = 'Yes';
 
 
         --Union HO and Collection data
-        SELECT * 
+        with br_vault_team as
+        (
+			select broker_id, product_nm,  state_cd, program_type, 
+					max(case when team_member_type = 'BusinessDevelopmentManager' then team_member_nm end) bdm_nm,
+					max(case when team_member_type = 'Underwriter' then team_member_nm end) Underwriter,
+					max(case when team_member_type = 'RenewalUnderwriter' then team_member_nm end) RenewalUnderwriter 
+			from edw_core.tbroker_vault_team bvt
+			group by broker_id , product_nm, state_cd, program_type
+        )  
+		SELECT a.*,
+				bvtm.bdm_nm,
+				bvtm.Underwriter,
+				bvtm.RenewalUnderwriter 
         INTO [edw_temp].[policy_redzone_feed_temp1]
         FROM (
             SELECT * FROM [edw_temp].[policy_redzone_feed_temp0]
             UNION ALL
             SELECT * FROM [edw_temp].[policy_redzone_feed_temp2]
-        ) AS tbl
+        ) AS a
+		left join br_vault_team  bvtm on     bvtm.broker_id = a.broker_id 
+                                         and bvtm.product_nm = a.product_nm 
+                                         and bvtm.program_type = a.program_type 
+								         and isnull(bvtm.state_cd,'') = case when bvtm.state_cd is null then '' else a.risk_state_cd end
         ; 
 
         -- Delete target table
@@ -150,6 +192,7 @@ BEGIN
         INSERT INTO [edw_integration].[policy_redzone_feed](
              [unique_id]
             ,[policy_id]
+            ,effective_dt
             ,[policy_type]
             ,[latitude]
             ,[longitude]
@@ -174,10 +217,21 @@ BEGIN
             ,[create_ts]
             ,[update_ts]
             ,[etl_audit_sk]
+            , bdm_nm
+            , new_business_underwriter_nm
+            , renewal_underwriter_nm 
+            , wildfire_protection_enrollment_in
+            , site_scheduling_contact_nm
+            , site_scheduling_phone_no
+            , site_scheduling_email
+            , emergency_contact_nm
+            , emergency_contact_phone_no
+            , emergency_contact_email
         )
         SELECT 
             unique_id, 
             policy_no, 
+            effective_dt,
             product_nm, 		
             latitude, 
             longitude, 
@@ -202,6 +256,16 @@ BEGIN
             [create_ts],
             [update_ts],
             [etl_audit_sk]
+            , bdm_nm
+            , Underwriter
+            , RenewalUnderwriter 
+            , wildfire_protection_enrollment_in
+            , site_scheduling_contact_nm
+            , site_scheduling_phone_no
+            , site_scheduling_email
+            , emergency_contact_nm
+            , emergency_contact_phone_no
+            , emergency_contact_email
         FROM [edw_temp].[policy_redzone_feed_temp1];
 
         --************End************

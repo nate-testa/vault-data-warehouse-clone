@@ -9,7 +9,8 @@ GO
 ------------------------------------------------------------------------------------------------------------------------------
 -- Change date			|Author							|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
--- 05/07/2024 			Yunus Mohammed					1. Created this procedure 
+-- 05/07/24 			Yunus Mohammed					1. Created this procedure 
+-- 08/20/24				Yunus Mohammed					2. Added effective date in update
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_location_wip]
 
@@ -111,17 +112,18 @@ BEGIN
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-		TARGET.address_line_1=SOURCE.RiskAddressLine1,
-		TARGET.address_line_2=SOURCE.RiskAddressLine2,
-		TARGET.city_nm=SOURCE.RiskAddressCity,
-		TARGET.state_cd=SOURCE.RiskAddressState,
-		TARGET.zip_cd=SOURCE.RiskAddressZipCode,
-		TARGET.county_nm=SOURCE.RiskAddressCounty,
-		TARGET.country_nm=SOURCE.RiskAddressCountry,
-		Target.longitude=SOURCE.Longitude,
+		Target.effective_dt=Source.EffectiveDate,
+		Target.address_line_1=Source.RiskAddressLine1,
+		Target.address_line_2=Source.RiskAddressLine2,
+		Target.city_nm=Source.RiskAddressCity,
+		Target.state_cd=Source.RiskAddressState,
+		Target.zip_cd=Source.RiskAddressZipCode,
+		Target.county_nm=Source.RiskAddressCounty,
+		Target.country_nm=Source.RiskAddressCountry,
+		Target.longitude=Source.Longitude,
 		Target.latitude=Source.Latitude,
 		Target.unit_no=Source.RiskAddressLineUnit,
-		TARGET.update_ts=getdate();
+		Target.update_ts=getdate();
 
 		SET @rows_affected=@@ROWCOUNT;
 

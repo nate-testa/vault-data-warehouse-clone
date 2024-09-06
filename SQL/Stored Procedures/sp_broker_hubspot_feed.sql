@@ -6,6 +6,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 07/29/24		        Yunus Mohammed				1. Created this procedure
 -- 08/09/24		        Archtha Gudimalla			2. Excluded test brokers
+-- 08/22/24		        Archtha Gudimalla			3. Added open submission ct
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -49,6 +50,7 @@ BEGIN
             sum(round(100*three_year_loss_incurred_amt/nullif(three_year_earned_net_premium_amt,0),2)) as two_year_ultimate_non_cat_loss_ratio,
             sum(round(100*five_year_non_cat_loss_incurred_amt/nullif(five_year_non_cat_earned_net_premium_amt,0),2)) as five_year_non_cat_loss_ratio,
             sum(ytd_bind_ct) AS ytd_bind_ct,
+            sum(open_submission_ct) as open_submissions_ct,
             sum(ytd_submission_ct) as ytd_submission_ct,
             sum(last30_days_submission_ct) as last30_days_submission_ct,
             sum(policy_renewal_offered_ct) as offered_renewal_ct,
@@ -86,7 +88,7 @@ BEGIN
         null as bdm_email,
         bvtm.[VRE_Underwriter] new_business_uw_nm,
         bvtm.[VES_Underwriter] as renewal_uw_nm, 
-        null as open_submissions_ct,
+        bs.open_submissions_ct,
         bs.one_year_actual_non_cat_loss_ratio,
         bs.two_year_ultimate_non_cat_loss_ratio,
         bs.five_year_non_cat_loss_ratio,

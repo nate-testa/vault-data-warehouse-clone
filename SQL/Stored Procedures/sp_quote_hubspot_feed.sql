@@ -9,6 +9,7 @@
 -- 08/09/24		        Architha Gudimalla			4. Only include quotes with eff dt >= 20230601
 -- 08/09/24		        Architha Gudimalla			5. Excluded test quotes
 -- 08/16/24		        Architha Gudimalla			6. Added Recampaign indicator
+-- 08/23/24		        Architha Gudimalla			7. Updated Recampaign indicator
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -111,6 +112,7 @@ BEGIN
         into edw_temp.quote_hubspot_feed_temp1
 
         from edw_core.tquote q
+        left join edw_core.tpolicy p on q.prior_term_policy_no = p.policy_no
         inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
         inner join edw_core.tquote_history h on h.quote_sk = q.quote_sk
         left join edw_core.tquote_insured i	on i.quote_history_sk = h.quote_history_sk and i.primary_insured_in = 'Yes'

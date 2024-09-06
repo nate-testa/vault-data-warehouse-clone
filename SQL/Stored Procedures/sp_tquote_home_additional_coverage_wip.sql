@@ -12,6 +12,9 @@ GO
 -- 05/07/2024 			Yunus Mohammed				1. Created this procedure
 -- 09/07/24				Hernando Gonzalez			2. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
 -- 08/01/24             Tuba Mohsin                 3. added contents_extended_replacement_cost_limit_amt
+-- 08/22/24				Yunus Mohammed				4. Removed effective date from merge and added in update clause
+-- 08/30/24				Yunus Mohammed				5. Added new columns
+-- 09/04/24				Yunus Mohammed				6. Removed error from update
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage_wip]
@@ -286,6 +289,18 @@ BEGIN
 		   		,MatchingUndamagedPropertyLimit as matching_undamaged_property_limit_amt
 		   		,RoofCoveringCoverageLimitationCW as roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in
 		   		,AllPerilRoofCoveringCoverageSP as all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
+				,WildfireProtectionEnrollment as wildfire_protection_enrollment_in
+				,WFSiteSchedulingContactName as site_scheduling_contact_nm
+				,WFSiteSchedulingPhoneNumber as site_scheduling_phone_no
+				,WFSiteSchedulingEmailAddress as site_scheduling_email
+				,WFEmergencyContactName as emergency_contact_nm
+				,WFEmergencyContactPhoneNumber as emergency_contact_phone_no
+				,WFEmergencyContactEmail as emergency_contact_email,WFGateCodes as gate_code
+				,PrimaryHomeRiskAddress as primary_home_risk_address
+				,PrimaryHomePolicyEffectiveDate  as primary_home_policy_effective_dt
+				,PrimaryHomePolicyExpirationDate as primary_home_policy_expiration_dt
+				,PrimaryHomeCarrierName as primary_home_carrier_nm
+				,PrimaryHomeCoverageAThreshold as primary_home_coverage_a_threshold
 				,source_system_sk
 				,GETDATE() AS create_ts
 				,GETDATE() AS update_ts
@@ -297,7 +312,7 @@ BEGIN
 						AND a.EffectiveDate = b.eff_dt
 						AND a.transaction_seq_no = b.tran_seq_no
 			) as [Source]
-			ON Source.quote_no = Target.[quote_no] and Source.effective_dt = Target.effective_dt and Source.transaction_seq_no = Target.transaction_seq_no
+			ON Source.quote_no = Target.[quote_no] and Source.transaction_seq_no = Target.transaction_seq_no
 			WHEN NOT MATCHED BY Target THEN	
 			INSERT
 			(
@@ -376,7 +391,13 @@ BEGIN
 			roof_exclusion_with_ensuing_loss_in,roof_coverage_endorsement_wh_in,roof_coverage_endorsement_ap_in,roof_coverage_endorsement_rv_in,
 			fire_station_connected_fire_alarm_in, police_station_connected_burglar_alarm_in, local_fire_alarm_system_in, 
 			local_burglar_alarm_system_in, automatic_smoke_detectors_in, automatic_sprinkler_system, emergency_extension_notice_in,
-			trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in,
+			trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, 
+			matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, 
+			all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in,
+			wildfire_protection_enrollment_in ,site_scheduling_contact_nm ,site_scheduling_phone_no ,
+			site_scheduling_email ,emergency_contact_nm ,emergency_contact_phone_no ,emergency_contact_email ,gate_code ,
+			primary_home_risk_address,primary_home_policy_effective_dt,primary_home_policy_expiration_dt,
+			primary_home_carrier_nm,primary_home_coverage_a_threshold,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
@@ -456,11 +477,18 @@ BEGIN
 				roof_exclusion_with_ensuing_loss_in,roof_coverage_endorsement_wh_in,roof_coverage_endorsement_ap_in,roof_coverage_endorsement_rv_in,
 				fire_station_connected_fire_alarm_in, police_station_connected_burglar_alarm_in, local_fire_alarm_system_in, local_burglar_alarm_system_in,
 				automatic_smoke_detectors_in, automatic_sprinkler_system, emergency_extension_notice_in,
-				trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in,
+				trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, 
+				matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, 
+				all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in,
+				wildfire_protection_enrollment_in ,site_scheduling_contact_nm ,site_scheduling_phone_no ,
+				site_scheduling_email ,emergency_contact_nm ,emergency_contact_phone_no ,emergency_contact_email ,gate_code ,
+				primary_home_risk_address,primary_home_policy_effective_dt,primary_home_policy_expiration_dt
+				,primary_home_carrier_nm,primary_home_coverage_a_threshold,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			WHEN MATCHED THEN UPDATE
 			SET
+			[target].effective_dt = [source].effective_dt,
 			[target].expiration_dt = [source].expiration_dt,
 			[target].quote_home_location_sk = [source].quote_home_location_sk,
 			[target].quote_home_coverage_sk = [source].quote_home_coverage_sk,
@@ -611,11 +639,7 @@ BEGIN
 			[target].firewise_community_credit_in = [source].firewise_community_credit_in,
 			[target].monitored_heat_sensors_in = [source].monitored_heat_sensors_in,
 			[target].builders_defect_exclusion_in = [source].builders_defect_exclusion_in,
-			[target].gated_community_patrol_service = [source].gated_community_patrol_service,
-			[target].source_system_sk = [source].source_system_sk,
-			[target].create_ts = [source].create_ts,
-			[target].update_ts = [source].update_ts,
-			[target].etl_audit_sk = [source].etl_audit_sk,
+			[target].gated_community_patrol_service = [source].gated_community_patrol_service,			
 			[target].extended_liability_location_ct = [source].extended_liability_location_ct,
 			[target].roof_exclusion_with_ensuing_loss_in = [source].roof_exclusion_with_ensuing_loss_in,
 			[target].roof_coverage_endorsement_wh_in = [source].roof_coverage_endorsement_wh_in,
@@ -635,8 +659,22 @@ BEGIN
 			[target].matching_undamaged_property_in = [source].matching_undamaged_property_in,
 			[target].matching_undamaged_property_limit_amt = [source].matching_undamaged_property_limit_amt,
 			[target].roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in = [source].roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in,
-			[target].all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in  = [source].all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
-			;
+			[target].all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in  = [source].all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in,
+			[target].wildfire_protection_enrollment_in = [source].wildfire_protection_enrollment_in,
+			[target].site_scheduling_contact_nm = [source].site_scheduling_contact_nm,
+			[target].site_scheduling_phone_no = [source].site_scheduling_phone_no,
+			[target].site_scheduling_email = [source].site_scheduling_email,
+			[target].emergency_contact_nm = [source].emergency_contact_nm,
+			[target].emergency_contact_phone_no = [source].emergency_contact_phone_no,
+			[target].emergency_contact_email = [source].emergency_contact_email,
+			[target].gate_code = [source].gate_code,
+			[target].primary_home_risk_address = [source].primary_home_risk_address,
+			[target].primary_home_policy_effective_dt = [source].primary_home_policy_effective_dt,
+			[target].primary_home_policy_expiration_dt = [source].primary_home_policy_expiration_dt,
+			[target].primary_home_carrier_nm = [source].primary_home_carrier_nm,
+			[target].primary_home_coverage_a_threshold = [source].primary_home_coverage_a_threshold,					
+			[target].update_ts = [source].update_ts;
+			
 
 			SET @rows_affected=@@ROWCOUNT;
 

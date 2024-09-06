@@ -2,10 +2,11 @@
 -- Author:		Hernando Gonzalez Garcia
 -- Description: This procedures insert homeowners mortgagee data
 ---------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date 			|Author							|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 05/05/24		Hernando Gonzalez Garcia		1. Created this procedure 
--- 05/14/24		Architha Gudimalla				2. Corrected errors
+-- 05/05/24				Hernando Gonzalez Garcia		1. Created this procedure 
+-- 05/14/24				Architha Gudimalla				2. Corrected errors
+-- 08/22/24				Yunus Mohammed					3. Removed effective date from merge and added in update clause
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_mortgagee_wip]
 AS
@@ -107,15 +108,15 @@ BEGIN
 		        edw_temp.tquote_mortgagee_wip_temp1 AS ttlc
 		) AS SOURCE
 		ON
-		    TARGET.quote_no = SOURCE.quote_no AND
-		    TARGET.effective_dt = SOURCE.effective_dt AND
+		    TARGET.quote_no = SOURCE.quote_no AND		    
 		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
 		    TARGET.mortgagee_no = SOURCE.mortgagee_no 
 		    --TARGET.expiration_dt = SOURCE.expiration_dt AND
 		    --TARGET.quote_history_sk = SOURCE.quote_history_sk
 
 		WHEN MATCHED THEN
-		    UPDATE SET 
+		    UPDATE SET
+				TARGET.effective_dt = SOURCE.effective_dt,
 		        TARGET.mortgagee_nm = SOURCE.mortgagee_nm,
 		        TARGET.mortgagee_type = SOURCE.mortgagee_type,
 		        TARGET.bill_mortgagee_in = SOURCE.bill_mortgagee_in,

@@ -16,6 +16,10 @@ GO
 -- 13/06/24     Hernando Gonzalez               7. Added NewlyPurchasedVehicleFinal
 -- 07/10/24     Alberto Almario                 8. added vehicle_unique_id 
 -- 08/07/24     Yunus Mohammed                  9. Updated logic to get garaging location
+-- 08/20/24     Yunus Mohammed                 10. Used garage_unique_id while assigning defualt garage location
+-- 08/21/24		Alberto Almario				   11. Remove effective_dt from merge join and add into update section
+-- 08/30/24	    Architha Gudimalla			   12. Added eff dt in merge-update
+-- 08/30/24	    Architha Gudimalla			   12. Excluded string in veh purchse dt
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip] 
@@ -203,7 +207,7 @@ BEGIN
                         AND qh.transaction_seq_no = 0
                     LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                         ON qav.quote_no = acc.PolicyNumber
-                        AND qav.effective_dt = acc.effectivedate
+                        --AND qav.effective_dt = acc.effectivedate
                         AND qav.vehicle_unique_id = cast(acco.[UniqueId] as varchar(max))
                         -- AND qav.vehicle_no = acco.[Index]
                     WHERE
@@ -409,7 +413,7 @@ BEGIN
                 t1.[RestraintInfo] AS restraint_info,
                 t1.[TransmissionInfo] AS transmission_info,
                 t1.[OtherInfo] AS other_info,
-                t1.[ReleaseDate] AS vehicle_release_dt,
+                case when isdate(t1.[ReleaseDate]) = 1 then t1.[ReleaseDate] else null end   AS vehicle_release_dt,
                 t1.[MotorHomeClass] AS motor_home_class,
                 t1.[PassengerHazardExclusion] AS passenger_hazard_exclusion_in,
                 t1.bodily_injury_premium_adjustment_method,
@@ -445,7 +449,7 @@ BEGIN
                 t1.extended_towing_labor_premium_adjustment_retention,
                 t1.extended_towing_labor_premium_adjustment_reason,
                 t1.NewlyPurchasedVehicle as newly_purchased_vehicle_override_in,
-                t1.NewlyPurchasedVehicleDate as newly_purchased_vehicle_dt,
+                case when isdate(t1.NewlyPurchasedVehicleDate) = 1 then t1.NewlyPurchasedVehicleDate else null end as newly_purchased_vehicle_dt,
                 t1.[NewlyPurchasedVehicleFinal] as newly_purchased_vehicle_final_in
             FROM 
                 [edw_temp].[tquote_auto_vehicle_coverage_wip_temp1] AS t1
@@ -456,19 +460,19 @@ BEGIN
                 and gar.garage_unique_id = ao.UniqueId
             LEFT JOIN (
                 SELECT 
-                    RANK() OVER (PARTITION BY quote_no, effective_dt, transaction_seq_no ORDER BY quote_no, effective_dt, transaction_seq_no, garage_location_no) AS rnk, 
+                    RANK() OVER (PARTITION BY quote_no, effective_dt, transaction_seq_no ORDER BY quote_no, effective_dt, transaction_seq_no, garage_unique_id) AS rnk, 
                     *
                 FROM 
                     [edw_core].[tquote_auto_garage_location]
             ) gar1 ON gar1.rnk = 1 AND gar1.quote_no = t1.quote_no AND gar1.effective_dt = t1.effective_dt AND t1.transaction_seq_no = gar1.transaction_seq_no
         ) AS source 
-            ON target.quote_no = source.quote_no 
-            AND target.effective_dt = source.effective_dt 
+            ON target.quote_no = source.quote_no  
             -- AND target.vehicle_no = source.vehicle_no 
             AND target.transaction_seq_no = source.transaction_seq_no
             AND target.vehicle_unique_id = source.vehicle_unique_id 
         WHEN MATCHED THEN
             UPDATE SET 
+                target.effective_dt = source.effective_dt,
                 target.vehicle_no = source.vehicle_no,
                 target.expiration_dt = source.expiration_dt,
                 target.quote_history_sk = source.quote_history_sk,

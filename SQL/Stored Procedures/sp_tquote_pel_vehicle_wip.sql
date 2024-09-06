@@ -7,6 +7,7 @@
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
 -- 05/14/2024 			Architha Gudimalla					3. Corrected errors
 -- 07/31/2024 			Alberto Almario						4. Add new column vehicle_unique_id
+-- 08/22/2024			Architha Gudimalla					54. Removed eff_dt from merge
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_vehicle_wip]
 
@@ -90,7 +91,7 @@ BEGIN
 										)
 		) as pivottable
 
-		MERGE INTO [edw_core].[tquote_pel_vehicle] AS TARGET
+		MERGE INTO  [edw_core].[tquote_pel_vehicle] AS TARGET
 		USING (
 		    SELECT
 		        PolicyNumber AS quote_no,
@@ -164,12 +165,13 @@ BEGIN
 		) AS SOURCE
 		ON
 		    TARGET.quote_no = SOURCE.quote_no AND
-		    TARGET.effective_dt = SOURCE.effective_dt AND
+		    --TARGET.effective_dt = SOURCE.effective_dt AND
 		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
 		    TARGET.vehicle_unique_id = SOURCE.vehicle_unique_id
 
 		WHEN MATCHED THEN
 		    UPDATE SET
+		        TARGET.effective_dt = SOURCE.effective_dt,
 		        TARGET.expiration_dt = SOURCE.expiration_dt,
 		        TARGET.quote_history_sk = SOURCE.quote_history_sk,
 		        TARGET.vehicle_type = SOURCE.vehicle_type,

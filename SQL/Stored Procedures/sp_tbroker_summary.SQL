@@ -42,6 +42,7 @@ GO
 -- 07/18/24		Architha Gudimalla				26. Updated logic for @last_source_extract_ts
 -- 07/26/24		Architha Gudimalla				27. Added changes for hubspot
 -- 08/01/24		Architha Gudimalla				28. Added logic for policy_renewal_offered_over_50k_ct
+-- 08/29/24		Architha Gudimalla				29. Corrected bind ct for hubspot
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -312,12 +313,12 @@ BEGIN
 							max(CAST(q.first_offered_quote_ts AS DATE)) max_quoted_dt, 
 							max(q.bind_dt) max_bind_dt, 
 							--
-							sum(case when q.bind_dt between 		 @prior_year_begin_dt and @prior_year_month_end_dt 	then q.quote_sk end) prior_ytd_bind_ct, 
-							sum(case when q.bind_dt between 		 	   @year_begin_dt and 				   @end_dt 	then q.quote_sk end) 	   ytd_bind_ct, 
-							sum(case when q.bind_dt between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt 	then q.quote_sk end) prior_qtd_bind_ct, 
-							sum(case when q.bind_dt between 		 	@quarter_begin_dt and 				   @end_dt 	then q.quote_sk end) 	   qtd_bind_ct, 
-							sum(case when q.bind_dt between    @prior_year_month_begin_dt and @prior_year_month_end_dt 	then q.quote_sk end) prior_mtd_bind_ct, 
-							sum(case when q.bind_dt between 			  @month_begin_dt and 				   @end_dt 	then q.quote_sk end)	   mtd_bind_ct
+							count(case when q.bind_dt between 		 @prior_year_begin_dt and @prior_year_month_end_dt 	then q.quote_sk end) prior_ytd_bind_ct, 
+							count(case when q.bind_dt between 		 	   @year_begin_dt and 				   @end_dt 	then q.quote_sk end) 	   ytd_bind_ct, 
+							count(case when q.bind_dt between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt 	then q.quote_sk end) prior_qtd_bind_ct, 
+							count(case when q.bind_dt between 		 	@quarter_begin_dt and 				   @end_dt 	then q.quote_sk end) 	   qtd_bind_ct, 
+							count(case when q.bind_dt between    @prior_year_month_begin_dt and @prior_year_month_end_dt 	then q.quote_sk end) prior_mtd_bind_ct, 
+							count(case when q.bind_dt between 			  @month_begin_dt and 				   @end_dt 	then q.quote_sk end)	   mtd_bind_ct
 							--
 					from edw_core.tquote q 
 					inner join edw_core.tcustomer cust on cust.customer_id = q.customer_id

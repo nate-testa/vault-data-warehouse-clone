@@ -67,7 +67,18 @@ def generate_redzone_csv_file(**kwargs):
                 [coverage_b] AS coverage_b,
                 [coverage_c] AS coverage_c,
                 [coverage_d] AS coverage_d,
-                [gate_code] AS gate_code
+                [gate_code] AS gate_code,
+                [effective_dt],
+                [new_business_underwriter_nm],
+                [renewal_underwriter_nm],
+                [bdm_nm],
+                wildfire_protection_enrollment_in,
+                site_scheduling_contact_nm,
+                site_scheduling_phone_no,
+                site_scheduling_email,
+                emergency_contact_nm,
+                emergency_contact_phone_no,
+                emergency_contact_email
             FROM [edw_integration].[policy_redzone_feed]
             """
 

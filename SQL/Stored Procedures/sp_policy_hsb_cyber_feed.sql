@@ -97,10 +97,7 @@ BEGIN
                     ELSE hac.home_cyber_protection_coverage_deductible
                 END AS hcp_deductible_amt,
                 hc.dwelling_limit_amt as coverage_a_value,
-                CASE 
-                    WHEN REPLACE(hac.home_cyber_protection_coverage_limit_amt,',','') IN ('','0','25000','50000','100000') OR hac.home_cyber_protection_coverage_limit_amt IS NULL THEN '500'
-                    WHEN REPLACE(hac.home_cyber_protection_coverage_limit_amt,',','') IN ('250000','500000') THEN '1000'
-                END as hcp_limit_amt,
+                REPLACE(hac.home_cyber_protection_coverage_limit_amt,',','') as hcp_limit_amt,
                 '' as homeowner_policy_form_no,
                 '' as product_form_no,
                 '' as client_product_nm,

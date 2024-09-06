@@ -11,6 +11,8 @@ GO
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- 11/16/23		Architha Gudimalla				2. Updated the prior policy logic
 -- 03/22/24		Rushin Shah						3. Added close_reason_desc column
+-- 08/29/24		Yunus Mohammed					4. Added expiration_dt in update stmt
+-- 09/04/24		Yunus Mohammed					5. Added term_no
 -- ===================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -192,6 +194,13 @@ BEGIN
 				case when tmp1.ExternalSourceId is not null then 'Yes' else 'No' end  migrated_in,
 				prior_pol.policy_sk prior_pol_policy_sk,
 				tmp1.CloseReasonType as close_reason_desc
+				,'Term ' || case 
+								when charindex('-',tmp1.PolicyNumber) <> 0 then cast(substring(tmp1.PolicyNumber,charindex('-',tmp1.PolicyNumber)+1,len(tmp1.PolicyNumber)) as int)
+								when tmp1.PolicyNumber like '%A'		   then 1
+								when tmp1.PolicyNumber like '%B'		   then 2
+								when tmp1.PolicyNumber like '%C'		   then 3
+							 	else 1
+							end term_no
 				--select *
 			FROM 
 				edw_temp.tquote_temp1 tmp1
@@ -246,6 +255,7 @@ BEGIN
 		   ,migrated_in
 		   ,prior_term_policy_sk
 		   ,close_reason_desc
+		   ,term_no
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -279,11 +289,13 @@ BEGIN
 				,source.migrated_in
 				,source.prior_pol_policy_sk
 				,source.close_reason_desc
+				,source.term_no
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
         Target.Effective_dt					= Source.EffectiveDate,
+		Target.expiration_dt				= Source.ExpirationDate,
         Target.broker_id					= Source.BrokerId,
         Target.customer_id					= Source.customer_id,
         Target.risk_state_cd				= Source.RiskStateCode,

@@ -21,6 +21,7 @@ BEGIN
     EXECUTE sp_refreshview '[edw_core].[vmvr]';  
     EXECUTE sp_refreshview '[edw_core].[vnhtsa]';  
     EXECUTE sp_refreshview '[edw_core].[vtransunion]'; 
+    EXECUTE sp_refreshview '[edw_core].[vlc360]'; 
 
     SET NOCOUNT OFF;
 END

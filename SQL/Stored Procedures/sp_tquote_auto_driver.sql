@@ -12,6 +12,7 @@ GO
 ---------------------------------------------------------------------------------------------------
 -- 22/02/24		Hernnando Gonzalez		    1. Added new field lending_loss_amt
 -- 04/07/24		Hernnando Gonzalez		    2. Added new fields AAFFactor, AFBFactor, NAFFactor, CPAFactor, MINFactor, MAJFactor, SPDFactor
+-- 22/08/24		Hernnando Gonzalez		    3. Added auto_vehicle_sk
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_driver]
 AS
@@ -46,7 +47,7 @@ BEGIN
             [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
             [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
             [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor],
+            [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor], [PrimaryVehicleId],
 			source_system_sk
 		
         INTO [edw_temp].[tquote_auto_driver_temp1]
@@ -92,7 +93,7 @@ BEGIN
                     [PreventionCourseCompleted], [PreventionCourseCompletionDate], [TrainingCourseCompleted], [GoodStudent], [AwayAtSchool], [MilitaryPersonnelDiscount], 
                     [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
                     [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
-                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor]
+                    [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor], [PrimaryVehicleId]
                 )
 			) pivottable
 
@@ -163,6 +164,7 @@ BEGIN
             min_factor,
             maj_factor,
             sdp_factor,
+            primary_quote_auto_vehicle_sk,
             source_system_sk,
             create_ts,
             update_ts,
@@ -233,12 +235,19 @@ BEGIN
             t1.[MINFactor] as min_factor,
             t1.[MAJFactor] as maj_factor,
             t1.[SPDFactor] as sdp_factor,
+            taut.[quote_auto_vehicle_sk] as primary_quote_auto_vehicle_sk,
             t1.source_system_sk,
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk
         FROM 
             [edw_temp].[tquote_auto_driver_temp1] AS t1
+        LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acctvo
+		on acctvo.Id = TRY_CAST(t1.[PrimaryVehicleId] AS INT)
+        LEFT JOIN [edw_core].[tquote_auto_vehicle] taut
+            ON taut.vehicle_unique_id = acctvo.UniqueId
+            AND taut.quote_no = t1.quote_no
+            AND taut.effective_dt = t1.effective_dt
         ;
 
         --************End************

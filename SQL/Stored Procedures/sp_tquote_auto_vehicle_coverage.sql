@@ -21,6 +21,8 @@ GO
 -- 13/06/24     Hernando Gonzalez               11. Added NewlyPurchasedVehicleFinal
 -- 07/10/24     Alberto Almario                 12. added vehicle_unique_id 
 -- 08/07/24     Yunus Mohammed                  13. Updated logic to get garaging location
+-- 08/20/24     Yunus Mohammed                  14. Used garage_unique_id while assigning defualt garage location
+-- 08/30/24	    Architha Gudimalla				15. Added eff dt in merge-update
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
@@ -210,7 +212,7 @@ BEGIN
                             AND qh.transaction_seq_no = acct.number
                         LEFT JOIN [edw_core].[tquote_auto_vehicle] AS qav
                             ON qav.quote_no = acct.PolicyNumber
-                            AND qav.effective_dt = acct.effectivedate
+                            --AND qav.effective_dt = acct.effectivedate
                             AND qav.vehicle_unique_id = cast(acctvo.[UniqueId] as varchar(max))
                             -- AND qav.vehicle_no = acctvo.[Index]
                         WHERE
@@ -610,7 +612,7 @@ BEGIN
         left join [edw_stage].[AccountTransactionVersionObject] AS atvo ON atvo.id = t1.GaragingLocationId
         left join[edw_core].[tquote_auto_garage_location] AS gar 
 					ON gar.quote_no = t1.quote_no and gar.effective_dt = t1.effective_dt and gar.transaction_seq_no = t1.transaction_seq_no and gar.garage_unique_id = cast(atvo.UniqueId as varchar(max))
-        left join ( select rank() over (partition by quote_no, effective_dt, transaction_seq_no order by quote_no, effective_dt, transaction_seq_no,garage_location_no) rnk, *
+        left join ( select rank() over (partition by quote_no, effective_dt, transaction_seq_no order by quote_no, effective_dt, transaction_seq_no,garage_unique_id) rnk, *
 				from [edw_core].[tquote_auto_garage_location] 
 		) gar1 on gar1.rnk = 1 and  gar1.quote_no = t1.quote_no and gar1.effective_dt = t1.effective_dt and t1.transaction_seq_no = gar1.transaction_seq_no
         ;
