@@ -478,13 +478,6 @@ with DAG(
             autocommit=True,
         )
 
-        treconciliation_email = PythonOperator(
-            task_id='treconciliation_email',
-            python_callable=check_treconciliation_and_send_email,
-            provide_context=True,
-            dag=dag,
-        )
-
         send_policy_transaction_email = EmailOperator(
             task_id='send_policy_transaction_email',
             to=to_email,
@@ -492,7 +485,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(policy_transaction_group_items, 'All stored procedures executed successfully for all the Policy Transaction tables'),
         )
 
-        sp_tpolicy_transaction >> sp_tpolicy_transaction_update >> sp_thome_coverage_update >> sp_tpolicy_update_cancels >> sp_treconciliation >> treconciliation_email >> send_policy_transaction_email
+        sp_tpolicy_transaction >> sp_tpolicy_transaction_update >> sp_thome_coverage_update >> sp_tpolicy_update_cancels >> sp_treconciliation >> send_policy_transaction_email
 
 
     with TaskGroup("claim_group") as claim_group:
@@ -635,6 +628,13 @@ with DAG(
             autocommit=True,
         )
 
+        treconciliation_email = PythonOperator(
+            task_id='treconciliation_email',
+            python_callable=check_treconciliation_and_send_email,
+            provide_context=True,
+            dag=dag,
+        )
+
         send_claim_email = EmailOperator(
             task_id='send_claim_email',
             to=to_email,
@@ -642,7 +642,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(claim_group_items, 'All stored procedures executed successfully for all the Claim tables'),
         )
 
-        sp_update_ebao_stage >> sp_tcatastrophe >> sp_tcause_of_loss >> sp_tsub_cause_of_loss >> sp_tclaim >> sp_ebao_tclaim_onetime_datafix >> sp_tclaim_feature >> sp_tclaim_payment >> sp_tclaim_transaction >> sp_tclaim_note >> sp_tclaim_diary >> sp_update_tclaim >> sp_update_tclaim_feature >> sp_treconciliation_ebao >> sp_tclaim_litigation >> send_claim_email
+        sp_update_ebao_stage >> sp_tcatastrophe >> sp_tcause_of_loss >> sp_tsub_cause_of_loss >> sp_tclaim >> sp_ebao_tclaim_onetime_datafix >> sp_tclaim_feature >> sp_tclaim_payment >> sp_tclaim_transaction >> sp_tclaim_note >> sp_tclaim_diary >> sp_update_tclaim >> sp_update_tclaim_feature >> sp_treconciliation_ebao >> sp_tclaim_litigation >> treconciliation_email >> send_claim_email
 
 
     with TaskGroup("datamart_group") as datamart_group:
