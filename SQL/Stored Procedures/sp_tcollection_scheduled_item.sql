@@ -10,6 +10,7 @@
 -- 10/13/23		Architha Gudimalla				4. Added item no
 -- 10/13/23		Architha Gudimalla				5. Updated the parentid join to get the correct class type
 -- 11/02/23		Architha Gudimalla				6. Updated left joins to inner
+-- 11/09/24		Alberto Almario					7. Include Condo data
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_scheduled_item]
@@ -81,7 +82,7 @@ BEGIN
 				LEFT JOIN [edw_core].[tpolicy_history] his ON his.policy_no = acc.PolicyNumber and his.effective_dt = acc.EffectiveDate and his.transaction_seq_no = acc.policychangenumber
 				LEFT JOIN [edw_core].[tcollection_class_type] ct on ct.policy_no = acc.PolicyNumber and ct.effective_dt = acc.EffectiveDate and ct.transaction_seq_no = acc.policychangenumber and pid.value = ct.class_type 
 			WHERE
-				p.[Name] in ('Collections','Homeowners')
+				p.[Name] in ('Collections','Homeowners','Condo')
 				AND acct.ObjectType = 'CollectionClassScheduleItem'
 				AND p.ProductLine='PersonalLines' --20230717 added
 			) t

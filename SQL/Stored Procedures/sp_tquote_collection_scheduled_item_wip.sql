@@ -8,6 +8,7 @@
 -- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- 05/30/24		Yunus Mohammed					3. Added AccountObject.Id instead of Account.Id
 -- 22/08/24		Hernando Gonzalez				4. Remove effective date from the merge join
+-- 11/09/24		Alberto Almario					5. Include Condo data
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_scheduled_item_wip]
@@ -83,7 +84,7 @@ BEGIN
 						and tqcct.effective_dt=acc.EffectiveDate
 						and tqcct.transaction_seq_no = 0 and pid.value = tqcct.class_type 
 			WHERE
-				p.[Name] in ('Collections','Homeowners')
+				p.[Name] in ('Collections','Homeowners','Condo')
 				AND acco.ObjectType = 'CollectionClassScheduleItem'
 				AND p.ProductLine='PersonalLines' --20230717 added
 			) t
