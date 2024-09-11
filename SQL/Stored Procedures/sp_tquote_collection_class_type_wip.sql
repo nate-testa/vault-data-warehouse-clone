@@ -9,6 +9,7 @@
 -- 05/28/24		Yunus Mohammed					3. Added AccountObject.Id instead of Account.Id
 -- 05/29/24		Alberto Almario					4. Integrate Premium Adjustments data into EDW - Collection
 -- 22/08/24		Hernando Gonzalez				5. Remove effective date from the merge join
+-- 11/09/24		Alberto Almario					6. Include Condo data
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_class_type_wip]
@@ -141,7 +142,7 @@ BEGIN
 			WHERE NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where b.AccountId=acc.id)
 				AND GREATEST(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
 				AND acc.PolicyNumber IS NOT NULL
-				AND p.[Name] in ('Collections','Homeowners')
+				AND p.[Name] in ('Collections','Homeowners','Condo')
 				AND acco.ObjectType = 'CollectionClass'
 				AND p.ProductLine='PersonalLines' --20230717 added
 			) t

@@ -11,6 +11,7 @@
 -- 11/02/23		Architha Gudimalla				5. Updated left joins to inner
 -- 03/21/24		Architha Gudimalla				6. Added deleted flag
 -- 05/28/24		Alberto Almario					7. Integrate Premium Adjustments data into EDW - Collection
+-- 11/09/24		Alberto Almario					8. Include Condo data
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_class_type]
@@ -137,7 +138,7 @@ BEGIN
 				LEFT JOIN [edw_core].[tpolicy_history] his ON his.policy_no = acct.PolicyNumber AND his.effective_dt=acct.EffectiveDate AND his.transaction_seq_no = acct.policychangenumber
 			WHERE acct.[State] = 'ISSUED'
 				AND acct.IssuedDate > @last_source_extract_ts
-				AND p.[Name] in ('Collections','Homeowners')
+				AND p.[Name] in ('Collections','Homeowners','Condo')
 				AND acctvo.ObjectType = 'CollectionClass'
 				AND p.ProductLine='PersonalLines' --20230717 added
 			) t

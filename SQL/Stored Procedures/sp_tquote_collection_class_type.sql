@@ -15,6 +15,7 @@ GO
 -- 11/14/23		Sandeep Gundreddy				3. modified quote_collection_location_sk join
 -- 11/15/23		Sandeep Gundreddy				4. modified LEFT joins to INNER joins
 -- 05/28/24		Alberto Almario					5. Integrate Premium Adjustments data into EDW - Collection
+-- 11/09/24		Alberto Almario					6. Include Condo data
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_class_type]
@@ -149,7 +150,7 @@ BEGIN
 			WHERE acc.[Stage] IN ('QUOTE','POLICY')
 				AND acc.CreatedDate > @last_source_extract_ts
 				AND acc.PolicyNumber IS NOT NULL
-				AND p.[Name] in ('Collections','Homeowners')
+				AND p.[Name] in ('Collections','Homeowners','Condo')
 				AND acct.ObjectType = 'CollectionClass'
 				AND p.ProductLine='PersonalLines' --20230717 added
 			) t

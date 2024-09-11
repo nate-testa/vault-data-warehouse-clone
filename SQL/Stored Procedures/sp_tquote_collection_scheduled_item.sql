@@ -12,6 +12,7 @@ GO
 -----------------------------------------------------------------------------------------------------------
 -- 23/10/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 11/14/23		Sandeep Gundreddy			    2. modified  quote_collection_class_type_sk logic
+-- 11/09/24		Alberto Almario					3. Include Condo data
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_scheduled_item]
@@ -89,7 +90,7 @@ BEGIN
 						and tqcct.effective_dt=acc.EffectiveDate
 						and tqcct.transaction_seq_no = acc.number and pid.value = tqcct.class_type 
 			WHERE
-				p.[Name] in ('Collections','Homeowners')
+				p.[Name] in ('Collections','Homeowners','Condo')
 				AND acct.ObjectType = 'CollectionClassScheduleItem'
 				AND p.ProductLine='PersonalLines' --20230717 added
 			) t
