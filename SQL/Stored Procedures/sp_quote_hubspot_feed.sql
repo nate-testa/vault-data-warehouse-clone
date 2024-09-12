@@ -10,6 +10,7 @@
 -- 08/09/24		        Architha Gudimalla			5. Excluded test quotes
 -- 08/16/24		        Architha Gudimalla			6. Added Recampaign indicator
 -- 08/23/24		        Architha Gudimalla			7. Updated Recampaign indicator
+-- 09/12/24		        Architha Gudimalla			8. Added Primary home fields
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -107,7 +108,12 @@ BEGIN
             tcct.total_blanket_limit_amt,
             tcct.total_scheduled_limit_amt,
             q.create_ts,
-            q.update_ts
+            q.update_ts,
+			tqhac.primary_home_risk_address, 
+			tqhac.primary_home_policy_effective_dt, 
+			tqhac.primary_home_policy_expiration_dt, 
+			tqhac.primary_home_carrier_nm, 
+			tqhac.primary_home_coverage_a_threshold
 
         into edw_temp.quote_hubspot_feed_temp1
 
@@ -125,6 +131,7 @@ BEGIN
         left join edw_core.tquote_collection_location tqcl on tqcl.quote_no = q.quote_no
         left join edw_core.tquote_pel_location tqpl on tqpl.quote_history_sk = h.quote_history_sk and tqpl.primary_location_in = 'Yes'
         left join edw_core.tquote_home_coverage tqhc on tqhc.quote_history_sk=h.quote_history_sk
+        left JOIN edw_core.tquote_home_additional_coverage AS tqhac ON tqhc.quote_home_coverage_sk = tqhac.quote_home_coverage_sk	
         left join edw_core.tquote_auto_policy_coverage tqapc on tqapc.quote_history_sk=h.quote_history_sk
         left join edw_core.tquote_pel_coverage tqpc on tqpc.quote_history_sk=h.quote_history_sk
         left join quote_collection_class_type as tcct on tcct.quote_history_sk = h.quote_history_sk
@@ -136,11 +143,136 @@ BEGIN
 		and q.insured_nm not like '%test%' 
 		and cust.last_nm not like '%test%'
 		and cust.first_nm not like '%test%' 
+		and cust.customer_nm not like '%test%';
+
+        
+
+        --this is to pull in policies with pending non renewal = Y
+        DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp2;
+	
+         with policy_collection_class_type as
+        (
+            select  policy_history_sk,
+                    sum(blanket_limit_amt) as total_blanket_limit_amt,
+                    sum(scheduled_limit_amt) as total_scheduled_limit_amt
+            from
+            edw_core.tcollection_class_type
+            group by policy_history_sk
+        )
+        select
+            q.policy_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,
+            q.customer_id,
+            br.broker_id, br.broker_nm, br.broker_tier, br.national_agency_in,
+            bvt.team_member_nm as bdm_nm,cust.vip_in,i.first_nm as insured_first_nm, i.last_nm as insured_last_nm,
+            h.underwriter_nm, q.uw_company_nm,
+            CASE
+            WHEN pr.product_cd IN ('HO','CO') THEN tqhl.address_line_1
+            WHEN pr.product_cd = 'LUX'  THEN tqcl.address_line_1
+            WHEN pr.product_cd = 'PEL' THEN tqpl.address_line_1
+            END AS [risk_address_line_1], 
+            CASE
+            WHEN pr.product_cd IN ('HO','CO') THEN tqhl.address_line_2
+            WHEN pr.product_cd = 'LUX'  THEN tqcl.address_line_2
+            WHEN pr.product_cd = 'PEL' THEN tqpl.address_line_2
+            END as [risk_address_line_2], 
+            CASE
+            WHEN pr.product_cd IN ('HO','CO') THEN tqhl.city_nm
+            WHEN pr.product_cd = 'LUX'  THEN tqcl.city_nm
+            WHEN pr.product_cd = 'PEL' THEN tqpl.city_nm
+            END as risk_city_nm,
+            CASE
+            WHEN pr.product_cd IN ('HO','CO') THEN tqhl.state_cd
+            WHEN pr.product_cd = 'LUX'  THEN tqcl.state_cd
+            WHEN pr.product_cd = 'PEL' THEN tqpl.state_cd
+            END as risk_state_cd,
+            CASE
+            WHEN pr.product_cd IN ('HO','CO') THEN tqhl.zip_cd
+            WHEN pr.product_cd = 'LUX'  THEN tqcl.zip_cd
+            WHEN pr.product_cd = 'PEL' THEN tqpl.zip_cd
+            END [risk_zip_cd],
+            h.premium_amt,
+            q.policy_status,
+            (ISNULL(tqhc.prior_nonwater_claim_ct,0) + ISNULL(tqhc.prior_water_claim_ct,0)) as claim_ct,
+            (select top 1 note_desc from edw_core.tnote tn where tn.policy_no = q.policy_no order by coalesce(note_updated_ts,note_created_ts) desc) as note_desc,
+            'Y' AS recampaign_in,
+            NULL AS rol_on_lost_business,
+            NULL AS lost_company,
+            null as reason_policy_not_taken,
+            NULL AS construction,
+            tqhc.[dwelling_limit_amt],
+            tqhc.[contents_limit_amt], 
+            tqhc.[other_structures_limit_amt],
+            tqhc.[loss_of_use_limit_amt],
+            tqhc.total_insured_value_amt,
+            tqhc.[roof_covering],
+            tqhc.[roof_updated_year],
+            CASE WHEN q.product_cd in ('HO','CO') then h.insurance_score ELSE NULL END AS insurance_score,
+            tqapc.bodily_injury_limit_amt as auto_liability_limit_amt,
+            tqpc.pel_limit_amt,
+            case when total_blanket_limit_amt > 0 and total_scheduled_limit_amt > 0 then 'Both'
+            when total_blanket_limit_amt > 0 then 'Blanket'
+            when total_scheduled_limit_amt > 0 then 'Scheduled'
+            end as collections_coverage_type,
+            tcct.total_blanket_limit_amt,
+            tcct.total_scheduled_limit_amt,
+            q.create_ts,
+            q.update_ts,
+			tqhac.primary_home_risk_address, 
+			tqhac.primary_home_policy_effective_dt, 
+			tqhac.primary_home_policy_expiration_dt, 
+			tqhac.primary_home_carrier_nm, 
+			tqhac.primary_home_coverage_a_threshold 
+        into edw_temp.quote_hubspot_feed_temp2
+        
+        from edw_core.tpolicy q 
+		--left join edw_core.tquote q1 on q1.quote_no = q.policy_no
+        inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
+        inner join edw_core.tpolicy_history h on h.policy_sk = q.policy_sk and h.latest_transaction_in = 'Y'
+        left join edw_core.tpolicy_insured i	on i.policy_history_sk = h.policy_history_sk and i.primary_insured_in = 'Yes'
+        left join edw_core.tcustomer cust on cust.customer_id = q.customer_id
+        left join edw_core.tbroker br on br.broker_id = q.broker_id
+        left join edw_core.tbroker_vault_team bvt on br.broker_id = bvt.broker_id and bvt.product_nm = pr.product_nm
+                                                    and bvt.team_member_type = 'BusinessDevelopmentManager' and q.program_type = bvt.program_type
+                                                    and  isnull(bvt.state_cd,q.risk_state_cd)=q.risk_state_cd
+        left join edw_core.thome_location tqhl on tqhl.policy_no = q.policy_no
+        left join edw_core.tcollection_location tqcl on tqcl.policy_no = q.policy_no
+        left join edw_core.tpel_location tqpl on tqpl.policy_history_sk = h.policy_history_sk and tqpl.primary_location_in = 'Yes'
+        left join edw_core.thome_coverage tqhc on tqhc.policy_history_sk=h.policy_history_sk
+        left JOIN edw_core.thome_additional_coverage AS tqhac ON tqhc.home_coverage_sk = tqhac.home_coverage_sk	
+        left join edw_core.tauto_policy_coverage tqapc on tqapc.policy_history_sk=h.policy_history_sk
+        left join edw_core.tpel_coverage tqpc on tqpc.policy_history_sk=h.policy_history_sk
+        left join policy_collection_class_type as tcct on tcct.policy_history_sk = h.policy_history_sk
+
+        where   q.broker_id <> '0'
+        and q.insured_nm not like '%test%' 
+		and cust.last_nm not like '%test%'
+		and cust.first_nm not like '%test%' 
 		and cust.customer_nm not like '%test%'
+		and pending_non_renewal_in = 'Yes'
+		and q.expiration_dt between dateadd(YYYY,-1,dateadd(d,-1,cast(getdate() as date))) and dateadd(dd,90,dateadd(YYYY,-1,dateadd(d,-1,cast(getdate() as date))))
+		and (non_renewal_sub_note_desc like '%OTHER%' or
+			 non_renewal_sub_note_desc like '%Renewal not taken%' or
+			 non_renewal_sub_note_desc like '%Coverage no longer needed%' or
+			 non_renewal_sub_note_desc like '%Coverage placed elseware%');
+        --and q1.quote_no is null
+      
+        DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp3;
+        
+        select *
+        into edw_temp.quote_hubspot_feed_temp3
+        FROM
+        (
+            select *
+            from edw_temp.quote_hubspot_feed_temp1
+            union ALL
+            select *
+            from edw_temp.quote_hubspot_feed_temp2
+        ) a;
+        	
 
         -- Start Merge process
 		MERGE INTO [edw_integration].[quote_hubspot_feed] AS target
-        USING [edw_temp].[quote_hubspot_feed_temp1] AS source on target.quote_no = source.quote_no
+        USING [edw_temp].[quote_hubspot_feed_temp3] AS source on target.quote_no = source.quote_no
         WHEN NOT MATCHED BY Target THEN
         INSERT
         (
@@ -152,6 +284,11 @@ BEGIN
             auto_liability_limit_amt, pel_limit_amt, collections_coverage_type, total_blanket_limit_amt , total_scheduled_limit_amt ,producer_nm,
             create_ts, update_ts ,etl_audit_sk
             ,customer_id 
+            ,primary_home_risk_address
+			,primary_home_policy_effective_dt
+			,primary_home_policy_expiration_dt 
+			,primary_home_carrier_nm
+			,primary_home_coverage_a_threshold
         )
         VALUES
         (
@@ -163,6 +300,11 @@ BEGIN
             auto_liability_limit_amt, pel_limit_amt, collections_coverage_type, total_blanket_limit_amt , total_scheduled_limit_amt ,producer_nm,
             getdate(), getdate(), @etl_audit_sk 
             ,customer_id 
+            ,primary_home_risk_address
+			,primary_home_policy_effective_dt
+			,primary_home_policy_expiration_dt 
+			,primary_home_carrier_nm
+			,primary_home_coverage_a_threshold
         )
         WHEN MATCHED THEN UPDATE
         SET        
@@ -209,7 +351,12 @@ BEGIN
             [target].producer_nm =   [source].producer_nm,
             [target].update_ts	=	GETDATE(),
             [target].etl_audit_sk	=	@etl_audit_sk,
-            [target].customer_id	=	[source].customer_id
+            [target].customer_id	=	[source].customer_id,
+            [target].primary_home_risk_address	        =	[source].primary_home_risk_address,
+            [target].primary_home_policy_effective_dt	=	[source].primary_home_policy_effective_dt,
+            [target].primary_home_policy_expiration_dt	=	[source].primary_home_policy_expiration_dt,
+            [target].primary_home_carrier_nm	        =	[source].primary_home_carrier_nm,
+            [target].primary_home_coverage_a_threshold	=	[source].primary_home_coverage_a_threshold 
             ;
         
         SET @rows_affected=@@ROWCOUNT;
