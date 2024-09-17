@@ -355,7 +355,7 @@ BEGIN
                 aglf.policy_no, aglf.effective_dt, aglf.transaction_seq_no,
                 (
                     SELECT 
-                        CONCAT('L',agl.garage_location_no) as locationNo,
+                        CONCAT('L',ROW_NUMBER() OVER(PARTITION BY agl.policy_no, agl.effective_dt, agl.transaction_seq_no ORDER BY agl.garage_unique_id)) AS locationNo,
                         agl.garage_address_line1 as addr1,
                         agl.garage_address_city_nm as city,
                         agl.garage_address_state_cd as [state],
