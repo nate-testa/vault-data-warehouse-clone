@@ -3,13 +3,13 @@ import pendulum
 from datetime import timedelta
 from airflow import DAG
 from airflow.utils.task_group import TaskGroup
+from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.operators.mssql_operator import MsSqlOperator
 from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format
 from clue_property_txt_generation import generate_property_txt_file_and_encrypt, SFTPUploadCluePropertyFileOperator
-from clue_auto_txt_generation import generate_auto_txt_file_and_encrypt, SFTPUploadClueAutoFileOperator
 
 to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
@@ -45,6 +45,22 @@ def on_failure_callback(context):
     )
     email.execute(context)
 
+def property_executed_today(**kwargs):
+    sql_qry = """
+                SELECT process_nm, status_desc
+                FROM edw_core.tetl_audit
+                WHERE process_nm = 'sp_claim_clue_property_feed'
+                AND status_desc = 'Success'
+                AND CAST(process_start_ts AS DATE) = CAST(GETDATE() AS DATE)
+              """
+    mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
+    result = mssql_hook.get_first(sql_qry)
+    if result is not None:
+        result = 'skip_task'
+    else:
+        result = 'continue_task'
+
+    return result
 
 args = {
     'owner': 'airflow',
@@ -54,14 +70,14 @@ args = {
 }
 
 with DAG(
-    dag_id='vault_CLUE_daily_feed',
+    dag_id='vault_CLUE_property_daily_feed',
     catchup=False,
     max_active_runs=1,
     default_args=args,
     start_date=pendulum.datetime(2024, 3, 29, tz="America/New_York"),
     # schedule_interval='0 4 * * *', # At 04:00 every day
     schedule_interval=None,
-    tags=["CLUE dag", "vault"],
+    tags=["CLUE property dag", "vault"],
 ) as dag:
     
 
@@ -69,9 +85,27 @@ with DAG(
         task_id='start',
     )
 
-    
-    with TaskGroup("CLUE_Property_group") as CLUE_Property_group:
+    end = DummyOperator(
+        task_id='end',
+        trigger_rule='none_failed',
+    )
 
+    skip_task = DummyOperator(
+        task_id='skip_task',
+    )
+
+    continue_task = DummyOperator(
+        task_id='continue_task',
+    )
+
+    clue_property_executed_today = BranchPythonOperator(
+        task_id='clue_property_executed_today',
+        python_callable=property_executed_today,
+        dag=dag,
+    )
+
+    with TaskGroup("CLUE_Property_group") as CLUE_Property_group:
+        
         sp_claim_clue_property_feed = MsSqlOperator(
             task_id='sp_claim_clue_property_feed',
             mssql_conn_id='Vault_EDW',
@@ -102,39 +136,6 @@ with DAG(
         sp_claim_clue_property_feed >> generate_clue_property_txt_file >> upload_clue_property_txt_to_sftp >> send_clue_property_email
 
 
-    with TaskGroup("CLUE_Auto_group") as CLUE_Auto_group:
-
-        sp_claim_clue_auto_feed = MsSqlOperator(
-            task_id='sp_claim_clue_auto_feed',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_claim_clue_auto_feed",
-            database="vault_edw",
-            autocommit=True,
-        )
-
-        generate_clue_auto_txt_file = PythonOperator(
-            task_id='generate_clue_auto_txt_file',
-            python_callable=generate_auto_txt_file_and_encrypt,
-            dag=dag,
-        )
-
-        upload_clue_auto_txt_to_sftp = SFTPUploadClueAutoFileOperator(
-            task_id='upload_clue_auto_txt_to_sftp',
-            sftp_conn_id='Vault_CLUE_sftp',
-            dag=dag,
-        )
-
-        send_clue_auto_email = EmailOperator(
-            task_id='send_clue_auto_email',
-            to=to_email,
-            subject='Airflow - CLUE tables loaded successfully',
-            html_content=get_sp_success_data_HTML('sp_claim_clue_auto_feed', 'The Clue Auto process (e) finished successfully.'),
-        )
-
-        sp_claim_clue_auto_feed >> generate_clue_auto_txt_file >> upload_clue_auto_txt_to_sftp >> send_clue_auto_email
-
-    end = DummyOperator(
-        task_id='end',
-    )
-
-start >> CLUE_Property_group >> CLUE_Auto_group >> end
+start >> clue_property_executed_today >> [continue_task, skip_task] 
+skip_task >> end
+continue_task >> CLUE_Property_group >> end
