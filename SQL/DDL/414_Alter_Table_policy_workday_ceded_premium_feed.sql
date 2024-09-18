@@ -1,0 +1,1 @@
+ALTER TABLE edw_integration.policy_workday_ceded_premium_feed ADD gross_premium_amt decimal(15,2); 
