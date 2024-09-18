@@ -9,6 +9,8 @@
 -- 11/29/23		Yunus Mohammed				2. Update logic to get begin and end date
 -- 03/21/24		Yunus Mohammed				3. Added party_subtype_role_nm in output
 -- 07/31/24		Yunus Mohammed				4. Updated Loss (Expense A&O) to Loss (Expense - A&O)
+-- 09/19/24		Yunus Mohammed				5. Used sub_cause_of_loss_cd AS sub_cause_of_loss_code instead of sub_cause_of_loss_desc
+--												added throw in catch block
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_payment]
@@ -95,7 +97,7 @@ BEGIN
 			CAST(tasl.aslob_cd AS INT) AS aslob,
 			tpay.payment_sequence_no AS transaction_id,
 			@end_dt AS monthend,
-			tscl.sub_cause_of_loss_desc AS sub_cause_of_loss_code,
+			tscl.sub_cause_of_loss_cd AS sub_cause_of_loss_code,
 			tscl.sub_cause_of_loss_desc AS sub_cause_of_loss_name,
 			tc.claim_status AS claim_status,
 			tcf.claim_feature_status AS loss_status,
@@ -213,6 +215,7 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
