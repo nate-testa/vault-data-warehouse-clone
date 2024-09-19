@@ -8,6 +8,7 @@
 -- 08/20/24		Architha Gudimalla				3. Added underwriter  
 -- 08/21/24		Architha Gudimalla				4. Added effective_dt
 -- 09/04/24		Architha Gudimalla				5. Added enrollment_forms
+-- 09/19/24		Architha Gudimalla				6. Add producer email
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_policy_redzone_feed]
 AS
@@ -81,13 +82,16 @@ BEGIN
             @current_date AS create_ts,
             @current_date AS update_ts,
             @etl_audit_sk AS etl_audit_sk
+            , p.email producer_email
         INTO [edw_temp].[policy_redzone_feed_temp0]
         FROM edw_core.titem_inforce AS summ	
         INNER JOIN edw_core.tdate AS td ON td.date_sk = summ.month_sk		
         INNER JOIN edw_core.thome_coverage AS cov ON summ.coverage_sk = cov.home_coverage_sk
         left JOIN edw_core.thome_additional_coverage AS acov ON summ.coverage_sk = acov.home_coverage_sk		
         INNER JOIN edw_core.thome_location AS loc ON summ.item_sk = loc.home_location_sk		
-        INNER JOIN edw_core.tpolicy AS pol ON summ.policy_sk = pol.policy_sk		
+        INNER JOIN edw_core.tpolicy AS pol ON summ.policy_sk = pol.policy_sk
+        INNER JOIN edw_core.tpolicy_history AS ph ON summ.policy_history_sk = ph.policy_history_sk			
+        left JOIN edw_core.tproducer AS p ON p.producer_sk = ph.producer_sk			
         INNER JOIN edw_core.tproduct AS pr ON summ.product_sk = pr.product_sk		
         INNER JOIN edw_core.tbroker AS br ON summ.broker_sk = br.broker_sk		
         LEFT JOIN edw_core.tpolicy_insured AS ins ON summ.policy_history_sk = ins.policy_history_sk AND ins.primary_insured_in = 'Yes'		
@@ -151,10 +155,13 @@ BEGIN
             @current_date as create_ts,
             @current_date as update_ts,
             @etl_audit_sk as etl_audit_sk
+            , p.email producer_email
         INTO [edw_temp].[policy_redzone_feed_temp2]
         FROM coll_limit
         INNER JOIN edw_core.tcollection_location AS loc ON coll_limit.item_sk = loc.collection_location_sk
         INNER JOIN edw_core.tpolicy AS pol ON coll_limit.policy_sk = pol.policy_sk
+        INNER JOIN edw_core.tpolicy_history AS ph ON coll_limit.policy_history_sk = ph.policy_history_sk			
+        left JOIN edw_core.tproducer AS p ON p.producer_sk = ph.producer_sk	
         INNER JOIN edw_core.tbroker AS br ON coll_limit.broker_sk = br.broker_sk
         LEFT JOIN edw_core.tpolicy_insured AS ins ON coll_limit.policy_history_sk = ins.policy_history_sk AND ins.primary_insured_in = 'Yes';
 
@@ -227,6 +234,7 @@ BEGIN
             , emergency_contact_nm
             , emergency_contact_phone_no
             , emergency_contact_email
+            , producer_email
         )
         SELECT 
             unique_id, 
@@ -266,6 +274,7 @@ BEGIN
             , emergency_contact_nm
             , emergency_contact_phone_no
             , emergency_contact_email
+            , producer_email
         FROM [edw_temp].[policy_redzone_feed_temp1];
 
         --************End************
