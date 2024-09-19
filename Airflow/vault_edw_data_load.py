@@ -183,7 +183,8 @@ with DAG(
             'sp_thome_location',
             'sp_thome_coverage',
             'sp_tmortgagee',
-            'sp_thome_additional_coverage'
+            'sp_thome_additional_coverage',
+            'sp_thome_coverage_ext'
         ]
 
         operators = []
@@ -645,6 +646,12 @@ with DAG(
             dag=dag,
         )
 
+        exec_vault_CLUE_property_daily_feed = TriggerDagRunOperator(
+            task_id="exec_vault_CLUE_property_daily_feed",
+            trigger_dag_id="vault_CLUE_property_daily_feed",
+            dag=dag,
+        )
+
         send_integration_email = EmailOperator(
             task_id='send_integration_email',
             to=to_email,
@@ -652,7 +659,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
         )
 
-        operators[0] >> operators[1] >> operators[2] >> operators[3] >> operators[4] >> operators[5] >> operators[6] >> ivans_api_call >> operators[7] >> generate_livevox_file >> upload_livevox_file_to_sftp >> operators[8] >> operators[9] >> operators[10] >> exec_vault_redzone_feed >> send_integration_email
+        operators[0] >> operators[1] >> operators[2] >> operators[3] >> operators[4] >> operators[5] >> operators[6] >> ivans_api_call >> operators[7] >> generate_livevox_file >> upload_livevox_file_to_sftp >> operators[8] >> operators[9] >> operators[10] >> exec_vault_redzone_feed >> exec_vault_CLUE_property_daily_feed >> send_integration_email
 
     exec_vault_edw_data_load_quotes = TriggerDagRunOperator(
         task_id="exec_vault_edw_data_load_quotes",
