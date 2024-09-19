@@ -12,6 +12,7 @@
 -- 08/09/24		Archtha Gudimalla			6. Only included pols with eff dt >= 20230601
 -- 08/29/24		Archtha Gudimalla			7. Updated address to use from customer table to keep it 
 --											   consistent across all policies of the customer
+-- 09/19/24		Archtha Gudimalla			8. Updated to null wherever cust email is like '%papermail%'
 -- ====================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -43,7 +44,7 @@ BEGIN
 			pol.policy_no,
 			pi.first_nm,
 			pi.last_nm,
-			cust.email, 
+			case when cust.email like '%papermail%' then null else cust.email end email, 
 			pol.risk_state_cd,
 			pol.product_cd AS product_nm,
 			br.broker_id,
