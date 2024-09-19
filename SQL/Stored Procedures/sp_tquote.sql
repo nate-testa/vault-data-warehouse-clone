@@ -13,6 +13,7 @@ GO
 -- 03/22/24		Rushin Shah						3. Added close_reason_desc column
 -- 08/29/24		Yunus Mohammed					4. Added expiration_dt in update stmt
 -- 09/04/24		Yunus Mohammed					5. Added term_no
+-- 09/18/24		Architha Gudimalla		        6. Updated term_no
 -- ===================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -195,7 +196,7 @@ BEGIN
 				prior_pol.policy_sk prior_pol_policy_sk,
 				tmp1.CloseReasonType as close_reason_desc
 				,'Term ' || case 
-								when charindex('-',tmp1.PolicyNumber) <> 0 then cast(substring(tmp1.PolicyNumber,charindex('-',tmp1.PolicyNumber)+1,len(tmp1.PolicyNumber)) as int)
+								when charindex('-',tmp1.PolicyNumber) <> 0 then cast(substring(tmp1.PolicyNumber,charindex('-',tmp1.PolicyNumber)+1,len(tmp1.PolicyNumber)) as int)+1
 								when tmp1.PolicyNumber like '%A'		   then 1
 								when tmp1.PolicyNumber like '%B'		   then 2
 								when tmp1.PolicyNumber like '%C'		   then 3
