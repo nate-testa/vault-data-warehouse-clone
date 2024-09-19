@@ -8,7 +8,7 @@
 -- 08/20/24		Architha Gudimalla				3. Added underwriter  
 -- 08/21/24		Architha Gudimalla				4. Added effective_dt
 -- 09/04/24		Architha Gudimalla				5. Added enrollment_forms
--- 09/19/24		Architha Gudimalla				6. Add producer email
+-- 09/19/24		Architha Gudimalla				6. Changed broker email to producer email
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_policy_redzone_feed]
 AS
@@ -233,8 +233,7 @@ BEGIN
             , site_scheduling_email
             , emergency_contact_nm
             , emergency_contact_phone_no
-            , emergency_contact_email
-            , producer_email
+            , emergency_contact_email 
         )
         SELECT 
             unique_id, 
@@ -255,7 +254,7 @@ BEGIN
             broker_id, 
             broker_nm, 
             broker_phone_no, 
-            broker_email,
+            producer_email,
             dwelling_limit_amt, 
             other_structures_limit_amt, 
             contents_limit_amt, 
@@ -273,8 +272,7 @@ BEGIN
             , site_scheduling_email
             , emergency_contact_nm
             , emergency_contact_phone_no
-            , emergency_contact_email
-            , producer_email
+            , emergency_contact_email 
         FROM [edw_temp].[policy_redzone_feed_temp1];
 
         --************End************
