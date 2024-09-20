@@ -1,9 +1,9 @@
-﻿-- ======================================================================================================
+﻿-- ==================================================================================================================
 -- Author:		Hernando Gonzalez
 -- Description: This stored procedure insert info related to Hubspot - Customer
---------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
---------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------
 -- 07/17/24		Hernando Gonzalez			1. Created this procedure 
 -- 07/23/24		Architha Gudimalla			2. Updated to use data from tpolicy_insured
 -- 07/29/24		Architha Gudimalla			3. Corrections after first runs
@@ -13,7 +13,8 @@
 -- 08/29/24		Archtha Gudimalla			7. Updated address to use from customer table to keep it 
 --											   consistent across all policies of the customer
 -- 09/19/24		Archtha Gudimalla			8. Updated to null wherever cust email is like '%papermail%'
--- ====================================================================================================== 
+-- 09/19/24		Archtha Gudimalla			9. Updated to null wherever cust email is like '%@%@%' (has two email)
+-- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
 AS
@@ -44,7 +45,7 @@ BEGIN
 			pol.policy_no,
 			pi.first_nm,
 			pi.last_nm,
-			case when cust.email like '%papermail%' then null else cust.email end email, 
+			case when cust.email like '%papermail%' or cust.email like '%@%@%' then null else cust.email end email, 
 			pol.risk_state_cd,
 			pol.product_cd AS product_nm,
 			br.broker_id,
