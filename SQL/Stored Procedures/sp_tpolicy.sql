@@ -27,6 +27,7 @@ GO
 -- 12/11/23		Architha Gudimalla		        16. Updated policy_term
 -- 03/21/24		Architha Gudimalla		        17. Added rewritten policy as prior policy no and rewritten_in
 -- 09/05/24		Architha Gudimalla		        18. Added term_no
+-- 09/18/24		Architha Gudimalla		        19. Updated term_no
 -- ======================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tpolicy]
@@ -179,7 +180,7 @@ BEGIN
 				--,case when acc_rw.PolicyNumber is not null then 'Yes' else 'No' end rewritten_in
 				,case when acc.isrewritten = 1 then 'Yes' else 'No' end rewritten_in
 				,'Term ' || case 
-								when charindex('-',tmp1.PolicyNumber) <> 0 then cast(substring(tmp1.PolicyNumber,charindex('-',tmp1.PolicyNumber)+1,len(tmp1.PolicyNumber)) as int)
+								when charindex('-',tmp1.PolicyNumber) <> 0 then cast(substring(tmp1.PolicyNumber,charindex('-',tmp1.PolicyNumber)+1,len(tmp1.PolicyNumber)) as int) + 1
 								when tmp1.PolicyNumber like '%A'		   then 1
 								when tmp1.PolicyNumber like '%B'		   then 2
 								when tmp1.PolicyNumber like '%C'		   then 3

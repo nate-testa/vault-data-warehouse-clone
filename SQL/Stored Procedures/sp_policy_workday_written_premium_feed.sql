@@ -10,6 +10,8 @@
 -- 12/05/23		Yunus Mohammed				3. Removed distinct and added contribcutoffdate date
 -- 03/20/24		Yunus Mohammed				4. Added condo in aslob
 -- 06/14/24		Yunus Mohammed				5. Updated aslob logic for commission query
+-- 09/18/24		Yunus Mohammed				6. Added Throw in catch block and used 
+--												Used tinternal_coverage for finacial category for commission part
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
@@ -168,8 +170,8 @@ BEGIN
 				WHEN 'LUX' THEN 'LUX Commission'
 				END
 				as subcategory,
-				-1 as financial_category_id,
-				'Commission Amount' AS [financial_category_name],
+				tic.internal_coverage_sk as financial_category_id,
+				tic.internal_coverage_desc AS [financial_category_name],
 				tic.aslob_cd AS [aslob],
 				tpt.commission_amt AS premium_amt
 				FROM
@@ -261,6 +263,7 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END

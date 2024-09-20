@@ -8,6 +8,7 @@
 -- 09/13/23		Yunus Mohammed				1. Created the procedure
 -- 11/15/23		Yunus Mohammed				2. Updated logic for cancelled and expired policies  
 -- 03/20/24		Yunus Mohammed				3. Included condo policies
+-- 09/18/24		Yunus Mohammed				4. Added gross premium and added Throw in catch block
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_ceded_premium_feed]
@@ -64,7 +65,9 @@ BEGIN
 				SELECT
 					accounting_date,policy_image_id,NULL AS policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
 					effective_date,expiration_date,transaction_type,producer_code,agency_name,NULL AS number_of_installments,insured_name,
-					[address],county,city,risk_state,zip,fire_protection,financial_category_id,coveragename,SUM(premium_amt) AS amount,NULL AS deleteddate,NULL AS contribcutoffdate,
+					[address],county,city,risk_state,zip,fire_protection,financial_category_id,coveragename,SUM(premium_amt) AS amount,
+					SUM(gross_premium_amt) as gross_premium_amt,
+					NULL AS deleteddate,NULL AS contribcutoffdate,
 					GETDATE() AS extraction_time,GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk as etl_audit_sk
 				FROM
 				(
@@ -96,7 +99,8 @@ BEGIN
 					NULL AS fire_protection,
 					tic.internal_coverage_sk AS financial_category_id,
 					tic.internal_coverage_desc AS [coveragename],
-					tpt.ceded_premium_amt AS premium_amt
+					tpt.ceded_premium_amt AS premium_amt,
+					tpt.premium_amt as gross_premium_amt
 				FROM
 					edw_core.tpolicy_transaction tpt
 					INNER JOIN edw_core.tpolicy tp on tp.policy_sk=tpt.policy_sk
@@ -158,6 +162,7 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END

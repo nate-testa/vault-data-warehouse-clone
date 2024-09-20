@@ -113,7 +113,9 @@ with DAG(
             'sp_tquote_home_coverage_wip',
             'sp_tquote_home_coverage',
             'sp_tquote_home_additional_coverage_wip',
-            'sp_tquote_home_additional_coverage'
+            'sp_tquote_home_additional_coverage',
+            'sp_tquote_home_coverage_ext_wip',
+            'sp_tquote_home_coverage_ext'
         ]
 
         operators = []

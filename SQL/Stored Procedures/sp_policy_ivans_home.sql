@@ -10,6 +10,7 @@ GO
 -- Description: This procedures insert and update info related to IVANS Home
 -- 04/05/2024                      sandeep Gundreddy                             repush to Git Repo
 -- 04/09/2024					   Rushin Shah									Update SP to identify delta based on last_source_extract_ts
+-- 18/09/2024					   Hernando Gonzalez							Fixed Earthquake Coverage
 -- ========================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_home]
@@ -96,7 +97,7 @@ BEGIN
 						        THEN CAST(hac.home_systems_protection_limit_amt as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Cyber Protection'
 						        THEN CAST(hac.home_cyber_protection_coverage_limit_amt as NVARCHAR(255))
-						    WHEN ic.internal_coverage_cd = 'Earthquake Coverage Extended for Loss Assessment'
+						    WHEN ic.internal_coverage_cd = 'Earthquake Coverage Extended for Loss Assessment'  or ic.internal_coverage_cd = 'Earthquake Coverage Extended'
 						        THEN CAST(hac.earthquake_coverage_extension_loss_assessment_limit_amt as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Fungi Liability Extension'
 						        THEN CAST(hac.fungi_bacteria_increase_limit as NVARCHAR(255))
@@ -127,8 +128,12 @@ BEGIN
 						        THEN CAST(hc.aop_deductible as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Cyber Protection'
 						        THEN CAST(hac.home_cyber_protection_coverage_deductible as NVARCHAR(255))
-						    WHEN ic.internal_coverage_cd = 'Earthquake Coverage Extended for Loss Assessment'
-						        THEN CAST(hac.earthquake_coverage_extension_loss_assessment_limit_amt as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Earthquake Coverage Extended for Loss Assessment'  or ic.internal_coverage_cd = 'Earthquake Coverage Extended'
+								THEN CAST(
+									COALESCE(
+									NULLIF(LTRIM(RTRIM(hac.earthquake_coverage_extension_deductible)), ''), 
+									NULLIF(LTRIM(RTRIM(hac.earthquake_endorsement_deductible)), '')
+								) AS NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Hurricane'
 						        THEN CAST(hc.wind_derived_deductible as NVARCHAR(255))
 							WHEN ic.internal_coverage_cd = 'Wind/Hail'
