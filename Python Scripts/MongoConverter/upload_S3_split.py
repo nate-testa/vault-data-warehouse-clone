@@ -4,6 +4,7 @@ import sys
 import os
 import configparser
 
+# Load config from local
 def load_config():
     """Load configuration from a file."""
     config = configparser.ConfigParser()
