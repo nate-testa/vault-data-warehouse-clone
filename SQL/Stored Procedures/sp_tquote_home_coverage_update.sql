@@ -11,6 +11,7 @@ GO
 -- 05/17/23		Architha Gudimalla		    2. Updated logic for loss_of_use_derived_pc
 -- 06/14/24		Yunus Mohammed 				3. Removed error for rate_on_line
 -- 08/04/24		Architha Gudimalla		    4. Updated loss_of_use_amt to float
+-- 09/23/24		Architha Gudimalla		    5. Updated logic for rate_on_line
 -- =============================================================================================================== 
 
 
@@ -136,7 +137,8 @@ BEGIN
 		), tr_run_total as
 		(
 			select quote_no, effective_Dt, transaction_seq_no, quote_sk, annual_premium_amt
-				, SUM(annual_premium_amt ) OVER (partition by tr.quote_sk ORDER BY tr.transaction_seq_no ASC) prm_run_total
+				--, SUM(annual_premium_amt ) OVER (partition by tr.quote_sk ORDER BY tr.transaction_seq_no ASC) prm_run_total
+				,   SUM(annual_premium_amt ) OVER (partition by tr.quote_sk,tr.transaction_seq_no) prm_run_total
 			from  tr
 		)
 		select hc.*,  annual_premium_amt, prm_run_total, round(prm_run_total*100/total_insured_value_amt,2) rate_on_line

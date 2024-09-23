@@ -17,6 +17,7 @@ GO
 -- 05/28/24		Architha Gudimalla				6. Updated the label for another long label for LC360
 -- 06/11/24		Architha Gudimalla				7. Updated the label for another long label for LC360
 -- 06/12/24		Architha Gudimalla				8. Excluded null label for LC360
+-- 09/21/24		Architha Gudimalla				9. Updated the label for another long label for LC360
 -- ======================================================================================================================= 
 
 CREATE OR ALTER       PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
@@ -75,12 +76,13 @@ BEGIN
 			from
 			(
 				select  accr.source, accr.reporttype, accri.Category, accri.[Group], 
-						replace(replace(replace(replace(replace(replace(replace(replace(label,
+						replace(replace(replace(replace(replace(replace(replace(replace(replace(label,
 						',',''),
 						'Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)','Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)'),
 						' Toilet Supply Lines That Have Plastic B-nut Connectors and',' Toilet Lines having Plastic B-nut Conn and'),
 						'when construction starts on second floor','construction on 2nd fl'),
 						'Water Leak Detection Alarm Systems','Water Leak Detectn Alarm Sys'),
+						'Bar sink cabinet next to icemaker. Water in and under cab. Client called plumber while I was there.','Bar sink cab next to icemaker. Water in, under cab. Client called plumber while I was there.'),
 						'[',' - '),
 						']',''),
 						'''','') Label, 
@@ -134,8 +136,8 @@ BEGIN
 					+ ' select	 acc.policynumber, acc.effectivedate, 
 												GREATEST(accri.UpdatedDate,accri.CreatedDate) UpdatedDate ,  accri.CreatedDate, 
 												accr.dateordered, accr.dateTimeRecieved, accr.dateTimeCompleted, accr.TransactionStatus, accr.[source], accr.reporttype, 
-												case when accri.Category = accri.[Group] or accri.Label = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(replace(replace(replace(replace(accri.label,''Water Leak Detection Alarm Systems'',''Water Leak Detectn Alarm Sys''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
-													when accri.Category <> accri.[Group] then concat(accri.Category, '' - '', accri.[Group], '' - '',replace(replace(replace(replace(replace(replace(replace(accri.label,''Water Leak Detection Alarm Systems'',''Water Leak Detectn Alarm Sys''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
+												case when accri.Category = accri.[Group] or accri.Label = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(replace(replace(replace(replace(replace(accri.label,''Water Leak Detection Alarm Systems'',''Water Leak Detectn Alarm Sys''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''Bar sink cabinet next to icemaker. Water in and under cab. Client called plumber while I was there.'',''Bar sink cab next to icemaker. Water in, under cab. Client called plumber while I was there.''),''['','' - ''),'']'',''''),'''''''',''''))
+													when accri.Category <> accri.[Group] then concat(accri.Category, '' - '', accri.[Group], '' - '',replace(replace(replace(replace(replace(replace(replace(replace(accri.label,''Water Leak Detection Alarm Systems'',''Water Leak Detectn Alarm Sys''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''Bar sink cabinet next to icemaker. Water in and under cab. Client called plumber while I was there.'',''Bar sink cab next to icemaker. Water in, under cab. Client called plumber while I was there.''),''['','' - ''),'']'',''''),'''''''',''''))
 													else ''''
 												end field_name,accri.[Value] 
 										from	edw_stage.[Account] acc, edw_stage.[AccountReport] accr, edw_stage.AccountReportItem accri
