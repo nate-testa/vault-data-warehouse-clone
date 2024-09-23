@@ -11,6 +11,7 @@
 -- 08/16/24		        Architha Gudimalla			6. Added Recampaign indicator
 -- 08/23/24		        Architha Gudimalla			7. Updated Recampaign indicator
 -- 09/12/24		        Architha Gudimalla			8. Added Primary home fields
+-- 09/21/24		        Architha Gudimalla			9. Added cast to null cols
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -195,10 +196,10 @@ BEGIN
             (ISNULL(tqhc.prior_nonwater_claim_ct,0) + ISNULL(tqhc.prior_water_claim_ct,0)) as claim_ct,
             (select top 1 note_desc from edw_core.tnote tn where tn.policy_no = q.policy_no order by coalesce(note_updated_ts,note_created_ts) desc) as note_desc,
             'Y' AS recampaign_in,
-            NULL AS rol_on_lost_business,
-            NULL AS lost_company,
-            null as reason_policy_not_taken,
-            NULL AS construction,
+            cast(null as varchar) AS rol_on_lost_business,
+            cast(null as varchar) AS lost_company,
+            cast(null as varchar) as reason_policy_not_taken,
+            cast(null as varchar) AS construction,
             tqhc.[dwelling_limit_amt],
             tqhc.[contents_limit_amt], 
             tqhc.[other_structures_limit_amt],
