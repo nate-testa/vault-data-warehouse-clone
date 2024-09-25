@@ -7,6 +7,7 @@
 -- 07/29/24		        Yunus Mohammed				1. Created this procedure
 -- 08/09/24		        Archtha Gudimalla			2. Excluded test brokers
 -- 08/22/24		        Archtha Gudimalla			3. Added open submission ct
+-- 09/25/24		        Archtha Gudimalla			4. Added commission tier and hit ratio
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -56,12 +57,49 @@ BEGIN
             sum(policy_renewal_offered_ct) as offered_renewal_ct,
             sum(policy_renewal_offered_over_50k_ct) as offered_renewal_over50k_ct,
             sum(inforce_ct) as inforce_ct,
-            sum(tbs.inforce_net_premium_amt) as inforce_premium_amt
+            sum(tbs.inforce_net_premium_amt) as inforce_premium_amt,
+            sum(tbs.ytd_new_business_ct) as ytd_new_business_ct,
+            sum(tbs.ytd_quote_ct) as ytd_quote_ct
             FROM
             edw_core.tbroker_summary tbs
             where
                 month_sk = (select date_sk from edw_core.tdate where actual_dt =EOMONTH(GETDATE()))
             group by broker_sk
+        ),
+        comm_tier AS
+        (
+            select broker_id, 
+                    replace(replace(replace(replace(replace(replace(min(case when rnk = '999' then broker_tier else rnk end)
+                        ,'1_Platinum','Platinum')
+                        ,'2_Gold','Gold')
+                        ,'3_National','National')
+                        ,'4_Wholesaler','Wholesaler')
+                        ,'5_A&WINS','A&WINS')
+                        ,'6_Burns','Burns') as
+                        c_tier
+            from
+            (
+                select  broker_id, max(broker_tier) broker_tier, 
+                        case when broker_tier like '%Platinum%' then '1_Platinum' 
+                            when broker_tier like '%Gold%' then '2_Gold' 
+                            when broker_tier like '%National%' then '3_National'
+                            when broker_tier like '%Wholesaler%' then '4_Wholesaler' 
+                            when broker_tier like '%WINS%' then '5_A&WINS' 
+                            when broker_tier like '%Burns%' then '6_Burns' 
+                            else '999'
+                        end rnk  
+                from edw_core.tbroker_commission 
+                group by broker_id, 
+                        case when broker_tier like '%Platinum%' then '1_Platinum' 
+                            when broker_tier like '%Gold%' then '2_Gold' 
+                            when broker_tier like '%National%' then '3_National'
+                            when broker_tier like '%Wholesaler%' then '4_Wholesaler' 
+                            when broker_tier like '%WINS%' then '5_A&WINS' 
+                            when broker_tier like '%Burns%' then '6_Burns' 
+                            else '999'
+                        end
+            ) a
+            group by broker_id 
         )
         SELECT
         tb.broker_id,
@@ -95,11 +133,11 @@ BEGIN
         bs.ytd_bind_ct,
         bs.ytd_submission_ct,
         bs.last30_days_submission_ct,
-        null as hit_ratio,
+        case when bs.ytd_quote_ct = 0 then 0 else round(100*cast(bs.ytd_new_business_ct as float)/bs.ytd_quote_ct,2) end as hit_ratio,
         bs.offered_renewal_ct,
         bs.offered_renewal_over50k_ct,
         bs.inforce_ct as inforce_policy_ct,
-        null as commission_tier, 
+        ct.c_tier as commission_tier, 
         bs.inforce_premium_amt,
         null as target_yoy_inforce_premium_pc,
         null as target_yoy_ytd_nb_prem_pc,
@@ -109,7 +147,8 @@ BEGIN
         FROM
         edw_core.tbroker tb
         left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
-        inner join br_summ as bs on bs.broker_sk = tb.broker_sk
+        inner join br_summ as bs    on bs.broker_sk = tb.broker_sk
+        left join comm_tier as ct   on ct.broker_id = tb.broker_id
         where tb.broker_nm not like '%test%'
 
         truncate table edw_integration.broker_hubspot_feed       

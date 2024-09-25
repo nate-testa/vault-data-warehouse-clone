@@ -14,6 +14,7 @@
 --											   consistent across all policies of the customer
 -- 09/19/24		Archtha Gudimalla			8. Updated to null wherever cust email is like '%papermail%'
 -- 09/19/24		Archtha Gudimalla			9. Updated to null wherever cust email is like '%@%@%' (has two email)
+-- 09/25/24		Archtha Gudimalla			10. Added producer id and name
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -61,7 +62,9 @@ BEGIN
 			cust.mailing_address_city_nm, 
 			cust.mailing_address_state_cd, 
 			cust.mailing_address_zip_cd,
-			pol.customer_id
+			pol.customer_id,
+			ph.producer_nm,
+			p.producer_id
 		INTO edw_temp.customer_hubspot_feed_temp1
 		FROM edw_core.tpolicy pol		
 		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
@@ -74,6 +77,7 @@ BEGIN
 													AND isnull(bvt.state_cd,pol.risk_state_cd)=pol.risk_state_cd
 		INNER join edw_core.tpolicy_history ph on ph.policy_sk = pol.policy_sk and ph.latest_transaction_in = 'Y'
 		INNER join edw_core.tpolicy_insured pi on pi.policy_history_sk = ph.policy_history_sk and pi.primary_insured_in = 'Yes'
+		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk
 		WHERE greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
 		and pol.insured_nm not like '%test%' 
 		and cust.last_nm not like '%test%'
@@ -105,6 +109,8 @@ BEGIN
 				,mailing_address_state_cd
 				,mailing_address_zip_cd
 				,customer_id
+			    ,producer_nm
+				,producer_id
 				FROM edw_temp.customer_hubspot_feed_temp1
 		) as SOURCE
 		ON Source.policy_no = Target.policy_no
@@ -132,6 +138,8 @@ BEGIN
 			,mailing_address_state_cd
 			,mailing_address_zip_cd
 			,customer_id
+			,producer_nm
+			,producer_id
 			)
 		VALUES (source.policy_no,
 				source.first_nm,
@@ -153,7 +161,9 @@ BEGIN
 				,source.mailing_address_city_nm
 				,source.mailing_address_state_cd
 				,source.mailing_address_zip_cd
-				,source.customer_id)
+				,source.customer_id
+				,source.producer_nm
+				,source.producer_id)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
