@@ -186,6 +186,8 @@ BEGIN
             ,target.mailing_address_state_cd = source.mailing_address_state_cd
             ,target.mailing_address_zip_cd 	= source.mailing_address_zip_cd
             ,target.customer_id 			= source.customer_id
+            ,target.producer_nm 			= source.producer_nm
+            ,target.producer_id 			= source.producer_id
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
