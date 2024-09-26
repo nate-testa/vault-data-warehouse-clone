@@ -9,6 +9,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 08/30/24		        Architha Gudimalla			    1. Created this procedure   
+-- 09/24/24		        Architha Gudimalla			    2. Added UniqueId, ObjectGroupIdentifier 
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_thome_coverage_ext 
@@ -55,9 +56,8 @@ BEGIN
                     acct.IssuedDate, acct.PolicyNumber as policy_no, acct.EffectiveDate as effective_dt,  
                      acct.PolicyChangeNumber as transaction_seq_no, 
                     acctvo.ObjectType as label, acctvof.Field, acctvof.Value 
-                
+                    , acctvo.UniqueId, acctvo.ObjectGroupIdentifier                
                 INTO edw_temp.thome_coverage_ext_temp1
-
                 FROM edw_stage.AccountTransaction acct
                 INNER JOIN edw_stage.Product AS p on p.Id = acct.ProductId
                 INNER JOIN edw_stage.AccountTransactionVersion AS acctv ON acctv.AccountTransactionId = acct.Id
@@ -88,6 +88,8 @@ BEGIN
             create_ts,
             update_ts,
             etl_audit_sk 
+            ,UniqueId
+            ,ObjectGroupIdentifier         
 		)
         SELECT 
             t1.policy_no,
@@ -99,6 +101,8 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk 
+            ,UniqueId
+            ,ObjectGroupIdentifier         
         FROM 
             edw_temp.thome_coverage_ext_temp1 AS t1
         ;
