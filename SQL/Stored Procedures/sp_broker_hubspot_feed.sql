@@ -1,14 +1,16 @@
--- =================================================================================================
+-- ===============================================================================================================================
 -- Author:		Yunus Mohammed
 -- Description: This procedures inserts and updates broker hubspot data
------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
 -- Change date          |Author						|	Change Description
------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
 -- 07/29/24		        Yunus Mohammed				1. Created this procedure
 -- 08/09/24		        Archtha Gudimalla			2. Excluded test brokers
 -- 08/22/24		        Archtha Gudimalla			3. Added open submission ct
 -- 09/25/24		        Archtha Gudimalla			4. Added commission tier and hit ratio
--- ======================================================================================================== 
+-- 09/30/24		        Archtha Gudimalla			5. Updated broker summary join to left 
+--                                                     (to show all brokers and not just the ones that have submission and quote)
+-- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
 
@@ -147,7 +149,7 @@ BEGIN
         FROM
         edw_core.tbroker tb
         left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
-        inner join br_summ as bs    on bs.broker_sk = tb.broker_sk
+        left join br_summ as bs    on bs.broker_sk = tb.broker_sk
         left join comm_tier as ct   on ct.broker_id = tb.broker_id
         where tb.broker_nm not like '%test%'
 
