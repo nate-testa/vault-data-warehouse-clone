@@ -170,53 +170,49 @@ def process_sftp_files():
     """
     Function to process call detail report files from SFTP and load them into EDW.
     """
+    
+    # Create local folder path
+    create_directory_if_not_exists(LOCAL_FOLDER_PATH)
 
-    if ENVIRONMENT == 'PRODUCTION':
+    # vacuum to tmp folder
+    delete_old_files(LOCAL_FOLDER_PATH,30)
 
-        # Create local folder path
-        create_directory_if_not_exists(LOCAL_FOLDER_PATH)
+    # SFTP Connection
+    sftp_conn_id = 'Vault_livevox_sftp_reports'
+    sftp_hook = BaseHook.get_connection(sftp_conn_id)
+    sftp_username = sftp_hook.login
+    sftp_password = sftp_hook.password
+    sftp_path = '/ftpOut/'
 
-        # vacuum to tmp folder
-        delete_old_files(LOCAL_FOLDER_PATH,30)
+    # Azure SQL Connection
+    mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
 
-        # SFTP Connection
-        sftp_conn_id = 'Vault_livevox_sftp_reports'
-        sftp_hook = BaseHook.get_connection(sftp_conn_id)
-        sftp_username = sftp_hook.login
-        sftp_password = sftp_hook.password
-        sftp_path = '/ftpOut/'
+    # Get the last loaded date
+    last_loaded_date = mssql_hook.get_first("SELECT edw_core.fn_get_last_source_extract_ts('py_call_detail_report') as last_loaded_date")[0]
+    print(f"*** Last loaded date: {last_loaded_date}")
 
-        # Azure SQL Connection
-        mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
+    # Filter files on SFTP and sort by modification date
+    print(f"*** Start Loading Files")
+    with pysftp.Connection(sftp_hook.host, username=sftp_username, password=sftp_password) as sftp:
+        file_list = sftp.listdir_attr(sftp_path)
+        file_list.sort(key=lambda x: x.st_mtime, reverse=False)  # Sort by modification date
+        for file_attr in file_list:
+            file_name = file_attr.filename
+            if 'Vault_Call_Detail_Report_' in file_name and file_name.endswith('.txt'):
+                file_date = datetime.fromtimestamp(file_attr.st_mtime)  # Convert timestamp to datetime
+                if file_date > last_loaded_date:    
+                    # Process files and load into Azure SQL
+                    print(f">>> Loading File: {file_name}")
+                    # Download file
+                    local_file_path = f'{LOCAL_FOLDER_PATH}/{file_name}'
+                    sftp.get(sftp_path + file_name, local_file_path)
 
-        # Get the last loaded date
-        last_loaded_date = mssql_hook.get_first("SELECT edw_core.fn_get_last_source_extract_ts('py_call_detail_report') as last_loaded_date")[0]
-        print(f"*** Last loaded date: {last_loaded_date}")
+                    # Load file into Azure SQL
+                    load_file_into_tbl(local_file_path)
 
-        # Filter files on SFTP and sort by modification date
-        print(f"*** Start Loading Files")
-        with pysftp.Connection(sftp_hook.host, username=sftp_username, password=sftp_password) as sftp:
-            file_list = sftp.listdir_attr(sftp_path)
-            file_list.sort(key=lambda x: x.st_mtime, reverse=False)  # Sort by modification date
-            for file_attr in file_list:
-                file_name = file_attr.filename
-                if 'Vault_Call_Detail_Report_' in file_name and file_name.endswith('.txt'):
-                    file_date = datetime.fromtimestamp(file_attr.st_mtime)  # Convert timestamp to datetime
-                    if file_date > last_loaded_date:    
-                        # Process files and load into Azure SQL
-                        print(f">>> Loading File: {file_name}")
-                        # Download file
-                        local_file_path = f'{LOCAL_FOLDER_PATH}/{file_name}'
-                        sftp.get(sftp_path + file_name, local_file_path)
-
-                        # Load file into Azure SQL
-                        load_file_into_tbl(local_file_path)
-
-                        # Update date in control table
-                        mssql_hook.run(f"UPDATE edw_core.tetl_control SET last_source_extract_ts = '{file_date}' WHERE process_nm = 'py_call_detail_report'")
-                        print(f"File Loaded <<<")
-    else:
-        print(f"**** Environment: [{ENVIRONMENT}] is not authorized to process livevox call_detail_report files.")
+                    # Update date in control table
+                    mssql_hook.run(f"UPDATE edw_core.tetl_control SET last_source_extract_ts = '{file_date}' WHERE process_nm = 'py_call_detail_report'")
+                    print(f"File Loaded <<<")
 
 
 
