@@ -1,4 +1,4 @@
-CREATE TABLE [edw_integration].[create_policy_search_snapsheet_api]
+CREATE TABLE [edw_integration].[claim_policy_search_snapsheet_api]
 (
 	[policyNumber] [varchar](255) NOT NULL,
 	[policyType] [varchar](255) NOT NULL,
@@ -16,8 +16,8 @@ CREATE TABLE [edw_integration].[create_policy_search_snapsheet_api]
 	[create_ts] [datetime] NULL,
 	[update_ts] [datetime] NULL,
 	[etl_audit_sk] [int] NULL,
-    CONSTRAINT uidx_create_policy_search_snapsheet_api UNIQUE (policyNumber, inceptionDate, transaction_seq_no)
+    CONSTRAINT uidx_claim_policy_search_snapsheet_api UNIQUE (policyNumber, inceptionDate, transaction_seq_no)
 );
 
 INSERT INTO edw_integration.tintegration_table_detail(table_nm,table_type,table_desc,load_method,load_type,load_frequency,create_ts,update_ts) 
-    VALUES ('create_policy_search_snapsheet_api','API','This table provides policy details for claims registration purpose to support Snapsheet create policy API','Stored Procedure','Insert','Daily',getdate(),getdate());
+    VALUES ('claim_policy_search_snapsheet_api','API','This table provides policy details for claims registration purpose to support Snapsheet create policy API','Stored Procedure','Insert','Daily',getdate(),getdate());
