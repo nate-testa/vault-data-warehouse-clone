@@ -12,7 +12,6 @@ from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 from vault_edw_HTML_format import get_sp_error_data_HTML, get_HTML_on_vault_format
-from airflow.models import Variable
 
 to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
