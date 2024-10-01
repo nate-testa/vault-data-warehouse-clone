@@ -220,13 +220,13 @@ args = {
 }
 
 with DAG(
-    dag_id='vault_load_call_detail_report',
+    dag_id='vault_livevox_load_call_detail_report',
     catchup=False,
     max_active_runs=1,
     default_args=args,
-    start_date=pendulum.datetime(2024, 4, 15, tz="America/New_York"),
-    # schedule_interval='0 4 * * *', # At 04:00 every day
-    schedule_interval=None,
+    start_date=pendulum.datetime(2024, 9, 30, tz="America/New_York"),
+    schedule_interval='0 5 * * *', # At 05:00 every day
+    # schedule_interval=None,
     tags=["call detail report dag", "vault"],
 ) as dag:
     
