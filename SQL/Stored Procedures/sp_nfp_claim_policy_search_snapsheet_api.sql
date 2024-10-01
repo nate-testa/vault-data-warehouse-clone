@@ -9,8 +9,8 @@ GO
 ---------------------------------------------------------------------------------------------------
 --	09-30-2024				Yunus Mohammed				Created procedure
 -- ================================================================================================= 
-create or ALTER   PROCEDURE [edw_core].[sp_snapsheet_create_nfp_policy_search_api]
-AS
+CREATE OR ALTER PROCEDURE [edw_core].[sp_nfp_claim_policy_search_snapsheet_api]
+AS 
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
     SET @ProcedureName = OBJECT_NAME(@@PROCID)
@@ -31,14 +31,14 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 		
-		DROP TABLE IF EXISTS [edw_temp].[snapsheet_create_nfp_policy_search_api_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[nfp_claim_policy_search_snapsheet_api_temp1];
 		SELECT
         policy_no,effective_dt,expiration_dt,transaction_effective_dt,transaction_seq_no,policy_status,
         insured_first_name,insured_last_name,product_nm,transaction_type,
         source_system_nm,address1,address2,city,[state],zip,country,
         row_number()over(partition by policy_no, effective_dt, transaction_seq_no
         order by policy_no,effective_dt,transaction_seq_no) as rn,update_ts
-        INTO edw_temp.snapsheet_create_nfp_policy_search_api_temp1
+        INTO edw_temp.nfp_claim_policy_search_snapsheet_api_temp1
         FROM
         (
         SELECT insured_cert_no as policy_no,effective_date as effective_dt,expiration_date as expiration_dt,
@@ -59,23 +59,23 @@ BEGIN
 
 
 		-- Start Insert process
-		INSERT INTO [edw_integration].[snapsheet_create_policy_search_api]
+		INSERT INTO [edw_integration].[claim_policy_search_snapsheet_api]
 		(			
-			policy_no,
-			policy_type,
-			[status],
-			product_code,
-			inception_date,			
-			expiration_dt,
-			transaction_effective_dt,
-			transaction_seq_no,
-			transaction_type,
-            policy_entities,
-			source_system_nm,			
-			api_status,			
-			create_ts,
-			update_ts,
-			etl_audit_sk
+			policyNumber,
+            policyType,
+            [status],
+            productCode,           
+            inceptionDate,
+            expiration_dt,
+            transaction_effective_dt,
+            transaction_seq_no,
+            transaction_type,
+            policyEntities,
+            source_system_nm,
+            api_status,            
+            create_ts,
+            update_ts,
+            etl_audit_sk
 		)
 		select
             policy_no,
@@ -95,12 +95,12 @@ BEGIN
                     insured_first_name [policyEntities.firstName],
                     insured_last_name as [policyEntities.lastName],
                     'Person' as [policyEntities.entityType],
-                    address1 as [policyEntities.address.address1],
-                    address2 as [policyEntities.address.address2],
-                    city as [policyEntities.address.city],
-                    state as [policyEntities.address.region],
-                    zip as [policyEntities.address.postalCode],
-                    'us' as [policyEntities.address.country],
+                    address1 as [policyEntities.addresses.address1],
+                    address2 as [policyEntities.addresses.address2],
+                    city as [policyEntities.addresseses.city],
+                    state as [policyEntities.addresses.region],
+                    zip as [policyEntities.addresses.postalCode],
+                    'us' as [policyEntities.addresses.country],
                     -- as addresses,
                     '[]' as contactMethods
                     for json path, include_null_values
@@ -112,13 +112,13 @@ BEGIN
             getdate() as update_ts,
             @etl_audit_sk as etl_audit_sk
             from
-            edw_temp.snapsheet_create_nfp_policy_search_api_temp1
+            edw_temp.nfp_claim_policy_search_snapsheet_api_temp1
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_transaction_create_ts) FROM [edw_temp].[snapsheet_create_nfp_policy_search_api_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_transaction_create_ts) FROM [edw_temp].[nfp_claim_policy_search_snapsheet_api_temp1] t1),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS [edw_temp].[snapsheet_create_nfp_policy_search_api_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[nfp_claim_policy_search_snapsheet_api_temp1];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;

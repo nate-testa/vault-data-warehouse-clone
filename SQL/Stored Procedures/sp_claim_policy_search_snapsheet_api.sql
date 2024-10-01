@@ -9,9 +9,10 @@ GO
 ---------------------------------------------------------------------------------------------------
 --	09-27-2024				Yunus Mohammed				Created procedure
 -- ================================================================================================= 
-create or ALTER   PROCEDURE [edw_core].[sp_snapsheet_create_policy_search_api]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_search_snapsheet_api]
 AS
 BEGIN
+
     DECLARE @ProcedureName NVARCHAR(120)
     SET @ProcedureName = OBJECT_NAME(@@PROCID)
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -31,7 +32,7 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 		
-		DROP TABLE IF EXISTS [edw_temp].[snapsheet_create_policy_search_api_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[claim_policy_search_snapsheet_api_temp1];
 		SELECT
 			DISTINCT
 				p.policy_no,
@@ -57,8 +58,7 @@ BEGIN
 							p.mailing_address_city_nm as [policyEntities.address.city],
 							p.mailing_address_state_cd as [policyEntities.address.region],
 							p.mailing_address_zip_cd as [policyEntities.address.postalCode],
-							p.mailing_address_country_nm as [policyEntities.address.country],
-							-- as addresses,
+							p.mailing_address_country_nm as [policyEntities.address.country],							
 							'[]' as contactMethods
 							for json path, include_null_values
 					)) as policy_entities,
@@ -69,7 +69,7 @@ BEGIN
 					ss.source_system_nm,			
 					'pending' as api_status,
 					pt.create_ts as policy_transaction_create_ts
-		INTO [edw_temp].[snapsheet_create_policy_search_api_temp1] 
+		INTO [edw_temp].[claim_policy_search_snapsheet_api_temp1] 
 		FROM (
 				SELECT 
 					DISTINCT pt.policy_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, 
@@ -99,19 +99,19 @@ BEGIN
 
 
 		-- Start Insert process
-		INSERT INTO [edw_integration].[snapsheet_create_policy_search_api]
+		INSERT INTO [edw_integration].[claim_policy_search_snapsheet_api]
 		(			
-			policy_no,
-			policy_type,
+			policyNumber,
+			policyType,
 			[status],
-			product_code,
-			inception_date,
-			policy_entities,
+			productCode,
+			policyEntities,
+			inceptionDate,
 			expiration_dt,
 			transaction_effective_dt,
 			transaction_seq_no,
 			transaction_type,
-			source_system_nm,			
+			source_system_nm,
 			api_status,			
 			create_ts,
 			update_ts,
@@ -122,8 +122,8 @@ BEGIN
 			policy_type,
 			[status],
 			product_code,
-			inception_date,
 			policy_entities,
+			inception_date,			
 			expiration_dt,
 			transaction_effective_dt,
 			transaction_seq_no,
@@ -133,13 +133,13 @@ BEGIN
 			getdate(),
 			getdate(),
 		    @etl_audit_sk
-		FROM [edw_temp].[snapsheet_create_policy_search_api_temp1];
+		FROM [edw_temp].[claim_policy_search_snapsheet_api_temp1];
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_transaction_create_ts) FROM [edw_temp].[snapsheet_create_policy_search_api_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_transaction_create_ts) FROM [edw_temp].[claim_policy_search_snapsheet_api_temp1] t1),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS [edw_temp].[snapsheet_create_policy_search_api_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[claim_policy_search_snapsheet_api_temp1];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
