@@ -18,7 +18,6 @@ to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
 cc_email = ""
 
-ENVIRONMENT = Variable.get("environment")
 HOME_PATH = os.path.expanduser('~')
 LOCAL_FOLDER_PATH = HOME_PATH + "/airflow/tmp_files/livevox_reports"
 
@@ -170,7 +169,6 @@ def process_sftp_files():
     """
     Function to process call detail report files from SFTP and load them into EDW.
     """
-    
     # Create local folder path
     create_directory_if_not_exists(LOCAL_FOLDER_PATH)
 
@@ -213,7 +211,6 @@ def process_sftp_files():
                     # Update date in control table
                     mssql_hook.run(f"UPDATE edw_core.tetl_control SET last_source_extract_ts = '{file_date}' WHERE process_nm = 'py_call_detail_report'")
                     print(f"File Loaded <<<")
-
 
 
 args = {
