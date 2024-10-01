@@ -17,6 +17,7 @@
 -- 09/25/24		Archtha Gudimalla			10. Added producer id and name
 -- 09/30/24		Archtha Gudimalla			11. Added new customer that only have quotes bu no inforce policies, 
 --												just to create a customer record
+-- 10/01/24		Archtha Gudimalla			12. Commented change 11 to use in future
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -88,6 +89,7 @@ BEGIN
 		and pol.effective_dt >= '01-jun-2023'
 		;
 
+		/*
 		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp2; 
 		--for quotes, just to create a customer record
 		SELECT
@@ -134,6 +136,7 @@ BEGIN
 		and quote_create_ts >= dateadd("mm",-1,cast(getdate() as date))
 		and not exists (select 'x' from edw_temp.customer_hubspot_feed_temp1 a where a.customer_id = cust.customer_id)
 		and not exists (select 'x' from edw_integration.customer_hubspot_feed b where b.customer_id = cust.customer_id);
+		*/
 
 		MERGE edw_integration.customer_hubspot_feed as TARGET
 		USING (
@@ -160,7 +163,7 @@ BEGIN
 				,customer_id
 			    ,producer_nm
 				,producer_id
-				FROM edw_temp.customer_hubspot_feed_temp1
+				FROM edw_temp.customer_hubspot_feed_temp1/*
 				union ALL 
 			SELECT 
 				policy_no
@@ -185,7 +188,7 @@ BEGIN
 				,customer_id
 			    ,producer_nm
 				,producer_id
-				FROM edw_temp.customer_hubspot_feed_temp2
+				FROM edw_temp.customer_hubspot_feed_temp2*/
 		) as SOURCE
 		ON Source.policy_no = Target.policy_no
 		-- For Inserts
