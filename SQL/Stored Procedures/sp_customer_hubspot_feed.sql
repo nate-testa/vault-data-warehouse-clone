@@ -18,6 +18,8 @@
 -- 09/30/24		Archtha Gudimalla			11. Added new customer that only have quotes bu no inforce policies, 
 --												just to create a customer record
 -- 10/01/24		Archtha Gudimalla			12. Commented change 11 to use in future
+-- 10/02/24		Archtha Gudimalla			13. Add mailing address country
+-- 10/02/24		Archtha Gudimalla			14. Excluded Yacht
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -65,6 +67,7 @@ BEGIN
 			cust.mailing_address_city_nm, 
 			cust.mailing_address_state_cd, 
 			cust.mailing_address_zip_cd,
+			cust.mailing_address_country_nm,
 			pol.customer_id,
 			ph.producer_nm,
 			p.producer_id
@@ -87,6 +90,7 @@ BEGIN
 		and cust.first_nm not like '%test%' 
 		and cust.customer_nm not like '%test%' 
 		and pol.effective_dt >= '01-jun-2023'
+		and pol.product_cd <> 'BY'
 		;
 
 		/*
@@ -160,6 +164,7 @@ BEGIN
 				,mailing_address_city_nm
 				,mailing_address_state_cd
 				,mailing_address_zip_cd
+				,mailing_address_country_nm
 				,customer_id
 			    ,producer_nm
 				,producer_id
@@ -185,6 +190,7 @@ BEGIN
 				,mailing_address_city_nm
 				,mailing_address_state_cd
 				,mailing_address_zip_cd
+				,mailing_address_country_nm
 				,customer_id
 			    ,producer_nm
 				,producer_id
@@ -214,6 +220,7 @@ BEGIN
 			,mailing_address_city_nm
 			,mailing_address_state_cd
 			,mailing_address_zip_cd
+			,mailing_address_country_nm
 			,customer_id
 			,producer_nm
 			,producer_id
@@ -238,6 +245,7 @@ BEGIN
 				,source.mailing_address_city_nm
 				,source.mailing_address_state_cd
 				,source.mailing_address_zip_cd
+				,source.mailing_address_country_nm
 				,source.customer_id
 				,source.producer_nm
 				,source.producer_id)
@@ -262,6 +270,7 @@ BEGIN
   			,target.mailing_address_city_nm = source.mailing_address_city_nm 
             ,target.mailing_address_state_cd = source.mailing_address_state_cd
             ,target.mailing_address_zip_cd 	= source.mailing_address_zip_cd
+            ,target.mailing_address_country_nm 	= source.mailing_address_country_nm
             ,target.customer_id 			= source.customer_id
             ,target.producer_nm 			= source.producer_nm
             ,target.producer_id 			= source.producer_id
