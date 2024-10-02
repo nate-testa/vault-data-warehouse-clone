@@ -10,6 +10,9 @@
 -- 09/25/24		        Archtha Gudimalla			4. Added commission tier and hit ratio
 -- 09/30/24		        Archtha Gudimalla			5. Updated broker summary join to left 
 --                                                     (to show all brokers and not just the ones that have submission and quote)
+-- 10/02/24		        Archtha Gudimalla			6. Add mailing address country
+-- 10/02/24		        Archtha Gudimalla			7. Updated logic for commisson tier
+-- 10/02/24		        Archtha Gudimalla			8. Excluded Yacht
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -66,6 +69,7 @@ BEGIN
             edw_core.tbroker_summary tbs
             where
                 month_sk = (select date_sk from edw_core.tdate where actual_dt =EOMONTH(GETDATE()))
+            and product_sk <> 6
             group by broker_sk
         ),
         comm_tier AS
@@ -110,7 +114,8 @@ BEGIN
         tb.mailing_address_line_2,
         tb.mailing_address_city_nm,
         tb.mailing_address_state_cd,
-        tb.mailing_address_zip_cd,
+        tb.mailing_address_zip_cd, 
+        tb.mailing_address_country_nm,
         tb.broker_tier,
         case
         when tb.broker_tier = 1 then 'Elite'
@@ -139,7 +144,7 @@ BEGIN
         bs.offered_renewal_ct,
         bs.offered_renewal_over50k_ct,
         bs.inforce_ct as inforce_policy_ct,
-        ct.c_tier as commission_tier, 
+        case when ct.c_tier in ('Platinum','Gold','National','Wholesaler','A&WINS','Burns') then ct.c_tier else null end as commission_tier, 
         bs.inforce_premium_amt,
         null as target_yoy_inforce_premium_pc,
         null as target_yoy_ytd_nb_prem_pc,
@@ -164,6 +169,7 @@ BEGIN
             offered_renewal_ct,offered_renewal_over50k_ct,inforce_policy_ct,commission_tier,inforce_premium_amt,target_yoy_inforce_premium_pc,
             target_yoy_ytd_nb_prem_pc,target_ytd_nb_premium_pc,target_ytd_renewal_retention_pc,
             create_ts,update_ts,etl_audit_sk
+            ,mailing_address_country_nm
 
         )
         SELECT        
@@ -174,6 +180,7 @@ BEGIN
             offered_renewal_ct,offered_renewal_over50k_ct,inforce_policy_ct,commission_tier,inforce_premium_amt,target_yoy_inforce_premium_pc,
             target_yoy_ytd_nb_prem_pc,target_ytd_nb_premium_pc,target_ytd_renewal_retention_pc,
             getdate(), getdate(), @etl_audit_sk 
+            ,mailing_address_country_nm
         FROM edw_temp.broker_hubspot_feed_temp1
         
         

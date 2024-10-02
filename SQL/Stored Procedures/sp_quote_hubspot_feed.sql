@@ -12,6 +12,7 @@
 -- 08/23/24		        Architha Gudimalla			7. Updated Recampaign indicator
 -- 09/12/24		        Architha Gudimalla			8. Added Primary home fields
 -- 09/21/24		        Architha Gudimalla			9. Added cast to null cols
+-- 10/02/24		        Archtha Gudimalla			10. Add mailing address country
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -80,6 +81,11 @@ BEGIN
             WHEN pr.product_cd = 'LUX'  THEN tqcl.zip_cd
             WHEN pr.product_cd = 'PEL' THEN tqpl.zip_cd
             END [risk_zip_cd],
+            CASE
+            WHEN pr.product_cd IN ('HO','CO') THEN tqhl.country_nm
+            WHEN pr.product_cd = 'LUX'  THEN tqcl.country_nm
+            WHEN pr.product_cd = 'PEL' THEN tqpl.country_nm
+            END [risk_country_nm],
             h.premium_amt,
             q.quote_status,
             (ISNULL(tqhc.prior_nonwater_claim_ct,0) + ISNULL(tqhc.prior_water_claim_ct,0)) as claim_ct,
@@ -144,7 +150,8 @@ BEGIN
 		and q.insured_nm not like '%test%' 
 		and cust.last_nm not like '%test%'
 		and cust.first_nm not like '%test%' 
-		and cust.customer_nm not like '%test%';
+		and cust.customer_nm not like '%test%'      
+		and q.product_cd <> 'BY';
 
         
 
@@ -191,6 +198,11 @@ BEGIN
             WHEN pr.product_cd = 'LUX'  THEN tqcl.zip_cd
             WHEN pr.product_cd = 'PEL' THEN tqpl.zip_cd
             END [risk_zip_cd],
+            CASE
+            WHEN pr.product_cd IN ('HO','CO') THEN tqhl.country_nm
+            WHEN pr.product_cd = 'LUX'  THEN tqcl.country_nm
+            WHEN pr.product_cd = 'PEL' THEN tqpl.country_nm
+            END [risk_country_nm],
             h.premium_amt,
             q.policy_status,
             (ISNULL(tqhc.prior_nonwater_claim_ct,0) + ISNULL(tqhc.prior_water_claim_ct,0)) as claim_ct,
@@ -244,7 +256,7 @@ BEGIN
         left join edw_core.tpel_coverage tqpc on tqpc.policy_history_sk=h.policy_history_sk
         left join policy_collection_class_type as tcct on tcct.policy_history_sk = h.policy_history_sk
 
-        where   q.broker_id <> '0'
+        where   q.broker_id <> '0' 
         and q.insured_nm not like '%test%' 
 		and cust.last_nm not like '%test%'
 		and cust.first_nm not like '%test%' 
@@ -254,7 +266,8 @@ BEGIN
 		and (non_renewal_sub_note_desc like '%OTHER%' or
 			 non_renewal_sub_note_desc like '%Renewal not taken%' or
 			 non_renewal_sub_note_desc like '%Coverage no longer needed%' or
-			 non_renewal_sub_note_desc like '%Coverage placed elseware%');
+			 non_renewal_sub_note_desc like '%Coverage placed elseware%')       
+		and q.product_cd <> 'BY';
         --and q1.quote_no is null
       
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp3;
@@ -279,7 +292,9 @@ BEGIN
         (
             quote_no , effective_dt ,expiration_dt , transaction_type , broker_id , broker_nm ,broker_tier ,national_agency_in, bdm_nm, 
             vip_in, insured_first_nm, insured_last_nm, underwriter_nm, uw_company_nm ,risk_address_line_1 , risk_address_line_2 ,risk_city_nm ,
-            risk_state_cd ,risk_zip_cd , premium_amt, quote_status , claim_ct , note_desc , recampaign_in , rol_on_lost_business, 
+            risk_state_cd ,risk_zip_cd , 
+            risk_country_nm,
+            premium_amt, quote_status , claim_ct , note_desc , recampaign_in , rol_on_lost_business, 
             lost_company , reason_quote_not_taken, construction , dwelling_limit_amt ,contents_limit_amt , other_structures_limit_amt , 
             loss_of_use_limit_amt, total_insured_value_amt ,roof_covering , roof_updated_year , insurance_score , 
             auto_liability_limit_amt, pel_limit_amt, collections_coverage_type, total_blanket_limit_amt , total_scheduled_limit_amt ,producer_nm,
@@ -295,7 +310,9 @@ BEGIN
         (
          quote_no , effective_dt ,expiration_dt , transaction_type , broker_id , broker_nm ,broker_tier ,national_agency_in, bdm_nm, 
             vip_in, insured_first_nm, insured_last_nm, underwriter_nm, uw_company_nm ,risk_address_line_1 , risk_address_line_2 ,risk_city_nm ,
-            risk_state_cd ,risk_zip_cd , premium_amt, quote_status , claim_ct , note_desc , recampaign_in , rol_on_lost_business, 
+            risk_state_cd ,risk_zip_cd , 
+            risk_country_nm,
+            premium_amt, quote_status , claim_ct , note_desc , recampaign_in , rol_on_lost_business, 
             lost_company , reason_quote_not_taken, construction , dwelling_limit_amt ,contents_limit_amt , other_structures_limit_amt , 
             loss_of_use_limit_amt, total_insured_value_amt ,roof_covering , roof_updated_year , insurance_score , 
             auto_liability_limit_amt, pel_limit_amt, collections_coverage_type, total_blanket_limit_amt , total_scheduled_limit_amt ,producer_nm,
@@ -327,6 +344,7 @@ BEGIN
             [target].risk_city_nm	=	[source].risk_city_nm,
             [target].risk_state_cd	=	[source].risk_state_cd,
             [target].risk_zip_cd	=	[source].risk_zip_cd,
+            [target].risk_country_nm	=	[source].risk_country_nm,
             [target].premium_amt	=	[source].premium_amt,
             [target].quote_status	=	[source].quote_status,
             [target].claim_ct	=	[source].claim_ct,
