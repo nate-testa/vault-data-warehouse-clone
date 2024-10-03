@@ -14,6 +14,7 @@
 -- 10/02/24		        Archtha Gudimalla			7. Updated logic for commisson tier
 -- 10/02/24		        Archtha Gudimalla			8. Excluded Yacht
 -- 10/03/24		        Archtha Gudimalla			9. Corrected broker summary pull month_sk
+-- 10/03/24		        Archtha Gudimalla			10. Corrected logix for 2 yr losss ratio
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -53,8 +54,8 @@ BEGIN
         (
             SELECT
             broker_sk,	
-            sum(round(100*one_year_non_cat_loss_incurred_amt/nullif(one_year_non_cat_earned_net_premium_amt,0),2)) as one_year_actual_non_cat_loss_ratio,
-            sum(round(100*three_year_loss_incurred_amt/nullif(three_year_earned_net_premium_amt,0),2)) as two_year_ultimate_non_cat_loss_ratio,
+            sum(round(100* one_year_non_cat_loss_incurred_amt/nullif( one_year_non_cat_earned_net_premium_amt,0),2)) as  one_year_actual_non_cat_loss_ratio,
+            sum(round(100* two_year_non_cat_loss_incurred_amt/nullif( two_year_non_cat_earned_net_premium_amt,0),2)) as  two_year_ultimate_non_cat_loss_ratio,
             sum(round(100*five_year_non_cat_loss_incurred_amt/nullif(five_year_non_cat_earned_net_premium_amt,0),2)) as five_year_non_cat_loss_ratio,
             sum(ytd_bind_ct) AS ytd_bind_ct,
             sum(open_submission_ct) as open_submissions_ct,
@@ -66,8 +67,7 @@ BEGIN
             sum(tbs.inforce_net_premium_amt) as inforce_premium_amt,
             sum(tbs.ytd_new_business_ct) as ytd_new_business_ct,
             sum(tbs.ytd_quote_ct) as ytd_quote_ct
-            FROM
-            edw_core.tbroker_summary tbs
+            FROM edw_core.tbroker_summary tbs
             where
                 month_sk = (select date_sk from edw_core.tdate where actual_dt =EOMONTH( dateadd("d",-1,GETDATE())))
             and product_sk <> 6
