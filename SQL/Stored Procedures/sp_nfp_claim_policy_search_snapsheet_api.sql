@@ -64,7 +64,7 @@ BEGIN
 			policyNumber,
             policyType,
             [status],
-            productCode,           
+            productCode,
             inceptionDate,
             expiration_dt,
             transaction_effective_dt,
@@ -72,7 +72,7 @@ BEGIN
             transaction_type,
             policyEntities,
             source_system_nm,
-            api_status,            
+            api_status,
             create_ts,
             update_ts,
             etl_audit_sk
@@ -91,18 +91,23 @@ BEGIN
             (
             (
                 select
-                    null as [policyEntities.name],
-                    insured_first_name [policyEntities.firstName],
-                    insured_last_name as [policyEntities.lastName],
-                    'Person' as [policyEntities.entityType],
-                    address1 as [policyEntities.addresses.address1],
-                    address2 as [policyEntities.addresses.address2],
-                    city as [policyEntities.addresseses.city],
-                    state as [policyEntities.addresses.region],
-                    zip as [policyEntities.addresses.postalCode],
-                    'us' as [policyEntities.addresses.country],
-                    -- as addresses,
-                    '[]' as contactMethods
+                    null as [name],
+                    insured_first_name [firstName],
+                    insured_last_name as [lastName],
+                    'PERSON' as [entityType],                    
+                    (
+                        SELECT 
+                            address1 as [address1],
+                            address2 as [address2],
+                            city as [city],
+                            state as [region],
+                            zip as [postalCode],
+                            'us' as [country]
+                        for json path, include_null_values
+                    ) AS addresses,
+                    (
+                        select ISNULL( (SELECT 1 as a where 1=2 FOR JSON PATH), '[]')
+                    ) as contactMethods
                     for json path, include_null_values
             )
             ) as policyEntities

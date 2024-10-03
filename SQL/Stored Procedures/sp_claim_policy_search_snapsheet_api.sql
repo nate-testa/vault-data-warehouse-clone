@@ -46,27 +46,33 @@ BEGIN
 				p.effective_dt as inception_date,
 				JSON_QUERY((
 						select
-							case when [pi].insured_type = 'Entity' then [pi].insured_nm end as [policyEntities.name],
-							case when [pi].Insured_type = 'Individual' then [pi].first_nm end as [policyEntities.firstName],
-							case when [pi].insured_type = 'Individual' then [pi].last_nm end as [policyEntities.lastName],
+							case when [pi].insured_type = 'Entity' then [pi].insured_nm end as [name],
+							case when [pi].Insured_type = 'Individual' then [pi].first_nm end as [firstName],
+							case when [pi].insured_type = 'Individual' then [pi].last_nm end as [lastName],
 							case
-								when [pi].insured_type = 'Entity' then 'Organization'
-								else 'Person'
-							end as [policyEntities.entityType],
-							p.mailing_address_line1 as [policyEntities.address.address1],
-							p.mailing_address_line2 as [policyEntities.address.address2],
-							p.mailing_address_city_nm as [policyEntities.address.city],
-							p.mailing_address_state_cd as [policyEntities.address.region],
-							p.mailing_address_zip_cd as [policyEntities.address.postalCode],
-							p.mailing_address_country_nm as [policyEntities.address.country],							
-							'[]' as contactMethods
+								when [pi].insured_type = 'Entity' then 'ORGANIZATION'
+								else 'PERSON'
+							end as [entityType],
+							(
+								SELECT 
+									p.mailing_address_line1 as [address1],
+									p.mailing_address_line2 as [address2],
+									p.mailing_address_city_nm as [city],
+									p.mailing_address_state_cd as [region],
+									p.mailing_address_zip_cd as [postalCode],
+									p.mailing_address_country_nm as [country]
+								for json path, include_null_values
+							) AS addresses,
+							(
+								select ISNULL( (SELECT 1 as a where 1=2 FOR JSON PATH), '[]')
+							) as contactMethods
 							for json path, include_null_values
 					)) as policy_entities,
 					p.expiration_dt,
 					d2.actual_dt as transaction_effective_dt,
 					pt.transaction_seq_no,
 					ptt.policy_transaction_type_nm as transaction_type,
-					ss.source_system_nm,			
+					ss.source_system_nm,
 					'pending' as api_status,
 					pt.create_ts as policy_transaction_create_ts
 		INTO [edw_temp].[claim_policy_search_snapsheet_api_temp1] 
