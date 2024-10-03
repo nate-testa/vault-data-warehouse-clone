@@ -13,6 +13,7 @@
 -- 10/02/24		        Archtha Gudimalla			6. Add mailing address country
 -- 10/02/24		        Archtha Gudimalla			7. Updated logic for commisson tier
 -- 10/02/24		        Archtha Gudimalla			8. Excluded Yacht
+-- 10/03/24		        Archtha Gudimalla			9. Corrected broker summary pull month_sk
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -68,7 +69,7 @@ BEGIN
             FROM
             edw_core.tbroker_summary tbs
             where
-                month_sk = (select date_sk from edw_core.tdate where actual_dt =EOMONTH(GETDATE()))
+                month_sk = (select date_sk from edw_core.tdate where actual_dt =EOMONTH( dateadd("d",-1,GETDATE())))
             and product_sk <> 6
             group by broker_sk
         ),
