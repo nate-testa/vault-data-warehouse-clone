@@ -19,6 +19,7 @@
 -- 08/13/24		Yunus Mohammed					14. Updated wind_derived_deductible logic
 -- 08/20/24		Yunus Mohammed					15. Updated wind_derived_deductible logic
 -- 09/03/24		Yunus Mohammed					16. Added new field no_of_family_units_in_structures.	
+-- 10/02/24		Yunus Mohammed					17. Added new field fortified_roof_credit
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -143,7 +144,7 @@ BEGIN
 				wildfire_threat, wildfire_hazard_severity,aop_deductible_manual,water_deductible_manual,wildfire_deductible_manual,wind_or_hailstorm_deductible_manual,
 				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt,
 				waive_inspection_in, waive_inspection_reason, inspection_note, rms_reviewed_in,
-				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,no_of_family_units_in_structures,
+				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,no_of_family_units_in_structures,fortified_roof_credit,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
@@ -278,6 +279,7 @@ BEGIN
 				tthc.RMSReviewed as rms_reviewed_in, 
 				tthc.NCRBManualRate as nc_bureau_rate,StatedLimitsPolicy as stated_limits_policy_in, RiskSharingPolicy as risk_sharing_policy_in,
 				tthc.NumberofFamilyUnitsinStructure as no_of_family_units_in_structures,
+				tthc.FortifiedRoofCredit as fortified_roof_credit,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_coverage_temp1 AS tthc

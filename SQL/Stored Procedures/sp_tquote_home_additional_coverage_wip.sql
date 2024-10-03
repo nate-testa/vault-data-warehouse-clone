@@ -15,6 +15,7 @@ GO
 -- 08/22/24				Yunus Mohammed				4. Removed effective date from merge and added in update clause
 -- 08/30/24				Yunus Mohammed				5. Added new columns
 -- 09/04/24				Yunus Mohammed				6. Removed error from update
+-- 10/02/24				Yunus Mohammed				7. Added new column fortified_roof_upgrade_endorsement_in
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage_wip]
@@ -301,6 +302,7 @@ BEGIN
 				,PrimaryHomePolicyExpirationDate as primary_home_policy_expiration_dt
 				,PrimaryHomeCarrierName as primary_home_carrier_nm
 				,PrimaryHomeCoverageAThreshold as primary_home_coverage_a_threshold
+				,FortifiedRoofUpgradeEndorsement as fortified_roof_upgrade_endorsement_in
 				,source_system_sk
 				,GETDATE() AS create_ts
 				,GETDATE() AS update_ts
@@ -397,7 +399,7 @@ BEGIN
 			wildfire_protection_enrollment_in ,site_scheduling_contact_nm ,site_scheduling_phone_no ,
 			site_scheduling_email ,emergency_contact_nm ,emergency_contact_phone_no ,emergency_contact_email ,gate_code ,
 			primary_home_risk_address,primary_home_policy_effective_dt,primary_home_policy_expiration_dt,
-			primary_home_carrier_nm,primary_home_coverage_a_threshold,
+			primary_home_carrier_nm,primary_home_coverage_a_threshold,fortified_roof_upgrade_endorsement_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
@@ -483,7 +485,7 @@ BEGIN
 				wildfire_protection_enrollment_in ,site_scheduling_contact_nm ,site_scheduling_phone_no ,
 				site_scheduling_email ,emergency_contact_nm ,emergency_contact_phone_no ,emergency_contact_email ,gate_code ,
 				primary_home_risk_address,primary_home_policy_effective_dt,primary_home_policy_expiration_dt
-				,primary_home_carrier_nm,primary_home_coverage_a_threshold,
+				,primary_home_carrier_nm,primary_home_coverage_a_threshold,fortified_roof_upgrade_endorsement_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			WHEN MATCHED THEN UPDATE
@@ -672,7 +674,8 @@ BEGIN
 			[target].primary_home_policy_effective_dt = [source].primary_home_policy_effective_dt,
 			[target].primary_home_policy_expiration_dt = [source].primary_home_policy_expiration_dt,
 			[target].primary_home_carrier_nm = [source].primary_home_carrier_nm,
-			[target].primary_home_coverage_a_threshold = [source].primary_home_coverage_a_threshold,					
+			[target].primary_home_coverage_a_threshold = [source].primary_home_coverage_a_threshold,
+			[target].fortified_roof_upgrade_endorsement_in = [source].fortified_roof_upgrade_endorsement_in,				
 			[target].update_ts = [source].update_ts;
 			
 

@@ -14,7 +14,8 @@
 -- 07/12/24				Yunus Mohammed				7. Added new fields stated_limits_policy_in and risk_sharing_policy_in
 -- 08/13/24				Yunus Mohammed				8. Updated wind_derived_deductible logic
 -- 08/20/24				Yunus Mohammed				9. Updated wind_derived_deductible logic
--- 09/03/24				Yunus Mohammed				10. Added new field no_of_family_units_in_structures
+-- 09/03/24				Yunus Mohammed				10. Added new column no_of_family_units_in_structures
+-- 10/02/24				Yunus Mohammed				11. Added new column fortified_roof_credit
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage]
 
@@ -142,9 +143,10 @@ BEGIN
 				reinsurance_designation, reinsurance_layered_program_in, reinsurance_attachment_limit_amt, reinsurance_total_tiv_amt,
 				wildfire_threat, wildfire_hazard_severity,
 				aop_deductible_manual,water_deductible_manual,wildfire_deductible_manual,wind_or_hailstorm_deductible_manual,
-				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt, 
+				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, 
+				aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt, 
 				waive_inspection_in, waive_inspection_reason, inspection_note, rms_reviewed_in,
-				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,no_of_family_units_in_structures,
+				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,no_of_family_units_in_structures,fortified_roof_credit,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			OUTPUT inserted.quote_home_coverage_sk INTO edw_temp.tquote_home_coverage_temp2
@@ -276,6 +278,7 @@ BEGIN
 				tthc.WaiveInspection as waive_inspection_in, tthc.WaiveReason as waive_inspection_reason, tthc.InspectionNotes as inspection_note, tthc.RMSReviewed as rms_reviewed_in,
 				tthc.NCRBManualRate AS nc_bureau_rate, StatedLimitsPolicy as stated_limits_policy_in , 
 				tthc.RiskSharingPolicy as risk_sharing_policy_in,tthc.NumberofFamilyUnitsinStructure as no_of_family_units_in_structures,
+				tthc.FortifiedRoofCredit as fortified_roof_credit,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk				
 			FROM
 				edw_temp.tquote_home_coverage_temp1 AS tthc
