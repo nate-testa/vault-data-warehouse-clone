@@ -7,6 +7,7 @@
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
 -- 07/03/2024			Alberto Almario						3. Added primary_location_in
 -- 08/22/2024			Architha Gudimalla					4. Removed eff_dt from merge
+-- 10/01/2024			Architha Gudimalla					5. Corrected AddressCountry
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_location_wip]
 
@@ -33,7 +34,7 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,source_system_sk,quote_history_sk,
 			rownum as [index],
-			CreatedDate,UpdatedDate,AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,
+			CreatedDate,UpdatedDate,AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
 			NumberOfSwimmingPools,MultiFamilyDwelling,VacantOrUnoccupied,ForSale,
 			SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator
 			,primary_location_in
@@ -79,7 +80,7 @@ BEGIN
 				and accof.Field IN 
 				(
 					'AddressLine1','AddressLine2','AddressCity','AddressState','AddressZipCode','AddressCounty',
-					'AddressCounty','NumberOfSwimmingPools','MultiFamilyDwelling','VacantOrUnoccupied','ForSale',
+					'AddressCountry','NumberOfSwimmingPools','MultiFamilyDwelling','VacantOrUnoccupied','ForSale',
 					'SquareFootage','NumberofAthleticStructures','ShortTermRental','LongTermRental','LocationsLimitsIndicator'
 				)
 			) as t
@@ -108,7 +109,7 @@ BEGIN
 		        ttlc.AddressState AS state_cd,
 		        ttlc.AddressZipCode AS zip_cd,
 		        ttlc.AddressCounty AS county_nm,
-		        ttlc.AddressCounty AS country_nm,
+		        ttlc.AddressCountry AS country_nm,
 		        NULL AS longitude,
 		        NULL AS latitude,
 		        ttlc.NumberOfSwimmingPools AS swimming_pool_ct,
