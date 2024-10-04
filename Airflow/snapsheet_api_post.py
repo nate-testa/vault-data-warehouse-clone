@@ -35,7 +35,6 @@ def process_policies(qry):
                 set update_ts = getdate(), api_status = 'Success', api_Error_description = NULL
                 where policyNumber = '{policyNumber}'
                 and inceptionDate = '{inceptionDate}'
-                and transaction_seq_no = '{transaction_seq_no}'
             """
         else:
             qry_update_result = f"""
@@ -44,12 +43,10 @@ def process_policies(qry):
                 api_Error_description = '{result_text.replace("'","''")}' 
                 where policyNumber = '{policyNumber}'
                 and inceptionDate = '{inceptionDate}'
-                and transaction_seq_no = '{transaction_seq_no}'
             """
 
         logger.debug(f"Executing update query: {qry_update_result}")
         mssql_hook.run(qry_update_result)
-
 
 def process_claims(qry):
     api = SnapsheetAPI(logger=logger)
@@ -82,7 +79,8 @@ def process_claims(qry):
                 update edw_stage.migration_create_claim_api 
                 set api_process_date = getdate(), api_status = 'Success', 
                     api_Error_description = NULL, 
-                    claimReferenceNumber = '{json_response_claims.get("claimReferenceNumber")}'
+                    claimReferenceNumber = '{json_response_claims.get("claimReferenceNumber")}',
+                    api_response = '{result_text.replace("'","''")}'
                 where claim_api_sk = '{claim_api_sk}'
             """
         else:
@@ -90,7 +88,8 @@ def process_claims(qry):
                 update edw_stage.migration_create_claim_api 
                 set api_process_date = getdate(), api_status = 'Error', 
                     api_Error_description = '{result_text.replace("'","''")}',
-                    claimReferenceNumber = NULL
+                    claimReferenceNumber = NULL,
+                    api_response = NULL
                 where claim_api_sk = '{claim_api_sk}'
             """
 
@@ -174,11 +173,24 @@ def process_financial_transactions(qry):
 def main():
     
     policies_qry = """
-        select 
+        SELECT
             policyNumber, policyType, status, productCode, inceptionDate, policyEntities, transaction_seq_no
-        from edw_integration.claim_policy_search_snapsheet_api
-        where api_status = 'pending'
-        order by policyNumber, inceptionDate, transaction_seq_no
+        FROM 
+        (
+            select 
+                policyNumber, 
+                policyType, 
+                status, 
+                productCode, 
+                inceptionDate, 
+                policyEntities, 
+                transaction_seq_no,
+                ROW_NUMBER() OVER (PARTITION BY policyNumber , inceptionDate ORDER BY transaction_seq_no DESC) AS rank
+            from 
+                edw_integration.claim_policy_search_snapsheet_api
+            where api_status in ('Error','pending') 
+        ) a 
+        WHERE a.rank = 1
     """
 
     claims_qry = """
