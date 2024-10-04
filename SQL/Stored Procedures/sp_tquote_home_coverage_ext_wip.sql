@@ -8,7 +8,9 @@ GO
 -----------------------------------------------------------------------------------------------------------------------
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
--- 09/12/24		        Alberto Almario			    1. Created this procedure   
+-- 09/12/24		        Alberto Almario			    1. Created this procedure  
+-- 09/24/24		        Architha Gudimalla			2. Added UniqueId, ObjectGroupIdentifier  
+-- 09/24/24		        Architha Gudimalla		    3. Updated Merge join condition
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_tquote_home_coverage_ext_wip 
@@ -45,6 +47,8 @@ BEGIN
             acctvo.ObjectType as label, 
             acctvof.Field, 
             acctvof.Value 
+            , acctvo.UniqueId
+            , acctvo.ObjectGroupIdentifier          
         INTO edw_temp.tquote_home_coverage_ext_wip_temp1
         FROM edw_stage.Account AS acct
         INNER JOIN edw_stage.Product AS p on p.Id = acct.ProductId
@@ -73,12 +77,17 @@ BEGIN
                 t1.transaction_seq_no, 
                 t1.label,
                 t1.field,
-                t1.value
+                t1.value,
+                t1.UniqueId,
+                t1.ObjectGroupIdentifier
 			FROM 
 				[edw_temp].[tquote_home_coverage_ext_wip_temp1] AS t1
 		) AS src
 		ON src.quote_no = trg.quote_no
         AND src.transaction_seq_no = trg.transaction_seq_no
+        AND src.label = trg.label
+        AND src.field = trg.field
+        AND src.UniqueId = trg.UniqueId
         -- For Inserts
 		WHEN NOT MATCHED BY TARGET THEN
 		INSERT
@@ -92,6 +101,8 @@ BEGIN
             create_ts,
             update_ts,
             etl_audit_sk 
+            ,UniqueId
+            ,ObjectGroupIdentifier 
 		)
         VALUES ( 
             src.quote_no,
@@ -102,16 +113,17 @@ BEGIN
             src.value,  
             getdate(),
             getdate(),
-            @etl_audit_sk 
+            @etl_audit_sk  
+            ,src.UniqueId
+            ,src.ObjectGroupIdentifier  
         )
         -- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-            trg.effective_dt = src.effective_dt,
-            trg.label = src.label,
-            trg.field = src.field,
+            trg.effective_dt = src.effective_dt, 
             trg.value = src.value,
-            trg.update_ts = getdate()
+            trg.ObjectGroupIdentifier = src.ObjectGroupIdentifier,
+            trg.update_ts = getdate()            
         ;
 
         --************End************

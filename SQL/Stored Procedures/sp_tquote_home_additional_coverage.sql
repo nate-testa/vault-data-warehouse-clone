@@ -22,6 +22,7 @@ GO
 -- 09/07/24				Hernando Gonzalez			7. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
 -- 08/01/24             Tuba Mohsin                 8. added contents_extended_replacement_cost_limit_amt
 -- 08/30/24				Yunus Mohammed				9. Added new columns
+-- 10/02/24				Yunus Mohammed				10. Added new column fortified_roof_upgrade_endorsement_in
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage]
@@ -204,7 +205,7 @@ BEGIN
 			wildfire_protection_enrollment_in ,site_scheduling_contact_nm ,site_scheduling_phone_no ,
 			site_scheduling_email ,emergency_contact_nm ,emergency_contact_phone_no ,emergency_contact_email ,gate_code ,
 			primary_home_risk_address,primary_home_policy_effective_dt,primary_home_policy_expiration_dt,
-			primary_home_carrier_nm,primary_home_coverage_a_threshold,
+			primary_home_carrier_nm,primary_home_coverage_a_threshold,fortified_roof_upgrade_endorsement_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT 
@@ -394,6 +395,7 @@ BEGIN
 			,PrimaryHomePolicyExpirationDate as primary_home_policy_expiration_dt
 			,PrimaryHomeCarrierName as primary_home_carrier_nm
 			,PrimaryHomeCoverageAThreshold as primary_home_coverage_a_threshold
+			,FortifiedRoofUpgradeEndorsement as fortified_roof_upgrade_endorsement_in
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts

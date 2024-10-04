@@ -1,13 +1,21 @@
--- =================================================================================================
+-- ===============================================================================================================================
 -- Author:		Yunus Mohammed
 -- Description: This procedures inserts and updates broker hubspot data
------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
 -- Change date          |Author						|	Change Description
------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
 -- 07/29/24		        Yunus Mohammed				1. Created this procedure
 -- 08/09/24		        Archtha Gudimalla			2. Excluded test brokers
 -- 08/22/24		        Archtha Gudimalla			3. Added open submission ct
--- ======================================================================================================== 
+-- 09/25/24		        Archtha Gudimalla			4. Added commission tier and hit ratio
+-- 09/30/24		        Archtha Gudimalla			5. Updated broker summary join to left 
+--                                                     (to show all brokers and not just the ones that have submission and quote)
+-- 10/02/24		        Archtha Gudimalla			6. Add mailing address country
+-- 10/02/24		        Archtha Gudimalla			7. Updated logic for commisson tier
+-- 10/02/24		        Archtha Gudimalla			8. Excluded Yacht
+-- 10/03/24		        Archtha Gudimalla			9. Corrected broker summary pull month_sk
+-- 10/03/24		        Archtha Gudimalla			10. Corrected logix for 2 yr losss ratio
+-- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
 
@@ -46,8 +54,8 @@ BEGIN
         (
             SELECT
             broker_sk,	
-            sum(round(100*one_year_non_cat_loss_incurred_amt/nullif(one_year_non_cat_earned_net_premium_amt,0),2)) as one_year_actual_non_cat_loss_ratio,
-            sum(round(100*three_year_loss_incurred_amt/nullif(three_year_earned_net_premium_amt,0),2)) as two_year_ultimate_non_cat_loss_ratio,
+            sum(round(100* one_year_non_cat_loss_incurred_amt/nullif( one_year_non_cat_earned_net_premium_amt,0),2)) as  one_year_actual_non_cat_loss_ratio,
+            sum(round(100* two_year_non_cat_loss_incurred_amt/nullif( two_year_non_cat_earned_net_premium_amt,0),2)) as  two_year_ultimate_non_cat_loss_ratio,
             sum(round(100*five_year_non_cat_loss_incurred_amt/nullif(five_year_non_cat_earned_net_premium_amt,0),2)) as five_year_non_cat_loss_ratio,
             sum(ytd_bind_ct) AS ytd_bind_ct,
             sum(open_submission_ct) as open_submissions_ct,
@@ -56,12 +64,49 @@ BEGIN
             sum(policy_renewal_offered_ct) as offered_renewal_ct,
             sum(policy_renewal_offered_over_50k_ct) as offered_renewal_over50k_ct,
             sum(inforce_ct) as inforce_ct,
-            sum(tbs.inforce_net_premium_amt) as inforce_premium_amt
-            FROM
-            edw_core.tbroker_summary tbs
+            sum(tbs.inforce_net_premium_amt) as inforce_premium_amt,
+            sum(tbs.ytd_new_business_ct) as ytd_new_business_ct,
+            sum(tbs.ytd_quote_ct) as ytd_quote_ct
+            FROM edw_core.tbroker_summary tbs
             where
-                month_sk = (select date_sk from edw_core.tdate where actual_dt =EOMONTH(GETDATE()))
+                month_sk = (select date_sk from edw_core.tdate where actual_dt =EOMONTH( dateadd("d",-1,GETDATE())))
+            and product_sk <> 6
             group by broker_sk
+        ),
+        comm_tier AS
+        (
+            select broker_id, 
+                    replace(replace(replace(replace(replace(replace(min(case when rnk = '999' then broker_tier else rnk end)
+                        ,'1_Platinum','Platinum')
+                        ,'2_Gold','Gold')
+                        ,'3_National','National')
+                        ,'4_Wholesaler','Wholesaler')
+                        ,'5_A&WINS','A&WINS')
+                        ,'6_Burns','Burns') as
+                        c_tier
+            from
+            (
+                select  broker_id, max(broker_tier) broker_tier, 
+                        case when broker_tier like '%Platinum%' then '1_Platinum' 
+                            when broker_tier like '%Gold%' then '2_Gold' 
+                            when broker_tier like '%National%' then '3_National'
+                            when broker_tier like '%Wholesaler%' then '4_Wholesaler' 
+                            when broker_tier like '%WINS%' then '5_A&WINS' 
+                            when broker_tier like '%Burns%' then '6_Burns' 
+                            else '999'
+                        end rnk  
+                from edw_core.tbroker_commission 
+                group by broker_id, 
+                        case when broker_tier like '%Platinum%' then '1_Platinum' 
+                            when broker_tier like '%Gold%' then '2_Gold' 
+                            when broker_tier like '%National%' then '3_National'
+                            when broker_tier like '%Wholesaler%' then '4_Wholesaler' 
+                            when broker_tier like '%WINS%' then '5_A&WINS' 
+                            when broker_tier like '%Burns%' then '6_Burns' 
+                            else '999'
+                        end
+            ) a
+            group by broker_id 
         )
         SELECT
         tb.broker_id,
@@ -70,7 +115,8 @@ BEGIN
         tb.mailing_address_line_2,
         tb.mailing_address_city_nm,
         tb.mailing_address_state_cd,
-        tb.mailing_address_zip_cd,
+        tb.mailing_address_zip_cd, 
+        tb.mailing_address_country_nm,
         tb.broker_tier,
         case
         when tb.broker_tier = 1 then 'Elite'
@@ -95,11 +141,11 @@ BEGIN
         bs.ytd_bind_ct,
         bs.ytd_submission_ct,
         bs.last30_days_submission_ct,
-        null as hit_ratio,
+        case when bs.ytd_quote_ct = 0 then 0 else round(100*cast(bs.ytd_new_business_ct as float)/bs.ytd_quote_ct,2) end as hit_ratio,
         bs.offered_renewal_ct,
         bs.offered_renewal_over50k_ct,
         bs.inforce_ct as inforce_policy_ct,
-        null as commission_tier, 
+        case when ct.c_tier in ('Platinum','Gold','National','Wholesaler','A&WINS','Burns') then ct.c_tier else null end as commission_tier, 
         bs.inforce_premium_amt,
         null as target_yoy_inforce_premium_pc,
         null as target_yoy_ytd_nb_prem_pc,
@@ -109,7 +155,8 @@ BEGIN
         FROM
         edw_core.tbroker tb
         left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
-        inner join br_summ as bs on bs.broker_sk = tb.broker_sk
+        left join br_summ as bs    on bs.broker_sk = tb.broker_sk
+        left join comm_tier as ct   on ct.broker_id = tb.broker_id
         where tb.broker_nm not like '%test%'
 
         truncate table edw_integration.broker_hubspot_feed       
@@ -123,6 +170,7 @@ BEGIN
             offered_renewal_ct,offered_renewal_over50k_ct,inforce_policy_ct,commission_tier,inforce_premium_amt,target_yoy_inforce_premium_pc,
             target_yoy_ytd_nb_prem_pc,target_ytd_nb_premium_pc,target_ytd_renewal_retention_pc,
             create_ts,update_ts,etl_audit_sk
+            ,mailing_address_country_nm
 
         )
         SELECT        
@@ -133,6 +181,7 @@ BEGIN
             offered_renewal_ct,offered_renewal_over50k_ct,inforce_policy_ct,commission_tier,inforce_premium_amt,target_yoy_inforce_premium_pc,
             target_yoy_ytd_nb_prem_pc,target_ytd_nb_premium_pc,target_ytd_renewal_retention_pc,
             getdate(), getdate(), @etl_audit_sk 
+            ,mailing_address_country_nm
         FROM edw_temp.broker_hubspot_feed_temp1
         
         

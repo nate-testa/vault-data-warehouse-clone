@@ -12,7 +12,8 @@
 -- 08/13/24				Yunus Mohammed				6. Updated wind_derived_deductible logic
 -- 08/20/24				Yunus Mohammed				7. Updated wind_derived_deductible logic
 -- 08/22/24				Yunus Mohammed				8. Removed effective date from merge and added in update clause
--- 09/03/24				Yunus Mohammed				9. Added new field no_of_family_units_in_structures
+-- 09/03/24				Yunus Mohammed				9. Added new column no_of_family_units_in_structures
+-- 10/02/24				Yunus Mohammed				10. Added new column fortified_roof_credit
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
 
@@ -228,6 +229,7 @@ BEGIN
 				tthc.WaiveInspection as waive_inspection_in, tthc.WaiveReason as waive_inspection_reason, tthc.InspectionNotes as inspection_note, tthc.RMSReviewed as rms_reviewed_in,
 				tthc.NCRBManualRate AS nc_bureau_rate, StatedLimitsPolicy as stated_limits_policy_in , RiskSharingPolicy as risk_sharing_policy_in,
 				tthc.NumberofFamilyUnitsinStructure as no_of_family_units_in_structures,
+				tthc.FortifiedRoofCredit as fortified_roof_credit,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk				
 			FROM
 				edw_temp.tquote_home_coverage_wip_temp1 AS tthc
@@ -270,7 +272,7 @@ BEGIN
 				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt,
 				aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt, 
 				waive_inspection_in, waive_inspection_reason, inspection_note, rms_reviewed_in,
-				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,no_of_family_units_in_structures,
+				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,no_of_family_units_in_structures,fortified_roof_credit,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
@@ -310,7 +312,7 @@ BEGIN
 				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, 
 				aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt, 
 				waive_inspection_in, waive_inspection_reason, inspection_note, rms_reviewed_in,nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,
-				no_of_family_units_in_structures,
+				no_of_family_units_in_structures,fortified_roof_credit,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			WHEN MATCHED THEN UPDATE
@@ -441,6 +443,7 @@ BEGIN
 			[target].stated_limits_policy_in = [source].stated_limits_policy_in,
 			[target].risk_sharing_policy_in = [source].risk_sharing_policy_in,
 			[target].no_of_family_units_in_structures = [source].no_of_family_units_in_structures,
+			[target].fortified_roof_credit = [source].fortified_roof_credit,
 			[target].update_ts = GETDATE();
 
 			SET @rows_affected=@@ROWCOUNT; 

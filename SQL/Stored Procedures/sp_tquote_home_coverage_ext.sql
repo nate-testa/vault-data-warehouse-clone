@@ -9,6 +9,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 08/04/24		        Alberto Almario			    1. Created this procedure   
+-- 09/24/24		        Architha Gudimalla			2. Added UniqueId, ObjectGroupIdentifier  
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_tquote_home_coverage_ext 
@@ -43,7 +44,9 @@ BEGIN
             acct.Number as transaction_seq_no, 
             acctvo.ObjectType as label, 
             acctvof.Field, 
-            acctvof.Value 
+            acctvof.Value  
+            , acctvo.UniqueId
+            , acctvo.ObjectGroupIdentifier   
         INTO edw_temp.tquote_home_coverage_ext_temp1
         FROM edw_stage.AccountTransaction acct
         INNER JOIN edw_stage.Product AS p on p.Id = acct.ProductId
@@ -76,6 +79,8 @@ BEGIN
             create_ts,
             update_ts,
             etl_audit_sk 
+            ,UniqueId
+            ,ObjectGroupIdentifier 
 		)
         SELECT 
             t1.quote_no,
@@ -87,6 +92,8 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk 
+            ,t1.UniqueId
+            ,t1.ObjectGroupIdentifier 
         FROM 
             edw_temp.tquote_home_coverage_ext_temp1 AS t1
         ;

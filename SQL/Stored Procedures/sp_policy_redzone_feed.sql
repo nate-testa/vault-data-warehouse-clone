@@ -9,6 +9,7 @@
 -- 08/21/24		Architha Gudimalla				4. Added effective_dt
 -- 09/04/24		Architha Gudimalla				5. Added enrollment_forms
 -- 09/19/24		Architha Gudimalla				6. Changed broker email to producer email
+-- 09/24/24		Architha Gudimalla				7. Updated join for tbroker_vault_team
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_policy_redzone_feed]
 AS
@@ -177,9 +178,9 @@ BEGIN
 			group by broker_id , product_nm, state_cd, program_type
         )  
 		SELECT a.*,
-				bvtm.bdm_nm,
-				bvtm.Underwriter,
-				bvtm.RenewalUnderwriter 
+				isnull(bvtm.bdm_nm,bvtm1.bdm_nm) bdm_nm,
+				isnull(bvtm.Underwriter,bvtm1.Underwriter) Underwriter,
+				isnull(bvtm.RenewalUnderwriter,bvtm1.RenewalUnderwriter) RenewalUnderwriter     
         INTO [edw_temp].[policy_redzone_feed_temp1]
         FROM (
             SELECT * FROM [edw_temp].[policy_redzone_feed_temp0]
@@ -188,8 +189,13 @@ BEGIN
         ) AS a
 		left join br_vault_team  bvtm on     bvtm.broker_id = a.broker_id 
                                          and bvtm.product_nm = a.product_nm 
-                                         and bvtm.program_type = a.program_type 
-								         and isnull(bvtm.state_cd,'') = case when bvtm.state_cd is null then '' else a.risk_state_cd end
+                                         and bvtm.program_type = a.program_type  
+								         and  bvtm.state_cd = a.risk_state_cd
+										 and bvtm.state_cd is not null
+		left join br_vault_team  bvtm1 on     bvtm1.broker_id = a.broker_id 
+                                         and bvtm1.product_nm = a.product_nm 
+                                         and bvtm1.program_type = a.program_type  
+										 and bvtm1.state_cd is  null
         ; 
 
         -- Delete target table
