@@ -163,11 +163,11 @@ BEGIN
 				tp.mailing_address_zip_cd AS [zip],
 				NULL AS fire_protection,
 				'Commission'  AS [category],
-				CASE tp.product_cd
-				WHEN 'HO' THEN 'Home Commission'
-				WHEN 'AU' THEN 'Auto Commission'
-				WHEN 'PEL' THEN 'PEL Commission'
-				WHEN 'LUX' THEN 'LUX Commission'
+				CASE
+				WHEN tp.product_cd in ('HO','CO') THEN 'Home Commission'
+				WHEN tp.product_cd = 'AU' THEN 'Auto Commission'
+				WHEN tp.product_cd = 'PEL' THEN 'PEL Commission'
+				WHEN tp.product_cd = 'LUX' THEN 'LUX Commission'
 				END
 				as subcategory,
 				tic.internal_coverage_sk as financial_category_id,
