@@ -12,6 +12,7 @@
 -- 06/14/24		Yunus Mohammed				5. Updated aslob logic for commission query
 -- 09/18/24		Yunus Mohammed				6. Added Throw in catch block and used 
 --												Used tinternal_coverage for finacial category for commission part
+-- 10/04/24		Yunus Mohammed				7. Added condo in subcategory for commission
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
