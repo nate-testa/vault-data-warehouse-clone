@@ -17,6 +17,7 @@
 -- 10/03/24		        Archtha Gudimalla			10. Corrected logix for 2 yr losss ratio
 -- 10/07/24		        Archtha Gudimalla			11. Excluded os and commercial brokers
 -- 10/07/24		        Archtha Gudimalla			12. Added ytd_nb_premium_amt and ytd_renewal_retention_pc
+-- 10/07/24		        Archtha Gudimalla			12. Added cast to change to float for ret pc and loss ratio
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -150,9 +151,9 @@ BEGIN
         bvtm.[VRE_Underwriter] new_business_uw_nm,
         bvtm.[VES_Underwriter] as renewal_uw_nm, 
         bs.open_submissions_ct,
-        case when bs.one_year_non_cat_earned_net_premium_amt > 0 then bs.one_year_non_cat_loss_incurred_amt/bs.one_year_non_cat_earned_net_premium_amt else 0 end as one_year_actual_non_cat_loss_ratio,
-        case when bs.two_year_non_cat_earned_net_premium_amt > 0 then bs.two_year_non_cat_loss_incurred_amt/bs.two_year_non_cat_earned_net_premium_amt else 0 end as two_year_ultimate_non_cat_loss_ratio,
-        case when bs.five_year_non_cat_earned_net_premium_amt > 0 then bs.five_year_non_cat_loss_incurred_amt/bs.five_year_non_cat_earned_net_premium_amt else 0 end as five_year_non_cat_loss_ratio,
+        case when bs.one_year_non_cat_earned_net_premium_amt > 0 then round(100*cast(bs.one_year_non_cat_loss_incurred_amt as float)/bs.one_year_non_cat_earned_net_premium_amt,2) else 0 end as one_year_actual_non_cat_loss_ratio,
+        case when bs.two_year_non_cat_earned_net_premium_amt > 0 then round(100*cast(bs.two_year_non_cat_loss_incurred_amt as float)/bs.two_year_non_cat_earned_net_premium_amt,2) else 0 end as two_year_ultimate_non_cat_loss_ratio,
+        case when bs.five_year_non_cat_earned_net_premium_amt > 0 then round(100*cast(bs.five_year_non_cat_loss_incurred_amt as float)/bs.five_year_non_cat_earned_net_premium_amt,2) else 0 end as five_year_non_cat_loss_ratio,
         bs.ytd_bind_ct,
         bs.ytd_submission_ct,
         bs.last30_days_submission_ct,
@@ -167,7 +168,7 @@ BEGIN
         null as target_ytd_nb_premium_pc,
         null as target_ytd_renewal_retention_pc
         ,ytd_new_business_net_premium_amt as ytd_nb_premium_amt
-        ,case when ytd_policy_expiring_ct > 0 then ytd_policy_renewal_ct/ytd_policy_expiring_ct else null end ytd_renewal_retention_pc
+        ,case when ytd_policy_expiring_ct > 0 then round(100*cast(ytd_policy_renewal_ct as float)/ytd_policy_expiring_ct,2) else null end ytd_renewal_retention_pc
         into edw_temp.broker_hubspot_feed_temp1
         FROM
         edw_core.tbroker tb
