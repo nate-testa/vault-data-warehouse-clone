@@ -15,6 +15,8 @@
 -- 10/02/24		        Archtha Gudimalla			8. Excluded Yacht
 -- 10/03/24		        Archtha Gudimalla			9. Corrected broker summary pull month_sk
 -- 10/03/24		        Archtha Gudimalla			10. Corrected logix for 2 yr losss ratio
+-- 10/07/24		        Archtha Gudimalla			11. Excluded os and commercial brokers
+-- 10/07/24		        Archtha Gudimalla			12. Added ytd_nb_premium_amt and ytd_renewal_retention_pc
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -39,6 +41,12 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 
+        declare @var_start_mn int;
+        declare @var_end_mn	int;
+
+        set @var_start_mn = (select min(yearmonth) from edw_core.tdate where calendar_year = year( dateadd("d",-1,GETDATE())));
+        set @var_end_mn   = (select min(yearmonth) from edw_core.tdate where actual_dt = EOMONTH( dateadd("d",-1,GETDATE())));
+
 		DROP TABLE IF exists edw_temp.broker_hubspot_feed_temp1;
 
         with br_vauk_team as
@@ -53,24 +61,31 @@ BEGIN
         br_summ as
         (
             SELECT
-            broker_sk,	
-            sum(round(100* one_year_non_cat_loss_incurred_amt/nullif( one_year_non_cat_earned_net_premium_amt,0),2)) as  one_year_actual_non_cat_loss_ratio,
-            sum(round(100* two_year_non_cat_loss_incurred_amt/nullif( two_year_non_cat_earned_net_premium_amt,0),2)) as  two_year_ultimate_non_cat_loss_ratio,
-            sum(round(100*five_year_non_cat_loss_incurred_amt/nullif(five_year_non_cat_earned_net_premium_amt,0),2)) as five_year_non_cat_loss_ratio,
-            sum(ytd_bind_ct) AS ytd_bind_ct,
-            sum(open_submission_ct) as open_submissions_ct,
-            sum(ytd_submission_ct) as ytd_submission_ct,
-            sum(last30_days_submission_ct) as last30_days_submission_ct,
-            sum(policy_renewal_offered_ct) as offered_renewal_ct,
-            sum(policy_renewal_offered_over_50k_ct) as offered_renewal_over50k_ct,
-            sum(inforce_ct) as inforce_ct,
-            sum(tbs.inforce_net_premium_amt) as inforce_premium_amt,
-            sum(tbs.ytd_new_business_ct) as ytd_new_business_ct,
-            sum(tbs.ytd_quote_ct) as ytd_quote_ct
+                broker_sk,	
+                sum(case when td.yearmonth = @var_end_mn then one_year_non_cat_loss_incurred_amt		else 0 end) as one_year_non_cat_loss_incurred_amt,
+                sum(case when td.yearmonth = @var_end_mn then two_year_non_cat_loss_incurred_amt		else 0 end) as two_year_non_cat_loss_incurred_amt,
+                sum(case when td.yearmonth = @var_end_mn then five_year_non_cat_loss_incurred_amt		else 0 end) as five_year_non_cat_loss_incurred_amt,
+                sum(case when td.yearmonth = @var_end_mn then one_year_non_cat_earned_net_premium_amt	else 0 end) as one_year_non_cat_earned_net_premium_amt,
+                sum(case when td.yearmonth = @var_end_mn then two_year_non_cat_earned_net_premium_amt	else 0 end) as two_year_non_cat_earned_net_premium_amt,
+                sum(case when td.yearmonth = @var_end_mn then five_year_non_cat_earned_net_premium_amt	else 0 end) as five_year_non_cat_earned_net_premium_amt, 
+                sum(case when td.yearmonth = @var_end_mn then tbs.ytd_bind_ct							else 0 end) as ytd_bind_ct,
+                sum(case when td.yearmonth = @var_end_mn then tbs.open_submission_ct					else 0 end) as open_submissions_ct,
+                sum(case when td.yearmonth = @var_end_mn then tbs.ytd_submission_ct						else 0 end) as ytd_submission_ct,
+                sum(case when td.yearmonth = @var_end_mn then tbs.last30_days_submission_ct				else 0 end) as last30_days_submission_ct,
+                sum(case when td.yearmonth = @var_end_mn then tbs.policy_renewal_offered_ct				else 0 end) as offered_renewal_ct,
+                sum(case when td.yearmonth = @var_end_mn then tbs.policy_renewal_offered_over_50k_ct	else 0 end) as offered_renewal_over50k_ct,
+                sum(case when td.yearmonth = @var_end_mn then tbs.inforce_ct							else 0 end) as inforce_ct,
+                sum(case when td.yearmonth = @var_end_mn then tbs.inforce_net_premium_amt				else 0 end) as inforce_premium_amt,
+                sum(case when td.yearmonth = @var_end_mn then tbs.ytd_new_business_ct					else 0 end) as ytd_new_business_ct,
+                sum(case when td.yearmonth = @var_end_mn then tbs.ytd_quote_ct							else 0 end) as ytd_quote_ct,
+                sum(case when td.yearmonth = @var_end_mn then tbs.ytd_new_business_net_premium_amt		else 0 end) as ytd_new_business_net_premium_amt,
+                sum(tbs.policy_expiring_ct) ytd_policy_expiring_ct,
+                sum(tbs.policy_renewal_ct) ytd_policy_renewal_ct
             FROM edw_core.tbroker_summary tbs
-            where
-                month_sk = (select date_sk from edw_core.tdate where actual_dt =EOMONTH( dateadd("d",-1,GETDATE())))
-            and product_sk <> 6
+			inner join edw_core.tdate td on td.date_sk = tbs.month_sk
+            where td.yearmonth >= @var_start_mn
+			and td.yearmonth <= @var_end_mn
+            and product_sk <> 6 
             group by broker_sk
         ),
         comm_tier AS
@@ -135,9 +150,9 @@ BEGIN
         bvtm.[VRE_Underwriter] new_business_uw_nm,
         bvtm.[VES_Underwriter] as renewal_uw_nm, 
         bs.open_submissions_ct,
-        bs.one_year_actual_non_cat_loss_ratio,
-        bs.two_year_ultimate_non_cat_loss_ratio,
-        bs.five_year_non_cat_loss_ratio,
+        case when bs.one_year_non_cat_earned_net_premium_amt > 0 then bs.one_year_non_cat_loss_incurred_amt/bs.one_year_non_cat_earned_net_premium_amt else 0 end as one_year_actual_non_cat_loss_ratio,
+        case when bs.two_year_non_cat_earned_net_premium_amt > 0 then bs.two_year_non_cat_loss_incurred_amt/bs.two_year_non_cat_earned_net_premium_amt else 0 end as two_year_ultimate_non_cat_loss_ratio,
+        case when bs.five_year_non_cat_earned_net_premium_amt > 0 then bs.five_year_non_cat_loss_incurred_amt/bs.five_year_non_cat_earned_net_premium_amt else 0 end as five_year_non_cat_loss_ratio,
         bs.ytd_bind_ct,
         bs.ytd_submission_ct,
         bs.last30_days_submission_ct,
@@ -150,7 +165,9 @@ BEGIN
         null as target_yoy_inforce_premium_pc,
         null as target_yoy_ytd_nb_prem_pc,
         null as target_ytd_nb_premium_pc,
-        null as target_ytd_renewal_retention_pc        
+        null as target_ytd_renewal_retention_pc
+        ,ytd_new_business_net_premium_amt as ytd_nb_premium_amt
+        ,case when ytd_policy_expiring_ct > 0 then ytd_policy_renewal_ct/ytd_policy_expiring_ct else null end ytd_renewal_retention_pc
         into edw_temp.broker_hubspot_feed_temp1
         FROM
         edw_core.tbroker tb
@@ -158,6 +175,8 @@ BEGIN
         left join br_summ as bs    on bs.broker_sk = tb.broker_sk
         left join comm_tier as ct   on ct.broker_id = tb.broker_id
         where tb.broker_nm not like '%test%'
+		and not (tb.broker_id like '1%' and len(tb.broker_id) = 5)
+		and not (len(tb.broker_id) > 6);
 
         truncate table edw_integration.broker_hubspot_feed       
     
@@ -171,7 +190,8 @@ BEGIN
             target_yoy_ytd_nb_prem_pc,target_ytd_nb_premium_pc,target_ytd_renewal_retention_pc,
             create_ts,update_ts,etl_audit_sk
             ,mailing_address_country_nm
-
+            ,ytd_nb_premium_amt
+            ,ytd_renewal_retention_pc
         )
         SELECT        
             broker_id,broker_nm,mailing_address_line_1,mailing_address_line_2,mailing_address_city_nm,mailing_address_state_cd,
@@ -182,6 +202,8 @@ BEGIN
             target_yoy_ytd_nb_prem_pc,target_ytd_nb_premium_pc,target_ytd_renewal_retention_pc,
             getdate(), getdate(), @etl_audit_sk 
             ,mailing_address_country_nm
+            ,ytd_nb_premium_amt
+            ,ytd_renewal_retention_pc
         FROM edw_temp.broker_hubspot_feed_temp1
         
         
