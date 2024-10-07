@@ -1,0 +1,4 @@
+EXEC sp_rename 'edw_stage.hubspot_company_goals.target_2024_policy_inforce_renewal_rentention_pct', 'target_2024_policy_inforce_renewal_retention__', 'COLUMN';
+EXEC sp_rename 'edw_stage.hubspot_company_goals.target_monthly_nb_quote_commitment_$', 'target_monthly_nb_quote_commitment__', 'COLUMN';
+EXEC sp_rename 'edw_stage.hubspot_company_goals.Pct_target_growth_2024_inforce_premium_over_last_year', 'target_growth_2024_inforce_premium_over_last_year', 'COLUMN';
+EXEC sp_rename 'edw_stage.hubspot_company_goals.Pct_target_growth_2024_nb_premium_over_last_year', 'target_growth_2024_nb_premium_over_last_year', 'COLUMN';
