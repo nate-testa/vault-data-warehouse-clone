@@ -13,6 +13,7 @@
 -- 09/12/24		        Architha Gudimalla			8. Added Primary home fields
 -- 09/21/24		        Architha Gudimalla			9. Added cast to null cols
 -- 10/02/24		        Archtha Gudimalla			10. Add mailing address country
+-- 10/07/24		        Archtha Gudimalla			11. Added Contruction
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -97,7 +98,10 @@ BEGIN
             NULL AS rol_on_lost_business,
             NULL AS lost_company,
             h.not_taken_reason_desc as reason_quote_not_taken,
-            NULL AS construction,
+             CASE
+            WHEN pr.product_cd IN ('HO','CO') THEN tqhc.construction_type
+            else cast(null as varchar)
+            END AS construction,
             tqhc.[dwelling_limit_amt],
             tqhc.[contents_limit_amt], 
             tqhc.[other_structures_limit_amt],
@@ -210,8 +214,11 @@ BEGIN
             'Y' AS recampaign_in,
             cast(null as varchar) AS rol_on_lost_business,
             cast(null as varchar) AS lost_company,
-            cast(null as varchar) as reason_policy_not_taken,
-            cast(null as varchar) AS construction,
+            cast(null as varchar) as reason_policy_not_taken, 
+            case
+            WHEN pr.product_cd IN ('HO','CO') THEN tqhc.construction_type
+            else cast(null as varchar)
+            END AS construction,
             tqhc.[dwelling_limit_amt],
             tqhc.[contents_limit_amt], 
             tqhc.[other_structures_limit_amt],
