@@ -120,7 +120,6 @@ BEGIN
 			source_system_nm,
 			api_status,			
 			create_ts,
-			update_ts,
 			etl_audit_sk
 		)
 		SELECT
@@ -136,7 +135,6 @@ BEGIN
 			transaction_type,
 			source_system_nm,
 			api_status,
-			getdate(),
 			getdate(),
 		    @etl_audit_sk
 		FROM [edw_temp].[claim_policy_search_snapsheet_api_temp1];

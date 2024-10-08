@@ -74,7 +74,6 @@ BEGIN
             source_system_nm,
             api_status,
             create_ts,
-            update_ts,
             etl_audit_sk
 		)
 		select
@@ -114,7 +113,6 @@ BEGIN
             ,source_system_nm
             ,'pending' as api_status,
             getdate() as create_ts,
-            getdate() as update_ts,
             @etl_audit_sk as etl_audit_sk
             from
             edw_temp.nfp_claim_policy_search_snapsheet_api_temp1
