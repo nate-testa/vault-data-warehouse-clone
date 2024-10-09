@@ -119,7 +119,7 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_transaction_create_ts) FROM [edw_temp].[nfp_claim_policy_search_snapsheet_api_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.update_ts) FROM [edw_temp].[nfp_claim_policy_search_snapsheet_api_temp1] t1),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS [edw_temp].[nfp_claim_policy_search_snapsheet_api_temp1];
 		
