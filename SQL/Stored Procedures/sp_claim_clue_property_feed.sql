@@ -294,7 +294,7 @@ BEGIN
         ----------------------------------------------------
         --*** Start Insert rows with causeOfLoss changed ***
         ----------------------------------------------------    
-        --Create temp table whit causeOfLoss that has changed in tclaim table
+        -- Create a temp table with the latest 'Append' records where 'causeOfLoss' has changed in the tclaim table.
         SELECT 
             cp.*, cl.causeOfLoss AS new_causeOfLoss
         INTO [edw_temp].[claim_clue_property_feed_temp2]
@@ -307,6 +307,7 @@ BEGIN
         ) AS mcp
         ON cp.claimNumber = mcp.claimNumber
         AND cp.create_ts = mcp.max_create_ts
+        AND cp.claimReportingStatus = 'A' -- Retrieve only the rows where claimReportingStatus is Append.
         INNER JOIN edw_core.tclaim AS c
         ON cp.claimNumber = c.claim_no
         INNER JOIN (
@@ -351,7 +352,7 @@ BEGIN
         ON c.cause_of_loss_sk = cl.cause_of_loss_sk
         WHERE cp.causeOfLoss <> cl.causeOfLoss
         
-        --Insert R row
+        --Insert an R row to remove the old causeOfLoss and replace it with the one created in the previous query.
         INSERT INTO [edw_temp].[claim_clue_property_feed_temp1]
         SELECT 
             contribCompany,
