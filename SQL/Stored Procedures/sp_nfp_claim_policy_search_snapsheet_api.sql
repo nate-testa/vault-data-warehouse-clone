@@ -79,7 +79,7 @@ BEGIN
 		select
             policy_no,
             'professional_liability' as policy_type,
-            'Active' as [status],
+            NULL as [status],
             'Excess Liability' as product_code,
             effective_dt as inception_date,
             expiration_dt,

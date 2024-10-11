@@ -1,0 +1,1 @@
+alter table edw_integration.claim_policy_webhook_snapsheet_api alter column status varchar(255) null
