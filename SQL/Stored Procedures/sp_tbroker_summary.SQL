@@ -359,7 +359,7 @@ BEGIN
 							r.broker_sk, r.product_sk, r.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco, 
 						   	sum(r.renewal_non_flat_cancelled_ct) renewal_ct,  
-							sum(case when renewal_quote_sk > 0 and q.quote_status in ('In Progress','Issued','Offered','Not taken') then 1 else 0 end) policy_renewal_offered_ct, 
+							sum(case when renewal_policy_sk > 0 or (renewal_quote_sk > 0 and q.quote_status in ('In Progress','Issued','Offered','Not taken')) then 1 else 0 end) policy_renewal_offered_ct, 
 							sum(case when renewal_ct > 0 and renewal_initial_written_premium_amt > 50000 then 1 else 0 end) policy_renewal_offered_over_50k_ct, 
 							sum(case when renewal_ct > 0 then renewal_initial_written_premium_amt else 0 end) policy_renewal_offered_premium_amt, 
 							sum(case when renewal_ct > 0 then r.expiring_written_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,
