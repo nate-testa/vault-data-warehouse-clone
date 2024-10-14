@@ -349,7 +349,7 @@ BEGIN
 						or prior_qtd_bind_ct <> 0 or qtd_bind_ct <> 0 
 						or prior_mtd_bind_ct <> 0 or mtd_bind_ct <> 0 
 						;  
-
+ 
 				--retention data
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_retention;
 				with ren AS
