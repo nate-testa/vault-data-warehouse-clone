@@ -57,7 +57,7 @@ def process_claims(qry):
     logging.info(f"Query returned {len(claims_data)} records")
 
     for record in claims_data:
-        (claim_api_sk, claimNumber, claimType, status, policyNumber, datetimeOfLoss, datetimeOfNotification,
+        (claimNumber, claimType, status, policyNumber, datetimeOfLoss, datetimeOfNotification,
          accountCode, lossType, claimIncidentDetails, exposures, vehicles, claimParties) = record
         logging.info(f"Processing claim record: {record}")
 
@@ -77,20 +77,20 @@ def process_claims(qry):
             json_response_claims = json.loads(result_text)
             qry_update_result = f"""
                 update edw_stage.migration_create_claim_api 
-                set api_process_date = getdate(), api_status = 'Success', 
+                set update_ts = getdate(), api_status = 'Success', 
                     api_Error_description = NULL, 
                     claimReferenceNumber = '{json_response_claims.get("claimReferenceNumber")}',
                     api_response = '{result_text.replace("'","''")}'
-                where claim_api_sk = '{claim_api_sk}'
+                where claimNumber = '{claimNumber}'
             """
         else:
             qry_update_result = f"""
                 update edw_stage.migration_create_claim_api 
-                set api_process_date = getdate(), api_status = 'Error', 
+                set update_ts = getdate(), api_status = 'Error', 
                     api_Error_description = '{result_text.replace("'","''")}',
                     claimReferenceNumber = NULL,
                     api_response = NULL
-                where claim_api_sk = '{claim_api_sk}'
+                where claimNumber = '{claimNumber}'
             """
 
         logging.info(f"Executing update query: {qry_update_result}")
@@ -105,7 +105,7 @@ def process_notes(qry):
     logging.info(f"Query returned {len(notes_data)} records")
 
     for record in notes_data:
-        (note_api_sk, data_json) = record
+        (claim_no, data_json) = record
         logging.info(f"Processing note record: {record}")
 
         success, result_text = api.create_note(data_json)
@@ -113,21 +113,21 @@ def process_notes(qry):
         if success:
             json_response_notes = json.loads(result_text)
             qry_update_result = f"""
-                update edw_stage.migration_create_a_note_api 
-                set api_process_date = getdate(), api_status = 'Success', 
+                update edw_stage.migration_create_note_api 
+                set update_ts = getdate(), api_status = 'Success', 
                     api_Error_description = NULL, 
-                    id = '{json_response_notes.get("data").get("id")}',
+                    claimReferenceNumber = '{json_response_notes.get("data").get("id")}',
                     api_response = '{result_text.replace("'","''")}'
-                where note_api_sk = '{note_api_sk}'
+                where claim_no = '{claim_no}'
             """
         else:
             qry_update_result = f"""
-                update edw_stage.migration_create_a_note_api 
-                set api_process_date = getdate(), api_status = 'Error', 
+                update edw_stage.migration_create_note_api 
+                set update_ts = getdate(), api_status = 'Error', 
                 api_Error_description = '{result_text.replace("'","''")}',
-                id = NULL,
+                claimReferenceNumber = NULL,
                 api_response = NULL
-                where note_api_sk = '{note_api_sk}'
+                where claim_no = '{claim_no}'
             """
 
         logging.info(f"Executing update query: {qry_update_result}")
@@ -151,7 +151,7 @@ def process_financial_transactions(qry):
             json_response_notes = json.loads(result_text)
             qry_update_result = f"""
                 update edw_stage.migration_create_financial_transaction_api 
-                set api_process_date = getdate(), api_status = 'Success', 
+                set update_ts = getdate(), api_status = 'Success', 
                     api_Error_description = NULL, 
                     id = '{json_response_notes.get("data").get("id")}',
                     api_response = '{result_text.replace("'","''")}'
@@ -160,7 +160,7 @@ def process_financial_transactions(qry):
         else:
             qry_update_result = f"""
                 update edw_stage.migration_create_financial_transaction_api 
-                set api_process_date = getdate(), api_status = 'Error', 
+                set update_ts = getdate(), api_status = 'Error', 
                 api_Error_description = '{result_text.replace("'","''")}',
                 id = NULL,
                 api_response = NULL
@@ -195,16 +195,16 @@ def main():
 
     claims_qry = """
         select 
-            claim_api_sk, claimNumber, claimType, status, policyNumber, datetimeOfLoss, datetimeOfNotification,
+            claimNumber, claimType, status, policyNumber, datetimeOfLoss, datetimeOfNotification,
             accountCode, lossType, claimIncidentDetails, exposures, vehicles, claimParties
         from edw_stage.migration_create_claim_api
-        where api_status = 'pending'
+        where api_status = 'pending' 
     """
 
     notes_qry = """
         select 
-            note_api_sk, note_json as data
-        from edw_stage.migration_create_a_note_api
+            claim_no, note_json as data
+        from edw_stage.migration_create_note_api
         where api_status = 'pending'
     """
 
