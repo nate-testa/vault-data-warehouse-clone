@@ -173,7 +173,7 @@ class LC360Processor:
                 df[col] = df[col].dt.strftime('%Y-%m-%d %H:%M:%S')
                 df[col] = df[col].replace('NaT', None)
 
-            logging.info("Data read and prepared successfully.")
+            logging.info("Data read and prepared successfully.") 
             return df
 
         except Exception as e:
@@ -185,26 +185,26 @@ class LC360Processor:
             # Truncate the table first using the Airflow connection
             with self.get_new_connection() as connection:
                 with connection.cursor() as cursor:
-                    truncate_sql = "TRUNCATE TABLE edw_cat_model.lc360_temp_table"
+                    truncate_sql = "TRUNCATE TABLE edw_temp.lc360_temp_table"
                     cursor.execute(truncate_sql)
                     connection.commit()
-                    logging.info("Table 'edw_cat_model.lc360_temp_table' truncated successfully.")
+                    logging.info("Table 'edw_temp.lc360_temp_table' truncated successfully.")
 
             # Create SQLAlchemy engine for inserting data into SQL Server
             mssql_hook = MsSqlHook(mssql_conn_id=self.mssql_conn_id)
             engine = mssql_hook.get_sqlalchemy_engine()
 
-            # Insert dataframe into SQL Server table 'edw_cat_model.lc360_temp_table'
+            # Insert dataframe into SQL Server table 'edw_temp.lc360_temp_table'
             df.to_sql(
                 name='lc360_temp_table',
                 con=engine,
-                schema='edw_cat_model',
+                schema='edw_temp',
                 if_exists='append',
                 index=False,
                 chunksize=500,
                 method='multi'
             )
-            logging.info("Data inserted into 'edw_cat_model.lc360_temp_table' successfully.")
+            logging.info("Data inserted into 'edw_temp.lc360_temp_table' successfully.")
         except Exception as e:
             logging.error(f"Error inserting data into SQL Server: {e}")
             raise
@@ -244,7 +244,7 @@ class LC360Processor:
                 with connection.cursor() as cursor:
                     insert_historical_sql = """
                         INSERT INTO edw_cat_model.Insp_LC360_historical
-                        SELECT * FROM edw_cat_model.lc360_temp_table
+                        SELECT * FROM edw_temp.lc360_temp_table
                     """
                     cursor.execute(insert_historical_sql)
                     connection.commit()

@@ -4,9 +4,9 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'lc360_temp_table' AND schema_name(schema_id) = 'edw_cat_model')
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'lc360_temp_table' AND schema_name(schema_id) = 'edw_temp')
 BEGIN
-  CREATE TABLE [edw_cat_model].[lc360_temp_table](
+  CREATE TABLE [edw_temp].[lc360_temp_table](
   	[inspection_update_dt] [varchar](10) NOT NULL,
   	[inspectionNumber] [int] NULL,
   	[policyNumber] [varchar](50) NULL,
