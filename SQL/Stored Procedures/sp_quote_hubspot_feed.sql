@@ -1,8 +1,8 @@
--- =================================================================================================
+-- =============================================================================================================================
 -- Description: This procedures inserts and updates quote hubspot data
------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------
 -- Change date          |Author						|	Change Description
------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------
 -- 07/17/24		        Yunus Mohammed				1. Created this procedure
 -- 07/29/24		        Architha Gudimalla			2. Excluded quotes with broker_id = 0
 -- 08/08/24		        Architha Gudimalla			3. Added Customer id
@@ -14,7 +14,8 @@
 -- 09/21/24		        Architha Gudimalla			9. Added cast to null cols
 -- 10/02/24		        Archtha Gudimalla			10. Add mailing address country
 -- 10/07/24		        Archtha Gudimalla			11. Added Contruction
--- ======================================================================================================== 
+-- 10/16/24		        Archtha Gudimalla			12. Excluded cancelled pols in pending_non_renewal recampaign
+-- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
 
@@ -274,7 +275,9 @@ BEGIN
 			 non_renewal_sub_note_desc like '%Renewal not taken%' or
 			 non_renewal_sub_note_desc like '%Coverage no longer needed%' or
 			 non_renewal_sub_note_desc like '%Coverage placed elseware%')       
-		and q.product_cd <> 'BY';
+		and q.product_cd <> 'BY'
+        and q.policy_status <> 'Cancelled'
+        ;
         --and q1.quote_no is null
       
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp3;
