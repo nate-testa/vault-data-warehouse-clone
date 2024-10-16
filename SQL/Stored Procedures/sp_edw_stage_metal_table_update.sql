@@ -40,8 +40,9 @@ BEGIN
 			from edw_stage.Account 
 			where EffectiveDate is null;
 
-			update edw_stage.Account a
+			update a
 			set EffectiveDate = cast(createddate as date)
+			from edw_stage.Account a
 			where exists (select 'x' from edw_temp.metal_table_temp1 b where a.[id] = b.[id]);
 
 			DROP TABLE IF EXISTS edw_temp.metal_table_temp1;
@@ -50,8 +51,9 @@ BEGIN
 			from edw_stage.Account 
 			where ExpirationDate is null;
 
-			update edw_stage.Account a
+			update a
 			set ExpirationDate = cast(createddate as date)
+			from edw_stage.Account a
 			where exists (select 'x' from edw_temp.metal_table_temp1 b where a.[id] = b.[id]); 
 		
 		SET @rows_affected=@@ROWCOUNT;
