@@ -13,7 +13,7 @@ to_email = "itdatateam@vault.insurance"
 
 ENVIRONMENT = Variable.get("environment")
 if ENVIRONMENT == 'PRODUCTION':
-    bash_command = 'bash /home/vuhubspotadmin/hs-integration/run_script.sh ' # It is important put and empty space at the end of the command
+    bash_command = 'bash /home/vphubspotadmin/hs-integration/run_script.sh ' # It is important put and empty space at the end of the command
 else:
     bash_command = ''
     print(f"**** Environment: [{ENVIRONMENT}] is not authorized to execute hubspot file (run_script.sh).")
