@@ -1,6 +1,7 @@
 import argparse
 import json
 import logging
+import time
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.utils.log.logging_mixin import LoggingMixin
 from snapsheet_api import SnapsheetAPI
@@ -10,6 +11,26 @@ from snapsheet_api import SnapsheetAPI
 logger = logging.getLogger(__name__) 
 logger.setLevel("DEBUG")
 
+policies_qry = """
+        SELECT
+            policyNumber, policyType, status, productCode, inceptionDate, policyEntities, transaction_seq_no
+        FROM 
+        (
+            select 
+                policyNumber, 
+                policyType, 
+                status, 
+                productCode, 
+                inceptionDate, 
+                policyEntities, 
+                transaction_seq_no,
+                ROW_NUMBER() OVER (PARTITION BY policyNumber , inceptionDate ORDER BY transaction_seq_no DESC) AS rank
+            from 
+                edw_integration.claim_policy_search_snapsheet_api
+            where api_status in ('Error','pending') 
+        ) a 
+        WHERE a.rank = 1
+    """
 
 def process_policies(qry):
     api = SnapsheetAPI(logger=logger)
@@ -48,30 +69,12 @@ def process_policies(qry):
         logger.debug(f"Executing update query: {qry_update_result}")
         mssql_hook.run(qry_update_result)
 
+        time.sleep(1)
 
+def process_snapsheet_policies():
+    process_policies(policies_qry)
 
 def main():
-    
-    policies_qry = """
-        SELECT
-            policyNumber, policyType, status, productCode, inceptionDate, policyEntities, transaction_seq_no
-        FROM 
-        (
-            select 
-                policyNumber, 
-                policyType, 
-                status, 
-                productCode, 
-                inceptionDate, 
-                policyEntities, 
-                transaction_seq_no,
-                ROW_NUMBER() OVER (PARTITION BY policyNumber , inceptionDate ORDER BY transaction_seq_no DESC) AS rank
-            from 
-                edw_integration.claim_policy_search_snapsheet_api
-            where api_status in ('Error','pending') 
-        ) a 
-        WHERE a.rank = 1
-    """
 
     parser = argparse.ArgumentParser(description='Execute a snapsheet API')
     parser.add_argument('function', choices=['policies'], help='The function you want to execute')

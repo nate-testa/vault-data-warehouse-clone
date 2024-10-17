@@ -1,6 +1,7 @@
 import argparse
 import json
 import logging
+import time
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.utils.log.logging_mixin import LoggingMixin
 from snapsheet_api import SnapsheetAPI
@@ -44,6 +45,8 @@ def process_policies(qry):
                 where policyNumber = '{policyNumber}'
                 and inceptionDate = '{inceptionDate}'
             """
+
+        time.sleep(1)
 
         logger.debug(f"Executing update query: {qry_update_result}")
         mssql_hook.run(qry_update_result)
@@ -93,6 +96,8 @@ def process_claims(qry):
                 where claimNumber = '{claimNumber}'
             """
 
+        time.sleep(1)
+
         logging.info(f"Executing update query: {qry_update_result}")
         mssql_hook.run(qry_update_result)
 
@@ -130,6 +135,8 @@ def process_notes(qry):
                 where claim_no = '{claim_no}'
             """
 
+        time.sleep(1)
+
         logging.info(f"Executing update query: {qry_update_result}")
         mssql_hook.run(qry_update_result)
 
@@ -166,6 +173,8 @@ def process_financial_transactions(qry):
                 api_response = NULL
                 where financial_transaction_id = '{financial_transaction_id}'
             """
+
+        time.sleep(1)
 
         logging.info(f"Executing update query: {qry_update_result}")
         mssql_hook.run(qry_update_result)
