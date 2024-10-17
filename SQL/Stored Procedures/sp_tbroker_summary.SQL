@@ -44,6 +44,7 @@ GO
 -- 08/01/24		Architha Gudimalla				28. Added logic for policy_renewal_offered_over_50k_ct
 -- 08/29/24		Architha Gudimalla				29. Corrected bind ct for hubspot
 -- 10/13/24		Architha Gudimalla				30. Updated logic for policy_renewal_offered_ct
+-- 10/13/24		Architha Gudimalla				30. Updated logic for policy_renewal_offered_over_50k_ct
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -359,8 +360,18 @@ BEGIN
 							r.broker_sk, r.product_sk, r.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco, 
 						   	sum(r.renewal_non_flat_cancelled_ct) renewal_ct,  
-							sum(case when renewal_policy_sk > 0 or (renewal_quote_sk > 0 and q.quote_status in ('In Progress','Issued','Offered','Not taken')) then 1 else 0 end) policy_renewal_offered_ct, 
-							sum(case when renewal_ct > 0 and renewal_initial_written_premium_amt > 50000 then 1 else 0 end) policy_renewal_offered_over_50k_ct, 
+							sum(case when renewal_policy_sk > 0 
+									or (renewal_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_offered_quote_history_sk IS NOT NULL ) 
+									or (renewal_quote_sk > 0 and q.quote_status in ('Issued','Offered','Not taken') ) 
+									then 1 
+									else 0 
+								end) policy_renewal_offered_ct, 
+							sum(case when (renewal_policy_sk > 0 and renewal_initial_written_premium_amt > 50000)
+									   or (renewal_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_offered_quote_history_sk IS NOT NULL AND qh.net_premium_amt > 50000) 
+									   or (renewal_quote_sk > 0 and q.quote_status in ('Issued','Offered','Not taken')  AND qh.net_premium_amt > 50000) 
+									 then 1 
+									 else 0 
+								end) policy_renewal_offered_over_50k_ct, 
 							sum(case when renewal_ct > 0 then renewal_initial_written_premium_amt else 0 end) policy_renewal_offered_premium_amt, 
 							sum(case when renewal_ct > 0 then r.expiring_written_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,
 							sum(r.non_flat_cancelled_ct-r.mid_term_cancelled_ct) expiring_ct,
@@ -370,6 +381,7 @@ BEGIN
 					inner join edw_core.tpolicy pol on r.policy_sk = pol.policy_sk 
 					inner join edw_core.tstate st  on pol.risk_state_cd = st.state_cd
 					left join edw_core.tquote q  on q.quote_sk = r.renewal_quote_sk
+					left join edw_core.tquote_history qh  on q.quote_sk = qh.quote_sk and qh.latest_transaction_in = 'Y'
 					where month_sk between @year_begin_dt_sk and @month_end_dt_sk  
 					group by r.month_sk, r.broker_sk, r.product_sk, r.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
