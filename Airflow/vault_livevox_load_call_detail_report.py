@@ -240,9 +240,16 @@ with DAG(
         python_callable=process_sftp_files,
         dag=dag,
     )
+
+    send_livevox_email = EmailOperator(
+            task_id='send_livevox_email',
+            to=to_email,
+            subject='Airflow - Livevox Job executed successfully',
+            html_content=get_HTML_on_vault_format('The Livevox Job has been executed successfully',''),
+        )
  
     end = DummyOperator(
         task_id='end',
     )
 
-start >> load_call_detail_report >> end
+start >> load_call_detail_report >> send_livevox_email >> end
