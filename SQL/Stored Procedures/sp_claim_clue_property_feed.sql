@@ -66,7 +66,8 @@ BEGIN
             SELECT 
                 policy_no,
                 mortgagee_nm,
-                loan_no
+                loan_no,
+                ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt ORDER BY transaction_seq_no DESC) as rn
             FROM edw_core.tmortgagee 
             WHERE mortgagee_type = 'First' 
             AND mortgagee_no = '1'
@@ -270,7 +271,7 @@ BEGIN
         LEFT JOIN customer AS cu ON p.customer_id = cu.customer_id
         LEFT JOIN edw_core.tcause_of_loss AS cof ON cof.cause_of_loss_sk = c.cause_of_loss_sk
         LEFT JOIN edw_core.tcatastrophe AS cat ON cat.catastrophe_sk=c.catastrophe_sk
-        LEFT JOIN mortagee AS m ON m.policy_no = c.policy_no 
+        LEFT JOIN mortagee AS m ON m.policy_no = c.policy_no AND m.rn = 1
         INNER JOIN location_address AS la ON c.policy_no = la.policy_no
         LEFT JOIN policy_insured_2 AS pi2 ON c.policy_no = pi2.policy_no
         WHERE p.product_cd IN ('HO','CO','LUX')
