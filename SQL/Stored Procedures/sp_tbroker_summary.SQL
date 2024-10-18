@@ -45,6 +45,7 @@ GO
 -- 08/29/24		Architha Gudimalla				29. Corrected bind ct for hubspot
 -- 10/13/24		Architha Gudimalla				30. Updated logic for policy_renewal_offered_ct
 -- 10/13/24		Architha Gudimalla				30. Updated logic for policy_renewal_offered_over_50k_ct
+-- 10/18/24		Architha Gudimalla				30. Renamed proc extention to small letters
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
