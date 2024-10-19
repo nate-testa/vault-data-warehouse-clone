@@ -79,8 +79,22 @@ BEGIN
 					SELECT
 						hc.policy_no as policyNumber,
 						--ic.primary_coverage_cd as coverageCd,
-						ic.internal_coverage_cd as coverageCd,
-						ic.internal_coverage_desc as coverageDesc,
+						CASE
+							WHEN ic.internal_coverage_cd = 'Loss of Use'
+								THEN 'LOU'
+							WHEN ic.internal_coverage_cd = 'AOP' AND hc.residence_type = 'Homeowners'
+								THEN 'DWELL'
+							WHEN ic.internal_coverage_cd = 'AOP' AND hc.residence_type = 'Condo/Co-op'
+								THEN 'CONTENTS'
+							ELSE ic.internal_coverage_cd
+						END as coverageCd,
+						CASE 
+						    WHEN ic.internal_coverage_cd = 'AOP' AND hc.residence_type = 'Homeowners'
+								THEN 'Dwelling'
+							WHEN ic.internal_coverage_cd = 'AOP' AND hc.residence_type = 'Condo/Co-op'
+								THEN 'Contents'
+							ELSE ic.internal_coverage_desc
+						END as coverageDesc,
 						--ic.internal_coverage_desc as IVANS_coverage_desc,
 						pt.premium_amt AS changeAmount,
 						--pt.annual_premium_amt AS currentAmount,
@@ -93,6 +107,10 @@ BEGIN
                             AND subpt.transaction_seq_no <= pt.transaction_seq_no
                         ) AS currentAmount,
 						CASE
+							WHEN ic.internal_coverage_cd = 'AOP' AND hc.residence_type = 'Homeowners'
+								THEN CAST(hc.dwelling_limit_amt as NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'AOP' AND hc.residence_type = 'Condo/Co-op'
+								THEN CAST(hc.contents_limit_amt as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Systems Protection'
 						        THEN CAST(hac.home_systems_protection_limit_amt as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Cyber Protection'
@@ -121,6 +139,8 @@ BEGIN
 						        THEN CAST(hac.damage_to_property_of_others_increased_limit_amt as NVARCHAR(255))
 							WHEN ic.internal_coverage_cd = 'Mine Subsidence'
 						        THEN CAST(hac.mine_subsidence_coverage_limit_amt as NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Loss of Use'
+						        THEN CAST(hc.loss_of_use_limit_amt AS NVARCHAR(255))
 						    ELSE NULL 
 						END AS [limit],
 						CASE 
@@ -134,12 +154,16 @@ BEGIN
 									NULLIF(LTRIM(RTRIM(hac.earthquake_coverage_extension_deductible)), ''), 
 									NULLIF(LTRIM(RTRIM(hac.earthquake_endorsement_deductible)), '')
 								) AS NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Other Wind'
+						        THEN CAST(hc.wind_derived_deductible as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Hurricane'
 						        THEN CAST(hc.wind_derived_deductible as NVARCHAR(255))
 							WHEN ic.internal_coverage_cd = 'Wind/Hail'
 						        THEN CAST(hc.wind_derived_deductible as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Wildfire'
 						        THEN CAST(hc.wildfire_deductible AS NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Loss of Use'
+						        THEN '0.0'
 						    ELSE NULL 
 						END AS deductible
 					FROM 
@@ -196,22 +220,6 @@ BEGIN
 					UNION ALL
 					SELECT DISTINCT
 						hc.policy_no as policyNumber
-						,'DWELL' as coverageCd
-						,'Dwelling' as coverageDesc
-						,0.0 as changeAmount
-						,0.0 as currentAmount
-						,CAST(hc.dwelling_limit_amt as NVARCHAR(255)) as [limit]
-						,'0.0' as deductible
-					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
-					INNER JOIN edw_core.thome_coverage as hc
-					ON pt.coverage_sk = hc.home_coverage_sk
-					WHERE  pt.policy_sk = ptf.policy_sk
-						AND pt.effective_dt_sk = ptf.effective_dt_sk
-						AND pt.transaction_seq_no = ptf.transaction_seq_no
-						AND LEN(TRIM(CAST(hc.dwelling_limit_amt as NVARCHAR(255)))) != 0
-					UNION ALL
-					SELECT DISTINCT
-						hc.policy_no as policyNumber
 						,'OS' as coverageCd
 						,'Other Structures' as coverageDesc
 						,0.0 as changeAmount
@@ -225,38 +233,6 @@ BEGIN
 						AND pt.effective_dt_sk = ptf.effective_dt_sk
 						AND pt.transaction_seq_no = ptf.transaction_seq_no
 						AND LEN(TRIM(CAST(hc.other_structures_limit_amt as NVARCHAR(255)))) != 0
-					UNION ALL
-					SELECT DISTINCT
-						hc.policy_no as policyNumber
-						,'CONTENTS' as coverageCd
-						,'Contents' as coverageDesc
-						,0.0 as changeAmount
-						,0.0 as currentAmount
-						,CAST(hc.contents_limit_amt as NVARCHAR(255)) as [limit]
-						,'0.0' as deductible
-					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
-					INNER JOIN edw_core.thome_coverage as hc
-					ON pt.coverage_sk = hc.home_coverage_sk
-					WHERE  pt.policy_sk = ptf.policy_sk
-						AND pt.effective_dt_sk = ptf.effective_dt_sk
-						AND pt.transaction_seq_no = ptf.transaction_seq_no
-						AND LEN(TRIM(CAST(hc.contents_limit_amt as NVARCHAR(255)))) != 0
-					UNION ALL
-					SELECT DISTINCT
-						hc.policy_no as policyNumber
-						,'LOU' as coverageCd
-						,'Loss of Use' as coverageDesc
-						,0.0 as changeAmount
-						,0.0 as currentAmount
-						,CAST(hc.loss_of_use_limit_amt as NVARCHAR(255)) as [limit]
-						,'0.0' as deductible
-					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
-					INNER JOIN edw_core.thome_coverage as hc
-					ON pt.coverage_sk = hc.home_coverage_sk
-					WHERE  pt.policy_sk = ptf.policy_sk
-						AND pt.effective_dt_sk = ptf.effective_dt_sk
-						AND pt.transaction_seq_no = ptf.transaction_seq_no
-						AND LEN(TRIM(CAST(hc.loss_of_use_limit_amt as NVARCHAR(255)))) != 0
 				) jd FOR JSON PATH, INCLUDE_NULL_VALUES
 			) AS Home_Coverages
 			FROM [edw_temp].[policy_ivans_home_temp1] as ptf

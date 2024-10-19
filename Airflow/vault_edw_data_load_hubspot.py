@@ -88,6 +88,12 @@ with DAG(
             )
             operators.append(operator)
 
+        exec_hubspot_integration_api_call = TriggerDagRunOperator(
+            task_id="exec_hubspot_integration_api_call",
+            trigger_dag_id="hubspot_integration_api_call",
+            dag=dag,
+        )
+
         send_hubspot_email = EmailOperator(
             task_id='send_hubspot_email',
             to=to_email,

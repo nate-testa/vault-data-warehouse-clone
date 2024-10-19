@@ -11,6 +11,7 @@ GO
 ---------------------------------------------------------------------------------------------------
 -- 07/27/23		Architha Gudimalla				1. Created this procedure  
 -- 03/08/23		Architha Gudimalla				2. Updated a label for LC360
+-- 10/11/24		Architha Gudimalla				3. Addec cache column
 -- ================================================================================================= 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tvendor_report]
@@ -246,7 +247,7 @@ BEGIN
 						end
 
 						
-						select @sql='select policynumber,effectivedate,dateordered,dateTimeRecieved,dateTimeCompleted,TransactionStatus,[source],reporttype'
+						select @sql='select policynumber,effectivedate,dateordered,dateTimeRecieved,dateTimeCompleted,TransactionStatus, IsReportFromCache,[source],reporttype'
 									+ @ColumnsToPivot  
 									+ ' into '
 									+  @tablename 
@@ -289,7 +290,7 @@ BEGIN
 								 + 
 									 '''
 									) as temp
-									group by policynumber,effectivedate,dateordered,dateTimeRecieved,dateTimeCompleted,TransactionStatus,[source],reporttype
+									group by policynumber,effectivedate,dateordered,dateTimeRecieved,dateTimeCompleted,TransactionStatus,IsReportFromCache,[source],reporttype
 									' as nvarchar(max))  
 						
 						print len(@sql)
