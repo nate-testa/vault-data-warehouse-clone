@@ -110,7 +110,7 @@ def process_notes(qry):
     logging.info(f"Query returned {len(notes_data)} records")
 
     for record in notes_data:
-        (claim_no, data_json) = record
+        (claim_no, note_created_ts, data_json) = record
         logging.info(f"Processing note record: {record}")
 
         success, result_text = api.create_note(data_json)
@@ -123,7 +123,7 @@ def process_notes(qry):
                     api_Error_description = NULL, 
                     claimReferenceNumber = '{json_response_notes.get("data").get("id")}',
                     api_response = '{result_text.replace("'","''")}'
-                where claim_no = '{claim_no}'
+                where claim_no = '{claim_no}' and note_created_ts = '{note_created_ts}'
             """
         else:
             qry_update_result = f"""
@@ -132,7 +132,7 @@ def process_notes(qry):
                 api_Error_description = '{result_text.replace("'","''")}',
                 claimReferenceNumber = NULL,
                 api_response = NULL
-                where claim_no = '{claim_no}'
+                where claim_no = '{claim_no}' and note_created_ts = '{note_created_ts}'
             """
 
         time.sleep(1)
@@ -212,7 +212,7 @@ def main():
 
     notes_qry = """
         select 
-            claim_no, note_json as data
+            claim_no, note_created_ts, note_json as data
         from edw_stage.migration_create_note_api
         where api_status = 'pending'
     """
