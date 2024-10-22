@@ -1,0 +1,11 @@
+alter table edw_integration.claim_policy_webhook_snapsheet_api alter column agentInformation nvarchar(max)
+alter table edw_integration.claim_policy_webhook_snapsheet_api alter column product nvarchar(max)
+alter table edw_integration.claim_policy_webhook_snapsheet_api alter column reservation nvarchar(max)
+alter table edw_integration.claim_policy_webhook_snapsheet_api alter column underwriting nvarchar(max)
+alter table edw_integration.claim_policy_webhook_snapsheet_api alter column coverages nvarchar(max)
+alter table edw_integration.claim_policy_webhook_snapsheet_api alter column endorsements nvarchar(max)
+alter table edw_integration.claim_policy_webhook_snapsheet_api alter column notes nvarchar(max)
+alter table edw_integration.claim_policy_webhook_snapsheet_api alter column versions nvarchar(max)
+alter table edw_integration.claim_policy_webhook_snapsheet_api alter column deductibles nvarchar(max)
+alter table edw_integration.claim_policy_webhook_snapsheet_api alter column data nvarchar(max)
+alter table edw_integration.claim_policy_webhook_snapsheet_api alter column inceptionAt datetime null
