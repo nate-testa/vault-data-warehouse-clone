@@ -121,7 +121,7 @@ def process_notes(qry):
                 update edw_stage.migration_create_note_api 
                 set update_ts = getdate(), api_status = 'Success', 
                     api_Error_description = NULL, 
-                    claimReferenceNumber = '{json_response_notes.get("data").get("id")}',
+                    note_id = '{json_response_notes.get("data").get("id")}',
                     api_response = '{result_text.replace("'","''")}'
                 where claim_no = '{claim_no}' and note_created_ts = '{note_created_ts}'
             """
@@ -130,7 +130,7 @@ def process_notes(qry):
                 update edw_stage.migration_create_note_api 
                 set update_ts = getdate(), api_status = 'Error', 
                 api_Error_description = '{result_text.replace("'","''")}',
-                claimReferenceNumber = NULL,
+                note_id = NULL,
                 api_response = NULL
                 where claim_no = '{claim_no}' and note_created_ts = '{note_created_ts}'
             """
