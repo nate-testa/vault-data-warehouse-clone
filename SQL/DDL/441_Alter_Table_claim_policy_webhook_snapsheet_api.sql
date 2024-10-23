@@ -9,5 +9,3 @@ alter table edw_integration.claim_policy_webhook_snapsheet_api alter column vers
 alter table edw_integration.claim_policy_webhook_snapsheet_api alter column deductibles nvarchar(max)
 alter table edw_integration.claim_policy_webhook_snapsheet_api alter column data nvarchar(max)
 alter table edw_integration.claim_policy_webhook_snapsheet_api alter column inceptionAt datetime null
-alter table edw_integration.claim_policy_search_snapsheet_api alter column create_ts datetime2(7)
-alter table edw_integration.claim_policy_search_snapsheet_api alter column update_ts datetime2(7)
