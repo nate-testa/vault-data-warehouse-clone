@@ -1,0 +1,2 @@
+alter table edw_integration.claim_policy_search_snapsheet_api alter column create_ts datetime2(7)
+alter table edw_integration.claim_policy_search_snapsheet_api alter column update_ts datetime2(7)

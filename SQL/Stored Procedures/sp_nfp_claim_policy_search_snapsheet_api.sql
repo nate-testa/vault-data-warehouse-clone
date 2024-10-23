@@ -78,7 +78,7 @@ BEGIN
 		)
 		select
             policy_no,
-            'professional_liability' as policy_type,
+            'general_liability' as policy_type,
             NULL as [status],
             'Excess Liability' as product_code,
             effective_dt as inception_date,
