@@ -143,8 +143,8 @@ class SnapsheetAPI:
 
         return success, result_text
         
-    def create_claim(self, claimNumber, claimType, status, policyNumber, datetimeOfLoss, datetimeOfNotification,
-                     accountCode, lossType, claimIncidentDetails, exposures, vehicles, claimParties):
+    def create_claim(self, claimNumber, claimType, status, policyNumber, firstOpenedAt, firstClosedAt, openedAt, closedAt, datetimeOfLoss, datetimeOfNotification, fraudScore, fraudLevelIndicator, providerCode, coverageCheck,
+         accountCode, lossType, notes, reservation, claimIncidentDetails, emergencyServicesDetail, notifier, notificationMethod, exposures, claimParties, vehicles, financialTransactions):
         path = '/api/v1/claims'
         url = f'{self.base_url}{path}'
         payload = {
@@ -152,14 +152,28 @@ class SnapsheetAPI:
             "claimType": claimType,
             "status": status,
             "policyNumber": policyNumber,
+            "firstOpenedAt": firstOpenedAt,
+            "firstClosedAt": firstClosedAt,
+            "openedAt": openedAt,
+            "closedAt": closedAt,
             "datetimeOfLoss": datetimeOfLoss,
             "datetimeOfNotification": datetimeOfNotification,
+            "fraudScore": fraudScore,
+            "fraudLevelIndicator": fraudLevelIndicator,
+            "providerCode": providerCode,
+            "coverageCheck": coverageCheck,
             "accountCode": accountCode,
             "lossType": lossType,
+            "notes": notes,
+            "reservation": reservation,
             "claimIncidentDetails": claimIncidentDetails,
+            "emergencyServicesDetail": emergencyServicesDetail,
+            "notifier": notifier,
+            "notificationMethod": notificationMethod,
             "exposures": exposures,
+            "claimParties": claimParties,
             "vehicles": vehicles,
-            "claimParties": claimParties
+            "financialTransactions": financialTransactions
         }
 
         payload = {k: v for k, v in payload.items() if v is not None}

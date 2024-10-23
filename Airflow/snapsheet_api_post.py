@@ -60,21 +60,21 @@ def process_claims(qry):
     logging.info(f"Query returned {len(claims_data)} records")
 
     for record in claims_data:
-        (claimNumber, claimType, status, policyNumber, datetimeOfLoss, datetimeOfNotification,
-         accountCode, lossType, claimIncidentDetails, exposures, vehicles, claimParties) = record
+        (claimNumber, claimType, status, policyNumber, firstOpenedAt, firstClosedAt, openedAt, closedAt, datetimeOfLoss, datetimeOfNotification, fraudScore, fraudLevelIndicator, providerCode, coverageCheck,
+         accountCode, lossType, notes, reservation, claimIncidentDetails, emergencyServicesDetail, notifier, notificationMethod, exposures, claimParties, vehicles, financialTransactions) = record
         logging.info(f"Processing claim record: {record}")
 
         datetimeOfLoss = datetimeOfLoss.strftime('%Y-%m-%dT%H:%M:%SZ') if datetimeOfLoss else None
         datetimeOfNotification = datetimeOfNotification.strftime('%Y-%m-%dT%H:%M:%SZ') if datetimeOfNotification else None
 
         claimIncidentDetails = json.loads(claimIncidentDetails) if claimIncidentDetails else None
+        notifier = json.loads(notifier) if notifier else None
         exposures = json.loads(exposures) if exposures else None
         vehicles = json.loads(vehicles) if vehicles else None
         claimParties = json.loads(claimParties) if claimParties else None
 
-        success, result_text = api.create_claim(claimNumber, claimType, status, policyNumber, datetimeOfLoss,
-                                               datetimeOfNotification, accountCode, lossType, claimIncidentDetails,
-                                               exposures, vehicles, claimParties)
+        success, result_text = api.create_claim(claimNumber, claimType, status, policyNumber, firstOpenedAt, firstClosedAt, openedAt, closedAt, datetimeOfLoss, datetimeOfNotification, fraudScore, fraudLevelIndicator, 
+        providerCode, coverageCheck, accountCode, lossType, notes, reservation, claimIncidentDetails, emergencyServicesDetail, notifier, notificationMethod, exposures, claimParties, vehicles, financialTransactions)
 
         if success:
             json_response_claims = json.loads(result_text)
@@ -204,24 +204,24 @@ def main():
 
     claims_qry = """
         select 
-            claimNumber, claimType, status, policyNumber, datetimeOfLoss, datetimeOfNotification,
-            accountCode, lossType, claimIncidentDetails, exposures, vehicles, claimParties
+            claimNumber, claimType, status, policyNumber, firstOpenedAt, firstClosedAt, openedAt, closedAt, datetimeOfLoss, datetimeOfNotification, fraudScore, fraudLevelIndicator, providerCode, coverageCheck,
+         accountCode, lossType, notes, reservation, claimIncidentDetails, emergencyServicesDetail, notifier, notificationMethod, exposures, claimParties, vehicles, financialTransactions
         from edw_stage.migration_create_claim_api
-        where api_status = 'pending' 
+        where api_status  in ('Error', 'pending')
     """
 
     notes_qry = """
         select 
             claim_no, note_created_ts, note_json as data
         from edw_stage.migration_create_note_api
-        where api_status = 'pending'
+        where api_status in ('Error', 'pending')
     """
 
     financial_transactions_qry = """
         select 
             financial_transaction_id, data
         from edw_stage.migration_create_financial_transaction_api
-        where api_status = 'pending'
+        where api_status in ('Error', 'pending')
     """
 
     parser = argparse.ArgumentParser(description='Execute a snapsheet API')
