@@ -103,7 +103,7 @@ BEGIN
 
 		-- Logic for excluded driver
         SELECT 
-			quote_no, effective_dt, transaction_seq_no, driver_no,  
+			quote_no, effective_dt, transaction_seq_no, driver_no, VersionObjectId, 
             ExcludedDriverId,ExcludedDriverAllVehicles,ExcludedDriverSelectVehicles,cast(null as varchar(max)) vehicle_list
         INTO [edw_temp].[tquote_auto_driver_temp2]
         FROM
@@ -111,7 +111,7 @@ BEGIN
                 SELECT
                     acct.PolicyNumber as quote_no, acct.EffectiveDate as effective_dt, acctvo.[Index] as driver_no,
 					acct.Number as transaction_seq_no,
-                    acctvof.[Field], acctvof.[Value] 
+                    acctvof.[Field], acctvof.[Value], acctvof.VersionObjectId
                 FROM
                     (SELECT
                         *
@@ -144,7 +144,7 @@ BEGIN
 		
 		DECLARE c1_rec CURSOR
 		FOR  
-		select ExcludedDriverSelectVehicles ,ExcludedDriverId
+		select ExcludedDriverSelectVehicles, VersionObjectId
 		from [edw_temp].[tquote_auto_driver_temp2]
 		where ExcludedDriverSelectVehicles is not null 
 		order by 1; 
@@ -183,7 +183,7 @@ BEGIN
 
 				update [edw_temp].[tquote_auto_driver_temp2]
 				set vehicle_list = stuff(@VehNameList,len(@VehNameList),1,'')
-				where ExcludedDriverId = @VersionObjectId
+				where VersionObjectId = @VersionObjectId
 								 
 				FETCH NEXT FROM c1_rec INTO @VehList, @VersionObjectId;  
 			END; 
@@ -338,7 +338,7 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk
-            , b.ExcludedDriverId
+            , case when b.ExcludedDriverId is not null then 'Yes' else 'No' end ExcludedDriverId
             , b.ExcludedDriverAllVehicles
             , b.vehicle_list
         FROM 
@@ -350,10 +350,10 @@ BEGIN
             AND taut.quote_no = t1.quote_no
             AND taut.effective_dt = t1.effective_dt
         LEFT JOIN [edw_temp].[tquote_auto_driver_temp2] b 
-        ON t1.quote_no = b.quote_no 
-        AND t1.effective_dt = b.effective_dt 
-        AND t1.transaction_seq_no = b.transaction_seq_no
-		AND t1.VersionObjectId = b.ExcludedDriverId
+            ON t1.quote_no = b.quote_no 
+            AND t1.effective_dt = b.effective_dt 
+            AND t1.transaction_seq_no = b.transaction_seq_no
+            AND t1.VersionObjectId = b.ExcludedDriverId
         ;
 
         --************End************

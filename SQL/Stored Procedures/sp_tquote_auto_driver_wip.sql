@@ -102,7 +102,7 @@ BEGIN
 
 		-- Logic for excluded driver
         SELECT 
-			quote_no, effective_dt, 0 as transaction_seq_no, driver_no,  
+			quote_no, effective_dt, 0 as transaction_seq_no, driver_no, ObjectId,
             ExcludedDriverId,ExcludedDriverAllVehicles,ExcludedDriverSelectVehicles,cast(null as varchar(max)) vehicle_list
         INTO [edw_temp].[tquote_auto_driver_wip_temp3]
         FROM
@@ -110,7 +110,7 @@ BEGIN
                 SELECT
                     acc.PolicyNumber as quote_no, acc.EffectiveDate as effective_dt, acco.[Index] as driver_no,
 					-- acc.Number as transaction_seq_no,
-                    accof.[Field], accof.[Value] 
+                    accof.[Field], accof.[Value], accof.ObjectId
                 FROM
                     (
                         SELECT *
@@ -143,7 +143,7 @@ BEGIN
 		
 		DECLARE c1_rec CURSOR
 		FOR  
-		select ExcludedDriverSelectVehicles ,ExcludedDriverId
+		select ExcludedDriverSelectVehicles, ObjectId
 		from [edw_temp].[tquote_auto_driver_wip_temp3]
 		where ExcludedDriverSelectVehicles is not null 
 		order by 1; 
@@ -182,7 +182,7 @@ BEGIN
 
 				update [edw_temp].[tquote_auto_driver_wip_temp3]
 				set vehicle_list = stuff(@VehNameList,len(@VehNameList),1,'')
-				where ExcludedDriverId = @ObjectId
+				where ObjectId = @ObjectId
 								 
 				FETCH NEXT FROM c1_rec INTO @VehList, @ObjectId;  
 			END; 
@@ -195,7 +195,7 @@ BEGIN
         INTO [edw_temp].[tquote_auto_driver_wip_temp2]
         FROM (
             SELECT t1.*, taut.quote_auto_vehicle_sk
-                , b.ExcludedDriverId as excluded_driver_in
+                , case when b.ExcludedDriverId is not null then 'Yes' else 'No' end as excluded_driver_in
                 , b.ExcludedDriverAllVehicles as excluded_driver_for_all_vehicles_in
                 , b.vehicle_list as excluded_driver_for_listed_vehicles
             FROM [edw_temp].[tquote_auto_driver_wip_temp1] t1
@@ -206,10 +206,10 @@ BEGIN
             AND taut.quote_no = t1.quote_no
             AND taut.effective_dt = t1.effective_dt
             LEFT JOIN [edw_temp].[tquote_auto_driver_wip_temp3] b
-            ON t1.quote_no = b.quote_no 
-            AND t1.effective_dt = b.effective_dt 
-            AND t1.transaction_seq_no = b.transaction_seq_no
-			AND t1.ObjectId = b.ExcludedDriverId
+                ON t1.quote_no = b.quote_no 
+                AND t1.effective_dt = b.effective_dt 
+                AND t1.transaction_seq_no = b.transaction_seq_no
+                AND t1.ObjectId = b.ExcludedDriverId
         ) as t2
 
 		-- Start Merge process
