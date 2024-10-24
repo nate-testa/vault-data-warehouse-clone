@@ -13,6 +13,7 @@ GO
 -- 22/02/24		Hernnando Gonzalez		    1. Added new field lending_loss_amt
 -- 04/07/24		Hernnando Gonzalez		    2. Added new fields AAFFactor, AFBFactor, NAFFactor, CPAFactor, MINFactor, MAJFactor, SPDFactor
 -- 22/08/24		Hernnando Gonzalez		    3. Added auto_vehicle_sk
+-- 10/23/24		Alberto Almario 		    4. Added excluded driver - AD6949
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_driver]
 AS
@@ -38,9 +39,10 @@ BEGIN
 
         -- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tquote_auto_driver_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[tquote_auto_driver_temp2];
 
 		SELECT 
-			CreatedDate, quote_no, effective_dt, expiration_dt, transaction_seq_no, driver_no, quote_history_sk, 
+			CreatedDate, quote_no, effective_dt, expiration_dt, transaction_seq_no, driver_no, quote_history_sk, VersionObjectId,
             [Prefix], [FirstName], [MiddleName], [LastName], [Suffix], [Birthdate], [Gender], [MaritalStatus], [RelationshipToInsured], [DriverStatus], [CertificationRequired], 
             [CertificationState], [DefensiveDriver], [TrainingDiscount], [LicenseStatus], [LicenseCountry], [LicenseState], [LicenseNumber], [LicenseYear], [AgeYearsLicensed], 
             [YearsLicensed], [UnverifiableDrivingRecord], [MultipleIncidentFactor], /*[**pending**-defensive_course_completed_in],*/ [PreventionCourseCompletedTwoYears], 
@@ -63,6 +65,7 @@ BEGIN
                         WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
                         ELSE 4 --(Metal)
                     END as [source_system_sk]
+                    , acctvof.VersionObjectId
                 FROM
                     (SELECT
                         *
@@ -96,6 +99,98 @@ BEGIN
                     [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor], [PrimaryVehicleId]
                 )
 			) pivottable
+
+
+		-- Logic for excluded driver
+        SELECT 
+			quote_no, effective_dt, transaction_seq_no, driver_no, VersionObjectId, 
+            ExcludedDriverId,ExcludedDriverAllVehicles,ExcludedDriverSelectVehicles,cast(null as varchar(max)) vehicle_list
+        INTO [edw_temp].[tquote_auto_driver_temp2]
+        FROM
+			(
+                SELECT
+                    acct.PolicyNumber as quote_no, acct.EffectiveDate as effective_dt, acctvo.[Index] as driver_no,
+					acct.Number as transaction_seq_no,
+                    acctvof.[Field], acctvof.[Value], acctvof.VersionObjectId
+                FROM
+                    (SELECT
+                        *
+                    FROM [edw_stage].[AccountTransaction]
+                    WHERE Stage in ('QUOTE','POLICY')
+                        AND CreatedDate > @last_source_extract_ts
+                    ) acct
+                INNER JOIN [edw_stage].[Product] AS p on p.Id = acct.ProductId
+                INNER JOIN [edw_stage].[AccountTransactionVersion] AS acctv ON acctv.AccountTransactionId = acct.Id
+                INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
+                INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] AS acctvof ON acctvof.VersionObjectId = acctvo.id 
+                WHERE
+                    p.[Name] = 'Automobile'
+                    AND p.ProductLine = 'PersonalLines'
+                    AND acctvo.ObjectType in ('Driver','ExcludedDriver') 
+			) t
+		PIVOT 
+			(
+				MAX([Value]) FOR [Field] IN 
+                (
+                    ExcludedDriverId,ExcludedDriverAllVehicles,ExcludedDriverSelectVehicles
+                )
+			) pivottable ;
+
+        DECLARE @VehList varchar(max)
+		DECLARE @VehNameList varchar(max)
+		DECLARE @VehUniqId varchar(255)
+		DECLARE @VersionObjectId int
+		DECLARE @temp varchar(max)
+		
+		DECLARE c1_rec CURSOR
+		FOR  
+		select ExcludedDriverSelectVehicles, VersionObjectId
+		from [edw_temp].[tquote_auto_driver_temp2]
+		where ExcludedDriverSelectVehicles is not null 
+		order by 1; 
+
+		open c1_rec; 
+		FETCH NEXT FROM c1_rec INTO @VehList, @VersionObjectId; 
+		WHILE @@FETCH_STATUS = 0
+			BEGIN   
+				print @VehList
+
+				DECLARE c2_rec CURSOR
+				FOR
+				SELECT value
+				FROM STRING_SPLIT(@VehList, ',')
+				order by 1;
+
+				set @VehNameList = '';
+
+				open c2_rec; 
+				FETCH NEXT FROM c2_rec INTO @VehUniqId; 
+				WHILE @@FETCH_STATUS = 0
+					BEGIN   
+						select  @temp = v.vehicle_model_year || ' ' || v.vehicle_make || ' ' || v.vehicle_model || ', '
+						from edw_core.tquote_auto_vehicle v where vehicle_unique_id = @VehUniqId;
+
+						set @VehNameList = @VehNameList || @temp;
+							 
+						--print @VehUniqId 
+						--print @VehNameList 
+						--print @VersionObjectId
+
+						FETCH NEXT FROM c2_rec INTO @VehUniqId;  
+					END; 
+				CLOSE c2_rec;
+				DEALLOCATE c2_rec;   
+
+				update [edw_temp].[tquote_auto_driver_temp2]
+				set vehicle_list = stuff(@VehNameList,len(@VehNameList),1,'')
+				where VersionObjectId = @VersionObjectId
+								 
+				FETCH NEXT FROM c1_rec INTO @VehList, @VersionObjectId;  
+			END; 
+		CLOSE c1_rec;
+		DEALLOCATE c1_rec; 
+        -- Logic for excluded driver
+        
 
 		-- Start Insert process
 		INSERT INTO [edw_core].[tquote_auto_driver]
@@ -169,6 +264,9 @@ BEGIN
             create_ts,
             update_ts,
             etl_audit_sk
+            , excluded_driver_in
+            , excluded_driver_for_all_vehicles_in
+            , excluded_driver_for_listed_vehicles
 		)
         SELECT 
             t1.quote_no,
@@ -240,6 +338,9 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk
+            , case when b.ExcludedDriverId is not null then 'Yes' else 'No' end ExcludedDriverId
+            , b.ExcludedDriverAllVehicles
+            , b.vehicle_list
         FROM 
             [edw_temp].[tquote_auto_driver_temp1] AS t1
         LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acctvo
@@ -248,6 +349,11 @@ BEGIN
             ON taut.vehicle_unique_id = acctvo.UniqueId
             AND taut.quote_no = t1.quote_no
             AND taut.effective_dt = t1.effective_dt
+        LEFT JOIN [edw_temp].[tquote_auto_driver_temp2] b 
+            ON t1.quote_no = b.quote_no 
+            AND t1.effective_dt = b.effective_dt 
+            AND t1.transaction_seq_no = b.transaction_seq_no
+            AND t1.VersionObjectId = b.ExcludedDriverId
         ;
 
         --************End************
@@ -264,6 +370,7 @@ BEGIN
 
         -- Drop temp table
         DROP TABLE IF EXISTS edw_temp.[tquote_auto_driver_temp1];
+        DROP TABLE IF EXISTS edw_temp.[tquote_auto_driver_temp2];
 
 	END TRY
 	BEGIN CATCH
