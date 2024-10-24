@@ -13,6 +13,7 @@
 -- 09/18/24		Yunus Mohammed				6. Added Throw in catch block and used 
 --												Used tinternal_coverage for finacial category for commission part
 -- 10/04/24		Yunus Mohammed				7. Added condo in subcategory for commission
+-- 10/24/24		Yunus Mohammed				8. Added Marine Boat & Yacht in Commission
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
@@ -169,6 +170,7 @@ BEGIN
 				WHEN tp.product_cd = 'AU' THEN 'Auto Commission'
 				WHEN tp.product_cd = 'PEL' THEN 'PEL Commission'
 				WHEN tp.product_cd = 'LUX' THEN 'LUX Commission'
+				WHEN tp.product_cd = 'BY' THEN 'Marine Boat & Yacht Commission'
 				END
 				as subcategory,
 				tic.internal_coverage_sk as financial_category_id,
