@@ -102,7 +102,7 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].tauto_driver_temp2;
 
 		SELECT 
-			policy_no, effective_dt, transaction_seq_no, driver_no,  
+			policy_no, effective_dt, transaction_seq_no, driver_no, VersionObjectId,  
             ExcludedDriverId,ExcludedDriverAllVehicles,ExcludedDriverSelectVehicles,cast(null as varchar(max)) vehicle_list
         INTO [edw_temp].tauto_driver_temp2
         FROM
@@ -110,7 +110,7 @@ BEGIN
                 SELECT
                     acct.PolicyNumber as policy_no, acct.EffectiveDate as effective_dt, acctvo.[Index] as driver_no,
 					acct.PolicyChangeNumber as transaction_seq_no,
-                    acctvof.[Field], acctvof.[Value] 
+                    acctvof.[Field], acctvof.[Value] , acctvof.VersionObjectId
                 FROM
                     (SELECT
                         *
@@ -344,16 +344,15 @@ BEGIN
             , b.ExcludedDriverId
             , b.ExcludedDriverAllVehicles
             , b.vehicle_list
-        FROM 
-            [edw_temp].[tauto_driver_temp1] AS t1
-        LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acctvo
-		on acctvo.Id = TRY_CAST(t1.[PrimaryVehicleId] AS INT)
-        LEFT JOIN [edw_core].[tauto_vehicle] taut
-            ON taut.vehicle_unique_id = acctvo.UniqueId
-            AND taut.policy_no = t1.policy_no
-            AND taut.effective_dt = t1.effective_dt
-		left join  [edw_temp].tauto_driver_temp2 b on a.policy_no = b.policy_no and a.effective_dt = b.effective_dt and a.transaction_seq_no = b.transaction_seq_no
-														and a.VersionObjectId = b.ExcludedDriverId
+        FROM [edw_temp].[tauto_driver_temp1] AS t1
+        LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acctvo	on acctvo.Id = TRY_CAST(t1.[PrimaryVehicleId] AS INT)
+        LEFT JOIN [edw_core].[tauto_vehicle] taut   ON taut.vehicle_unique_id = acctvo.UniqueId
+                                                    AND taut.policy_no = t1.policy_no
+                                                    AND taut.effective_dt = t1.effective_dt
+		left join  [edw_temp].tauto_driver_temp2 b on t1.policy_no = b.policy_no 
+                                                    and t1.effective_dt = b.effective_dt 
+                                                    and t1.transaction_seq_no = b.transaction_seq_no
+													and t1.VersionObjectId = b.ExcludedDriverId
         ;
 
         --************End************
