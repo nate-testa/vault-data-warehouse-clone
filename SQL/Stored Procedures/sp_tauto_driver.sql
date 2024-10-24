@@ -341,7 +341,7 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk
-            , b.ExcludedDriverId
+            , case when b.ExcludedDriverId is not null then 'Yes' else 'No' end
             , b.ExcludedDriverAllVehicles
             , b.vehicle_list
         FROM [edw_temp].[tauto_driver_temp1] AS t1
