@@ -29,45 +29,8 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 
 		DROP TABLE IF exists edw_temp.tclaim_temp1;
-		/*WITH first_close_dt AS 
-		(
-			SELECT DISTINCT c.claim_no
-			,MIN(ch.insert_time) AS claim_first_closed_dt
-			FROM
-				edw_stage.t_clm_case_his ch
-				INNER JOIN edw_stage.t_clm_case c ON ch.case_id = c.case_id
-			WHERE
-				ch.claim_type = 'LOS'
-				AND ch.new_status = 'CLOSED'
-			GROUP BY c.claim_no
-		)
-		, first_reopen as 
-		(
-			SELECT DISTINCT c.claim_no
-			,MIN(ch.insert_time) as claim_first_reopen_dt
-			FROM
-				edw_stage.t_clm_case_his ch
-				INNER JOIN edw_stage.t_clm_case c ON ch.case_id = c.case_id
-			WHERE
-				ch.claim_type = 'LOS'
-				and ch.new_status = 'REOPEN'
-			GROUP BY c.claim_no
-		)
-		,reject_reason as
-		(
-		SELECT 
-			LEFT(String1,Delim-1) AS reason,
-			RIGHT(String1,LEN(String1)-Delim) AS reject_code
-			FROM 
-			(
-				SELECT
-					DYNAMIC_FIELDS, 
-					CHARINDEX('^',REPLACE(REPLACE(REPLACE(CAST(DYNAMIC_FIELDS AS VARCHAR(MAX)), '{"DisplayValue":"',''), '","DataValue":','^'),'}','')) AS Delim,
-					REPLACE(REPLACE(REPLACE(CAST(DYNAMIC_FIELDS AS VARCHAR(MAX)), '{"DisplayValue":"',''), '","DataValue":','^'),'}','')  AS String1
-				FROM edw_stage.t_dd_busi_data_table_record
-				WHERE data_table_id = 1013
-			) as parsing
-		)*/
+		
+		
 		SELECT
 		claim_no, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS policy_effective_dt, 
 		policy_sk,cause_of_loss_sk,loss_desc, source_claim_status,claim_status, catastrophe_sk, product_sk,
@@ -81,13 +44,13 @@ BEGIN
 		SELECT
 			1 --ROW_NUMBER() OVER(PARTITION BY tcase.claim_no,tph.policy_no ORDER BY tph.transaction_seq_no DESC,iif(UPPER(tcasestat.status_name)='REJECTED', rr.reason,NULL) desc) AS 
 			rn,
-			tph.effective_dt --CASE WHEN tph.effective_dt IS NULL THEN CAST(tcp.EFF_DATE AS DATE) ELSE CAST(tph.effective_dt AS DATE) END AS effective_dt,
+			tph.effective_dt 
 			tbrk.broker_id,
 			c.customer_id,
 			c.claim_number, 
 			c.datetime_of_loss AS loss_dt, 
 			c.first_opened_at AS report_dt, 
-			c.policy_number as policy_no, --CASE WHEN TRIM(tcase.policy_no) IS NULL THEN tcp.policy_no ELSE TRIM(tcase.policy_no) END AS policy_no,
+			c.policy_number as policy_no, 
 			tph.policy_sk,
 			cl.cause_of_loss_sk,
 			c.incident_location_description AS loss_desc,		
@@ -123,11 +86,11 @@ BEGIN
 			scl.sub_cause_of_loss_sk,
 			c.updated_at update_time,
 			c.first_closed_at as claim_first_closed_dt,
-			'NA' claim_first_reopen_dt, --fro.claim_first_reopen_dt,
+			'NA' claim_first_reopen_dt, 
 			c.created_at AS claim_created_ts,
 			c.creator_user_name AS claim_created_by_nm,
 			tph.policy_history_sk,
-			'NA' claim_reject_reason_desc --iif(UPPER(tcasestat.status_name)='REJECTED', rr.reason,NULL) as claim_reject_reason_desc
+			'NA' claim_reject_reason_desc 
 		FROM edw_stage_snapsheet.claims c
 		left join edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
 		left join claim_party_contact_methods cpcmp on c.notifier_claim_party_id = and cpcm.id and  cpcmp.contact_method_type = 'phone'
@@ -148,25 +111,6 @@ BEGIN
 		LEFT JOIN edw_core.tproduct prd ON prd.ebao_product_cd=tcase.product_code
 		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_cd=tcase.loss_cause
 		LEFT JOIN edw_core.tsub_cause_of_loss scl ON tcase.sub_cause_of_loss_code=scl.sub_cause_of_loss_cd
-			/*edw_stage.t_clm_case tcase
-			LEFT JOIN edw_stage.t_clm_case_his h on tcase.case_id = h.case_id
-			LEFT JOIN 
-			(
-				SELECT case_id
-				,MAX(insert_time) AS insert_time
-				FROM edw_stage.t_clm_case_his				
-				GROUP BY case_id
-			) his ON his.case_id = h.case_id AND his.insert_time = h.INSERT_TIME
-			LEFT JOIN reject_reason rr ON rr.reject_code = h.REJECT_REASON
-			LEFT JOIN edw_stage.t_clm_case_status tcasestat ON tcase.CASE_STATUS = tcasestat.STATUS_CODE
-			-- returns Accident Address
-			LEFT JOIN edw_stage.t_int_address tia ON tia.source_id=tcase.case_id
-			LEFT JOIN edw_stage.t_pub_address tpa ON tia.T_ADDRESS_ID=tpa.ADDRESS_ID
-			LEFT JOIN edw_stage.t_clm_policy tcp ON tcase.case_id=tcp.case_id
-			LEFT JOIN first_close_dt fcd ON fcd.claim_no = tcase.claim_no
-			LEFT JOIN first_reopen fro ON fro.claim_no = tcase.claim_no
-			LEFT JOIN edw_stage.t_pub_user tpu ON tpu.[USER_ID] = tcase.INSERT_BY
-			*/
 		WHERE greatest(c.created_at,c.updated_at) > @last_source_extract_ts
 	) AS t
 	WHERE
