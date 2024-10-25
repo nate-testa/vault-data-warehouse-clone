@@ -270,10 +270,10 @@ BEGIN
 		and isnull(cust.customer_nm,'') not like '%test%'    
 		and pending_non_renewal_in = 'Yes'
 		and q.expiration_dt between dateadd(YYYY,-1,dateadd(d,-1,cast(getdate() as date))) and dateadd(dd,90,dateadd(YYYY,-1,dateadd(d,-1,cast(getdate() as date))))
-		and (non_renewal_sub_note_desc like '%OTHER%' or
-			 non_renewal_sub_note_desc like '%Renewal not taken%' or
-			 non_renewal_sub_note_desc like '%Coverage no longer needed%' or
-			 non_renewal_sub_note_desc like '%Coverage placed elseware%')       
+		and (isnull(non_renewal_sub_note_desc,'') like '%OTHER%' or
+			 isnull(non_renewal_sub_note_desc,'') like '%Renewal not taken%' or
+			 isnull(non_renewal_sub_note_desc,'') like '%Coverage no longer needed%' or
+			 isnull(non_renewal_sub_note_desc,'') like '%Coverage placed elseware%')       
 		and q.product_cd <> 'BY'
         and q.policy_status <> 'Cancelled'
         ;
