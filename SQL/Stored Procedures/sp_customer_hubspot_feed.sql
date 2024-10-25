@@ -20,6 +20,7 @@
 -- 10/01/24		Archtha Gudimalla			12. Commented change 11 to use in future
 -- 10/02/24		Archtha Gudimalla			13. Add mailing address country
 -- 10/02/24		Archtha Gudimalla			14. Excluded Yacht
+-- 10/25/24		Archtha Gudimalla			15. Added isnull to code when checking names for test quotes
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -85,10 +86,10 @@ BEGIN
 		INNER join edw_core.tpolicy_insured pi on pi.policy_history_sk = ph.policy_history_sk and pi.primary_insured_in = 'Yes'
 		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk
 		WHERE greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
-		and pol.insured_nm not like '%test%' 
-		and cust.last_nm not like '%test%'
-		and cust.first_nm not like '%test%' 
-		and cust.customer_nm not like '%test%' 
+		and isnull(pol.insured_nm,'') not like '%test%' 
+		and isnull(cust.last_nm,'') not like '%test%'
+		and isnull(cust.first_nm,'') not like '%test%' 
+		and isnull(cust.customer_nm,'') not like '%test%' 
 		and pol.effective_dt >= '01-jun-2023'
 		and pol.product_cd <> 'BY'
 		;

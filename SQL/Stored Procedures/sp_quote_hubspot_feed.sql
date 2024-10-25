@@ -15,6 +15,7 @@
 -- 10/02/24		        Archtha Gudimalla			10. Add mailing address country
 -- 10/07/24		        Archtha Gudimalla			11. Added Contruction
 -- 10/16/24		        Archtha Gudimalla			12. Excluded cancelled pols in pending_non_renewal recampaign
+-- 10/25/24		        Archtha Gudimalla			13. Added isnull to code when checking names for test quotes
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -152,13 +153,11 @@ BEGIN
 		and greatest(q.create_ts,q.update_ts) > @last_source_extract_ts
         and q.broker_id <> '0'
         and q.effective_Dt >= '01-jun-2023'  
-		and q.insured_nm not like '%test%' 
-		and cust.last_nm not like '%test%'
-		and cust.first_nm not like '%test%' 
-		and cust.customer_nm not like '%test%'      
-		and q.product_cd <> 'BY';
-
-        
+		and isnull(q.insured_nm,'') not like '%test%' 
+		and isnull(cust.last_nm,'') not like '%test%'
+		and isnull(cust.first_nm,'') not like '%test%' 
+		and isnull(cust.customer_nm,'') not like '%test%'      
+		and q.product_cd <> 'BY';         
 
         --this is to pull in policies with pending non renewal = Y
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp2;

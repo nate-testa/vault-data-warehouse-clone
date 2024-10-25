@@ -18,6 +18,7 @@
 -- 10/07/24		        Archtha Gudimalla			11. Excluded os and commercial brokers
 -- 10/07/24		        Archtha Gudimalla			12. Added ytd_nb_premium_amt and ytd_renewal_retention_pc
 -- 10/07/24		        Archtha Gudimalla			12. Added cast to change to float for ret pc and loss ratio
+-- 10/25/24		        Archtha Gudimalla			13. Added isnull to tb.broker_nm not like '%test%'
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -175,7 +176,7 @@ BEGIN
         left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
         left join br_summ as bs    on bs.broker_sk = tb.broker_sk
         left join comm_tier as ct   on ct.broker_id = tb.broker_id
-        where tb.broker_nm not like '%test%'
+        where isnull(tb.broker_nm,'') not like '%test%'
 		and not (tb.broker_id like '1%' and len(tb.broker_id) = 5)
 		and not (len(tb.broker_id) > 6);
 

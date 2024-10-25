@@ -1,13 +1,14 @@
--- =================================================================================================
+-- ====================================================================================================================
 -- Description: This procedures inserts and updates quote note hubspot data
------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 -- Change date          |Author						|	Change Description
------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 -- 07/23/24		        Architha Gudimalla			1. Created this procedure
 -- 07/29/24		        Architha Gudimalla			2. Corrections after first run
 -- 08/09/24		        Architha Gudimalla			3. Exclude notes before 20240601
 -- 10/11/24		        Architha Gudimalla			4. Exclude yacht
--- ======================================================================================================== 
+-- 10/25/24		        Architha Gudimalla			5. Include notes for only those quotes that are in the quote feed
+-- ==================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_note_hubspot_feed]
 
@@ -39,10 +40,7 @@ BEGIN
         where n.object_type = 'Account' 
 		and greatest(n.note_created_ts, n.note_updated_ts) > @last_source_extract_ts
 		and n.policy_no is not null 
-		and exists (select quote_no from edw_core.tquote q 
-					where q.product_cd <> 'BY' 
-					and n.policy_no = q.quote_no 
-					and effective_dt >= '01-jun-2024');
+		and exists (select quote_no from edw_integration.quote_hubspot_feed);
 
         -- Start Merge process
 		MERGE INTO [edw_integration].[quote_note_hubspot_feed] AS target
