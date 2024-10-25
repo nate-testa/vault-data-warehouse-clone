@@ -40,7 +40,8 @@ BEGIN
         where n.object_type = 'Account' 
 		and greatest(n.note_created_ts, n.note_updated_ts) > @last_source_extract_ts
 		and n.policy_no is not null 
-		and exists (select quote_no from edw_integration.quote_hubspot_feed);
+		and exists (select quote_no from edw_integration.quote_hubspot_feed q
+					where n.policy_no = q.quote_no );
 
         -- Start Merge process
 		MERGE INTO [edw_integration].[quote_note_hubspot_feed] AS target
