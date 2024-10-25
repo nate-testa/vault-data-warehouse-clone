@@ -263,11 +263,11 @@ BEGIN
         left join edw_core.tpel_coverage tqpc on tqpc.policy_history_sk=h.policy_history_sk
         left join policy_collection_class_type as tcct on tcct.policy_history_sk = h.policy_history_sk
 
-        where   q.broker_id <> '0' 
-        and q.insured_nm not like '%test%' 
-		and cust.last_nm not like '%test%'
-		and cust.first_nm not like '%test%' 
-		and cust.customer_nm not like '%test%'
+        where   q.broker_id <> '0'  
+		and isnull(q.insured_nm,'') not like '%test%' 
+		and isnull(cust.last_nm,'') not like '%test%'
+		and isnull(cust.first_nm,'') not like '%test%' 
+		and isnull(cust.customer_nm,'') not like '%test%'    
 		and pending_non_renewal_in = 'Yes'
 		and q.expiration_dt between dateadd(YYYY,-1,dateadd(d,-1,cast(getdate() as date))) and dateadd(dd,90,dateadd(YYYY,-1,dateadd(d,-1,cast(getdate() as date))))
 		and (non_renewal_sub_note_desc like '%OTHER%' or
