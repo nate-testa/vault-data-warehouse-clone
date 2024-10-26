@@ -1,7 +1,6 @@
 import argparse
 import json
 import logging
-import time
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.utils.log.logging_mixin import LoggingMixin
 from snapsheet_api import SnapsheetAPI
@@ -9,7 +8,7 @@ from snapsheet_api import SnapsheetAPI
 
 
 logger = logging.getLogger(__name__) 
-logger.setLevel("DEBUG")
+# logger.setLevel("DEBUG")
 
 policies_qry = """
         SELECT
@@ -42,26 +41,27 @@ def process_policies(qry):
 
     for record in policy_data:
         (policyNumber, policyType, status, productCode, inceptionDate, policyEntities, transaction_seq_no) = record
+        logger.info(f"*************** Start Processing *********************")
         logger.info(f"Processing policy record: {record}")
 
         inceptionDate = inceptionDate.strftime('%Y-%m-%dT%H:%M:%SZ') if inceptionDate else None
-        policyEntities = json.loads(policyEntities) if policyEntities else None 
-        
+        policyEntities = json.loads(policyEntities) if policyEntities else None
+
         # call API function
         success, result_text = api.create_policy(policyNumber, policyType, status, productCode, inceptionDate, policyEntities)
 
         if success:
             qry_update_result = f"""
-                update edw_integration.claim_policy_search_snapsheet_api 
+                update edw_integration.claim_policy_search_snapsheet_api
                 set update_ts = getdate(), api_status = 'Success', api_Error_description = NULL
                 where policyNumber = '{policyNumber}'
                 and inceptionDate = '{inceptionDate}'
             """
         else:
             qry_update_result = f"""
-                update edw_integration.claim_policy_search_snapsheet_api 
-                set update_ts = getdate(), api_status = 'Error', 
-                api_Error_description = '{result_text.replace("'","''")}' 
+                update edw_integration.claim_policy_search_snapsheet_api
+                set update_ts = getdate(), api_status = 'Error',
+                api_Error_description = '{result_text.replace("'","''")}'
                 where policyNumber = '{policyNumber}'
                 and inceptionDate = '{inceptionDate}'
             """
@@ -69,7 +69,6 @@ def process_policies(qry):
         logger.debug(f"Executing update query: {qry_update_result}")
         mssql_hook.run(qry_update_result)
 
-        time.sleep(1)
 
 def process_snapsheet_policies():
     process_policies(policies_qry)

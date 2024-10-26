@@ -1,14 +1,13 @@
 import argparse
 import json
 import logging
-import time
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.utils.log.logging_mixin import LoggingMixin
 from snapsheet_api import SnapsheetAPI
 
 
 
-logger = logging.getLogger(__name__) 
+logger = logging.getLogger(__name__)
 # logger.setLevel("DEBUG")
 
 
@@ -22,31 +21,31 @@ def process_policies(qry):
 
     for record in policy_data:
         (policyNumber, policyType, status, productCode, inceptionDate, policyEntities, transaction_seq_no) = record
+        logger.info(f"*************** Start Processing *********************")
         logger.info(f"Processing policy record: {record}")
 
         inceptionDate = inceptionDate.strftime('%Y-%m-%dT%H:%M:%SZ') if inceptionDate else None
-        policyEntities = json.loads(policyEntities) if policyEntities else None 
-        
+        policyEntities = json.loads(policyEntities) if policyEntities else None
+
         # call API function
         success, result_text = api.create_policy(policyNumber, policyType, status, productCode, inceptionDate, policyEntities)
 
         if success:
             qry_update_result = f"""
-                update edw_integration.claim_policy_search_snapsheet_api 
+                update edw_integration.claim_policy_search_snapsheet_api
                 set update_ts = getdate(), api_status = 'Success', api_Error_description = NULL
                 where policyNumber = '{policyNumber}'
                 and inceptionDate = '{inceptionDate}'
             """
         else:
             qry_update_result = f"""
-                update edw_integration.claim_policy_search_snapsheet_api 
-                set update_ts = getdate(), api_status = 'Error', 
-                api_Error_description = '{result_text.replace("'","''")}' 
+                update edw_integration.claim_policy_search_snapsheet_api
+                set update_ts = getdate(), api_status = 'Error',
+                api_Error_description = '{result_text.replace("'","''")}'
                 where policyNumber = '{policyNumber}'
                 and inceptionDate = '{inceptionDate}'
             """
 
-        time.sleep(1)
 
         logger.debug(f"Executing update query: {qry_update_result}")
         mssql_hook.run(qry_update_result)
@@ -62,6 +61,7 @@ def process_claims(qry):
     for record in claims_data:
         (claimNumber, claimType, status, policyNumber, firstOpenedAt, firstClosedAt, openedAt, closedAt, datetimeOfLoss, datetimeOfNotification, fraudScore, fraudLevelIndicator, providerCode, coverageCheck,
          accountCode, lossType, notes, reservation, claimIncidentDetails, emergencyServicesDetail, notifier, notificationMethod, exposures, claimParties, vehicles, financialTransactions) = record
+        logging.info(f"*************** Start Processing *********************")
         logging.info(f"Processing claim record: {record}")
 
         datetimeOfLoss = datetimeOfLoss.strftime('%Y-%m-%dT%H:%M:%SZ') if datetimeOfLoss else None
@@ -79,24 +79,23 @@ def process_claims(qry):
         if success:
             json_response_claims = json.loads(result_text)
             qry_update_result = f"""
-                update edw_stage.migration_create_claim_api 
-                set update_ts = getdate(), api_status = 'Success', 
-                    api_Error_description = NULL, 
+                update edw_stage.migration_create_claim_api
+                set update_ts = getdate(), api_status = 'Success',
+                    api_Error_description = NULL,
                     claimReferenceNumber = '{json_response_claims.get("claimReferenceNumber")}',
                     api_response = '{result_text.replace("'","''")}'
                 where claimNumber = '{claimNumber}'
             """
         else:
             qry_update_result = f"""
-                update edw_stage.migration_create_claim_api 
-                set update_ts = getdate(), api_status = 'Error', 
+                update edw_stage.migration_create_claim_api
+                set update_ts = getdate(), api_status = 'Error',
                     api_Error_description = '{result_text.replace("'","''")}',
                     claimReferenceNumber = NULL,
                     api_response = NULL
                 where claimNumber = '{claimNumber}'
             """
 
-        time.sleep(1)
 
         logging.info(f"Executing update query: {qry_update_result}")
         mssql_hook.run(qry_update_result)
@@ -111,6 +110,7 @@ def process_notes(qry):
 
     for record in notes_data:
         (claim_no, note_created_ts, data_json) = record
+        logging.info(f"*************** Start Processing *********************")
         logging.info(f"Processing note record: {record}")
 
         success, result_text = api.create_note(data_json)
@@ -118,24 +118,23 @@ def process_notes(qry):
         if success:
             json_response_notes = json.loads(result_text)
             qry_update_result = f"""
-                update edw_stage.migration_create_note_api 
-                set update_ts = getdate(), api_status = 'Success', 
-                    api_Error_description = NULL, 
+                update edw_stage.migration_create_note_api
+                set update_ts = getdate(), api_status = 'Success',
+                    api_Error_description = NULL,
                     note_id = '{json_response_notes.get("data").get("id")}',
                     api_response = '{result_text.replace("'","''")}'
-                where claim_no = '{claim_no}' and note_created_ts = '{note_created_ts}'
+                where claim_no = '{claim_no}' and cast(note_created_ts as datetime2(3)) = cast('{note_created_ts}' as datetime2(3))
             """
         else:
             qry_update_result = f"""
-                update edw_stage.migration_create_note_api 
-                set update_ts = getdate(), api_status = 'Error', 
+                update edw_stage.migration_create_note_api
+                set update_ts = getdate(), api_status = 'Error',
                 api_Error_description = '{result_text.replace("'","''")}',
                 note_id = NULL,
                 api_response = NULL
-                where claim_no = '{claim_no}' and note_created_ts = '{note_created_ts}'
+                where claim_no = '{claim_no}' and cast(note_created_ts as datetime2(3)) = cast('{note_created_ts}' as datetime2(3))
             """
 
-        time.sleep(1)
 
         logging.info(f"Executing update query: {qry_update_result}")
         mssql_hook.run(qry_update_result)
@@ -150,6 +149,7 @@ def process_financial_transactions(qry):
 
     for record in financial_transaction_data:
         (financial_transaction_id, data_json) = record
+        logging.info(f"*************** Start Processing *********************")
         logging.info(f"Processing note record: {record}")
 
         success, result_text = api.create_financial_transaction(data_json)
@@ -158,23 +158,22 @@ def process_financial_transactions(qry):
             json_response_notes = json.loads(result_text)
             qry_update_result = f"""
                 update edw_stage.migration_create_financial_transaction_api 
-                set update_ts = getdate(), api_status = 'Success', 
-                    api_Error_description = NULL, 
+                set update_ts = getdate(), api_status = 'Success',
+                    api_Error_description = NULL,
                     id = '{json_response_notes.get("data").get("id")}',
                     api_response = '{result_text.replace("'","''")}'
                 where financial_transaction_id = '{financial_transaction_id}'
             """
         else:
             qry_update_result = f"""
-                update edw_stage.migration_create_financial_transaction_api 
-                set update_ts = getdate(), api_status = 'Error', 
+                update edw_stage.migration_create_financial_transaction_api
+                set update_ts = getdate(), api_status = 'Error',
                 api_Error_description = '{result_text.replace("'","''")}',
                 id = NULL,
                 api_response = NULL
                 where financial_transaction_id = '{financial_transaction_id}'
             """
 
-        time.sleep(1)
 
         logging.info(f"Executing update query: {qry_update_result}")
         mssql_hook.run(qry_update_result)
@@ -184,26 +183,26 @@ def main():
     policies_qry = """
         SELECT
             policyNumber, policyType, status, productCode, inceptionDate, policyEntities, transaction_seq_no
-        FROM 
+        FROM
         (
-            select 
-                policyNumber, 
-                policyType, 
-                status, 
-                productCode, 
-                inceptionDate, 
-                policyEntities, 
+            select
+                policyNumber,
+                policyType,
+                status,
+                productCode,
+                inceptionDate,
+                policyEntities,
                 transaction_seq_no,
                 ROW_NUMBER() OVER (PARTITION BY policyNumber , inceptionDate ORDER BY transaction_seq_no DESC) AS rank
-            from 
+            from
                 edw_integration.claim_policy_search_snapsheet_api
-            where api_status in ('Error','pending') 
-        ) a 
+            where api_status in ('Error','pending')
+        ) a
         WHERE a.rank = 1
     """
 
     claims_qry = """
-        select 
+        select
             claimNumber, claimType, status, policyNumber, firstOpenedAt, firstClosedAt, openedAt, closedAt, datetimeOfLoss, datetimeOfNotification, fraudScore, fraudLevelIndicator, providerCode, coverageCheck,
          accountCode, lossType, notes, reservation, claimIncidentDetails, emergencyServicesDetail, notifier, notificationMethod, exposures, claimParties, vehicles, financialTransactions
         from edw_stage.migration_create_claim_api
@@ -211,14 +210,14 @@ def main():
     """
 
     notes_qry = """
-        select 
+        select
             claim_no, note_created_ts, note_json as data
         from edw_stage.migration_create_note_api
         where api_status in ('Error', 'pending')
     """
 
     financial_transactions_qry = """
-        select 
+        select
             financial_transaction_id, data
         from edw_stage.migration_create_financial_transaction_api
         where api_status in ('Error', 'pending')
@@ -235,7 +234,7 @@ def main():
     elif args.function == 'notes':
         process_notes(notes_qry)
     elif args.function == 'financial_transactions':
-        process_notes(financial_transactions_qry)
+        process_financial_transactions(financial_transactions_qry)
 
 
 if __name__ == '__main__':

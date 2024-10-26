@@ -4,6 +4,7 @@ import hmac
 import base64
 import json
 import logging
+import time
 from datetime import datetime
 from urllib.parse import urlencode
 
@@ -13,8 +14,12 @@ P_SECRET = 'CJNWgmHUMiQnpRFJoZvb'
 P_KEY = 'vault_us_api'
 P_BASE_URL = 'https://test.snapsheetvice.com'
 
-
 class SnapsheetAPI:
+    # Class-level variables to maintain shared state across instances
+    request_count = 0               # For enforcing rate limit
+    start_time = time.time()        # Initialize start time as class-level attribute
+    global_start_time = time.time() # For calculating global execution time
+    total_requests_sent = 0         # For tracking the total number of requests sent
 
     def __init__(self, secret=P_SECRET, key=P_KEY, base_url=P_BASE_URL, logger=None):
         self.secret = secret
@@ -38,38 +43,94 @@ class SnapsheetAPI:
 
         return headers
 
-    def _post_request(self, url, headers, data):
+    # Rate limiting function
+    @classmethod
+    def enforce_rate_limit(cls, max_requests=90, time_window=10):
+        # Check if the request count exceeds the allowed max_requests
+        if cls.request_count >= max_requests:
+            elapsed_time = time.time() - cls.start_time
+            if elapsed_time < time_window:
+                # Pause execution until the time window resets
+                time.sleep(time_window - elapsed_time)
+
+            # Reset the request count and start time after the wait
+            cls.request_count = 0
+            cls.start_time = time.time()
+
+    def _post_request(self, url, headers, data, max_retries=5):
         try:
-            # Log request
-            self.logger.info(f"POST Request URL: {url}")
-            self.logger.debug(f"POST Request Headers: {headers}")
-            self.logger.debug(f"POST Request Data: {data}")
+            # Use the global start time for calculating total execution time across all requests
+            SnapsheetAPI.global_start_time = SnapsheetAPI.global_start_time or time.time()
 
-            # Create request
-            response = requests.post(url, headers=headers, data=data)
-            
-            # Log response
-            self.logger.debug(f"POST Response status_code: {response.status_code}")
-            self.logger.debug(f"POST Response headers: {response.headers}")
-            self.logger.debug(f"POST Response text: {response.text}")
+            # Enforce rate limit before making the request
+            if "/claims" in url and "/v1/" in url:
+                self.enforce_rate_limit(9, 10)  # Limit to 9 requests every 10 seconds
+            else:
+                self.enforce_rate_limit(90, 10)  # Default limit to 90 requests every 10 seconds
 
-            # Raise for status if there's an HTTP error
-            # response.raise_for_status()
+            retry_count = 0
+            while retry_count < max_retries:
+                # Log request
+                self.logger.info(f"POST Request URL: {url}")
+                self.logger.debug(f"POST Request Headers: {headers}")
+                self.logger.debug(f"POST Request Data: {data}")
 
-            return response
+                # Create request
+                response = requests.post(url, headers=headers, data=data)
+                SnapsheetAPI.request_count += 1  # Increment class-level request count
+                SnapsheetAPI.total_requests_sent += 1  # Increment global total requests sent (for tracking only)
+
+                # If response is successful or not a 429 error, return the response
+                if response.status_code != 429:
+                    # Log response
+                    self.logger.debug(f"POST Response status_code: {response.status_code}")
+                    self.logger.debug(f"POST Response headers: {response.headers}")
+                    self.logger.debug(f"POST Response text: {response.text}")
+
+                    # Calculate and log total execution time and total requests sent
+                    total_end_time = time.time()
+                    total_execution_time = total_end_time - SnapsheetAPI.global_start_time
+                    self.logger.info(f"Total execution time for all POST requests: {total_execution_time:.2f} seconds")
+                    self.logger.info(f"Total requests sent for all POST operations: {SnapsheetAPI.total_requests_sent}")
+
+                    return response
+
+                # If response is 429, log the Retry-After value if present
+                retry_count += 1
+                retry_after = response.headers.get('Retry-After')
+                if retry_after:
+                    self.logger.warning(f"Received 429 Too Many Requests. Retry-After: {retry_after} seconds")
+                    wait_time = int(retry_after)  # Use Retry-After header if present
+                else:
+                    wait_time = 2 ** retry_count  # Exponential backoff: 2, 4, 8, etc. seconds
+
+                # Log the chosen wait time
+                self.logger.warning(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+
+            # If max retries exceeded, raise an exception
+            raise Exception(f"Max retries exceeded for POST request to {url}")
+
         except requests.exceptions.RequestException as e:
-            self.logger.error(f"POST {url} failed: {str(e)}")
+            # Log total execution time and requests sent in case of an exception
+            total_end_time = time.time()
+            total_execution_time = total_end_time - SnapsheetAPI.global_start_time
+            self.logger.error(f"POST {url} failed after {total_execution_time:.2f} seconds with {SnapsheetAPI.total_requests_sent} requests: {str(e)}")
             raise
-    
+
     def _get_request(self, url, headers):
         try:
+            # Enforce rate limit before making the request
+            self.enforce_rate_limit()
+
             # Log request
             self.logger.info(f"GET Request URL: {url}")
             self.logger.debug(f"GET Request Headers: {headers}")
 
             # Create request
             response = requests.get(url, headers=headers)
-            
+            self.request_count += 1  # Increment request count after each call
+
             # Log response
             self.logger.debug(f"GET Response status_code: {response.status_code}")
             self.logger.debug(f"GET Response headers: {response.headers}")
@@ -85,6 +146,9 @@ class SnapsheetAPI:
 
     def _patch_request(self, url, headers, data):
         try:
+            # Enforce rate limit before making the request
+            self.enforce_rate_limit()
+
             # Log request
             self.logger.info(f"PATCH Request URL: {url}")
             self.logger.debug(f"PATCH Request Headers: {headers}")
@@ -92,7 +156,8 @@ class SnapsheetAPI:
 
             # Create request
             response = requests.patch(url, headers=headers, data=data)
-            
+            self.request_count += 1  # Increment request count after each call
+
             # Log response details
             self.logger.debug(f"PATCH Response status_code: {response.status_code}")
             self.logger.debug(f"PATCH Response headers: {response.headers}")
