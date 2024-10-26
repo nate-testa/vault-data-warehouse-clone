@@ -9,6 +9,7 @@
 -- 11/15/23		Yunus Mohammed				2. Updated logic for cancelled and expired policies  
 -- 03/20/24		Yunus Mohammed				3. Included condo policies
 -- 09/18/24		Yunus Mohammed				4. Added gross premium and added Throw in catch block
+-- 10/24/24		Yunus Mohammed				5. Added gross premium in insert
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_ceded_premium_feed]
@@ -127,13 +128,13 @@ BEGIN
 			accounting_date,policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
 			effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 			[address],county,city,risk_state,zip,fire_protection,financial_category_id,coverageName,
-			amount,deleteddate,contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
+			amount,gross_premium_amt,deleteddate,contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
 				accounting_date,policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,financial_category_id,coveragename,
-				amount,null as deleteddate,null contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
+				amount,gross_premium_amt,null as deleteddate,null contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
 			FROM
 				policy_workday_ceded_premium_feed_temp
 
