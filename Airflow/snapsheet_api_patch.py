@@ -1,6 +1,6 @@
 import argparse
 import logging
-from airflow.utils.log.logging_mixin import LoggingMixin
+from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from snapsheet_api import SnapsheetAPI
 
 
@@ -8,56 +8,63 @@ logger = logging.getLogger(__name__)
 # logger.setLevel("DEBUG")
 
 
-def update_exposure_data(exposure_id=1043736, claim_handler_data_id="1n0xxQznkLnllgDsL5TwEg"):
+def exposure_data(qry):
     api = SnapsheetAPI(logger=logger)
-    data_json = {
-        "data": {
-            "id": str(exposure_id),
-            "type": "exposure",
-            "relationships": {
-                "claim_handler": {
-                    "data": {
-                        "id": claim_handler_data_id,
-                        "type": "user"
-                    }
-                }
-            }
-        }
-    }
-    
-    success, result = api.update_an_exposure(exposure_id, data_json)
+    mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
 
-    if success:
-        logger.info(f"Exposure Data Updated")
-    else:
-        logger.error(f"Error on update exposure data for exposure_id: {exposure_id}")
+    logger.info(f"Executing SQL query: {qry}")
+    update_exposure_data = mssql_hook.get_records(qry)
+    logger.info(f"Query returned {len(update_exposure_data)} records")
+
+    for record in update_exposure_data:
+        (exposureReferenceNumber, data) = record
+        logger.info(f"*************** Start Processing *********************")
+        logger.info(f"Processing exposure record: {record}")
+
+        success, result_text = api.update_an_exposure(exposureReferenceNumber, data)
+
+        if success:
+            qry_update_result = f"""
+                update edw_stage.migration_update_exposure_adjuster_api 
+                set update_ts = getdate(), api_status = 'Success', 
+                    api_Error_description = NULL, 
+                    api_response = '{result_text.replace("'","''")}'
+                where exposureReferenceNumber = '{exposureReferenceNumber}'
+            """
+        else:
+            qry_update_result = f"""
+                update edw_stage.migration_update_exposure_adjuster_api 
+                set update_ts = getdate(), api_status = 'Error', 
+                    api_Error_description = '{result_text.replace("'","''")}',
+                    api_response = NULL
+                where exposureReferenceNumber = '{exposureReferenceNumber}'
+            """
+
+        logger.info(f"Executing update query: {qry_update_result}")
+        mssql_hook.run(qry_update_result)
 
 
 def main():
+
+    update_exposure_qry = """
+        select 
+            exposure_id, data
+        from edw_stage.migration_update_exposure_adjuster_api
+        where api_status  in ('Error', 'pending') and exposureReferenceNumber = '1138419'
+    """
+
     parser = argparse.ArgumentParser(
         description='Execute Snapsheet API functions to update data'
     )
     parser.add_argument(
         'function',
-        choices=['update_exposure_by_id'],
+        choices=['exposure_data'],
         help='The function you want to execute.'
-    )
-    parser.add_argument(
-        'exposure_id',
-        nargs='?',
-        default='1234',
-        help='The exposure_id. Defaults to 1234.'
-    )
-    parser.add_argument(
-        'claim_handler_data_id',
-        nargs='?',
-        default='1234',
-        help='The claim_handler_data_id. Defaults to 1234.'
     )
     args = parser.parse_args()
 
-    if args.function == 'update_exposure_by_id':
-        update_exposure_data(args.exposure_id, args.claim_handler_data_id)
+    if args.function == 'exposure_data':
+        exposure_data(update_exposure_qry)
     
 
 if __name__ == '__main__':
