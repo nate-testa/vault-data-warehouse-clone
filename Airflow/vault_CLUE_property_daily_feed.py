@@ -129,8 +129,8 @@ with DAG(
         send_clue_property_email = EmailOperator(
             task_id='send_clue_property_email',
             to=to_email,
-            subject='Airflow - CLUE tables loaded successfully',
-            html_content=get_sp_success_data_HTML('sp_claim_clue_property_feed', 'The Clue Property process (e) finished successfully.'),
+            subject='Airflow - CLUE Property process completed successfully',
+            html_content=get_sp_success_data_HTML('sp_claim_clue_property_feed', 'The Clue Property process finished successfully.'),
         )
 
         sp_claim_clue_property_feed >> generate_clue_property_txt_file >> upload_clue_property_txt_to_sftp >> send_clue_property_email
