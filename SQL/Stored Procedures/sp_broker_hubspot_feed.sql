@@ -19,6 +19,7 @@
 -- 10/07/24		        Archtha Gudimalla			12. Added ytd_nb_premium_amt and ytd_renewal_retention_pc
 -- 10/07/24		        Archtha Gudimalla			12. Added cast to change to float for ret pc and loss ratio
 -- 10/25/24		        Archtha Gudimalla			13. Added isnull to tb.broker_nm not like '%test%'
+-- 10/26/24		        Archtha Gudimalla			14. Updated tbroker_vault_team logic
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
