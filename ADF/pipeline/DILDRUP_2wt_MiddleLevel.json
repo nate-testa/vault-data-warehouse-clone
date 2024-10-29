@@ -1,5 +1,5 @@
 {
-	"name": "MetadataDrivenCopyTaskPARTYDELETE_etw_MiddleLevel",
+	"name": "DILDRUP_2wt_MiddleLevel",
 	"properties": {
 		"description": "This pipeline will copy one batch of objects. The objects belonging to this batch will be copied parallelly.",
 		"activities": [
@@ -40,7 +40,7 @@
 									"partitionOption": "None"
 								},
 								"dataset": {
-									"referenceName": "MetadataDrivenCopyTaskPARTYDELETE_etw_ControlDS",
+									"referenceName": "DILDRUP_2wt_ControlDS",
 									"type": "DatasetReference"
 								},
 								"firstRowOnly": false
@@ -64,7 +64,7 @@
 							"userProperties": [],
 							"typeProperties": {
 								"pipeline": {
-									"referenceName": "MetadataDrivenCopyTaskPARTYDELETE_etw_BottomLevel",
+									"referenceName": "DILDRUP_2wt_BottomLevel",
 									"type": "PipelineReference"
 								},
 								"waitOnCompletion": true,
@@ -104,8 +104,10 @@
 			}
 		},
 		"folder": {
-			"name": "MetadataDrivenCopyTaskPARTYDELETE_etw_20240829"
+			"name": "DILDRUP_2wt_20240202"
 		},
-		"annotations": []
-	}
+		"annotations": [],
+		"lastPublishTime": "2024-02-02T13:53:47Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
 }

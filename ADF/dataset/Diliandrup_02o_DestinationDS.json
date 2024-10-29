@@ -1,20 +1,20 @@
 {
-	"name": "UserRoleMetaData_yfj_SourceDS",
+	"name": "Diliandrup_02o_DestinationDS",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "LS_azrvaultmetaldev001_metaldb",
+			"referenceName": "AzureSqlDatabase_edw_dev",
 			"type": "LinkedServiceReference"
 		},
 		"parameters": {
-			"cw_schema": {
+			"cw_table": {
 				"type": "String"
 			},
-			"cw_table": {
+			"cw_schema": {
 				"type": "String"
 			}
 		},
 		"folder": {
-			"name": "UserRoleMetaData_yfj_20240801"
+			"name": "Diliandrup_02o_20240326"
 		},
 		"annotations": [],
 		"type": "AzureSqlTable",
@@ -29,5 +29,6 @@
 				"type": "Expression"
 			}
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
 }

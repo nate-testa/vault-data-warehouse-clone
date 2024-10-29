@@ -1,12 +1,12 @@
 {
-	"name": "MetadataDrivenCopyTaskPARTYDELETE_etw_ControlDS",
+	"name": "DROPEBAOTEST_w2z_ControlDS",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "AzureSqlDatabase_edw_dev",
 			"type": "LinkedServiceReference"
 		},
 		"folder": {
-			"name": "MetadataDrivenCopyTaskPARTYDELETE_etw_20240829"
+			"name": "DROPEBAOTEST_w2z_20240131"
 		},
 		"annotations": [],
 		"type": "AzureSqlTable",
@@ -15,5 +15,6 @@
 			"schema": "edw_stage",
 			"table": "ControlLoadTable"
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
 }

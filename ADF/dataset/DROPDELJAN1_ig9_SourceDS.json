@@ -1,0 +1,34 @@
+{
+	"name": "DROPDELJAN1_ig9_SourceDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_azrvaultmetaldev001_metaldb",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"cw_schema": {
+				"type": "String"
+			},
+			"cw_table": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "DROPDELJAN1_ig9_20240124"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().cw_schema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().cw_table",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

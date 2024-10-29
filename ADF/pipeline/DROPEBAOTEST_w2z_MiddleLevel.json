@@ -1,5 +1,5 @@
 {
-	"name": "UserRoleMetaData_yfj_MiddleLevel",
+	"name": "DROPEBAOTEST_w2z_MiddleLevel",
 	"properties": {
 		"description": "This pipeline will copy one batch of objects. The objects belonging to this batch will be copied parallelly.",
 		"activities": [
@@ -40,7 +40,7 @@
 									"partitionOption": "None"
 								},
 								"dataset": {
-									"referenceName": "UserRoleMetaData_yfj_ControlDS",
+									"referenceName": "DROPEBAOTEST_w2z_ControlDS",
 									"type": "DatasetReference"
 								},
 								"firstRowOnly": false
@@ -64,7 +64,7 @@
 							"userProperties": [],
 							"typeProperties": {
 								"pipeline": {
-									"referenceName": "UserRoleMetaData_yfj_BottomLevel",
+									"referenceName": "DROPEBAOTEST_w2z_BottomLevel",
 									"type": "PipelineReference"
 								},
 								"waitOnCompletion": true,
@@ -104,8 +104,10 @@
 			}
 		},
 		"folder": {
-			"name": "UserRoleMetaData_yfj_20240801"
+			"name": "DROPEBAOTEST_w2z_20240131"
 		},
-		"annotations": []
-	}
+		"annotations": [],
+		"lastPublishTime": "2024-02-01T01:53:38Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
 }

@@ -1,8 +1,8 @@
 {
-	"name": "UserRoleMetaData_yfj_DestinationDS",
+	"name": "DILITNDRUP_kss_SourceDS",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "AzureSqlDatabase_edw_dev",
+			"referenceName": "LS_azrvaultmetaldev001_metaldb",
 			"type": "LinkedServiceReference"
 		},
 		"parameters": {
@@ -14,7 +14,7 @@
 			}
 		},
 		"folder": {
-			"name": "UserRoleMetaData_yfj_20240801"
+			"name": "DILITNDRUP_kss_20240319"
 		},
 		"annotations": [],
 		"type": "AzureSqlTable",
@@ -29,5 +29,6 @@
 				"type": "Expression"
 			}
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
 }

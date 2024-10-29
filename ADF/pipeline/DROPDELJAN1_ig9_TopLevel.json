@@ -1,5 +1,5 @@
 {
-	"name": "MetadataDrivenCopyTaskPARTYDELETE_etw_TopLevel",
+	"name": "DROPDELJAN1_ig9_TopLevel",
 	"properties": {
 		"description": "This pipeline will count the total number of objects (tables etc.) required to be copied in this run, come up with the number of sequential batches based on the max allowed concurrent copy task, and then execute another pipeline to copy different batches sequentially.",
 		"activities": [
@@ -26,7 +26,7 @@
 						"partitionOption": "None"
 					},
 					"dataset": {
-						"referenceName": "MetadataDrivenCopyTaskPARTYDELETE_etw_ControlDS",
+						"referenceName": "DROPDELJAN1_ig9_ControlDS",
 						"type": "DatasetReference"
 					}
 				}
@@ -62,7 +62,7 @@
 							"userProperties": [],
 							"typeProperties": {
 								"pipeline": {
-									"referenceName": "MetadataDrivenCopyTaskPARTYDELETE_etw_MiddleLevel",
+									"referenceName": "DROPDELJAN1_ig9_MiddleLevel",
 									"type": "PipelineReference"
 								},
 								"waitOnCompletion": true,
@@ -117,10 +117,12 @@
 			}
 		},
 		"folder": {
-			"name": "MetadataDrivenCopyTaskPARTYDELETE_etw_20240829"
+			"name": "DROPDELJAN1_ig9_20240124"
 		},
 		"annotations": [
 			"MetadataDrivenSolution"
-		]
-	}
+		],
+		"lastPublishTime": "2024-01-24T13:36:16Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
 }

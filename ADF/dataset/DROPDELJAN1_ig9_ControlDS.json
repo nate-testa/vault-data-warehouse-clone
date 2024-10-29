@@ -1,0 +1,20 @@
+{
+	"name": "DROPDELJAN1_ig9_ControlDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase_edw_dev",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "DROPDELJAN1_ig9_20240124"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edw_stage",
+			"table": "ControlLoadTable"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

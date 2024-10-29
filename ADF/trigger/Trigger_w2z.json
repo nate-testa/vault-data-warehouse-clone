@@ -1,0 +1,24 @@
+{
+	"name": "Trigger_w2z",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DROPEBAOTEST_w2z_TopLevel",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 24,
+				"startTime": "2024-02-01T01:47:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

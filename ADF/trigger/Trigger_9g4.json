@@ -1,0 +1,17 @@
+{
+	"name": "Trigger_9g4",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 24,
+				"startTime": "2023-09-06T20:20:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

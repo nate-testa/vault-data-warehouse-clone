@@ -1,5 +1,5 @@
 {
-	"name": "MetadataDrivenCopyTaskPARTYDELETE_etw_SourceDS",
+	"name": "DILDRUP_2wt_SourceDS",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "LS_eBao_uat_aws_us_uat_vault",
@@ -11,7 +11,7 @@
 			}
 		},
 		"folder": {
-			"name": "MetadataDrivenCopyTaskPARTYDELETE_etw_20240829"
+			"name": "DILDRUP_2wt_20240202"
 		},
 		"annotations": [],
 		"type": "MySqlTable",
@@ -22,5 +22,6 @@
 				"type": "Expression"
 			}
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
 }

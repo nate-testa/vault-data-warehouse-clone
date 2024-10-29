@@ -1,12 +1,12 @@
 {
-	"name": "Trigger_dd8",
+	"name": "Trigger_02o",
 	"properties": {
 		"annotations": [],
 		"runtimeState": "Stopped",
 		"pipelines": [
 			{
 				"pipelineReference": {
-					"referenceName": "MetadataDrivenCopy_LS_AWS_DMS_dd8_TopLevel",
+					"referenceName": "Diliandrup_02o_TopLevel",
 					"type": "PipelineReference"
 				}
 			}
@@ -16,7 +16,7 @@
 			"recurrence": {
 				"frequency": "Hour",
 				"interval": 24,
-				"startTime": "2024-06-05T19:03:00Z",
+				"startTime": "2024-03-26T14:59:00Z",
 				"timeZone": "UTC"
 			}
 		}

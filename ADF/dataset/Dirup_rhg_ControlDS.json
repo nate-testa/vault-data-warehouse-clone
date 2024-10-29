@@ -1,12 +1,12 @@
 {
-	"name": "UserRoleMetaData_yfj_ControlDS",
+	"name": "Dirup_rhg_ControlDS",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "AzureSqlDatabase_edw_dev",
 			"type": "LinkedServiceReference"
 		},
 		"folder": {
-			"name": "UserRoleMetaData_yfj_20240801"
+			"name": "Dirup_rhg_20240320"
 		},
 		"annotations": [],
 		"type": "AzureSqlTable",
@@ -15,5 +15,6 @@
 			"schema": "edw_stage",
 			"table": "ControlLoadTable"
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
 }

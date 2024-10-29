@@ -1,5 +1,5 @@
 {
-	"name": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_TopLevel",
+	"name": "Diliandrup_02o_TopLevel",
 	"properties": {
 		"description": "This pipeline will count the total number of objects (tables etc.) required to be copied in this run, come up with the number of sequential batches based on the max allowed concurrent copy task, and then execute another pipeline to copy different batches sequentially.",
 		"activities": [
@@ -20,14 +20,13 @@
 					"source": {
 						"type": "AzureSqlSource",
 						"sqlReaderQuery": {
-							"value": "SELECT count(*) as count FROM @{pipeline().parameters.MainControlTableName} where TopLevelPipelineName='@{pipeline().Pipeline}' and CopyEnabled = 1",
+							"value": "SELECT count(*) as count FROM @{pipeline().parameters.MainControlTableName} where TopLevelPipelineName='@{pipeline().Pipeline}' and TriggerName like '%@{pipeline().TriggerName}%' and CopyEnabled = 1",
 							"type": "Expression"
 						},
-						"isolationLevel": "ReadUncommitted",
 						"partitionOption": "None"
 					},
 					"dataset": {
-						"referenceName": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_ControlDS",
+						"referenceName": "Diliandrup_02o_ControlDS",
 						"type": "DatasetReference"
 					}
 				}
@@ -50,8 +49,7 @@
 						"value": "@range(0, add(div(activity('GetSumOfObjectsToCopy').output.firstRow.count,\n                    pipeline().parameters.MaxNumberOfConcurrentTasks),\n                    if(equals(mod(activity('GetSumOfObjectsToCopy').output.firstRow.count,\n                    pipeline().parameters.MaxNumberOfConcurrentTasks), 0), 0, 1)))",
 						"type": "Expression"
 					},
-					"isSequential": false,
-					"batchCount": 50,
+					"isSequential": true,
 					"activities": [
 						{
 							"name": "CopyObjectsInOneBatch",
@@ -64,7 +62,7 @@
 							"userProperties": [],
 							"typeProperties": {
 								"pipeline": {
-									"referenceName": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_MiddleLevel",
+									"referenceName": "Diliandrup_02o_MiddleLevel",
 									"type": "PipelineReference"
 								},
 								"waitOnCompletion": true,
@@ -104,7 +102,6 @@
 				}
 			}
 		],
-		"concurrency": 50,
 		"parameters": {
 			"MaxNumberOfObjectsReturnedFromLookupActivity": {
 				"type": "Int",
@@ -112,7 +109,7 @@
 			},
 			"MaxNumberOfConcurrentTasks": {
 				"type": "Int",
-				"defaultValue": 100
+				"defaultValue": 20
 			},
 			"MainControlTableName": {
 				"type": "String",
@@ -120,12 +117,12 @@
 			}
 		},
 		"folder": {
-			"name": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_20230530"
+			"name": "Diliandrup_02o_20240326"
 		},
 		"annotations": [
 			"MetadataDrivenSolution"
 		],
-		"lastPublishTime": "2023-08-31T16:32:25Z"
+		"lastPublishTime": "2024-03-26T15:03:01Z"
 	},
 	"type": "Microsoft.DataFactory/factories/pipelines"
 }

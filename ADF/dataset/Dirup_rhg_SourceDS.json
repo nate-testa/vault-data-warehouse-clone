@@ -1,8 +1,8 @@
 {
-	"name": "MetadataDrivenCopyTaskPARTYDELETE_etw_DestinationDS",
+	"name": "Dirup_rhg_SourceDS",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "AzureSqlDatabase_edw_dev",
+			"referenceName": "LS_azrvaultmetaldev001_metaldb",
 			"type": "LinkedServiceReference"
 		},
 		"parameters": {
@@ -14,7 +14,7 @@
 			}
 		},
 		"folder": {
-			"name": "MetadataDrivenCopyTaskPARTYDELETE_etw_20240829"
+			"name": "Dirup_rhg_20240320"
 		},
 		"annotations": [],
 		"type": "AzureSqlTable",
@@ -29,5 +29,6 @@
 				"type": "Expression"
 			}
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
 }

@@ -1,8 +1,8 @@
 {
-	"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_SourceDS",
+	"name": "DROPEBAOTEST_w2z_SourceDS",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "LS_AWS_DMS_UAT",
+			"referenceName": "LS_eBao_uat_aws_us_uat_vault",
 			"type": "LinkedServiceReference"
 		},
 		"parameters": {
@@ -11,7 +11,7 @@
 			}
 		},
 		"folder": {
-			"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
+			"name": "DROPEBAOTEST_w2z_20240131"
 		},
 		"annotations": [],
 		"type": "MySqlTable",
@@ -22,5 +22,6 @@
 				"type": "Expression"
 			}
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
 }

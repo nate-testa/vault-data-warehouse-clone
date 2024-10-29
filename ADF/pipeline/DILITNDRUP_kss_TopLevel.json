@@ -1,5 +1,5 @@
 {
-	"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_TopLevel",
+	"name": "DILITNDRUP_kss_TopLevel",
 	"properties": {
 		"description": "This pipeline will count the total number of objects (tables etc.) required to be copied in this run, come up with the number of sequential batches based on the max allowed concurrent copy task, and then execute another pipeline to copy different batches sequentially.",
 		"activities": [
@@ -20,13 +20,13 @@
 					"source": {
 						"type": "AzureSqlSource",
 						"sqlReaderQuery": {
-							"value": "SELECT count(*) as count FROM @{pipeline().parameters.MainControlTableName} where TopLevelPipelineName='@{pipeline().Pipeline}' and CopyEnabled = 1",
+							"value": "SELECT count(*) as count FROM @{pipeline().parameters.MainControlTableName} where TopLevelPipelineName='@{pipeline().Pipeline}' and TriggerName like '%@{pipeline().TriggerName}%' and CopyEnabled = 1",
 							"type": "Expression"
 						},
 						"partitionOption": "None"
 					},
 					"dataset": {
-						"referenceName": "MetadataDrivenCopy_LS_AWS_DMS_dd8_ControlDS",
+						"referenceName": "DILITNDRUP_kss_ControlDS",
 						"type": "DatasetReference"
 					}
 				}
@@ -62,7 +62,7 @@
 							"userProperties": [],
 							"typeProperties": {
 								"pipeline": {
-									"referenceName": "MetadataDrivenCopy_LS_AWS_DMS_dd8_MiddleLevel",
+									"referenceName": "DILITNDRUP_kss_MiddleLevel",
 									"type": "PipelineReference"
 								},
 								"waitOnCompletion": true,
@@ -117,10 +117,12 @@
 			}
 		},
 		"folder": {
-			"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
+			"name": "DILITNDRUP_kss_20240319"
 		},
 		"annotations": [
 			"MetadataDrivenSolution"
-		]
-	}
+		],
+		"lastPublishTime": "2024-03-20T00:10:55Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
 }

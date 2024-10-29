@@ -1,5 +1,5 @@
 {
-	"name": "MetadataDrivenCopyTaskPARTYDELETE_etw_BottomLevel",
+	"name": "DILDRUP_2wt_BottomLevel",
 	"properties": {
 		"description": "This pipeline will copy objects from one group. The objects belonging to this group will be copied parallelly.",
 		"activities": [
@@ -54,11 +54,7 @@
 												],
 												"typeProperties": {
 													"source": {
-														"type": "MySqlSource",
-														"query": {
-															"value": "@json(item().CopySourceSettings).query",
-															"type": "Expression"
-														}
+														"type": "MySqlSource"
 													},
 													"sink": {
 														"type": "AzureSqlSink",
@@ -66,23 +62,8 @@
 															"value": "@json(item().CopySinkSettings).preCopyScript",
 															"type": "Expression"
 														},
-														"writeBehavior": {
-															"value": "@json(item().CopySinkSettings).writeBehavior",
-															"type": "Expression"
-														},
-														"sqlWriterUseTableLock": {
-															"value": "@json(item().CopySinkSettings).sqlWriterUseTableLock",
-															"type": "Expression"
-														},
-														"upsertSettings": {
-															"useTempDB": true
-														},
 														"tableOption": {
 															"value": "@json(item().CopySinkSettings).tableOption",
-															"type": "Expression"
-														},
-														"disableMetricsCollection": {
-															"value": "@json(item().CopySinkSettings).disableMetricsCollection",
 															"type": "Expression"
 														}
 													},
@@ -95,7 +76,7 @@
 												},
 												"inputs": [
 													{
-														"referenceName": "MetadataDrivenCopyTaskPARTYDELETE_etw_SourceDS",
+														"referenceName": "DILDRUP_2wt_SourceDS",
 														"type": "DatasetReference",
 														"parameters": {
 															"cw_tableName": {
@@ -107,15 +88,15 @@
 												],
 												"outputs": [
 													{
-														"referenceName": "MetadataDrivenCopyTaskPARTYDELETE_etw_DestinationDS",
+														"referenceName": "DILDRUP_2wt_DestinationDS",
 														"type": "DatasetReference",
 														"parameters": {
-															"cw_schema": {
-																"value": "@json(item().SinkObjectSettings).schema",
-																"type": "Expression"
-															},
 															"cw_table": {
 																"value": "@json(item().SinkObjectSettings).table",
+																"type": "Expression"
+															},
+															"cw_schema": {
+																"value": "@json(item().SinkObjectSettings).schema",
 																"type": "Expression"
 															}
 														}
@@ -149,7 +130,7 @@
 														}
 													},
 													"dataset": {
-														"referenceName": "MetadataDrivenCopyTaskPARTYDELETE_etw_SourceDS",
+														"referenceName": "DILDRUP_2wt_SourceDS",
 														"type": "DatasetReference",
 														"parameters": {
 															"cw_tableName": {
@@ -203,23 +184,8 @@
 															"value": "@json(item().CopySinkSettings).preCopyScript",
 															"type": "Expression"
 														},
-														"writeBehavior": {
-															"value": "@json(item().CopySinkSettings).writeBehavior",
-															"type": "Expression"
-														},
-														"sqlWriterUseTableLock": {
-															"value": "@json(item().CopySinkSettings).sqlWriterUseTableLock",
-															"type": "Expression"
-														},
-														"upsertSettings": {
-															"useTempDB": true
-														},
 														"tableOption": {
 															"value": "@json(item().CopySinkSettings).tableOption",
-															"type": "Expression"
-														},
-														"disableMetricsCollection": {
-															"value": "@json(item().CopySinkSettings).disableMetricsCollection",
 															"type": "Expression"
 														}
 													},
@@ -232,7 +198,7 @@
 												},
 												"inputs": [
 													{
-														"referenceName": "MetadataDrivenCopyTaskPARTYDELETE_etw_SourceDS",
+														"referenceName": "DILDRUP_2wt_SourceDS",
 														"type": "DatasetReference",
 														"parameters": {
 															"cw_tableName": {
@@ -244,15 +210,15 @@
 												],
 												"outputs": [
 													{
-														"referenceName": "MetadataDrivenCopyTaskPARTYDELETE_etw_DestinationDS",
+														"referenceName": "DILDRUP_2wt_DestinationDS",
 														"type": "DatasetReference",
 														"parameters": {
-															"cw_schema": {
-																"value": "@json(item().SinkObjectSettings).schema",
-																"type": "Expression"
-															},
 															"cw_table": {
 																"value": "@json(item().SinkObjectSettings).table",
+																"type": "Expression"
+															},
+															"cw_schema": {
+																"value": "@json(item().SinkObjectSettings).schema",
 																"type": "Expression"
 															}
 														}
@@ -279,7 +245,7 @@
 												},
 												"userProperties": [],
 												"typeProperties": {
-													"storedProcedureName": "[UpdateWatermarkColumnValue_etw]",
+													"storedProcedureName": "[UpdateWatermarkColumnValue_2wt]",
 													"storedProcedureParameters": {
 														"Id": {
 															"value": {
@@ -330,11 +296,7 @@
 										],
 										"typeProperties": {
 											"source": {
-												"type": "MySqlSource",
-												"query": {
-													"value": "@json(item().CopySourceSettings).query",
-													"type": "Expression"
-												}
+												"type": "MySqlSource"
 											},
 											"sink": {
 												"type": "AzureSqlSink",
@@ -342,23 +304,8 @@
 													"value": "@json(item().CopySinkSettings).preCopyScript",
 													"type": "Expression"
 												},
-												"writeBehavior": {
-													"value": "@json(item().CopySinkSettings).writeBehavior",
-													"type": "Expression"
-												},
-												"sqlWriterUseTableLock": {
-													"value": "@json(item().CopySinkSettings).sqlWriterUseTableLock",
-													"type": "Expression"
-												},
-												"upsertSettings": {
-													"useTempDB": true
-												},
 												"tableOption": {
 													"value": "@json(item().CopySinkSettings).tableOption",
-													"type": "Expression"
-												},
-												"disableMetricsCollection": {
-													"value": "@json(item().CopySinkSettings).disableMetricsCollection",
 													"type": "Expression"
 												}
 											},
@@ -371,7 +318,7 @@
 										},
 										"inputs": [
 											{
-												"referenceName": "MetadataDrivenCopyTaskPARTYDELETE_etw_SourceDS",
+												"referenceName": "DILDRUP_2wt_SourceDS",
 												"type": "DatasetReference",
 												"parameters": {
 													"cw_tableName": {
@@ -383,15 +330,15 @@
 										],
 										"outputs": [
 											{
-												"referenceName": "MetadataDrivenCopyTaskPARTYDELETE_etw_DestinationDS",
+												"referenceName": "DILDRUP_2wt_DestinationDS",
 												"type": "DatasetReference",
 												"parameters": {
-													"cw_schema": {
-														"value": "@json(item().SinkObjectSettings).schema",
-														"type": "Expression"
-													},
 													"cw_table": {
 														"value": "@json(item().SinkObjectSettings).table",
+														"type": "Expression"
+													},
+													"cw_schema": {
+														"value": "@json(item().SinkObjectSettings).schema",
 														"type": "Expression"
 													}
 												}
@@ -411,8 +358,10 @@
 			}
 		},
 		"folder": {
-			"name": "MetadataDrivenCopyTaskPARTYDELETE_etw_20240829"
+			"name": "DILDRUP_2wt_20240202"
 		},
-		"annotations": []
-	}
+		"annotations": [],
+		"lastPublishTime": "2024-02-02T13:53:47Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
 }

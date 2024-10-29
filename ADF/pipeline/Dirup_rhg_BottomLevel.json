@@ -1,5 +1,5 @@
 {
-	"name": "UserRoleMetaData_yfj_BottomLevel",
+	"name": "Dirup_rhg_BottomLevel",
 	"properties": {
 		"description": "This pipeline will copy objects from one group. The objects belonging to this group will be copied parallelly.",
 		"activities": [
@@ -119,7 +119,7 @@
 												},
 												"inputs": [
 													{
-														"referenceName": "UserRoleMetaData_yfj_SourceDS",
+														"referenceName": "Dirup_rhg_SourceDS",
 														"type": "DatasetReference",
 														"parameters": {
 															"cw_schema": {
@@ -135,15 +135,15 @@
 												],
 												"outputs": [
 													{
-														"referenceName": "UserRoleMetaData_yfj_DestinationDS",
+														"referenceName": "Dirup_rhg_DestinationDS",
 														"type": "DatasetReference",
 														"parameters": {
-															"cw_schema": {
-																"value": "@json(item().SinkObjectSettings).schema",
-																"type": "Expression"
-															},
 															"cw_table": {
 																"value": "@json(item().SinkObjectSettings).table",
+																"type": "Expression"
+															},
+															"cw_schema": {
+																"value": "@json(item().SinkObjectSettings).schema",
 																"type": "Expression"
 															}
 														}
@@ -178,7 +178,7 @@
 														"partitionOption": "None"
 													},
 													"dataset": {
-														"referenceName": "UserRoleMetaData_yfj_SourceDS",
+														"referenceName": "Dirup_rhg_SourceDS",
 														"type": "DatasetReference",
 														"parameters": {
 															"cw_schema": {
@@ -289,7 +289,7 @@
 												},
 												"inputs": [
 													{
-														"referenceName": "UserRoleMetaData_yfj_SourceDS",
+														"referenceName": "Dirup_rhg_SourceDS",
 														"type": "DatasetReference",
 														"parameters": {
 															"cw_schema": {
@@ -305,15 +305,15 @@
 												],
 												"outputs": [
 													{
-														"referenceName": "UserRoleMetaData_yfj_DestinationDS",
+														"referenceName": "Dirup_rhg_DestinationDS",
 														"type": "DatasetReference",
 														"parameters": {
-															"cw_schema": {
-																"value": "@json(item().SinkObjectSettings).schema",
-																"type": "Expression"
-															},
 															"cw_table": {
 																"value": "@json(item().SinkObjectSettings).table",
+																"type": "Expression"
+															},
+															"cw_schema": {
+																"value": "@json(item().SinkObjectSettings).schema",
 																"type": "Expression"
 															}
 														}
@@ -340,7 +340,7 @@
 												},
 												"userProperties": [],
 												"typeProperties": {
-													"storedProcedureName": "[UpdateWatermarkColumnValue_yfj]",
+													"storedProcedureName": "[UpdateWatermarkColumnValue_rhg]",
 													"storedProcedureParameters": {
 														"Id": {
 															"value": {
@@ -456,7 +456,7 @@
 										},
 										"inputs": [
 											{
-												"referenceName": "UserRoleMetaData_yfj_SourceDS",
+												"referenceName": "Dirup_rhg_SourceDS",
 												"type": "DatasetReference",
 												"parameters": {
 													"cw_schema": {
@@ -472,15 +472,15 @@
 										],
 										"outputs": [
 											{
-												"referenceName": "UserRoleMetaData_yfj_DestinationDS",
+												"referenceName": "Dirup_rhg_DestinationDS",
 												"type": "DatasetReference",
 												"parameters": {
-													"cw_schema": {
-														"value": "@json(item().SinkObjectSettings).schema",
-														"type": "Expression"
-													},
 													"cw_table": {
 														"value": "@json(item().SinkObjectSettings).table",
+														"type": "Expression"
+													},
+													"cw_schema": {
+														"value": "@json(item().SinkObjectSettings).schema",
 														"type": "Expression"
 													}
 												}
@@ -500,8 +500,10 @@
 			}
 		},
 		"folder": {
-			"name": "UserRoleMetaData_yfj_20240801"
+			"name": "Dirup_rhg_20240320"
 		},
-		"annotations": []
-	}
+		"annotations": [],
+		"lastPublishTime": "2024-03-20T16:43:51Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
 }

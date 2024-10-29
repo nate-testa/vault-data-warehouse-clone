@@ -1,5 +1,5 @@
 {
-	"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_DestinationDS",
+	"name": "DROPEBAOTEST_w2z_DestinationDS",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "AzureSqlDatabase_edw_dev",
@@ -14,7 +14,7 @@
 			}
 		},
 		"folder": {
-			"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
+			"name": "DROPEBAOTEST_w2z_20240131"
 		},
 		"annotations": [],
 		"type": "AzureSqlTable",
@@ -29,5 +29,6 @@
 				"type": "Expression"
 			}
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
 }
