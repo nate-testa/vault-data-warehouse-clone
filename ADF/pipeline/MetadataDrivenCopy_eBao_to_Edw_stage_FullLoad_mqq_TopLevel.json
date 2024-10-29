@@ -56,6 +56,9 @@
 							"description": "Execute another pipeline to copy one batch of objects. The objects belonging to this batch will be copied parallelly.",
 							"type": "ExecutePipeline",
 							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
 							"userProperties": [],
 							"typeProperties": {
 								"pipeline": {
@@ -119,7 +122,7 @@
 		"annotations": [
 			"MetadataDrivenSolution"
 		],
-		"lastPublishTime": "2023-09-05T21:22:51Z"
+		"lastPublishTime": "2024-08-30T14:57:10Z"
 	},
 	"type": "Microsoft.DataFactory/factories/pipelines"
 }

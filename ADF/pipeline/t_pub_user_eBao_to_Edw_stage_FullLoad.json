@@ -1,0 +1,930 @@
+{
+	"name": "t_pub_user_eBao_to_Edw_stage_FullLoad",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy_0lj",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [
+					{
+						"name": "Source",
+						"value": "`t_pub_user`"
+					},
+					{
+						"name": "Destination",
+						"value": "edw_stage.t_pub_user"
+					}
+				],
+				"typeProperties": {
+					"source": {
+						"type": "MySqlSource"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "TRUNCATE TABLE edw_stage.t_pub_user",
+						"tableOption": "autoCreate"
+					},
+					"enableStaging": false,
+					"validateDataConsistency": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "USER_ID",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "USER_ID",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "ORG_ID",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "ORG_ID",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "PASSWORD",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "PASSWORD",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "REAL_NAME",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "REAL_NAME",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "CREATE_DATE",
+									"type": "DateTime",
+									"physicalType": "DateTime"
+								},
+								"sink": {
+									"name": "CREATE_DATE",
+									"type": "DateTime",
+									"physicalType": "datetime2"
+								}
+							},
+							{
+								"source": {
+									"name": "USER_NAME",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "USER_NAME",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "PASSWORD_CHANGE",
+									"type": "DateTime",
+									"physicalType": "DateTime"
+								},
+								"sink": {
+									"name": "PASSWORD_CHANGE",
+									"type": "DateTime",
+									"physicalType": "datetime2"
+								}
+							},
+							{
+								"source": {
+									"name": "NEED_CHANGE_PASS",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "NEED_CHANGE_PASS",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "DEFAULT_LANG",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "DEFAULT_LANG",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "USER_DISABLE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "USER_DISABLE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "DISABLE_CAUSE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "DISABLE_CAUSE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "INVALID_LOGIN",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "INVALID_LOGIN",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "LATEST_IP",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "LATEST_IP",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "LATEST_IP_OLD",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "LATEST_IP_OLD",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "LATEST_LOGIN_TIME",
+									"type": "DateTime",
+									"physicalType": "DateTime"
+								},
+								"sink": {
+									"name": "LATEST_LOGIN_TIME",
+									"type": "DateTime",
+									"physicalType": "datetime2"
+								}
+							},
+							{
+								"source": {
+									"name": "LATEST_LOGIN_OLD",
+									"type": "DateTime",
+									"physicalType": "DateTime"
+								},
+								"sink": {
+									"name": "LATEST_LOGIN_OLD",
+									"type": "DateTime",
+									"physicalType": "datetime2"
+								}
+							},
+							{
+								"source": {
+									"name": "LATEST_LOGOUT_TIME",
+									"type": "DateTime",
+									"physicalType": "DateTime"
+								},
+								"sink": {
+									"name": "LATEST_LOGOUT_TIME",
+									"type": "DateTime",
+									"physicalType": "datetime2"
+								}
+							},
+							{
+								"source": {
+									"name": "LATEST_ACCESS_TIME",
+									"type": "DateTime",
+									"physicalType": "DateTime"
+								},
+								"sink": {
+									"name": "LATEST_ACCESS_TIME",
+									"type": "DateTime",
+									"physicalType": "datetime2"
+								}
+							},
+							{
+								"source": {
+									"name": "USER_TYPE",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "USER_TYPE",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "PARTY_ID",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "PARTY_ID",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "PARTY_ROLE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "PARTY_ROLE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "DEPT_ID",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "DEPT_ID",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "EMAIL",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "EMAIL",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "DISABLE_DATE",
+									"type": "DateTime",
+									"physicalType": "DateTime"
+								},
+								"sink": {
+									"name": "DISABLE_DATE",
+									"type": "DateTime",
+									"physicalType": "datetime2"
+								}
+							},
+							{
+								"source": {
+									"name": "CUSTOMER_ID",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "CUSTOMER_ID",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "ID_CARD",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "ID_CARD",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "ACTIVATE_PASSWORD",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "ACTIVATE_PASSWORD",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "USER_ON_LEAVE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "USER_ON_LEAVE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "DISABLE_CAUSE_DETAIL",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "DISABLE_CAUSE_DETAIL",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "INSERT_BY",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "INSERT_BY",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "UPDATE_BY",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "UPDATE_BY",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "DYNAMIC_FIELDS",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "DYNAMIC_FIELDS",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "MOBILE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "MOBILE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "ORGAN_ID",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "ORGAN_ID",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "DEFAULT_LANGUAGE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "DEFAULT_LANGUAGE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "CODE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "CODE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "STATUS",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "STATUS",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "ON_LEAVE_FLAG",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "ON_LEAVE_FLAG",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "REGISTER_CODE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "REGISTER_CODE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "REGISTER_EXPIRE_DATE",
+									"type": "DateTime",
+									"physicalType": "DateTime"
+								},
+								"sink": {
+									"name": "REGISTER_EXPIRE_DATE",
+									"type": "DateTime",
+									"physicalType": "datetime2"
+								}
+							},
+							{
+								"source": {
+									"name": "INSERT_TIME",
+									"type": "DateTime",
+									"physicalType": "DateTime"
+								},
+								"sink": {
+									"name": "INSERT_TIME",
+									"type": "DateTime",
+									"physicalType": "datetime2"
+								}
+							},
+							{
+								"source": {
+									"name": "UPDATE_TIME",
+									"type": "DateTime",
+									"physicalType": "DateTime"
+								},
+								"sink": {
+									"name": "UPDATE_TIME",
+									"type": "DateTime",
+									"physicalType": "datetime2"
+								}
+							},
+							{
+								"source": {
+									"name": "TITLE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "TITLE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "USER_NO",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "USER_NO",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "POSITION",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "POSITION",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "BRANCH_ID",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "BRANCH_ID",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "COM_CODE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "COM_CODE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "MAKE_CODE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "MAKE_CODE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "EMPLOYEE_FLAG",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "EMPLOYEE_FLAG",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "NEW_USER_CODE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "NEW_USER_CODE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "VALID_STATUS",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "VALID_STATUS",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "ARTICLE_CODE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "ARTICLE_CODE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "FLAG",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "FLAG",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "EXTRANET_SINGLE_FLAG",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "EXTRANET_SINGLE_FLAG",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "AGENT_ACOUNT_FLAG",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "AGENT_ACOUNT_FLAG",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "VOCATION_CODE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "VOCATION_CODE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "PARTIN_TIME",
+									"type": "DateTime",
+									"physicalType": "DateTime"
+								},
+								"sink": {
+									"name": "PARTIN_TIME",
+									"type": "DateTime",
+									"physicalType": "datetime2"
+								}
+							},
+							{
+								"source": {
+									"name": "SALES_FLAG",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "SALES_FLAG",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "ORG_CODE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "ORG_CODE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "ADDRESS",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "ADDRESS",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "TEL",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "TEL",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "B2B_BELONG_TO_ORG_ID",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "B2B_BELONG_TO_ORG_ID",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "B2B_EXT_RBANCH_NO",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "B2B_EXT_RBANCH_NO",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "B2B_CONTRACT_ID",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "B2B_CONTRACT_ID",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "B2B_PLAN_CODE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "B2B_PLAN_CODE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "B2B_AGREEMENT_NO",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "B2B_AGREEMENT_NO",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "BUSINESS_OBJECT_ID",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "BUSINESS_OBJECT_ID",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "B2B_PRODUCT_CODE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "B2B_PRODUCT_CODE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "USER_ROLE_CODE",
+									"type": "String",
+									"physicalType": "VarChar"
+								},
+								"sink": {
+									"name": "USER_ROLE_CODE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "RECORD_USAGE",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "RECORD_USAGE",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "SUPERVISOR",
+									"type": "Decimal",
+									"physicalType": "NewDecimal"
+								},
+								"sink": {
+									"name": "SUPERVISOR",
+									"type": "Decimal",
+									"physicalType": "decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "IMAGE",
+									"type": "String",
+									"physicalType": "Text"
+								},
+								"sink": {
+									"name": "IMAGE",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "SourceDataset_0lj",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DestinationDataset_0lj",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2024-10-29T20:49:53Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

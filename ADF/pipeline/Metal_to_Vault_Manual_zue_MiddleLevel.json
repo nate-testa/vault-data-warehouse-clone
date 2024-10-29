@@ -58,6 +58,9 @@
 									]
 								}
 							],
+							"policy": {
+								"secureInput": false
+							},
 							"userProperties": [],
 							"typeProperties": {
 								"pipeline": {
@@ -104,7 +107,7 @@
 			"name": "Metal_to_Vault_Manual_zue_20230705"
 		},
 		"annotations": [],
-		"lastPublishTime": "2023-07-05T21:52:16Z"
+		"lastPublishTime": "2024-08-30T14:57:09Z"
 	},
 	"type": "Microsoft.DataFactory/factories/pipelines"
 }
