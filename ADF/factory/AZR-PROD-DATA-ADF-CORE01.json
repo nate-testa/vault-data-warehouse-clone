@@ -1,0 +1,9 @@
+{
+	"name": "AZR-PROD-DATA-ADF-CORE01",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "89f2eac1-9b6c-4fbd-baa8-dd0d60ee7263",
+		"tenantId": "348d7f3f-9dec-4a47-a2a1-d314cc2e5774"
+	}
+}

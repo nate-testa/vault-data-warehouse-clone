@@ -1,0 +1,17 @@
+{
+	"name": "DestinationDataset_jap",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_PROD",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edw_stage",
+			"table": "t_pub_diary"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

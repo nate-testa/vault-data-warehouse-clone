@@ -1,0 +1,22 @@
+{
+	"name": "LS_eBao_aws_us_prod_vault",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"description": "Integration Runtime with AWS PROD --> 10.81.240.218 with eBao DB --> aws_us_prod_vault",
+		"annotations": [],
+		"type": "MySql",
+		"typeProperties": {
+			"server": "aws-us-gi-prod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com",
+			"port": "3306",
+			"database": "aws_us_prod_vault",
+			"username": "dms_repl_read",
+			"sslMode": 0,
+			"driverVersion": "v2",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiIzODM5NTMwZi03YjYzLTQ2YmQtYjA3ZS1mNDk3ZTNmN2ExYjYiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "AWS-PROD",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

@@ -1,0 +1,20 @@
+{
+	"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_ControlDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_PROD",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edw_stage",
+			"table": "ControlLoadTable"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
