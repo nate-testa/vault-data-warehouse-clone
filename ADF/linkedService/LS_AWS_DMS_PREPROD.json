@@ -1,0 +1,21 @@
+{
+	"name": "LS_AWS_DMS_PREPROD",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "MySql",
+		"typeProperties": {
+			"server": "vlt-mysqla-ods-prod-instance-1.c3ze9u5b0sq7.us-east-1.rds.amazonaws.com",
+			"port": "3306",
+			"database": "dms_core",
+			"username": "vltDmsUserPROD",
+			"sslMode": 0,
+			"driverVersion": "v2",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiIwM2Y5ZGNjMy04MWE4LTRjMzEtODA1My1hZmVhNDc1NWU4ZjciLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "AWS-PREPROD",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
