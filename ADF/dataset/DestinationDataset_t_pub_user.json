@@ -1,9 +1,12 @@
 {
-	"name": "DestinationDataset_0lj",
+	"name": "DestinationDataset_t_pub_user",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "LS_EDW_PROD",
 			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "t_pub_user"
 		},
 		"annotations": [],
 		"type": "AzureSqlTable",

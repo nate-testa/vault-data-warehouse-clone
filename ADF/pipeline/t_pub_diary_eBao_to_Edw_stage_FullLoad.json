@@ -239,13 +239,13 @@
 				},
 				"inputs": [
 					{
-						"referenceName": "SourceDataset_jap",
+						"referenceName": "SourceDataset_t_pub_diary",
 						"type": "DatasetReference"
 					}
 				],
 				"outputs": [
 					{
-						"referenceName": "DestinationDataset_jap",
+						"referenceName": "DestinationDataset_t_pub_diary",
 						"type": "DatasetReference"
 					}
 				]

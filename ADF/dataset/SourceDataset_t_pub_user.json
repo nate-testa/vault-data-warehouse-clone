@@ -1,9 +1,12 @@
 {
-	"name": "SourceDataset_0lj",
+	"name": "SourceDataset_t_pub_user",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "LS_eBao_aws_us_prod_pub",
 			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "t_pub_user"
 		},
 		"annotations": [],
 		"type": "MySqlTable",

@@ -1,9 +1,12 @@
 {
-	"name": "DestinationDataset_jap",
+	"name": "DestinationDataset_t_pub_diary",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "LS_EDW_PROD",
 			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "t_pub_dairy"
 		},
 		"annotations": [],
 		"type": "AzureSqlTable",
