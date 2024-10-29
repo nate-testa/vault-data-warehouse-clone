@@ -1,9 +1,0 @@
-{
-	"name": "AZR-PREP-DATA-ADF-CORE01",
-	"location": "eastus",
-	"identity": {
-		"type": "SystemAssigned",
-		"principalId": "7a527093-dd45-4991-9336-4df52064b600",
-		"tenantId": "348d7f3f-9dec-4a47-a2a1-d314cc2e5774"
-	}
-}

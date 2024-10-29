@@ -1,6 +1,0 @@
-{
-	"name": "AWS-PREPROD",
-	"properties": {
-		"type": "SelfHosted"
-	}
-}
