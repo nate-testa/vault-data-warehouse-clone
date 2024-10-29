@@ -1,0 +1,21 @@
+{
+	"name": "LS_eBao_uat_aws_us_uat_unicorn_insurepay",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "MySql",
+		"typeProperties": {
+			"server": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com",
+			"port": "3306",
+			"database": "aws_us_uat_unicorn_insurepay",
+			"username": "awac_readonly",
+			"sslMode": 0,
+			"driverVersion": "v2",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiIxODI5Yjk0MC0yYmMzLTQ3NjEtODI3NC04MmU3NGI1M2JjNmYiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "AWS-UAT",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

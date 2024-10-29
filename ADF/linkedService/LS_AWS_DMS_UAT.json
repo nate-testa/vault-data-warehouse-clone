@@ -1,0 +1,21 @@
+{
+	"name": "LS_AWS_DMS_UAT",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "MySql",
+		"typeProperties": {
+			"server": "vlt-mysql-ods-uat.cluster-ctaeroxllezw.us-east-1.rds.amazonaws.com",
+			"port": "3306",
+			"database": "dms_core",
+			"username": "vltDmsUserUAT",
+			"sslMode": 0,
+			"driverVersion": "v2",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiI0MTdkZTg1Ny04ZTY0LTRkOGMtYTNkMi0wNmY5YjI0NDYxM2QiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "AWS-UAT",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
