@@ -5,8 +5,13 @@
 		"annotations": [],
 		"type": "MySql",
 		"typeProperties": {
-			"connectionString": "server=aws-us-gi-preprod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com;port=3306;database=aws_us_preprod_diary;user=vault_us_preprod_dms_ro;sslmode=0",
-			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiIwNWUwOTBmYy00OTExLTQyMDItYmQzYy0zNWU5OTZhNzQ5Y2EiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+			"server": "aws-us-gi-preprod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com",
+			"port": "3306",
+			"database": "aws_us_preprod_diary",
+			"username": "vault_us_preprod_dms_ro",
+			"sslMode": 0,
+			"driverVersion": "v2",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiI4ZmIzYmFlZS03NzJiLTQyNzAtOTM3ZC1iODA0OGQzYzQxMTkiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
 		},
 		"connectVia": {
 			"referenceName": "AWS-PREPROD",

@@ -15,5 +15,6 @@
 			"schema": "edw_stage",
 			"table": "ControlLoadTable"
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
 }
