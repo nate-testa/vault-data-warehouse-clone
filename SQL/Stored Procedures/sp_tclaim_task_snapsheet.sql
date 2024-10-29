@@ -159,7 +159,7 @@ BEGIN
 			Target.completed_at_ts = Source.completed_at_ts
 			Target.first_assigned_at_ts = Source.first_assigned_at_ts
 			Target.source_system_sk = Source.source_system_sk
-			Target.update_ts = @current_date
+			Target.update_ts = GETDATE()
 			;
 
 			SET @rows_affected=@@ROWCOUNT;
