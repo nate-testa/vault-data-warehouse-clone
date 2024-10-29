@@ -1,7 +1,0 @@
-{
-	"name": "AWS-PROD",
-	"properties": {
-		"type": "SelfHosted",
-		"description": "Integration Runtime via AWS PROD eBao VM -->10.81.240.218"
-	}
-}
