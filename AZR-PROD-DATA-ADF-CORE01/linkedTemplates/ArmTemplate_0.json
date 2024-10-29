@@ -7,37 +7,101 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "AZR-PROD-DATA-ADF-CORE01"
 		},
-		"LS_AWS_DMS_PROD_connectionString": {
+		"LS_AWS_DMS_PROD_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_AWS_DMS_PROD'"
+			"metadata": "Secure string for 'password' of 'LS_AWS_DMS_PROD'"
 		},
-		"LS_eBao_aws_us_prod_address_connectionString": {
+		"LS_eBao_aws_us_prod_address_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_address'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_aws_us_prod_address'"
 		},
-		"LS_eBao_aws_us_prod_diary_connectionString": {
+		"LS_eBao_aws_us_prod_diary_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_diary'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_aws_us_prod_diary'"
 		},
-		"LS_eBao_aws_us_prod_pub_connectionString": {
+		"LS_eBao_aws_us_prod_pub_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_pub'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_aws_us_prod_pub'"
 		},
-		"LS_eBao_aws_us_prod_unicorn_insurepay_connectionString": {
+		"LS_eBao_aws_us_prod_unicorn_insurepay_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_unicorn_insurepay'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_aws_us_prod_unicorn_insurepay'"
 		},
-		"LS_eBao_aws_us_prod_vault_connectionString": {
+		"LS_eBao_aws_us_prod_vault_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_vault'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_aws_us_prod_vault'"
 		},
-		"LS_EDW_PROD_connectionString": {
-			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_EDW_PROD'"
+		"LS_AWS_DMS_PROD_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "vlt-mysqla-ods-prod-instance-1.c3ze9u5b0sq7.us-east-1.rds.amazonaws.com"
 		},
-		"LS_METALDB_PROD_connectionString": {
-			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_METALDB_PROD'"
+		"LS_AWS_DMS_PROD_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "dms_core"
+		},
+		"LS_AWS_DMS_PROD_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "vltDmsUserPROD"
+		},
+		"LS_eBao_aws_us_prod_address_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-prod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_aws_us_prod_address_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_prod_address"
+		},
+		"LS_eBao_aws_us_prod_address_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "dms_repl_read"
+		},
+		"LS_eBao_aws_us_prod_diary_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-prod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_aws_us_prod_diary_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_prod_diary"
+		},
+		"LS_eBao_aws_us_prod_diary_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "dms_repl_read"
+		},
+		"LS_eBao_aws_us_prod_pub_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-prod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_aws_us_prod_pub_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_prod_pub"
+		},
+		"LS_eBao_aws_us_prod_pub_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "dms_repl_read"
+		},
+		"LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-prod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_prod_unicorn_insurepay"
+		},
+		"LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "dms_repl_read"
+		},
+		"LS_eBao_aws_us_prod_vault_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-prod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_aws_us_prod_vault_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_prod_vault"
+		},
+		"LS_eBao_aws_us_prod_vault_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "dms_repl_read"
 		},
 		"azr_prod_data_core01_pep01_properties_privateLinkResourceId": {
 			"type": "string",
@@ -138,7 +202,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_AWS_DMS_PROD_connectionString')]"
+					"server": "[parameters('LS_AWS_DMS_PROD_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_AWS_DMS_PROD_properties_typeProperties_database')]",
+					"username": "[parameters('LS_AWS_DMS_PROD_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_AWS_DMS_PROD_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-PROD",
@@ -158,7 +231,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_aws_us_prod_address_connectionString')]"
+					"server": "[parameters('LS_eBao_aws_us_prod_address_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_aws_us_prod_address_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_aws_us_prod_address_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_aws_us_prod_address_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-PROD",
@@ -177,7 +259,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_aws_us_prod_diary_connectionString')]"
+					"server": "[parameters('LS_eBao_aws_us_prod_diary_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_aws_us_prod_diary_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_aws_us_prod_diary_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_aws_us_prod_diary_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-PROD",
@@ -196,7 +287,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_aws_us_prod_pub_connectionString')]"
+					"server": "[parameters('LS_eBao_aws_us_prod_pub_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_aws_us_prod_pub_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_aws_us_prod_pub_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_aws_us_prod_pub_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-PROD",
@@ -216,7 +316,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_aws_us_prod_unicorn_insurepay_connectionString')]"
+					"server": "[parameters('LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_aws_us_prod_unicorn_insurepay_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-PROD",
@@ -236,7 +345,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_aws_us_prod_vault_connectionString')]"
+					"server": "[parameters('LS_eBao_aws_us_prod_vault_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_aws_us_prod_vault_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_aws_us_prod_vault_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_aws_us_prod_vault_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-PROD",
@@ -462,41 +580,49 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/LS_EDW_PROD')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_diary')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
 			"properties": {
-				"annotations": [],
-				"type": "AzureSqlDatabase",
-				"typeProperties": {
-					"connectionString": "[parameters('LS_EDW_PROD_connectionString')]"
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_aws_us_prod_diary",
+					"type": "LinkedServiceReference"
 				},
-				"connectVia": {
-					"referenceName": "Data-ADF-IR-via-VNet",
-					"type": "IntegrationRuntimeReference"
+				"folder": {
+					"name": "t_pub_dairy"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "`t_pub_diary`"
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/integrationRuntimes/Data-ADF-IR-via-VNet')]"
+				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_aws_us_prod_diary')]"
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/LS_METALDB_PROD')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_user')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
 			"properties": {
-				"annotations": [],
-				"type": "AzureSqlDatabase",
-				"typeProperties": {
-					"connectionString": "[parameters('LS_METALDB_PROD_connectionString')]"
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_aws_us_prod_pub",
+					"type": "LinkedServiceReference"
 				},
-				"connectVia": {
-					"referenceName": "Data-ADF-IR-via-VNet",
-					"type": "IntegrationRuntimeReference"
+				"folder": {
+					"name": "t_pub_user"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "`t_pub_user`"
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/integrationRuntimes/Data-ADF-IR-via-VNet')]"
+				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_aws_us_prod_pub')]"
 			]
 		}
 	]

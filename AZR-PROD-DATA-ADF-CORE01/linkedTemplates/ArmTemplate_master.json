@@ -7,9 +7,9 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "AZR-PROD-DATA-ADF-CORE01"
 		},
-		"LS_AWS_DMS_PROD_connectionString": {
+		"LS_AWS_DMS_PROD_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_AWS_DMS_PROD'"
+			"metadata": "Secure string for 'password' of 'LS_AWS_DMS_PROD'"
 		},
 		"LS_EDW_PROD_connectionString": {
 			"type": "secureString",
@@ -19,25 +19,97 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_METALDB_PROD'"
 		},
-		"LS_eBao_aws_us_prod_address_connectionString": {
+		"LS_eBao_aws_us_prod_address_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_address'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_aws_us_prod_address'"
 		},
-		"LS_eBao_aws_us_prod_diary_connectionString": {
+		"LS_eBao_aws_us_prod_diary_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_diary'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_aws_us_prod_diary'"
 		},
-		"LS_eBao_aws_us_prod_pub_connectionString": {
+		"LS_eBao_aws_us_prod_pub_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_pub'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_aws_us_prod_pub'"
 		},
-		"LS_eBao_aws_us_prod_unicorn_insurepay_connectionString": {
+		"LS_eBao_aws_us_prod_unicorn_insurepay_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_unicorn_insurepay'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_aws_us_prod_unicorn_insurepay'"
 		},
-		"LS_eBao_aws_us_prod_vault_connectionString": {
+		"LS_eBao_aws_us_prod_vault_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_aws_us_prod_vault'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_aws_us_prod_vault'"
+		},
+		"LS_AWS_DMS_PROD_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "vlt-mysqla-ods-prod-instance-1.c3ze9u5b0sq7.us-east-1.rds.amazonaws.com"
+		},
+		"LS_AWS_DMS_PROD_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "dms_core"
+		},
+		"LS_AWS_DMS_PROD_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "vltDmsUserPROD"
+		},
+		"LS_eBao_aws_us_prod_address_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-prod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_aws_us_prod_address_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_prod_address"
+		},
+		"LS_eBao_aws_us_prod_address_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "dms_repl_read"
+		},
+		"LS_eBao_aws_us_prod_diary_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-prod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_aws_us_prod_diary_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_prod_diary"
+		},
+		"LS_eBao_aws_us_prod_diary_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "dms_repl_read"
+		},
+		"LS_eBao_aws_us_prod_pub_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-prod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_aws_us_prod_pub_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_prod_pub"
+		},
+		"LS_eBao_aws_us_prod_pub_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "dms_repl_read"
+		},
+		"LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-prod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_prod_unicorn_insurepay"
+		},
+		"LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "dms_repl_read"
+		},
+		"LS_eBao_aws_us_prod_vault_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-prod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_aws_us_prod_vault_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_prod_vault"
+		},
+		"LS_eBao_aws_us_prod_vault_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "dms_repl_read"
 		},
 		"azr_prod_data_core01_pep01_properties_privateLinkResourceId": {
 			"type": "string",
@@ -83,7 +155,7 @@
 		{
 			"name": "AZR-PROD-DATA-ADF-CORE01_ArmTemplate_0",
 			"type": "Microsoft.Resources/deployments",
-			"apiVersion": "2018-02-01",
+			"apiVersion": "2024-03-01",
 			"properties": {
 				"mode": "incremental",
 				"templateLink": {
@@ -94,29 +166,77 @@
 					"factoryName": {
 						"value": "[parameters('factoryName')]"
 					},
-					"LS_AWS_DMS_PROD_connectionString": {
-						"value": "[parameters('LS_AWS_DMS_PROD_connectionString')]"
+					"LS_AWS_DMS_PROD_password": {
+						"value": "[parameters('LS_AWS_DMS_PROD_password')]"
 					},
-					"LS_eBao_aws_us_prod_address_connectionString": {
-						"value": "[parameters('LS_eBao_aws_us_prod_address_connectionString')]"
+					"LS_eBao_aws_us_prod_address_password": {
+						"value": "[parameters('LS_eBao_aws_us_prod_address_password')]"
 					},
-					"LS_eBao_aws_us_prod_diary_connectionString": {
-						"value": "[parameters('LS_eBao_aws_us_prod_diary_connectionString')]"
+					"LS_eBao_aws_us_prod_diary_password": {
+						"value": "[parameters('LS_eBao_aws_us_prod_diary_password')]"
 					},
-					"LS_eBao_aws_us_prod_pub_connectionString": {
-						"value": "[parameters('LS_eBao_aws_us_prod_pub_connectionString')]"
+					"LS_eBao_aws_us_prod_pub_password": {
+						"value": "[parameters('LS_eBao_aws_us_prod_pub_password')]"
 					},
-					"LS_eBao_aws_us_prod_unicorn_insurepay_connectionString": {
-						"value": "[parameters('LS_eBao_aws_us_prod_unicorn_insurepay_connectionString')]"
+					"LS_eBao_aws_us_prod_unicorn_insurepay_password": {
+						"value": "[parameters('LS_eBao_aws_us_prod_unicorn_insurepay_password')]"
 					},
-					"LS_eBao_aws_us_prod_vault_connectionString": {
-						"value": "[parameters('LS_eBao_aws_us_prod_vault_connectionString')]"
+					"LS_eBao_aws_us_prod_vault_password": {
+						"value": "[parameters('LS_eBao_aws_us_prod_vault_password')]"
 					},
-					"LS_EDW_PROD_connectionString": {
-						"value": "[parameters('LS_EDW_PROD_connectionString')]"
+					"LS_AWS_DMS_PROD_properties_typeProperties_server": {
+						"value": "[parameters('LS_AWS_DMS_PROD_properties_typeProperties_server')]"
 					},
-					"LS_METALDB_PROD_connectionString": {
-						"value": "[parameters('LS_METALDB_PROD_connectionString')]"
+					"LS_AWS_DMS_PROD_properties_typeProperties_database": {
+						"value": "[parameters('LS_AWS_DMS_PROD_properties_typeProperties_database')]"
+					},
+					"LS_AWS_DMS_PROD_properties_typeProperties_username": {
+						"value": "[parameters('LS_AWS_DMS_PROD_properties_typeProperties_username')]"
+					},
+					"LS_eBao_aws_us_prod_address_properties_typeProperties_server": {
+						"value": "[parameters('LS_eBao_aws_us_prod_address_properties_typeProperties_server')]"
+					},
+					"LS_eBao_aws_us_prod_address_properties_typeProperties_database": {
+						"value": "[parameters('LS_eBao_aws_us_prod_address_properties_typeProperties_database')]"
+					},
+					"LS_eBao_aws_us_prod_address_properties_typeProperties_username": {
+						"value": "[parameters('LS_eBao_aws_us_prod_address_properties_typeProperties_username')]"
+					},
+					"LS_eBao_aws_us_prod_diary_properties_typeProperties_server": {
+						"value": "[parameters('LS_eBao_aws_us_prod_diary_properties_typeProperties_server')]"
+					},
+					"LS_eBao_aws_us_prod_diary_properties_typeProperties_database": {
+						"value": "[parameters('LS_eBao_aws_us_prod_diary_properties_typeProperties_database')]"
+					},
+					"LS_eBao_aws_us_prod_diary_properties_typeProperties_username": {
+						"value": "[parameters('LS_eBao_aws_us_prod_diary_properties_typeProperties_username')]"
+					},
+					"LS_eBao_aws_us_prod_pub_properties_typeProperties_server": {
+						"value": "[parameters('LS_eBao_aws_us_prod_pub_properties_typeProperties_server')]"
+					},
+					"LS_eBao_aws_us_prod_pub_properties_typeProperties_database": {
+						"value": "[parameters('LS_eBao_aws_us_prod_pub_properties_typeProperties_database')]"
+					},
+					"LS_eBao_aws_us_prod_pub_properties_typeProperties_username": {
+						"value": "[parameters('LS_eBao_aws_us_prod_pub_properties_typeProperties_username')]"
+					},
+					"LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_server": {
+						"value": "[parameters('LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_server')]"
+					},
+					"LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_database": {
+						"value": "[parameters('LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_database')]"
+					},
+					"LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_username": {
+						"value": "[parameters('LS_eBao_aws_us_prod_unicorn_insurepay_properties_typeProperties_username')]"
+					},
+					"LS_eBao_aws_us_prod_vault_properties_typeProperties_server": {
+						"value": "[parameters('LS_eBao_aws_us_prod_vault_properties_typeProperties_server')]"
+					},
+					"LS_eBao_aws_us_prod_vault_properties_typeProperties_database": {
+						"value": "[parameters('LS_eBao_aws_us_prod_vault_properties_typeProperties_database')]"
+					},
+					"LS_eBao_aws_us_prod_vault_properties_typeProperties_username": {
+						"value": "[parameters('LS_eBao_aws_us_prod_vault_properties_typeProperties_username')]"
 					},
 					"azr_prod_data_core01_pep01_properties_privateLinkResourceId": {
 						"value": "[parameters('azr_prod_data_core01_pep01_properties_privateLinkResourceId')]"
@@ -143,7 +263,7 @@
 		{
 			"name": "AZR-PROD-DATA-ADF-CORE01_ArmTemplate_1",
 			"type": "Microsoft.Resources/deployments",
-			"apiVersion": "2018-02-01",
+			"apiVersion": "2024-03-01",
 			"properties": {
 				"mode": "incremental",
 				"templateLink": {
@@ -153,6 +273,12 @@
 				"parameters": {
 					"factoryName": {
 						"value": "[parameters('factoryName')]"
+					},
+					"LS_EDW_PROD_connectionString": {
+						"value": "[parameters('LS_EDW_PROD_connectionString')]"
+					},
+					"LS_METALDB_PROD_connectionString": {
+						"value": "[parameters('LS_METALDB_PROD_connectionString')]"
 					}
 				}
 			},
@@ -163,7 +289,7 @@
 		{
 			"name": "AZR-PROD-DATA-ADF-CORE01_ArmTemplate_2",
 			"type": "Microsoft.Resources/deployments",
-			"apiVersion": "2018-02-01",
+			"apiVersion": "2024-03-01",
 			"properties": {
 				"mode": "incremental",
 				"templateLink": {
@@ -178,6 +304,26 @@
 			},
 			"dependsOn": [
 				"[resourceId('Microsoft.Resources/deployments', 'AZR-PROD-DATA-ADF-CORE01_ArmTemplate_1')]"
+			]
+		},
+		{
+			"name": "AZR-PROD-DATA-ADF-CORE01_ArmTemplate_3",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2024-03-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_3.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Resources/deployments', 'AZR-PROD-DATA-ADF-CORE01_ArmTemplate_2')]"
 			]
 		}
 	]
