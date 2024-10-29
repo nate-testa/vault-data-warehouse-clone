@@ -1,0 +1,34 @@
+{
+	"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_DestinationDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_UAT",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"cw_table": {
+				"type": "String"
+			},
+			"cw_schema": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().cw_schema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().cw_table",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

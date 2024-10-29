@@ -1,0 +1,73 @@
+{
+	"name": "Master_Ref_Procedure",
+	"properties": {
+		"activities": [
+			{
+				"name": "sp_tbroker",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[edw_core].[sp_tbroker]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_EDW_UAT",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_tcustomer",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[edw_core].[sp_tcustomer]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_EDW_UAT",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "sp_tinternal_coverage",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[edw_core].[sp_tinternal_coverage]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_EDW_UAT",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"folder": {
+			"name": "StoredProcedure EXEC"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-08-30T14:32:26Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
