@@ -3,7 +3,7 @@
 	"properties": {
 		"activities": [
 			{
-				"name": "Copy_0lj",
+				"name": "Copy_t_pub_user",
 				"type": "Copy",
 				"dependsOn": [],
 				"policy": {
