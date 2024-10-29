@@ -106,6 +106,8 @@
 		"folder": {
 			"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
 		},
-		"annotations": []
-	}
+		"annotations": [],
+		"lastPublishTime": "2024-08-30T14:32:30Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
 }

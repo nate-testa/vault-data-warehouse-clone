@@ -121,6 +121,8 @@
 		},
 		"annotations": [
 			"MetadataDrivenSolution"
-		]
-	}
+		],
+		"lastPublishTime": "2024-08-30T14:32:31Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
 }

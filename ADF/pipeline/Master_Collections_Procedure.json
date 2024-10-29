@@ -110,7 +110,7 @@
 			"name": "StoredProcedure EXEC"
 		},
 		"annotations": [],
-		"lastPublishTime": "2023-07-11T13:42:22Z"
+		"lastPublishTime": "2024-08-30T14:32:26Z"
 	},
 	"type": "Microsoft.DataFactory/factories/pipelines"
 }

@@ -13,6 +13,9 @@
 						]
 					}
 				],
+				"policy": {
+					"secureInput": false
+				},
 				"userProperties": [],
 				"typeProperties": {
 					"pipeline": {
@@ -26,6 +29,9 @@
 				"name": "Master_Ref",
 				"type": "ExecutePipeline",
 				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
 				"userProperties": [],
 				"typeProperties": {
 					"pipeline": {
@@ -46,6 +52,9 @@
 						]
 					}
 				],
+				"policy": {
+					"secureInput": false
+				},
 				"userProperties": [],
 				"typeProperties": {
 					"pipeline": {
@@ -94,7 +103,7 @@
 			"name": "StoredProcedure EXEC"
 		},
 		"annotations": [],
-		"lastPublishTime": "2023-07-11T15:02:30Z"
+		"lastPublishTime": "2024-08-30T14:32:29Z"
 	},
 	"type": "Microsoft.DataFactory/factories/pipelines"
 }

@@ -5,8 +5,14 @@
 		"annotations": [],
 		"type": "MySql",
 		"typeProperties": {
-			"connectionString": "server=aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com;port=3306;database=aws_us_diary_uat;user=awac_readonly;sslmode=1;usesystemtruststore=0",
-			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiJhYjVhMjdjYS01NGM4LTQzOGYtOTUwNS0xYjU4YjBlMGMwNjYiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+			"server": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com",
+			"port": "3306",
+			"database": "aws_us_diary_uat",
+			"username": "awac_readonly",
+			"sslMode": 1,
+			"useSystemTrustStore": 0,
+			"driverVersion": "v2",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiIzMTI2Mjc4MC0xMGFhLTRmNjgtYjkxOS01Zjc1ZmI2NjI2ZDIiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
 		},
 		"connectVia": {
 			"referenceName": "AWS-UAT",

@@ -1,10 +1,10 @@
 {
-    "name": "azrvaultdatauat001-privateData-pep01",
-    "properties": {
-        "privateLinkResourceId": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-DATA-DB-RG/providers/Microsoft.Sql/servers/azrvaultdatauat001",
-        "groupId": "sqlServer",
-        "fqdns": [
-            "azrvaultdatauat001.database.windows.net"
-        ]
-    }
+	"name": "azrvaultdatauat001-privateData-pep01",
+	"properties": {
+		"privateLinkResourceId": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-DATA-DB-RG/providers/Microsoft.Sql/servers/azrvaultdatauat001",
+		"groupId": "sqlServer",
+		"fqdns": [
+			"azrvaultdatauat001.database.windows.net"
+		]
+	}
 }
