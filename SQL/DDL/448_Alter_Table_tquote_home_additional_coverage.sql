@@ -1,2 +1,3 @@
 ALTER TABLE edw_core.tquote_home_additional_coverage ADD fortified_roof_program_discount_amt float;
 ALTER TABLE edw_core.tquote_home_additional_coverage ADD non_program_discount_amt float;
+ALTER TABLE edw_core.tquote_home_additional_coverage ADD leed_certification_discount_in VARCHAR(255);
