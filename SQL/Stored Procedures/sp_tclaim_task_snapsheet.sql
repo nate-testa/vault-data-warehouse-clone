@@ -72,7 +72,7 @@ BEGIN
 		;
 		
 		
-		MERGE edw_core.tclaim_task_snapsheet AS Target
+		-- MERGE edw_core.tclaim_task_snapsheet AS Target
 		USING edw_temp.tclaim_task_snapsheet_temp1 AS Source
 			ON Source.claim_no = Target.claim_no
 			AND Source.task_status = Target.task_status
