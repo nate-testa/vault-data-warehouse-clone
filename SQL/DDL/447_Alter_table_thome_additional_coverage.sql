@@ -1,0 +1,2 @@
+ALTER TABLE edw_core.thome_additional_coverage ADD fortified_roof_program_discount_amt float;
+ALTER TABLE edw_core.thome_additional_coverage ADD non_program_discount_amt float;
