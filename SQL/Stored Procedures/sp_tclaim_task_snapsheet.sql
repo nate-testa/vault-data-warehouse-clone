@@ -73,94 +73,94 @@ BEGIN
 		
 		
 		-- MERGE edw_core.tclaim_task_snapsheet AS Target
-		USING edw_temp.tclaim_task_snapsheet_temp1 AS Source
-			ON Source.claim_no = Target.claim_no
-			AND Source.task_status = Target.task_status
-			AND Source.effective_at_ts = Target.effective_at_ts
-			AND Source.task_note = Target.task_note
-		-- For Inserts
-		WHEN NOT MATCHED BY Target THEN
-		INSERT (
-				claim_no,
-				claim_sk,
-				claim_feature_sk,
-				exposure_sk,
-				task_status,
-				task_priority,
-				task_note,
-				task_type_nm,
-				task_category_nm,
-				task_file_type_nm,
-				created_by_nm,
-				completed_by_nm,
-				assigned_to_nm,
-				assigned_by_nm,
-				first_assigned_by_nm,
-				assigned_at_ts,
-				effective_at_ts,
-				created_at_ts,
-				updated_at_ts,
-				completed_at_ts,
-				first_assigned_at_ts
-				source_system_sk,
-				create_ts,
-				update_ts,
-				etl_audit_sk
-			)
-		VALUES (
-				claim_no,
-				claim_sk,
-				claim_feature_sk,
-				exposure_sk,
-				task_status,
-				task_priority,
-				task_note,
-				task_type_nm,
-				task_category_nm,
-				task_file_type_nm,
-				created_by_nm,
-				completed_by_nm,
-				assigned_to_nm,
-				assigned_by_nm,
-				first_assigned_by_nm,
-				assigned_at_ts,
-				effective_at_ts,
-				created_at_ts,
-				updated_at_ts,
-				completed_at_ts,
-				first_assigned_at_ts,
-				source_system_sk,
-				GETDATE() AS create_ts,
-				GETDATE() AS update_ts,
-				@etl_audit_sk AS etl_audit_sk
-			)
-		-- For Updates
-		WHEN MATCHED THEN UPDATE 
-		SET
-			Target.claim_no = Source.claim_no
-			Target.claim_sk = Source.claim_sk
-			Target.claim_feature_sk = Source.claim_feature_sk
-			Target.exposure_sk = Source.exposure_sk
-			Target.task_status = Source.task_status
-			Target.task_priority = Source.task_priority
-			Target.task_note = Source.task_note
-			Target.task_type_nm = Source.task_type_nm
-			Target.task_category_nm = Source.task_category_nm
-			Target.task_file_type_nm = Source.task_file_type_nm
-			Target.created_by_nm = Source.created_by_nm
-			Target.completed_by_nm = Source.completed_by_nm
-			Target.assigned_to_nm = Source.assigned_to_nm
-			Target.assigned_by_nm = Source.assigned_by_nm
-			Target.first_assigned_by_nm = Source.first_assigned_by_nm
-			Target.assigned_at_ts = Source.assigned_at_ts
-			Target.effective_at_ts = Source.effective_at_ts
-			Target.created_at_ts = Source.created_at_ts
-			Target.updated_at_ts = Source.updated_at_ts
-			Target.completed_at_ts = Source.completed_at_ts
-			Target.first_assigned_at_ts = Source.first_assigned_at_ts
-			Target.source_system_sk = Source.source_system_sk
-			Target.update_ts = GETDATE()
-			;
+		-- USING edw_temp.tclaim_task_snapsheet_temp1 AS Source
+		-- 	ON Source.claim_no = Target.claim_no
+		-- 	AND Source.task_status = Target.task_status
+		-- 	AND Source.effective_at_ts = Target.effective_at_ts
+		-- 	AND Source.task_note = Target.task_note
+		-- -- For Inserts
+		-- WHEN NOT MATCHED BY Target THEN
+		-- INSERT (
+		-- 		claim_no,
+		-- 		claim_sk,
+		-- 		claim_feature_sk,
+		-- 		exposure_sk,
+		-- 		task_status,
+		-- 		task_priority,
+		-- 		task_note,
+		-- 		task_type_nm,
+		-- 		task_category_nm,
+		-- 		task_file_type_nm,
+		-- 		created_by_nm,
+		-- 		completed_by_nm,
+		-- 		assigned_to_nm,
+		-- 		assigned_by_nm,
+		-- 		first_assigned_by_nm,
+		-- 		assigned_at_ts,
+		-- 		effective_at_ts,
+		-- 		created_at_ts,
+		-- 		updated_at_ts,
+		-- 		completed_at_ts,
+		-- 		first_assigned_at_ts
+		-- 		source_system_sk,
+		-- 		create_ts,
+		-- 		update_ts,
+		-- 		etl_audit_sk
+		-- 	)
+		-- VALUES (
+		-- 		claim_no,
+		-- 		claim_sk,
+		-- 		claim_feature_sk,
+		-- 		exposure_sk,
+		-- 		task_status,
+		-- 		task_priority,
+		-- 		task_note,
+		-- 		task_type_nm,
+		-- 		task_category_nm,
+		-- 		task_file_type_nm,
+		-- 		created_by_nm,
+		-- 		completed_by_nm,
+		-- 		assigned_to_nm,
+		-- 		assigned_by_nm,
+		-- 		first_assigned_by_nm,
+		-- 		assigned_at_ts,
+		-- 		effective_at_ts,
+		-- 		created_at_ts,
+		-- 		updated_at_ts,
+		-- 		completed_at_ts,
+		-- 		first_assigned_at_ts,
+		-- 		source_system_sk,
+		-- 		GETDATE() AS create_ts,
+		-- 		GETDATE() AS update_ts,
+		-- 		@etl_audit_sk AS etl_audit_sk
+		-- 	)
+		-- -- For Updates
+		-- WHEN MATCHED THEN UPDATE 
+		-- SET
+		-- 	Target.claim_no = Source.claim_no
+		-- 	Target.claim_sk = Source.claim_sk
+		-- 	Target.claim_feature_sk = Source.claim_feature_sk
+		-- 	Target.exposure_sk = Source.exposure_sk
+		-- 	Target.task_status = Source.task_status
+		-- 	Target.task_priority = Source.task_priority
+		-- 	Target.task_note = Source.task_note
+		-- 	Target.task_type_nm = Source.task_type_nm
+		-- 	Target.task_category_nm = Source.task_category_nm
+		-- 	Target.task_file_type_nm = Source.task_file_type_nm
+		-- 	Target.created_by_nm = Source.created_by_nm
+		-- 	Target.completed_by_nm = Source.completed_by_nm
+		-- 	Target.assigned_to_nm = Source.assigned_to_nm
+		-- 	Target.assigned_by_nm = Source.assigned_by_nm
+		-- 	Target.first_assigned_by_nm = Source.first_assigned_by_nm
+		-- 	Target.assigned_at_ts = Source.assigned_at_ts
+		-- 	Target.effective_at_ts = Source.effective_at_ts
+		-- 	Target.created_at_ts = Source.created_at_ts
+		-- 	Target.updated_at_ts = Source.updated_at_ts
+		-- 	Target.completed_at_ts = Source.completed_at_ts
+		-- 	Target.first_assigned_at_ts = Source.first_assigned_at_ts
+		-- 	Target.source_system_sk = Source.source_system_sk
+		-- 	Target.update_ts = GETDATE()
+		-- 	;
 
 			SET @rows_affected=@@ROWCOUNT;
 
