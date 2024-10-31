@@ -5,6 +5,9 @@
 			"referenceName": "LS_eBao_uat_aw_uat_pub",
 			"type": "LinkedServiceReference"
 		},
+		"folder": {
+			"name": "Dataset_t_pub_user"
+		},
 		"annotations": [],
 		"type": "MySqlTable",
 		"schema": [],

@@ -1,9 +1,9 @@
 {
-	"name": "CopyPipeline_t_pub_user",
+	"name": "t_pub_user_eBao_to_Edw_stage_FullLoad",
 	"properties": {
 		"activities": [
 			{
-				"name": "Copy_pxk",
+				"name": "Copy_t_pub_user",
 				"type": "Copy",
 				"dependsOn": [],
 				"policy": {
