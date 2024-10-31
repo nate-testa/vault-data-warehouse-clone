@@ -1,0 +1,51 @@
+{
+	"name": "LS_AWS_DMS_dmsDocument",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy_jxh",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [
+					{
+						"name": "Destination",
+						"value": "edw_stage.dms_claim_payment_estimate"
+					}
+				],
+				"typeProperties": {
+					"source": {
+						"type": "MySqlSource",
+						"query": "SELECT dd.dmsDocumentId, dd.claimNumber, ddd.type as document_type, ddd.subType as subtype, dd.documentName, dd.fileName as document_fileName, dda.name as attached_To, dd.createDate, dd.documentDate, dd.createBy,\r\n\"Unknown\" as paymentStatus, now() as create_ts\r\nFROM dms_core.DmsDocument dd,\r\ndms_core.DmsDocumentDetail ddd,\r\ndms_core.DmsDocumentAttachTo dda\r\nWHERE dd.dmsDocumentId = dda.dmsDocumentId \r\nand ddd.dmsDocumentId = dda.dmsDocumentId\r\nand ddd.type = 'Claim'\r\nand ddd.subType IN ('Estimate of Damages','BI/UM Demand')\r\norder by dd.createDate desc"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "TRUNCATE TABLE edw_stage.dms_claim_payment_estimate",
+						"tableOption": "autoCreate"
+					},
+					"enableStaging": false,
+					"validateDataConsistency": false
+				},
+				"inputs": [
+					{
+						"referenceName": "SourceDataset_dmsDocument",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DestinationDataset_dmsDocument",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"annotations": []
+	}
+}
