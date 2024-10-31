@@ -5,6 +5,9 @@
 			"referenceName": "AzureSqlDatabase_edw_dev",
 			"type": "LinkedServiceReference"
 		},
+		"folder": {
+			"name": "Dataset_t_pub_user"
+		},
 		"annotations": [],
 		"type": "AzureSqlTable"
 	}
