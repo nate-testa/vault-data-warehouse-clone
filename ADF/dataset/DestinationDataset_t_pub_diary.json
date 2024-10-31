@@ -1,9 +1,12 @@
 {
-	"name": "DestinationDataset_3ly",
+	"name": "DestinationDataset_t_pub_diary",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "LS_EDW_PREPROD",
 			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "t_pub_diary"
 		},
 		"annotations": [],
 		"type": "AzureSqlTable",
