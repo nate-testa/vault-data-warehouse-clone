@@ -5,6 +5,9 @@
 			"referenceName": "LS_EDW_UAT",
 			"type": "LinkedServiceReference"
 		},
+		"folder": {
+			"name": "Dataset_t_pub_diary"
+		},
 		"annotations": [],
 		"type": "AzureSqlTable",
 		"schema": [],
