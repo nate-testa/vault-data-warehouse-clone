@@ -5,6 +5,9 @@
 			"referenceName": "LS_eBao_uat_aws_us_diary_uat",
 			"type": "LinkedServiceReference"
 		},
+		"folder": {
+			"name": "Dataset_t_pub_diary"
+		},
 		"annotations": [],
 		"type": "MySqlTable",
 		"schema": [],
