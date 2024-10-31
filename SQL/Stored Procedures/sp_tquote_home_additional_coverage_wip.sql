@@ -16,7 +16,7 @@ GO
 -- 08/30/24				Yunus Mohammed				5. Added new columns
 -- 09/04/24				Yunus Mohammed				6. Removed error from update
 -- 10/02/24				Yunus Mohammed				7. Added new column fortified_roof_upgrade_endorsement_in
--- 30/10/24				Hernando Gonzalez			8. Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
+-- 30/10/24				Hernando Gonzalez			8. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage_wip]

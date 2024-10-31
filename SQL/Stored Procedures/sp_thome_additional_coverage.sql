@@ -16,7 +16,7 @@
 -- 08/01/24             Tuba Mohsin                 6. added contents_extended_replacement_cost_limit_amt
 -- 08/30/24				Yunus Mohammed				7. Added new columns
 -- 10/02/24				Yunus Mohammed				8. Added new column fortified_roof_upgrade_endorsement_in
--- 30/10/24				Hernando Gonzalez			9. Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
+-- 30/10/24				Hernando Gonzalez			9. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
 -- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
 
