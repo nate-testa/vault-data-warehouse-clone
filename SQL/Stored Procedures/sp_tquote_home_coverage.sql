@@ -148,7 +148,7 @@ BEGIN
 				aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt, 
 				waive_inspection_in, waive_inspection_reason, inspection_note, rms_reviewed_in,
 				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,no_of_family_units_in_structures,fortified_roof_credit,
-				facultative_reinsurance_in, layered_limits_in, [100_pc_dwelling_limit_value_amt], [100_pc_other_structures_limit_value_amt], [100_pc_contents_limit_value_amt], [100_pc_loss_of_use_value_amt], facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
+				facultative_reinsurance_in, layered_limits_in, [dwelling_limit_100_pc_value_amt], [other_structures_limit_100_pc_value_amt], [contents_limit_100_pc_value_amt], [loss_of_use_100_pc_value_amt], facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			OUTPUT inserted.quote_home_coverage_sk INTO edw_temp.tquote_home_coverage_temp2
@@ -283,10 +283,10 @@ BEGIN
 				tthc.FortifiedRoofCredit as fortified_roof_credit,
 				tthc.FacultativeReinsurance as facultative_reinsurance_in,
 				tthc.LayeredLimits as layered_limits_in,
-				tthc.[100PercentCoverageAValue] as [100_pc_dwelling_limit_value_amt],
-				tthc.[100PercentCoverageBValue] as [100_pc_other_structures_limit_value_amt],
-				tthc.[100PercentCoverageCValue] as [100_pc_contents_limit_value_amt],
-				tthc.[100PercentCoverageDValue] as [100_pc_loss_of_use_value_amt],
+				tthc.[dwelling_limit_100_pc_value_amt] as [dwelling_limit_100_pc_value_amt],
+				tthc.[other_structures_limit_100_pc_value_amt] as [other_structures_limit_100_pc_value_amt],
+				tthc.[contents_limit_100_pc_value_amt] as [contents_limit_100_pc_value_amt],
+				tthc.[loss_of_use_100_pc_value_amt] as [loss_of_use_100_pc_value_amt],
 				tthc.FACAttachmentPoint as facultative_attachment_point,
 				tthc.FACLimit as facultative_limit_amt,
 				tthc.FACPremiumCeded as facultative_ceded_premium_amt,
