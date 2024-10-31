@@ -70,6 +70,7 @@ BEGIN
 		-- (CASE WHEN SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) LIKE '%_defense%' 	AND fri.reserve_method = 'subrogation' 	THEN pay.amount ELSE 0 END) as subro_defense_paid_amt,
 		-- (CASE WHEN SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) LIKE '%_defense%' 	AND fri.reserve_method = 'salvage' 		THEN pay.amount ELSE 0 END) as salvage_defense_paid_amt,
 		5 AS source_system_sk
+	INTO edw_temp.tclaim_transaction_snapsheet_temp1
 	FROM edw_stage_snapsheet.financial_transactions as ft
 	INNER JOIN edw_stage_snapsheet.claims as c ON c.id = ft.claim_id
 	INNER JOIN edw_core.tclaim as tc ON tc.claim_no = c.claim_number
