@@ -16,6 +16,7 @@
 -- 08/20/24				Yunus Mohammed				9. Updated wind_derived_deductible logic
 -- 09/03/24				Yunus Mohammed				10. Added new column no_of_family_units_in_structures
 -- 10/02/24				Yunus Mohammed				11. Added new column fortified_roof_credit
+-- 31/10/24		        Hernando Gonzalez			12. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage]
 
@@ -147,6 +148,7 @@ BEGIN
 				aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt, 
 				waive_inspection_in, waive_inspection_reason, inspection_note, rms_reviewed_in,
 				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,no_of_family_units_in_structures,fortified_roof_credit,
+				facultative_reinsurance_in, layered_limits_in, [100_pc_dwelling_limit_value_amt], [100_pc_other_structures_limit_value_amt], [100_pc_contents_limit_value_amt], [100_pc_loss_of_use_value_amt], facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			OUTPUT inserted.quote_home_coverage_sk INTO edw_temp.tquote_home_coverage_temp2
@@ -279,6 +281,24 @@ BEGIN
 				tthc.NCRBManualRate AS nc_bureau_rate, StatedLimitsPolicy as stated_limits_policy_in , 
 				tthc.RiskSharingPolicy as risk_sharing_policy_in,tthc.NumberofFamilyUnitsinStructure as no_of_family_units_in_structures,
 				tthc.FortifiedRoofCredit as fortified_roof_credit,
+				tthc.FacultativeReinsurance as facultative_reinsurance_in,
+				tthc.LayeredLimits as layered_limits_in,
+				tthc.[100PercentCoverageAValue] as [100_pc_dwelling_limit_value_amt],
+				tthc.[100PercentCoverageBValue] as [100_pc_other_structures_limit_value_amt],
+				tthc.[100PercentCoverageCValue] as [100_pc_contents_limit_value_amt],
+				tthc.[100PercentCoverageDValue] as [100_pc_loss_of_use_value_amt],
+				tthc.FACAttachmentPoint as facultative_attachment_point,
+				tthc.FACLimit as facultative_limit_amt,
+				tthc.FACPremiumCeded as facultative_ceded_premium_amt,
+				tthc.FACReinsurer as facultative_reinsurer_nm,
+				tthc.CoverageLayer as coverage_layer,
+				TRY_CAST(REPLACE(tthc.PercentagePlaced, '%', '') AS FLOAT) / 100 AS coverage_layer_placed_pc,
+				tthc.LayerLimit as coverage_layer_limit_amt,
+				tthc.NewlyPurchasedHome as newly_purchased_home_in,
+				tthc.TargetClosingDate as target_closing_dt,
+				tthc.CurrentPolicyAnniversaryDate as current_policy_anniversary_dt,
+				CONCAT(tthc.HomeInsuranceCompany, ' ', tthc.OtherCarrierName) as current_underlying_company_nm,
+				tthc.NewClientForTheAgency as new_client_for_agency_in,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk				
 			FROM
 				edw_temp.tquote_home_coverage_temp1 AS tthc
