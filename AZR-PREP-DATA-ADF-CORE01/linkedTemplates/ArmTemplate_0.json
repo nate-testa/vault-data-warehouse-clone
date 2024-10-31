@@ -7,29 +7,29 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "AZR-PREP-DATA-ADF-CORE01"
 		},
-		"LS_AWS_DMS_PREPROD_connectionString": {
+		"LS_AWS_DMS_PREPROD_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_AWS_DMS_PREPROD'"
+			"metadata": "Secure string for 'password' of 'LS_AWS_DMS_PREPROD'"
 		},
-		"LS_eBao_preProd_aws_us_preprod_address_connectionString": {
+		"LS_eBao_preProd_aws_us_preprod_address_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_address'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_preProd_aws_us_preprod_address'"
 		},
-		"LS_eBao_preProd_aws_us_preprod_diary_connectionString": {
+		"LS_eBao_preProd_aws_us_preprod_diary_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_diary'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_preProd_aws_us_preprod_diary'"
 		},
-		"LS_eBao_preProd_aws_us_preprod_pub_connectionString": {
+		"LS_eBao_preProd_aws_us_preprod_pub_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_pub'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_preProd_aws_us_preprod_pub'"
 		},
-		"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_connectionString": {
+		"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_unicorn_insurepay'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_preProd_aws_us_preprod_unicorn_insurepay'"
 		},
-		"LS_eBao_preProd_aws_us_preprod_vault_connectionString": {
+		"LS_eBao_preProd_aws_us_preprod_vault_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_preProd_aws_us_preprod_vault'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_preProd_aws_us_preprod_vault'"
 		},
 		"LS_EDW_PREPROD_connectionString": {
 			"type": "secureString",
@@ -38,6 +38,78 @@
 		"LS_METALDB_PREPROD_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_METALDB_PREPROD'"
+		},
+		"LS_AWS_DMS_PREPROD_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "vlt-mysqla-ods-prod-instance-1.c3ze9u5b0sq7.us-east-1.rds.amazonaws.com"
+		},
+		"LS_AWS_DMS_PREPROD_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "dms_core"
+		},
+		"LS_AWS_DMS_PREPROD_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "vltDmsUserPROD"
+		},
+		"LS_eBao_preProd_aws_us_preprod_address_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-preprod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_preProd_aws_us_preprod_address_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_preprod_address"
+		},
+		"LS_eBao_preProd_aws_us_preprod_address_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "vault_us_preprod_dms_ro"
+		},
+		"LS_eBao_preProd_aws_us_preprod_diary_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-preprod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_preProd_aws_us_preprod_diary_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_preprod_diary"
+		},
+		"LS_eBao_preProd_aws_us_preprod_diary_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "vault_us_preprod_dms_ro"
+		},
+		"LS_eBao_preProd_aws_us_preprod_pub_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-preprod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_preProd_aws_us_preprod_pub_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_preprod_pub"
+		},
+		"LS_eBao_preProd_aws_us_preprod_pub_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "vault_us_preprod_dms_ro"
+		},
+		"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-preprod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_preprod_unicorn_insurepay"
+		},
+		"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "vault_us_preprod_dms_ro"
+		},
+		"LS_eBao_preProd_aws_us_preprod_vault_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-preprod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_preProd_aws_us_preprod_vault_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_preprod_vault"
+		},
+		"LS_eBao_preProd_aws_us_preprod_vault_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "vault_us_preprod_dms_ro"
 		},
 		"azr_prep_data_core01_pep01_properties_privateLinkResourceId": {
 			"type": "string",
@@ -117,7 +189,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_AWS_DMS_PREPROD_connectionString')]"
+					"server": "[parameters('LS_AWS_DMS_PREPROD_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_AWS_DMS_PREPROD_properties_typeProperties_database')]",
+					"username": "[parameters('LS_AWS_DMS_PREPROD_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_AWS_DMS_PREPROD_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-PREPROD",
@@ -136,7 +217,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_preProd_aws_us_preprod_address_connectionString')]"
+					"server": "[parameters('LS_eBao_preProd_aws_us_preprod_address_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_preProd_aws_us_preprod_address_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_preProd_aws_us_preprod_address_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_address_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-PREPROD",
@@ -155,7 +245,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_preProd_aws_us_preprod_diary_connectionString')]"
+					"server": "[parameters('LS_eBao_preProd_aws_us_preprod_diary_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_preProd_aws_us_preprod_diary_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_preProd_aws_us_preprod_diary_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_diary_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-PREPROD",
@@ -174,7 +273,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_preProd_aws_us_preprod_pub_connectionString')]"
+					"server": "[parameters('LS_eBao_preProd_aws_us_preprod_pub_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_preProd_aws_us_preprod_pub_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_preProd_aws_us_preprod_pub_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_pub_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-PREPROD",
@@ -193,7 +301,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_connectionString')]"
+					"server": "[parameters('LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-PREPROD",
@@ -212,7 +329,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_preProd_aws_us_preprod_vault_connectionString')]"
+					"server": "[parameters('LS_eBao_preProd_aws_us_preprod_vault_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_preProd_aws_us_preprod_vault_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_preProd_aws_us_preprod_vault_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_preProd_aws_us_preprod_vault_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-PREPROD",
@@ -406,6 +532,52 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_diary')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_preProd_aws_us_preprod_diary",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "t_pub_diary"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "`t_pub_diary`"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_preProd_aws_us_preprod_diary')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_user')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_preProd_aws_us_preprod_pub",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "t_pub_user"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "`t_pub_user`"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_preProd_aws_us_preprod_pub')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/LS_EDW_PREPROD')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
@@ -442,68 +614,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/integrationRuntimes/AZR-ADF-IR')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_LS_AWS_DMS_dd8_ControlDS')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_EDW_PREPROD",
-					"type": "LinkedServiceReference"
-				},
-				"folder": {
-					"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
-				},
-				"annotations": [],
-				"type": "AzureSqlTable",
-				"schema": [],
-				"typeProperties": {
-					"schema": "edw_stage",
-					"table": "ControlLoadTable"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_PREPROD')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_LS_AWS_DMS_dd8_DestinationDS')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_EDW_PREPROD",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"cw_table": {
-						"type": "String"
-					},
-					"cw_schema": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
-				},
-				"annotations": [],
-				"type": "AzureSqlTable",
-				"schema": [],
-				"typeProperties": {
-					"schema": {
-						"value": "@dataset().cw_schema",
-						"type": "Expression"
-					},
-					"table": {
-						"value": "@dataset().cw_table",
-						"type": "Expression"
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_PREPROD')]"
 			]
 		}
 	]

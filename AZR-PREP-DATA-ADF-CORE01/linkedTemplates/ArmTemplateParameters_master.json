@@ -5,7 +5,7 @@
 		"factoryName": {
 			"value": "AZR-PREP-DATA-ADF-CORE01"
 		},
-		"LS_AWS_DMS_PREPROD_connectionString": {
+		"LS_AWS_DMS_PREPROD_password": {
 			"value": ""
 		},
 		"LS_EDW_PREPROD_connectionString": {
@@ -14,20 +14,74 @@
 		"LS_METALDB_PREPROD_connectionString": {
 			"value": ""
 		},
-		"LS_eBao_preProd_aws_us_preprod_address_connectionString": {
+		"LS_eBao_preProd_aws_us_preprod_address_password": {
 			"value": ""
 		},
-		"LS_eBao_preProd_aws_us_preprod_diary_connectionString": {
+		"LS_eBao_preProd_aws_us_preprod_diary_password": {
 			"value": ""
 		},
-		"LS_eBao_preProd_aws_us_preprod_pub_connectionString": {
+		"LS_eBao_preProd_aws_us_preprod_pub_password": {
 			"value": ""
 		},
-		"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_connectionString": {
+		"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_password": {
 			"value": ""
 		},
-		"LS_eBao_preProd_aws_us_preprod_vault_connectionString": {
+		"LS_eBao_preProd_aws_us_preprod_vault_password": {
 			"value": ""
+		},
+		"LS_AWS_DMS_PREPROD_properties_typeProperties_server": {
+			"value": "vlt-mysqla-ods-prod-instance-1.c3ze9u5b0sq7.us-east-1.rds.amazonaws.com"
+		},
+		"LS_AWS_DMS_PREPROD_properties_typeProperties_database": {
+			"value": "dms_core"
+		},
+		"LS_AWS_DMS_PREPROD_properties_typeProperties_username": {
+			"value": "vltDmsUserPROD"
+		},
+		"LS_eBao_preProd_aws_us_preprod_address_properties_typeProperties_server": {
+			"value": "aws-us-gi-preprod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_preProd_aws_us_preprod_address_properties_typeProperties_database": {
+			"value": "aws_us_preprod_address"
+		},
+		"LS_eBao_preProd_aws_us_preprod_address_properties_typeProperties_username": {
+			"value": "vault_us_preprod_dms_ro"
+		},
+		"LS_eBao_preProd_aws_us_preprod_diary_properties_typeProperties_server": {
+			"value": "aws-us-gi-preprod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_preProd_aws_us_preprod_diary_properties_typeProperties_database": {
+			"value": "aws_us_preprod_diary"
+		},
+		"LS_eBao_preProd_aws_us_preprod_diary_properties_typeProperties_username": {
+			"value": "vault_us_preprod_dms_ro"
+		},
+		"LS_eBao_preProd_aws_us_preprod_pub_properties_typeProperties_server": {
+			"value": "aws-us-gi-preprod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_preProd_aws_us_preprod_pub_properties_typeProperties_database": {
+			"value": "aws_us_preprod_pub"
+		},
+		"LS_eBao_preProd_aws_us_preprod_pub_properties_typeProperties_username": {
+			"value": "vault_us_preprod_dms_ro"
+		},
+		"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_properties_typeProperties_server": {
+			"value": "aws-us-gi-preprod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_properties_typeProperties_database": {
+			"value": "aws_us_preprod_unicorn_insurepay"
+		},
+		"LS_eBao_preProd_aws_us_preprod_unicorn_insurepay_properties_typeProperties_username": {
+			"value": "vault_us_preprod_dms_ro"
+		},
+		"LS_eBao_preProd_aws_us_preprod_vault_properties_typeProperties_server": {
+			"value": "aws-us-gi-preprod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_preProd_aws_us_preprod_vault_properties_typeProperties_database": {
+			"value": "aws_us_preprod_vault"
+		},
+		"LS_eBao_preProd_aws_us_preprod_vault_properties_typeProperties_username": {
+			"value": "vault_us_preprod_dms_ro"
 		},
 		"azr_prep_data_core01_pep01_properties_privateLinkResourceId": {
 			"value": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PREP-DATA-DB-RG/providers/Microsoft.Sql/servers/azr-prep-data-db-core01"
