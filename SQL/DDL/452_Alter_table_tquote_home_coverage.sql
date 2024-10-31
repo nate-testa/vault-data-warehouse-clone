@@ -1,9 +1,9 @@
 ALTER TABLE edw_core.tquote_home_coverage ADD facultative_reinsurance_in VARCHAR(255);
 ALTER TABLE edw_core.tquote_home_coverage ADD layered_limits_in VARCHAR(255);
-ALTER TABLE edw_core.tquote_home_coverage ADD 100_pc_dwelling_limit_value_amt VARCHAR(255);
-ALTER TABLE edw_core.tquote_home_coverage ADD 100_pc_other_structures_limit_value_amt VARCHAR(255);
-ALTER TABLE edw_core.tquote_home_coverage ADD 100_pc_contents_limit_value_amt VARCHAR(255);
-ALTER TABLE edw_core.tquote_home_coverage ADD 100_pc_loss_of_use_value_amt VARCHAR(255);
+ALTER TABLE edw_core.tquote_home_coverage ADD dwelling_limit_100_pc_value_amt VARCHAR(255);
+ALTER TABLE edw_core.tquote_home_coverage ADD other_structures_limit_100_pc_value_amt VARCHAR(255);
+ALTER TABLE edw_core.tquote_home_coverage ADD contents_limit_100_pc_value_amt VARCHAR(255);
+ALTER TABLE edw_core.tquote_home_coverage ADD loss_of_use_100_pc_value_amt VARCHAR(255);
 ALTER TABLE edw_core.tquote_home_coverage ADD facultative_attachment_point VARCHAR(255);
 ALTER TABLE edw_core.tquote_home_coverage ADD facultative_limit_amt VARCHAR(255);
 ALTER TABLE edw_core.tquote_home_coverage ADD facultative_ceded_premium_amt VARCHAR(255);
