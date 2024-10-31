@@ -5,6 +5,9 @@
 			"referenceName": "LS_AWS_DMS_UAT",
 			"type": "LinkedServiceReference"
 		},
+		"folder": {
+			"name": "Dataset_dmsDocument"
+		},
 		"annotations": [],
 		"type": "MySqlTable",
 		"schema": []

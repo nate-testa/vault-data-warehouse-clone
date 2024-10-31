@@ -5,6 +5,9 @@
 			"referenceName": "AzureSqlDatabase_edw_dev",
 			"type": "LinkedServiceReference"
 		},
+		"folder": {
+			"name": "Dataset_dmsDocument"
+		},
 		"annotations": [],
 		"type": "AzureSqlTable",
 		"schema": [],

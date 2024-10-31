@@ -3,7 +3,7 @@
 	"properties": {
 		"activities": [
 			{
-				"name": "Copy_jxh",
+				"name": "Copy_dmsDocument",
 				"type": "Copy",
 				"dependsOn": [],
 				"policy": {
