@@ -1,0 +1,12 @@
+{
+	"name": "SourceDataset_dmsDocument",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_AWS_DMS_UAT",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "MySqlTable",
+		"schema": []
+	}
+}
