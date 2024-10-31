@@ -1,6 +1,6 @@
 update edw_core.tvalidation_sql 
 set target_sql = 'select 0',
-	source_sql =  'select count(*) from edw_core.tpolicy_transaction a inner join edw_core.tpolicy pol on a.policy_sk = pol.policy_sk inner join edw_core.tinternal_coverage ic on a.internal_coverage_sk = ic.internal_coverage_sk  where isnull(collection_class_type_sk,0) = 0  and tax_fee_surcharge_sk = 0      and (product_sk = 2  or (a.source_system_sk = 4 and product_sk in (1,5) and ic.internal_coverage_cd = ''Lux'')  ) and effective_dt >= ''2023-09-01'''
+	source_sql =  'select count(*) from edw_core.tpolicy_transaction a inner join edw_core.tpolicy pol on a.policy_sk = pol.policy_sk inner join edw_core.tinternal_coverage ic on a.internal_coverage_sk = ic.internal_coverage_sk  where isnull(collection_class_type_sk,0) = 0  and tax_fee_surcharge_sk = 0      and (product_sk = 2  or (a.source_system_sk = 4 and product_sk in (1,5) and ic.internal_coverage_cd = ''Lux'')  ) and pol.migrated_in = ''No'''
 where validation_sql_desc = 'tpolicy_transaction - LUX - collection_class_type_sk = 0';
 
 update edw_core.tvalidation_sql 
