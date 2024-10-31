@@ -3,7 +3,7 @@
 	"properties": {
 		"activities": [
 			{
-				"name": "Copy_nl8",
+				"name": "Copy_t_pub_diary",
 				"type": "Copy",
 				"dependsOn": [],
 				"policy": {
