@@ -23,6 +23,7 @@ GO
 -- 08/01/24             Tuba Mohsin                 8. added contents_extended_replacement_cost_limit_amt
 -- 08/30/24				Yunus Mohammed				9. Added new columns
 -- 10/02/24				Yunus Mohammed				10. Added new column fortified_roof_upgrade_endorsement_in
+-- 30/10/24				Hernando Gonzalez			11. Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage]
@@ -206,6 +207,7 @@ BEGIN
 			site_scheduling_email ,emergency_contact_nm ,emergency_contact_phone_no ,emergency_contact_email ,gate_code ,
 			primary_home_risk_address,primary_home_policy_effective_dt,primary_home_policy_expiration_dt,
 			primary_home_carrier_nm,primary_home_coverage_a_threshold,fortified_roof_upgrade_endorsement_in,
+			fortified_roof_program_discount_amt, non_program_discount_amt,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT 
@@ -384,18 +386,20 @@ BEGIN
 		   ,RoofCoveringCoverageLimitationCW as roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in
 		   ,AllPerilRoofCoveringCoverageSP as all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
 		   ,WildfireProtectionEnrollment as wildfire_protection_enrollment_in
-			,WFSiteSchedulingContactName as site_scheduling_contact_nm
-			,WFSiteSchedulingPhoneNumber as site_scheduling_phone_no
-			,WFSiteSchedulingEmailAddress as site_scheduling_email
-			,WFEmergencyContactName as emergency_contact_nm
-			,WFEmergencyContactPhoneNumber as emergency_contact_phone_no
-			,WFEmergencyContactEmail as emergency_contact_email,WFGateCodes as gate_code
-			,PrimaryHomeRiskAddress as primary_home_risk_address
-			,PrimaryHomePolicyEffectiveDate  as primary_home_policy_effective_dt
-			,PrimaryHomePolicyExpirationDate as primary_home_policy_expiration_dt
-			,PrimaryHomeCarrierName as primary_home_carrier_nm
-			,PrimaryHomeCoverageAThreshold as primary_home_coverage_a_threshold
-			,FortifiedRoofUpgradeEndorsement as fortified_roof_upgrade_endorsement_in
+		   ,WFSiteSchedulingContactName as site_scheduling_contact_nm
+		   ,WFSiteSchedulingPhoneNumber as site_scheduling_phone_no
+		   ,WFSiteSchedulingEmailAddress as site_scheduling_email
+		   ,WFEmergencyContactName as emergency_contact_nm
+		   ,WFEmergencyContactPhoneNumber as emergency_contact_phone_no
+		   ,WFEmergencyContactEmail as emergency_contact_email,WFGateCodes as gate_code
+		   ,PrimaryHomeRiskAddress as primary_home_risk_address
+		   ,PrimaryHomePolicyEffectiveDate  as primary_home_policy_effective_dt
+		   ,PrimaryHomePolicyExpirationDate as primary_home_policy_expiration_dt
+		   ,PrimaryHomeCarrierName as primary_home_carrier_nm
+		   ,PrimaryHomeCoverageAThreshold as primary_home_coverage_a_threshold
+		   ,FortifiedRoofUpgradeEndorsement as fortified_roof_upgrade_endorsement_in
+		   ,FortifiedRoofProgramDiscount as fortified_roof_program_discount_amt
+		   ,NonProgramDiscount as non_program_discount_amt
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts
