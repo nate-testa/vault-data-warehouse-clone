@@ -9,6 +9,9 @@
 			"name": "Dataset_t_pub_user"
 		},
 		"annotations": [],
-		"type": "AzureSqlTable"
+		"type": "AzureSqlTable",
+		"typeProperties": {
+			"tableName": "[edw_stage].[t_pub_user]"
+		}
 	}
 }
