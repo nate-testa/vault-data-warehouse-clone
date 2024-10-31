@@ -1,0 +1,15 @@
+{
+	"name": "SourceDataset_t_pub_diary",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_eBao_uat_aws_us_diary_uat",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "MySqlTable",
+		"schema": [],
+		"typeProperties": {
+			"tableName": "`t_pub_diary`"
+		}
+	}
+}
