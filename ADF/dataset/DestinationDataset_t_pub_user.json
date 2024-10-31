@@ -1,0 +1,16 @@
+{
+	"name": "DestinationDataset_t_pub_user",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_PREPROD",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edw_stage",
+			"table": "t_pub_user"
+		}
+	}
+}
