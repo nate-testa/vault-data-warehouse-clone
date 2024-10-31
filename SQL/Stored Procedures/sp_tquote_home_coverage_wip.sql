@@ -14,6 +14,7 @@
 -- 08/22/24				Yunus Mohammed				8. Removed effective date from merge and added in update clause
 -- 09/03/24				Yunus Mohammed				9. Added new column no_of_family_units_in_structures
 -- 10/02/24				Yunus Mohammed				10. Added new column fortified_roof_credit
+-- 31/10/24		        Hernando Gonzalez			11. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
 
@@ -230,6 +231,24 @@ BEGIN
 				tthc.NCRBManualRate AS nc_bureau_rate, StatedLimitsPolicy as stated_limits_policy_in , RiskSharingPolicy as risk_sharing_policy_in,
 				tthc.NumberofFamilyUnitsinStructure as no_of_family_units_in_structures,
 				tthc.FortifiedRoofCredit as fortified_roof_credit,
+				tthc.FacultativeReinsurance as facultative_reinsurance_in,
+				tthc.LayeredLimits as layered_limits_in,
+				tthc.[dwelling_limit_100_pc_value_amt] as [dwelling_limit_100_pc_value_amt],
+				tthc.[other_structures_limit_100_pc_value_amt] as [other_structures_limit_100_pc_value_amt],
+				tthc.[contents_limit_100_pc_value_amt] as [contents_limit_100_pc_value_amt],
+				tthc.[loss_of_use_100_pc_value_amt] as [loss_of_use_100_pc_value_amt],
+				tthc.FACAttachmentPoint as facultative_attachment_point,
+				tthc.FACLimit as facultative_limit_amt,
+				tthc.FACPremiumCeded as facultative_ceded_premium_amt,
+				tthc.FACReinsurer as facultative_reinsurer_nm,
+				tthc.CoverageLayer as coverage_layer,
+				TRY_CAST(REPLACE(tthc.PercentagePlaced, '%', '') AS FLOAT) / 100 AS coverage_layer_placed_pc,
+				tthc.LayerLimit as coverage_layer_limit_amt,
+				tthc.NewlyPurchasedHome as newly_purchased_home_in,
+				tthc.TargetClosingDate as target_closing_dt,
+				tthc.CurrentPolicyAnniversaryDate as current_policy_anniversary_dt,
+				CONCAT(tthc.HomeInsuranceCompany, ' ', tthc.OtherCarrierName) as current_underlying_company_nm,
+				tthc.NewClientForTheAgency as new_client_for_agency_in,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk				
 			FROM
 				edw_temp.tquote_home_coverage_wip_temp1 AS tthc
@@ -273,6 +292,7 @@ BEGIN
 				aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt, 
 				waive_inspection_in, waive_inspection_reason, inspection_note, rms_reviewed_in,
 				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,no_of_family_units_in_structures,fortified_roof_credit,
+				facultative_reinsurance_in, layered_limits_in, [dwelling_limit_100_pc_value_amt], [other_structures_limit_100_pc_value_amt], [contents_limit_100_pc_value_amt], [loss_of_use_100_pc_value_amt], facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
@@ -313,6 +333,7 @@ BEGIN
 				aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt, 
 				waive_inspection_in, waive_inspection_reason, inspection_note, rms_reviewed_in,nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,
 				no_of_family_units_in_structures,fortified_roof_credit,
+				facultative_reinsurance_in, layered_limits_in, [dwelling_limit_100_pc_value_amt], [other_structures_limit_100_pc_value_amt], [contents_limit_100_pc_value_amt], [loss_of_use_100_pc_value_amt], facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			WHEN MATCHED THEN UPDATE
@@ -444,6 +465,24 @@ BEGIN
 			[target].risk_sharing_policy_in = [source].risk_sharing_policy_in,
 			[target].no_of_family_units_in_structures = [source].no_of_family_units_in_structures,
 			[target].fortified_roof_credit = [source].fortified_roof_credit,
+			[target].facultative_reinsurance_in = [source].facultative_reinsurance_in,
+			[target].layered_limits_in = [source].layered_limits_in,
+			[target].[dwelling_limit_100_pc_value_amt] = [source].[dwelling_limit_100_pc_value_amt],
+			[target].[other_structures_limit_100_pc_value_amt] = [source].[other_structures_limit_100_pc_value_amt],
+			[target].[contents_limit_100_pc_value_amt] = [source].[contents_limit_100_pc_value_amt],
+			[target].[loss_of_use_100_pc_value_amt] = [source].[loss_of_use_100_pc_value_amt],
+			[target].facultative_attachment_point = [source].facultative_attachment_point,
+			[target].facultative_limit_amt = [source].facultative_limit_amt,
+			[target].facultative_ceded_premium_amt = [source].facultative_ceded_premium_amt,
+			[target].facultative_reinsurer_nm = [source].facultative_reinsurer_nm,
+			[target].coverage_layer = [source].coverage_layer,
+			[target].coverage_layer_placed_pc = [source].coverage_layer_placed_pc,
+			[target].coverage_layer_limit_amt = [source].coverage_layer_limit_amt,
+			[target].newly_purchased_home_in = [source].newly_purchased_home_in,
+			[target].target_closing_dt = [source].target_closing_dt,
+			[target].current_policy_anniversary_dt = [source].current_policy_anniversary_dt,
+			[target].current_underlying_company_nm = [source].current_underlying_company_nm,
+			[target].new_client_for_agency_in = [source].new_client_for_agency_in,
 			[target].update_ts = GETDATE();
 
 			SET @rows_affected=@@ROWCOUNT; 
