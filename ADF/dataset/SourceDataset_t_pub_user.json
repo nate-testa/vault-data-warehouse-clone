@@ -5,6 +5,9 @@
 			"referenceName": "LS_eBao_preProd_aws_us_preprod_pub",
 			"type": "LinkedServiceReference"
 		},
+		"folder": {
+			"name": "t_pub_user"
+		},
 		"annotations": [],
 		"type": "MySqlTable",
 		"schema": [],

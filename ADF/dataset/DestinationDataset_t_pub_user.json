@@ -5,6 +5,9 @@
 			"referenceName": "LS_EDW_PREPROD",
 			"type": "LinkedServiceReference"
 		},
+		"folder": {
+			"name": "t_pub_user"
+		},
 		"annotations": [],
 		"type": "AzureSqlTable",
 		"schema": [],
