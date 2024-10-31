@@ -7,9 +7,9 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "AZR-VD-UAT-ADF"
 		},
-		"LS_AWS_DMS_UAT_connectionString": {
+		"LS_AWS_DMS_UAT_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_AWS_DMS_UAT'"
+			"metadata": "Secure string for 'password' of 'LS_AWS_DMS_UAT'"
 		},
 		"LS_EDW_UAT_connectionString": {
 			"type": "secureString",
@@ -19,25 +19,97 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_METAL_UAT'"
 		},
-		"LS_eBao_uat_aw_uat_pub_connectionString": {
+		"LS_eBao_uat_aw_uat_pub_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_uat_aw_uat_pub'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_uat_aw_uat_pub'"
 		},
-		"LS_eBao_uat_aws_us_address_uat_connectionString": {
+		"LS_eBao_uat_aws_us_address_uat_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_uat_aws_us_address_uat'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_uat_aws_us_address_uat'"
 		},
-		"LS_eBao_uat_aws_us_diary_uat_connectionString": {
+		"LS_eBao_uat_aws_us_diary_uat_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_uat_aws_us_diary_uat'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_uat_aws_us_diary_uat'"
 		},
-		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_connectionString": {
+		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_uat_aws_us_uat_unicorn_insurepay'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_uat_aws_us_uat_unicorn_insurepay'"
 		},
-		"LS_eBao_uat_aws_us_uat_vault_connectionString": {
+		"LS_eBao_uat_aws_us_uat_vault_password": {
 			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_eBao_uat_aws_us_uat_vault'"
+			"metadata": "Secure string for 'password' of 'LS_eBao_uat_aws_us_uat_vault'"
+		},
+		"LS_AWS_DMS_UAT_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "vlt-mysql-ods-uat.cluster-ctaeroxllezw.us-east-1.rds.amazonaws.com"
+		},
+		"LS_AWS_DMS_UAT_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "dms_core"
+		},
+		"LS_AWS_DMS_UAT_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "vltDmsUserUAT"
+		},
+		"LS_eBao_uat_aw_uat_pub_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aw_uat_pub_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aw_uat_pub"
+		},
+		"LS_eBao_uat_aw_uat_pub_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "awac_readonly"
+		},
+		"LS_eBao_uat_aws_us_address_uat_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aws_us_address_uat_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_address_uat"
+		},
+		"LS_eBao_uat_aws_us_address_uat_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "awac_readonly"
+		},
+		"LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_diary_uat"
+		},
+		"LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "awac_readonly"
+		},
+		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_uat_unicorn_insurepay"
+		},
+		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "awac_readonly"
+		},
+		"LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_uat_vault"
+		},
+		"LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "awac_readonly"
 		},
 		"AWS-UAT_properties_typeProperties_linkedInfo_resourceId": {
 			"type": "string",
@@ -289,7 +361,8 @@
 				"policy": {
 					"elapsedTimeMetric": {}
 				},
-				"annotations": []
+				"annotations": [],
+				"lastPublishTime": "2024-08-30T14:32:29Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_LS_AWS_DMS_dd8_SourceDS')]",
@@ -413,7 +486,7 @@
 					"name": "StoredProcedure EXEC"
 				},
 				"annotations": [],
-				"lastPublishTime": "2023-07-11T13:42:22Z"
+				"lastPublishTime": "2024-08-30T14:32:26Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
@@ -509,7 +582,7 @@
 					"name": "StoredProcedure EXEC"
 				},
 				"annotations": [],
-				"lastPublishTime": "2023-07-11T13:42:22Z"
+				"lastPublishTime": "2024-08-30T14:32:27Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
@@ -589,7 +662,7 @@
 					"name": "StoredProcedure EXEC"
 				},
 				"annotations": [],
-				"lastPublishTime": "2023-07-11T13:42:22Z"
+				"lastPublishTime": "2024-08-30T14:32:26Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
@@ -711,7 +784,7 @@
 					"name": "StoredProcedure EXEC"
 				},
 				"annotations": [],
-				"lastPublishTime": "2023-07-11T15:02:30Z"
+				"lastPublishTime": "2024-08-30T14:32:29Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/pipelines/Master_Home_Procedure')]",
@@ -1139,7 +1212,8 @@
 				"folder": {
 					"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
 				},
-				"annotations": []
+				"annotations": [],
+				"lastPublishTime": "2024-08-30T14:32:29Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_LS_AWS_DMS_dd8_SourceDS')]",
@@ -1261,7 +1335,8 @@
 				"folder": {
 					"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
 				},
-				"annotations": []
+				"annotations": [],
+				"lastPublishTime": "2024-08-30T14:32:30Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_LS_AWS_DMS_dd8_ControlDS')]",
@@ -1397,7 +1472,8 @@
 				},
 				"annotations": [
 					"MetadataDrivenSolution"
-				]
+				],
+				"lastPublishTime": "2024-08-30T14:32:31Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_LS_AWS_DMS_dd8_ControlDS')]",
@@ -2029,7 +2105,7 @@
 					"name": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_20230530"
 				},
 				"annotations": [],
-				"lastPublishTime": "2023-08-25T17:22:01Z"
+				"lastPublishTime": "2024-08-30T14:32:29Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_SourceDS')]",
@@ -2153,7 +2229,7 @@
 					"name": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_20230530"
 				},
 				"annotations": [],
-				"lastPublishTime": "2023-08-31T16:32:25Z"
+				"lastPublishTime": "2024-08-30T14:32:30Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_ControlDS')]",
@@ -2293,7 +2369,7 @@
 				"annotations": [
 					"MetadataDrivenSolution"
 				],
-				"lastPublishTime": "2023-08-31T16:32:25Z"
+				"lastPublishTime": "2024-08-30T14:32:31Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_ControlDS')]",
@@ -2716,7 +2792,7 @@
 					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905"
 				},
 				"annotations": [],
-				"lastPublishTime": "2023-09-06T19:14:54Z"
+				"lastPublishTime": "2024-08-30T14:32:29Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_SourceDS')]",
@@ -3140,7 +3216,7 @@
 					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_address"
 				},
 				"annotations": [],
-				"lastPublishTime": "2023-09-06T19:17:49Z"
+				"lastPublishTime": "2024-08-30T14:32:29Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_SourceDS_t_pub_address')]",
@@ -3564,7 +3640,7 @@
 					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_diary"
 				},
 				"annotations": [],
-				"lastPublishTime": "2023-09-06T19:17:49Z"
+				"lastPublishTime": "2024-08-30T14:32:29Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_SourceDS_t_pub_diary')]",
@@ -3687,7 +3763,7 @@
 					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905"
 				},
 				"annotations": [],
-				"lastPublishTime": "2023-09-05T21:22:50Z"
+				"lastPublishTime": "2024-08-30T14:32:30Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS')]",
@@ -3809,7 +3885,7 @@
 					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_address"
 				},
 				"annotations": [],
-				"lastPublishTime": "2023-09-06T20:32:31Z"
+				"lastPublishTime": "2024-08-30T14:32:30Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS')]",
@@ -3931,7 +4007,7 @@
 					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_diary"
 				},
 				"annotations": [],
-				"lastPublishTime": "2023-09-06T20:32:31Z"
+				"lastPublishTime": "2024-08-30T14:32:30Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS')]",
@@ -4068,7 +4144,7 @@
 				"annotations": [
 					"MetadataDrivenSolution"
 				],
-				"lastPublishTime": "2023-09-05T21:22:51Z"
+				"lastPublishTime": "2024-08-30T14:32:30Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS')]",
@@ -4205,7 +4281,7 @@
 				"annotations": [
 					"MetadataDrivenSolution"
 				],
-				"lastPublishTime": "2023-09-06T20:32:31Z"
+				"lastPublishTime": "2024-08-30T14:32:31Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS')]",
@@ -4342,7 +4418,7 @@
 				"annotations": [
 					"MetadataDrivenSolution"
 				],
-				"lastPublishTime": "2023-09-06T20:32:31Z"
+				"lastPublishTime": "2024-08-30T14:32:30Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS')]",
@@ -4859,7 +4935,7 @@
 					"name": "Metal_to_Vault_Manual_zue_20230705"
 				},
 				"annotations": [],
-				"lastPublishTime": "2023-07-05T21:52:15Z"
+				"lastPublishTime": "2024-08-30T14:32:29Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/Metal_to_Vault_Manual_zue_SourceDS')]",
@@ -4982,7 +5058,7 @@
 					"name": "Metal_to_Vault_Manual_zue_20230705"
 				},
 				"annotations": [],
-				"lastPublishTime": "2023-07-05T21:52:16Z"
+				"lastPublishTime": "2024-08-30T14:32:30Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/Metal_to_Vault_Manual_zue_ControlDS')]",
@@ -5119,11 +5195,189 @@
 				"annotations": [
 					"MetadataDrivenSolution"
 				],
-				"lastPublishTime": "2023-07-05T21:52:16Z"
+				"lastPublishTime": "2024-08-30T14:32:30Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/Metal_to_Vault_Manual_zue_ControlDS')]",
 				"[concat(variables('factoryId'), '/pipelines/Metal_to_Vault_Manual_zue_MiddleLevel')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/t_pub_diary_eBao_to_Edw_stage_FullLoad')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy_t_pub_diary",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [
+							{
+								"name": "Source",
+								"value": "`t_pub_diary`"
+							},
+							{
+								"name": "Destination",
+								"value": "edw_stage.t_pub_diary"
+							}
+						],
+						"typeProperties": {
+							"source": {
+								"type": "MySqlSource"
+							},
+							"sink": {
+								"type": "AzureSqlSink",
+								"preCopyScript": "TRUNCATE TABLE edw_stage.t_pub_diary",
+								"tableOption": "autoCreate"
+							},
+							"enableStaging": false,
+							"validateDataConsistency": false
+						},
+						"inputs": [
+							{
+								"referenceName": "SourceDataset_t_pub_diary",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "DestinationDataset_t_pub_diary",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/SourceDataset_t_pub_diary')]",
+				"[concat(variables('factoryId'), '/datasets/DestinationDataset_t_pub_diary')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/t_pub_user_eBao_to_Edw_stage_FullLoad')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy_t_pub_user",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [
+							{
+								"name": "Source",
+								"value": "`t_pub_user`"
+							},
+							{
+								"name": "Destination",
+								"value": "edw_stage.t_pub_user"
+							}
+						],
+						"typeProperties": {
+							"source": {
+								"type": "MySqlSource"
+							},
+							"sink": {
+								"type": "AzureSqlSink",
+								"preCopyScript": "TRUNCATE TABLE edw_stage.t_pub_user",
+								"tableOption": "autoCreate"
+							},
+							"enableStaging": false,
+							"validateDataConsistency": false
+						},
+						"inputs": [
+							{
+								"referenceName": "SourceDataset_t_pub_user",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "DestinationDataset_t_pub_user",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/SourceDataset_t_pub_user')]",
+				"[concat(variables('factoryId'), '/datasets/DestinationDataset_t_pub_user')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DestinationDataset_t_pub_diary')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_EDW_UAT",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_t_pub_diary"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "edw_stage",
+					"table": "t_pub_diary"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DestinationDataset_t_pub_user')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_EDW_UAT",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_t_pub_user"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "edw_stage",
+					"table": "t_pub_user"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
 			]
 		},
 		{
@@ -5668,6 +5922,52 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_diary')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_uat_aws_us_diary_uat",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_t_pub_diary"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "`t_pub_diary`"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_uat_aws_us_diary_uat')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_user')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_uat_aw_uat_pub",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_t_pub_user"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "`t_pub_user`"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_uat_aw_uat_pub')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/LS_AWS_DMS_UAT')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
@@ -5675,7 +5975,17 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_AWS_DMS_UAT_connectionString')]"
+					"server": "[parameters('LS_AWS_DMS_UAT_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_AWS_DMS_UAT_properties_typeProperties_database')]",
+					"username": "[parameters('LS_AWS_DMS_UAT_properties_typeProperties_username')]",
+					"sslMode": 1,
+					"useSystemTrustStore": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_AWS_DMS_UAT_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-UAT",
@@ -5695,9 +6005,15 @@
 				"type": "AzureSqlDatabase",
 				"typeProperties": {
 					"connectionString": "[parameters('LS_EDW_UAT_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "Data-UAT-ADF-IR-via-VNet",
+					"type": "IntegrationRuntimeReference"
 				}
 			},
-			"dependsOn": []
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/Data-UAT-ADF-IR-via-VNet')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/LS_METAL_UAT')]",
@@ -5708,9 +6024,15 @@
 				"type": "AzureSqlDatabase",
 				"typeProperties": {
 					"connectionString": "[parameters('LS_METAL_UAT_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "Data-UAT-ADF-IR-via-VNet",
+					"type": "IntegrationRuntimeReference"
 				}
 			},
-			"dependsOn": []
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/Data-UAT-ADF-IR-via-VNet')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/LS_eBao_uat_aw_uat_pub')]",
@@ -5720,7 +6042,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_uat_aw_uat_pub_connectionString')]"
+					"server": "[parameters('LS_eBao_uat_aw_uat_pub_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_uat_aw_uat_pub_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_uat_aw_uat_pub_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_uat_aw_uat_pub_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-UAT",
@@ -5739,7 +6070,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_uat_aws_us_address_uat_connectionString')]"
+					"server": "[parameters('LS_eBao_uat_aws_us_address_uat_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_uat_aws_us_address_uat_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_uat_aws_us_address_uat_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_uat_aws_us_address_uat_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-UAT",
@@ -5758,7 +6098,17 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_uat_aws_us_diary_uat_connectionString')]"
+					"server": "[parameters('LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_username')]",
+					"sslMode": 1,
+					"useSystemTrustStore": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_uat_aws_us_diary_uat_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-UAT",
@@ -5777,7 +6127,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_uat_aws_us_uat_unicorn_insurepay_connectionString')]"
+					"server": "[parameters('LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_uat_aws_us_uat_unicorn_insurepay_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-UAT",
@@ -5796,7 +6155,16 @@
 				"annotations": [],
 				"type": "MySql",
 				"typeProperties": {
-					"connectionString": "[parameters('LS_eBao_uat_aws_us_uat_vault_connectionString')]"
+					"server": "[parameters('LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_server')]",
+					"port": "3306",
+					"database": "[parameters('LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_database')]",
+					"username": "[parameters('LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_eBao_uat_aws_us_uat_vault_password')]"
+					},
+					"driverVersion": "v2"
 				},
 				"connectVia": {
 					"referenceName": "AWS-UAT",
@@ -5930,13 +6298,6 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
 			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/default')]",
-			"type": "Microsoft.DataFactory/factories/globalparameters",
-			"apiVersion": "2018-06-01",
-			"properties": {},
-			"dependsOn": []
 		}
 	]
 }

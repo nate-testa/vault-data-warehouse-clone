@@ -5,7 +5,7 @@
 		"factoryName": {
 			"value": "AZR-VD-UAT-ADF"
 		},
-		"LS_AWS_DMS_UAT_connectionString": {
+		"LS_AWS_DMS_UAT_password": {
 			"value": ""
 		},
 		"LS_EDW_UAT_connectionString": {
@@ -14,20 +14,74 @@
 		"LS_METAL_UAT_connectionString": {
 			"value": ""
 		},
-		"LS_eBao_uat_aw_uat_pub_connectionString": {
+		"LS_eBao_uat_aw_uat_pub_password": {
 			"value": ""
 		},
-		"LS_eBao_uat_aws_us_address_uat_connectionString": {
+		"LS_eBao_uat_aws_us_address_uat_password": {
 			"value": ""
 		},
-		"LS_eBao_uat_aws_us_diary_uat_connectionString": {
+		"LS_eBao_uat_aws_us_diary_uat_password": {
 			"value": ""
 		},
-		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_connectionString": {
+		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_password": {
 			"value": ""
 		},
-		"LS_eBao_uat_aws_us_uat_vault_connectionString": {
+		"LS_eBao_uat_aws_us_uat_vault_password": {
 			"value": ""
+		},
+		"LS_AWS_DMS_UAT_properties_typeProperties_server": {
+			"value": "vlt-mysql-ods-uat.cluster-ctaeroxllezw.us-east-1.rds.amazonaws.com"
+		},
+		"LS_AWS_DMS_UAT_properties_typeProperties_database": {
+			"value": "dms_core"
+		},
+		"LS_AWS_DMS_UAT_properties_typeProperties_username": {
+			"value": "vltDmsUserUAT"
+		},
+		"LS_eBao_uat_aw_uat_pub_properties_typeProperties_server": {
+			"value": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aw_uat_pub_properties_typeProperties_database": {
+			"value": "aw_uat_pub"
+		},
+		"LS_eBao_uat_aw_uat_pub_properties_typeProperties_username": {
+			"value": "awac_readonly"
+		},
+		"LS_eBao_uat_aws_us_address_uat_properties_typeProperties_server": {
+			"value": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aws_us_address_uat_properties_typeProperties_database": {
+			"value": "aws_us_address_uat"
+		},
+		"LS_eBao_uat_aws_us_address_uat_properties_typeProperties_username": {
+			"value": "awac_readonly"
+		},
+		"LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_server": {
+			"value": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_database": {
+			"value": "aws_us_diary_uat"
+		},
+		"LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_username": {
+			"value": "awac_readonly"
+		},
+		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_server": {
+			"value": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_database": {
+			"value": "aws_us_uat_unicorn_insurepay"
+		},
+		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_username": {
+			"value": "awac_readonly"
+		},
+		"LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_server": {
+			"value": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_database": {
+			"value": "aws_us_uat_vault"
+		},
+		"LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_username": {
+			"value": "awac_readonly"
 		},
 		"AWS-UAT_properties_typeProperties_linkedInfo_resourceId": {
 			"value": "/subscriptions/6c8f1314-e2b0-43e5-87b0-0538a6a6ca04/resourcegroups/AZR-DEV-DATA-ADF/providers/Microsoft.DataFactory/factories/AZR-VD-Metal-ADF/integrationruntimes/AWS-UAT"
