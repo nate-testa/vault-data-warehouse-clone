@@ -11,6 +11,7 @@
 -- 10/13/23		Architha Gudimalla				5. Updated the parentid join to get the correct class type
 -- 11/02/23		Architha Gudimalla				6. Updated left joins to inner
 -- 11/09/24		Alberto Almario					7. Include Condo data
+-- 10/31/24		Architha Gudimalla				8. VI34577/AD7581 - Added scheduled item deleted in
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_scheduled_item]
@@ -52,6 +53,7 @@ BEGIN
 			source_system_sk, --20230717 added
 			CreatedDate,
 			UpdatedDate
+			,scheduled_item_deleted_in
 		INTO [edw_temp].[tcollection_scheduled_item_temp1]
 		FROM
 			(
@@ -60,6 +62,7 @@ BEGIN
 				acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, acc.PolicyChangeNumber
 				,his.[policy_history_sk], ct.collection_class_type_sk, acct.[Index]
 				,accto.Field, accto.[Value]
+				,CASE WHEN acct.IsDeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END as scheduled_item_deleted_in
 				,acc.CreatedDate, acc.UpdatedDate
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
@@ -113,12 +116,14 @@ BEGIN
            ,[create_ts]
            ,[update_ts]
            ,[etl_audit_sk]
+		   ,scheduled_item_deleted_in
 			)
 		SELECT 
 			[PolicyNumber],[EffectiveDate],[transaction_dt],[ExpirationDate],[IssuedDate],[PolicyChangeNumber]
 			,[policy_history_sk],[collection_class_type_sk],[scheduled_item_no]
 			,[Description],[CoverageLimit],[SeeScheduleOnFileWithTheCompany],[AppraisalDate],[CollectorCar]
 			,[source_system_sk],getdate(),getdate(), @etl_audit_sk
+			,scheduled_item_deleted_in
 		FROM 
 			[edw_temp].[tcollection_scheduled_item_temp1]
 

@@ -9,6 +9,7 @@
 -- 05/30/24		Yunus Mohammed					3. Added AccountObject.Id instead of Account.Id
 -- 22/08/24		Hernando Gonzalez				4. Remove effective date from the merge join
 -- 11/09/24		Alberto Almario					5. Include Condo data
+-- 10/31/24		Architha Gudimalla				5. VI34577/AD7581 - Added scheduled item deleted in
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_scheduled_item_wip]
@@ -50,6 +51,7 @@ BEGIN
 			source_system_sk, --20230717 added
 			CreatedDate,
 			UpdatedDate
+			,scheduled_item_deleted_in
 		INTO [edw_temp].[tquote_collection_scheduled_item_wip_temp1]
 		FROM
 			(
@@ -60,6 +62,7 @@ BEGIN
 				,tqcct.[quote_collection_class_type_sk]
 				,acco.[Index]
 				,accof.Field, accof.[Value]
+				,CASE WHEN acco.IsDeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END as scheduled_item_deleted_in
 				,acc.CreatedDate, acc.UpdatedDate
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
@@ -114,6 +117,7 @@ BEGIN
 		        GETDATE() AS create_ts,
 		        GETDATE() AS update_ts,
 		        @etl_audit_sk AS etl_audit_sk
+				,scheduled_item_deleted_in
 		    FROM 
 		        [edw_temp].[tquote_collection_scheduled_item_wip_temp1]
 		) AS SOURCE
@@ -134,9 +138,10 @@ BEGIN
 		        TARGET.appraisal_dt = SOURCE.appraisal_dt,
 		        TARGET.collector_car_in = SOURCE.collector_car_in,
 		        TARGET.source_system_sk = SOURCE.source_system_sk,
-		        TARGET.create_ts = SOURCE.create_ts,
+		        --TARGET.create_ts = SOURCE.create_ts,
 		        TARGET.update_ts = SOURCE.update_ts,
-		        TARGET.etl_audit_sk = SOURCE.etl_audit_sk
+		        TARGET.etl_audit_sk = SOURCE.etl_audit_sk,
+		        TARGET.scheduled_item_deleted_in = SOURCE.scheduled_item_deleted_in
 		WHEN NOT MATCHED BY TARGET THEN
 		    INSERT (
 		        quote_no,
@@ -155,6 +160,7 @@ BEGIN
 		        create_ts,
 		        update_ts,
 		        etl_audit_sk
+				,scheduled_item_deleted_in
 		    )
 		    VALUES (
 		        SOURCE.quote_no,
@@ -172,7 +178,8 @@ BEGIN
 		        SOURCE.source_system_sk,
 		        SOURCE.create_ts,
 		        SOURCE.update_ts,
-		        SOURCE.etl_audit_sk
+		        SOURCE.etl_audit_sk,
+				SOURCE.scheduled_item_deleted_in
 		);
 
 		SET @rows_affected=@@ROWCOUNT;
