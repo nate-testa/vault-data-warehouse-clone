@@ -153,10 +153,17 @@ with DAG(
             # parameters={"myParam": "value"},
         )
 
-        adf_etl_load_ebao_mqq_diary: BaseOperator = AzureDataFactoryRunPipelineOperator(
-            task_id="adf_etl_load_ebao_mqq_diary",
+        adf_etl_load_ebao_pub_user: BaseOperator = AzureDataFactoryRunPipelineOperator(
+            task_id="adf_etl_load_ebao_pub_user",
             azure_data_factory_conn_id='azure_data_factory_vault_data',
-            pipeline_name="MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_TopLevel_t_pub_diary",
+            pipeline_name="t_pub_user_eBao_to_Edw_stage_FullLoad",
+            # parameters={"myParam": "value"},
+        )
+
+        adf_etl_load_ebao_pub_diary: BaseOperator = AzureDataFactoryRunPipelineOperator(
+            task_id="adf_etl_load_ebao_pub_diary",
+            azure_data_factory_conn_id='azure_data_factory_vault_data',
+            pipeline_name="t_pub_diary_eBao_to_Edw_stage_FullLoad",
             # parameters={"myParam": "value"},
         )
 
@@ -174,7 +181,7 @@ with DAG(
             html_content=get_HTML_on_vault_format('The Azure Data Factory pipelines executed successfully',''),
         )
 
-        adf_etl_load_stage >> adf_etl_load_ebao_mqq >> adf_etl_load_ebao_mqq_address >> adf_etl_load_ebao_mqq_diary >> adf_etl_load_ls_aws_dms >> send_adf_email
+        adf_etl_load_stage >> adf_etl_load_ebao_mqq >> adf_etl_load_ebao_mqq_address >> adf_etl_load_ebao_pub_user >> adf_etl_load_ebao_pub_diary >> adf_etl_load_ls_aws_dms >> send_adf_email
 
 
     with TaskGroup("home_group") as home_group:
