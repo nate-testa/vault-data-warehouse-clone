@@ -3,18 +3,19 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
--- =====================================================================================================================
+-- ===========================================================================================================================
 -- Description: This procedures inserts and updates tquote 
------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- 11/16/23		Architha Gudimalla				2. Updated the prior policy logic
 -- 03/22/24		Rushin Shah						3. Added close_reason_desc column
 -- 08/29/24		Yunus Mohammed					4. Added expiration_dt in update stmt
 -- 09/04/24		Yunus Mohammed					5. Added term_no
 -- 09/18/24		Architha Gudimalla		        6. Updated term_no
--- ===================================================================================================================== 
+-- 11/01/24		Architha Gudimalla		        7. AD7593 - Added update to fix null EffectiveDate/ExpirationDate in Metal
+-- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
 
@@ -37,6 +38,11 @@ BEGIN
 	
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+
+		update 	edw_stage.Account
+		set 	EffectiveDate = cast(createddate as date), ExpirationDate  = cast(createddate as date)
+		where 	EffectiveDate is null
+		AND 	greatest(CreatedDate,UpdatedDate)>@last_source_extract_ts;
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.tquote_temp1;
