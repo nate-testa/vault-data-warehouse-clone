@@ -18,6 +18,8 @@
 -- 10/07/24		        Archtha Gudimalla			11. Excluded os and commercial brokers
 -- 10/07/24		        Archtha Gudimalla			12. Added ytd_nb_premium_amt and ytd_renewal_retention_pc
 -- 10/07/24		        Archtha Gudimalla			12. Added cast to change to float for ret pc and loss ratio
+-- 10/25/24		        Archtha Gudimalla			13. Added isnull to tb.broker_nm not like '%test%'
+-- 10/26/24		        Archtha Gudimalla			14. Updated tbroker_vault_team logic
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -52,12 +54,15 @@ BEGIN
 
         with br_vauk_team as
         (
-        select broker_id, 
-                max(case when team_member_type = 'BusinessDevelopmentManager' then team_member_nm end) [bdm], 
-                max(case when program_type = 'Admitted' and team_member_type = 'Underwriter' then team_member_nm end) [VRE_Underwriter], 
-                max(case when program_type = 'Non-Admitted' and team_member_type = 'Underwriter' then team_member_nm end) [VES_Underwriter]
-        from edw_core.tbroker_vault_team bvt
-        group by broker_id 
+			 select broker_id, --product_nm,  state_cd, program_type, 
+					max(case when team_member_type = 'BusinessDevelopmentManager' then team_member_nm end) bdm_nm ,
+					count(distinct case when team_member_type = 'BusinessDevelopmentManager' then team_member_nm end) bdm_nm_distinct ,
+					max(case when team_member_type = 'Underwriter' then team_member_nm end) Underwriter ,
+					count(distinct case when team_member_type = 'Underwriter' then team_member_nm end) Underwriter_distinct ,
+					max(case when team_member_type = 'RenewalUnderwriter' then team_member_nm end) RenewalUnderwriter ,
+					count(distinct case when team_member_type = 'RenewalUnderwriter' then team_member_nm end) RenewalUnderwriter_distinct 
+			from edw_core.tbroker_vault_team bvt 
+			group by broker_id --, --product_nm, state_cd, program_type
         ),
         br_summ as
         (
@@ -135,9 +140,9 @@ BEGIN
         tb.mailing_address_country_nm,
         tb.broker_tier,
         case
-        when tb.broker_tier = 1 then 'Elite'
-        when tb.broker_tier in (2,4) then 'Signature'
-        When tb.broker_tier = 5 then 'Terminated'
+            when tb.broker_tier = 1 then 'Elite'
+            when tb.broker_tier in (2,4) then 'Signature'
+            When tb.broker_tier = 5 then 'Terminated'
         end as broker_tier_nm,
         tb.national_agency_in,
         tb.broker_type,
@@ -146,10 +151,10 @@ BEGIN
         tb.primary_contact_nm,
         tb.broker_email,
         tb.broker_phone_no,
-        bvtm.[bdm] as bdm_nm,
+        bvtm.bdm_nm,
         null as bdm_email,
-        bvtm.[VRE_Underwriter] new_business_uw_nm,
-        bvtm.[VES_Underwriter] as renewal_uw_nm, 
+        case when bvtm.Underwriter_distinct        = 1 then bvtm.[Underwriter]        else null end as new_business_uw_nm,
+        case when bvtm.RenewalUnderwriter_distinct = 1 then bvtm.[RenewalUnderwriter] else null end as renewal_uw_nm, 
         bs.open_submissions_ct,
         case when bs.one_year_non_cat_earned_net_premium_amt > 0 then round(100*cast(bs.one_year_non_cat_loss_incurred_amt as float)/bs.one_year_non_cat_earned_net_premium_amt,2) else 0 end as one_year_actual_non_cat_loss_ratio,
         case when bs.two_year_non_cat_earned_net_premium_amt > 0 then round(100*cast(bs.two_year_non_cat_loss_incurred_amt as float)/bs.two_year_non_cat_earned_net_premium_amt,2) else 0 end as two_year_ultimate_non_cat_loss_ratio,
@@ -170,12 +175,11 @@ BEGIN
         ,ytd_new_business_net_premium_amt as ytd_nb_premium_amt
         ,case when ytd_policy_expiring_ct > 0 then round(100*cast(ytd_policy_renewal_ct as float)/ytd_policy_expiring_ct,2) else null end ytd_renewal_retention_pc
         into edw_temp.broker_hubspot_feed_temp1
-        FROM
-        edw_core.tbroker tb
+        FROM edw_core.tbroker tb
         left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
         left join br_summ as bs    on bs.broker_sk = tb.broker_sk
         left join comm_tier as ct   on ct.broker_id = tb.broker_id
-        where tb.broker_nm not like '%test%'
+        where isnull(tb.broker_nm,'') not like '%test%'
 		and not (tb.broker_id like '1%' and len(tb.broker_id) = 5)
 		and not (len(tb.broker_id) > 6);
 

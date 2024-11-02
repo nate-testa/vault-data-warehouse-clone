@@ -129,8 +129,8 @@ with DAG(
         send_clue_auto_email = EmailOperator(
             task_id='send_clue_auto_email',
             to=to_email,
-            subject='Airflow - CLUE tables loaded successfully',
-            html_content=get_sp_success_data_HTML('sp_claim_clue_auto_feed', 'The Clue Auto process (e) finished successfully.'),
+            subject='Airflow - CLUE Auto process completed successfully',
+            html_content=get_sp_success_data_HTML('sp_claim_clue_auto_feed', 'The Clue Auto process finished successfully.'),
         )
 
         sp_claim_clue_auto_feed >> generate_clue_auto_txt_file >> upload_clue_auto_txt_to_sftp >> send_clue_auto_email
