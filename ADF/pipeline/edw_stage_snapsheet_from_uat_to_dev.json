@@ -1,0 +1,1033 @@
+{
+	"name": "edw_stage_snapsheet_from_uat_to_dev",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEach_50g",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.cw_items",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Copy_50g",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [
+								{
+									"name": "Source",
+									"value": "edw_stage_snapsheet.@{item().source.table}"
+								},
+								{
+									"name": "Destination",
+									"value": "edw_stage_snapsheet.@{item().destination.table}"
+								}
+							],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "AzureSqlSink",
+									"tableOption": "autoCreate"
+								},
+								"enableStaging": false,
+								"validateDataConsistency": false
+							},
+							"inputs": [
+								{
+									"referenceName": "SourceDataset_edw_stage_snapsheet",
+									"type": "DatasetReference",
+									"parameters": {
+										"cw_table": "@item().source.table"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DestinationDataset_edw_stage_snapsheet",
+									"type": "DatasetReference",
+									"parameters": {
+										"cw_table": "@item().destination.table"
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"cw_items": {
+				"type": "Array",
+				"defaultValue": [
+					{
+						"source": {
+							"table": "assignment_attribute_categories"
+						},
+						"destination": {
+							"table": "assignment_attribute_categories"
+						}
+					},
+					{
+						"source": {
+							"table": "assignment_profile_attributes"
+						},
+						"destination": {
+							"table": "assignment_profile_attributes"
+						}
+					},
+					{
+						"source": {
+							"table": "assignment_profile_categories"
+						},
+						"destination": {
+							"table": "assignment_profile_categories"
+						}
+					},
+					{
+						"source": {
+							"table": "assignment_profiles"
+						},
+						"destination": {
+							"table": "assignment_profiles"
+						}
+					},
+					{
+						"source": {
+							"table": "assignment_scores"
+						},
+						"destination": {
+							"table": "assignment_scores"
+						}
+					},
+					{
+						"source": {
+							"table": "attachments"
+						},
+						"destination": {
+							"table": "attachments"
+						}
+					},
+					{
+						"source": {
+							"table": "bank_accounts"
+						},
+						"destination": {
+							"table": "bank_accounts"
+						}
+					},
+					{
+						"source": {
+							"table": "carrier_documents"
+						},
+						"destination": {
+							"table": "carrier_documents"
+						}
+					},
+					{
+						"source": {
+							"table": "claim_parties"
+						},
+						"destination": {
+							"table": "claim_parties"
+						}
+					},
+					{
+						"source": {
+							"table": "claim_party_associated_claim_parties"
+						},
+						"destination": {
+							"table": "claim_party_associated_claim_parties"
+						}
+					},
+					{
+						"source": {
+							"table": "claim_party_contact_methods"
+						},
+						"destination": {
+							"table": "claim_party_contact_methods"
+						}
+					},
+					{
+						"source": {
+							"table": "claims"
+						},
+						"destination": {
+							"table": "claims"
+						}
+					},
+					{
+						"source": {
+							"table": "common_incident_details"
+						},
+						"destination": {
+							"table": "common_incident_details"
+						}
+					},
+					{
+						"source": {
+							"table": "coverage_checks"
+						},
+						"destination": {
+							"table": "coverage_checks"
+						}
+					},
+					{
+						"source": {
+							"table": "custom_field_claims"
+						},
+						"destination": {
+							"table": "custom_field_claims"
+						}
+					},
+					{
+						"source": {
+							"table": "custom_field_claims_enumeration_values"
+						},
+						"destination": {
+							"table": "custom_field_claims_enumeration_values"
+						}
+					},
+					{
+						"source": {
+							"table": "customer_logs"
+						},
+						"destination": {
+							"table": "customer_logs"
+						}
+					},
+					{
+						"source": {
+							"table": "customer_ratings"
+						},
+						"destination": {
+							"table": "customer_ratings"
+						}
+					},
+					{
+						"source": {
+							"table": "email_templates"
+						},
+						"destination": {
+							"table": "email_templates"
+						}
+					},
+					{
+						"source": {
+							"table": "emails"
+						},
+						"destination": {
+							"table": "emails"
+						}
+					},
+					{
+						"source": {
+							"table": "estimates"
+						},
+						"destination": {
+							"table": "estimates"
+						}
+					},
+					{
+						"source": {
+							"table": "exposures"
+						},
+						"destination": {
+							"table": "exposures"
+						}
+					},
+					{
+						"source": {
+							"table": "feature_flags"
+						},
+						"destination": {
+							"table": "feature_flags"
+						}
+					},
+					{
+						"source": {
+							"table": "file_submissions"
+						},
+						"destination": {
+							"table": "file_submissions"
+						}
+					},
+					{
+						"source": {
+							"table": "financial_deductible_items"
+						},
+						"destination": {
+							"table": "financial_deductible_items"
+						}
+					},
+					{
+						"source": {
+							"table": "financial_payment_details"
+						},
+						"destination": {
+							"table": "financial_payment_details"
+						}
+					},
+					{
+						"source": {
+							"table": "financial_payment_items"
+						},
+						"destination": {
+							"table": "financial_payment_items"
+						}
+					},
+					{
+						"source": {
+							"table": "financial_reserve_items"
+						},
+						"destination": {
+							"table": "financial_reserve_items"
+						}
+					},
+					{
+						"source": {
+							"table": "financial_transaction_actions"
+						},
+						"destination": {
+							"table": "financial_transaction_actions"
+						}
+					},
+					{
+						"source": {
+							"table": "financial_transaction_activity_logs"
+						},
+						"destination": {
+							"table": "financial_transaction_activity_logs"
+						}
+					},
+					{
+						"source": {
+							"table": "financial_transactions"
+						},
+						"destination": {
+							"table": "financial_transactions"
+						}
+					},
+					{
+						"source": {
+							"table": "financials_line_items"
+						},
+						"destination": {
+							"table": "financials_line_items"
+						}
+					},
+					{
+						"source": {
+							"table": "fraud_investigation_details"
+						},
+						"destination": {
+							"table": "fraud_investigation_details"
+						}
+					},
+					{
+						"source": {
+							"table": "fraud_investigations"
+						},
+						"destination": {
+							"table": "fraud_investigations"
+						}
+					},
+					{
+						"source": {
+							"table": "injured_people"
+						},
+						"destination": {
+							"table": "injured_people"
+						}
+					},
+					{
+						"source": {
+							"table": "injuries"
+						},
+						"destination": {
+							"table": "injuries"
+						}
+					},
+					{
+						"source": {
+							"table": "injury_costs"
+						},
+						"destination": {
+							"table": "injury_costs"
+						}
+					},
+					{
+						"source": {
+							"table": "injury_evaluations"
+						},
+						"destination": {
+							"table": "injury_evaluations"
+						}
+					},
+					{
+						"source": {
+							"table": "injury_medical_assessments"
+						},
+						"destination": {
+							"table": "injury_medical_assessments"
+						}
+					},
+					{
+						"source": {
+							"table": "injury_treatments"
+						},
+						"destination": {
+							"table": "injury_treatments"
+						}
+					},
+					{
+						"source": {
+							"table": "integration_history_logs"
+						},
+						"destination": {
+							"table": "integration_history_logs"
+						}
+					},
+					{
+						"source": {
+							"table": "letters"
+						},
+						"destination": {
+							"table": "letters"
+						}
+					},
+					{
+						"source": {
+							"table": "lexis_nexis_clue_report_options"
+						},
+						"destination": {
+							"table": "lexis_nexis_clue_report_options"
+						}
+					},
+					{
+						"source": {
+							"table": "liability_assignments"
+						},
+						"destination": {
+							"table": "liability_assignments"
+						}
+					},
+					{
+						"source": {
+							"table": "liability_determinations"
+						},
+						"destination": {
+							"table": "liability_determinations"
+						}
+					},
+					{
+						"source": {
+							"table": "medical_assessments"
+						},
+						"destination": {
+							"table": "medical_assessments"
+						}
+					},
+					{
+						"source": {
+							"table": "medicares"
+						},
+						"destination": {
+							"table": "medicares"
+						}
+					},
+					{
+						"source": {
+							"table": "note_templates"
+						},
+						"destination": {
+							"table": "note_templates"
+						}
+					},
+					{
+						"source": {
+							"table": "notes"
+						},
+						"destination": {
+							"table": "notes"
+						}
+					},
+					{
+						"source": {
+							"table": "payees"
+						},
+						"destination": {
+							"table": "payees"
+						}
+					},
+					{
+						"source": {
+							"table": "permission_groups"
+						},
+						"destination": {
+							"table": "permission_groups"
+						}
+					},
+					{
+						"source": {
+							"table": "permission_groups_users"
+						},
+						"destination": {
+							"table": "permission_groups_users"
+						}
+					},
+					{
+						"source": {
+							"table": "permission_groups_viceroy_rule_sets"
+						},
+						"destination": {
+							"table": "permission_groups_viceroy_rule_sets"
+						}
+					},
+					{
+						"source": {
+							"table": "photo_captures"
+						},
+						"destination": {
+							"table": "photo_captures"
+						}
+					},
+					{
+						"source": {
+							"table": "policies"
+						},
+						"destination": {
+							"table": "policies"
+						}
+					},
+					{
+						"source": {
+							"table": "profiles"
+						},
+						"destination": {
+							"table": "profiles"
+						}
+					},
+					{
+						"source": {
+							"table": "properties"
+						},
+						"destination": {
+							"table": "properties"
+						}
+					},
+					{
+						"source": {
+							"table": "property_details"
+						},
+						"destination": {
+							"table": "property_details"
+						}
+					},
+					{
+						"source": {
+							"table": "property_incident_detail_collision_damages"
+						},
+						"destination": {
+							"table": "property_incident_detail_collision_damages"
+						}
+					},
+					{
+						"source": {
+							"table": "property_incident_detail_fallen_trees"
+						},
+						"destination": {
+							"table": "property_incident_detail_fallen_trees"
+						}
+					},
+					{
+						"source": {
+							"table": "property_incident_detail_fire_damages"
+						},
+						"destination": {
+							"table": "property_incident_detail_fire_damages"
+						}
+					},
+					{
+						"source": {
+							"table": "property_incident_detail_home_damages"
+						},
+						"destination": {
+							"table": "property_incident_detail_home_damages"
+						}
+					},
+					{
+						"source": {
+							"table": "property_incident_detail_service_lines"
+						},
+						"destination": {
+							"table": "property_incident_detail_service_lines"
+						}
+					},
+					{
+						"source": {
+							"table": "property_incident_detail_theft_or_liability_incidents"
+						},
+						"destination": {
+							"table": "property_incident_detail_theft_or_liability_incidents"
+						}
+					},
+					{
+						"source": {
+							"table": "property_incident_detail_water_damages"
+						},
+						"destination": {
+							"table": "property_incident_detail_water_damages"
+						}
+					},
+					{
+						"source": {
+							"table": "property_incident_detail_wind_and_hail_damages"
+						},
+						"destination": {
+							"table": "property_incident_detail_wind_and_hail_damages"
+						}
+					},
+					{
+						"source": {
+							"table": "property_items"
+						},
+						"destination": {
+							"table": "property_items"
+						}
+					},
+					{
+						"source": {
+							"table": "provider_features_settings_values"
+						},
+						"destination": {
+							"table": "provider_features_settings_values"
+						}
+					},
+					{
+						"source": {
+							"table": "provider_fields"
+						},
+						"destination": {
+							"table": "provider_fields"
+						}
+					},
+					{
+						"source": {
+							"table": "providers"
+						},
+						"destination": {
+							"table": "providers"
+						}
+					},
+					{
+						"source": {
+							"table": "rentals"
+						},
+						"destination": {
+							"table": "rentals"
+						}
+					},
+					{
+						"source": {
+							"table": "reservations"
+						},
+						"destination": {
+							"table": "reservations"
+						}
+					},
+					{
+						"source": {
+							"table": "shift_groups"
+						},
+						"destination": {
+							"table": "shift_groups"
+						}
+					},
+					{
+						"source": {
+							"table": "shifts"
+						},
+						"destination": {
+							"table": "shifts"
+						}
+					},
+					{
+						"source": {
+							"table": "sms"
+						},
+						"destination": {
+							"table": "sms"
+						}
+					},
+					{
+						"source": {
+							"table": "sms_templates"
+						},
+						"destination": {
+							"table": "sms_templates"
+						}
+					},
+					{
+						"source": {
+							"table": "snap_and_sign_disclosure_templates"
+						},
+						"destination": {
+							"table": "snap_and_sign_disclosure_templates"
+						}
+					},
+					{
+						"source": {
+							"table": "snap_and_sign_disclosures"
+						},
+						"destination": {
+							"table": "snap_and_sign_disclosures"
+						}
+					},
+					{
+						"source": {
+							"table": "snap_and_sign_mfas"
+						},
+						"destination": {
+							"table": "snap_and_sign_mfas"
+						}
+					},
+					{
+						"source": {
+							"table": "snap_and_sign_release_templates"
+						},
+						"destination": {
+							"table": "snap_and_sign_release_templates"
+						}
+					},
+					{
+						"source": {
+							"table": "snap_and_sign_releases"
+						},
+						"destination": {
+							"table": "snap_and_sign_releases"
+						}
+					},
+					{
+						"source": {
+							"table": "snap_and_sign_signatures"
+						},
+						"destination": {
+							"table": "snap_and_sign_signatures"
+						}
+					},
+					{
+						"source": {
+							"table": "snap_and_sign_signees"
+						},
+						"destination": {
+							"table": "snap_and_sign_signees"
+						}
+					},
+					{
+						"source": {
+							"table": "supplements"
+						},
+						"destination": {
+							"table": "supplements"
+						}
+					},
+					{
+						"source": {
+							"table": "tags"
+						},
+						"destination": {
+							"table": "tags"
+						}
+					},
+					{
+						"source": {
+							"table": "task_assignment_profile_attributes"
+						},
+						"destination": {
+							"table": "task_assignment_profile_attributes"
+						}
+					},
+					{
+						"source": {
+							"table": "task_categories"
+						},
+						"destination": {
+							"table": "task_categories"
+						}
+					},
+					{
+						"source": {
+							"table": "task_files"
+						},
+						"destination": {
+							"table": "task_files"
+						}
+					},
+					{
+						"source": {
+							"table": "task_types"
+						},
+						"destination": {
+							"table": "task_types"
+						}
+					},
+					{
+						"source": {
+							"table": "tasks"
+						},
+						"destination": {
+							"table": "tasks"
+						}
+					},
+					{
+						"source": {
+							"table": "users"
+						},
+						"destination": {
+							"table": "users"
+						}
+					},
+					{
+						"source": {
+							"table": "valuations"
+						},
+						"destination": {
+							"table": "valuations"
+						}
+					},
+					{
+						"source": {
+							"table": "vehicle_damages"
+						},
+						"destination": {
+							"table": "vehicle_damages"
+						}
+					},
+					{
+						"source": {
+							"table": "vehicle_passenger_details"
+						},
+						"destination": {
+							"table": "vehicle_passenger_details"
+						}
+					},
+					{
+						"source": {
+							"table": "vehicles"
+						},
+						"destination": {
+							"table": "vehicles"
+						}
+					},
+					{
+						"source": {
+							"table": "vendor_assignment_tasks"
+						},
+						"destination": {
+							"table": "vendor_assignment_tasks"
+						}
+					},
+					{
+						"source": {
+							"table": "vendor_assignments"
+						},
+						"destination": {
+							"table": "vendor_assignments"
+						}
+					},
+					{
+						"source": {
+							"table": "vendor_contact_contact_methods"
+						},
+						"destination": {
+							"table": "vendor_contact_contact_methods"
+						}
+					},
+					{
+						"source": {
+							"table": "vendor_contacts"
+						},
+						"destination": {
+							"table": "vendor_contacts"
+						}
+					},
+					{
+						"source": {
+							"table": "vendor_task_events"
+						},
+						"destination": {
+							"table": "vendor_task_events"
+						}
+					},
+					{
+						"source": {
+							"table": "vendor_types"
+						},
+						"destination": {
+							"table": "vendor_types"
+						}
+					},
+					{
+						"source": {
+							"table": "vendors"
+						},
+						"destination": {
+							"table": "vendors"
+						}
+					},
+					{
+						"source": {
+							"table": "viceroy_rule_sets"
+						},
+						"destination": {
+							"table": "viceroy_rule_sets"
+						}
+					},
+					{
+						"source": {
+							"table": "viceroy_rule_sets_rules"
+						},
+						"destination": {
+							"table": "viceroy_rule_sets_rules"
+						}
+					},
+					{
+						"source": {
+							"table": "viceroy_rules"
+						},
+						"destination": {
+							"table": "viceroy_rules"
+						}
+					},
+					{
+						"source": {
+							"table": "workflow_definition_versions"
+						},
+						"destination": {
+							"table": "workflow_definition_versions"
+						}
+					},
+					{
+						"source": {
+							"table": "workflow_definitions"
+						},
+						"destination": {
+							"table": "workflow_definitions"
+						}
+					},
+					{
+						"source": {
+							"table": "workflow_events"
+						},
+						"destination": {
+							"table": "workflow_events"
+						}
+					},
+					{
+						"source": {
+							"table": "workflow_global_event_handler_definitions"
+						},
+						"destination": {
+							"table": "workflow_global_event_handler_definitions"
+						}
+					},
+					{
+						"source": {
+							"table": "workflow_stages"
+						},
+						"destination": {
+							"table": "workflow_stages"
+						}
+					},
+					{
+						"source": {
+							"table": "workflow_transitions"
+						},
+						"destination": {
+							"table": "workflow_transitions"
+						}
+					},
+					{
+						"source": {
+							"table": "workflows"
+						},
+						"destination": {
+							"table": "workflows"
+						}
+					},
+					{
+						"source": {
+							"table": "workflows_action_blueprints_event_handlers"
+						},
+						"destination": {
+							"table": "workflows_action_blueprints_event_handlers"
+						}
+					},
+					{
+						"source": {
+							"table": "workflows_action_blueprints_stages"
+						},
+						"destination": {
+							"table": "workflows_action_blueprints_stages"
+						}
+					},
+					{
+						"source": {
+							"table": "workflows_actions_event_handler"
+						},
+						"destination": {
+							"table": "workflows_actions_event_handler"
+						}
+					},
+					{
+						"source": {
+							"table": "workflows_actions_workflow"
+						},
+						"destination": {
+							"table": "workflows_actions_workflow"
+						}
+					},
+					{
+						"source": {
+							"table": "workflows_event_handlers_global"
+						},
+						"destination": {
+							"table": "workflows_event_handlers_global"
+						}
+					},
+					{
+						"source": {
+							"table": "workflows_event_handlers_initial"
+						},
+						"destination": {
+							"table": "workflows_event_handlers_initial"
+						}
+					},
+					{
+						"source": {
+							"table": "workflows_event_handlers_stage"
+						},
+						"destination": {
+							"table": "workflows_event_handlers_stage"
+						}
+					}
+				]
+			}
+		},
+		"annotations": []
+	}
+}

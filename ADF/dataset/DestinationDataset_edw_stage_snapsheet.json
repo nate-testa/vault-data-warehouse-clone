@@ -1,0 +1,24 @@
+{
+	"name": "DestinationDataset_edw_stage_snapsheet",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase_edw_dev",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"cw_table": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edw_stage_snapsheet",
+			"table": {
+				"value": "@dataset().cw_table",
+				"type": "Expression"
+			}
+		}
+	}
+}
