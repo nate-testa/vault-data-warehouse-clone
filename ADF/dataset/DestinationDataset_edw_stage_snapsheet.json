@@ -10,6 +10,9 @@
 				"type": "String"
 			}
 		},
+		"folder": {
+			"name": "edw_stage_snapsheet"
+		},
 		"annotations": [],
 		"type": "AzureSqlTable",
 		"schema": [],
