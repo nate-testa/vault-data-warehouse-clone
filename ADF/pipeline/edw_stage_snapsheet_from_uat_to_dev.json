@@ -14,7 +14,7 @@
 					},
 					"activities": [
 						{
-							"name": "Copy_50g",
+							"name": "Copy_edw_stage_snapsheet",
 							"type": "Copy",
 							"dependsOn": [],
 							"policy": {
@@ -42,7 +42,7 @@
 								"sink": {
 									"type": "AzureSqlSink",
 									"preCopyScript": {
-										"value": "TRUNCATE TABLE @{json(item().SinkObjectSettings).schema}.@{json(item().SinkObjectSettings).table}",
+										"value": "@concat('TRUNCATE TABLE ', activity('Copy_edw_stage_snapsheet').userProperties.destination, ';')",
 										"type": "Expression"
 									},
 									"tableOption": "autoCreate"
