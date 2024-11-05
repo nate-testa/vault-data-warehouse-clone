@@ -42,7 +42,7 @@
 								"sink": {
 									"type": "AzureSqlSink",
 									"preCopyScript": {
-										"value": "@concat('TRUNCATE TABLE ', activity('Copy_edw_stage_snapsheet').userProperties.destination, ';')",
+										"value": "@concat('TRUNCATE TABLE edw_stage_snapsheet.', item().destination.table, ';')\n",
 										"type": "Expression"
 									},
 									"tableOption": "autoCreate"
