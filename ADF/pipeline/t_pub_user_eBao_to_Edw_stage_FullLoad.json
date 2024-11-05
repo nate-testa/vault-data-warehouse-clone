@@ -24,7 +24,12 @@
 						"type": "MySqlSource"
 					},
 					"sink": {
-						"type": "AzureSqlSink"
+						"type": "AzureSqlSink",
+						"preCopyScript": "TRUNCATE TABLE edw_stage.t_pub_user",
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": false,
+						"tableOption": "autoCreate",
+						"disableMetricsCollection": false
 					},
 					"enableStaging": false
 				},
