@@ -5,7 +5,7 @@
 ---------------------------------------------------------------------------------------------------
 --	09-30-2024				Yunus Mohammed				Created procedure
 -- ================================================================================================= 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
+CREATE     PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -41,13 +41,13 @@ BEGIN
             cpsa.create_ts > @last_source_extract_ts
             and cpsa.source_system_nm != 'NFP'
 
-        declare @home_sql varchar(max) = ''
+	declare @home_sql varchar(max) = ''
         select @home_sql = @home_sql + 'select tph.policy_history_sk, ''' + snapsheet_coverage_nm + ''' as  [name],''' 
         + coverage_type + ''' as coverage_type,'''
         + ISNULL(snapsheet_deductible_type,'') + ''' as deductible_type,'''
         + '' + snapsheet_coverage_cd +''' as [coverageCode],'
-        + ' case when isnumeric('+ column_nm +') = 1 then CAST('
-        + column_nm + ' AS varchar(255)) end as [limits.amount],'
+        + ' CAST('
+        + column_nm + ' AS varchar(255)) as [limits.amount],'
         + ' null as [limits.coverageLimitType]' 
         + ' from
         [edw_temp].[claim_policy_webhook_snapsheet_api_temp1] cpsa
@@ -65,10 +65,11 @@ BEGIN
         exec (@home_sql)
 
         declare @auto_sql varchar(max) = ''
-        select @auto_sql = @auto_sql + 'select tph.policy_history_sk ,''' + snapsheet_coverage_nm + ''' as  [name],'
-        + '''' + snapsheet_coverage_cd +''' as [coverageCode],'
-        + ' case when isnumeric('+ column_nm +') = 1 then cast('
-        + column_nm + ' AS varchar(255)) end as [limits.amount],'
+        select @auto_sql = @auto_sql + 'select tph.policy_history_sk ,''' + snapsheet_coverage_nm + ''' as  [name],'''
+		 + coverage_type + ''' as coverage_type,'''
+         + snapsheet_coverage_cd +''' as [coverageCode],'
+        + ' cast('
+        + column_nm + ' AS varchar(255)) as [limits.amount],'
         + ' null as [limits.coverageLimitType]'
         + ' from
         [edw_temp].[claim_policy_webhook_snapsheet_api_temp1] cpsa
@@ -108,10 +109,11 @@ BEGIN
         exec (@pel_sql);
 
         declare @auto_vehicle_sql varchar(max) = ''
-        select @auto_vehicle_sql = @auto_vehicle_sql + 'select tph.policy_history_sk, source.auto_vehicle_sk, ''' + snapsheet_coverage_nm + ''' as  [name],'
-        + '''' + snapsheet_coverage_cd +''' as [coverageCode],'
-        + ' case when isnumeric('+ column_nm +') = 1 then cast('
-        + column_nm + ' AS varchar(255)) end as [limits.amount],'
+        select @auto_vehicle_sql = @auto_vehicle_sql + 'select tph.policy_history_sk, source.auto_vehicle_sk, ''' + snapsheet_coverage_nm + ''' as  [name],'''
+		+ coverage_type + ''' as coverage_type,'''
+        + snapsheet_coverage_cd +''' as [coverageCode],'
+        + ' cast('
+        + column_nm + ' AS varchar(255)) as [limits.amount],'
         + ' null as [limits.coverageLimitType]'
         + ' from
         [edw_temp].[claim_policy_webhook_snapsheet_api_temp1] cpsa
@@ -130,9 +132,9 @@ BEGIN
         exec (@auto_vehicle_sql);
 
 
-        with policy_webhook as
-        (
-        select
+	with policy_webhook as
+	(
+    select
             FORMAT(tp.cancellation_effective_dt, 'yyyy-MM-ddTHH:mm:ssZ') AS cancelledAt,
             tph.cancellation_reason_desc  AS cancelledReason,
             FORMAT(cpsa.inceptionDate, 'yyyy-MM-ddTHH:mm:ssZ') as effectiveAt,
@@ -198,7 +200,7 @@ BEGIN
             json_query((
                 select
                     [role],
-                    tp.insured_nm as [name],
+                    temp.name as [name],
                     json_query((
                             SELECT
                                 address1,
@@ -219,7 +221,7 @@ BEGIN
                         for json path, include_null_values
                     )) as contactMethods
                 from
-                (	
+            (	
                     select 'mortgagee' as [role],mortgagee_nm as [name],
                     address_line_1 as address1,address_line_2 as address2,city_nm as city,zip_cd as postalCode,state_cd as region,country_nm as country
                     from edw_core.tmortgagee tm
@@ -233,7 +235,13 @@ BEGIN
                             when interest_type = 'Loss Payee' then 'loss_payee'
                             when interest_type in ('Additional Insured - Contents','Additional Insured - Individual','Additional Insured - Limited Liability') then 'additional_insured'
                         else 'Other'
-                        end as [role],isnull(loss_payee_nm,additional_interest_nm) as [name],
+                        end as [role],
+                        case
+                            when interest_type = 'Loss Payee' and entity_type = 'Individual' then CONCAT_WS(' ',first_nm,last_nm)
+                            when interest_type = 'Loss Payee' then loss_payee_nm
+                            when entity_type = 'Individual' then CONCAT_WS(' ',first_nm,last_nm)
+                            else additional_interest_nm
+                        end as [name],
                     address_line_1 as address1,address_line_2 as address2,city_nm as city,zip_cd as postalCode,state_cd as region,country_nm as country
                     from edw_core.tadditional_interest tadi
                     where
@@ -242,7 +250,7 @@ BEGIN
                         and tadi.transaction_seq_no = cpsa.transaction_seq_no
                 ) as temp
                     
-                for json path, include_null_values, without_array_wrapper
+                for json path, include_null_values
             )) as [businesses],
             ((
 
@@ -334,7 +342,15 @@ BEGIN
                                         edw_temp.policy_webhook_home_coverages a
                                     where
                                     a.policy_history_sk = tph.policy_history_sk
-                                    and [limits.amount] is not null
+									and a.coverage_type in ('Limit','Indicator')
+                                    and
+										(
+											[limits.amount] is not null or 
+											(
+												coverage_type = 'Indicator'
+												and  [limits.amount] ='Yes'
+											)
+										)
                                         /*(
                                         deductible_type != ''
                                         or (deductible_type = '' and [limits.amount] is not null)
@@ -353,13 +369,31 @@ BEGIN
                                     null as [limits.deductible]
                                     */
                                 FROM
-                                    edw_temp.policy_webhook_home_coverages a
-                                    inner join edw_core.tcollection_coverage as tcc on tcc.policy_history_sk = a.policy_history_sk
-                                    inner join edw_core.tcollection_class_type tct on tct.collection_coverage_sk = tcc.collection_coverage_sk
+									edw_core.tcollection_class_type tct
                                 where
-                                    a.policy_history_sk = tph.policy_history_sk
-                                    and [limits.amount] is not null
-                                group by tcc.policy_history_sk
+                                    tct.policy_history_sk = tph.policy_history_sk
+                                    and [scheduled_limit_amt] is not null
+                                group by tct.policy_history_sk
+
+								UNION
+
+                                SELECT
+                                    'HO Collections - Blanket' as [name],
+                                    'HCOBL' as [coverageCode],
+                                    null as [limits.amount],
+                                    null as [limits.deductible]
+                                    /*
+                                    sum(blanket_limit_amt) as [coverage.limits.amount],
+                                    null as [limits.coverageLimitType],
+                                    null as [limits.deductible]
+                                    */
+                                FROM
+									edw_core.tcollection_class_type tct
+                                where
+                                    tct.policy_history_sk = tph.policy_history_sk
+                                    and blanket_limit_amt is not null
+                                group by tct.policy_history_sk
+
                             ) as a	for json path, include_null_values
                         )
                         ) as coverages
@@ -416,7 +450,7 @@ BEGIN
                     select
                         prefix as [prefix], first_nm as [firstName], middle_nm as [middleName], last_nm as [lastName],
                         suffix as [suffix], null as [dateOfBirth], gender as [gender],license_country_nm as [licenseIssuingCountry],
-                        license_no as [licenseNumber]
+                        license_no as [LicenseNumber]
                     from
                         edw_core.tauto_driver tad
                     where
@@ -442,7 +476,15 @@ BEGIN
                             where
                                 a.auto_vehicle_sk = tav.auto_vehicle_sk
                                 and a.policy_history_sk = tph.policy_history_sk
-                                and [limits.amount] is not null
+								--and a.coverage_type in ('Limit','Indicator')
+								and
+								(
+									[limits.amount] is not null or 
+									(
+										a.coverage_type = 'Indicator'
+										and  [limits.amount] ='Yes'
+									)
+								)
                             for json path, include_null_values
                         )
                     ) as coverages
@@ -493,10 +535,10 @@ BEGIN
                 tpv.vehicle_vin as [vehicle.vinNumber],
                 tpv.vehicle_model as [vehicle.year],
                 json_query((
-                    select                        
-                        prefix as [prefix], first_nm as [firstName], middle_nm as [middleName], last_nm as [lastName],
-                        suffix as [suffix], null as [dateOfBirth], null as [gender],license_country_nm as [licenseIssuingCountry],
-                        license_no as [licenseNumber]
+                    select
+                        prefix as  [Prefix], first_nm as [FirstName], middle_nm as [MiddleName], last_nm as [LastName],
+                        suffix as [Suffix],null as [Birthdate], license_country_nm as [LicenseCountry],
+                        license_no as [LicenseNumber]
                     from
                         edw_core.tpel_driver tpd
                     where
@@ -528,6 +570,7 @@ BEGIN
                         edw_temp.policy_webhook_pel_coverages a
                     where
                         a.policy_history_sk = tph.policy_history_sk
+						--and a.coverage_type in ('Limit','Indicator')
                         and [limits.amount] is not null
                     for json path, include_null_values
                     )
@@ -577,7 +620,7 @@ BEGIN
                             select
                             case coverageCode
                                 when 'COBL' then 'Collections - Blanket Limit'
-                                when 'COSC' then 'Collections - Scheduled'
+                 when 'COSC' then 'Collections - Scheduled'
                             end as [name],
                             coverageCode,
                             null as [limits.amount],
@@ -599,11 +642,10 @@ BEGIN
                                    100 as COBL,
                                    100 as COSC
                                 FROM
-                                    edw_core.tcollection_coverage as tcc
-                                    inner join edw_core.tcollection_class_type tct on tct.collection_coverage_sk = tcc.collection_coverage_sk
+                                    edw_core.tcollection_class_type tct
                                 WHERE
-                                    tcc.policy_history_sk = tph.policy_history_sk
-                                group by tcc.policy_history_sk							
+                                    tct.policy_history_sk = tph.policy_history_sk
+                                group by tct.policy_history_sk							
                             ) as sourcetable
                         unpivot
                         (
@@ -660,30 +702,55 @@ BEGIN
                                         edw_temp.policy_webhook_home_coverages a
                                     where
                                     a.policy_history_sk = tph.policy_history_sk
-                                    and  [limits.amount] is not null
+									and coverage_type in ('Limit','Indicator')
+                                   	and
+									(
+										[limits.amount] is not null or 
+										(
+											coverage_type = 'Indicator'
+											and  [limits.amount] ='Yes'
+										)
+									)
                                     /*(
                                         deductible_type != ''
                                         or (deductible_type = '' and [coverage.limits.amount] is not null)
                                     )*/
                                 union
-                                SELECT
+                               SELECT
                                     'HO Collections - Scheduled' as [name],
                                     'HCOSC' as [coverageCode],
                                     null as [limits.amount],
                                     null as [limits.deductible]
                                     /*
                                     sum(scheduled_limit_amt) as [coverage.limits.amount],
-                                    null as [coverage.limits.coverageLimitType],
-                                    null as [coverage.limits.deductible]
+                                    null as [limits.coverageLimitType],
+                                    null as [limits.deductible]
                                     */
                                 FROM
-                                    edw_temp.policy_webhook_home_coverages a
-                                    inner join edw_core.tcollection_coverage as tcc on tcc.policy_history_sk = a.policy_history_sk
-                                    inner join edw_core.tcollection_class_type tct on tct.collection_coverage_sk = tcc.collection_coverage_sk
+									edw_core.tcollection_class_type tct
                                 where
-                                    a.policy_history_sk = tph.policy_history_sk
-                                    and [limits.amount] is not null
-                                group by tcc.policy_history_sk
+                                    tct.policy_history_sk = tph.policy_history_sk
+                                    and [scheduled_limit_amt] is not null
+                                group by tct.policy_history_sk
+
+								UNION
+
+                                SELECT
+                                    'HO Collections - Blanket' as [name],
+                                    'HCOBL' as [coverageCode],
+                                    null as [limits.amount],
+                                    null as [limits.deductible]
+                                    /*
+                                    sum(blanket_limit_amt) as [coverage.limits.amount],
+                                    null as [limits.coverageLimitType],
+                                    null as [limits.deductible]
+                                    */
+                                FROM
+									edw_core.tcollection_class_type tct
+                                where
+                                    tct.policy_history_sk = tph.policy_history_sk
+                                    and blanket_limit_amt is not null
+                                group by tct.policy_history_sk
                             ) as a	for json path, include_null_values
                         )
                         )
@@ -704,7 +771,15 @@ BEGIN
                                 edw_temp.policy_webhook_auto_coverages a
                             where
                                 a.policy_history_sk = tph.policy_history_sk
-                                and  [limits.amount] is not null
+								--and coverage_type in ('Limit','Indicator')
+								and
+								(
+									[limits.amount] is not null or 
+									(
+										coverage_type = 'Indicator'
+										and  [limits.amount] ='Yes'
+									)
+								)
                             for json path, include_null_values
                         )
                     )
@@ -717,7 +792,7 @@ BEGIN
                             [coverageCode],
                             null as [limits.amount],
                             null as [limits.deductible]
-                            /*
+/*
                             case
                                 when coverage_type = 'Limit' then 
                                     [coverage.limits.amount]
@@ -732,7 +807,8 @@ BEGIN
                             edw_temp.policy_webhook_pel_coverages a
                         where
                             a.policy_history_sk = tph.policy_history_sk
-                            and  [limits.amount] is not null
+							--and coverage_type in ('Limit','Indicator')
+                            and [limits.amount] is not null
                         for json path, include_null_values
                         )
                     )
@@ -800,7 +876,9 @@ BEGIN
                 edw_temp.policy_webhook_home_coverages a
             WHERE
                 deductible_type != ''
-                and [limits.amount] is not null		
+                and [limits.amount] is not null
+                and a.policy_history_sk = tph.policy_history_sk
+                and isnull([limits.amount],'0')!= '0'
             for json path, include_null_values
             )
             )
@@ -814,7 +892,7 @@ BEGIN
         left join edw_core.tpolicy_history tph on tph.policy_sk = tp.policy_sk and tph.transaction_seq_no = cpsa.transaction_seq_no
         left join edw_core.tproduct prd on prd.product_cd = tp.product_cd
         left join edw_core.tbroker tbrk on tp.broker_id = tbrk.broker_id
-        )
+	)
 
         select *,
         json_query
