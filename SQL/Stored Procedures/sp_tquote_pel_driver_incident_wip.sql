@@ -68,7 +68,7 @@ BEGIN
 				--and acc.[Stage] IN ('QUOTE','POLICY')
 				and p.[Name]='Personal Excess Liability'
 				and pr.ProductLine = 'PersonalLines'
-				and acco.ObjectType='Watercraft'
+				and acco.ObjectType='ReportedIncidents'
 				and accof.Field IN 
 				(
 					'IncidentDate','IncidentType','IncidentDescription','IncludeInRate','Disputed'

@@ -58,7 +58,7 @@ BEGIN
 				act.[State] ='ISSUED'
 				and p.[Name]='Personal Excess Liability'
 				and pr.ProductLine = 'PersonalLines'
-				and atvo.ObjectType='Watercraft'
+				and atvo.ObjectType='ReportedIncidents'
 				and atvof.Field IN 
 				(
 					'IncidentDate','IncidentType','IncidentDescription','IncludeInRate','Disputed'
