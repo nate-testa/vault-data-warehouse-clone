@@ -7,6 +7,7 @@
 -- Change date			|Author							|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
 -- 10/24/2023 			Yunus Mohammed					1. Created this procedure 
+-- 11/06/2024			Alberto Almario					2. VI34964/AD7640 - Updated object type
 -- =========================================================================================================================== 
 create  or alter   PROCEDURE [edw_core].[sp_tquote_pel_driver_incident]
 
