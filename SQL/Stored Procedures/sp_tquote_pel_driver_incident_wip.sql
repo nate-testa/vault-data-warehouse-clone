@@ -7,6 +7,7 @@
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
 -- 05/14/2024 			Architha Gudimalla					3. Corrected errors
 -- 08/22/2024			Architha Gudimalla					4. Removed eff_dt from merge
+-- 11/06/2024			Alberto Almario						5. VI34964/AD7640 - Updated object type
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_pel_driver_incident_wip]
@@ -68,7 +69,7 @@ BEGIN
 				--and acc.[Stage] IN ('QUOTE','POLICY')
 				and p.[Name]='Personal Excess Liability'
 				and pr.ProductLine = 'PersonalLines'
-				and acco.ObjectType='Watercraft'
+				and acco.ObjectType='ReportedIncidents'
 				and accof.Field IN 
 				(
 					'IncidentDate','IncidentType','IncidentDescription','IncludeInRate','Disputed'

@@ -2,6 +2,10 @@
 -- Author:		Yunus Mohammed
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert pel driver incident data
+-----------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+-----------------------------------------------------------------------------------------------------------
+-- 11/06/24		Alberto Almario				1. VI34964/AD7640 - Updated object type
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_driver_incident]
 
@@ -58,7 +62,7 @@ BEGIN
 				act.[State] ='ISSUED'
 				and p.[Name]='Personal Excess Liability'
 				and pr.ProductLine = 'PersonalLines'
-				and atvo.ObjectType='Watercraft'
+				and atvo.ObjectType='ReportedIncidents'
 				and atvof.Field IN 
 				(
 					'IncidentDate','IncidentType','IncidentDescription','IncludeInRate','Disputed'
