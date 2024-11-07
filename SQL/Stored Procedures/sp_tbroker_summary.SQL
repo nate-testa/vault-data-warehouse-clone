@@ -8,7 +8,7 @@ GO
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the broker data for each month
 ---------------------------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author						|	Change Description 
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 -- 06/20/23		Architha Gudimalla				1. Created this procedure 
 -- 10/13/23		Architha Gudimalla				2. Added risk state
