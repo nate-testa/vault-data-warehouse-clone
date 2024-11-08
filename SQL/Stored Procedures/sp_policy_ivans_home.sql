@@ -233,6 +233,57 @@ BEGIN
 						AND pt.effective_dt_sk = ptf.effective_dt_sk
 						AND pt.transaction_seq_no = ptf.transaction_seq_no
 						AND LEN(TRIM(CAST(hc.other_structures_limit_amt as NVARCHAR(255)))) != 0
+					UNION ALL
+ 					SELECT DISTINCT
+						hc.policy_no as policyNumber
+						,'CONTENTS' as coverageCd
+						,'Contents' as coverageDesc
+						,0.0 as changeAmount
+						,0.0 as currentAmount
+						,CAST(hc.contents_limit_amt as NVARCHAR(255)) as [limit]
+						,'0.0' as deductible
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
+					INNER JOIN edw_core.thome_coverage as hc
+					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
+						AND NOT EXISTS (
+					        SELECT 1
+					        FROM edw_core.tpolicy_transaction pt_main
+					        LEFT JOIN edw_core.tinternal_coverage ic ON pt_main.internal_coverage_sk = ic.internal_coverage_sk
+					        LEFT JOIN edw_core.thome_coverage hc_main ON pt_main.coverage_sk = hc_main.home_coverage_sk
+					        WHERE pt_main.policy_sk = ptf.policy_sk
+					            AND pt_main.effective_dt_sk = ptf.effective_dt_sk
+					            AND pt_main.transaction_seq_no = ptf.transaction_seq_no
+					            AND ic.internal_coverage_cd = 'AOP'
+					            AND hc_main.residence_type = 'Condo/Co-op'
+				    	)
+					UNION ALL
+					SELECT DISTINCT
+						hc.policy_no as policyNumber
+						,'LOU' as coverageCd
+						,'Loss of Use' as coverageDesc
+						,0.0 as changeAmount
+						,0.0 as currentAmount
+						,CAST(hc.loss_of_use_limit_amt as NVARCHAR(255)) as [limit]
+						,'0.0' as deductible
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
+					INNER JOIN edw_core.thome_coverage as hc
+					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
+						AND NOT EXISTS (
+					        SELECT 1
+					        FROM edw_core.tpolicy_transaction pt_main
+					        LEFT JOIN edw_core.tinternal_coverage ic ON pt_main.internal_coverage_sk = ic.internal_coverage_sk
+					        LEFT JOIN edw_core.thome_coverage hc_main ON pt_main.coverage_sk = hc_main.home_coverage_sk
+					        WHERE pt_main.policy_sk = ptf.policy_sk
+					            AND pt_main.effective_dt_sk = ptf.effective_dt_sk
+					            AND pt_main.transaction_seq_no = ptf.transaction_seq_no
+					            AND ic.internal_coverage_cd = 'Loss of Use'
+						)
 				) jd FOR JSON PATH, INCLUDE_NULL_VALUES
 			) AS Home_Coverages
 			FROM [edw_temp].[policy_ivans_home_temp1] as ptf
