@@ -60,9 +60,6 @@ GO
 --													any policy that has a renewal quote offered is termed as renewal offered
 -- ================================================================================================================================================== 
 
-
-  
-
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
 @in_end_dt date = null
 AS 
