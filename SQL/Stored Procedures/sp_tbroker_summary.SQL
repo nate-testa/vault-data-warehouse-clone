@@ -46,6 +46,18 @@ GO
 -- 10/13/24		Architha Gudimalla				30. Updated logic for policy_renewal_offered_ct
 -- 10/13/24		Architha Gudimalla				30. Updated logic for policy_renewal_offered_over_50k_ct
 -- 11/07/24		Architha Gudimalla				31. AD7643 | Updated retention logic, used mtd values for existing cols and added new ytd cols
+--
+--													Discussed with tyler, went over the calculations for retention % and retention prm % between brk and ren summ
+--													ret from brk summ -- sum(policy_renewal_accepted_ct)/sum(policy_renewal_ct) 
+--													ret from ren summ -- sum(renewal_non_flat_cancelled_ct)/sum(renewal_ct)
+--													prm ret from brk summ --  sum(policy_renewal_premium_amt)/sum(policy_renewal_offered_expiring_premium_amt) 
+--													prm ret from ren summ --  sum(renewal_sixty_day_written_premium_amt (where renewal_non_flat_cancelled_ct = 1))
+--                                                                           /sum(expiring_written_premium_amt (where renewal_ct = 1)
+--
+--													any policy that is expiring and not flat cancelled, is termed as expring 
+--													any policy that is renewed, whether or not it is cancelled, is termed as renewed
+--													any renewal that is not flat cancelled is termed as renewal accepted
+--													any policy that has a renewal quote offered is termed as renewal offered
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -360,7 +372,8 @@ BEGIN
 					select 	r.month_sk,
 							r.broker_sk, r.product_sk, r.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco, 
-						   	sum(r.renewal_non_flat_cancelled_ct) renewal_ct,  
+						   	sum(r.renewal_non_flat_cancelled_ct) renewal_accepted_ct,  
+							sum(r.renewal_ct) renewal_ct,  
 							sum(case when renewal_policy_sk > 0 
 									or (renewal_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_offered_quote_history_sk IS NOT NULL ) 
 									or (renewal_quote_sk > 0 and q.quote_status in ('Issued','Offered','Not taken') ) 
@@ -377,7 +390,8 @@ BEGIN
 							sum(case when renewal_ct > 0 then r.expiring_written_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,
 							sum(r.non_flat_cancelled_ct-r.mid_term_cancelled_ct) expiring_ct,
 							sum(isnull(r.expiring_sixty_day_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) ) expiring_prm,
-							sum(isnull(r.renewal_sixty_day_written_premium_amt,0)) renewal_prm
+							sum(case when r.renewal_non_flat_cancelled_ct = 1 then isnull(r.renewal_sixty_day_written_premium_amt,0) else 0 end) renewal_prm
+
 					from edw_core.trenewal_summary r 
 					inner join edw_core.tpolicy pol on r.policy_sk = pol.policy_sk 
 					inner join edw_core.tstate st  on pol.risk_state_cd = st.state_cd
@@ -389,23 +403,25 @@ BEGIN
 				)
 				select broker_sk,product_sk, customer_sk, uwco, state_sk,
 						--  
-						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then renewal_ct 									else 0 end) renewal_ct,  
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then renewal_accepted_ct 						else 0 end) policy_renewal_accepted_ct,  
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then renewal_ct 									else 0 end) policy_renewal_ct,  
 						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_ct 					else 0 end) policy_renewal_offered_ct,  
 						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_over_50k_ct 			else 0 end) policy_renewal_offered_over_50k_ct,   
 						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_premium_amt 			else 0 end) policy_renewal_offered_premium_amt,  
 						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_expiring_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,   
-						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then expiring_ct 								else 0 end) expiring_ct,
-						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then renewal_prm 								else 0 end) renewal_prm,   
-						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then expiring_prm 								else 0 end) expiring_prm  ,
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then expiring_ct 								else 0 end) policy_expiring_ct,
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then renewal_prm 								else 0 end) policy_renewal_prm,   
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then expiring_prm 								else 0 end) policy_expiring_prm  ,
 						--  
-						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_ct 								   else 0 end) ytd_renewal_ct,  
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_accepted_ct 						   else 0 end) ytd_policy_renewal_accepted_ct,  
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_ct 								   else 0 end) ytd_policy_renewal_ct,  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_ct 				   else 0 end) ytd_policy_renewal_offered_ct,  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_over_50k_ct 		   else 0 end) ytd_policy_renewal_offered_over_50k_ct,   
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_premium_amt 		   else 0 end) ytd_policy_renewal_offered_premium_amt,  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_expiring_premium_amt else 0 end) ytd_policy_renewal_offered_expiring_premium_amt,   
-						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_ct 								   else 0 end) ytd_expiring_ct,
-						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_prm 								   else 0 end) ytd_renewal_prm,   
-						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_prm 							   else 0 end) ytd_expiring_prm 
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_ct 								   else 0 end) ytd_policy_expiring_ct,
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_prm 								   else 0 end) ytd_policy_renewal_prm,   
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_prm 							   else 0 end) ytd_policy_expiring_prm 
 				into edw_temp.tbroker_summ_retention
 				from ren
 				group by broker_sk,product_sk, customer_sk, uwco, state_sk;
@@ -920,6 +936,7 @@ BEGIN
 						five_year_non_cat_loss_incurred_amt,  
 						--
 						policy_expiring_ct,
+						policy_renewal_accepted_ct,
 						policy_renewal_ct,
 						policy_renewal_offered_ct,
 						policy_renewal_offered_over_50k_ct,
@@ -929,6 +946,7 @@ BEGIN
 						policy_renewal_premium_amt, 
 						--
 						ytd_policy_expiring_ct,
+						ytd_policy_renewal_accepted_ct,
 						ytd_policy_renewal_ct,
 						ytd_policy_renewal_offered_ct,
 						ytd_policy_renewal_offered_over_50k_ct,
@@ -1054,23 +1072,25 @@ BEGIN
 						sum(summ.five_year_non_cat_claim_ct), 
 						sum(summ.five_year_non_cat_loss_incurred_amt),  
 						--
-						sum(isnull(r.expiring_ct								,0)) policy_expiring_ct,
-						sum(isnull(r.renewal_ct									,0)) policy_renewal_ct,
+						sum(isnull(r.policy_expiring_ct							,0)) policy_expiring_ct,
+						sum(isnull(r.policy_renewal_accepted_ct					,0)) policy_renewal_accepted_ct,
+						sum(isnull(r.policy_renewal_ct							,0)) policy_renewal_ct,
 						sum(isnull(r.policy_renewal_offered_ct					,0)) policy_renewal_offered_ct,
 						sum(isnull(r.policy_renewal_offered_over_50k_ct			,0)) policy_renewal_offered_over_50k_ct, 
 						sum(isnull(r.policy_renewal_offered_premium_amt			,0)) policy_renewal_offered_premium_amt,
 						sum(isnull(r.policy_renewal_offered_expiring_premium_amt,0)) policy_renewal_offered_expiring_premium_amt, 
-						sum(isnull(r.expiring_prm								,0)) policy_expiring_premium_amt,
-						sum(isnull(r.renewal_prm								,0)) policy_renewal_premium_amt,
+						sum(isnull(r.policy_expiring_prm						,0)) policy_expiring_premium_amt,
+						sum(isnull(r.policy_renewal_prm							,0)) policy_renewal_premium_amt,
 						--
-						sum(isnull(r.ytd_expiring_ct								,0)) ytd_policy_expiring_ct,
-						sum(isnull(r.ytd_renewal_ct									,0)) ytd_policy_renewal_ct,
+						sum(isnull(r.ytd_policy_expiring_ct							,0)) ytd_policy_expiring_ct,
+						sum(isnull(r.ytd_policy_renewal_accepted_ct					,0)) ytd_policy_renewal_accepted_ct,
+						sum(isnull(r.ytd_policy_renewal_ct							,0)) ytd_policy_renewal_ct,
 						sum(isnull(r.ytd_policy_renewal_offered_ct					,0)) ytd_policy_renewal_offered_ct,
 						sum(isnull(r.ytd_policy_renewal_offered_over_50k_ct			,0)) ytd_policy_renewal_offered_over_50k_ct, 
 						sum(isnull(r.ytd_policy_renewal_offered_premium_amt			,0)) ytd_policy_renewal_offered_premium_amt,
 						sum(isnull(r.ytd_policy_renewal_offered_expiring_premium_amt,0)) ytd_policy_renewal_offered_expiring_premium_amt, 
-						sum(isnull(r.ytd_expiring_prm								,0)) ytd_policy_expiring_premium_amt,
-						sum(isnull(r.ytd_renewal_prm								,0)) ytd_policy_renewal_premium_amt,
+						sum(isnull(r.ytd_policy_expiring_prm						,0)) ytd_policy_expiring_premium_amt,
+						sum(isnull(r.ytd_policy_renewal_prm							,0)) ytd_policy_renewal_premium_amt,
 						--
 						max(summ.update_ts), max(summ.etl_audit_sk),
 						--
