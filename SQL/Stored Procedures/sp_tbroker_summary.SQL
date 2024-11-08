@@ -46,7 +46,22 @@ GO
 -- 10/13/24		Architha Gudimalla				30. Updated logic for policy_renewal_offered_ct
 -- 10/13/24		Architha Gudimalla				30. Updated logic for policy_renewal_offered_over_50k_ct
 -- 11/07/24		Architha Gudimalla				31. AD7643 | Updated retention logic, used mtd values for existing cols and added new ytd cols
+--
+--													Discussed with tyler, went over the calculations for retention % and retention prm % between brk and ren summ
+--													ret from brk summ -- sum(policy_renewal_accepted_ct)/sum(policy_renewal_ct) 
+--													ret from ren summ -- sum(renewal_non_flat_cancelled_ct)/sum(renewal_ct)
+--													prm ret from brk summ --  sum(policy_renewal_premium_amt)/sum(policy_renewal_offered_expiring_premium_amt) 
+--													prm ret from ren summ --  sum(renewal_sixty_day_written_premium_amt (where renewal_non_flat_cancelled_ct = 1))
+--                                                                           /sum(expiring_written_premium_amt (where renewal_ct = 1)
+--
+--													any policy that is expiring and not flat cancelled, is termed as expring 
+--													any policy that is renewed, whether or not it is cancelled, is termed as renewed
+--													any renewal that is not flat cancelled is termed as renewal accepted
+--													any policy that has a renewal quote offered is termed as renewal offered
 -- ================================================================================================================================================== 
+
+
+  
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
 @in_end_dt date = null
