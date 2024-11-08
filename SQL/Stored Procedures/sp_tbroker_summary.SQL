@@ -389,14 +389,14 @@ BEGIN
 				)
 				select broker_sk,product_sk, customer_sk, uwco, state_sk,
 						--  
-						sum(case when month_sk between @month_begin_dt and @month_end_dt_sk then renewal_ct 									else 0 end) renewal_ct,  
-						sum(case when month_sk between @month_begin_dt and @month_end_dt_sk then policy_renewal_offered_ct 						else 0 end) policy_renewal_offered_ct,  
-						sum(case when month_sk between @month_begin_dt and @month_end_dt_sk then policy_renewal_offered_over_50k_ct 			else 0 end) policy_renewal_offered_over_50k_ct,   
-						sum(case when month_sk between @month_begin_dt and @month_end_dt_sk then policy_renewal_offered_premium_amt 			else 0 end) policy_renewal_offered_premium_amt,  
-						sum(case when month_sk between @month_begin_dt and @month_end_dt_sk then policy_renewal_offered_expiring_premium_amt 	else 0 end) policy_renewal_offered_expiring_premium_amt,   
-						sum(case when month_sk between @month_begin_dt and @month_end_dt_sk then expiring_ct 									else 0 end) expiring_ct,
-						sum(case when month_sk between @month_begin_dt and @month_end_dt_sk then renewal_prm 									else 0 end) renewal_prm,   
-						sum(case when month_sk between @month_begin_dt and @month_end_dt_sk then expiring_prm 									else 0 end) expiring_prm  ,
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then renewal_ct 									else 0 end) renewal_ct,  
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_ct 					else 0 end) policy_renewal_offered_ct,  
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_over_50k_ct 			else 0 end) policy_renewal_offered_over_50k_ct,   
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_premium_amt 			else 0 end) policy_renewal_offered_premium_amt,  
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_expiring_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,   
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then expiring_ct 								else 0 end) expiring_ct,
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then renewal_prm 								else 0 end) renewal_prm,   
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then expiring_prm 								else 0 end) expiring_prm  ,
 						--  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_ct 								   else 0 end) ytd_renewal_ct,  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_ct 				   else 0 end) ytd_policy_renewal_offered_ct,  
