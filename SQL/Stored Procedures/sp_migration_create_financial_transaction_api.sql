@@ -143,12 +143,11 @@
             CAST(exposureReferenceNumber AS VARCHAR(255)) AS exposure_id,
             resh.outstanding_amount AS reserve_amt,
             'unspecified' AS cost_category,
-            -- LOWER(ext.snapsheet_exposure_type) +
-            --     CASE
-            --         WHEN resh.RESERVE_TYPE IN ('RC_01', 'RC_04', 'RC_05') THEN '_claim'
-            --         WHEN resh.RESERVE_TYPE IN ('RC_02', 'RC_03', 'RC_05', 'RC_06') THEN '_adjusting'
-            --     END AS cost_type,
-            et.exposureType AS cost_type,
+            LOWER(et.exposureType) +
+                CASE
+                    WHEN resh.RESERVE_TYPE IN ('RC_01', 'RC_04', 'RC_05') THEN '_claim'
+                    WHEN resh.RESERVE_TYPE IN ('RC_02', 'RC_03', 'RC_05', 'RC_06') THEN '_adjusting'
+                END AS cost_type,
             CASE
                 WHEN resh.reserve_type IN ('RC_01', 'RC_02') AND settle.claim_type = 'LOS' AND settle_changed > 0 THEN settle_changed
                 ELSE 0
@@ -165,7 +164,10 @@
             'phone' AS [payee_contact_type],
             'Farhad.Imam@Vault.Insurance' AS [payee_email],
             p.claimPartyReferenceNumber AS PAYEE_ID,
-            'claim_party' AS payee_type,
+            CASE 
+                WHEN party_role.ROLE_CODE in (02,03,05,06,08,10,15,16,19,21,22,23) THEN 'vendor' 
+                ELSE 'claim_party' 
+            END AS payee_type,
             'standard' AS [data.attributes.shipping_option],
             party.PARTY_NAME AS [name],
             tpa.ADDRESS_LINE_1 AS [address1],
@@ -195,6 +197,7 @@
         LEFT JOIN edw_stage.t_clm_settle_payee settle_payee ON settle_payee.settle_payee_id = settle_item.settle_payee_id
         LEFT JOIN edw_stage.t_clm_settle settle ON settle.settle_id = settle_payee.settle_id
         LEFT JOIN edw_stage.t_clm_party party ON party.PARTY_ID = settle_payee.PAYEE_ID
+        LEFT JOIN edw_stage.t_clm_party_role party_role on party_role.ROLE_CODE = party.PARTY_ROLE 
         LEFT JOIN edw_stage.t_int_address tia ON tia.source_id = c.case_id
         LEFT JOIN edw_stage.t_pub_address tpa ON tia.T_ADDRESS_ID = tpa.ADDRESS_ID
         LEFT JOIN [edw_temp].[migration_create_financial_transaction_api_temp2] p 
@@ -210,7 +213,11 @@
         -- *** Create temp table to prepare the final JSON data column *** --
         ---------------------------------------------------------------------
         SELECT
+            HIS_ID,
             claimNumber AS claim_no,
+            [data.attributes.remote_identifier],
+            cost_type,
+            CAST(reserve_amt AS VARCHAR(255)) AS amount,
             CASE 
                 -- Payment Section --
                 WHEN paid_amt != 0 THEN 
