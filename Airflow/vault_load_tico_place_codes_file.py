@@ -155,5 +155,5 @@ with DAG(
         task_id='end',
     )
 
-start >> download_tico_file >> load_tico_file >> send_tico_email >> end
+start >> py_download_tico_file >> py_load_tico_file >> send_tico_email >> end
 
