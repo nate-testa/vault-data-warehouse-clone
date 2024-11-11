@@ -21,6 +21,7 @@
 -- 10/25/24		        Archtha Gudimalla			13. Added isnull to tb.broker_nm not like '%test%'
 -- 10/26/24		        Archtha Gudimalla			14. Updated tbroker_vault_team logic
 -- 11/07/24		        Archtha Gudimalla			15. AZ7643 - Updated retention logic to match with what's in broker summary
+-- 11/11/24		        Archtha Gudimalla			16. AZ7643 - Updated retention to rolling 12 month instead of YTD
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -82,8 +83,8 @@ BEGIN
                 sum(case when td.yearmonth = @var_end_mn then tbs.ytd_submission_ct						else 0 end) as ytd_submission_ct,
                 sum(case when td.yearmonth = @var_end_mn then tbs.last30_days_submission_ct				else 0 end) as last30_days_submission_ct,
                 --
-                sum(case when td.yearmonth = @var_end_mn then tbs.ytd_policy_renewal_accepted_ct		else 0 end) as ytd_policy_renewal_accepted_ct,
-                sum(case when td.yearmonth = @var_end_mn then tbs.ytd_policy_renewal_ct				    else 0 end) as ytd_policy_renewal_ct,
+                --sum(case when td.yearmonth = @var_end_mn then tbs.ytd_policy_renewal_accepted_ct		else 0 end) as ytd_policy_renewal_accepted_ct,
+                --sum(case when td.yearmonth = @var_end_mn then tbs.ytd_policy_renewal_ct				    else 0 end) as ytd_policy_renewal_ct,
                 sum(case when td.yearmonth = @var_end_mn then tbs.ytd_policy_renewal_offered_ct			else 0 end) as ytd_offered_renewal_ct,
                 sum(case when td.yearmonth = @var_end_mn then tbs.ytd_policy_renewal_offered_over_50k_ct else 0 end) as ytd_offered_renewal_over50k_ct,
                 --
@@ -91,9 +92,11 @@ BEGIN
                 sum(case when td.yearmonth = @var_end_mn then tbs.inforce_net_premium_amt				else 0 end) as inforce_premium_amt,
                 sum(case when td.yearmonth = @var_end_mn then tbs.ytd_new_business_ct					else 0 end) as ytd_new_business_ct,
                 sum(case when td.yearmonth = @var_end_mn then tbs.ytd_quote_ct							else 0 end) as ytd_quote_ct,
-                sum(case when td.yearmonth = @var_end_mn then tbs.ytd_new_business_net_premium_amt		else 0 end) as ytd_new_business_net_premium_amt
-                --,sum(tbs.policy_expiring_ct) ytd_policy_expiring_ct,
-                --sum(tbs.policy_renewal_ct) ytd_policy_renewal_ct
+                sum(case when td.yearmonth = @var_end_mn then tbs.ytd_new_business_net_premium_amt		else 0 end) as ytd_new_business_net_premium_amt,
+                --
+                sum(case when tbs.policy_renewal_accepted_ct is not null then tbs.policy_renewal_accepted_ct else 0 end) rolling_12_policy_renewal_accepted_ct,
+                sum(case when tbs.policy_renewal_ct          is not null then tbs.policy_renewal_ct          else 0 end) rolling_12_policy_renewal_ct
+                --
             FROM edw_core.tbroker_summary tbs
 			inner join edw_core.tdate td on td.date_sk = tbs.month_sk
             where td.yearmonth >= @var_start_mn
@@ -180,7 +183,7 @@ BEGIN
         null as target_ytd_nb_premium_pc,
         null as target_ytd_renewal_retention_pc
         ,ytd_new_business_net_premium_amt as ytd_nb_premium_amt
-        ,case when ytd_policy_renewal_ct > 0 then round(100*cast(ytd_policy_renewal_accepted_ct as float)/ytd_policy_renewal_ct,2) else null end ytd_renewal_retention_pc
+        ,case when rolling_12_policy_renewal_ct > 0 then round(100*cast(rolling_12_policy_renewal_accepted_ct as float)/rolling_12_policy_renewal_ct,2) else null end ytd_renewal_retention_pc
         into edw_temp.broker_hubspot_feed_temp1
         FROM edw_core.tbroker tb
         left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
