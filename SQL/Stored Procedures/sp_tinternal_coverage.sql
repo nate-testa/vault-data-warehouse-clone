@@ -83,7 +83,7 @@ BEGIN
 				case when pr.ProductCode = 'LUX' then '090'
 					 when pr.ProductCode in ('HO','CO') then '040'
 					 when pr.ProductCode = 'AU' and nullif(trim(accttf.name),'') = 'Clean Risk Loss Recoupment' then '192'
-					 when pr.ProductCode = 'AU' then '211'
+					 when pr.ProductCode = 'AU' and nullif(trim(accttf.name),'') != 'Clean Risk Loss Recoupment' then '211'
 					 when pr.ProductCode = 'PEL' then '171'
 					 else null
 				end aslob,
