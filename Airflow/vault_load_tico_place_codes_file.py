@@ -83,6 +83,9 @@ def load_file_into_tbl():
         # Load file into a DataFrame
         df = pd.read_csv(file_path)
 
+        # Delete 'Unnamed' columns
+        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+
         # Add new columns
         df['create_ts'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
