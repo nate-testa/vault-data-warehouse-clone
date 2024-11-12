@@ -38,6 +38,7 @@
         DROP TABLE IF EXISTS [edw_temp].[migration_create_financial_transaction_api_temp3];
         DROP TABLE IF EXISTS [edw_temp].[migration_create_financial_transaction_api_temp4];
         DROP TABLE IF EXISTS [edw_temp].[migration_create_financial_transaction_api_temp5];
+        DROP TABLE IF EXISTS [edw_temp].[migration_create_financial_transaction_api_temp6];
 
 
         ----------------------------------------------------------
@@ -97,6 +98,7 @@
             ) AS claimParties
         ;
 
+
         ------------------------------------------------------------------------------------------------------
         -- *** Create temp table using CROSS APPLY to extract original exposures data from JSON column. *** --
         ------------------------------------------------------------------------------------------------------
@@ -115,38 +117,117 @@
             ) AS original_exposures
         ;
 
+        
+        ---------------------------------------------------
+        -- *** Create temp table for clm_reserve_his *** --
+        ---------------------------------------------------
+        SELECT * 
+        INTO [edw_temp].[migration_create_financial_transaction_api_temp4]
+        FROM (
+            SELECT 
+                'Reserve_Amount' AS amount_type,
+                t.exposure_id,
+                t.claimNumber,
+                t.claimReferenceNumber,
+                t.exposureReferenceNumber,
+                t.source_table_update_ts,
+                i.item_id,
+                o.object_id,
+                c.case_id,
+                resh.his_id, 
+                resh.item_id as resh_item_id, 
+                resh.business_instance_id, 
+                resh.post_date, 
+                resh.reserve_type, 
+                resh.outstanding_amount, 
+                resh.outstanding_changed, 
+                resh.settle_amount, 
+                resh.settle_changed,
+                CASE
+                    WHEN resh.reserve_type IN ('RC_01', 'RC_02', 'RC_03') THEN 'indemnity'
+                    WHEN resh.reserve_type IN ('RC_04', 'RC_05', 'RC_06', 'RC_07') THEN 'recovery'
+                END AS financial_transaction_type, 
+                CASE
+                    WHEN resh.reserve_type IN ('RC_04', 'RC_07') THEN 'subrogation'
+                    WHEN resh.reserve_type IN ('RC_05', 'RC_06') THEN 'salvage'
+                END AS reserve_method
+            FROM [edw_temp].[migration_create_financial_transaction_api_temp1] t
+            LEFT JOIN edw_stage.t_clm_item i ON t.exposure_id = i.item_id
+            LEFT JOIN edw_stage.t_clm_object o ON i.object_id = o.object_id
+            LEFT JOIN edw_stage.t_clm_case c ON o.case_id = c.case_id
+            LEFT JOIN edw_stage.t_clm_reserve_his resh ON resh.item_id = i.item_id
+            UNION ALL
+            SELECT 
+                'Payment_Amount' AS amount_type,
+                t.exposure_id,
+                t.claimNumber,
+                t.claimReferenceNumber,
+                t.exposureReferenceNumber,
+                t.source_table_update_ts,
+                i.item_id,
+                o.object_id,
+                c.case_id,
+                resh.his_id, 
+                resh.item_id as resh_item_id, 
+                resh.business_instance_id, 
+                resh.post_date, 
+                resh.reserve_type, 
+                resh.outstanding_amount, 
+                resh.outstanding_changed, 
+                resh.settle_amount, 
+                resh.settle_changed,
+                CASE
+                    WHEN resh.reserve_type IN ('RC_01', 'RC_02', 'RC_03') THEN 'indemnity'
+                    WHEN resh.reserve_type IN ('RC_04', 'RC_05', 'RC_06', 'RC_07') THEN 'recovery'
+                END AS financial_transaction_type,
+                CASE
+                    WHEN resh.reserve_type IN ('RC_04', 'RC_07') THEN 'subrogation'
+                    WHEN resh.reserve_type IN ('RC_05', 'RC_06') THEN 'salvage'
+                END AS reserve_method
+            FROM [edw_temp].[migration_create_financial_transaction_api_temp1] t
+            LEFT JOIN edw_stage.t_clm_item i ON t.exposure_id = i.item_id
+            LEFT JOIN edw_stage.t_clm_object o ON i.object_id = o.object_id
+            LEFT JOIN edw_stage.t_clm_case c ON o.case_id = c.case_id
+            LEFT JOIN edw_stage.t_clm_reserve_his resh ON resh.item_id = i.item_id
+            WHERE resh.outstanding_changed < 0
+            -- WHERE rest.settle_amount > 0 -- Option 2
+        ) tbl
+        ;
+
+
 
         ---------------------------------------------------------------------
         -- *** Create temp table to extract info from edw_state tables *** --
         ---------------------------------------------------------------------
         SELECT
-            t.claimNumber,
-            t.claimReferenceNumber,
-            t.source_table_update_ts,
+            resh.amount_type,
+            resh.claimNumber,
+            resh.claimReferenceNumber,
+            resh.source_table_update_ts,
             resh.his_id,
+            resh.outstanding_amount,
+            resh.outstanding_changed,
+            resh.settle_amount,
+            resh.settle_changed,
             'financial_transaction' AS [data.type],
             CASE
                 WHEN cp.organ_id = 1000000000002 THEN 'vault_reciprocal_exchange'
                 WHEN cp.organ_id = 1000000000001 THEN 'vault_es_insurance_company'
                 ELSE ''
             END AS [data.attributes.accountCode],
-            -- CAST(resh.his_id AS VARCHAR(255)) AS [data.attributes.original_transaction_id],
             null as [data.attributes.original_transaction_id],
             resh.post_date AS [data.attributes.originated_at],
-            CASE
-                WHEN resh.RESERVE_TYPE IN ('RC_01', 'RC_02', 'RC_03') THEN 'indemnity'
-                WHEN resh.RESERVE_TYPE IN ('RC_04', 'RC_05', 'RC_06', 'RC_07') THEN 'recovery'
-            END AS [data.attributes.financial_transaction_type],
-            resh.ITEM_ID AS [data.attributes.remote_identifier],
+            resh.financial_transaction_type AS [data.attributes.financial_transaction_type],
+            resh.item_id AS [data.attributes.remote_identifier],
             'check' AS [data.attributes.payment_method],
             CAST(1 AS BIT) AS [data.attributes.is_historical],
-            CAST(exposureReferenceNumber AS VARCHAR(255)) AS exposure_id,
+            CAST(resh.exposureReferenceNumber AS VARCHAR(255)) AS exposure_id,
             resh.outstanding_amount AS reserve_amt,
             'unspecified' AS cost_category,
             LOWER(et.exposureType) +
                 CASE
-                    WHEN resh.RESERVE_TYPE IN ('RC_01', 'RC_04', 'RC_05') THEN '_claim'
-                    WHEN resh.RESERVE_TYPE IN ('RC_02', 'RC_03', 'RC_05', 'RC_06') THEN '_adjusting'
+                    WHEN resh.reserve_type IN ('RC_01', 'RC_04', 'RC_05') THEN '_claim'
+                    WHEN resh.reserve_type IN ('RC_02', 'RC_03', 'RC_05', 'RC_06') THEN '_adjusting'
                 END AS cost_type,
             CASE
                 WHEN resh.reserve_type IN ('RC_01', 'RC_02') AND settle.claim_type = 'LOS' AND settle_changed > 0 THEN settle_changed
@@ -156,10 +237,7 @@
                 WHEN settle_item.pay_final = 4 THEN 'final'
                 ELSE 'partial'
             END AS payment_type,
-            CASE
-                WHEN resh.reserve_type IN ('RC_04', 'RC_07') THEN 'subrogation'
-                WHEN resh.reserve_type IN ('RC_05', 'RC_06') THEN 'salvage'
-            END AS reserve_method,
+            resh.reserve_method,
             '7272900434' AS [payee_phone_no],
             'phone' AS [payee_contact_type],
             'Farhad.Imam@Vault.Insurance' AS [payee_email],
@@ -175,22 +253,9 @@
             tpa.POST_CODE AS [postal_code],
             tpa.[STATE] AS [region],
             tpa.COUNTRY AS [country]
-        INTO [edw_temp].[migration_create_financial_transaction_api_temp4]
-        FROM [edw_temp].[migration_create_financial_transaction_api_temp1] t
-        LEFT JOIN edw_stage.t_clm_item i ON t.exposure_id = i.item_id
-        LEFT JOIN edw_stage.t_clm_object obj ON i.object_id = obj.object_id
-        LEFT JOIN edw_stage.t_clm_case c ON obj.CASE_ID = c.CASE_ID
-        LEFT JOIN edw_core.tproduct prd ON prd.ebao_product_cd = c.product_code
-        LEFT JOIN edw_stage.t_clm_policy cp ON c.case_id = cp.case_id
-        LEFT JOIN edw_stage.t_clm_subclaim_type sct ON obj.subclaim_type = sct.subclaim_type_code
-        LEFT JOIN edw_stage.migration_exposure_type_mapping ext 
-            ON ext.product_cd = prd.product_cd
-            AND ext.coverage_name = CAST(i.coverage_name AS VARCHAR(MAX))
-            AND ext.subclaim_type_name = CASE
-                WHEN CAST(i.coverage_name AS VARCHAR(MAX)) = 'Dwelling' THEN ''
-                ELSE CAST(sct.subclaim_type_name AS VARCHAR(MAX))
-            END
-        LEFT JOIN edw_stage.t_clm_reserve_his resh ON resh.ITEM_ID = i.ITEM_ID
+        INTO [edw_temp].[migration_create_financial_transaction_api_temp5]
+        FROM [edw_temp].[migration_create_financial_transaction_api_temp4] resh
+        LEFT JOIN edw_stage.t_clm_policy cp ON resh.case_id = cp.case_id
         LEFT JOIN edw_stage.t_clm_settle_item settle_item 
             ON resh.item_id = settle_item.item_id
             AND resh.business_instance_id = settle_item.settle_item_id
@@ -198,14 +263,14 @@
         LEFT JOIN edw_stage.t_clm_settle settle ON settle.settle_id = settle_payee.settle_id
         LEFT JOIN edw_stage.t_clm_party party ON party.PARTY_ID = settle_payee.PAYEE_ID
         LEFT JOIN edw_stage.t_clm_party_role party_role on party_role.ROLE_CODE = party.PARTY_ROLE 
-        LEFT JOIN edw_stage.t_int_address tia ON tia.source_id = c.case_id
+        LEFT JOIN edw_stage.t_int_address tia ON tia.source_id = resh.case_id
         LEFT JOIN edw_stage.t_pub_address tpa ON tia.T_ADDRESS_ID = tpa.ADDRESS_ID
         LEFT JOIN [edw_temp].[migration_create_financial_transaction_api_temp2] p 
             ON party.pty_PARTY_ID = p.externalReferenceNumber
         LEFT JOIN [edw_temp].[migration_create_financial_transaction_api_temp3] et
-            ON t.exposure_id = et.exposureId
-            AND t.claimNumber = et.claimNumber
-            AND T.claimReferenceNumber = et.claimReferenceNumber
+            ON resh.exposure_id = et.exposureId
+            AND resh.claimNumber = et.claimNumber
+            AND resh.claimReferenceNumber = et.claimReferenceNumber
         ;
 
 
@@ -217,25 +282,26 @@
             claimNumber AS claim_no,
             [data.attributes.remote_identifier],
             cost_type,
+            outstanding_amount,
+            outstanding_changed,
+            settle_amount,
+            settle_changed,
             CAST(reserve_amt AS VARCHAR(255)) AS amount,
-            CASE 
-                -- Payment Section --
-                WHEN paid_amt != 0 THEN 
+            CAST(paid_amt AS VARCHAR(255)) AS paid_amt,
+            amount_type,
+            CASE
+                -- Reserve Section - Remove Payment Information -- 
+                WHEN amount_type = 'Reserve_Amount' THEN 
                 (
                     SELECT
                         [data.type],
                         [data.attributes.accountCode],
                         [data.attributes.financial_transaction_type],
-                        [data.attributes.remote_identifier],
+                        CASE 
+                            WHEN paid_amt != 0 THEN NULL 
+                            ELSE [data.attributes.remote_identifier]
+                        END AS [data.attributes.remote_identifier],
                         [data.attributes.originated_at],
-                        [data.attributes.original_transaction_id],
-                        [data.attributes.is_historical],
-                        CASE 
-                            WHEN paid_amt != 0 THEN [data.attributes.payment_method]
-                        END AS [data.attributes.payment_method],
-                        CASE 
-                            WHEN paid_amt != 0 THEN [data.attributes.shipping_option]
-                        END AS [data.attributes.shipping_option],
                         ISNULL(
                             JSON_QUERY(
                                 (
@@ -251,6 +317,23 @@
                                 )
                             ), '[]'
                         ) AS [data.attributes.reserve_items],
+                        claimReferenceNumber AS [data.relationships.claim.data.id],
+                        'claim' AS [data.relationships.claim.data.type]
+                    FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
+                ) 
+                -- Payment Section --
+                WHEN amount_type = 'Payment_Amount' THEN 
+                (
+                    SELECT
+                        [data.type],
+                        [data.attributes.accountCode],
+                        [data.attributes.financial_transaction_type],
+                        [data.attributes.remote_identifier],
+                        [data.attributes.originated_at],
+                        [data.attributes.original_transaction_id],
+                        [data.attributes.is_historical],
+                        CASE WHEN paid_amt != 0 THEN [data.attributes.payment_method] END AS [data.attributes.payment_method],
+                        CASE WHEN paid_amt != 0 THEN [data.attributes.shipping_option] END AS [data.attributes.shipping_option],
                         ISNULL(
                             JSON_QUERY(
                                 (
@@ -320,43 +403,12 @@
                         'claim' AS [data.relationships.claim.data.type]
                     FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
                 )
-                -- Reserve Section - Remove Payment Information -- 
-                ELSE 
-                (
-                    SELECT
-                        [data.type],
-                        [data.attributes.accountCode],
-                        [data.attributes.financial_transaction_type],
-                        CASE 
-                            WHEN paid_amt != 0 THEN NULL 
-                            ELSE [data.attributes.remote_identifier]
-                        END AS [data.attributes.remote_identifier],
-                        [data.attributes.originated_at],
-                        ISNULL(
-                            JSON_QUERY(
-                                (
-                                    SELECT
-                                        exposure_id,
-                                        CAST(reserve_amt AS VARCHAR(255)) AS amount,
-                                        cost_category,
-                                        cost_type,
-                                        reserve_method
-                                    WHERE
-                                        reserve_amt > 0
-                                    FOR JSON PATH, INCLUDE_NULL_VALUES
-                                )
-                            ), '[]'
-                        ) AS [data.attributes.reserve_items],
-                        claimReferenceNumber AS [data.relationships.claim.data.id],
-                        'claim' AS [data.relationships.claim.data.type]
-                    FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
-                )
             END AS [data],
             'pending' AS api_status,
             GETDATE() AS create_ts,
             source_table_update_ts
-        INTO [edw_temp].[migration_create_financial_transaction_api_temp5]
-        FROM [edw_temp].[migration_create_financial_transaction_api_temp4] a
+        INTO [edw_temp].[migration_create_financial_transaction_api_temp6]
+        FROM [edw_temp].[migration_create_financial_transaction_api_temp5] a
         WHERE reserve_amt != 0 OR paid_amt != 0
         ORDER BY his_id
         ;
@@ -366,7 +418,8 @@
         -- SELECT * FROM [edw_temp].[migration_create_financial_transaction_api_temp2];
         -- SELECT * FROM [edw_temp].[migration_create_financial_transaction_api_temp3];
         -- SELECT * FROM [edw_temp].[migration_create_financial_transaction_api_temp4];
-        SELECT * FROM [edw_temp].[migration_create_financial_transaction_api_temp5];
+        -- SELECT * FROM [edw_temp].[migration_create_financial_transaction_api_temp5] order by his_id;
+        SELECT * FROM [edw_temp].[migration_create_financial_transaction_api_temp6] ORDER BY [data.attributes.remote_identifier], HIS_ID, amount_type;
 
 
         -- * Start Insert process
@@ -403,6 +456,7 @@
 --         DROP TABLE IF EXISTS [edw_temp].[migration_create_financial_transaction_api_temp3];
 --         DROP TABLE IF EXISTS [edw_temp].[migration_create_financial_transaction_api_temp4];
 --         DROP TABLE IF EXISTS [edw_temp].[migration_create_financial_transaction_api_temp5];
+--         DROP TABLE IF EXISTS [edw_temp].[migration_create_financial_transaction_api_temp6];
 
 -- 	END TRY
 -- 	BEGIN CATCH
