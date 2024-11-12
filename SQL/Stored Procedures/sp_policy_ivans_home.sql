@@ -11,7 +11,7 @@ GO
 -- 04/05/2024                      sandeep Gundreddy                             repush to Git Repo
 -- 04/09/2024					   Rushin Shah									Update SP to identify delta based on last_source_extract_ts
 -- 18/09/2024					   Hernando Gonzalez							Fixed Earthquake Coverage
--- 09/11/2024					   Hernando Gonzalez							Fixed Contents and Loss of Use
+-- 09/11/2024					   Hernando Gonzalez							VI-34591 | Fixed Contents and Loss of Use
 -- ========================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_home]
