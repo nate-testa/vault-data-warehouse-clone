@@ -113,11 +113,12 @@ BEGIN
 
 		DROP TABLE IF EXISTS edw_temp.tquote_update_quote_history_sk;
         
-		select 	quote_sk, quote_history_sk
+		select 	qh.quote_sk, qh.quote_history_sk
 		into 	edw_temp.tquote_update_quote_history_sk
-		from 	edw_core.tquote_history
-		where  	transaction_status = 'Issued'
-		and 	transaction_created_ts > @last_source_extract_ts;
+		from 	edw_core.tquote_history qh
+		inner join edw_stage.account acc on acc.PolicyNumber = qh.quote_no
+		where  	qh.transaction_status = 'Issued'
+		and 	acc.UpdatedDate	> @last_source_extract_ts;
 
 		update 	a
 		set 	a.issued_quote_history_sk = b.quote_history_sk
