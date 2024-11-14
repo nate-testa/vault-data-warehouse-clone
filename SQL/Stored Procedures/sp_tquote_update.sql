@@ -10,6 +10,7 @@ GO
 -- 09/08/23		Architha Gudimalla			1. Created this procedure  
 -- 11/14/23		Sandeep Gundreddy			2. Modify logic  
 -- 11/22/23     Sandeep Gundreddy           3. Modified logic to fix quote_status for Issued quotes
+-- 09/08/23		Architha Gudimalla			4. VI34112|AD7632 - Added issued_quote_history_sk
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_update]
@@ -110,6 +111,20 @@ BEGIN
 		inner join (select quote_no,max(bind_dt) max_bind_dt from edw_core.tquote_history where bind_dt is not null group by quote_no) b 
         on a.quote_no = b.quote_no; 
 
+		DROP TABLE IF EXISTS edw_temp.tquote_update_quote_history_sk;
+        
+		select 	quote_sk, quote_history_sk
+		into 	edw_temp.tquote_update_quote_history_sk
+		from 	edw_core.tquote_history
+		where  	transaction_status = 'Issued'
+		and 	transaction_created_ts > @last_source_extract_ts;
+
+		update 	a
+		set 	a.issued_quote_history_sk = b.quote_history_sk
+		from 	edw_core.tquote a
+		inner join edw_temp.tquote_update_quote_history_sk b on a.quote_sk = b.quote_sk; 
+
+		DROP TABLE IF EXISTS edw_temp.tquote_update_quote_history_sk;
       
 		SET @rows_affected=@@ROWCOUNT;   
 	
