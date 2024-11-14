@@ -287,6 +287,7 @@ with DAG(
             'sp_tquote_history_update',
             'sp_tquote_history_underwriter_update',
             'sp_tquote_update',
+            'sp_tquote_update_lifetime_claims',
             'sp_tquote_referral_message',
             'sp_tquote_form'
         ]
