@@ -19,7 +19,7 @@ GO
 -- 11/16/23     Architha Gudimalla				8. Added update statement becuase of dupe issue for optional coverages
 -- 11/30/23     Sandeep Gundreddy				9. Added Aslob logic for Condo- CO
 -- 07/12/24     Architha Gudimalla				10.Added another union all to the main selet into tinternal_coverage_temp1 for legislatinve coverages
--- 11/12/24		Rushin Shah						11.Updated aslob for Clean Risk Loss Recoupment (VI-34651) 
+-- 11/12/24		Rushin Shah						11.Updated aslob for Clean Risk Loss Recoupment (VI-34651)  
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tinternal_coverage]
