@@ -7,6 +7,8 @@
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
 -- 05/14/2024 			Architha Gudimalla					3. Corrected errors
 -- 08/22/2024			Architha Gudimalla					4. Removed eff_dt from merge
+-- 11/06/2024			Alberto Almario						5. VI34964/AD7640 - Updated object type
+-- 11/13/2024			Alberto Almario						6. AD7672 - new column quote_pel_driver_sk
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_pel_driver_incident_wip]
@@ -35,6 +37,7 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,source_system_sk,quote_history_sk,[Index],
 			CreatedDate,UpdatedDate,IncidentDate,IncidentType,IncidentDescription,IncludeInRate,Disputed
+			,quote_pel_driver_sk
 			into edw_temp.tquote_pel_driver_incident_wip_temp1
 		from
 		(
@@ -48,6 +51,7 @@ BEGIN
 			0 AS transaction_seq_no, 
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,			
 			acc.CreatedDate,acc.UpdatedDate,accof.Field,accof.[Value]
+			,pd.quote_pel_driver_sk
 			from
 				(
 				    SELECT *
@@ -59,16 +63,18 @@ BEGIN
 				inner join edw_stage.Product p on p.Id=acc.ProductId
 				inner join [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
 				inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
+				inner join [edw_stage].[AccountObject] AS pid ON acco.parentobjectid = pid.Id
 				left join [edw_core].[tquote_history] tph on tph.quote_no=acc.PolicyNumber
 						and tph.effective_dt=acc.EffectiveDate
 						and tph.transaction_seq_no = 0
 				left join edw_stage.Product pr on acc.ProductId = pr.id
+				left join edw_core.[tquote_pel_driver] AS pd ON pd.quote_no = acc.PolicyNumber AND pd.effective_dt = acc.EffectiveDate AND pd.transaction_seq_no = 0 and pd.driver_no=pid.[index]
 			where
 				acc.PolicyNumber is not null
 				--and acc.[Stage] IN ('QUOTE','POLICY')
 				and p.[Name]='Personal Excess Liability'
 				and pr.ProductLine = 'PersonalLines'
-				and acco.ObjectType='Watercraft'
+				and acco.ObjectType='ReportedIncidents'
 				and accof.Field IN 
 				(
 					'IncidentDate','IncidentType','IncidentDescription','IncludeInRate','Disputed'
@@ -98,6 +104,7 @@ BEGIN
 		        GETDATE() AS create_ts,
 		        GETDATE() AS update_ts,
 		        @etl_audit_sk AS etl_audit_sk
+				,ttpv.quote_pel_driver_sk
 		    FROM
 		        edw_temp.tquote_pel_driver_incident_wip_temp1 AS ttpv
 		) AS SOURCE
@@ -120,17 +127,20 @@ BEGIN
 		        TARGET.source_system_sk = SOURCE.source_system_sk,
 		        TARGET.update_ts = SOURCE.update_ts,
 		        TARGET.etl_audit_sk = SOURCE.etl_audit_sk
+				,TARGET.quote_pel_driver_sk = SOURCE.quote_pel_driver_sk
 
 		WHEN NOT MATCHED BY TARGET THEN
 		    INSERT (
 		        quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_history_sk,
 		        incident_no, incident_dt, incident_type, incident_desc, include_in_rate_in, incident_disputed_in,
 		        source_system_sk, create_ts, update_ts, etl_audit_sk
+				,quote_pel_driver_sk
 		    )
 		    VALUES (
 		        SOURCE.quote_no, SOURCE.effective_dt, SOURCE.expiration_dt, SOURCE.transaction_seq_no, SOURCE.quote_history_sk,
 		        SOURCE.incident_no, SOURCE.incident_dt, SOURCE.incident_type, SOURCE.incident_desc, SOURCE.include_in_rate_in, SOURCE.incident_disputed_in,
 		        SOURCE.source_system_sk, SOURCE.create_ts, SOURCE.update_ts, SOURCE.etl_audit_sk
+				,SOURCE.quote_pel_driver_sk
 		);
 
 		SET @rows_affected=@@ROWCOUNT;

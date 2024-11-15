@@ -1,8 +1,13 @@
-﻿-- =============================================
+﻿-- ===========================================================================================================================
 -- Author:		Yunus Mohammed
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert pel driver incident data
--- =============================================
+----------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+----------------------------------------------------------------------------------------------------------------------------
+-- 11/06/24		Alberto Almario				1. VI34964/AD7640 - Updated object type
+-- 11/11/24		Architha Gudimalla			2. AD7672 - updated pel_driver_sk
+-- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_driver_incident]
 
 AS
@@ -28,7 +33,7 @@ BEGIN
 		drop table if exists edw_temp.tpel_driver_incident_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,source_system_sk,policy_history_sk,[Index],
-			IssuedDate,IncidentDate,IncidentType,IncidentDescription,IncludeInRate,Disputed
+			IssuedDate,IncidentDate,IncidentType,IncidentDescription,IncludeInRate,Disputed, pel_driver_sk
 			into edw_temp.tpel_driver_incident_temp1
 		from
 		(
@@ -42,23 +47,25 @@ BEGIN
 			act.policychangenumber AS transaction_seq_no, 
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			act.IssuedDate as TransactionDate,
-			act.IssuedDate,atvof.Field,atvof.[Value]
+			act.IssuedDate,atvof.Field,atvof.[Value], pd.pel_driver_sk
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
 				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
+				INNER JOIN edw_stage.AccountTransactionVersionObject AS pid ON atvo.parentobjectid = pid.Id
 				left join [edw_core].[tpolicy_history] tph on tph.policy_no=act.PolicyNumber
 						and tph.effective_dt=act.EffectiveDate
 						and tph.transaction_seq_no = act.policychangenumber
-				left join edw_stage.Product pr on act.ProductId = pr.id
+				left join edw_stage.Product pr on act.ProductId = pr.id 
+                LEFT JOIN edw_core.[tpel_driver] AS pd ON pd.policy_no = act.PolicyNumber AND pd.effective_dt = act.EffectiveDate AND pd.transaction_seq_no = act.policychangenumber and pd.driver_no=pid.[index]
 			where
 				act.PolicyNumber is not null and
 				act.[State] ='ISSUED'
 				and p.[Name]='Personal Excess Liability'
 				and pr.ProductLine = 'PersonalLines'
-				and atvo.ObjectType='Watercraft'
+				and atvo.ObjectType='ReportedIncidents'
 				and atvof.Field IN 
 				(
 					'IncidentDate','IncidentType','IncidentDescription','IncludeInRate','Disputed'
@@ -76,6 +83,7 @@ BEGIN
 			policy_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no,policy_history_sk,
 			incident_no,incident_dt,incident_type,incident_desc,include_in_rate_in,incident_disputed_in,
 			source_system_sk,create_ts,	update_ts,etl_audit_sk
+			, pel_driver_sk
 		)
 		SELECT
 			PolicyNumber AS policy_no,EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
@@ -83,6 +91,7 @@ BEGIN
 			[Index] incident_no,IncidentDate AS incident_dt,IncidentType AS [incident_type],
 			IncidentDescription AS incident_desc,IncludeInRate AS include_in_rate_in,Disputed AS incident_disputed_in,
 			source_system_sk AS source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
+			,pel_driver_sk
 		FROM
 			edw_temp.tpel_driver_incident_temp1 AS ttpv
 

@@ -153,7 +153,7 @@ BEGIN
 		where update_ts > @last_source_extract_ts
 		or hc.rate_on_line is null; 
 		
-		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line; 
+		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line;   
 
 		SET @rows_affected=@@ROWCOUNT;
 	

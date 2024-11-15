@@ -375,7 +375,8 @@ with DAG(
             'sp_update_tclaim',
             'sp_update_tclaim_feature',
             'sp_treconciliation_ebao',
-            'sp_tclaim_litigation'
+            'sp_tclaim_litigation',
+            'sp_tpolicy_update_lifetime_claims'
             ]
 
         operators = []
