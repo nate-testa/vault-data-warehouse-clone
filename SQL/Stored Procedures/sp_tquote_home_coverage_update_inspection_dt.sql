@@ -68,6 +68,8 @@ BEGIN
 		set 		cov.last_inspection_dt = a.inspection_dt
 		from 		edw_core.tquote_home_coverage cov
 		inner join 	edw_temp.tquote_home_cov_upd_inspection_dt_final a on cov.quote_no = a.quote_no  ;
+		
+		SET @rows_affected=@@ROWCOUNT;
 
 		DROP TABLE IF exists edw_temp.tquote_home_cov_upd_inspection_dt_final; 
 		DROP TABLE IF exists edw_temp.tquote_home_cov_upd_inspection_dt; 
@@ -92,6 +94,8 @@ BEGIN
 		inner join edw_core.tquote q on q.quote_no = cov.quote_no
 		inner join edw_temp.tquote_home_cov_upd_inspection_dt_1 a on q.prior_policy_no = a.quote_no 
 		where cov.last_inspection_dt is null 
+		
+		SET @rows_affected=@rows_affected+@@ROWCOUNT;
 
 		--pull subsequent terms of the cancel rewritten policy
 		select	 q.quote_no, q.effective_dt, max(a.last_inspection_dt) last_inspection_dt 
@@ -110,14 +114,14 @@ BEGIN
 		from  edw_core.tquote_home_coverage cov 
 		inner join edw_temp.tquote_home_cov_upd_inspection_dt_2 a on cov.quote_no = a.quote_no 
 		where cov.last_inspection_dt is null
+		
+		SET @rows_affected=@rows_affected+@@ROWCOUNT;
 
 		DROP TABLE IF exists edw_temp.tquote_home_cov_upd_inspection_dt_1; 
 		DROP TABLE IF exists edw_temp.tquote_home_cov_upd_inspection_dt_2;  
 
 		-------------------------------------------------------------------------------------------------------------------------------------
 		
-		SET @rows_affected=@@ROWCOUNT;
-	
 		SET @new_last_source_extract_ts=COALESCE((SELECT dateadd(d,-1,MAX(CreatedDate)) 
 												  FROM edw_stage.tvendor_report_field_data
 												  where 	source = 'LC360' 
