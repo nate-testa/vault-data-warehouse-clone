@@ -7,7 +7,7 @@
 -- 11/09/23		Architha Gudimalla		    2. Added logic for loss_of_use_derived_pc
 -- 03/26/24		Architha Gudimalla		    3. Added to  loss_of_use_derived_pc - Reasonable and Necessary Expenses- 12 months
 -- 04/19/24		Architha Gudimalla		    4. Updated the @new_last_source_extract_ts and also added the update to check for nulls
--- 06/14/24		Yunus Mohammed 				5. Removed error for rate_on_line
+-- 06/14/24		Yunus Mohammed 				5. Removed error for rate_on_line 
 -- ================================================================================================================================== 
 
 
@@ -124,7 +124,7 @@ BEGIN
 		where transaction_dt > @last_source_extract_ts
 		or hc.rate_on_line is null; 
 		
-		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line; 
+		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line;   
 
 		SET @rows_affected=@@ROWCOUNT;
 	
