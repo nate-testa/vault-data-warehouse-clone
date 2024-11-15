@@ -111,10 +111,10 @@ BEGIN
 		inner join (select quote_no,max(bind_dt) max_bind_dt from edw_core.tquote_history where bind_dt is not null group by quote_no) b 
         on a.quote_no = b.quote_no; 
 
-		DROP TABLE IF EXISTS edw_temp.tquote_update_quote_history_sk; 
+		DROP TABLE IF EXISTS edw_temp.tquote_update_temp1; 
         
 		select 	qh.quote_sk, max(qh.quote_history_sk) quote_history_sk
-		into 	edw_temp.tquote_update_quote_history_sk
+		into 	edw_temp.tquote_update_temp1
 		from 	edw_core.tquote_history qh
 		inner join edw_stage.account acc on acc.PolicyNumber = qh.quote_no
 		where  	qh.transaction_status = 'Issued'
@@ -124,9 +124,9 @@ BEGIN
 		update 	a
 		set 	a.issued_quote_history_sk = b.quote_history_sk
 		from 	edw_core.tquote a
-		inner join edw_temp.tquote_update_quote_history_sk b on a.quote_sk = b.quote_sk; 
+		inner join edw_temp.tquote_update_temp1 b on a.quote_sk = b.quote_sk; 
 
-		DROP TABLE IF EXISTS edw_temp.tquote_update_quote_history_sk;
+		DROP TABLE IF EXISTS edw_temp.tquote_update_temp1;
       
 		SET @rows_affected=@@ROWCOUNT;   
 	
