@@ -35,7 +35,7 @@ BEGIN
 
 		update pol
 		set lifetime_claim_ct = 0,
-			lifetime_incurred_amt = 0
+			lifetime_loss_incurred_amt = 0
 		from edw_core.tpolicy pol;
 
 		-------------------------------------------------------------------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ BEGIN
 
 		update pol
 		set lifetime_claim_ct = a.claim_ct,
-			lifetime_incurred_amt = a.li_amt
+			lifetime_loss_incurred_amt = a.li_amt
 		from edw_core.tpolicy pol
 		inner join edw_temp.tpolicy_update_lifetime_claims_temp2 a on a.policy_sk = pol.policy_sk;
 		
@@ -80,7 +80,7 @@ BEGIN
 
 		update pol
 		set lifetime_claim_ct = lifetime_claim_ct+a.claim_ct,
-			lifetime_incurred_amt = lifetime_incurred_amt+a.li_amt
+			lifetime_loss_incurred_amt = lifetime_loss_incurred_amt+a.li_amt
 		from edw_core.tpolicy pol
 		inner join edw_temp.tpolicy_update_lifetime_claims_temp3 a on a.policy_no = pol.policy_no;
 		

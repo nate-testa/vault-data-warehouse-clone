@@ -31,12 +31,12 @@ BEGIN
 
 		update q
 		set lifetime_claim_ct = 0,
-			lifetime_incurred_amt = 0
+			lifetime_loss_incurred_amt = 0
 		from tquote q;     
 
 		update q
 		set lifetime_claim_ct = isnull(pol.lifetime_claim_ct,0),
-			lifetime_incurred_amt = isnull(pol.lifetime_incurred_amt,0)
+			lifetime_loss_incurred_amt = isnull(pol.lifetime_loss_incurred_amt,0)
 		from tquote q
 		left join edw_core.tpolicy pol on pol.policy_sk = q.policy_sk ;   
 		

@@ -12,4 +12,4 @@ IF NOT EXISTS (
     WHERE   TABLE_SCHEMA='edw_core'
     AND     TABLE_NAME = 'tpolicy'
     AND     COLUMN_NAME = 'lifetime_incurred_amt'
-) BEGIN ALTER TABLE edw_core.tpolicy ADD lifetime_incurred_amt decimal(15,2) END; 
+) BEGIN ALTER TABLE edw_core.tpolicy ADD lifetime_loss_incurred_amt decimal(15,2) END;  
