@@ -31,7 +31,16 @@ BEGIN
 
 		drop table if exists edw_temp.tpolicy_update_lifetime_claims_temp1;
 		drop table if exists edw_temp.tpolicy_update_lifetime_claims_temp2;
+		drop table if exists edw_temp.tpolicy_update_lifetime_claims_temp3;
+
+		update pol
+		set lifetime_claim_ct = 0,
+			lifetime_incurred_amt = 0
+		from edw_core.tpolicy pol;
+
+		-------------------------------------------------------------------------------------------------------------------------------------------
 		
+		--for non-cancel rewrites
 		select pol.policy_no, pol.original_policy_no, pol.term_no, count(c.claim_sk) claim_ct,
 				sum(c.loss_reserve_amt + c.expense_reserve_amt + c.adjusting_other_reserve_amt + c.subro_reserve_amt + c.salvage_reserve_amt + c.salvage_expense_reserve_amt + c.subro_expense_reserve_amt
 					+ c.loss_paid_amt + c.expense_paid_amt + c.adjusting_other_paid_amt + c.subro_recovery_amt + c.salvage_recovery_amt + c.salvage_expense_paid_amt + c.subro_expense_paid_amt
@@ -40,8 +49,7 @@ BEGIN
 		from edw_core.tclaim c
 		inner join edw_core.tpolicy pol on pol.policy_sk = c.policy_sk
 		where exists ( select policy_sk from edw_core.tclaim c1
-						where greatest(c1.create_ts, c1.update_ts) > @last_source_extract_ts
-						and c1.policy_sk is not null
+						where  c1.policy_sk is not null
 						and c1.policy_sk = c.policy_sk)
 		group by pol.policy_no, pol.original_policy_no, pol.term_no
 		order by 1
@@ -50,24 +58,43 @@ BEGIN
 				, sum(isnull(claim_ct,0)) claim_ct, sum(isnull(li_amt,0)) li_amt
 		into edw_temp.tpolicy_update_lifetime_claims_temp2
 		from edw_core.tpolicy pol
-		left join #edw_temp.tpolicy_update_lifetime_claims_temp1 a on pol.original_policy_no = a.original_policy_no and a.term_no <= pol.term_no
+		left join edw_temp.tpolicy_update_lifetime_claims_temp1 a on pol.original_policy_no = a.original_policy_no and a.term_no <= pol.term_no
 		group by pol.policy_sk, pol.policy_no, pol.original_policy_no, pol.term_no;
 
 		update pol
 		set lifetime_claim_ct = a.claim_ct,
 			lifetime_incurred_amt = a.li_amt
-		from tpolicy pol
+		from edw_core.tpolicy pol
 		inner join edw_temp.tpolicy_update_lifetime_claims_temp2 a on a.policy_sk = pol.policy_sk;
+		
+		SET @rows_affected=@@ROWCOUNT; 
+
+		-------------------------------------------------------------------------------------------------------------------------------------------
+
+		--for cancel rewrites
+		select pol.policy_no, claim_ct , li_amt 
+		into edw_temp.tpolicy_update_lifetime_claims_temp3
+		from edw_temp.tpolicy_update_lifetime_claims_temp2 a
+		inner join edw_Core.tpolicy pol on pol.prior_policy_no = a.policy_no   
+		where  claim_ct <> 0 or li_amt <> 0
+
+		update pol
+		set lifetime_claim_ct = lifetime_claim_ct+a.claim_ct,
+			lifetime_incurred_amt = lifetime_incurred_amt+a.li_amt
+		from edw_core.tpolicy pol
+		inner join edw_temp.tpolicy_update_lifetime_claims_temp3 a on a.policy_no = pol.policy_no;
+		
+		SET @rows_affected=@rows_affected+@@ROWCOUNT; 
+		
+		-------------------------------------------------------------------------------------------------------------------------------------------
 
 		drop table if exists edw_temp.tpolicy_update_lifetime_claims_temp1;
 		drop table if exists edw_temp.tpolicy_update_lifetime_claims_temp2;
-		
-		SET @rows_affected=@@ROWCOUNT;
-	
-		SET @new_last_source_extract_ts=COALESCE((select greatest(create_ts, update_ts) from edw_core.tclaim),@last_source_extract_ts); 
-		
-		-- Update control table
-		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts; 
+		drop table if exists edw_temp.tpolicy_update_lifetime_claims_temp3;
+
+        -- Update control table
+		SET @new_last_source_extract_ts = '2017-01-01'
+		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;   
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

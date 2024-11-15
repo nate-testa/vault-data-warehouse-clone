@@ -29,19 +29,16 @@ BEGIN
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))   
 
+		update q
+		set lifetime_claim_ct = 0,
+			lifetime_incurred_amt = 0
+		from tquote q;     
 
 		update q
 		set lifetime_claim_ct = isnull(pol.lifetime_claim_ct,0),
 			lifetime_incurred_amt = isnull(pol.lifetime_incurred_amt,0)
 		from tquote q
-		left join edw_core.tpolicy pol on pol.policy_sk = q.policy_sk ; 
-
-		
-         
-        -- Update control table
-		SET @new_last_source_extract_ts = '2017-01-01'
-		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts; 
-
+		left join edw_core.tpolicy pol on pol.policy_sk = q.policy_sk ;   
 		
 		SET @rows_affected=@@ROWCOUNT;
 
