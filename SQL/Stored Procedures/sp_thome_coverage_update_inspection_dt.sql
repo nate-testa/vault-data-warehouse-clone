@@ -31,11 +31,13 @@ BEGIN
 		
 		----------------for non cancel rewrtes------------------------------------------------------------------------------------------------------------
 
-		DROP TABLE IF exists edw_temp.thome_cov_upd_inspection_dt; 
+		DROP TABLE IF exists edw_temp.thome_coverage_update_inspection_dt_temp1; 
+
+		DROP TABLE IF exists edw_temp.thome_coverage_update_inspection_dt_temp1_final; 
 
 		--get all inspection records from vendor reports
 		select  policynumber, cast(effectivedate as date) effectivedate, max(cast(value as date)) inspection_dt 
-		into   	edw_temp.thome_cov_upd_inspection_dt
+		into   	edw_temp.thome_coverage_update_inspection_dt_temp1
 		from 	edw_stage.tvendor_report_field_data
 		where 	source = 'LC360' 
 		and 	field_name = 'Summary - Inspection Date'
@@ -43,41 +45,39 @@ BEGIN
 		and 	CreatedDate > @last_source_extract_ts
 		group by  policynumber, cast(effectivedate as date)
 
-		DROP TABLE IF exists edw_temp.thome_cov_upd_inspection_dt_final; 
-
 		--use records created above and join to tpolicy for the current term
 		select a.*, pol.original_policy_no , pol.term_no
-		into  edw_temp.thome_cov_upd_inspection_dt_final
-		from   edw_temp.thome_cov_upd_inspection_dt a
+		into  edw_temp.thome_coverage_update_inspection_dt_temp1_final
+		from   edw_temp.thome_coverage_update_inspection_dt_temp1 a
 		inner join edw_core.tpolicy pol on a.policynumber = pol.policy_no
 
 		--use records created above and join to tpolicy for the future term by joining on original_policy_no and term
-		insert into  edw_temp.thome_cov_upd_inspection_dt_final
+		insert into  edw_temp.thome_coverage_update_inspection_dt_temp1_final
 		select	 pol.policy_no, pol.effective_dt, max(a.inspection_dt) inspection_dt, pol.original_policy_no, pol.term_no 
 		from	 edw_core.tpolicy pol 
-		inner join edw_temp.thome_cov_upd_inspection_dt_final a  on a.original_policy_no = pol.original_policy_no and pol.term_no > a.term_no
-		where  	pol.policy_no not in (select policynumber from edw_temp.thome_cov_upd_inspection_dt_final) 
+		inner join edw_temp.thome_coverage_update_inspection_dt_temp1_final a  on a.original_policy_no = pol.original_policy_no and pol.term_no > a.term_no
+		where  	pol.policy_no not in (select policynumber from edw_temp.thome_coverage_update_inspection_dt_temp1_final) 
 		group by pol.policy_no, pol.effective_dt,  pol.original_policy_no, pol.term_no 
 		order by 1; 
 
 		update 		cov
 		set 		cov.last_inspection_dt = a.inspection_dt
 		from 		edw_core.thome_coverage cov
-		inner join 	edw_temp.thome_cov_upd_inspection_dt_final a on cov.policy_no = a.policynumber  ;
+		inner join 	edw_temp.thome_coverage_update_inspection_dt_temp1_final a on cov.policy_no = a.policynumber  ;
 		
 		SET @rows_affected=@@ROWCOUNT;
 
-		DROP TABLE IF exists edw_temp.thome_cov_upd_inspection_dt_final; 
-		DROP TABLE IF exists edw_temp.thome_cov_upd_inspection_dt; 
+		DROP TABLE IF exists edw_temp.thome_coverage_update_inspection_dt_temp1_final; 
+		DROP TABLE IF exists edw_temp.thome_coverage_update_inspection_dt_temp1; 
 		
 		----------------for cancel rewrtes---------------------------------------------------------------------------------------------------------------
 
-		DROP TABLE IF exists edw_temp.thome_cov_upd_inspection_dt_1; 
-		DROP TABLE IF exists edw_temp.thome_cov_upd_inspection_dt_2; 
+		DROP TABLE IF exists edw_temp.thome_coverage_update_inspection_dt_temp3; 
+		DROP TABLE IF exists edw_temp.thome_coverage_update_inspection_dt_temp2; 
 
 		--pull all policies that were cancel rewritten
 		select policy_no, effective_dt, max(last_inspection_dt) last_inspection_dt
-		into edw_temp.thome_cov_upd_inspection_dt_1
+		into edw_temp.thome_coverage_update_inspection_dt_temp3
 		from edw_core.thome_coverage 
 		where last_inspection_dt is not null
 		and policy_no in (select prior_policy_no from edw_core.tpolicy)
@@ -88,19 +88,19 @@ BEGIN
 		set cov.last_inspection_dt = a.last_inspection_dt 
 		from  edw_core.thome_coverage cov
 		inner join edw_core.tpolicy pol on pol.policy_no = cov.policy_no
-		inner join edw_temp.thome_cov_upd_inspection_dt_1 a on pol.prior_policy_no = a.policy_no 
+		inner join edw_temp.thome_coverage_update_inspection_dt_temp3 a on pol.prior_policy_no = a.policy_no 
 		where cov.last_inspection_dt is null
 		
 		SET @rows_affected=@rows_affected+@@ROWCOUNT;
 
 		--pull subsequent terms of the cancel rewritten policy
 		select	 pol.policy_no, pol.effective_dt, max(a.last_inspection_dt) last_inspection_dt 
-		into edw_temp.thome_cov_upd_inspection_dt_2
+		into edw_temp.thome_coverage_update_inspection_dt_temp2
 		from	 edw_core.tpolicy pol 
 		inner join (select cov.policy_no, cov.last_inspection_dt, pol.original_policy_no, pol.term_no
 					from  edw_core.thome_coverage cov
 					inner join edw_core.tpolicy pol on pol.policy_no = cov.policy_no
-					inner join edw_temp.thome_cov_upd_inspection_dt_1 a on pol.prior_policy_no = a.policy_no 
+					inner join edw_temp.thome_coverage_update_inspection_dt_temp3 a on pol.prior_policy_no = a.policy_no 
 					) a  on a.original_policy_no = pol.original_policy_no and pol.term_no > a.term_no 
 		group by pol.policy_no, pol.effective_dt  
 		
@@ -108,13 +108,13 @@ BEGIN
 		update cov
 		set cov.last_inspection_dt = a.last_inspection_dt 
 		from  edw_core.thome_coverage cov 
-		inner join edw_temp.thome_cov_upd_inspection_dt_2 a on cov.policy_no = a.policy_no 
+		inner join edw_temp.thome_coverage_update_inspection_dt_temp2 a on cov.policy_no = a.policy_no 
 		where cov.last_inspection_dt is null
 		
 		SET @rows_affected=@rows_affected+@@ROWCOUNT;
 
-		DROP TABLE IF exists edw_temp.thome_cov_upd_inspection_dt_1; 
-		DROP TABLE IF exists edw_temp.thome_cov_upd_inspection_dt_2; 
+		DROP TABLE IF exists edw_temp.thome_coverage_update_inspection_dt_temp3; 
+		DROP TABLE IF exists edw_temp.thome_coverage_update_inspection_dt_temp2; 
 
 		-------------------------------------------------------------------------------------------------------------------------------------
 
