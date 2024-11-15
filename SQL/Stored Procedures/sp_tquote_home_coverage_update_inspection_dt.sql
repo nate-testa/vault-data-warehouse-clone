@@ -7,11 +7,7 @@ GO
 -----------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------
--- 11/13/23		Architha Gudimalla		    1. Created this procedure to update TIV and loss_of_use_derived_pc
--- 05/17/23		Architha Gudimalla		    2. Updated logic for loss_of_use_derived_pc
--- 06/14/24		Yunus Mohammed 				3. Removed error for rate_on_line
--- 08/04/24		Architha Gudimalla		    4. Updated loss_of_use_amt to float
--- 09/23/24		Architha Gudimalla		    5. Updated logic for rate_on_line
+-- 11/13/23		Architha Gudimalla		    1. Created this procedure 
 -- =============================================================================================================== 
 
 
@@ -38,10 +34,13 @@ BEGIN
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) 
 		
+		----------------for non cancel rewrtes------------------------------------------------------------------------------------------------------------
+
 		DROP TABLE IF exists edw_temp.tquote_home_cov_upd_inspection_dt; 
+		DROP TABLE IF exists edw_temp.tquote_home_cov_upd_inspection_dt_final; 
 
 		--get all inspection records from vendor reports
-		select  policynumber, cast(effectivedate as date) effectivedate, max(cast(value as date)) inspection_dt 
+		select  policynumber quote_no, cast(effectivedate as date) effectivedate, max(cast(value as date)) inspection_dt 
 		into   	edw_temp.tquote_home_cov_upd_inspection_dt
 		from 	edw_stage.tvendor_report_field_data
 		where 	source = 'LC360' 
@@ -50,30 +49,72 @@ BEGIN
 		and 	CreatedDate > @last_source_extract_ts
 		group by  policynumber, cast(effectivedate as date)
 
-		DROP TABLE IF exists edw_temp.tquote_home_cov_upd_inspection_dt_final; 
-
 		--use records created above and join to tpolicy for the current term
-		select a.*, pol.original_policy_no , pol.term_no
+		select a.*, q.original_policy_no , q.term_no
 		into  edw_temp.tquote_home_cov_upd_inspection_dt_final
 		from   edw_temp.tquote_home_cov_upd_inspection_dt a
-		inner join edw_core.tpolicy pol on a.policynumber = pol.policy_no
+		inner join edw_core.tquote q on a.quote_no = q.quote_no
 
 		--use records created above and join to tpolicy for the future term by joining on original_policy_no and term
 		insert into  edw_temp.tquote_home_cov_upd_inspection_dt_final
-		select	 pol.policy_no, pol.effective_dt, max(a.inspection_dt) inspection_dt, pol.original_policy_no, pol.term_no 
-		from	 edw_core.tpolicy pol 
-		inner join edw_temp.tquote_home_cov_upd_inspection_dt_final a  on a.original_policy_no = pol.original_policy_no and pol.term_no > a.term_no
-		where  	pol.policy_no not in (select policynumber from edw_temp.tquote_home_cov_upd_inspection_dt_final) 
-		group by pol.policy_no, pol.effective_dt,  pol.original_policy_no, pol.term_no 
+		select	 q.quote_no, q.effective_dt, max(a.inspection_dt) inspection_dt, q.original_policy_no, q.term_no 
+		from	 edw_core.tquote q 
+		inner join edw_temp.tquote_home_cov_upd_inspection_dt_final a  on a.original_policy_no = q.original_policy_no and q.term_no > a.term_no
+		where  	q.quote_no not in (select quote_no from edw_temp.tquote_home_cov_upd_inspection_dt_final) 
+		group by q.quote_no, q.effective_dt,  q.original_policy_no, q.term_no 
 		order by 1; 
 
 		update 		cov
 		set 		cov.last_inspection_dt = a.inspection_dt
 		from 		edw_core.tquote_home_coverage cov
-		inner join 	edw_temp.tquote_home_cov_upd_inspection_dt_final a on cov.policy_no = a.policynumber  ;
+		inner join 	edw_temp.tquote_home_cov_upd_inspection_dt_final a on cov.quote_no = a.quote_no  ;
 
 		DROP TABLE IF exists edw_temp.tquote_home_cov_upd_inspection_dt_final; 
 		DROP TABLE IF exists edw_temp.tquote_home_cov_upd_inspection_dt; 
+		
+		----------------for cancel rewrtes---------------------------------------------------------------------------------------------------------------
+
+		DROP TABLE IF exists edw_temp.tquote_home_cov_upd_inspection_dt_1; 
+		DROP TABLE IF exists edw_temp.tquote_home_cov_upd_inspection_dt_2; 
+
+		--pull all policies that were cancel rewritten
+		select quote_no, effective_dt, max(last_inspection_dt) last_inspection_dt
+		into edw_temp.tquote_home_cov_upd_inspection_dt_1
+		from edw_core.tquote_home_coverage 
+		where last_inspection_dt is not null
+		and quote_no in (select prior_policy_no from edw_core.tquote)
+		group by quote_no, effective_dt 
+		
+		--update last_inspection_dt for cancel rewritten policy using  the prior policy
+		update cov
+		set cov.last_inspection_dt = a.last_inspection_dt 
+		from  edw_core.tquote_home_coverage cov
+		inner join edw_core.tquote q on q.quote_no = cov.quote_no
+		inner join edw_temp.tquote_home_cov_upd_inspection_dt_1 a on q.prior_policy_no = a.quote_no 
+		where cov.last_inspection_dt is null 
+
+		--pull subsequent terms of the cancel rewritten policy
+		select	 q.quote_no, q.effective_dt, max(a.last_inspection_dt) last_inspection_dt 
+		into edw_temp.tquote_home_cov_upd_inspection_dt_2
+		from	 edw_core.tquote q 
+		inner join (select cov.quote_no, cov.last_inspection_dt, q.original_policy_no, q.term_no
+					from  edw_core.tquote_home_coverage cov
+					inner join edw_core.tquote q on q.quote_no = cov.quote_no
+					inner join edw_temp.tquote_home_cov_upd_inspection_dt_1 a on q.prior_policy_no = a.quote_no 
+					) a  on a.original_policy_no = q.original_policy_no and q.term_no > a.term_no 
+		group by q.quote_no, q.effective_dt  
+		
+		--update subsequent terms of the cancel rewritten policy
+		update cov
+		set cov.last_inspection_dt = a.last_inspection_dt 
+		from  edw_core.tquote_home_coverage cov 
+		inner join edw_temp.tquote_home_cov_upd_inspection_dt_2 a on cov.quote_no = a.quote_no 
+		where cov.last_inspection_dt is null
+
+		DROP TABLE IF exists edw_temp.tquote_home_cov_upd_inspection_dt_1; 
+		DROP TABLE IF exists edw_temp.tquote_home_cov_upd_inspection_dt_2;  
+
+		-------------------------------------------------------------------------------------------------------------------------------------
 		
 		SET @rows_affected=@@ROWCOUNT;
 	
