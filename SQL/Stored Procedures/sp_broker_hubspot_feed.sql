@@ -22,6 +22,8 @@
 -- 10/26/24		        Archtha Gudimalla			14. Updated tbroker_vault_team logic
 -- 11/07/24		        Archtha Gudimalla			15. AZ7643 - Updated retention logic to match with what's in broker summary
 -- 11/11/24		        Archtha Gudimalla			16. AZ7643 - Updated retention to rolling 12 month instead of YTD
+-- 11/16/24		        Archtha Gudimalla			17. Updated column name error in last insert 
+--                                                      for ytd_offered_renewal_ct,ytd_offered_renewal_over50k_ct
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -213,7 +215,7 @@ BEGIN
             mailing_address_zip_cd,broker_tier,broker_tier_nm,national_agency_in,broker_type,broker_status,contract_dt,primary_contact_nm,
             broker_email,broker_phone_no,bdm_nm,bdm_email,new_business_uw_nm,renewal_uw_nm,open_submissions_ct,one_year_actual_non_cat_loss_ratio,
             two_year_ultimate_non_cat_loss_ratio,five_year_non_cat_loss_ratio,ytd_bind_ct,ytd_submission_ct,last30_days_submission_ct,hit_ratio,
-            offered_renewal_ct,offered_renewal_over50k_ct,inforce_policy_ct,commission_tier,inforce_premium_amt,target_yoy_inforce_premium_pc,
+            ytd_offered_renewal_ct,ytd_offered_renewal_over50k_ct,inforce_policy_ct,commission_tier,inforce_premium_amt,target_yoy_inforce_premium_pc,
             target_yoy_ytd_nb_prem_pc,target_ytd_nb_premium_pc,target_ytd_renewal_retention_pc,
             getdate(), getdate(), @etl_audit_sk 
             ,mailing_address_country_nm
