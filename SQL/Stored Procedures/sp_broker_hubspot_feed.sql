@@ -22,6 +22,9 @@
 -- 10/26/24		        Archtha Gudimalla			14. Updated tbroker_vault_team logic
 -- 11/07/24		        Archtha Gudimalla			15. AZ7643 - Updated retention logic to match with what's in broker summary
 -- 11/11/24		        Archtha Gudimalla			16. AZ7643 - Updated retention to rolling 12 month instead of YTD
+-- 11/16/24		        Archtha Gudimalla			17. Updated column name error in last insert 
+--                                                      for ytd_offered_renewal_ct,ytd_offered_renewal_over50k_ct
+-- 11/18/24		        Archtha Gudimalla			18. AZ7643 - Updated retention rolling 12 month to go 12 month back from prior month
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -46,11 +49,13 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 
-        declare @var_start_mn int;
+        declare @ret_start_mn int;
+        declare @ret_end_mn	int;
         declare @var_end_mn	int;
 
-        set @var_start_mn = (select min(yearmonth) from edw_core.tdate where calendar_year = year( dateadd("d",-1,GETDATE())));
-        set @var_end_mn   = (select min(yearmonth) from edw_core.tdate where actual_dt = EOMONTH( dateadd("d",-1,GETDATE())));
+        set @ret_start_mn = (select min(yearmonth) from edw_core.tdate where actual_dt = dateadd("yyyy",-1, EOMONTH(				getdate())));
+        set @ret_end_mn   = (select min(yearmonth) from edw_core.tdate where actual_dt = dateadd(  "mm",-1, EOMONTH(				getdate())));
+        set @var_end_mn   = (select min(yearmonth) from edw_core.tdate where actual_dt =                    EOMONTH( dateadd("d",-1,getdate())));
 
 		DROP TABLE IF exists edw_temp.broker_hubspot_feed_temp1;
 
@@ -94,12 +99,12 @@ BEGIN
                 sum(case when td.yearmonth = @var_end_mn then tbs.ytd_quote_ct							else 0 end) as ytd_quote_ct,
                 sum(case when td.yearmonth = @var_end_mn then tbs.ytd_new_business_net_premium_amt		else 0 end) as ytd_new_business_net_premium_amt,
                 --
-                sum(case when tbs.policy_renewal_accepted_ct is not null then tbs.policy_renewal_accepted_ct else 0 end) rolling_12_policy_renewal_accepted_ct,
-                sum(case when tbs.policy_renewal_ct          is not null then tbs.policy_renewal_ct          else 0 end) rolling_12_policy_renewal_ct
+                sum(case when td.yearmonth between @ret_start_mn and @ret_end_mn and tbs.policy_renewal_accepted_ct is not null then tbs.policy_renewal_accepted_ct else 0 end) rolling_12_policy_renewal_accepted_ct,
+                sum(case when td.yearmonth between @ret_start_mn and @ret_end_mn and tbs.policy_renewal_ct          is not null then tbs.policy_renewal_ct          else 0 end) rolling_12_policy_renewal_ct
                 --
             FROM edw_core.tbroker_summary tbs
 			inner join edw_core.tdate td on td.date_sk = tbs.month_sk
-            where td.yearmonth >= @var_start_mn
+            where td.yearmonth >= @ret_start_mn
 			and td.yearmonth <= @var_end_mn
             and product_sk <> 6 
             group by broker_sk
@@ -213,7 +218,7 @@ BEGIN
             mailing_address_zip_cd,broker_tier,broker_tier_nm,national_agency_in,broker_type,broker_status,contract_dt,primary_contact_nm,
             broker_email,broker_phone_no,bdm_nm,bdm_email,new_business_uw_nm,renewal_uw_nm,open_submissions_ct,one_year_actual_non_cat_loss_ratio,
             two_year_ultimate_non_cat_loss_ratio,five_year_non_cat_loss_ratio,ytd_bind_ct,ytd_submission_ct,last30_days_submission_ct,hit_ratio,
-            offered_renewal_ct,offered_renewal_over50k_ct,inforce_policy_ct,commission_tier,inforce_premium_amt,target_yoy_inforce_premium_pc,
+            ytd_offered_renewal_ct,ytd_offered_renewal_over50k_ct,inforce_policy_ct,commission_tier,inforce_premium_amt,target_yoy_inforce_premium_pc,
             target_yoy_ytd_nb_prem_pc,target_ytd_nb_premium_pc,target_ytd_renewal_retention_pc,
             getdate(), getdate(), @etl_audit_sk 
             ,mailing_address_country_nm
