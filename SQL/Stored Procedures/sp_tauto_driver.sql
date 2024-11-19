@@ -41,8 +41,7 @@ BEGIN
 		--************Start************
 
         -- Step1 limit amount of rows.
-		DROP TABLE IF EXISTS [edw_temp].tauto_driver_temp0;
-        DROP TABLE IF EXISTS [edw_temp].tauto_driver_temp1;
+		DROP TABLE IF EXISTS [edw_temp].tauto_driver_temp1;
 		DROP TABLE IF EXISTS [edw_temp].tauto_driver_temp2;
 		DROP TABLE IF EXISTS [edw_temp].tauto_driver_temp3;
 
@@ -77,7 +76,12 @@ BEGIN
                     END as [source_system_sk],
                     acctvo.IsDeletedOnPolicyChange, acctvof.VersionObjectId
                     ,acctvo.[UniqueId] driver_unique_id
-                FROM [edw_temp].[tauto_driver_temp0] acct
+                FROM (
+                        SELECT *
+                        FROM [edw_stage].[AccountTransaction]
+                        WHERE [State] = 'ISSUED'
+                        AND IssuedDate > @last_source_extract_ts
+                    ) acct
                 INNER JOIN [edw_stage].[Product] AS p on p.Id = acct.ProductId
                 INNER JOIN [edw_stage].[AccountTransactionVersion] AS acctv ON acctv.AccountTransactionId = acct.Id
                 INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
@@ -116,7 +120,12 @@ BEGIN
 					acct.PolicyChangeNumber as transaction_seq_no,
                     acctvof.[Field], acctvof.[Value] , acctvof.VersionObjectId
                     ,acctvo.[UniqueId] driver_unique_id
-                FROM [edw_temp].tauto_driver_temp2 acct
+                FROM (
+                        SELECT *
+                        FROM [edw_stage].[AccountTransaction]
+                        WHERE [State] = 'ISSUED'
+                        AND IssuedDate > @last_source_extract_ts
+                    ) acct
                 INNER JOIN [edw_stage].[Product] AS p on p.Id = acct.ProductId
                 INNER JOIN [edw_stage].[AccountTransactionVersion] AS acctv ON acctv.AccountTransactionId = acct.Id
                 INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
