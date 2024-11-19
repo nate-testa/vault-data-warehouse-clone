@@ -116,13 +116,7 @@ BEGIN
 					acct.PolicyChangeNumber as transaction_seq_no,
                     acctvof.[Field], acctvof.[Value] , acctvof.VersionObjectId
                     ,acctvo.[UniqueId] driver_unique_id
-                FROM
-                    (SELECT
-                        *
-                    FROM [edw_stage].[AccountTransaction]
-                    WHERE [State] = 'ISSUED' 
-                        AND IssuedDate > @last_source_extract_ts
-                    ) acct
+                FROM [edw_temp].tauto_driver_temp2 acct
                 INNER JOIN [edw_stage].[Product] AS p on p.Id = acct.ProductId
                 INNER JOIN [edw_stage].[AccountTransactionVersion] AS acctv ON acctv.AccountTransactionId = acct.Id
                 INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
