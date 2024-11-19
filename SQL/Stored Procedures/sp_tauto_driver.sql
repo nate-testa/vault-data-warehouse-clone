@@ -43,13 +43,7 @@ BEGIN
         -- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].tauto_driver_temp1;
 		DROP TABLE IF EXISTS [edw_temp].tauto_driver_temp2;
-		DROP TABLE IF EXISTS [edw_temp].tauto_driver_temp3;
-
-        SELECT *
-        into [edw_temp].[tauto_driver_temp0]
-        FROM [edw_stage].[AccountTransaction]
-        WHERE [State] = 'ISSUED'
-        AND IssuedDate > @last_source_extract_ts;
+		DROP TABLE IF EXISTS [edw_temp].tauto_driver_temp3; 
 
 		SELECT 
 			IssuedDate, policy_no, effective_dt, transaction_effective_dt, expiration_dt, transaction_dt, transaction_seq_no, driver_no, policy_history_sk, VersionObjectId,
@@ -457,8 +451,7 @@ BEGIN
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
-        -- Drop temp table
-        DROP TABLE IF EXISTS edw_temp.[tauto_driver_temp0];
+        -- Drop temp table 
         DROP TABLE IF EXISTS edw_temp.[tauto_driver_temp1]; 
 		DROP TABLE IF EXISTS [edw_temp].tauto_driver_temp2;
 		DROP TABLE IF EXISTS [edw_temp].tauto_driver_temp3;
