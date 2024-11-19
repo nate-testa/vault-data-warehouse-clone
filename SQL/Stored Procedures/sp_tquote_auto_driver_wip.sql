@@ -13,6 +13,7 @@ GO
 -- 04/07/24		Hernnando Gonzalez		        4. Added new fields AAFFactor, AFBFactor, NAFFactor, CPAFactor, MINFactor, MAJFactor, SPDFactor
 -- 08/21/24		Alberto Almario					5. Remove effective_dt from merge join and add into update section
 -- 10/23/24		Alberto Almario 		        6. Added excluded driver - AD6949
+-- 11/19/24     Yunus Mohammed                  7. AD7761 - Added driveruniqueid
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_driver_wip]
 AS
@@ -50,7 +51,7 @@ BEGIN
             [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
             [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
             [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor], [PrimaryVehicleId],
-			source_system_sk
+			source_system_sk,driver_unique_id
         INTO [edw_temp].[tquote_auto_driver_wip_temp1]
 		
         FROM
@@ -65,6 +66,7 @@ BEGIN
                         ELSE 4 --(Metal)
                     END as [source_system_sk]
                     , accof.ObjectId
+                    , acco.UniqueId as driver_unique_id
                 FROM
                     (
                         SELECT *
@@ -102,7 +104,7 @@ BEGIN
 
 		-- Logic for excluded driver
         SELECT 
-			quote_no, effective_dt, 0 as transaction_seq_no, driver_no, ObjectId,
+			quote_no, effective_dt, 0 as transaction_seq_no, driver_no, ObjectId,driver_unique_id,
             ExcludedDriverId,ExcludedDriverAllVehicles,ExcludedDriverSelectVehicles,cast(null as varchar(max)) vehicle_list
         INTO [edw_temp].[tquote_auto_driver_wip_temp3]
         FROM
@@ -110,7 +112,7 @@ BEGIN
                 SELECT
                     acc.PolicyNumber as quote_no, acc.EffectiveDate as effective_dt, acco.[Index] as driver_no,
 					-- acc.Number as transaction_seq_no,
-                    accof.[Field], accof.[Value], accof.ObjectId
+                    accof.[Field], accof.[Value], accof.ObjectId,acco.UniqueId as driver_unique_id
                 FROM
                     (
                         SELECT *
@@ -287,7 +289,8 @@ BEGIN
                 target.etl_audit_sk = @etl_audit_sk,
                 target.excluded_driver_in = source.excluded_driver_in,
                 target.excluded_driver_for_all_vehicles_in = source.excluded_driver_for_all_vehicles_in,
-                target.excluded_driver_for_listed_vehicles = source.excluded_driver_for_listed_vehicles
+                target.excluded_driver_for_listed_vehicles = source.excluded_driver_for_listed_vehicles,
+                target.driver_unique_id = source.driver_unique_id
         WHEN NOT MATCHED THEN
             INSERT (
                 quote_no,
@@ -361,7 +364,8 @@ BEGIN
                 etl_audit_sk,
                 excluded_driver_in,
                 excluded_driver_for_all_vehicles_in,
-                excluded_driver_for_listed_vehicles
+                excluded_driver_for_listed_vehicles,
+                driver_unique_id
             )
             VALUES (
                 source.quote_no,
@@ -435,7 +439,8 @@ BEGIN
                 @etl_audit_sk,
                 source.excluded_driver_in,
                 source.excluded_driver_for_all_vehicles_in,
-                source.excluded_driver_for_listed_vehicles
+                source.excluded_driver_for_listed_vehicles,
+                source.driver_unique_id
             );
 
 
