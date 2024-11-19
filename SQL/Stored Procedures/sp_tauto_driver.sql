@@ -435,7 +435,7 @@ BEGIN
             t1.etl_audit_sk
             , t1.excluded_driver_in
             , t1.ExcludedDriverAllVehicles
-            , t1..vehicle_list
+            , t1.vehicle_list
             , t1.driver_unique_id
         FROM [edw_temp].[tauto_driver_temp3] t1;
 
