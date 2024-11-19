@@ -218,7 +218,7 @@ BEGIN
 		MERGE INTO [edw_core].[tquote_auto_driver] AS target
         USING [edw_temp].[tquote_auto_driver_wip_temp2] AS source
             ON target.quote_no = source.quote_no
-            AND target.driver_no = source.driver_no
+            AND target.driver_unique_id = source.driver_unique_id
             AND target.transaction_seq_no = source.transaction_seq_no
         WHEN MATCHED THEN
             UPDATE SET
