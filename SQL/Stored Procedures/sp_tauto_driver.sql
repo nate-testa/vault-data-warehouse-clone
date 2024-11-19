@@ -437,7 +437,7 @@ BEGIN
             , t1.ExcludedDriverAllVehicles
             , t1..vehicle_list
             , t1.driver_unique_id
-        FROM [edw_temp].[tauto_driver_temp3];
+        FROM [edw_temp].[tauto_driver_temp3] t1;
 
         --************End************
 
