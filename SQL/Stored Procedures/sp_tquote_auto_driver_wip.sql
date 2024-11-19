@@ -290,7 +290,7 @@ BEGIN
                 target.excluded_driver_in = source.excluded_driver_in,
                 target.excluded_driver_for_all_vehicles_in = source.excluded_driver_for_all_vehicles_in,
                 target.excluded_driver_for_listed_vehicles = source.excluded_driver_for_listed_vehicles,
-                target.driver_unique_id = source.driver_unique_id
+                target.driver_no = source.driver_no
         WHEN NOT MATCHED THEN
             INSERT (
                 quote_no,

@@ -138,7 +138,7 @@ BEGIN
 		        TARGET.update_ts = SOURCE.update_ts,
 		        TARGET.etl_audit_sk = SOURCE.etl_audit_sk,
 		        TARGET.driver_limit_type = SOURCE.driver_limit_type,
-				TARGET.driver_unique_id = SOURCE.driver_unique_id
+				TARGET.driver_no = SOURCE.driver_no
 
 		WHEN NOT MATCHED BY TARGET THEN
 		    INSERT (
