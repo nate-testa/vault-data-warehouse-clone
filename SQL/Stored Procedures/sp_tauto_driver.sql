@@ -16,7 +16,7 @@ GO
 -- 04/07/24		Hernnando Gonzalez		    4. Added new fields AAFFactor, AFBFactor, NAFFactor, CPAFactor, MINFactor, MAJFactor, SPDFactor
 -- 22/08/24		Hernnando Gonzalez		    5. Added auto_vehicle_sk
 -- 10/22/24		Architha Gudimalla		    6. AD6949 - Added excluded driver
--- 11/19/24		Architha Gudimalla		    7. AD7756 - Added excluded driver 
+-- 11/19/24		Architha Gudimalla		    7. AD7756 - Added driver unique id
 -- ==============================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_driver]
 AS
@@ -435,9 +435,9 @@ BEGIN
             t1.etl_audit_sk
             , t1.excluded_driver_in
             , t1.ExcludedDriverAllVehicles
-            , t1..vehicle_list
+            , t1.vehicle_list
             , t1.driver_unique_id
-        FROM [edw_temp].[tauto_driver_temp3];
+        FROM [edw_temp].[tauto_driver_temp3] t1;
 
         --************End************
 
