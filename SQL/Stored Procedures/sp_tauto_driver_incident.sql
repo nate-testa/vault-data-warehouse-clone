@@ -10,6 +10,7 @@ GO
 -- 09/15/23		Alberto Almario					1. Created the proc
 -- 03/01/24     Architha Gudimalla              2. Updated the logic to use parent object id to get the correct driver no with the incidents
 -- 08/07/24		Hernnando Gonzalez		        3. Added new field IncreasePremiumOnRenewal
+-- 11/19/24		Architha Gudimalla		        4. AD7756 - Added excluded driver
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_driver_incident] 
 AS
@@ -34,7 +35,14 @@ BEGIN
 		--************Start************
 
         -- Step1 limit amount of rows.
+		DROP TABLE IF EXISTS [edw_temp].[tauto_driver_incident_temp0];
 		DROP TABLE IF EXISTS [edw_temp].[tauto_driver_incident_temp1];
+
+        SELECT *
+        into [edw_temp].[tauto_driver_incident_temp0]
+        FROM [edw_stage].[AccountTransaction]
+        WHERE [State] = 'ISSUED'
+        AND IssuedDate > @last_source_extract_ts;
 
 		SELECT 
 			IssuedDate, policy_no, effective_dt, transaction_effective_dt, expiration_dt, transaction_dt, transaction_seq_no, policy_history_sk, auto_driver_sk, driver_no, incident_no,
@@ -42,7 +50,7 @@ BEGIN
             [CollisionPayment], [ComprehensivePayment], [GlassPayment], [MedicalExpensePayment], [MedicalPaymentPayment], [OtherPayment], [PropertyDamagePayment], [PersonalInjuryProtectionPayment], 
             [RentalReimbursementPayment], [SpousalLiabilityPayment], [TowingAndLaborPayment], [UninsuredMotoristPayment], [UnderinsuredMotoristPayment], [LendingLoss], [PIPClaimOverride], [IncreasePremiumOnRenewal],
 			source_system_sk 
-		
+            ,driver_incident_unique_id
         INTO [edw_temp].[tauto_driver_incident_temp1]
 		
         FROM
@@ -56,13 +64,8 @@ BEGIN
                         WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
                         ELSE 4 --(Metal)
                     END as [source_system_sk]
-                FROM
-                (
-                    SELECT *
-                    FROM [edw_stage].[AccountTransaction]
-                    WHERE [State] = 'ISSUED'
-                        AND IssuedDate > @last_source_extract_ts
-                ) acct
+                    ,acctvo.unique_id driver_incident_unique_id
+                FROM [edw_temp].[tauto_driver_incident_temp0] acct
                 INNER JOIN [edw_stage].[Product] AS p on p.Id = acct.ProductId
                 INNER JOIN [edw_stage].[AccountTransactionVersion] AS acctv ON acctv.AccountTransactionId = acct.Id
                 INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
@@ -127,6 +130,7 @@ BEGIN
             lending_loss_in,
             pip_claim_override_in,
             increase_premium_on_renewal_in
+            ,driver_incident_unique_id
 		)
         SELECT 
             t1.policy_no, 
@@ -169,6 +173,7 @@ BEGIN
             t1.[LendingLoss] as lending_loss_in,
             t1.PIPClaimOverride as pip_claim_override_in,
             t1.[IncreasePremiumOnRenewal] as increase_premium_on_renewal_in
+            ,t1.driver_incident_unique_id
         FROM 
             [edw_temp].[tauto_driver_incident_temp1] AS t1
         ;
@@ -186,6 +191,7 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
         -- Drop temp table
+        DROP TABLE IF EXISTS edw_temp.[tauto_driver_incident_temp0];
         DROP TABLE IF EXISTS edw_temp.[tauto_driver_incident_temp1];
 
 	END TRY
