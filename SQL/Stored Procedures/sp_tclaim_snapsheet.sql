@@ -32,7 +32,7 @@ BEGIN
 		
 		
 		SELECT
-		claim_no, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS policy_effective_dt, 
+		claim_number as claim_no, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS policy_effective_dt, 
 		policy_sk,cause_of_loss_sk,loss_desc, source_claim_status,claim_status, catastrophe_sk, product_sk,
 		loss_address ,loss_city_nm ,loss_state_cd ,loss_zip_cd,loss_country_nm,broker_id,customer_id,underwriting_company_nm,
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
@@ -42,11 +42,10 @@ BEGIN
 		FROM
 		(
 		SELECT
-			1 --ROW_NUMBER() OVER(PARTITION BY tcase.claim_no,tph.policy_no ORDER BY tph.transaction_seq_no DESC,iif(UPPER(tcasestat.status_name)='REJECTED', rr.reason,NULL) desc) AS 
-			rn,
+			1 as rn,
 			tph.effective_dt, 
 			tbrk.broker_id,
-			c.customer_id,
+			cr.customer_id,
 			c.claim_number, 
 			c.datetime_of_loss AS loss_dt, 
 			c.first_opened_at AS report_dt, 
@@ -86,15 +85,16 @@ BEGIN
 			scl.sub_cause_of_loss_sk,
 			c.updated_at update_time,
 			c.first_closed_at as claim_first_closed_dt,
-			'NA' claim_first_reopen_dt, 
+			CAST(NULL AS DATE) as claim_first_reopen_dt, 
 			c.created_at AS claim_created_ts,
 			c.creator_user_name AS claim_created_by_nm,
 			tph.policy_history_sk,
 			'NA' claim_reject_reason_desc 
 		FROM edw_stage_snapsheet.claims c
-		left join edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
-		left join claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcm.id and  cpcmp.contact_method_type = 'phone'
-		left join claim_party_contact_methods cpcme on c.notifier_claim_party_id = cpcm.id and  cpcme.contact_method_type = 'email'
+		LEFT JOIN edw_stage.t_clm_case tcase on c.claim_number = tcase.claim_no
+		LEFT JOIN edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
+		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcmp.id and  cpcmp.contact_method_type = 'phone'
+		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcme on c.notifier_claim_party_id = cpcme.id and  cpcme.contact_method_type = 'email'
 		LEFT JOIN edw_core.tpolicy_history tph ON TRIM(tcase.policy_no) = tph.policy_no
 												AND tph.policy_history_sk = (
 																	SELECT TOP 1 policy_history_sk
@@ -106,7 +106,7 @@ BEGIN
 																	ORDER BY transaction_seq_no DESC
 																)
 		LEFT JOIN edw_core.tbroker tbrk ON tbrk.broker_sk = tph.broker_sk	
-		LEFT JOIN edw_core.tcustomer c ON c.customer_sk=tph.customer_sk
+		LEFT JOIN edw_core.tcustomer cr ON cr.customer_sk=tph.customer_sk
 		LEFT JOIN edw_core.tcatastrophe cat ON TRIM(tcase.accident_code)=TRIM(cat.catastrophe_cd)
 		LEFT JOIN edw_core.tproduct prd ON prd.ebao_product_cd=tcase.product_code
 		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_cd=tcase.loss_cause
