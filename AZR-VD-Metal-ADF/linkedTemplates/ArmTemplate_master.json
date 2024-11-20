@@ -1,0 +1,448 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "AZR-VD-Metal-ADF"
+		},
+		"AzureBlobStorage1_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureBlobStorage1'"
+		},
+		"AzureSqlDatabase_UAT_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSqlDatabase_UAT'"
+		},
+		"AzureSqlDatabase_edw_dev_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSqlDatabase_edw_dev'"
+		},
+		"LS_AWS_DMS_UAT_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_AWS_DMS_UAT'"
+		},
+		"LS_EDW_UAT_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_EDW_UAT'"
+		},
+		"LS_azrvaultmetaldev001_metaldb_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_azrvaultmetaldev001_metaldb'"
+		},
+		"LS_eBao_uat_aw_uat_pub_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_eBao_uat_aw_uat_pub'"
+		},
+		"LS_eBao_uat_aws_us_address_uat_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_eBao_uat_aws_us_address_uat'"
+		},
+		"LS_eBao_uat_aws_us_diary_uat_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_eBao_uat_aws_us_diary_uat'"
+		},
+		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_eBao_uat_aws_us_uat_unicorn_insurepay'"
+		},
+		"LS_eBao_uat_aws_us_uat_vault_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_eBao_uat_aws_us_uat_vault'"
+		},
+		"MySql1_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'MySql1'"
+		},
+		"LS_AWS_DMS_UAT_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "vlt-mysql-ods-uat.cluster-ctaeroxllezw.us-east-1.rds.amazonaws.com"
+		},
+		"LS_AWS_DMS_UAT_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "dms_core"
+		},
+		"LS_AWS_DMS_UAT_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "vltDmsUserUAT"
+		},
+		"LS_EDW_UAT_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "azrvaultdatauat001.database.windows.net"
+		},
+		"LS_EDW_UAT_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "vault_edw"
+		},
+		"LS_EDW_UAT_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "vltadmin"
+		},
+		"LS_eBao_uat_aw_uat_pub_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aw_uat_pub_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aw_uat_pub"
+		},
+		"LS_eBao_uat_aw_uat_pub_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "awac_readonly"
+		},
+		"LS_eBao_uat_aws_us_address_uat_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aws_us_address_uat_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_address_uat"
+		},
+		"LS_eBao_uat_aws_us_address_uat_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "awac_readonly"
+		},
+		"LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_diary_uat"
+		},
+		"LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "awac_readonly"
+		},
+		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_uat_unicorn_insurepay"
+		},
+		"LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "awac_readonly"
+		},
+		"LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
+		},
+		"LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "aws_us_uat_vault"
+		},
+		"LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "awac_readonly"
+		},
+		"AzureMetalDBSit_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/61591278-f31e-4706-ac18-ebb142d84d24/resourceGroups/AZR-INFRA-RG/providers/Microsoft.Sql/servers/azrvaultmetaldev001"
+		},
+		"AzureMetalDBSit_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"AzureMetalDBSit_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azrvaultmetaldev001.database.windows.net"
+			]
+		},
+		"AzureSqlDatabase871_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/61591278-f31e-4706-ac18-ebb142d84d24/resourceGroups/DefaultResourceGroup-EUS2/providers/Microsoft.Sql/servers/azr-vault-data-sit-001"
+		},
+		"AzureSqlDatabase871_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"AzureSqlDatabase871_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-vault-data-sit-001.database.windows.net"
+			]
+		},
+		"DEVSIT-SQL_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/6c8f1314-e2b0-43e5-87b0-0538a6a6ca04/resourceGroups/AZR-DEV-DATA-DB-RG/providers/Microsoft.Sql/servers/azrvaultdatasit001"
+		},
+		"DEVSIT-SQL_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"DEVSIT-SQL_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azrvaultdatasit001.database.windows.net"
+			]
+		},
+		"azr-dev-metal-db-core01-pep01_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/6c8f1314-e2b0-43e5-87b0-0538a6a6ca04/resourceGroups/AZR-DEV-METAL-DB-RG/providers/Microsoft.Sql/servers/azr-dev-metal-db-core01"
+		},
+		"azr-dev-metal-db-core01-pep01_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr-dev-metal-db-core01-pep01_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-dev-metal-db-core01.database.windows.net"
+			]
+		},
+		"azr-uat-data-db-core01-pep03_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-DATA-DB-RG/providers/Microsoft.Sql/servers/azrvaultdatauat001"
+		},
+		"azr-uat-data-db-core01-pep03_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr-uat-data-db-core01-pep03_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azrvaultdatauat001.database.windows.net"
+			]
+		},
+		"containerUri": {
+			"type": "string",
+			"metadata": "URI to storage account containing linked ARM templates"
+		},
+		"containerSasToken": {
+			"type": "string",
+			"metadata": "Sas token to storage account containing linked ARM templates"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "AZR-VD-Metal-ADF_ArmTemplate_0",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2024-03-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"AzureBlobStorage1_connectionString": {
+						"value": "[parameters('AzureBlobStorage1_connectionString')]"
+					},
+					"LS_EDW_UAT_password": {
+						"value": "[parameters('LS_EDW_UAT_password')]"
+					},
+					"LS_AWS_DMS_UAT_password": {
+						"value": "[parameters('LS_AWS_DMS_UAT_password')]"
+					},
+					"LS_eBao_uat_aw_uat_pub_password": {
+						"value": "[parameters('LS_eBao_uat_aw_uat_pub_password')]"
+					},
+					"LS_eBao_uat_aws_us_address_uat_password": {
+						"value": "[parameters('LS_eBao_uat_aws_us_address_uat_password')]"
+					},
+					"LS_eBao_uat_aws_us_diary_uat_password": {
+						"value": "[parameters('LS_eBao_uat_aws_us_diary_uat_password')]"
+					},
+					"LS_eBao_uat_aws_us_uat_unicorn_insurepay_password": {
+						"value": "[parameters('LS_eBao_uat_aws_us_uat_unicorn_insurepay_password')]"
+					},
+					"LS_eBao_uat_aws_us_uat_vault_password": {
+						"value": "[parameters('LS_eBao_uat_aws_us_uat_vault_password')]"
+					},
+					"MySql1_connectionString": {
+						"value": "[parameters('MySql1_connectionString')]"
+					},
+					"LS_EDW_UAT_properties_typeProperties_server": {
+						"value": "[parameters('LS_EDW_UAT_properties_typeProperties_server')]"
+					},
+					"LS_EDW_UAT_properties_typeProperties_database": {
+						"value": "[parameters('LS_EDW_UAT_properties_typeProperties_database')]"
+					},
+					"LS_EDW_UAT_properties_typeProperties_userName": {
+						"value": "[parameters('LS_EDW_UAT_properties_typeProperties_userName')]"
+					},
+					"LS_AWS_DMS_UAT_properties_typeProperties_server": {
+						"value": "[parameters('LS_AWS_DMS_UAT_properties_typeProperties_server')]"
+					},
+					"LS_AWS_DMS_UAT_properties_typeProperties_database": {
+						"value": "[parameters('LS_AWS_DMS_UAT_properties_typeProperties_database')]"
+					},
+					"LS_AWS_DMS_UAT_properties_typeProperties_username": {
+						"value": "[parameters('LS_AWS_DMS_UAT_properties_typeProperties_username')]"
+					},
+					"LS_eBao_uat_aw_uat_pub_properties_typeProperties_server": {
+						"value": "[parameters('LS_eBao_uat_aw_uat_pub_properties_typeProperties_server')]"
+					},
+					"LS_eBao_uat_aw_uat_pub_properties_typeProperties_database": {
+						"value": "[parameters('LS_eBao_uat_aw_uat_pub_properties_typeProperties_database')]"
+					},
+					"LS_eBao_uat_aw_uat_pub_properties_typeProperties_username": {
+						"value": "[parameters('LS_eBao_uat_aw_uat_pub_properties_typeProperties_username')]"
+					},
+					"LS_eBao_uat_aws_us_address_uat_properties_typeProperties_server": {
+						"value": "[parameters('LS_eBao_uat_aws_us_address_uat_properties_typeProperties_server')]"
+					},
+					"LS_eBao_uat_aws_us_address_uat_properties_typeProperties_database": {
+						"value": "[parameters('LS_eBao_uat_aws_us_address_uat_properties_typeProperties_database')]"
+					},
+					"LS_eBao_uat_aws_us_address_uat_properties_typeProperties_username": {
+						"value": "[parameters('LS_eBao_uat_aws_us_address_uat_properties_typeProperties_username')]"
+					},
+					"LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_server": {
+						"value": "[parameters('LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_server')]"
+					},
+					"LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_database": {
+						"value": "[parameters('LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_database')]"
+					},
+					"LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_username": {
+						"value": "[parameters('LS_eBao_uat_aws_us_diary_uat_properties_typeProperties_username')]"
+					},
+					"LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_server": {
+						"value": "[parameters('LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_server')]"
+					},
+					"LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_database": {
+						"value": "[parameters('LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_database')]"
+					},
+					"LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_username": {
+						"value": "[parameters('LS_eBao_uat_aws_us_uat_unicorn_insurepay_properties_typeProperties_username')]"
+					},
+					"LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_server": {
+						"value": "[parameters('LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_server')]"
+					},
+					"LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_database": {
+						"value": "[parameters('LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_database')]"
+					},
+					"LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_username": {
+						"value": "[parameters('LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_username')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "AZR-VD-Metal-ADF_ArmTemplate_1",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2024-03-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_1.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"AzureSqlDatabase_UAT_connectionString": {
+						"value": "[parameters('AzureSqlDatabase_UAT_connectionString')]"
+					},
+					"AzureSqlDatabase_edw_dev_connectionString": {
+						"value": "[parameters('AzureSqlDatabase_edw_dev_connectionString')]"
+					},
+					"LS_azrvaultmetaldev001_metaldb_connectionString": {
+						"value": "[parameters('LS_azrvaultmetaldev001_metaldb_connectionString')]"
+					},
+					"AzureMetalDBSit_properties_privateLinkResourceId": {
+						"value": "[parameters('AzureMetalDBSit_properties_privateLinkResourceId')]"
+					},
+					"AzureMetalDBSit_properties_groupId": {
+						"value": "[parameters('AzureMetalDBSit_properties_groupId')]"
+					},
+					"AzureMetalDBSit_properties_fqdns": {
+						"value": "[parameters('AzureMetalDBSit_properties_fqdns')]"
+					},
+					"AzureSqlDatabase871_properties_privateLinkResourceId": {
+						"value": "[parameters('AzureSqlDatabase871_properties_privateLinkResourceId')]"
+					},
+					"AzureSqlDatabase871_properties_groupId": {
+						"value": "[parameters('AzureSqlDatabase871_properties_groupId')]"
+					},
+					"AzureSqlDatabase871_properties_fqdns": {
+						"value": "[parameters('AzureSqlDatabase871_properties_fqdns')]"
+					},
+					"DEVSIT-SQL_properties_privateLinkResourceId": {
+						"value": "[parameters('DEVSIT-SQL_properties_privateLinkResourceId')]"
+					},
+					"DEVSIT-SQL_properties_groupId": {
+						"value": "[parameters('DEVSIT-SQL_properties_groupId')]"
+					},
+					"DEVSIT-SQL_properties_fqdns": {
+						"value": "[parameters('DEVSIT-SQL_properties_fqdns')]"
+					},
+					"azr-dev-metal-db-core01-pep01_properties_privateLinkResourceId": {
+						"value": "[parameters('azr-dev-metal-db-core01-pep01_properties_privateLinkResourceId')]"
+					},
+					"azr-dev-metal-db-core01-pep01_properties_groupId": {
+						"value": "[parameters('azr-dev-metal-db-core01-pep01_properties_groupId')]"
+					},
+					"azr-dev-metal-db-core01-pep01_properties_fqdns": {
+						"value": "[parameters('azr-dev-metal-db-core01-pep01_properties_fqdns')]"
+					},
+					"azr-uat-data-db-core01-pep03_properties_privateLinkResourceId": {
+						"value": "[parameters('azr-uat-data-db-core01-pep03_properties_privateLinkResourceId')]"
+					},
+					"azr-uat-data-db-core01-pep03_properties_groupId": {
+						"value": "[parameters('azr-uat-data-db-core01-pep03_properties_groupId')]"
+					},
+					"azr-uat-data-db-core01-pep03_properties_fqdns": {
+						"value": "[parameters('azr-uat-data-db-core01-pep03_properties_fqdns')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Resources/deployments', 'AZR-VD-Metal-ADF_ArmTemplate_0')]"
+			]
+		},
+		{
+			"name": "AZR-VD-Metal-ADF_ArmTemplate_2",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2024-03-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_2.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Resources/deployments', 'AZR-VD-Metal-ADF_ArmTemplate_1')]"
+			]
+		},
+		{
+			"name": "AZR-VD-Metal-ADF_ArmTemplate_3",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2024-03-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_3.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[resourceId('Microsoft.Resources/deployments', 'AZR-VD-Metal-ADF_ArmTemplate_2')]"
+			]
+		}
+	]
+}

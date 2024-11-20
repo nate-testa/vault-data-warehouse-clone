@@ -1,0 +1,734 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "AZR-VD-Metal-ADF"
+		},
+		"AzureSqlDatabase_UAT_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSqlDatabase_UAT'"
+		},
+		"AzureSqlDatabase_edw_dev_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSqlDatabase_edw_dev'"
+		},
+		"LS_azrvaultmetaldev001_metaldb_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_azrvaultmetaldev001_metaldb'"
+		},
+		"AzureMetalDBSit_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/61591278-f31e-4706-ac18-ebb142d84d24/resourceGroups/AZR-INFRA-RG/providers/Microsoft.Sql/servers/azrvaultmetaldev001"
+		},
+		"AzureMetalDBSit_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"AzureMetalDBSit_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azrvaultmetaldev001.database.windows.net"
+			]
+		},
+		"AzureSqlDatabase871_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/61591278-f31e-4706-ac18-ebb142d84d24/resourceGroups/DefaultResourceGroup-EUS2/providers/Microsoft.Sql/servers/azr-vault-data-sit-001"
+		},
+		"AzureSqlDatabase871_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"AzureSqlDatabase871_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-vault-data-sit-001.database.windows.net"
+			]
+		},
+		"DEVSIT-SQL_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/6c8f1314-e2b0-43e5-87b0-0538a6a6ca04/resourceGroups/AZR-DEV-DATA-DB-RG/providers/Microsoft.Sql/servers/azrvaultdatasit001"
+		},
+		"DEVSIT-SQL_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"DEVSIT-SQL_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azrvaultdatasit001.database.windows.net"
+			]
+		},
+		"azr-dev-metal-db-core01-pep01_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/6c8f1314-e2b0-43e5-87b0-0538a6a6ca04/resourceGroups/AZR-DEV-METAL-DB-RG/providers/Microsoft.Sql/servers/azr-dev-metal-db-core01"
+		},
+		"azr-dev-metal-db-core01-pep01_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr-dev-metal-db-core01-pep01_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-dev-metal-db-core01.database.windows.net"
+			]
+		},
+		"azr-uat-data-db-core01-pep03_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-DATA-DB-RG/providers/Microsoft.Sql/servers/azrvaultdatauat001"
+		},
+		"azr-uat-data-db-core01-pep03_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr-uat-data-db-core01-pep03_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azrvaultdatauat001.database.windows.net"
+			]
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/integrationRuntimeAzure')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "East US",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 10,
+							"cleanup": false,
+							"customProperties": []
+						},
+						"pipelineExternalComputeScaleProperties": {
+							"timeToLive": 60
+						}
+					}
+				},
+				"managedVirtualNetwork": {
+					"type": "ManagedVirtualNetworkReference",
+					"referenceName": "default"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/AzureMetalDBSit')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('AzureMetalDBSit_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('AzureMetalDBSit_properties_groupId')]",
+				"fqdns": "[parameters('AzureMetalDBSit_properties_fqdns')]"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/AzureSqlDatabase871')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('AzureSqlDatabase871_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('AzureSqlDatabase871_properties_groupId')]",
+				"fqdns": "[parameters('AzureSqlDatabase871_properties_fqdns')]"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/DEVSIT-SQL')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('DEVSIT-SQL_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('DEVSIT-SQL_properties_groupId')]",
+				"fqdns": "[parameters('DEVSIT-SQL_properties_fqdns')]"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/azr-dev-metal-db-core01-pep01')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('azr-dev-metal-db-core01-pep01_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('azr-dev-metal-db-core01-pep01_properties_groupId')]",
+				"fqdns": "[parameters('azr-dev-metal-db-core01-pep01_properties_fqdns')]"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/azr-uat-data-db-core01-pep03')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('azr-uat-data-db-core01-pep03_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('azr-uat-data-db-core01-pep03_properties_groupId')]",
+				"fqdns": "[parameters('azr-uat-data-db-core01-pep03_properties_fqdns')]"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_SourceDS')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_uat_aws_us_uat_vault",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"cw_tableName": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": {
+						"value": "@dataset().cw_tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_SourceDS_t_pub_address')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_uat_aws_us_address_uat",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"cw_tableName": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_address"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": {
+						"value": "@dataset().cw_tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_SourceDS_t_pub_diary')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_uat_aws_us_diary_uat",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"cw_tableName": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_diary"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": {
+						"value": "@dataset().cw_tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_SourceDS_MySQL')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_uat_aws_us_uat_vault",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"cw_tableName": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "MetadataDrivenCopy_eBao_to_Edw_stage"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": {
+						"value": "@dataset().cw_tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_dmsDocument')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_AWS_DMS_UAT",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_dmsDocument"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_diary')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_uat_aws_us_diary_uat",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_t_pub_diary"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "`t_pub_diary`"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_user')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_uat_aw_uat_pub",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_t_pub_user"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "`t_pub_user`"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlDatabase_UAT')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureSqlDatabase_UAT_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "integrationRuntimeAzure",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/integrationRuntimeAzure')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlDatabase_edw_dev')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureSqlDatabase_edw_dev_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "integrationRuntimeAzure",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/integrationRuntimeAzure')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_azrvaultmetaldev001_metaldb')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_azrvaultmetaldev001_metaldb_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "integrationRuntimeAzure",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/integrationRuntimeAzure')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Master_Collections_Procedure')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "sp_tcollections_location",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_tcollection_location]"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase_edw_dev",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_tcollections_coverage",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_tcollections_location",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_tcollection_coverage]"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase_edw_dev",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_tcollection_additional_coverage",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_tcollections_coverage",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_tcollection_additional_coverage]"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase_edw_dev",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_tcollection_scheduled_item_detail",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_tcollection_additional_coverage",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_tcollection_scheduled_item_detail]"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase_edw_dev",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "StoredProcedure EXEC"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-07-11T13:42:22Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase_edw_dev')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Master_Home_Procedure')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "sp_thome_location",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_thome_location]"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase_edw_dev",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_thome_coverage",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_thome_location",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_thome_coverage]"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase_edw_dev",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_thome_additional_coverage",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "sp_thome_coverage",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_thome_additional_coverage]"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase_edw_dev",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "StoredProcedure EXEC"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-07-11T13:42:22Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase_edw_dev')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Master_Ref_Procedure')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "sp_tbroker",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_tbroker]"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase_edw_dev",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_tcustomer",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_tcustomer]"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase_edw_dev",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "sp_tinternal_coverage",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[edw_core].[sp_tinternal_coverage]"
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabase_edw_dev",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "StoredProcedure EXEC"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-07-11T13:42:22Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase_edw_dev')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DestinationDataset_dmsDocument')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabase_edw_dev",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_dmsDocument"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "edw_stage",
+					"table": "dms_claim_payment_estimate"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabase_edw_dev')]"
+			]
+		}
+	]
+}
