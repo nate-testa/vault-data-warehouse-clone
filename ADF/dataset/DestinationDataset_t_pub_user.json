@@ -10,8 +10,10 @@
 		},
 		"annotations": [],
 		"type": "AzureSqlTable",
+		"schema": [],
 		"typeProperties": {
-			"tableName": "[edw_stage].[t_pub_user]"
+			"schema": "edw_stage",
+			"table": "t_pub_user"
 		}
 	}
 }
