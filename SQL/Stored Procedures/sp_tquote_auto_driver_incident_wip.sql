@@ -13,6 +13,7 @@ GO
 -- 06/09/2024   Yunus Mohammed                  4. Corrcted insert statement
 -- 08/07/24		Hernnando Gonzalez		        5. Added new field IncreasePremiumOnRenewal
 -- 08/21/24		Alberto Almario					6. Remove effective_dt from merge join and add into update section
+-- 08/07/24		Architha Gudimalla 		        7. AD7776 - update driver table join to use uniqueID
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_driver_incident_wip]
 AS
@@ -72,7 +73,7 @@ BEGIN
                 INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
                 INNER JOIN [edw_stage].[AccountObject] AS pid ON acco.parentobjectid = pid.Id
                 LEFT JOIN [edw_core].[tquote_history] AS qh  ON qh.quote_no = acc.PolicyNumber AND qh.effective_dt = acc.EffectiveDate AND qh.transaction_seq_no = 0
-                LEFT JOIN [edw_core].[tquote_auto_driver] AS qad ON qad.quote_no = acc.PolicyNumber AND qad.effective_dt = acc.EffectiveDate AND qad.transaction_seq_no = 0 and qad.driver_no=pid.[index]
+                LEFT JOIN [edw_core].[tquote_auto_driver] AS qad ON qad.quote_no = acc.PolicyNumber AND qad.effective_dt = acc.EffectiveDate AND qad.transaction_seq_no = 0 and qad.driver_unique_id=pid.uniqueid
                 WHERE p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'
                     AND accof.[Group] in ('Incidents in the Past 5 Years')
