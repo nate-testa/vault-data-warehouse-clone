@@ -1,0 +1,16 @@
+{
+	"name": "SourceDataset_dmsDocument",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_AWS_DMS_UAT",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Dataset_dmsDocument"
+		},
+		"annotations": [],
+		"type": "MySqlTable",
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
