@@ -8,7 +8,7 @@
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 
-AS
+AS	
 BEGIN
 	DECLARE @ProcedureName NVARCHAR(120)
     SET @ProcedureName = OBJECT_NAME(@@PROCID)
@@ -44,7 +44,7 @@ BEGIN
 		SELECT
 			1 --ROW_NUMBER() OVER(PARTITION BY tcase.claim_no,tph.policy_no ORDER BY tph.transaction_seq_no DESC,iif(UPPER(tcasestat.status_name)='REJECTED', rr.reason,NULL) desc) AS 
 			rn,
-			tph.effective_dt 
+			tph.effective_dt, 
 			tbrk.broker_id,
 			c.customer_id,
 			c.claim_number, 
@@ -93,8 +93,8 @@ BEGIN
 			'NA' claim_reject_reason_desc 
 		FROM edw_stage_snapsheet.claims c
 		left join edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
-		left join claim_party_contact_methods cpcmp on c.notifier_claim_party_id = and cpcm.id and  cpcmp.contact_method_type = 'phone'
-		left join claim_party_contact_methods cpcme on c.notifier_claim_party_id = and cpcm.id and  cpcme.contact_method_type = 'email'
+		left join claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcm.id and  cpcmp.contact_method_type = 'phone'
+		left join claim_party_contact_methods cpcme on c.notifier_claim_party_id = cpcm.id and  cpcme.contact_method_type = 'email'
 		LEFT JOIN edw_core.tpolicy_history tph ON TRIM(tcase.policy_no) = tph.policy_no
 												AND tph.policy_history_sk = (
 																	SELECT TOP 1 policy_history_sk
