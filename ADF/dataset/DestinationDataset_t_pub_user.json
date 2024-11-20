@@ -11,7 +11,7 @@
 		"annotations": [],
 		"type": "AzureSqlTable",
 		"typeProperties": {
-			"tableName": "[edw_stage].[t_pub_user]"
+			"tableName": "edw_stage/t_pub_user"
 		}
 	}
 }
