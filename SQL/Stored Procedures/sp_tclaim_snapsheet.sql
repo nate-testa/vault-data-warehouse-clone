@@ -28,11 +28,10 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 
-		DROP TABLE IF exists edw_temp.tclaim_temp1;
-		
+		DROP TABLE IF exists edw_temp.tclaim_temp1; 
 		
 		SELECT
-		claim_no, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS policy_effective_dt, 
+		claim_number, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS policy_effective_dt, 
 		policy_sk,cause_of_loss_sk,loss_desc, source_claim_status,claim_status, catastrophe_sk, product_sk,
 		loss_address ,loss_city_nm ,loss_state_cd ,loss_zip_cd,loss_country_nm,broker_id,customer_id,underwriting_company_nm,
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
@@ -44,36 +43,38 @@ BEGIN
 		SELECT
 			1 --ROW_NUMBER() OVER(PARTITION BY tcase.claim_no,tph.policy_no ORDER BY tph.transaction_seq_no DESC,iif(UPPER(tcasestat.status_name)='REJECTED', rr.reason,NULL) desc) AS 
 			rn,
-			tph.effective_dt 
+			tph.effective_dt, 
 			tbrk.broker_id,
 			c.customer_id,
-			c.claim_number, 
-			c.datetime_of_loss AS loss_dt, 
-			c.first_opened_at AS report_dt, 
-			c.policy_number as policy_no, 
+			cl.claim_number, 
+			cl.datetime_of_loss AS loss_dt, 
+			cl.first_opened_at AS report_dt, 
+			cl.policy_number as policy_no, 
 			tph.policy_sk,
-			cl.cause_of_loss_sk,
-			c.incident_location_description AS loss_desc,		
-			UPPER(c.status) AS source_claim_status,
+			col.cause_of_loss_sk,
+			cl.incident_location_description AS loss_desc,		
+			UPPER(cl.status) AS source_claim_status,
 			UPPER(CASE 
-				WHEN c.status IN('DRAFT','OPEN') 
+				WHEN cl.status IN('DRAFT','OPEN') 
 				THEN 'Open' 
 				else 'Closed' 
 			END) AS claim_status,
-			cat.catastrophe_sk AS catastrophe_sk, 
-			prd.product_sk,
+			--cat.catastrophe_sk 
+			null AS catastrophe_sk, 
+			--prd.product_sk,
+			null as product_sk,
 			CONCAT(	'',
-					TRIM(c.address_address1), 
-					CASE WHEN TRIM(ISNULL(c.address_address1,''))='' THEN '' ELSE '' END,
-					TRIM(ISNULL(c.address_address2,''))
+					TRIM(cl.address_address1), 
+					CASE WHEN TRIM(ISNULL(cl.address_address1,''))='' THEN '' ELSE '' END,
+					TRIM(ISNULL(cl.address_address2,''))
 			) AS loss_address ,
-			c.address_city AS loss_city_nm ,
-		    UPPER(TRIM(c.address_region)) AS loss_state_cd ,
-			c.address_postal_code AS loss_zip_cd, 
-			c.address_country AS loss_country_nm,
+			cl.address_city AS loss_city_nm ,
+		    UPPER(TRIM(cl.address_region)) AS loss_state_cd ,
+			cl.address_postal_code AS loss_zip_cd, 
+			cl.address_country AS loss_country_nm,
 			CASE
-					WHEN c.account_code='vault_reciprocal_exchange' THEN 'VRE'
-					WHEN c.account_code='vault_es_insurance_company' THEN 'VES'
+					WHEN cl.account_code='vault_reciprocal_exchange' THEN 'VRE'
+					WHEN cl.account_code='vault_es_insurance_company' THEN 'VES'
 			ELSE '' END AS underwriting_company_nm,
 			CONCAT(	'',
 					TRIM(cp.first_name), 
@@ -83,42 +84,43 @@ BEGIN
 			cp.relation_to_insured AS contact_type,
 			cpcmp.value as contact_phone,
 			CASE WHEN TRIM(cpcmp.value)='' THEN NULL ELSE cpcmp.value END AS contact_person_email,
-			scl.sub_cause_of_loss_sk,
-			c.updated_at update_time,
-			c.first_closed_at as claim_first_closed_dt,
+			--scl.sub_cause_of_loss_sk,
+			null as sub_cause_of_loss_sk,
+			cl.updated_at update_time,
+			cl.first_closed_at as claim_first_closed_dt,
 			'NA' claim_first_reopen_dt, 
-			c.created_at AS claim_created_ts,
-			c.creator_user_name AS claim_created_by_nm,
+			cl.created_at AS claim_created_ts,
+			cl.creator_user_name AS claim_created_by_nm,
 			tph.policy_history_sk,
-			'NA' claim_reject_reason_desc 
-		FROM edw_stage_snapsheet.claims c
-		left join edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
-		left join claim_party_contact_methods cpcmp on c.notifier_claim_party_id = and cpcm.id and  cpcmp.contact_method_type = 'phone'
-		left join claim_party_contact_methods cpcme on c.notifier_claim_party_id = and cpcm.id and  cpcme.contact_method_type = 'email'
-		LEFT JOIN edw_core.tpolicy_history tph ON TRIM(tcase.policy_no) = tph.policy_no
+			'NA' claim_reject_reason_desc  
+		FROM edw_stage_snapsheet.claims cl
+		left join edw_stage_snapsheet.claim_parties cp on cl.notifier_claim_party_id = cp.id
+		left join edw_stage_snapsheet.claim_party_contact_methods cpcmp on cl.notifier_claim_party_id = cpcmp.id and  cpcmp.contact_method_type = 'phone'
+		left join edw_stage_snapsheet.claim_party_contact_methods cpcme on cl.notifier_claim_party_id = cpcme.id and  cpcme.contact_method_type = 'email'
+		LEFT JOIN edw_core.tpolicy_history tph ON TRIM(cl.policy_number) = tph.policy_no
 												AND tph.policy_history_sk = (
 																	SELECT TOP 1 policy_history_sk
 																	FROM
 																		edw_core.tpolicy_history tph1
 																	WHERE
-																		tph1.policy_no = tcase.policy_no
-																		AND CAST(tph1.transaction_effective_dt AS DATE) <= CAST(tcase.accident_time AS DATE)
+																		tph1.policy_no = cl.policy_number
+																		AND CAST(tph1.transaction_effective_dt AS DATE) <= CAST(cl.datetime_of_loss AS DATE)
 																	ORDER BY transaction_seq_no DESC
 																)
 		LEFT JOIN edw_core.tbroker tbrk ON tbrk.broker_sk = tph.broker_sk	
 		LEFT JOIN edw_core.tcustomer c ON c.customer_sk=tph.customer_sk
-		LEFT JOIN edw_core.tcatastrophe cat ON TRIM(tcase.accident_code)=TRIM(cat.catastrophe_cd)
-		LEFT JOIN edw_core.tproduct prd ON prd.ebao_product_cd=tcase.product_code
-		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_cd=tcase.loss_cause
-		LEFT JOIN edw_core.tsub_cause_of_loss scl ON tcase.sub_cause_of_loss_code=scl.sub_cause_of_loss_cd
-		WHERE greatest(c.created_at,c.updated_at) > @last_source_extract_ts
+		--LEFT JOIN edw_core.tcatastrophe cat ON TRIM(tcase.accident_code)=TRIM(cat.catastrophe_cd)
+		--LEFT JOIN edw_core.tproduct prd ON prd.snapsheet_product_cd=cl.claim_type
+		LEFT JOIN edw_core.tcause_of_loss col ON col.cause_of_loss_cd=cl.loss_type
+		--LEFT JOIN edw_core.tsub_cause_of_loss scl ON tcase.sub_cause_of_loss_code=scl.sub_cause_of_loss_cd
+		--WHERE greatest(cl.created_at,cl.updated_at) > @last_source_extract_ts
 	) AS t
 	WHERE
-		rn=1
+		rn=1  
 		
 	MERGE edw_core.tclaim AS Target
 	USING edw_temp.tclaim_temp1 AS Source
-	ON Source.claim_no=Target.claim_no
+	ON Source.claim_number=Target.claim_no
 	-- For Inserts
 	WHEN NOT MATCHED BY Target THEN
 	INSERT (
@@ -132,7 +134,7 @@ BEGIN
 		)
 	VALUES
 		(
-		claim_no,loss_dt,report_dt,policy_no
+		claim_number,loss_dt,report_dt,policy_no
 		,policy_effective_dt,policy_sk,cause_of_loss_sk,sub_cause_of_loss_sk,loss_desc,claim_status
 		,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,loss_address,loss_city_nm
 		,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_id,contact_nm,contact_type
