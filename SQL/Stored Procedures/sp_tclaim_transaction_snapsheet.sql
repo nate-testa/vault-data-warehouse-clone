@@ -97,7 +97,6 @@ BEGIN
 		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(ft.created_at AS DATE)
 		WHERE 1=1
 			and fta.created_at > @last_source_extract_ts
-			and c.claim_number ='24ATFL438857763' 
 			and fta.code in ('submitted','cancel') 
 			and ft.approved_at is not null --> Added this filter to exclude pending approvals reserves and subsequent cancel records
 		ORDER BY res.claim_id,res.exposure_id,res.cost_type,res.cost_category,res.reserve_method,fta.created_at
@@ -240,9 +239,8 @@ BEGIN
 								ELSE c.claim_type 
 							END)
 		WHERE 1=1
-			AND c.claim_number = '24ATFL438857763'
 			AND fta.code in ('submitted','cancel','stop')
-			AND fta.created_at>@last_source_extract_ts
+			AND fta.created_at > @last_source_extract_ts
 		;
 
 		

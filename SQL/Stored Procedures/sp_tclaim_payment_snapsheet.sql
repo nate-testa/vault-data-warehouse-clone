@@ -28,7 +28,7 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 
-		DROP TABLE IF exists edw_temp.tclaim_payment_temp1
+		DROP TABLE IF exists edw_temp.tclaim_payment_snapsheet_temp1
 
 		SELECT	c.claim_number as claim_no,
 				tc.claim_sk,
@@ -58,7 +58,7 @@ BEGIN
 				null as expert_subtype_role, --party.expert_subtype_role, --pending
 				5 AS source_system_sk
 
-		INTO 	edw_temp.tclaim_payment_temp1 
+		INTO 	edw_temp.tclaim_payment_snapsheet_temp1 
 
 		FROM 		edw_stage_snapsheet.claims c
 		inner join 	edw_stage_snapsheet.financial_payment_items AS fpi on fpi.claim_id = c.id
@@ -71,7 +71,7 @@ BEGIN
 		WHERE		greatest(fpi.created_at,fpi.updated_at) > @last_source_extract_ts;   
 
 		MERGE edw_core.tclaim_payment  AS Target
-		USING edw_temp.tclaim_payment_temp1 AS Source
+		USING edw_temp.tclaim_payment_snapsheet_temp1 AS Source
 		ON  Source.claim_feature_sk=Target.claim_feature_sk AND 
 			Source.payment_no=Target.payment_no AND 
 			Source.payment_sequence_no=Target.payment_sequence_no
@@ -88,7 +88,7 @@ BEGIN
 					claim_no,claim_sk,claim_feature_sk,payment_sequence_no,payment_no,payment_status,
 					claim_type_cd,payee_nm,party_role_nm,paid_amt,payee_address,
 					remark,payment_submitter_nm,payment_approver_nm,payment_submitted_dt,payment_approver_dt,
-					payment_category_nm,partial_final_payment_desc,expert_subtype_role,3,@current_date,@current_date,@etl_audit_sk
+					payment_category_nm,partial_final_payment_desc,expert_subtype_role,source_system_sk,@current_date,@current_date,@etl_audit_sk
 			)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -112,7 +112,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(payment_approver_dt) FROM edw_temp.tclaim_payment_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(payment_approver_dt) FROM edw_temp.tclaim_payment_snapsheet_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
@@ -121,7 +121,7 @@ BEGIN
 
 		
 		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tclaim_payment_temp1
+		DROP TABLE IF EXISTS edw_temp.tclaim_payment_snapsheet_temp1
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
