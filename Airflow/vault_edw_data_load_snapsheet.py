@@ -1,12 +1,14 @@
 import pendulum
 from datetime import timedelta
 from airflow import DAG
+from airflow.models import BaseOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.operators.mssql_operator import MsSqlOperator
 from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
+from airflow.providers.microsoft.azure.operators.data_factory import AzureDataFactoryRunPipelineOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
 
 to_email = "itdatateam@vault.insurance"
@@ -65,6 +67,25 @@ with DAG(
         task_id='start',
     )
 
+    with TaskGroup("ADF_snapsheet_group") as ADF_snapsheet_group:
+
+        edw_stage_snapsheet_from_uat_to_dev: BaseOperator = AzureDataFactoryRunPipelineOperator(
+            task_id="edw_stage_snapsheet_from_uat_to_dev",
+            azure_data_factory_conn_id='azure_data_factory_vault_data',
+            pipeline_name="edw_stage_snapsheet_from_uat_to_dev",
+            # parameters={"myParam": "value"},
+        )
+
+        send_adf_email = EmailOperator(
+            task_id='send_adf_email',
+            to=to_email,
+            subject='Airflow - ADF Snapsheet pipelines executed successfully',
+            html_content=get_HTML_on_vault_format('The Azure Data Factory pipelines executed successfully for Snapsheet data',''),
+        )
+
+        edw_stage_snapsheet_from_uat_to_dev >> send_adf_email
+
+
     
     with TaskGroup("snapsheet_group") as snapsheet_group:
 
@@ -106,5 +127,4 @@ with DAG(
         task_id='end',
     )
 
-
-start >> snapsheet_group >> end
+start >> ADF_snapsheet_group >> snapsheet_group >> end
