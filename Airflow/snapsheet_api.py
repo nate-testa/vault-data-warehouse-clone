@@ -406,6 +406,14 @@ class SnapsheetAPI:
     def update_an_exposure(self, exposure_id, data):
         path = f'/api/v2/exposures/{exposure_id}'
         url = f'{self.base_url}{path}'
+
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Invalid JSON format for data: {data}")
+                return False, f"Error (JSONDecodeError): {str(e)}"
+
         payload_json = json.dumps(data)
         headers = self._generate_headers('PATCH', path, payload_json)
         
@@ -423,6 +431,37 @@ class SnapsheetAPI:
         except requests.exceptions.RequestException as e:
             result_text = f"Error (RequestException): {str(e)}"
             self.logger.error(f"Failed to update exposure {exposure_id}: {result_text}")
+
+        return success, result_text
+
+    def update_an_claim(self, claim_id, data):
+        path = f'/api/v2/claims/{claim_id}'
+        url = f'{self.base_url}{path}'
+
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Invalid JSON format for data: {data}")
+                return False, f"Error (JSONDecodeError): {str(e)}"
+
+        payload_json = json.dumps(data)
+        headers = self._generate_headers('PATCH', path, payload_json)
+        
+        result = None
+        result_text = None
+        success = False
+
+        try:
+            result = self._patch_request(url, headers, payload_json)
+            if result.status_code == 200:
+                success = True
+                result_text = result.text
+            else:
+                result_text = f"code: {result.status_code} | reason: {result.reason} | text: {result.text}"
+        except requests.exceptions.RequestException as e:
+            result_text = f"Error (RequestException): {str(e)}"
+            self.logger.error(f"Failed to update claim {claim_id}: {result_text}")
 
         return success, result_text
 

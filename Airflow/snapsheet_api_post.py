@@ -8,7 +8,7 @@ from snapsheet_api import SnapsheetAPI
 
 
 logger = logging.getLogger(__name__)
-# logger.setLevel("DEBUG")
+logger.setLevel("DEBUG")
 
 
 def process_policies(qry):
@@ -72,6 +72,7 @@ def process_claims(qry):
         exposures = json.loads(exposures) if exposures else None
         vehicles = json.loads(vehicles) if vehicles else None
         claimParties = json.loads(claimParties) if claimParties else None
+        financialTransactions = json.loads(financialTransactions) if financialTransactions else None
 
         success, result_text = api.create_claim(claimNumber, claimType, status, policyNumber, firstOpenedAt, firstClosedAt, openedAt, closedAt, datetimeOfLoss, datetimeOfNotification, fraudScore, fraudLevelIndicator, 
         providerCode, coverageCheck, accountCode, lossType, notes, reservation, claimIncidentDetails, emergencyServicesDetail, notifier, notificationMethod, exposures, claimParties, vehicles, financialTransactions)
