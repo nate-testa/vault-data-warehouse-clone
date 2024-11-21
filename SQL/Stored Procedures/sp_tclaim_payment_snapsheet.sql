@@ -30,26 +30,25 @@ BEGIN
 
 		DROP TABLE IF exists edw_temp.tclaim_payment_temp1
 
-		SELECT	c.claim_number,
+		SELECT	c.claim_number as claim_no,
 				tc.claim_sk,
 				tf.claim_feature_sk,
-				concat(fpi.financial_transaction_id , "-" , fpi.exposure_id) AS payment_sequence_no,
-				settle_payee.stage AS payment_status,
+				-- concat(fpi.financial_transaction_id , '-' , fpi.exposure_id) AS payment_sequence_no,
+				1 AS payment_sequence_no,
+				ft.stage AS payment_status,
 				null AS payment_no,
 				fpi.cost_type AS claim_type_cd,
-				null as settle_payee_id,
-				null as payee_id,
 				concat(cp.first_name,' ',cp.last_name) AS payee_nm,
 				fpd.party_type AS party_role_nm, 
 				ISNULL(fpi.amount,0) AS paid_amt,
-				concat( fpi.address_address_1,', ',
-						fpi.address_address_2,', ', 
-						fpi.address_city,', ', 
-						fpi.address_region,', ', 
-						fpi.address_postal_code,', ', 
-						fpi.address_country
+				concat( fpd.address_address_1,', ',
+						fpd.address_address_2,', ', 
+						fpd.address_city,', ', 
+						fpd.address_region,', ', 
+						fpd.address_postal_code,', ', 
+						fpd.address_country
 				) AS payee_address,
-				fpd.note_body AS remark, 
+				fpi.note_body AS remark, 
 				u.name AS payment_submitter_nm,
 				null as payment_approver_nm, --ISNULL(tpu1.REAL_NAME,tpu2.REAL_NAME) AS payment_approver_nm, --pending
 				ft.created_at AS payment_submitted_dt,
@@ -63,12 +62,12 @@ BEGIN
 
 		FROM 		edw_stage_snapsheet.claims c
 		inner join 	edw_stage_snapsheet.financial_payment_items AS fpi on fpi.claim_id = c.id
-		left join 	edw_stage_snapsheet.claim_parties cp on a.party_id = cp.id 
-		left join 	edw_stage_snapsheet.financial_payment_details fpd on fpd.id = financial_payment_items.financial_transaction_id
+		left join 	edw_stage_snapsheet.financial_payment_details fpd on fpd.id = fpi.financial_transaction_id
+		left join 	edw_stage_snapsheet.claim_parties cp on fpd.party_id = cp.id
 		left join 	edw_stage_snapsheet.financial_transactions ft on fpi.financial_transaction_id = ft.id
-		left join 	edw_stage.users u on ft.creator_user_id = u.id 
+		left join 	edw_stage_snapsheet.users u on ft.creator_user_id = u.id 
 		INNER JOIN 	edw_core.tclaim tc ON tc.claim_no=c.claim_number
-		INNER JOIN 	edw_core.tclaim_feature tf ON tf.claim_no=tc.claim_no AND tf.subclaim_seq_no = obj.seq_no -- need to check join
+		INNER JOIN 	edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no --AND tf.subclaim_seq_no = obj.seq_no -- need to check join
 		WHERE		greatest(fpi.created_at,fpi.updated_at) > @last_source_extract_ts;   
 
 		MERGE edw_core.tclaim_payment  AS Target
@@ -80,14 +79,14 @@ BEGIN
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
 					claim_no,claim_sk,claim_feature_sk,payment_sequence_no,payment_no,payment_status,
-					claim_type_cd,settle_payee_id,payee_id,payee_nm,party_role_nm,paid_amt,payee_address,
+					claim_type_cd,payee_nm,party_role_nm,paid_amt,payee_address,
 					remark,payment_submitter_nm,payment_approver_nm,payment_submitted_dt,payment_approver_dt,
 					payment_category_nm,partial_final_payment_desc,party_subtype_role_nm,source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 		VALUES
 			(
 					claim_no,claim_sk,claim_feature_sk,payment_sequence_no,payment_no,payment_status,
-					claim_type_cd,settle_payee_id,payee_id,payee_nm,party_role_nm,paid_amt,payee_address,
+					claim_type_cd,payee_nm,party_role_nm,paid_amt,payee_address,
 					remark,payment_submitter_nm,payment_approver_nm,payment_submitted_dt,payment_approver_dt,
 					payment_category_nm,partial_final_payment_desc,expert_subtype_role,3,@current_date,@current_date,@etl_audit_sk
 			)
@@ -96,8 +95,6 @@ BEGIN
 		SET
 			Target.payment_status=Source.payment_status,
 			Target.claim_type_cd=Source.claim_type_cd,
-			Target.settle_payee_id=Source.settle_payee_id,
-			Target.payee_id=Source.payee_id,
 			Target.payee_nm=Source.payee_nm,
 			Target.party_role_nm=Source.party_role_nm,
 			Target.paid_amt=Source.paid_amt,
