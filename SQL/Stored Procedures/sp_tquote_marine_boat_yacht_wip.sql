@@ -87,7 +87,7 @@ BEGIN
 		-- Start Merge process
 		MERGE [edw_core].[tquote_marine_boat_yacht] AS [target]
 		USING [edw_temp].[tquote_marine_boat_yacht_wip_temp1] AS [source]
-		ON [source].quote_no = target.quote_no AND [source].effective_dt = target.effective_dt      
+		ON [source].quote_no = target.quote_no
 		-- For Inserts
 		WHEN NOT MATCHED BY TARGET THEN
 		INSERT (
