@@ -96,7 +96,9 @@ with DAG(
             'sp_tclaim_snapsheet',
             'sp_tclaim_feature_snapsheet',
             'sp_tclaim_payment_snapsheet',
-            'sp_tclaim_transaction_snapsheet'
+            'sp_tclaim_transaction_snapsheet',
+            'sp_update_tclaim_snapsheet',
+            'sp_update_tclaim_feature_snapsheet'
         ]
 
         operators = []
