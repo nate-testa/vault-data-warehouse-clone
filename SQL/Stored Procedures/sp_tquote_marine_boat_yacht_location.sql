@@ -42,11 +42,11 @@ BEGIN
 		from
 			(
 			
-			select			
+			select
 			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
 			tph.quote_history_sk,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
-			act.policychangenumber AS transaction_seq_no, atvo.[index],
+			act.Number AS transaction_seq_no, atvo.[index],
 			act.CreatedDate,atvof.Field,atvof.[Value]
 			from
 				edw_stage.AccountTransaction act
