@@ -38,7 +38,7 @@ BEGIN
         SELECT
             ROW_NUMBER() OVER (PARTITION BY PolicyNumber, EffectiveDate ORDER BY PolicyChangeNumber DESC) AS row_no, 
             PolicyNumber AS policy_no, EffectiveDate as effective_dt,ExpirationDate as expiration_dt,
-            [Index] as vehicle_no,
+            -- [Index] as vehicle_no,
             IssuedDate,
             [Product] as boat_yatch_product_type,
             make as boat_yacht_make,
