@@ -4,6 +4,7 @@ from datetime import timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
 
 default_args = {
     'owner': 'airflow',
@@ -53,8 +54,14 @@ with DAG(
         dag=dag,
     )
 
+    exec_vault_nfp_monthly_load = TriggerDagRunOperator(
+            task_id="exec_vault_nfp_monthly_load",
+            trigger_dag_id="vault_nfp_monthly_load",
+            dag=dag,
+        )
+
     end = DummyOperator(
         task_id='end',
     )
 
-    start >> pre_process_task >> process_task >> end
+    start >> pre_process_task >> process_task >> exec_vault_nfp_monthly_load >> end
