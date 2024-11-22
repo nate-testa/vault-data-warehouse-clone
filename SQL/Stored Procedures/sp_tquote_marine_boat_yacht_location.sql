@@ -57,7 +57,7 @@ BEGIN
 				left join edw_stage.AccountTransactionVersionObjectField atvof_2 on atvof_2.ReferenceObjectId = atvo.id and atvof_2.Field = 'PrimaryLocationId'
 				left join [edw_core].[tquote_history] tph on tph.quote_no=act.PolicyNumber
 						and tph.effective_dt=act.EffectiveDate
-						and tph.transaction_seq_no = act.policychangenumber
+						and tph.transaction_seq_no = act.[Number]
 			where
 			    act.PolicyNumber is not null and
 				act.[Stage] IN ('QUOTE','POLICY')
