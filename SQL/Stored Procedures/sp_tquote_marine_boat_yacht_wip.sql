@@ -105,6 +105,7 @@ BEGIN
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
+            [target].effective_dt = [source].effective_dt,
             [target].expiration_dt = [source].expiration_dt,
             [target].boat_yatch_product_type = [source].boat_yatch_product_type,
             [target].boat_yatch_mep = [source].boat_yatch_mep,

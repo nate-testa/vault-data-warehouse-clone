@@ -36,11 +36,11 @@ BEGIN
         FROM
         (
         SELECT
-            ROW_NUMBER() OVER (PARTITION BY PolicyNumber, EffectiveDate ORDER BY [Number] DESC) AS row_no, 
+            ROW_NUMBER() OVER (PARTITION BY PolicyNumber ORDER BY [Number] DESC) AS row_no, 
             PolicyNumber AS quote_no, EffectiveDate as effective_dt,ExpirationDate as expiration_dt,
            -- [Index] as vehicle_no,
             CreatedDate,
-            [Product] as boat_yatch_product_type,                
+            [Product] as boat_yatch_product_type,
             make as boat_yacht_make,
             Model as boat_yacht_model,
             [Type] as boat_yatch_type,
@@ -95,7 +95,7 @@ BEGIN
 		-- Start Merge process
 		MERGE [edw_core].[tquote_marine_boat_yacht] AS [target]
 		USING [edw_temp].[tquote_marine_boat_yacht_temp1] AS [source]
-		ON [source].quote_no = target.quote_no AND [source].effective_dt = target.effective_dt      
+		ON [source].quote_no = target.quote_no AND [source].effective_dt = target.effective_dt
 		-- For Inserts
 		WHEN NOT MATCHED BY TARGET THEN
 		INSERT (
@@ -113,6 +113,7 @@ BEGIN
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
+            [target].effective_dt = source.effective_dt,
             [target].expiration_dt = [source].expiration_dt,
             [target].boat_yatch_product_type = [source].boat_yatch_product_type,
             [target].boat_yatch_mep = [source].boat_yatch_mep,
