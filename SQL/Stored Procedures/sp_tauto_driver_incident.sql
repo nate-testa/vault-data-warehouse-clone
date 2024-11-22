@@ -10,6 +10,7 @@ GO
 -- 09/15/23		Alberto Almario					1. Created the proc
 -- 03/01/24     Architha Gudimalla              2. Updated the logic to use parent object id to get the correct driver no with the incidents
 -- 08/07/24		Hernnando Gonzalez		        3. Added new field IncreasePremiumOnRenewal
+-- 08/07/24		Architha Gudimalla 		        4. AD7776 - update driver table join to use uniqueID
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_driver_incident] 
 AS
@@ -69,7 +70,7 @@ BEGIN
                 INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] AS acctvof ON acctvof.VersionObjectId = acctvo.id  
                 INNER JOIN [edw_stage].[AccountTransactionVersionObject] AS pid ON acctvo.parentobjectid = pid.Id
                 LEFT JOIN [edw_core].[tpolicy_history] AS ph ON ph.policy_no = acct.PolicyNumber AND ph.effective_dt = acct.EffectiveDate AND ph.transaction_seq_no = acct.policychangenumber
-                LEFT JOIN [edw_core].[tauto_driver] AS ad ON ad.policy_no = acct.PolicyNumber AND ad.effective_dt = acct.EffectiveDate AND ad.transaction_seq_no = acct.policychangenumber and ad.driver_no=pid.[index]
+                LEFT JOIN [edw_core].[tauto_driver] AS ad ON ad.policy_no = acct.PolicyNumber AND ad.effective_dt = acct.EffectiveDate AND ad.transaction_seq_no = acct.policychangenumber and ad.driver_unique_id=pid.uniqueid
                 WHERE   p.[Name] = 'Automobile'
                 AND     p.ProductLine = 'PersonalLines'
                 AND     acctvof.[Group] in ('Incidents in the Past 5 Years') 

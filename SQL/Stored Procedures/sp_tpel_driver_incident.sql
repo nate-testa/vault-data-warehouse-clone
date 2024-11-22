@@ -7,6 +7,7 @@
 ----------------------------------------------------------------------------------------------------------------------------
 -- 11/06/24		Alberto Almario				1. VI34964/AD7640 - Updated object type
 -- 11/11/24		Architha Gudimalla			2. AD7672 - updated pel_driver_sk
+-- 11/19/24		Architha Gudimalla 		    3. AD7777 - update driver table join to use uniqueID
 -- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_driver_incident]
 
@@ -59,7 +60,7 @@ BEGIN
 						and tph.effective_dt=act.EffectiveDate
 						and tph.transaction_seq_no = act.policychangenumber
 				left join edw_stage.Product pr on act.ProductId = pr.id 
-                LEFT JOIN edw_core.[tpel_driver] AS pd ON pd.policy_no = act.PolicyNumber AND pd.effective_dt = act.EffectiveDate AND pd.transaction_seq_no = act.policychangenumber and pd.driver_no=pid.[index]
+                LEFT JOIN edw_core.[tpel_driver] AS pd ON pd.policy_no = act.PolicyNumber AND pd.effective_dt = act.EffectiveDate AND pd.transaction_seq_no = act.policychangenumber and pd.driver_unique_id=pid.uniqueid
 			where
 				act.PolicyNumber is not null and
 				act.[State] ='ISSUED'

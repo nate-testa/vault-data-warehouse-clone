@@ -1,14 +1,15 @@
 ﻿
--- =============================================
+-- ===================================================================================================================
 -- Author:		Yunus Mohammed
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert pel quote driver incident data
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date			|Author							|	Change Description
+-- Change date	|Author					|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
--- 10/24/2023 			Yunus Mohammed					1. Created this procedure 
--- 11/06/2024			Alberto Almario					2. VI34964/AD7640 - Updated object type
--- 11/13/2024			Alberto Almario					3. AD7672 - new column quote_pel_driver_sk
+-- 10/24/23 	Yunus Mohammed				1. Created this procedure 
+-- 11/06/24		Alberto Almario				2. VI34964/AD7640 - Updated object type
+-- 11/13/24		Alberto Almario				3. AD7672 - new column quote_pel_driver_sk
+-- 11/19/24		Architha Gudimalla 		    4. AD7777 - update driver table join to use uniqueID
 -- =========================================================================================================================== 
 create  or alter   PROCEDURE [edw_core].[sp_tquote_pel_driver_incident]
 
@@ -62,7 +63,7 @@ BEGIN
 						and tph.effective_dt=act.EffectiveDate
 						and tph.transaction_seq_no = act.Number
 				left join edw_stage.Product pr on act.ProductId = pr.id
-				left join edw_core.[tquote_pel_driver] AS pd ON pd.quote_no = act.PolicyNumber AND pd.effective_dt = act.EffectiveDate AND pd.transaction_seq_no = act.[Number] and pd.driver_no=pid.[index]
+				left join edw_core.[tquote_pel_driver] AS pd ON pd.quote_no = act.PolicyNumber AND pd.effective_dt = act.EffectiveDate AND pd.transaction_seq_no = act.[Number] and pd.driver_unique_id=pid.uniqueid
 			where
 				act.PolicyNumber is not null and
 				act.[Stage] IN ('QUOTE','POLICY')
