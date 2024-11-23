@@ -61,11 +61,11 @@ BEGIN
 		INTO 	edw_temp.tclaim_payment_snapsheet_temp1 
 
 		FROM 		edw_stage_snapsheet.claims c
-		inner join 	edw_stage_snapsheet.financial_payment_items AS fpi on fpi.claim_id = c.id
-		left join 	edw_stage_snapsheet.financial_payment_details fpd on fpd.id = fpi.financial_transaction_id
-		left join 	edw_stage_snapsheet.claim_parties cp on fpd.party_id = cp.id
-		left join 	edw_stage_snapsheet.financial_transactions ft on fpi.financial_transaction_id = ft.id
-		left join 	edw_stage_snapsheet.users u on ft.creator_user_id = u.id 
+		INNER JOIN 	edw_stage_snapsheet.financial_payment_items fpi on fpi.claim_id = c.id
+		LEFT JOIN 	edw_stage_snapsheet.financial_payment_details fpd on fpd.claim_id = c.id
+		LEFT JOIN 	edw_stage_snapsheet.claim_parties cp on fpd.party_id = cp.id
+		LEFT JOIN 	edw_stage_snapsheet.financial_transactions ft on ft.id = fpi.financial_transaction_id
+		LEFT JOIN 	edw_stage_snapsheet.users u on ft.creator_user_id = u.id 
 		INNER JOIN 	edw_core.tclaim tc ON tc.claim_no=c.claim_number
 		INNER JOIN 	edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no --AND tf.subclaim_seq_no = obj.seq_no -- need to check join
 		WHERE		greatest(fpi.created_at,fpi.updated_at) > @last_source_extract_ts;   

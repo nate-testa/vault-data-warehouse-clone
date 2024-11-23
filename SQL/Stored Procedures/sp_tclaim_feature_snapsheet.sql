@@ -43,7 +43,7 @@ BEGIN
 			case
 				when veh.potential_total_loss = 'true' then 'Y' 
 				when prd.product_cd = 'AU' then 'N'
-				else 'N'
+				else NULL
 			end AS total_loss_in,
 			prd.product_sk,
 			exps.[status] AS claim_feature_status,
@@ -71,11 +71,11 @@ BEGIN
 				WHEN 'PEL' THEN NULL
 				WHEN 'AU' THEN tavc.auto_vehicle_coverage_sk
 			END AS vehicle_coverage_sk,
-			exps.updated_at
+			greatest(exps.created_at,exps.updated_at) AS greatest_created_updated
 		INTO edw_temp.tclaim_feature_snapsheet_temp1
 		FROM edw_stage_snapsheet.claims clm
 		INNER JOIN edw_core.tclaim tcl ON clm.claim_number = tcl.claim_no
-		INNER JOIN [edw_stage_snapsheet].[exposures] exps on exps.claim_id = clm.id
+		INNER JOIN edw_stage_snapsheet.exposures exps on exps.claim_id = clm.id
 		LEFT JOIN edw_stage_snapsheet.vehicles veh on veh.claim_id = exps.claim_id and veh.exposure_id = exps.id
 		LEFT JOIN edw_core.tproduct prd ON prd.product_sk = tcl.product_sk
 		-- Home Coverage
@@ -148,7 +148,7 @@ BEGIN
 											AND tcl.loss_dt > = tavc1.transaction_effective_dt
 										ORDER BY tavc1.transaction_seq_no DESC
 								)
-		WHERE exps.updated_at > @last_source_extract_ts
+		WHERE greatest(exps.created_at,exps.updated_at) > @last_source_extract_ts;   
 		
 
 		
@@ -192,7 +192,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(updated_at) FROM edw_temp.tclaim_feature_snapsheet_temp1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest_created_updated) FROM edw_temp.tclaim_feature_snapsheet_temp1),@last_source_extract_ts);
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
