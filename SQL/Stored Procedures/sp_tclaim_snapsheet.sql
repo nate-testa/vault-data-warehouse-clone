@@ -28,7 +28,24 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 
-		DROP TABLE IF exists edw_temp.tclaim_temp1;
+		DROP TABLE IF exists edw_temp.tclaim_snapsheet_temp1;
+		DROP TABLE IF exists edw_temp.tclaim_snapsheet_temp2;
+
+		SELECT 
+			b.claim_id,
+			a.option_name,
+			LEFT(a.option_name, CHARINDEX('|', a.option_name) - 1) AS catastrophe_cd,
+			SUBSTRING(
+				a.option_name, 
+				CHARINDEX('|', a.option_name) + 1, 
+				CHARINDEX('|', a.option_name, CHARINDEX('|', a.option_name) + 1) - CHARINDEX('|', a.option_name) - 1
+			) AS catastrophe_nm,
+			RIGHT(a.option_name, LEN(a.option_name) - CHARINDEX('|', a.option_name, CHARINDEX('|', a.option_name) + 1)) AS catastrophe_desc
+		INTO edw_temp.tclaim_snapsheet_temp2
+		FROM edw_stage_snapsheet.custom_field_claims_enumeration_values a
+		INNER JOIN edw_stage_snapsheet.custom_field_claims b
+		ON a.custom_field_claims_id = b.id
+		;
 		
 		
 		SELECT
@@ -38,7 +55,7 @@ BEGIN
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
 		claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
 		5 AS source_system_sk,sub_cause_of_loss_sk,update_time
-		INTO edw_temp.tclaim_temp1
+		INTO edw_temp.tclaim_snapsheet_temp1
 		FROM
 		(
 		SELECT
@@ -59,8 +76,8 @@ BEGIN
 				THEN 'Open' 
 				else 'Closed' 
 			END) AS claim_status,
-			cat.catastrophe_sk AS catastrophe_sk, 
-			prd.product_sk,
+			cat.catastrophe_sk, 
+			tph.product_sk,
 			CONCAT(	'',
 					TRIM(c.address_address1), 
 					CASE WHEN TRIM(ISNULL(c.address_address1,''))='' THEN '' ELSE '' END,
@@ -81,43 +98,41 @@ BEGIN
 			) AS contact_nm,
 			cp.relation_to_insured AS contact_type,
 			cpcmp.value as contact_phone,
-			CASE WHEN TRIM(cpcmp.value)='' THEN NULL ELSE cpcmp.value END AS contact_person_email,
-			scl.sub_cause_of_loss_sk,
+			CASE WHEN TRIM(cpcme.value)='' THEN NULL ELSE cpcme.value END AS contact_person_email,
+			NULL as sub_cause_of_loss_sk,
 			c.updated_at update_time,
 			c.first_closed_at as claim_first_closed_dt,
 			CAST(NULL AS DATE) as claim_first_reopen_dt, 
 			c.created_at AS claim_created_ts,
 			c.creator_user_name AS claim_created_by_nm,
 			tph.policy_history_sk,
-			'NA' claim_reject_reason_desc 
+			NULL AS claim_reject_reason_desc 
 		FROM edw_stage_snapsheet.claims c
-		LEFT JOIN edw_stage.t_clm_case tcase on c.claim_number = tcase.claim_no
 		LEFT JOIN edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
-		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcmp.id and  cpcmp.contact_method_type = 'phone'
-		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcme on c.notifier_claim_party_id = cpcme.id and  cpcme.contact_method_type = 'email'
-		LEFT JOIN edw_core.tpolicy_history tph ON TRIM(tcase.policy_no) = tph.policy_no
+		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcmp.claim_party_id and  cpcmp.contact_method_type = 'phone'
+		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcme on c.notifier_claim_party_id = cpcme.claim_party_id and  cpcme.contact_method_type = 'email'
+		LEFT JOIN edw_core.tpolicy_history tph ON TRIM(c.policy_number) = tph.policy_no
 												AND tph.policy_history_sk = (
 																	SELECT TOP 1 policy_history_sk
 																	FROM
 																		edw_core.tpolicy_history tph1
 																	WHERE
-																		tph1.policy_no = tcase.policy_no
-																		AND CAST(tph1.transaction_effective_dt AS DATE) <= CAST(tcase.accident_time AS DATE)
+																		tph1.policy_no = c.policy_number
+																		AND CAST(tph1.transaction_effective_dt AS DATE) <= CAST(c.datetime_of_loss AS DATE)
 																	ORDER BY transaction_seq_no DESC
 																)
 		LEFT JOIN edw_core.tbroker tbrk ON tbrk.broker_sk = tph.broker_sk	
 		LEFT JOIN edw_core.tcustomer cr ON cr.customer_sk=tph.customer_sk
-		LEFT JOIN edw_core.tcatastrophe cat ON TRIM(tcase.accident_code)=TRIM(cat.catastrophe_cd)
-		LEFT JOIN edw_core.tproduct prd ON prd.ebao_product_cd=tcase.product_code
-		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_cd=tcase.loss_cause
-		LEFT JOIN edw_core.tsub_cause_of_loss scl ON tcase.sub_cause_of_loss_code=scl.sub_cause_of_loss_cd
+		LEFT JOIN edw_temp.tclaim_snapsheet_temp2 cc ON cc.claim_id = c.id
+		LEFT JOIN edw_core.tcatastrophe cat ON cc.catastrophe_cd = cat.catastrophe_cd
+		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_cd = c.loss_type
 		WHERE greatest(c.created_at,c.updated_at) > @last_source_extract_ts
 	) AS t
 	WHERE
 		rn=1
 		
 	MERGE edw_core.tclaim AS Target
-	USING edw_temp.tclaim_temp1 AS Source
+	USING edw_temp.tclaim_snapsheet_temp1 AS Source
 	ON Source.claim_no=Target.claim_no
 	-- For Inserts
 	WHEN NOT MATCHED BY Target THEN
@@ -178,16 +193,17 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(update_time) FROM edw_temp.tclaim_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(update_time) FROM edw_temp.tclaim_snapsheet_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
-
 		
 		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tclaim_temp1
+		DROP TABLE IF EXISTS edw_temp.tclaim_snapsheet_temp1;
+		DROP TABLE IF exists edw_temp.tclaim_snapsheet_temp2;
+
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
