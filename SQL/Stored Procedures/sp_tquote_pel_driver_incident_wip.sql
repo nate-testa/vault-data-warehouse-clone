@@ -10,6 +10,7 @@
 -- 11/06/24		Alberto Almario				5. VI34964/AD7640 - Updated object type
 -- 11/13/24		Alberto Almario				6. AD7672 - new column quote_pel_driver_sk
 -- 11/19/24		Architha Gudimalla 		    7. AD7777 - update driver table join to use uniqueID
+-- 11/24/24		Alberto Almario 		    8. AD7809 - Add driver_no column to merge sentence.
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_pel_driver_incident_wip]
@@ -109,11 +110,10 @@ BEGIN
 		    FROM
 		        edw_temp.tquote_pel_driver_incident_wip_temp1 AS ttpv
 		) AS SOURCE
-		ON
-		    TARGET.quote_no = SOURCE.quote_no AND
-		    --TARGET.effective_dt = SOURCE.effective_dt AND
-		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
-		    TARGET.incident_no = SOURCE.incident_no
+			ON TARGET.quote_no = SOURCE.quote_no
+            AND TARGET.driver_no = SOURCE.driver_no
+            AND TARGET.incident_no = SOURCE.incident_no
+            AND TARGET.transaction_seq_no = SOURCE.transaction_seq_no
 
 		WHEN MATCHED THEN
 		    UPDATE SET
