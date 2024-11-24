@@ -39,7 +39,7 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,source_system_sk,quote_history_sk,[Index],
 			CreatedDate,UpdatedDate,IncidentDate,IncidentType,IncidentDescription,IncludeInRate,Disputed
-			,quote_pel_driver_sk
+			,quote_pel_driver_sk, driver_no
 			into edw_temp.tquote_pel_driver_incident_wip_temp1
 		from
 		(
@@ -53,7 +53,7 @@ BEGIN
 			0 AS transaction_seq_no, 
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,			
 			acc.CreatedDate,acc.UpdatedDate,accof.Field,accof.[Value]
-			,pd.quote_pel_driver_sk
+			,pd.quote_pel_driver_sk, pd.driver_no
 			from
 				(
 				    SELECT *
@@ -135,13 +135,13 @@ BEGIN
 		        quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_history_sk,
 		        incident_no, incident_dt, incident_type, incident_desc, include_in_rate_in, incident_disputed_in,
 		        source_system_sk, create_ts, update_ts, etl_audit_sk
-				,quote_pel_driver_sk
+				,quote_pel_driver_sk, driver_no
 		    )
 		    VALUES (
 		        SOURCE.quote_no, SOURCE.effective_dt, SOURCE.expiration_dt, SOURCE.transaction_seq_no, SOURCE.quote_history_sk,
 		        SOURCE.incident_no, SOURCE.incident_dt, SOURCE.incident_type, SOURCE.incident_desc, SOURCE.include_in_rate_in, SOURCE.incident_disputed_in,
 		        SOURCE.source_system_sk, SOURCE.create_ts, SOURCE.update_ts, SOURCE.etl_audit_sk
-				,SOURCE.quote_pel_driver_sk
+				,SOURCE.quote_pel_driver_sk, SOURCE.driver_no
 		);
 
 		SET @rows_affected=@@ROWCOUNT;
