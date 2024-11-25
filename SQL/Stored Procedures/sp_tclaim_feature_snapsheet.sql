@@ -9,7 +9,7 @@ GO
 -- Change date 		|Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 11/21/2024		Yunus Mohammd				1. Created this procedure
--- 11/20/2024		Alberto Almario				2. Changes on some columns and tables
+-- 11/22/2024		Alberto Almario				2. Changes on some columns and tables
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet]
 AS

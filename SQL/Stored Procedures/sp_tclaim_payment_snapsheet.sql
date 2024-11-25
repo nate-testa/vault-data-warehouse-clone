@@ -3,7 +3,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- Change date |	Author					|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 07/28/23		Architha Gudimalla			1. Created this procedure 
+-- 11/15/24		Architha Gudimalla			1. Created this procedure 
 -- 11/20/24		Alberto Almario				2. Changes on some columns and tables
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment_snapsheet]
