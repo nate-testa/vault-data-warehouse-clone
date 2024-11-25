@@ -73,7 +73,7 @@ BEGIN
 			--
 			,FactorMethod as [premium_adjustment_method]
 			,Factor as [premium_adjustment_factor]
-			,Retention as [premium_adjustment_retention]
+			,[Retention] as [premium_adjustment_retention]
 			,Reason as [premium_adjustment_retention_reason]
 			--
 			,source_system_sk
@@ -107,7 +107,7 @@ BEGIN
 					INNER JOIN [edw_stage].[AccountTransactionVersion] atv on act.Id = atv.AccountTransactionId
 					INNER JOIN [edw_stage].[AccountTransactionVersionObject] atvo on atv.Id = atvo.AccountTransactionVersionId
 					INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] atvof on atvo.Id = atvof.VersionObjectId
-					LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] atvof_2 on atvof_2.ReferenceObjectId = atvo.id AND atvof_2.Field = 'PrimaryLocationId'
+					LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] atvof_2 on atvof_2.ReferenceObjectId = atvo.id
 					LEFT JOIN [edw_stage].[AccountTransactionVersionPremium] atvp on atvp.AccountTransactionVersionId = atv.Id
 					LEFT JOIN [edw_stage].[AccountTransactionVersionPremiumfactor] atvpf on atvpf.AccountTransactionVersionPremiumId = atvp.Id
 					LEFT JOIN [edw_core].[tquote_history] tqh on tqh.quote_no = act.PolicyNumber

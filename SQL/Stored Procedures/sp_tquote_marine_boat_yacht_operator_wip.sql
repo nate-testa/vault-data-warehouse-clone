@@ -102,6 +102,7 @@ BEGIN
 			ON Target.quote_no = Source.quote_no
 			AND Target.effective_dt = Source.effective_dt
 			AND Target.transaction_seq_no = Source.transaction_seq_no
+			AND Target.operator_unique_id = Source.operator_unique_id
 		WHEN MATCHED THEN
 			UPDATE SET
 				Target.expiration_dt = Source.expiration_dt,
