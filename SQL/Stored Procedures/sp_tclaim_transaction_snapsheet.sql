@@ -9,6 +9,7 @@ GO
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 10/30/24		Hernando Gonzalez			1. Created this procedure - AD7391
+-- 11/20/24		Alberto Almario				2. Changes on some columns and tables
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction_snapsheet]
 AS
