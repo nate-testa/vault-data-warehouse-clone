@@ -73,7 +73,7 @@ BEGIN
 			--
 			,FactorMethod as [premium_adjustment_method]
 			,Factor as [premium_adjustment_factor]
-			,Retention as [premium_adjustment_retention]
+			,[Retention] as [premium_adjustment_retention]
 			,Reason as [premium_adjustment_retention_reason]
 			--
 			,source_system_sk
@@ -145,12 +145,11 @@ BEGIN
 		ON
 		    [Target].quote_no = [Source].quote_no AND
 		    [Target].effective_dt = [Source].effective_dt AND
-			[Target].expiration_dt = [Source].expiration_dt AND -- ??
 		    [Target].transaction_seq_no = [Source].transaction_seq_no
 		WHEN MATCHED THEN
 		    UPDATE SET
-		        --[Target].effective_dt = [Source].effective_dt,
-		        --[Target].expiration_dt = [Source].expiration_dt, -- ??
+		        [Target].effective_dt = [Source].effective_dt,
+		        [Target].expiration_dt = [Source].expiration_dt,
 		        [Target].quote_history_sk = [Source].quote_history_sk,
 				[Target].quote_marine_boat_yacht_sk = [Source].[quote_marine_boat_yacht_sk],
 				[Target].quote_marine_boat_yacht_location_sk = [Source].[quote_marine_boat_yacht_location_sk],
