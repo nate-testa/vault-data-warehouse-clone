@@ -99,11 +99,11 @@ BEGIN
 			ON Target.quote_no = Source.quote_no
 			AND Target.effective_dt = Source.effective_dt
 			AND Target.transaction_seq_no = Source.transaction_seq_no
+			AND Target.watercraft_unique_id = Source.watercraft_unique_id
 		WHEN MATCHED THEN
 			UPDATE SET
 				Target.expiration_dt = Source.expiration_dt,
 				Target.watercraft_no = Source.watercraft_no,
-				Target.watercraft_unique_id = Source.watercraft_unique_id,
 				Target.quote_history_sk = Source.quote_history_sk,
 				Target.watercraft_make = Source.watercraft_make,
 				Target.watercraft_model = Source.watercraft_model,
