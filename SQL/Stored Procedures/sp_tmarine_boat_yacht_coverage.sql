@@ -115,7 +115,7 @@ BEGIN
 					LEFT JOIN [edw_core].[tpolicy_history] tph on tph.policy_no = act.PolicyNumber
 							AND tph.effective_dt = act.EffectiveDate
 							AND tph.transaction_seq_no = act.policychangenumber
-					LEFT JOIN [edw_core].[tmarine_boat_yacht] mby on mby.policy_no = act.PolicyNumber AND mby.effective_dt = CAST(act.EffectiveDate as DATE) AND mby.expiration_dt = CAST(act.ExpirationDate as DATE)
+					LEFT JOIN [edw_core].[tmarine_boat_yacht] mby on mby.policy_no = act.PolicyNumber AND mby.effective_dt = CAST(act.EffectiveDate as DATE)
 					LEFT JOIN [edw_core].[tmarine_boat_yacht_location] mbyl on mbyl.policy_no = act.PolicyNumber AND mbyl.effective_dt = CAST(act.EffectiveDate as DATE) AND mbyl.transaction_seq_no = act.policychangenumber
 				WHERE
 					act.PolicyNumber IS NOT NULL

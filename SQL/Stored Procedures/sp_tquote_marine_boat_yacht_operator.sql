@@ -73,7 +73,6 @@ BEGIN
 					INNER JOIN edw_stage.AccountTransactionVersionObject atvo ON atv.Id = atvo.AccountTransactionVersionId
 					INNER JOIN edw_stage.AccountTransactionVersionObjectField atvof ON atvo.Id = atvof.VersionObjectId
 					LEFT JOIN edw_core.tquote_marine_boat_yacht mby ON mby.quote_no = act.PolicyNumber
-						AND mby.effective_dt = act.EffectiveDate 
 					LEFT JOIN edw_core.tquote_history tph ON tph.quote_no = act.PolicyNumber
 						AND tph.effective_dt = act.EffectiveDate
 						AND tph.transaction_seq_no = act.Number
