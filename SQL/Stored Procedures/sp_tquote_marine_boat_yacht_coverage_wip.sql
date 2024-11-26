@@ -119,7 +119,7 @@ BEGIN
 					LEFT JOIN [edw_core].[tquote_history] tqh on tqh.quote_no = act.PolicyNumber
 							AND tqh.effective_dt = act.EffectiveDate
 							AND tqh.transaction_seq_no = 0
-					LEFT JOIN [edw_core].[tquote_marine_boat_yacht] qmby on qmby.quote_no = act.PolicyNumber AND qmby.effective_dt = CAST(act.EffectiveDate as DATE) AND qmby.expiration_dt = CAST(act.ExpirationDate as DATE)
+					LEFT JOIN [edw_core].[tquote_marine_boat_yacht] qmby on qmby.quote_no = act.PolicyNumber
 					LEFT JOIN [edw_core].[tquote_marine_boat_yacht_location] qmbyl on qmbyl.quote_no = act.PolicyNumber AND qmbyl.effective_dt = CAST(act.EffectiveDate as DATE) AND qmbyl.transaction_seq_no = 0
 				WHERE
 					act.PolicyNumber IS NOT NULL
