@@ -10,6 +10,7 @@
 -- 12/05/23		Yunus Mohammed				3. Added contribcutoffdate date
 -- 02/14/24		Yunus Mohammed				4. Removed distinct and added check from tpolicy_history table
 -- 09/18/24		Yunus Mohammed				5. Added Throw in catch block
+-- 11/26/24		Yunus Mohammed				6. Updated Marine Boat & Yacht to Marine_Boat&Yacht
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -76,6 +77,7 @@ BEGIN
 					WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
 					WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
 					WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
+					WHEN tprd.product_cd = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
 					ELSE tprd.product_nm
 				END AS [product],
 				CASE WHEN tp.uw_company_nm='Vault E & S Insurance Company' THEN 'Vault E&S Insurance Company' 
