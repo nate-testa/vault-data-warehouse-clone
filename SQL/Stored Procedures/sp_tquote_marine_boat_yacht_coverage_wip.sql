@@ -116,9 +116,9 @@ BEGIN
 					INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
 					LEFT JOIN [edw_stage].[AccountPremium] ap on ap.AccountId = act.Id
 					LEFT JOIN [edw_stage].[AccountPremiumFactor] apf on apf.AccountPremiumId = ap.Id
-					LEFT JOIN [edw_core].[tquote_history] tph on tph.quote_no = act.PolicyNumber
-							AND tph.effective_dt = act.EffectiveDate
-							AND tph.transaction_seq_no = 0
+					LEFT JOIN [edw_core].[tquote_history] tqh on tqh.quote_no = act.PolicyNumber
+							AND tqh.effective_dt = act.EffectiveDate
+							AND tqh.transaction_seq_no = 0
 					LEFT JOIN [edw_core].[tquote_marine_boat_yacht] qmby on qmby.quote_no = act.PolicyNumber AND qmby.effective_dt = CAST(act.EffectiveDate as DATE) AND qmby.expiration_dt = CAST(act.ExpirationDate as DATE)
 					LEFT JOIN [edw_core].[tquote_marine_boat_yacht_location] qmbyl on qmbyl.quote_no = act.PolicyNumber AND qmbyl.effective_dt = CAST(act.EffectiveDate as DATE) AND qmbyl.transaction_seq_no = 0
 				WHERE
@@ -141,7 +141,7 @@ BEGIN
 		) as pivottable
 
 		MERGE INTO [edw_core].[tquote_marine_boat_yacht_coverage] AS [Target]
-		USING [edw_core].[tquote_marine_boat_yacht_coverage_wip_temp1] as [Source]
+		USING [edw_temp].[tquote_marine_boat_yacht_coverage_wip_temp1] as [Source]
 		ON
 		    [Target].quote_no = [Source].quote_no AND
 		    [Target].effective_dt = [Source].effective_dt AND
