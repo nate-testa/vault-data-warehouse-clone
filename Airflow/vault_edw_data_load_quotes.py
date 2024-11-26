@@ -142,6 +142,11 @@ with DAG(
         operators[-1] >> send_quote_home_email
 
 
+    quote_collection_marine = DummyOperator(
+            task_id='quote_collection_marine',
+        )
+
+
     with TaskGroup("quote_collection_group") as quote_collection_group:
 
         quote_collection_group_items = [
@@ -177,6 +182,45 @@ with DAG(
             operators[i] >> operators[i + 1]
 
         operators[-1] >> send_quote_collection_email
+
+
+    with TaskGroup("quote_marine_group") as quote_marine_group:
+
+        quote_marine_group_items = [
+            'sp_tquote_marine_boat_yacht_wip',
+            'sp_tquote_marine_boat_yacht',
+            'sp_tquote_marine_boat_yacht_location_wip',
+            'sp_tquote_marine_boat_yacht_location',
+            'sp_tquote_marine_boat_yacht_coverage_wip',
+            'sp_tquote_marine_boat_yacht_coverage',
+            'sp_tquote_marine_boat_yacht_operator_wip',
+            'sp_tquote_marine_boat_yacht_operator',
+            'sp_tquote_marine_boat_yacht_watercraft_wip',
+            'sp_tquote_marine_boat_yacht_watercraft'
+        ]
+
+        operators = []
+        for item in quote_marine_group_items:
+            operator = MsSqlOperator(
+                task_id=item,
+                mssql_conn_id='Vault_EDW',
+                sql=f"EXEC edw_core.{item}",
+                database="vault_edw",
+                autocommit=True,
+            )
+            operators.append(operator)
+
+        send_quote_marine_email = EmailOperator(
+            task_id='send_quote_marine_email',
+            to=to_email,
+            subject='Airflow - Quote Marine tables loaded successfully',
+            html_content=get_sp_success_data_HTML(quote_marine_group_items, 'All stored procedures executed successfully for all the Quote Marine tables'),
+        )
+
+        for i in range(len(operators) - 1):
+            operators[i] >> operators[i + 1]
+
+        operators[-1] >> send_quote_marine_email
 
 
     with TaskGroup("quote_PEL_group") as quote_PEL_group:
@@ -396,4 +440,4 @@ with DAG(
     )
 
 
-start >> quote_group >> [quote_home_group , quote_PEL_group, quote_auto_group] >> quote_collection_group >> quote_transaction_group >> quote_broker_group >> exec_vault_edw_data_load_vendor_reports >> end
+start >> quote_group >> [quote_home_group , quote_PEL_group, quote_auto_group] >> quote_collection_marine >> [quote_collection_group, quote_marine_group] >> quote_transaction_group >> quote_broker_group >> exec_vault_edw_data_load_vendor_reports >> end
