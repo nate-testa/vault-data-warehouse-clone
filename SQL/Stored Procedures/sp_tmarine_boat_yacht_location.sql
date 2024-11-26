@@ -31,10 +31,11 @@ BEGIN
 			PolicyNumber as policy_no,EffectiveDate as effective_dt,
 			ExpirationDate as expiration_dt,TransactionEffectiveDate as transaction_effective_dt,TransactionDate as transaction_dt,transaction_seq_no,
 			source_system_sk,policy_history_sk,
-			IssuedDate,AddressLine1 as address_line_1,
-            AddressLine2 as address_line_2,AddressCity as city_nm,
-            AddressLineUnit as unit_no,
-            AddressState as state_cd,AddressZipCode as zip_cd,AddressCounty as county_nm,AddressCountry as country_nm		
+			IssuedDate,MooringLocationAddressLine1 as address_line_1,
+            MooringLocationAddressLine2 as address_line_2,MooringLocationAddressCity as city_nm,
+            MooringLocationAddressLineUnit as unit_no,
+            MooringLocationAddressState as state_cd,MooringLocationAddressZipCode as zip_cd,MooringLocationAddressCounty as county_nm,
+            MooringLocationAddressCountry as country_nm		
 		into edw_temp.tmarine_boat_yacht_location_temp1
 		from
 		(
@@ -66,8 +67,9 @@ BEGIN
 				
 				and atvof.Field IN 
 				(
-					'AddressLine1','AddressLine2','AddressLineUnit','AddressCity','AddressState','AddressZipCode','AddressCounty',
-					'AddressCountry'
+				    'MooringLocationAddressLine1', 'MooringLocationAddressLine2', 'MooringLocationAddressLineUnit',
+					'MooringLocationAddressCity', 'MooringLocationAddressZipCode', 'MooringLocationAddressState',
+					'MooringLocationAddressCounty', 'MooringLocationAddressCountry'
 				)
 				and act.IssuedDate > @last_source_extract_ts
 			) as t
@@ -76,7 +78,8 @@ BEGIN
 		(
 			max(Value) FOR Field IN 
             (
-                AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry
+                MooringLocationAddressLine1,MooringLocationAddressLine2,MooringLocationAddressLineUnit,MooringLocationAddressCity,
+				MooringLocationAddressState,MooringLocationAddressZipCode,MooringLocationAddressCounty,MooringLocationAddressCountry
             )
 		) as pivottable
 

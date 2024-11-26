@@ -31,10 +31,11 @@ BEGIN
 			PolicyNumber as quote_no,EffectiveDate as effective_dt,
 			ExpirationDate as expiration_dt,transaction_seq_no,
 			source_system_sk,quote_history_sk,
-			AddressLine1 as address_line_1,
-            AddressLine2 as address_line_2,AddressCity as city_nm,
-            AddressLineUnit as unit_no,
-            AddressState as state_cd,AddressZipCode as zip_cd,AddressCounty as county_nm,AddressCountry as country_nm,
+			MooringLocationAddressLine1 as address_line_1,
+            MooringLocationAddressLine2 as address_line_2,MooringLocationAddressCity as city_nm,
+            MooringLocationAddressLineUnit as unit_no,
+            MooringLocationAddressState as state_cd,MooringLocationAddressZipCode as zip_cd,MooringLocationAddressCounty as county_nm,
+            MooringLocationAddressCountry as country_nm,
 			CreatedDate,UpdatedDate,
 			GETDATE() AS create_ts, GETDATE() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		into edw_temp.tquote_marine_boat_yacht_location_wip_temp1
@@ -69,8 +70,8 @@ BEGIN
 				and pr.ProductLine = 'PersonalLines'				
 				and accof.Field IN 
 				(
-					'AddressLine1','AddressLine2','AddressLineUnit','AddressCity','AddressState','AddressZipCode','AddressCounty',
-					'AddressCountry'
+					'MooringLocationAddressLine1','MooringLocationAddressLine2','MooringLocationAddressLineUnit','MooringLocationAddressCity',
+                    'MooringLocationAddressState','MooringLocationAddressZipCode','MooringLocationAddressCounty','MooringLocationAddressCountry'
 				)				
 			) as t
 		) as t
@@ -78,7 +79,8 @@ BEGIN
 		(
 			max(Value) FOR Field IN 
             (
-                AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry
+                MooringLocationAddressLine1,MooringLocationAddressLine2,MooringLocationAddressLineUnit,MooringLocationAddressCity,
+                MooringLocationAddressState,MooringLocationAddressZipCode,MooringLocationAddressCounty,MooringLocationAddressCountry
             )
 		) as pivottable
 
@@ -117,18 +119,6 @@ BEGIN
 		        [Source].address_line_1, [Source].address_line_2, [Source].unit_no, [Source].city_nm, [Source].state_cd, [Source].zip_cd, [Source].county_nm, 
                 [Source].country_nm, [Source].source_system_sk, [Source].create_ts, [Source].update_ts, [Source].etl_audit_sk
 			);
-		INSERT INTO [edw_core].[tquote_marine_boat_yacht_location]
-		(
-            quote_no,effective_dt,expiration_dt,transaction_seq_no,quote_history_sk,
-            address_line_1,address_line_2,unit_no,city_nm,state_cd,zip_cd,county_nm,country_nm,
-            source_system_sk,create_ts,update_ts,etl_audit_sk
-		)
-		SELECT
-			quote_no,effective_dt,expiration_dt,transaction_seq_no,quote_history_sk,
-            address_line_1,address_line_2,unit_no,city_nm,state_cd,zip_cd,county_nm,country_nm,
-			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
-		FROM
-			edw_temp.tquote_marine_boat_yacht_location_wip_temp1 AS ttlc
 
 		SET @rows_affected=@@ROWCOUNT;
 
