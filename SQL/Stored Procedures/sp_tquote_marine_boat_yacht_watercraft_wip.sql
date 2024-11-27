@@ -81,7 +81,6 @@ BEGIN
 						AND tph.transaction_seq_no = 0
 				WHERE 1=1
 					AND act.PolicyNumber IS NOT NULL 
-					AND act.[Stage] IN ('QUOTE','POLICY')
 					AND p.[Name] = 'Marine Boat & Yacht'
 					AND p.ProductLine = 'PersonalLines'
 					AND atvo.ObjectType = 'PersonalWatercraft'
