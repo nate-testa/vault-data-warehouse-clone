@@ -123,7 +123,6 @@ BEGIN
 					LEFT JOIN [edw_core].[tquote_marine_boat_yacht_location] qmbyl on qmbyl.quote_no = act.PolicyNumber AND qmbyl.effective_dt = CAST(act.EffectiveDate as DATE) AND qmbyl.transaction_seq_no = 0
 				WHERE
 					act.PolicyNumber IS NOT NULL
-					AND act.[Stage] IN ('QUOTE', 'POLICY')
 					AND pr.[Name] = 'Marine Boat & Yacht'
 					AND pr.ProductLine = 'PersonalLines'
 					AND accof.Field IN 
