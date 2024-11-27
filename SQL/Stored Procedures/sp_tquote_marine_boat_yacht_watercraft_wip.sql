@@ -83,7 +83,6 @@ BEGIN
 					AND act.PolicyNumber IS NOT NULL 
 					AND p.[Name] = 'Marine Boat & Yacht'
 					AND p.ProductLine = 'PersonalLines'
-					AND atvo.ObjectType = 'PersonalWatercraft'
 					AND atvof.Field IN ('Year', 'Make', 'Model', 'PWCId')
 			) as t
 		PIVOT 
