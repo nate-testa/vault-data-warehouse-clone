@@ -16,7 +16,8 @@ GO
 -- 08/30/24				Yunus Mohammed				5. Added new columns
 -- 09/04/24				Yunus Mohammed				6. Removed error from update
 -- 10/02/24				Yunus Mohammed				7. Added new column fortified_roof_upgrade_endorsement_in
--- 30/10/24				Hernando Gonzalez			8. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
+-- 10/30/24				Hernando Gonzalez			8. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
+-- 12/02/24				Yunus Mohammed				9. AD-7834 Added new fields
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage_wip]
@@ -306,6 +307,17 @@ BEGIN
 				,FortifiedRoofUpgradeEndorsement as fortified_roof_upgrade_endorsement_in
 		        ,FortifiedRoofProgramDiscount as fortified_roof_program_discount_amt
 				,NonProgramDiscount as non_program_discount_amt
+				,FullExtendedReplacementCostCoverage as full_extended_replacement_cost_in
+				,Risk_Score_Water_Non_Weather as risk_score_water_non_weather, Risk_Score_Water_Weather as risk_score_water_weather
+				,Risk_Score_Water_Backup as risk_score_water_backup, Risk_Score_Wind_Hail as risk_score_wind_hail
+				,Risk_Score_Other as risk_score_other
+				,Risk_Score_Lightning as risk_score_lightning
+				,Risk_Score_Theft as risk_score_theft
+				,Risk_Score_Liability as risk_score_liability
+				,Risk_Score_Hurricane as risk_score_hurricane
+				,Risk_Score_Wildfire as risk_score_wildfire
+				,Risk_Score_Sinkhole_Mine as risk_score_sinkhole_mine
+				,Risk_Score_All_Perils as risk_score_all_peril
 				,source_system_sk
 				,GETDATE() AS create_ts
 				,GETDATE() AS update_ts
@@ -404,6 +416,9 @@ BEGIN
 			primary_home_risk_address,primary_home_policy_effective_dt,primary_home_policy_expiration_dt,
 			primary_home_carrier_nm,primary_home_coverage_a_threshold,fortified_roof_upgrade_endorsement_in,
 			fortified_roof_program_discount_amt, non_program_discount_amt,
+			full_extended_replacement_cost_in, risk_score_water_non_weather, risk_score_water_weather,
+			risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
+			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
@@ -491,6 +506,9 @@ BEGIN
 				primary_home_risk_address,primary_home_policy_effective_dt,primary_home_policy_expiration_dt
 				,primary_home_carrier_nm,primary_home_coverage_a_threshold,fortified_roof_upgrade_endorsement_in, 
 				fortified_roof_program_discount_amt, non_program_discount_amt,
+				full_extended_replacement_cost_in, risk_score_water_non_weather, risk_score_water_weather,
+				risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
+				risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			WHEN MATCHED THEN UPDATE
@@ -682,7 +700,20 @@ BEGIN
 			[target].primary_home_coverage_a_threshold = [source].primary_home_coverage_a_threshold,
 			[target].fortified_roof_upgrade_endorsement_in = [source].fortified_roof_upgrade_endorsement_in,				
 			[target].fortified_roof_program_discount_amt = [source].fortified_roof_program_discount_amt,
-			[target].non_program_discount_amt = [source].non_program_discount_amt,		
+			[target].non_program_discount_amt = [source].non_program_discount_amt,
+			[target].full_extended_replacement_cost_in = [source].full_extended_replacement_cost_in,
+			[target].risk_score_water_non_weather = [source].risk_score_water_non_weather,
+			[target].risk_score_water_weather = [source].risk_score_water_weather,
+			[target].risk_score_water_backup = [source].risk_score_water_backup, 
+			[target].risk_score_wind_hail= [source].risk_score_wind_hail,
+			[target].risk_score_other = [source].risk_score_other,
+			[target].risk_score_lightning = [source].risk_score_lightning,
+			[target].risk_score_theft = [source].risk_score_theft,
+			[target].risk_score_liability = [source].risk_score_liability,
+			[target].risk_score_hurricane = [source].risk_score_hurricane, 
+			[target].risk_score_wildfire = [source].risk_score_wildfire,
+			[target].risk_score_sinkhole_mine = [source].risk_score_sinkhole_mine,
+			[target].risk_score_all_peril = [source].risk_score_all_peril,
 			[target].update_ts = [source].update_ts;
 			
 

@@ -17,7 +17,7 @@
 -- 09/03/24				Yunus Mohammed				10. Added new column no_of_family_units_in_structures
 -- 10/02/24				Yunus Mohammed				11. Added new column fortified_roof_credit
 -- 10/31/24		        Hernando Gonzalez			12. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
--- 12/02/24				Yunus Mohammed				13. Added new fields.
+-- 12/02/24				Yunus Mohammed				13. AD-7834 Added new fields.
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage]
 
