@@ -20,7 +20,8 @@
 -- 08/20/24		Yunus Mohammed					15. Updated wind_derived_deductible logic
 -- 09/03/24		Yunus Mohammed					16. Added new field no_of_family_units_in_structures.	
 -- 10/02/24		Yunus Mohammed					17. Added new field fortified_roof_credit
--- 31/10/24		Hernando Gonzalez				18. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
+-- 10/31/24		Hernando Gonzalez				18. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
+-- 12/02/24		Yunus Mohammed					19 Added new fields
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -143,11 +144,17 @@ BEGIN
 				premium_adjustment_method, premium_adjustment_factor, premium_adjustment_retention, premium_adjustment_retention_reason,
 				reinsurance_designation, reinsurance_layered_program_in, reinsurance_attachment_limit_amt, reinsurance_total_tiv_amt,
 				wildfire_threat, wildfire_hazard_severity,aop_deductible_manual,water_deductible_manual,wildfire_deductible_manual,wind_or_hailstorm_deductible_manual,
-				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt,
+				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, 
+				aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt,
 				waive_inspection_in, waive_inspection_reason, inspection_note, rms_reviewed_in,
 				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,no_of_family_units_in_structures,fortified_roof_credit,
-				facultative_reinsurance_in, layered_limits_in, [dwelling_limit_100_pc_value_amt], [other_structures_limit_100_pc_value_amt], [contents_limit_100_pc_value_amt], [loss_of_use_100_pc_value_amt], facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
+				facultative_reinsurance_in, layered_limits_in, [dwelling_limit_100_pc_value_amt], [other_structures_limit_100_pc_value_amt], 
+				[contents_limit_100_pc_value_amt], [loss_of_use_100_pc_value_amt], facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt,
+				facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, 
+				current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
+				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
+				
 			)
 			SELECT
 				tthc.PolicyNumber AS policy_no,tthc.EffectiveDate AS effective_dt,tthc.ExpirationDate AS expiration_dt,
@@ -300,6 +307,8 @@ BEGIN
 				tthc.CurrentPolicyAnniversaryDate as current_policy_anniversary_dt,
 				CONCAT(tthc.HomeInsuranceCompany, ' ', tthc.OtherCarrierName) as current_underlying_company_nm,
 				tthc.NewClientForTheAgency as new_client_for_agency_in,
+				tthc.NumberOfBathrooms as no_of_bathrooms,tthc.NumberOfFireplaces as no_of_fireplaces,
+				tthc.FoundationType as foundation_type,tthc.WaivedInflationFactor as waived_inflation_factor_in,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_coverage_temp1 AS tthc
