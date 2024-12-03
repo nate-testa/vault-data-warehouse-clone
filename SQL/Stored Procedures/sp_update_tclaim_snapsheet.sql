@@ -120,17 +120,42 @@ BEGIN
 
 		UPDATE edw_core.tclaim
 		SET 
-			adjusting_other_paid_amt = CASE WHEN adjusting_other_paid_amt IS NULL THEN 0 ELSE adjusting_other_paid_amt END,
-			adjusting_other_reserve_amt = CASE WHEN adjusting_other_reserve_amt IS NULL THEN 0 ELSE adjusting_other_reserve_amt END,
-			refund_expense_paid_amt = CASE WHEN refund_expense_paid_amt IS NULL THEN 0 ELSE refund_expense_paid_amt END,
-			refund_indemnity_paid_amt = CASE WHEN refund_indemnity_paid_amt IS NULL THEN 0 ELSE refund_indemnity_paid_amt END,
-			salvage_expense_paid_amt = CASE WHEN salvage_expense_paid_amt IS NULL THEN 0 ELSE salvage_expense_paid_amt END,
-			salvage_expense_reserve_amt = CASE WHEN salvage_expense_reserve_amt IS NULL THEN 0 ELSE salvage_expense_reserve_amt END,
-			salvage_reserve_amt = CASE WHEN salvage_reserve_amt IS NULL THEN 0 ELSE salvage_reserve_amt END,
-			subro_expense_paid_amt = CASE WHEN subro_expense_paid_amt IS NULL THEN 0 ELSE subro_expense_paid_amt END,
-			subro_expense_reserve_amt = CASE WHEN subro_expense_reserve_amt IS NULL THEN 0 ELSE subro_expense_reserve_amt END,
-			subro_recovery_amt = CASE WHEN subro_recovery_amt IS NULL THEN 0 ELSE subro_recovery_amt END,
-			subro_reserve_amt = CASE WHEN subro_reserve_amt IS NULL THEN 0 ELSE subro_reserve_amt END
+			defense_reserve_amt = ISNULL(defense_reserve_amt,0)
+			,deductible_recovery_reserve_amt = ISNULL(deductible_recovery_reserve_amt,0)
+			,reinsurance_recovery_reserve_amt = ISNULL(reinsurance_recovery_reserve_amt,0)
+			,overpayment_recovery_reserve_amt = ISNULL(overpayment_recovery_reserve_amt,0)
+			,deductible_recovery_expense_reserve_amt = ISNULL(deductible_recovery_expense_reserve_amt,0)
+			,reinsurance_recovery_expense_reserve_amt = ISNULL(reinsurance_recovery_expense_reserve_amt,0)
+			,overpayment_recovery_expense_reserve_amt = ISNULL(overpayment_recovery_expense_reserve_amt,0)
+			,subrogation_recovery_defense_reserve_amt = ISNULL(subrogation_recovery_defense_reserve_amt,0)
+			,salvage_recovery_defense_reserve_amt = ISNULL(salvage_recovery_defense_reserve_amt,0)
+			,deductible_recovery_defense_reserve_amt = ISNULL(deductible_recovery_defense_reserve_amt,0)
+			,reinsurance_recovery_defense_reserve_amt = ISNULL(reinsurance_recovery_defense_reserve_amt,0)
+			,overpayment_recovery_defense_reserve_amt = ISNULL(overpayment_recovery_defense_reserve_amt,0)
+			,defense_paid_amt = ISNULL(defense_paid_amt,0)
+			,deductible_recovery_amt = ISNULL(deductible_recovery_amt,0)
+			,reinsurance_recovery_amt = ISNULL(reinsurance_recovery_amt,0)
+			,overpayment_recovery_amt = ISNULL(overpayment_recovery_amt,0)
+			,deductible_expense_recovery_amt = ISNULL(deductible_expense_recovery_amt,0)
+			,reinsurance_expense_recovery_amt = ISNULL(reinsurance_expense_recovery_amt,0)
+			,overpayment_expense_recovery_amt = ISNULL(overpayment_expense_recovery_amt,0)
+			,subrogation_defense_recovery_amt = ISNULL(subrogation_defense_recovery_amt,0)
+			,salvage_defense_recovery_amt = ISNULL(salvage_defense_recovery_amt,0)
+			,deductible_defense_recovery_amt = ISNULL(deductible_defense_recovery_amt,0)
+			,reinsurance_defense_recovery_amt = ISNULL(reinsurance_defense_recovery_amt,0)
+			,overpayment_defense_recovery_amt = ISNULL(overpayment_defense_recovery_amt,0)
+			,subrogation_recovery_reserve_amt = ISNULL(subrogation_recovery_reserve_amt,0)
+			,salvage_recovery_reserve_amt = ISNULL(salvage_recovery_reserve_amt,0)
+			,subrogation_recovery_expense_reserve_amt = ISNULL(subrogation_recovery_expense_reserve_amt,0)
+			,salvage_recovery_expense_reserve_amt = ISNULL(salvage_recovery_expense_reserve_amt,0)
+			,subrogation_recovery_amt = ISNULL(subrogation_recovery_amt,0)
+			,salvage_expense_recovery_amt = ISNULL(salvage_expense_recovery_amt,0)
+			,subrogation_expense_recovery_amt = ISNULL(subrogation_expense_recovery_amt,0)
+			,loss_reserve_amt = ISNULL(loss_reserve_amt,0)
+			,expense_reserve_amt = ISNULL(expense_reserve_amt,0)
+			,loss_paid_amt = ISNULL(loss_paid_amt,0)
+			,expense_paid_amt = ISNULL(expense_paid_amt,0)
+			,salvage_recovery_amt = ISNULL(salvage_recovery_amt,0)
 		;
 
 		SET @rows_affected= ISNULL(@rows_affected,0) + @@ROWCOUNT;	
