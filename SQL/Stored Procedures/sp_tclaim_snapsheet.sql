@@ -125,7 +125,7 @@ BEGIN
 		LEFT JOIN edw_core.tcustomer cr ON cr.customer_sk=tph.customer_sk
 		LEFT JOIN edw_temp.tclaim_snapsheet_temp2 cc ON cc.claim_id = c.id
 		LEFT JOIN edw_core.tcatastrophe cat ON cc.catastrophe_cd = cat.catastrophe_cd
-		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_cd = c.loss_type
+		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_desc = c.loss_type AND cl.source_system_sk = 5
 		WHERE greatest(c.created_at,c.updated_at) > @last_source_extract_ts
 	) AS t
 	WHERE
