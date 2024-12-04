@@ -434,7 +434,7 @@ class SnapsheetAPI:
 
         return success, result_text
 
-    def update_an_claim(self, claim_id, data):
+    def update_a_claim(self, claim_id, data):
         path = f'/api/v2/claims/{claim_id}'
         url = f'{self.base_url}{path}'
 
