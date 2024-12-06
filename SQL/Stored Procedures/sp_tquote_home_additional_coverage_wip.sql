@@ -317,7 +317,7 @@ BEGIN
 				,Risk_Score_Hurricane as risk_score_hurricane
 				,Risk_Score_Wildfire as risk_score_wildfire
 				,Risk_Score_Sinkhole_Mine as risk_score_sinkhole_mine
-				,Risk_Score_All_Perils as risk_score_all_peril
+				,Risk_Score_All_Perils as risk_score_all_perils
 				,source_system_sk
 				,GETDATE() AS create_ts
 				,GETDATE() AS update_ts
@@ -713,7 +713,7 @@ BEGIN
 			[target].risk_score_hurricane = [source].risk_score_hurricane, 
 			[target].risk_score_wildfire = [source].risk_score_wildfire,
 			[target].risk_score_sinkhole_mine = [source].risk_score_sinkhole_mine,
-			[target].risk_score_all_peril = [source].risk_score_all_peril,
+			[target].risk_score_all_perils = [source].risk_score_all_perils,
 			[target].update_ts = [source].update_ts;
 			
 

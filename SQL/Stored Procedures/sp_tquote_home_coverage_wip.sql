@@ -494,10 +494,10 @@ BEGIN
 			[target].current_policy_anniversary_dt = [source].current_policy_anniversary_dt,
 			[target].current_underlying_company_nm = [source].current_underlying_company_nm,
 			[target].new_client_for_agency_in = [source].new_client_for_agency_in,
-			[target].no_of_bathrooms = [source].NumberOfBathrooms,
-			[target].no_of_fireplaces = [source].NumberOfFireplaces,
-			[target].foundation_type = [source].FoundationType,
-			[target].waived_inflation_factor_in = [source].tthc.WaivedInflationFactor ,
+			[target].no_of_bathrooms = [source].no_of_bathrooms,
+			[target].no_of_fireplaces = [source].no_of_fireplaces,
+			[target].foundation_type = [source].foundation_type,
+			[target].waived_inflation_factor_in = [source].waived_inflation_factor_in,
 			[target].update_ts = GETDATE();
 
 			SET @rows_affected=@@ROWCOUNT; 
