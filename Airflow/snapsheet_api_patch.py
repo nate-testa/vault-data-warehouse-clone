@@ -113,6 +113,41 @@ def claim_status(qry):
         logger.info(f"Executing update query: {qry_update_result}")
         mssql_hook.run(qry_update_result)
 
+def claim_catastrophe(qry):
+    api = SnapsheetAPI(logger=logger)
+    mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
+
+    logger.info(f"Executing SQL query: {qry}")
+    update_claim_catastrophe = mssql_hook.get_records(qry)
+    logger.info(f"Query returned {len(update_claim_catastrophe)} records")
+
+    for record in update_claim_catastrophe:
+        (claimReferenceNumber, data) = record
+        logger.info(f"*************** Start Processing *********************")
+        logger.info(f"Processing claim record: {record}")
+
+        success, result_text = api.update_a_claim(claimReferenceNumber, data)
+
+        if success:
+            qry_update_result = f"""
+                update edw_stage.migration_create_claim_api_update_catastrophe 
+                set update_ts = getdate(), api_status = 'Success', 
+                    api_Error_description = NULL, 
+                    api_response = '{result_text.replace("'","''")}'
+                where claimRerenceNumber = '{claimReferenceNumber}'
+            """
+        else:
+            qry_update_result = f"""
+                update edw_stage.migration_create_claim_api_update_catastrophe 
+                set update_ts = getdate(), api_status = 'Error', 
+                    api_Error_description = '{result_text.replace("'","''")}',
+                    api_response = NULL
+                where claimRerenceNumber = '{claimReferenceNumber}'
+            """
+
+        logger.info(f"Executing update query: {qry_update_result}")
+        mssql_hook.run(qry_update_result)
+
 def main():
 
     update_exposure_adjuster_qry = """
@@ -136,12 +171,19 @@ def main():
         where api_status  in ('Error', 'pending')
     """
 
+    update_claim_catastrophe_qry = """
+        select 
+            claimRerenceNumber, data
+        from edw_stage.migration_create_claim_api_update_catastrophe
+        where api_status  in ('Error', 'pending')
+    """
+
     parser = argparse.ArgumentParser(
         description='Execute Snapsheet API functions to update data'
     )
     parser.add_argument(
         'function',
-        choices=['exposure_adjuster','exposure_status','claim_status'],
+        choices=['exposure_adjuster','exposure_status','claim_status','claim_catastrophe'],
         help='The function you want to execute.'
     )
     args = parser.parse_args()
@@ -152,6 +194,8 @@ def main():
         exposure_status(update_exposure_status_qry)
     elif args.function == 'claim_status':
         claim_status(update_claim_status_qry)
+    elif args.function == 'claim_catastrophe':
+        claim_catastrophe(update_claim_catastrophe_qry)
     
 
 if __name__ == '__main__':
