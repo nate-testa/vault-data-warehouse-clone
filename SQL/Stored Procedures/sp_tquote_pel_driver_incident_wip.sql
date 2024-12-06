@@ -10,6 +10,8 @@
 -- 11/06/24		Alberto Almario				5. VI34964/AD7640 - Updated object type
 -- 11/13/24		Alberto Almario				6. AD7672 - new column quote_pel_driver_sk
 -- 11/19/24		Architha Gudimalla 		    7. AD7777 - update driver table join to use uniqueID
+-- 11/24/24		Alberto Almario 		    8. AD7809 - Add driver_no column to merge sentence.
+-- 12/06/24		Sandeep Gundreddy 		    9. AD7809 - Add quote_pel_driver_sk column to merge sentence 
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_pel_driver_incident_wip]
@@ -38,7 +40,7 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,source_system_sk,quote_history_sk,[Index],
 			CreatedDate,UpdatedDate,IncidentDate,IncidentType,IncidentDescription,IncludeInRate,Disputed
-			,quote_pel_driver_sk
+			,quote_pel_driver_sk, driver_no
 			into edw_temp.tquote_pel_driver_incident_wip_temp1
 		from
 		(
@@ -52,7 +54,7 @@ BEGIN
 			0 AS transaction_seq_no, 
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,			
 			acc.CreatedDate,acc.UpdatedDate,accof.Field,accof.[Value]
-			,pd.quote_pel_driver_sk
+			,pd.quote_pel_driver_sk, pd.driver_no
 			from
 				(
 				    SELECT *
@@ -109,11 +111,10 @@ BEGIN
 		    FROM
 		        edw_temp.tquote_pel_driver_incident_wip_temp1 AS ttpv
 		) AS SOURCE
-		ON
-		    TARGET.quote_no = SOURCE.quote_no AND
-		    --TARGET.effective_dt = SOURCE.effective_dt AND
-		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
-		    TARGET.incident_no = SOURCE.incident_no
+			ON TARGET.quote_no = SOURCE.quote_no
+            AND TARGET.quote_pel_driver_sk = SOURCE.quote_pel_driver_sk
+            AND TARGET.incident_no = SOURCE.incident_no
+            AND TARGET.transaction_seq_no = SOURCE.transaction_seq_no
 
 		WHEN MATCHED THEN
 		    UPDATE SET
