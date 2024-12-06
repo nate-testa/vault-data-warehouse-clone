@@ -37,20 +37,19 @@ BEGIN
 		SELECT 
 			c.claim_number as claim_no,
 			tc.claim_sk,
-			NULL as subclaim_seq_no,
 			n.body as content_desc,
-			n.note_type as category_nm,
-			NULL as send_message_to,
+			n.note_type,
 			u.name as note_created_by_nm,
 			n.created_at as note_created_ts,
-			NULL as user_type,
-			NULL as overview_desc,
+			n.contact_type,
+			cf.claim_feature_sk,
 			5 AS source_system_sk
 		INTO edw_temp.tclaim_note_snapsheet_temp1
 		FROM edw_stage_snapsheet.claims as c
 		INNER JOIN edw_stage_snapsheet.notes as n ON n.claim_id = c.id
 		LEFT JOIN edw_stage_snapsheet.users as u ON u.id = n.logged_by_user_id
 		LEFT JOIN edw_core.tclaim as tc ON tc.claim_no = c.claim_number
+		LEFT JOIN edw_core.tclaim_feature as cf ON cf.claim_no = c.claim_number
 		WHERE c.created_at > @last_source_extract_ts
 		;
 
@@ -59,14 +58,12 @@ BEGIN
 			(
 				claim_no,
 				claim_sk,
-				subclaim_seq_no,
 				content_desc,
-				category_nm,
-				send_message_to,
+				note_type,
 				note_created_by_nm,
 				note_created_ts,
-				user_type,
-				overview_desc,
+				contact_type,
+				claim_feature_sk,
 				source_system_sk,
 				create_ts,
 				update_ts,
@@ -75,14 +72,12 @@ BEGIN
 		SELECT 
 			claim_no,
 			claim_sk,
-			subclaim_seq_no,
 			content_desc,
-			category_nm,
-			send_message_to,
+			note_type,
 			note_created_by_nm,
 			note_created_ts,
-			user_type,
-			overview_desc,
+			contact_type,
+			claim_feature_sk,
 			source_system_sk,
 			GETDATE() AS create_ts,
 			GETDATE() AS update_ts,
