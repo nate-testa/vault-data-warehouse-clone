@@ -217,6 +217,10 @@ with DAG(
 
         operators[-1] >> send_home_email
 
+    
+    collection_marine = DummyOperator(
+        task_id='collection_marine',
+    )
 
     with TaskGroup("collection_group") as collection_group:
 
@@ -249,6 +253,40 @@ with DAG(
             operators[i] >> operators[i + 1]
 
         operators[-1] >> send_collection_email
+
+
+    with TaskGroup("marine_group") as marine_group:
+
+        marine_group_items = [
+            'sp_tmarine_boat_yacht',
+            'sp_tmarine_boat_yacht_location',
+            'sp_tmarine_boat_yacht_coverage',
+            'sp_tmarine_boat_yacht_operator',
+            'sp_tmarine_boat_yacht_watercraft'
+        ]
+
+        operators = []
+        for item in marine_group_items:
+            operator = MsSqlOperator(
+                task_id=item,
+                mssql_conn_id='Vault_EDW',
+                sql=f"EXEC edw_core.{item}",
+                database="vault_edw",
+                autocommit=True,
+            )
+            operators.append(operator)
+
+        send_marine_email = EmailOperator(
+            task_id='send_marine_email',
+            to=to_email,
+            subject='Airflow - Marine tables loaded successfully',
+            html_content=get_sp_success_data_HTML(marine_group_items, 'All stored procedures executed successfully for all the Marine tables'),
+        )
+
+        for i in range(len(operators) - 1):
+            operators[i] >> operators[i + 1]
+
+        operators[-1] >> send_marine_email
 
 
     with TaskGroup("PEL_group") as PEL_group:
@@ -680,4 +718,4 @@ with DAG(
     )
 
 
-start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group] >> collection_group >> policy_transaction_group >> claim_group >> datamart_group >> validation_result_group >> integration_group >> exec_vault_edw_data_load_quotes >> end
+start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group] >> collection_marine >> [collection_group, marine_group] >> policy_transaction_group >> claim_group >> datamart_group >> validation_result_group >> integration_group >> exec_vault_edw_data_load_quotes >> end

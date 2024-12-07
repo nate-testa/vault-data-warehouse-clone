@@ -26,6 +26,7 @@
 -- 07/12/24		Architha Gudimalla				18. Added these to timternal_coverage table join along with subscriber contributoin
 --										   			Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S
 -- 										   			Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S
+--11/25/2024	Sandeep Gundreddy				19. Added logic to load item_sk and coverage_sk for Marine Boat & Yacht
 -- ====================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -172,12 +173,14 @@ BEGIN
 				 when coll.policy_no is not null then coll.collection_location_sk 
 			     --when pel_loc.policy_no is not null then pel_loc.pel_location_sk  
 			     when au_veh.policy_no is not null then au_veh.auto_vehicle_sk 
+				 when mby.policy_no is not null then mby.marine_boat_yacht_sk
 			     else 0 
 			end item_sk, 
 			case when ho.policy_no is not null then ho.home_coverage_sk 
 				 when coll.policy_no is not null then coll.collection_coverage_sk 
 			     when pel_cov.policy_no is not null then pel_cov.pel_coverage_sk 
-			     when au_pol_cov.policy_no is not null then au_pol_cov.auto_policy_coverage_sk 
+			     when au_pol_cov.policy_no is not null then au_pol_cov.auto_policy_coverage_sk
+				 when mby.policy_no is not null then mby.marine_boat_yacht_coverage_sk 
 			     else 0 
 			end cov_sk, 
 			case when au_veh_cov.policy_no is not null then au_veh_cov.auto_vehicle_coverage_sk 
@@ -219,6 +222,7 @@ BEGIN
 		LEFT JOIN edw_core.tauto_vehicle au_veh on source.PolicyNumber = au_veh.policy_no and cast(source.EffectiveDate as date) = au_veh.effective_dt and source.vehicle_unique_id = au_veh.vehicle_unique_id
 		LEFT JOIN edw_core.tauto_policy_coverage au_pol_cov on source.PolicyNumber = au_pol_cov.policy_no and cast(source.EffectiveDate as date) = au_pol_cov.effective_dt and source.PolicyChangeNumber = au_pol_cov.transaction_seq_no
 		LEFT JOIN edw_core.tauto_vehicle_coverage au_veh_cov on source.PolicyNumber = au_veh_cov.policy_no and cast(source.EffectiveDate as date) = au_veh_cov.effective_dt and source.PolicyChangeNumber = au_veh_cov.transaction_seq_no and source.vehicle_unique_id = au_veh_cov.vehicle_unique_id
+		LEFT JOIN edw_core.tmarine_boat_yacht_coverage mby on source.PolicyNumber = mby.policy_no and cast(source.EffectiveDate as date) = mby.effective_dt and source.PolicyChangeNumber = mby.transaction_seq_no
 		LEFT JOIN edw_core.tproduct pr on pr.product_cd = pol.product_cd
 		LEFT JOIN edw_core.tbroker br on pol.broker_id = br.broker_id
 		LEFT JOIN edw_core.tcustomer cust on pol.customer_id = cust.customer_id

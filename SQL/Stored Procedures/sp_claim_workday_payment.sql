@@ -11,6 +11,7 @@
 -- 07/31/24		Yunus Mohammed				4. Updated Loss (Expense A&O) to Loss (Expense - A&O)
 -- 09/19/24		Yunus Mohammed				5. Used sub_cause_of_loss_cd AS sub_cause_of_loss_code instead of sub_cause_of_loss_desc
 --												added throw in catch block
+-- 11/26/24		Yunus Mohammed				6. Updated "Marine Boat & Yacht" to "Marine_Boat&Yacht"
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_payment]
@@ -86,6 +87,7 @@ BEGIN
 				WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
 				WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
 				WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
+				WHEN tprd.product_cd = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
 			ELSE tprd.product_nm END AS product,
 			tcf.claim_coverage_desc AS policycoveragetype,
 			ttr.cat_name AS paymenttype,

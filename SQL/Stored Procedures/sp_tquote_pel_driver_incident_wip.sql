@@ -1,14 +1,17 @@
 ﻿-- =========================================================================================================================== 
 -- Description: This procedures insert pel quote driver incident data
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date			|Author							|	Change Description
+-- Change date	|Author					|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
--- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
--- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
--- 05/14/2024 			Architha Gudimalla					3. Corrected errors
--- 08/22/2024			Architha Gudimalla					4. Removed eff_dt from merge
--- 11/06/2024			Alberto Almario						5. VI34964/AD7640 - Updated object type
--- 11/13/2024			Alberto Almario						6. AD7672 - new column quote_pel_driver_sk
+-- 05/06/24 	Hernando Gonzalez			1. Created this procedure 
+-- 05/08/24 	Architha Gudimalla			2. Updated @new_last_source_extract_ts 
+-- 05/14/24 	Architha Gudimalla			3. Corrected errors
+-- 08/22/24		Architha Gudimalla			4. Removed eff_dt from merge
+-- 11/06/24		Alberto Almario				5. VI34964/AD7640 - Updated object type
+-- 11/13/24		Alberto Almario				6. AD7672 - new column quote_pel_driver_sk
+-- 11/19/24		Architha Gudimalla 		    7. AD7777 - update driver table join to use uniqueID
+-- 11/24/24		Alberto Almario 		    8. AD7809 - Add driver_no column to merge sentence.
+-- 12/06/24		Sandeep Gundreddy 		    9. AD7809 - Add quote_pel_driver_sk column to merge sentence 
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_pel_driver_incident_wip]
@@ -37,7 +40,7 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,source_system_sk,quote_history_sk,[Index],
 			CreatedDate,UpdatedDate,IncidentDate,IncidentType,IncidentDescription,IncludeInRate,Disputed
-			,quote_pel_driver_sk
+			,quote_pel_driver_sk, driver_no
 			into edw_temp.tquote_pel_driver_incident_wip_temp1
 		from
 		(
@@ -51,7 +54,7 @@ BEGIN
 			0 AS transaction_seq_no, 
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,			
 			acc.CreatedDate,acc.UpdatedDate,accof.Field,accof.[Value]
-			,pd.quote_pel_driver_sk
+			,pd.quote_pel_driver_sk, pd.driver_no
 			from
 				(
 				    SELECT *
@@ -68,7 +71,7 @@ BEGIN
 						and tph.effective_dt=acc.EffectiveDate
 						and tph.transaction_seq_no = 0
 				left join edw_stage.Product pr on acc.ProductId = pr.id
-				left join edw_core.[tquote_pel_driver] AS pd ON pd.quote_no = acc.PolicyNumber AND pd.effective_dt = acc.EffectiveDate AND pd.transaction_seq_no = 0 and pd.driver_no=pid.[index]
+				left join edw_core.[tquote_pel_driver] AS pd ON pd.quote_no = acc.PolicyNumber AND pd.effective_dt = acc.EffectiveDate AND pd.transaction_seq_no = 0 and pd.driver_unique_id=pid.uniqueid 
 			where
 				acc.PolicyNumber is not null
 				--and acc.[Stage] IN ('QUOTE','POLICY')
@@ -108,11 +111,10 @@ BEGIN
 		    FROM
 		        edw_temp.tquote_pel_driver_incident_wip_temp1 AS ttpv
 		) AS SOURCE
-		ON
-		    TARGET.quote_no = SOURCE.quote_no AND
-		    --TARGET.effective_dt = SOURCE.effective_dt AND
-		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
-		    TARGET.incident_no = SOURCE.incident_no
+			ON TARGET.quote_no = SOURCE.quote_no
+            AND TARGET.quote_pel_driver_sk = SOURCE.quote_pel_driver_sk
+            AND TARGET.incident_no = SOURCE.incident_no
+            AND TARGET.transaction_seq_no = SOURCE.transaction_seq_no
 
 		WHEN MATCHED THEN
 		    UPDATE SET

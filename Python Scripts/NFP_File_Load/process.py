@@ -1,3 +1,4 @@
+
 import logging
 import struct
 import shutil
@@ -62,7 +63,7 @@ class NFPDataProcessor:
             self.df['update_ts'] = datetime.utcnow()
             self.df['product_type'] = 'Group Umbrella'
             self.df['product_nm'] = 'PEL'
-            # Added Custom
+            # Custom
             self.df['risk_group'] = self.df['insured_cert_no'] +"-"+ self.df["insured_first_name"] +"-"+ self.df["insured_last_name"]
             logging.info("Data processing completed successfully.")
         except Exception as e:
@@ -77,7 +78,7 @@ class NFPDataProcessor:
                 dtype = row['DATA_TYPE']
                 if col in self.df.columns:
                     self.df[col] = self.df[col].replace({pd.NaT: None, 'nan': None, 'NaN': None})
-                    
+
                     if dtype in ['int', 'bigint', 'smallint', 'tinyint']:
                         self.df[col] = pd.to_numeric(self.df[col], errors='coerce').astype('Int64').fillna(0)
                     elif dtype in ['float', 'real', 'decimal', 'numeric']:
@@ -93,7 +94,6 @@ class NFPDataProcessor:
         except Exception as e:
             logging.error("Error converting data types: %s", e)
             raise
-
     def get_data_frame(self):
         return self.df
 
@@ -161,39 +161,49 @@ class AzureSQLConnector:
             connection_string = f"DRIVER={self.driver};SERVER={self.server};DATABASE={self.database};UID={self.username};PWD={self.password};TrustServerCertificate=yes;"
             connection = pyodbc.connect(connection_string)
             cursor = connection.cursor()
-    
+
             # Rename columns that require special handling
             data_frame = data_frame.rename(columns={
                 'non_profit_d&o_liability_coverage': '[non_profit_d&o_liability_coverage]',
                 'non_profit_d&o_liability_premium': '[non_profit_d&o_liability_premium]'
             })
-    
+
             # Log the columns that will be used in the insert statement
             columns = data_frame.columns.tolist()
-            logging.info(f"Columns to be used in insert statement: {columns}")            
-    
+            #logging.info(f"Columns to be used in insert statement: {columns}")
+
             # Create the insert query template
             columns_str = ', '.join(columns)
             placeholders = ', '.join(['?' for _ in columns])
             insert_query_template = f"INSERT INTO {schema}.{table_name} ({columns_str}) VALUES ({placeholders})"
-            logging.info(f"Insert query template: {insert_query_template}")
-    
+            #logging.info(f"Insert query template: {insert_query_template}")
+
             # Convert DataFrame to list of tuples, handling NaN appropriately
             data_tuples = [
-                tuple(None if (col in columns and pd.isna(value)) else None if pd.isna(value) else value 
-                    for col, value in zip(columns, row)) 
+                tuple(None if (col in columns and pd.isna(value)) else None if pd.isna(value) else str(value).replace("'", "''") # value
+                    for col, value in zip(columns, row))
                 for row in data_frame.to_numpy()
             ]
-    
+
             # Execute each query with the actual values
-            for data_tuple in data_tuples:
+            '''for data_tuple in data_tuples:
                 filled_query = insert_query_template
                 for i, value in enumerate(data_tuple):
                     value_str = 'NULL' if value is None or value == 'None' else repr(value)
                     filled_query = filled_query.replace('?', value_str, 1)
                 logging.info(f"Executing query: {filled_query}")
+                cursor.execute(filled_query)'''
+
+            for data_tuple in data_tuples:
+                filled_query = insert_query_template
+                for i, value in enumerate(data_tuple):
+                    if isinstance(value, str):  # Escape single quotes in strings
+                        value = value.replace("'", "''")
+                    value_str = 'NULL' if value is None or value == 'None' else f"'{value}'"  # Wrap strings in single quotes
+                    filled_query = filled_query.replace('?', value_str, 1)
+                logging.info(f"Executing query: {filled_query}")
                 cursor.execute(filled_query)
-    
+
             connection.commit()
             cursor.close()
             connection.close()
@@ -278,14 +288,14 @@ def main(server=None):
     # Load configuration
     current_dir = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(current_dir, 'config.ini')
-    
+
     # Read the configuration file
     config = ConfigParser()
     config.read(config_path)
-    
-    source_directory = os.path.join(current_dir, config.get('DEFAULT', 'source_directory'))
-    processed_directory = os.path.join(current_dir, config.get('DEFAULT', 'processed_directory'))
-    log_directory = os.path.join(current_dir, config.get('DEFAULT', 'log_directory'))
+
+    source_directory = config.get('DEFAULT', 'source_directory')
+    processed_directory = config.get('DEFAULT', 'processed_directory')
+    log_directory = config.get('DEFAULT', 'log_directory')
     server = server if server is not None else config.get('DEFAULT', 'server')
     database = config.get('DEFAULT', 'database')
     table_name = config.get('DEFAULT', 'table_name')
@@ -296,7 +306,7 @@ def main(server=None):
     password = config.get('DEFAULT', 'password')
     validate_column_empty = config.getboolean('DEFAULT', 'validate_column_empty')
     column_to_validate = config.get('DEFAULT', 'column_to_validate')
-    column_mapping_file = os.path.join(current_dir, config.get('DEFAULT', 'column_mapping_file'))
+    column_mapping_file = config.get('DEFAULT', 'column_mapping_file')
     show_records = config.get('DEFAULT', 'show_records')
 
     column_mapping = load_column_mapping(column_mapping_file)

@@ -3,7 +3,10 @@ import pendulum
 from datetime import timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.bash_operator import BashOperator  # Correct import
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
+from airflow.models import Variable
+
 
 default_args = {
     'owner': 'airflow',
@@ -12,20 +15,8 @@ default_args = {
 }
 
 # Define
-HOME_PATH = os.path.expanduser('~')
-FOLDER_PATH = os.path.join(HOME_PATH, 'scripts/python/nfp_file')
-server = 'azrvaultdatasit001.database.windows.net'  # Default value for server
-
-def run_preprocess():
-    preprocess_script = os.path.join(FOLDER_PATH, 'preProcess.py')
-    os.system(f'python3 {preprocess_script}')
-
-def run_process(server):
-    process_script = os.path.join(FOLDER_PATH, 'process.py')
-    command = f'python3 {process_script}'
-    if server:
-        command += f' --server {server}'
-    os.system(command)
+FOLDER_PATH = Variable.get("NFP_FOLDER_PATH")  # Use absolute path
+server = Variable.get("NFP_SERVER")  # Default value for server
 
 with DAG(
     dag_id='nfp_file_processing',
@@ -40,16 +31,21 @@ with DAG(
         task_id='start',
     )
 
-    pre_process_task = PythonOperator(
+    pre_process_task = BashOperator(
         task_id='preprocess_task',
-        python_callable=run_preprocess,
+        bash_command=f'python3 {FOLDER_PATH}/preProcess.py',
         dag=dag,
     )
 
-    process_task = PythonOperator(
+    process_task = BashOperator(
         task_id='process_task',
-        python_callable=run_process,
-        op_args=[server],  # Pass the server variable to the function
+        bash_command=f'python3 {FOLDER_PATH}/process.py --server {server}',
+        dag=dag,
+    )
+
+    exec_vault_nfp_monthly_load = TriggerDagRunOperator(
+        task_id="exec_vault_nfp_monthly_load",
+        trigger_dag_id="vault_nfp_monthly_load",
         dag=dag,
     )
 
@@ -57,4 +53,4 @@ with DAG(
         task_id='end',
     )
 
-    start >> pre_process_task >> process_task >> end
+    start >> pre_process_task >> process_task >> exec_vault_nfp_monthly_load >> end

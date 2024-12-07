@@ -14,6 +14,7 @@
 --												Used tinternal_coverage for finacial category for commission part
 -- 10/04/24		Yunus Mohammed				7. Added condo in subcategory for commission
 -- 10/24/24		Yunus Mohammed				8. Added Marine Boat & Yacht in Commission
+-- 11/26/24		Yunus Mohammed				9. Updated Marine Boat & Yacht to Marine_Boat&Yacht
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
@@ -65,6 +66,7 @@ BEGIN
 					WHEN product = 'Excess Liability' THEN 'Excess_Liability'
 					WHEN product = 'Auto' THEN 'Automobile'
 					WHEN product = 'Condo' THEN 'Homeowners'
+					WHEN product = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
 					ELSE product
 				END AS product,
 				transaction_sequence,company,transaction_date,
@@ -134,6 +136,7 @@ BEGIN
 					WHEN product = 'Excess Liability' THEN 'Excess_Liability'
 					WHEN product = 'Auto' THEN 'Automobile'
 					WHEN product = 'Condo' THEN 'Homeowners'
+					WHEN product = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
 					ELSE product
 				END AS product,
 				transaction_sequence,company,transaction_date,
@@ -170,7 +173,7 @@ BEGIN
 				WHEN tp.product_cd = 'AU' THEN 'Auto Commission'
 				WHEN tp.product_cd = 'PEL' THEN 'PEL Commission'
 				WHEN tp.product_cd = 'LUX' THEN 'LUX Commission'
-				WHEN tp.product_cd = 'BY' THEN 'Marine Boat & Yacht Commission'
+				WHEN tp.product_cd = 'BY' THEN 'Marine_Boat&Yacht Commission'
 				END
 				as subcategory,
 				tic.internal_coverage_sk as financial_category_id,
