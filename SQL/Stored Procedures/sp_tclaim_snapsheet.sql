@@ -59,7 +59,7 @@ BEGIN
 		FROM
 		(
 		SELECT
-			1 as rn,
+			ROW_NUMBER() OVER(PARTITION BY c.claim_number ORDER BY c.claim_number) as rn,
 			tph.effective_dt, 
 			tbrk.broker_id,
 			cr.customer_id,
