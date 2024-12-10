@@ -42,6 +42,7 @@ BEGIN
 		INTO edw_temp.tclaim_cost_category_snapsheet_temp1
 		FROM edw_stage_snapsheet.financial_reserve_items
 		WHERE updated_at > @last_source_extract_ts
+		AND cost_category NOT IN (select claim_cost_category_nm from edw_core.tclaim_cost_category where source_system_sk = 5)
 		GROUP BY cost_category
 		;
 
