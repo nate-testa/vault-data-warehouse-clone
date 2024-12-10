@@ -42,7 +42,7 @@ BEGIN
 		-- *** Create temp table 1 ***
 		SELECT
 			tc.claim_sk 
-			,NULL AS claim_feature_sk 
+			,tf.claim_feature_sk AS claim_feature_sk
 			,tpr.product_sk 
 			,tc.policy_sk 
 			,tb.broker_sk 
@@ -53,7 +53,7 @@ BEGIN
 			,NULL AS claim_transaction_type_sk 
 			,NULL AS feature_status_sk 
 			,NULL AS expense_reserve_amt
-			,NULL AS claim_cost_category_sk
+			,tcc.claim_cost_category_sk AS claim_cost_category_sk
 			,res.claim_id
 			,c.claim_number
 			,ft.id AS financial_transaction_id
@@ -81,7 +81,8 @@ BEGIN
 		FROM edw_stage_snapsheet.financial_transactions ft
 		INNER JOIN edw_stage_snapsheet.claims c ON c.id = ft.claim_id
 		INNER JOIN edw_core.tclaim tc ON tc.claim_no = c.claim_number
-		INNER JOIN edw_stage_snapsheet.exposures e ON e.claim_id = c.id
+		INNER JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no
+		INNER JOIN edw_stage_snapsheet.exposures e ON e.claim_id = c.id and tf.exposure_name = e.exposure_name and tf.exposure_type = e.exposure_type
 		LEFT JOIN edw_stage_snapsheet.financial_payment_items fpi ON fpi.financial_transaction_id = ft.id
 		INNER JOIN edw_stage_snapsheet.financial_reserve_items res ON res.exposure_id = e.id AND res.financial_transaction_id = ft.id
 		INNER JOIN edw_stage_snapsheet.financial_transaction_actions fta ON fta.financial_transaction_id = ft.id 
@@ -96,6 +97,7 @@ BEGIN
 		LEFT JOIN edw_core.tbroker tb ON tb.broker_id = tp.broker_id
 		LEFT JOIN edw_core.tcustomer tcu ON tcu.customer_id = tp.customer_id
 		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(ft.created_at AS DATE)
+		LEFT JOIN edw_core.tclaim_cost_category as tcc on tcc.claim_cost_category_nm = res.cost_category
 		WHERE 1=1
 			and fta.created_at > @last_source_extract_ts
 			and fta.code in ('submitted','cancel') 
