@@ -19,7 +19,8 @@ GO
 -- 08/20/24     Yunus Mohammed                 10. Used garage_unique_id while assigning defualt garage location
 -- 08/21/24		Alberto Almario				   11. Remove effective_dt from merge join and add into update section
 -- 08/30/24	    Architha Gudimalla			   12. Added eff dt in merge-update
--- 08/30/24	    Architha Gudimalla			   12. Excluded string in veh purchse dt
+-- 08/30/24	    Architha Gudimalla			   13. Excluded string in veh purchse dt
+-- 12/10/24     Alberto Almario                14. Add column rater_pip_discount
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip] 
@@ -179,7 +180,8 @@ BEGIN
                 [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
                 [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
                 [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-                [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, vehicle_unique_id, NewlyPurchasedVehicle, NewlyPurchasedVehicleDate, [NewlyPurchasedVehicleFinal]
+                [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, vehicle_unique_id, NewlyPurchasedVehicle, NewlyPurchasedVehicleDate, [NewlyPurchasedVehicleFinal],
+                [RaterPIPDiscount]
             
             FROM
                 (
@@ -231,7 +233,7 @@ BEGIN
                         [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
                         [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
                         [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-                        [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal]
+                        [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal], [RaterPIPDiscount]
                     )
                 ) pivottable
         )
@@ -450,7 +452,8 @@ BEGIN
                 t1.extended_towing_labor_premium_adjustment_reason,
                 t1.NewlyPurchasedVehicle as newly_purchased_vehicle_override_in,
                 case when isdate(t1.NewlyPurchasedVehicleDate) = 1 then t1.NewlyPurchasedVehicleDate else null end as newly_purchased_vehicle_dt,
-                t1.[NewlyPurchasedVehicleFinal] as newly_purchased_vehicle_final_in
+                t1.[NewlyPurchasedVehicleFinal] as newly_purchased_vehicle_final_in,
+                t1.[RaterPIPDiscount] as rater_pip_discount
             FROM 
                 [edw_temp].[tquote_auto_vehicle_coverage_wip_temp1] AS t1
             LEFT JOIN 
@@ -620,7 +623,8 @@ BEGIN
                 target.extended_towing_labor_premium_adjustment_reason = source.extended_towing_labor_premium_adjustment_reason,
                 target.newly_purchased_vehicle_override_in = source.newly_purchased_vehicle_override_in,
                 target.newly_purchased_vehicle_dt = source.newly_purchased_vehicle_dt,
-                target.newly_purchased_vehicle_final_in = source.newly_purchased_vehicle_final_in
+                target.newly_purchased_vehicle_final_in = source.newly_purchased_vehicle_final_in,
+                target.rater_pip_discount = source.rater_pip_discount
         WHEN NOT MATCHED THEN
             INSERT (
                 quote_no,
@@ -775,7 +779,8 @@ BEGIN
                 extended_towing_labor_premium_adjustment_reason,
                 newly_purchased_vehicle_override_in,
                 newly_purchased_vehicle_dt,
-                newly_purchased_vehicle_final_in
+                newly_purchased_vehicle_final_in,
+                rater_pip_discount
             )
             VALUES (
                 source.quote_no,
@@ -930,7 +935,8 @@ BEGIN
                 source.extended_towing_labor_premium_adjustment_reason,
                 source.newly_purchased_vehicle_override_in,
                 source.newly_purchased_vehicle_dt,
-                source.newly_purchased_vehicle_final_in
+                source.newly_purchased_vehicle_final_in,
+                source.rater_pip_discount
             );
 
 

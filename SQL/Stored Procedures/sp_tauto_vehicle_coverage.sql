@@ -21,6 +21,7 @@ GO
 -- 13/06/24     Hernando Gonzalez               8. Added NewlyPurchasedVehicleFinal
 -- 08/07/24     Yunus Mohammed                  9. Updated logic to get garaging location
 -- 08/20/24     Yunus Mohammed                 10. Used garage_unique_id while assigning defualt garage location
+-- 12/10/24     Alberto Almario                11. Add column rater_pip_discount
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
@@ -180,7 +181,7 @@ BEGIN
             [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
             [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
             [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-            [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal]
+            [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal], [RaterPIPDiscount]
         INTO [edw_temp].[tauto_vehicle_coverage_temp3]
         FROM
             (
@@ -233,7 +234,7 @@ BEGIN
                     [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
                     [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
                     [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-                    [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal]
+                    [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal], [RaterPIPDiscount]
                 )
             ) pivottable
 
@@ -439,6 +440,7 @@ BEGIN
             ,newly_purchased_vehicle_override_in
             ,newly_purchased_vehicle_dt
             ,newly_purchased_vehicle_final_in
+            ,rater_pip_discount
 		)
         SELECT 
             t1.policy_no,
@@ -606,6 +608,7 @@ BEGIN
             ,t1.[NewlyPurchasedVehicle] as newly_purchased_vehicle_override_in
             ,t1.[NewlyPurchasedVehicleDate] as newly_purchased_vehicle_dt
             ,t1.[NewlyPurchasedVehicleFinal] as newly_purchased_vehicle_final_in
+            ,t1.[RaterPIPDiscount] as rater_pip_discount
         FROM
             [edw_temp].[tauto_vehicle_coverage_temp1] AS t1
         left join [edw_stage].[AccountTransactionVersionObject] AS atvo ON atvo.id = t1.GaragingLocationId
