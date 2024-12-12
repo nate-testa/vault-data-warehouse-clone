@@ -37,7 +37,7 @@ BEGIN
 				-- concat(fpi.financial_transaction_id , '-' , fpi.exposure_id) AS payment_sequence_no,
 				1 AS payment_sequence_no,
 				ft.stage AS payment_status,
-				null AS payment_no,
+				fpi.financial_transaction_id AS payment_no,
 				fpi.cost_type AS claim_type_cd,
 				concat(cp.first_name,' ',cp.last_name) AS payee_nm,
 				fpd.party_type AS party_role_nm, 
