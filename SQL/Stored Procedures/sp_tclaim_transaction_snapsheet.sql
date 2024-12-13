@@ -49,32 +49,31 @@ BEGIN
 			,tcu.customer_sk 
 			,td1.date_sk AS transaction_dt_sk 
 			,fta.created_at AS transaction_ts 
-			,res.financial_transaction_id AS claim_payment_sk 
+			,res.financial_transaction_id AS claim_payment_sk -- get claim_pyment_sk from tclaim_payment on financial_transaction_id = tclaim_payment.payment_no
 			,case 
-				when res.cost_type like '%_claim%' and res.reserve_method is NULL then 'claim'
-				when res.cost_type like '%_adjusting%' and res.reserve_method is NULL then 'adjusting'
-				when res.cost_type like '%_defense%' and res.reserve_method is NULL then 'defense'
-				when res.cost_type like '%_claim%' and res.reserve_method = 'subrogation'  then 'claim-subrogation'
-				when res.cost_type like '%_claim%' and res.reserve_method = 'salvage'  then 'claim-salvage'
-				when res.cost_type like '%_claim%' and res.reserve_method = 'overpayment' then 'claim-overpayment'
-				when res.cost_type like '%_claim%' and res.reserve_method = 'deductible'  then 'claim-deductible'
-				when res.cost_type like '%_claim%' and res.reserve_method = 'reinsurance'  then 'claim-reinsurance'
-				when res.cost_type like '%_adjusting%' and res.reserve_method = 'salvage' then 'adjusting-salvage'
-				when res.cost_type like '%_adjusting%' and res.reserve_method = 'subrogation'  then 'adjusting-subrogation'
-				when res.cost_type like '%_adjusting%' and res.reserve_method = 'overpayment' then 'adjusting-overpayment'
-				when res.cost_type like '%_adjusting%' and res.reserve_method = 'deductible'  then 'adjusting-deductible'
-				when res.cost_type like '%_adjusting%' and res.reserve_method = 'reinsurance'  then 'adjusting-reinsurance'
-				when res.cost_type like '%_defense%' and res.reserve_method = 'salvage' then 'defense-salvage'
-				when res.cost_type like '%_defense%' and res.reserve_method = 'subrogation'  then 'defense-subrogation'
-				when res.cost_type like '%_defense%' and res.reserve_method = 'overpayment' then 'defense-overpayment'
-				when res.cost_type like '%_defense%' and res.reserve_method = 'deductible'  then 'defense-deductible'
-				when res.cost_type like '%_defense%' and res.reserve_method = 'reinsurance'  then 'defense-reinsurance'
+				when res.cost_type like '%_claim%' 		and res.reserve_method is NULL 			then 'claim'
+				when res.cost_type like '%_adjusting%' 	and res.reserve_method is NULL 			then 'adjusting'
+				when res.cost_type like '%_defense%' 	and res.reserve_method is NULL 			then 'defense'
+				when res.cost_type like '%_claim%' 		and res.reserve_method = 'subrogation' 	then 'claim-subrogation'
+				when res.cost_type like '%_claim%' 		and res.reserve_method = 'salvage' 		then 'claim-salvage'
+				when res.cost_type like '%_claim%' 		and res.reserve_method = 'overpayment' 	then 'claim-overpayment'
+				when res.cost_type like '%_claim%' 		and res.reserve_method = 'deductible' 	then 'claim-deductible'
+				when res.cost_type like '%_claim%' 		and res.reserve_method = 'reinsurance' 	then 'claim-reinsurance'
+				when res.cost_type like '%_adjusting%' 	and res.reserve_method = 'salvage'  	then 'adjusting-salvage'
+				when res.cost_type like '%_adjusting%' 	and res.reserve_method = 'subrogation'  then 'adjusting-subrogation'
+				when res.cost_type like '%_adjusting%' 	and res.reserve_method = 'overpayment'  then 'adjusting-overpayment'
+				when res.cost_type like '%_adjusting%' 	and res.reserve_method = 'deductible'   then 'adjusting-deductible'
+				when res.cost_type like '%_adjusting%' 	and res.reserve_method = 'reinsurance'  then 'adjusting-reinsurance'
+				when res.cost_type like '%_defense%' 	and res.reserve_method = 'salvage' 		then 'defense-salvage'
+				when res.cost_type like '%_defense%' 	and res.reserve_method = 'subrogation' 	then 'defense-subrogation'
+				when res.cost_type like '%_defense%' 	and res.reserve_method = 'overpayment' 	then 'defense-overpayment'
+				when res.cost_type like '%_defense%' 	and res.reserve_method = 'deductible' 	then 'defense-deductible'
+				when res.cost_type like '%_defense%' 	and res.reserve_method = 'reinsurance' 	then 'defense-reinsurance'
 			end as claim_transaction_type_cd
 			,NULL AS feature_status_sk 
 			,tcc.claim_cost_category_sk AS claim_cost_category_sk
 			,res.claim_id
 			,c.claim_number
-			,ft.id AS financial_transaction_id
 			,res.system_generated
 			,e.exposure_type
 			,e.exposure_name
@@ -84,8 +83,9 @@ BEGIN
 			,e.coverage_name
 			,fta.created_at
 			,fta.code
-			,res.exposure_id
+			,res.financial_transaction_id
 			,res.cost_type
+			,res.exposure_id
 			,res.cost_category
 			,res.reserve_method
 			,res.amount
@@ -96,18 +96,17 @@ BEGIN
 			END as reserve_amount
 			,5 AS source_system_sk
 		INTO edw_temp.tclaim_transaction_snapsheet_temp1
-		FROM edw_stage_snapsheet.financial_transactions ft
-		INNER JOIN edw_stage_snapsheet.financial_payment_items fpi on fpi.financial_transaction_id = ft.id
-		INNER JOIN edw_stage_snapsheet.financial_reserve_items res on res.financial_transaction_id = ft.id and fpi.exposure_id = res.exposure_id and fpi.cost_category = res.cost_category
-		INNER JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = ft.id
-		INNER JOIN edw_stage_snapsheet.claims c on c.id = ft.claim_id
+		FROM edw_stage_snapsheet.financial_reserve_items res
+		LEFT JOIN edw_stage_snapsheet.financial_transactions ft on res.financial_transaction_id = ft.id
+		LEFT JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = res.financial_transaction_id
+		INNER JOIN edw_stage_snapsheet.claims c on c.id = res.claim_id
 		INNER JOIN edw_core.tclaim tc ON tc.claim_no = c.claim_number
-		INNER JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no and fpi.exposure_id = tf.claim_coverage_cd
-		INNER JOIN edw_stage_snapsheet.exposures e on e.claim_id = ft.claim_id and tf.exposure_name = e.exposure_name and tf.exposure_type = e.exposure_type
+		INNER JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no and res.exposure_id = tf.claim_coverage_cd
+		INNER JOIN edw_stage_snapsheet.exposures e on e.claim_id = res.claim_id and tf.exposure_name = e.exposure_name and tf.exposure_type = e.exposure_type
 		LEFT JOIN edw_core.tpolicy tp ON tp.policy_sk = tc.policy_sk
 		LEFT JOIN edw_core.tbroker tb ON tb.broker_id = tp.broker_id
 		LEFT JOIN edw_core.tcustomer tcu ON tcu.customer_id = tp.customer_id
-		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(ft.created_at AS DATE)
+		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(res.created_at AS DATE)
 		LEFT JOIN edw_core.tclaim_cost_category as tcc on tcc.claim_cost_category_nm = res.cost_category
 		LEFT JOIN edw_core.tproduct tpr
 			ON tpr.product_cd = (CASE 
@@ -143,29 +142,31 @@ BEGIN
 			,a.coverage_premium_class
 			,a.coverage_name
 			,a.transaction_ts
-			,a.cost_category
-			,a.cost_type
 			,a.reserve_method 
 			,a.source_system_sk
 			,a.created_at
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'claim' 		and a.reserve_method is NULL 			then a.reserve_amount ELSE 0 END) as loss_reserve_amt 
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'adjusting' 	and a.reserve_method is NULL 			then a.reserve_amount ELSE 0 END) as expense_reserve_amt 
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'defense' 		and a.reserve_method is NULL 			then a.reserve_amount ELSE 0 END) as defense_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'claim' 		and a.reserve_method = 'subrogation' 	then a.reserve_amount ELSE 0 END) as subrogation_recovery_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'claim' 		and a.reserve_method = 'salvage' 		then a.reserve_amount ELSE 0 END) as salvage_recovery_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'claim' 		and a.reserve_method = 'deductible' 	then a.reserve_amount ELSE 0 END) as deductible_recovery_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'claim' 		and a.reserve_method = 'reinsurance' 	then a.reserve_amount ELSE 0 END) as reinsurance_recovery_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'claim' 		and a.reserve_method = 'overpayment' 	then a.reserve_amount ELSE 0 END) as overpayment_recovery_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'adjusting' 	and a.reserve_method = 'subrogation' 	then a.reserve_amount ELSE 0 END) as subrogation_recovery_expense_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'adjusting' 	and a.reserve_method = 'salvage' 		then a.reserve_amount ELSE 0 END) as salvage_recovery_expense_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'adjusting' 	and a.reserve_method = 'deductible' 	then a.reserve_amount ELSE 0 END) as deductible_recovery_expense_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'adjusting' 	and a.reserve_method = 'reinsurance' 	then a.reserve_amount ELSE 0 END) as reinsurance_recovery_expense_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'adjusting' 	and a.reserve_method = 'overpayment' 	then a.reserve_amount ELSE 0 END) as overpayment_recovery_expense_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'defense' 		and a.reserve_method = 'subrogation'  	then a.reserve_amount ELSE 0 END) as subrogation_recovery_defense_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'defense' 		and a.reserve_method = 'salvage' 		then a.reserve_amount ELSE 0 END) as salvage_recovery_defense_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'defense' 		and a.reserve_method = 'deductible' 	then a.reserve_amount ELSE 0 END) as deductible_recovery_defense_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'defense' 		and a.reserve_method = 'reinsurance' 	then a.reserve_amount ELSE 0 END) as reinsurance_recovery_defense_reserve_amt
-			,(case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'defense' 		and a.reserve_method = 'overpayment' 	then a.reserve_amount ELSE 0 END) as overpayment_recovery_defense_reserve_amt 
+			,a.financial_transaction_id
+			,a.cost_type
+			,a.exposure_id
+			,a.cost_category
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'claim' 		and a.reserve_method is NULL 			then a.reserve_amount else 0 end as loss_reserve_amt 
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'adjusting' 	and a.reserve_method is NULL 			then a.reserve_amount else 0 end as expense_reserve_amt 
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'defense' 	and a.reserve_method is NULL 			then a.reserve_amount else 0 end as defense_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'claim' 		and a.reserve_method = 'subrogation' 	then a.reserve_amount else 0 end as subrogation_recovery_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'claim' 		and a.reserve_method = 'salvage' 		then a.reserve_amount else 0 end as salvage_recovery_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'claim' 		and a.reserve_method = 'deductible' 	then a.reserve_amount else 0 end as deductible_recovery_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'claim' 		and a.reserve_method = 'reinsurance' 	then a.reserve_amount else 0 end as reinsurance_recovery_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'claim' 		and a.reserve_method = 'overpayment' 	then a.reserve_amount else 0 end as overpayment_recovery_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'adjusting' 	and a.reserve_method = 'subrogation' 	then a.reserve_amount else 0 end as subrogation_recovery_expense_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'adjusting' 	and a.reserve_method = 'salvage' 		then a.reserve_amount else 0 end as salvage_recovery_expense_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'adjusting' 	and a.reserve_method = 'deductible' 	then a.reserve_amount else 0 end as deductible_recovery_expense_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'adjusting' 	and a.reserve_method = 'reinsurance' 	then a.reserve_amount else 0 end as reinsurance_recovery_expense_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'adjusting' 	and a.reserve_method = 'overpayment' 	then a.reserve_amount else 0 end as overpayment_recovery_expense_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'defense' 	and a.reserve_method = 'subrogation'  	then a.reserve_amount else 0 end as subrogation_recovery_defense_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'defense' 	and a.reserve_method = 'salvage' 		then a.reserve_amount else 0 end as salvage_recovery_defense_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'defense' 	and a.reserve_method = 'deductible' 	then a.reserve_amount else 0 end as deductible_recovery_defense_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'defense' 	and a.reserve_method = 'reinsurance' 	then a.reserve_amount else 0 end as reinsurance_recovery_defense_reserve_amt
+			,case when SUBSTRING(a.cost_type, CHARINDEX('_', a.cost_type) + 1, LEN(a.cost_type)) = 'defense' 	and a.reserve_method = 'overpayment' 	then a.reserve_amount else 0 end as overpayment_recovery_defense_reserve_amt 
 		INTO edw_temp.tclaim_transaction_snapsheet_temp2
 		FROM edw_temp.tclaim_transaction_snapsheet_temp1 a
 		LEFT JOIN edw_core.tclaim_transaction_type ctt on a.claim_transaction_type_cd = ctt.claim_transaction_type_cd
@@ -184,10 +185,12 @@ BEGIN
 			,e.coverage_name
 			,pay.amount as source_paid_amt
 			,fta.created_at as transaction_ts
-			,res.cost_category
-			,pay.cost_type
 			,res.reserve_method as reserve_method
 			,ft.id as source_transaction_id
+			,pay.financial_transaction_id
+			,pay.cost_type
+			,pay.exposure_id
+			,pay.cost_category
 			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method is NULL and fta.code='submitted' then pay.amount 
 				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method is NULL and fta.code in ('stop','cancel') then -1 * pay.amount
 				ELSE 0 END) as loss_paid_amt
@@ -243,15 +246,19 @@ BEGIN
 				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'overpayment' and fta.code in ('stop','cancel') then  pay.amount 
 				ELSE 0 END) as overpayment_defense_recovery_amt 
 		INTO edw_temp.tclaim_transaction_snapsheet_temp3
-		FROM edw_stage_snapsheet.financial_transactions ft
-		INNER JOIN edw_stage_snapsheet.claims c ON c.id = ft.claim_id
+		FROM edw_stage_snapsheet.financial_reserve_items res
+		left JOIN edw_stage_snapsheet.financial_payment_items pay ON pay.financial_transaction_id = res.financial_transaction_id AND pay.cost_type = res.cost_type AND pay.exposure_id = res.exposure_id AND pay.cost_category = res.cost_category
+		left join edw_stage_snapsheet.financial_transactions ft on res.financial_transaction_id = ft.id
+		left JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = res.financial_transaction_id
+		INNER JOIN edw_stage_snapsheet.claims c on c.id = res.claim_id
 		INNER JOIN edw_core.tclaim tc ON tc.claim_no = c.claim_number
+		INNER JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no and res.exposure_id = tf.claim_coverage_cd
+		INNER JOIN edw_stage_snapsheet.exposures e on e.claim_id = res.claim_id and tf.exposure_name = e.exposure_name and tf.exposure_type = e.exposure_type
 		LEFT JOIN edw_core.tpolicy tp ON tp.policy_sk = tc.policy_sk
 		LEFT JOIN edw_core.tbroker tb ON tb.broker_id = tp.broker_id
-		INNER JOIN edw_stage_snapsheet.exposures e ON e.claim_id = c.id
-		INNER JOIN edw_stage_snapsheet.financial_transaction_actions fta ON fta.financial_transaction_id = ft.id
-		INNER JOIN edw_stage_snapsheet.financial_reserve_items res ON res.exposure_id = e.id AND res.financial_transaction_id = ft.id
-		INNER JOIN edw_stage_snapsheet.financial_payment_items pay ON pay.cost_type = res.cost_type AND pay.financial_transaction_id = res.financial_transaction_id AND pay.exposure_id = res.exposure_id AND pay.cost_category = res.cost_category
+		LEFT JOIN edw_core.tcustomer tcu ON tcu.customer_id = tp.customer_id
+		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(res.created_at AS DATE)
+		LEFT JOIN edw_core.tclaim_cost_category as tcc on tcc.claim_cost_category_nm = res.cost_category
 		LEFT JOIN edw_core.tproduct tpr
 		ON tpr.product_cd = (CASE 
 								WHEN c.claim_type = 'auto' THEN 'AU' 
@@ -323,6 +330,10 @@ BEGIN
 			AND a.product_sk = b.product_sk
 			AND a.exposure_name = b.exposure_name
 			AND a.transaction_ts = b.transaction_ts
+			AND a.financial_transaction_id = b.financial_transaction_id
+			AND a.cost_type = b.cost_type
+			AND a.exposure_id = b.exposure_id
+			AND a.cost_category = b.cost_category
 		;
 
 
