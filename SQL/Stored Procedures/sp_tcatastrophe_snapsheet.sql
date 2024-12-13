@@ -1,16 +1,12 @@
-﻿SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- ========================================================================================================
+﻿-- ========================================================================================================
 -- Description: This procedures inserts catastrophe snapsheet data
 -----------------------------------------------------------------------------------------------------------
 -- Change date 		|Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 11/15/2024		Alberto Almario				1. Created this procedure
+-- 12/13/2024		Hernando Gonzalez			2. Implement Merge to prevent duplicates
 -- ======================================================================================================== 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tcatastrophe_snapsheet]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_tcatastrophe_snapsheet]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -33,7 +29,6 @@ BEGIN
 		--************Start************
 
 		DROP TABLE IF EXISTS edw_temp.tcatastrophe_snapsheet_temp1;
-
 
 		SELECT 
 			option_name,
@@ -60,9 +55,18 @@ BEGIN
 			RIGHT(option_name, LEN(option_name) - CHARINDEX('|', option_name, CHARINDEX('|', option_name) + 1))
 		;
 
-		-- Start Insert process
-		INSERT INTO edw_core.tcatastrophe
-		(
+		-- Start Merge process
+		MERGE INTO [edw_core].[tcatastrophe] as [Target]
+		USING [edw_temp].[tcatastrophe_snapsheet_temp1] as Source
+			ON Target.catastrophe_cd = Source.catastrophe_cd
+		WHEN MATCHED THEN
+			UPDATE SET
+				Target.catastrophe_nm = Source.catastrophe_nm,
+				Target.catastrophe_desc = Source.catastrophe_desc,
+				Target.update_ts = GETDATE(),
+				Target.etl_audit_sk = @etl_audit_sk
+		WHEN NOT MATCHED BY Target THEN
+		INSERT (
 			catastrophe_cd,
 			catastrophe_nm,
 			catastrophe_desc,
@@ -71,15 +75,15 @@ BEGIN
 			update_ts,
 			etl_audit_sk
 		)
-		SELECT 
-			catastrophe_cd,
-			catastrophe_nm,
-			catastrophe_desc,
-			source_system_sk,
-			GETDATE() AS create_ts,
-			GETDATE() AS update_ts,
-			@etl_audit_sk AS etl_audit_sk
-		FROM edw_temp.tcatastrophe_snapsheet_temp1;
+		VALUES (
+			Source.catastrophe_cd,
+			Source.catastrophe_nm,
+			Source.catastrophe_desc,
+			Source.source_system_sk,
+			GETDATE(),
+			GETDATE(),
+			@etl_audit_sk
+		);
 
 		--************End************
 
@@ -109,3 +113,6 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
+GO
+
+
