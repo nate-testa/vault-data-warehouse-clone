@@ -1,0 +1,2 @@
+ALTER TABLE edw_core.tquote_marine_boat_yacht_location DROP COLUMN longitude;
+ALTER TABLE edw_core.tquote_marine_boat_yacht_location DROP COLUMN latitude;
