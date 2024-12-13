@@ -49,7 +49,6 @@ BEGIN
 			,tcu.customer_sk 
 			,td1.date_sk AS transaction_dt_sk 
 			,fta.created_at AS transaction_ts 
-			,res.financial_transaction_id AS claim_payment_sk -- get claim_pyment_sk from tclaim_payment on financial_transaction_id = tclaim_payment.payment_no
 			,case 
 				when res.cost_type like '%_claim%' 		and res.reserve_method is NULL 			then 'claim'
 				when res.cost_type like '%_adjusting%' 	and res.reserve_method is NULL 			then 'adjusting'
@@ -132,7 +131,6 @@ BEGIN
 			,a.broker_sk 
 			,a.customer_sk
 			,a.transaction_dt_sk
-			,a.claim_payment_sk
 			,ctt.claim_transaction_type_sk
 			,a.feature_status_sk
 			,a.claim_cost_category_sk
@@ -179,6 +177,7 @@ BEGIN
 			,tpr.product_sk 
 			,tc.policy_sk 
 			,tb.broker_sk 
+			,cp.claim_payment_sk
 			,c.claim_number
 			,e.exposure_name
 			,e.coverage_premium_class
@@ -259,6 +258,7 @@ BEGIN
 		LEFT JOIN edw_core.tcustomer tcu ON tcu.customer_id = tp.customer_id
 		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(res.created_at AS DATE)
 		LEFT JOIN edw_core.tclaim_cost_category as tcc on tcc.claim_cost_category_nm = res.cost_category
+		LEFT JOIN edw_core.tclaim_payment as cp on cp.payment_no = res.financial_transaction_id and cp.claim_type_cd = pay.cost_type
 		LEFT JOIN edw_core.tproduct tpr
 		ON tpr.product_cd = (CASE 
 								WHEN c.claim_type = 'auto' THEN 'AU' 
@@ -281,7 +281,7 @@ BEGIN
 			a.customer_sk,
 			a.transaction_dt_sk,
 			a.transaction_ts,
-			a.claim_payment_sk,
+			b.claim_payment_sk,
 			a.claim_transaction_type_sk,
 			a.feature_status_sk,
 			a.loss_reserve_amt,
