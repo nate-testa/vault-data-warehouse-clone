@@ -6,7 +6,7 @@
 -- 11/15/2024		Alberto Almario				1. Created this procedure
 -- 12/13/2024		Hernando Gonzalez			2. Implement Merge to prevent duplicates
 -- ======================================================================================================== 
-ALTER   PROCEDURE [edw_core].[sp_tcatastrophe_snapsheet]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_tcatastrophe_snapsheet]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
