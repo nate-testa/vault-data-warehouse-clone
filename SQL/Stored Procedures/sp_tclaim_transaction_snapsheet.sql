@@ -244,12 +244,17 @@ BEGIN
 			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'overpayment' and fta.code='submitted' then -1 * pay.amount 
 				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'overpayment' and fta.code in ('stop','cancel','failed') then  pay.amount 
 				ELSE 0 END) as overpayment_defense_recovery_amt 
-			,RANK() OVER(PARTITION BY fta.financial_transaction_id ORDER BY fta.id DESC) as rn
 		INTO edw_temp.tclaim_transaction_snapsheet_temp3
 		FROM edw_stage_snapsheet.financial_reserve_items res
-		left JOIN edw_stage_snapsheet.financial_payment_items pay ON pay.financial_transaction_id = res.financial_transaction_id AND pay.cost_type = res.cost_type AND pay.exposure_id = res.exposure_id AND pay.cost_category = res.cost_category
-		left join edw_stage_snapsheet.financial_transactions ft on res.financial_transaction_id = ft.id
-		left JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = res.financial_transaction_id
+		INNER JOIN edw_stage_snapsheet.financial_payment_items pay ON pay.financial_transaction_id = res.financial_transaction_id AND pay.cost_type = res.cost_type AND pay.exposure_id = res.exposure_id AND pay.cost_category = res.cost_category
+		INNER JOIN edw_stage_snapsheet.financial_transactions ft on res.financial_transaction_id = ft.id
+		INNER JOIN (
+			select 
+				RANK() OVER(PARTITION BY financial_transaction_id ORDER BY id DESC) AS rn, *
+			from edw_stage_snapsheet.financial_transaction_actions
+			where code in ('submitted','cancel','stop','failed')
+		) fta on fta.financial_transaction_id = res.financial_transaction_id and fta.rn = 1
+		-- edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = res.financial_transaction_id
 		INNER JOIN edw_stage_snapsheet.claims c on c.id = res.claim_id
 		INNER JOIN edw_core.tclaim tc ON tc.claim_no = c.claim_number
 		INNER JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no and res.exposure_id = tf.claim_coverage_cd
@@ -335,7 +340,6 @@ BEGIN
 			AND a.cost_type = b.cost_type
 			AND a.exposure_id = b.exposure_id
 			AND a.cost_category = b.cost_category
-		WHERE b.rn = 1 or b.rn IS NULL
 		;
 
 
