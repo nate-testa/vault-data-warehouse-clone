@@ -148,10 +148,38 @@ def process_financial_transactions(qry):
     financial_transaction_data = mssql_hook.get_records(qry)
     logging.info(f"Query returned {len(financial_transaction_data)} records")
 
+    def has_failed_transactions(claim_no):
+        qry = f"""
+            SELECT COUNT(1) AS ct
+            FROM edw_stage.migration_create_financial_transaction_api
+            WHERE api_status = 'Error'
+            AND claim_no = '{claim_no}';
+        """
+        record_count = mssql_hook.get_first(qry)
+        if record_count and record_count[0] > 0:
+            return True
+        else:
+            return False
+
     for record in financial_transaction_data:
-        (financial_transaction_id, data_json) = record
+        (financial_transaction_id, claim_no, data_json) = record
         logging.info(f"*************** Start Processing *********************")
         logging.info(f"Processing note record: {record}")
+
+        
+        # Skipp transaction because claim_no has failed transactions
+        if has_failed_transactions(claim_no):
+            qry_update_result = f"""
+                update edw_stage.migration_create_financial_transaction_api
+                set update_ts = getdate(), api_status = 'Skipped',
+                api_Error_description = 'Transaction skipped because the claim_no has associated failed transactions.',
+                id = NULL,
+                api_response = NULL
+                where financial_transaction_id = '{financial_transaction_id}'
+            """
+            logging.info(f"Executing skipped query: {qry_update_result}")
+            mssql_hook.run(qry_update_result)
+            continue
 
         success, result_text = api.create_financial_transaction(data_json)
 
@@ -219,9 +247,10 @@ def main():
 
     financial_transactions_qry = """
         select
-            financial_transaction_id, data
+            financial_transaction_id, claim_no, data
         from edw_stage.migration_create_financial_transaction_api
         where api_status in ('Error', 'pending')
+        order by financial_transaction_id
     """
 
     parser = argparse.ArgumentParser(description='Execute a snapsheet API')
