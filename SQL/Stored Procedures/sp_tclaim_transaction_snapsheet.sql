@@ -264,7 +264,7 @@ BEGIN
 		LEFT JOIN edw_core.tcustomer tcu ON tcu.customer_id = tp.customer_id
 		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(res.created_at AS DATE)
 		LEFT JOIN edw_core.tclaim_cost_category as tcc on tcc.claim_cost_category_nm = res.cost_category
-		LEFT JOIN edw_core.tclaim_payment as cp on cp.payment_no = res.financial_transaction_id and cp.claim_type_cd = pay.cost_type
+		LEFT JOIN edw_core.tclaim_payment as cp on cp.payment_no = res.financial_transaction_id and cp.claim_type_cd = pay.cost_type and cp.cost_category = pay.cost_category
 		LEFT JOIN edw_core.tproduct tpr
 		ON tpr.product_cd = (CASE 
 								WHEN c.claim_type = 'auto' THEN 'AU' 

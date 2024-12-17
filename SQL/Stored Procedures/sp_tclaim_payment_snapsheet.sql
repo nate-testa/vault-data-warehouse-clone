@@ -39,6 +39,7 @@ BEGIN
 				ft.stage AS payment_status,
 				fpi.financial_transaction_id AS payment_no,
 				fpi.cost_type AS claim_type_cd,
+				fpi.cost_category,
 				concat(cp.first_name,' ',cp.last_name) AS payee_nm,
 				fpd.party_type AS party_role_nm, 
 				ISNULL(fpi.amount,0) AS paid_amt,
@@ -81,14 +82,14 @@ BEGIN
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
 					claim_no,claim_sk,claim_feature_sk,payment_sequence_no,payment_no,payment_status,
-					claim_type_cd,payee_nm,party_role_nm,paid_amt,payee_address,
+					claim_type_cd,cost_category,payee_nm,party_role_nm,paid_amt,payee_address,
 					remark,payment_submitter_nm,payment_approver_nm,payment_submitted_dt,payment_approver_dt,
 					payment_category_nm,partial_final_payment_desc,party_subtype_role_nm,source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 		VALUES
 			(
 					claim_no,claim_sk,claim_feature_sk,payment_sequence_no,payment_no,payment_status,
-					claim_type_cd,payee_nm,party_role_nm,paid_amt,payee_address,
+					claim_type_cd,cost_category,payee_nm,party_role_nm,paid_amt,payee_address,
 					remark,payment_submitter_nm,payment_approver_nm,payment_submitted_dt,payment_approver_dt,
 					payment_category_nm,partial_final_payment_desc,expert_subtype_role,source_system_sk,@current_date,@current_date,@etl_audit_sk
 			)
@@ -97,6 +98,7 @@ BEGIN
 		SET
 			Target.payment_status=Source.payment_status,
 			Target.claim_type_cd=Source.claim_type_cd,
+			Target.cost_category=Source.cost_category,
 			Target.payee_nm=Source.payee_nm,
 			Target.party_role_nm=Source.party_role_nm,
 			Target.paid_amt=Source.paid_amt,
