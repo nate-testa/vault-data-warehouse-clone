@@ -1,0 +1,2 @@
+ALTER TABLE edw_integration.claim_renewal_rating_home_collection_api ADD SourceOfFire varchar(255);
+ALTER TABLE edw_integration.claim_renewal_rating_home_collection_api ADD SourceOfWater varchar(255);

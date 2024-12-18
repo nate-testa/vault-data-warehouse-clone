@@ -1,0 +1,1 @@
+ALTER TABLE edw_integration.claim_renewal_rating_auto_pel_api ADD FirstPartyDriverName varchar(255);
