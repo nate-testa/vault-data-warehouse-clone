@@ -1,0 +1,33 @@
+{
+	"name": "MetadataDrivenCopyTask_ProductObjectFieldValueDisplay_t0x_SourceDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_azrvaultmetaldev001_metaldb",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"cw_schema": {
+				"type": "String"
+			},
+			"cw_table": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "MetadataDrivenCopyTask_ProductObjectFieldValueDisplay_t0x_20241218"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().cw_schema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().cw_table",
+				"type": "Expression"
+			}
+		}
+	}
+}
