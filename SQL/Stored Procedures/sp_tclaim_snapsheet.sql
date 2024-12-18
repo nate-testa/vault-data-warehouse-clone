@@ -54,7 +54,7 @@ BEGIN
 		loss_address ,loss_city_nm ,loss_state_cd ,loss_zip_cd,loss_country_nm,broker_id,customer_id,underwriting_company_nm,
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
 		claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
-		5 AS source_system_sk,sub_cause_of_loss_sk,update_time
+		5 AS source_system_sk,sub_cause_of_loss_sk,update_time,first_party_driver_nm,source_of_fire,source_of_water
 		INTO edw_temp.tclaim_snapsheet_temp1
 		FROM
 		(
@@ -106,11 +106,18 @@ BEGIN
 			c.created_at AS claim_created_ts,
 			c.creator_user_name AS claim_created_by_nm,
 			tph.policy_history_sk,
-			NULL AS claim_reject_reason_desc 
+			NULL AS claim_reject_reason_desc,
+			NULLIF(TRIM(CONCAT(ISNULL(cpd.first_name, ''), ' ', ISNULL(cpd.last_name, ''))),'') as first_party_driver_nm,
+			pidfd.source_of_fire,
+			pidwd.source_of_water 
 		FROM edw_stage_snapsheet.claims c
 		LEFT JOIN edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
 		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcmp.claim_party_id and  cpcmp.contact_method_type = 'phone'
 		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcme on c.notifier_claim_party_id = cpcme.claim_party_id and  cpcme.contact_method_type = 'email'
+		LEFT JOIN edw_stage_snapsheet.vehicles v on v.claim_id = c.id 
+		LEFT JOIN edw_stage_snapsheet.claim_parties cpd on v.driver_claim_party_id = cpd.id
+		LEFT JOIN edw_stage_snapsheet.property_incident_detail_fire_damages pidfd on c.id = pidfd.claim_id
+		LEFT JOIN edw_stage_snapsheet.property_incident_detail_water_damages pidwd on c.id = pidwd.claim_id
 		LEFT JOIN edw_core.tpolicy_history tph ON TRIM(c.policy_number) = tph.policy_no
 												AND tph.policy_history_sk = (
 																	SELECT TOP 1 policy_history_sk
@@ -143,7 +150,8 @@ BEGIN
 			,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_id,contact_nm,contact_type
 			,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
 			claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
-			source_system_sk,create_ts,update_ts,etl_audit_sk
+			source_system_sk,create_ts,update_ts,etl_audit_sk,
+			first_party_driver_nm,source_of_fire,source_of_water
 		)
 	VALUES
 		(
@@ -153,7 +161,8 @@ BEGIN
 		,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_id,contact_nm,contact_type
 		,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,claim_created_ts ,claim_created_by_nm,
 		policy_history_sk,claim_reject_reason_desc,
-		source_system_sk,@current_date,@current_date,@etl_audit_sk
+		source_system_sk,@current_date,@current_date,@etl_audit_sk,
+		first_party_driver_nm,source_of_fire,source_of_water
 		)
 	-- For Updates
 	WHEN MATCHED THEN UPDATE 
@@ -188,7 +197,11 @@ BEGIN
 		Target.claim_created_by_nm=Source.claim_created_by_nm,
 		Target.update_ts=@current_date,
 		Target.sub_cause_of_loss_sk=Source.sub_cause_of_loss_sk,
-		Target.claim_reject_reason_desc=Source.claim_reject_reason_desc;
+		Target.claim_reject_reason_desc=Source.claim_reject_reason_desc,
+		Target.first_party_driver_nm=Source.first_party_driver_nm,
+		Target.source_of_fire=Source.source_of_fire,
+		Target.source_of_water=Source.source_of_water
+		;
 
 		SET @rows_affected=@@ROWCOUNT;
 
