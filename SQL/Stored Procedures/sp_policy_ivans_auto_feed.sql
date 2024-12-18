@@ -345,6 +345,7 @@ BEGIN
                     WHERE ad.policy_no = adf.policy_no
                         AND ad.effective_dt = adf.effective_dt
                         AND ad.transaction_seq_no = adf.transaction_seq_no
+                        AND ad.driver_deleted_in = 'No'
                     FOR JSON PATH
                 ) AS AU_Drivers
             FROM edw_core.tauto_driver AS adf
