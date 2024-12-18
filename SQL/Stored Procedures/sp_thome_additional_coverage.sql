@@ -18,6 +18,7 @@
 -- 10/02/24				Yunus Mohammed				8. Added new column fortified_roof_upgrade_endorsement_in
 -- 10/30/24				Hernando Gonzalez			9. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
 -- 12/02/24				Yunus Mohammed				10. AD-7834 Added new fields
+-- 12/18/24				Hernando Gonzalez			11. AD-7963 | Added Risk_Score_Fire
 -- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
 
@@ -205,7 +206,7 @@ BEGIN
 			fortified_roof_program_discount_amt, non_program_discount_amt,
 			full_extended_replacement_cost_in, risk_score_water_non_weather, risk_score_water_weather,
 			risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
-			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,
+			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT 
@@ -409,6 +410,7 @@ BEGIN
 			,Risk_Score_Hurricane as risk_score_hurricane, Risk_Score_Wildfire as risk_score_wildfire
 			,Risk_Score_Sinkhole_Mine as risk_score_sinkhole_mine
 			,Risk_Score_All_Perils as risk_score_all_peril
+			,Risk_Score_Fire as risk_score_fire
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts
