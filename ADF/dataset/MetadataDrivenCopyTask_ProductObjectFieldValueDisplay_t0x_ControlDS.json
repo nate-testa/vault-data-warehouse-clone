@@ -1,0 +1,19 @@
+{
+	"name": "MetadataDrivenCopyTask_ProductObjectFieldValueDisplay_t0x_ControlDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase_UAT",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "MetadataDrivenCopyTask_ProductObjectFieldValueDisplay_t0x_20241218"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edw_stage",
+			"table": "ControlLoadTable"
+		}
+	}
+}
