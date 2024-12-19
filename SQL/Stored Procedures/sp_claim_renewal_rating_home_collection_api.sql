@@ -62,14 +62,13 @@ BEGIN
 			cl.loss_state_cd AS	AddressState,
 			NULL AS	 AddressCounty,
 			CL.loss_country_nm AS AddressCountry,
-			NULL AS Coverage,
+			cf.claim_coverage_desc AS Coverage,
 			cl.expense_reserve_amt AS ReserveExpense,
 			cl.loss_reserve_amt AS ReserveIndemnity,
 			cl.expense_paid_amt AS PaidExpense,
 			cl.loss_paid_amt AS PaidIndemnity,
 			cl.source_of_fire as SourceOfFire,
-			cl.source_of_water as SourceOfWater,
-			cf.claim_coverage_desc
+			cl.source_of_water as SourceOfWater			
 		INTO edw_temp.claim_renewal_rating_home_collection_api_temp1
 		FROM
 			edw_core.tclaim cl
