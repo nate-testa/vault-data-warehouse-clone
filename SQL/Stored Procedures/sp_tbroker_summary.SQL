@@ -58,6 +58,7 @@ GO
 --													any policy that is renewed, whether or not it is cancelled, is termed as renewed
 --													any renewal that is not flat cancelled is termed as renewal accepted
 --													any policy that has a renewal quote offered is termed as renewal offered
+-- 12/17/24		Architha Gudimalla				32. VI35593 - new columns request
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -315,15 +316,29 @@ BEGIN
 							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 			  @year_begin_dt and 				  @end_dt then q.quote_sk end) 		 ytd_quote_ct, 
 							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 	 @prior_quarter_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_qtd_quote_ct, 
 							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 		   @quarter_begin_dt and 				  @end_dt then q.quote_sk end) 		 qtd_quote_ct,
-							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between @prior_year_month_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_mtd_quote_ct, 
+							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between   @prior_year_month_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_mtd_quote_ct, 
 							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 			 @month_begin_dt and 				  @end_dt then q.quote_sk end) 		 mtd_quote_ct, 
 							--
 							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 		 @prior_year_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_ytd_quote_net_premium_amt, 
 							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 		 	   @year_begin_dt and 				   @end_dt 	then qh.net_premium_amt end) 		ytd_quote_net_premium_amt, 
 							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_qtd_quote_net_premium_amt, 
 							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 		 	@quarter_begin_dt and 				   @end_dt 	then qh.net_premium_amt end) 		qtd_quote_net_premium_amt, 
-							sum(case when CAST(q.first_offered_quote_ts AS DATE) between @prior_year_month_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_mtd_quote_net_premium_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between   @prior_year_month_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_mtd_quote_net_premium_amt, 
 							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 			  @month_begin_dt and 				   @end_dt 	then qh.net_premium_amt end)		mtd_quote_net_premium_amt, 
+							--
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 		 @prior_year_begin_dt and @prior_year_month_end_dt and qhcov.quote_home_coverage_sk is not null	then qhcov.dwelling_limit_amt end) prior_ytd_quote_dwelling_limit_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 		 	   @year_begin_dt and 				   @end_dt and qhcov.quote_home_coverage_sk is not null	then qhcov.dwelling_limit_amt end) 		ytd_quote_dwelling_limit_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt and qhcov.quote_home_coverage_sk is not null	then qhcov.dwelling_limit_amt end) prior_qtd_quote_dwelling_limit_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 		 	@quarter_begin_dt and 				   @end_dt and qhcov.quote_home_coverage_sk is not null	then qhcov.dwelling_limit_amt end) 		qtd_quote_dwelling_limit_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between   @prior_year_month_begin_dt and @prior_year_month_end_dt and qhcov.quote_home_coverage_sk is not null	then qhcov.dwelling_limit_amt end) prior_mtd_quote_dwelling_limit_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 			  @month_begin_dt and 				   @end_dt and qhcov.quote_home_coverage_sk is not null	then qhcov.dwelling_limit_amt end)		mtd_quote_dwelling_limit_amt,  
+							--
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 		 @prior_year_begin_dt and @prior_year_month_end_dt and qhcov.quote_home_coverage_sk is not null	then qhcov.total_insured_value_amt end) prior_ytd_quote_tiv_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 		 	   @year_begin_dt and 				   @end_dt and qhcov.quote_home_coverage_sk is not null	then qhcov.total_insured_value_amt end) 		 ytd_quote_tiv_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt and qhcov.quote_home_coverage_sk is not null	then qhcov.total_insured_value_amt end) prior_qtd_quote_tiv_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 		 	@quarter_begin_dt and 				   @end_dt and qhcov.quote_home_coverage_sk is not null	then qhcov.total_insured_value_amt end) 		 qtd_quote_tiv_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between   @prior_year_month_begin_dt and @prior_year_month_end_dt and qhcov.quote_home_coverage_sk is not null	then qhcov.total_insured_value_amt end) prior_mtd_quote_tiv_amt, 
+							sum(case when CAST(q.first_offered_quote_ts AS DATE) between 			  @month_begin_dt and 				   @end_dt and qhcov.quote_home_coverage_sk is not null	then qhcov.total_insured_value_amt end)		 mtd_quote_tiv_amt, 
 							--
 							max(CAST(q.first_offered_quote_ts AS DATE)) max_quoted_dt, 
 							max(q.bind_dt) max_bind_dt, 
@@ -339,6 +354,7 @@ BEGIN
 					inner join edw_core.tcustomer cust on cust.customer_id = q.customer_id
 					inner join edw_core.tproduct p on p.product_cd = q.product_cd
 					left join edw_core.tquote_history qh on q.quote_sk = qh.quote_sk and qh.latest_transaction_in = 'Y' -- q.first_offered_quote_history_sk = qh.quote_history_sk 
+					left join edw_core.tquote_home_coverage qhcov on qhcov.quote_history_sk = qh.quote_history_sk
 					inner join edw_core.tbroker br on q.broker_id = br.broker_id
 					inner join edw_core.tstate st on q.risk_state_cd = st.state_cd
 					where  q.quote_term = 'New'
@@ -432,17 +448,32 @@ BEGIN
 				print '@month_begin_dt_sk - ' + cast ( @month_begin_dt_sk as char)
 				print '@month_end_dt_sk - '+ cast (  @month_end_dt_sk as char)
 				print '@@prior_year_three_month_end_dt_sk - '+ cast (  @prior_year_three_month_end_dt_sk as char) 
-				*/
+				*/ 
 
 				--inforce and ytd prm data
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_pols;
 				SELECT summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco,   
 							--
+							sum(case when summ.month_sk = @month_end_dt_sk and ph_cancels.transaction_type = 'Cancellation' and ph_cancels.transaction_effective_dt <> ph_cancels.effective_dt 
+									 then 1 else 0 end) mtd_mt_cancels, 
+							sum(case when summ.month_sk = @month_end_dt_sk and ph_cancels.transaction_type = 'Cancellation' and ph_cancels.transaction_effective_dt <> ph_cancels.effective_dt 
+									 and ph_cancels.product_sk in (1,5) and ph_cancels.transaction_desc like '%sold%' 
+									 then 1 else 0 end) mtd_mt_cancels_home_sold, 
+							sum(case when summ.month_sk = @month_end_dt_sk and ph_cancels.transaction_type = 'Cancellation' and ph_cancels.transaction_effective_dt <> ph_cancels.effective_dt 
+									 and ph_cancels.cancellation_reason_desc in ('Coverage Placed Elsewhere','Coverage No Longer Needed','Coverage No Longer Applicable') 
+									 then 1 else 0 end) mtd_mt_cancels_cov_rep, 
+							sum(case when summ.month_sk = @month_end_dt_sk and ph_cancels.transaction_type = 'Cancellation' and ph_cancels.transaction_effective_dt <> ph_cancels.effective_dt 
+									 and ph_cancels.cancellation_reason_desc in ('Non Payment of Premium','NONPAYMENT OF PREMIUM') 
+									 then 1 else 0 end) mtd_mt_cancels_non_pay,  
+							--
 							sum(case when summ.month_sk = @month_end_dt_sk 			  and summ.inforce_ct = 1 then summ.inforce_ct else 0 end) inforce_ct,  
 							sum(case when summ.month_sk = @month_end_dt_sk 			  and summ.inforce_ct = 1 then summ.annual_net_premium_amt else 0 end) inforce_net_premium_amt,
 							sum(case when summ.month_sk = @prior_year_month_end_dt_sk and summ.inforce_ct = 1 then summ.inforce_ct else 0 end) prior_inforce_ct,  
 							sum(case when summ.month_sk = @prior_year_month_end_dt_sk and summ.inforce_ct = 1 then summ.annual_net_premium_amt else 0 end) prior_inforce_net_premium_amt,   
+							
+							sum(case when summ.month_sk = @month_end_dt_sk 			  and summ.inforce_ct = 1 and hcov.home_coverage_sk is not null then hcov.dwelling_limit_amt else 0 end) inforce_dwelling_limit_amt,
+							sum(case when summ.month_sk = @month_end_dt_sk 			  and summ.inforce_ct = 1 and hcov.home_coverage_sk is not null then hcov.total_insured_value_amt else 0 end) inforce_tiv_amt,
 							
 							sum(case when summ.month_sk = @prior_year_month_end_dt_sk and summ.product_sk = 3 and summ.inforce_ct = 1 then 1 else 0 end) +  
 							sum(case when summ.month_sk = @prior_year_month_end_dt_sk and summ.product_sk = 5 and summ.inforce_ct = 1 then 1 else 0 end) +  
@@ -464,7 +495,21 @@ BEGIN
 							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between    @prior_quarter_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 then pol.policy_sk end) prior_qtd_new_business_ct ,
 							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	 @quarter_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 then pol.policy_sk end) 	   qtd_new_business_ct ,
 							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 then pol.policy_sk end) prior_mtd_new_business_ct ,
-							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	   @month_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 then pol.policy_sk end) 	   mtd_new_business_ct ,/*
+							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	   @month_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 then pol.policy_sk end) 	   mtd_new_business_ct ,
+							--
+							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between    	  @prior_year_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and hcov.home_coverage_sk is not null then hcov.dwelling_limit_amt end) prior_ytd_new_business_dwelling_limit_amt ,
+							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	    @year_begin_dt and 			     	@end_dt and summ.inforce_ct = 1 and hcov.home_coverage_sk is not null then hcov.dwelling_limit_amt end) 	   ytd_new_business_dwelling_limit_amt ,
+							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between    @prior_quarter_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and hcov.home_coverage_sk is not null then hcov.dwelling_limit_amt end) prior_qtd_new_business_dwelling_limit_amt ,
+							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	 @quarter_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 and hcov.home_coverage_sk is not null then hcov.dwelling_limit_amt end) 	   qtd_new_business_dwelling_limit_amt ,
+							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and hcov.home_coverage_sk is not null then hcov.dwelling_limit_amt end) prior_mtd_new_business_dwelling_limit_amt ,
+							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	   @month_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 and hcov.home_coverage_sk is not null then hcov.dwelling_limit_amt end) 	   mtd_new_business_dwelling_limit_amt ,
+							--
+							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between    	  @prior_year_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and hcov.home_coverage_sk is not null then hcov.total_insured_value_amt end) prior_ytd_new_business_tiv_amt ,
+							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	    @year_begin_dt and 			     	@end_dt and summ.inforce_ct = 1 and hcov.home_coverage_sk is not null then hcov.total_insured_value_amt end) 	   ytd_new_business_tiv_amt ,
+							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between    @prior_quarter_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and hcov.home_coverage_sk is not null then hcov.total_insured_value_amt end) prior_qtd_new_business_tiv_amt ,
+							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	 @quarter_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 and hcov.home_coverage_sk is not null then hcov.total_insured_value_amt end) 	   qtd_new_business_tiv_amt ,
+							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and hcov.home_coverage_sk is not null then hcov.total_insured_value_amt end) prior_mtd_new_business_tiv_amt ,
+							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	   @month_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 and hcov.home_coverage_sk is not null then hcov.total_insured_value_amt end) 	   mtd_new_business_tiv_amt ,/*
 							--
 							sum(           case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  @prior_year_begin_dt and @prior_year_month_end_dt then summ.mtd_net_premium_amt else 0 end) prior_ytd_new_business_net_premium_amt ,   
 							sum(           case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  		@year_begin_dt and 			   	 	@end_dt then summ.mtd_net_premium_amt else 0 end) 	     ytd_new_business_net_premium_amt ,   
@@ -497,20 +542,20 @@ BEGIN
 							--
 							sum(case when  summ.month_sk >  @prior_year_two_month_end_dt_sk then summ.earned_net_premium_amt else 0 end)  two_year_earned_net_premium_amt,
 							sum(case when  summ.month_sk > @prior_year_five_month_end_dt_sk then summ.earned_net_premium_amt else 0 end) five_year_earned_net_premium_amt
-							--
+							-- 
 				 into edw_temp.tbroker_summ_pols
-				 FROM	edw_core.tpolicy_summary summ, edw_core.tpolicy pol, edw_core.tstate st,  edw_core.tdate td,
-				 		edw_core.tpolicy_history ph,
-				 		(select policy_sk, min(transaction_seq_no) transaction_seq_no
-							from edw_core.tpolicy_history
-							group by policy_sk ) min_ph
-					 where	summ.month_sk between  @prior_year_five_month_end_dt_sk and  @month_end_dt_sk
-					 and td.date_sk = summ.month_sk
-					 and 	summ.policy_sk = pol.policy_sk
-					 and 	pol.risk_state_cd = st.state_cd
-					 and 	summ.policy_sk = ph.policy_sk 
-					 and 	ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
-					 group by summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
+				 FROM	edw_core.tpolicy_summary summ
+				 left join edw_core.thome_coverage hcov on hcov.policy_history_sk = summ.policy_history_sk
+				 inner join edw_core.tpolicy pol on summ.policy_sk = pol.policy_sk
+				 inner join edw_core.tstate st on pol.risk_state_cd = st.state_cd
+				 inner join edw_core.tdate td on td.date_sk = summ.month_sk 
+				 inner join edw_core.tpolicy_history ph_cancels on summ.policy_history_sk = ph_cancels.policy_history_sk 
+				 inner join edw_core.tpolicy_history ph on summ.policy_sk = ph.policy_sk 
+				 inner join (select policy_sk, min(transaction_seq_no) transaction_seq_no
+								from edw_core.tpolicy_history
+								group by policy_sk ) min_ph on ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
+				 where	summ.month_sk between  @prior_year_five_month_end_dt_sk and  @month_end_dt_sk
+				 group by summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				 
 				--earned non cat net prms
@@ -720,7 +765,21 @@ BEGIN
 						sum(isnull(q.prior_qtd_quote_net_premium_amt,0)) prior_qtd_quote_net_premium_amt,
 						sum(isnull(q.qtd_quote_net_premium_amt,0)) qtd_quote_net_premium_amt,  
 						sum(isnull(q.prior_mtd_quote_net_premium_amt,0)) prior_mtd_quote_net_premium_amt,
-						sum(isnull(q.mtd_quote_net_premium_amt,0)) mtd_quote_net_premium_amt,  
+						sum(isnull(q.mtd_quote_net_premium_amt,0)) mtd_quote_net_premium_amt,   
+						--
+						sum(isnull(q.prior_ytd_quote_dwelling_limit_amt,0)) prior_ytd_quote_dwelling_limit_amt,
+						sum(isnull(q.ytd_quote_dwelling_limit_amt,0)) 		  	  ytd_quote_dwelling_limit_amt,  
+						sum(isnull(q.prior_qtd_quote_dwelling_limit_amt,0)) prior_qtd_quote_dwelling_limit_amt,
+						sum(isnull(q.qtd_quote_dwelling_limit_amt,0)) 		  	  qtd_quote_dwelling_limit_amt,  
+						sum(isnull(q.prior_mtd_quote_dwelling_limit_amt,0)) prior_mtd_quote_dwelling_limit_amt,
+						sum(isnull(q.mtd_quote_dwelling_limit_amt,0)) 		  	  mtd_quote_dwelling_limit_amt,  
+						--
+						sum(isnull(q.prior_ytd_quote_tiv_amt,0)) prior_ytd_quote_tiv_amt,
+						sum(isnull(q.ytd_quote_tiv_amt,0)) 		  	   ytd_quote_tiv_amt,  
+						sum(isnull(q.prior_qtd_quote_tiv_amt,0)) prior_qtd_quote_tiv_amt,
+						sum(isnull(q.qtd_quote_tiv_amt,0)) 		  	   qtd_quote_tiv_amt,  
+						sum(isnull(q.prior_mtd_quote_tiv_amt,0)) prior_mtd_quote_tiv_amt,
+						sum(isnull(q.mtd_quote_tiv_amt,0)) 		  	   mtd_quote_tiv_amt,  
 						-- avg lines per account - can be calculated
 						max(cast(case when q.max_quoted_dt is not null then q.max_quoted_dt end as date)) last_quote_dt,
 						max(case when q.max_bind_dt is not null then q.max_bind_dt end) last_bound_dt,
@@ -751,6 +810,22 @@ BEGIN
 						sum(isnull(ps.mtd_new_business_ct,0)) mtd_new_business_ct, 
 						sum(isnull(ps.mtd_new_business_net_premium_amt,0)) mtd_new_business_net_premium_amt, 
 						--
+						sum(isnull(ps.prior_ytd_new_business_dwelling_limit_amt,0)) prior_ytd_new_business_dwelling_limit_amt, 
+						sum(isnull(ps.prior_qtd_new_business_dwelling_limit_amt,0)) prior_qtd_new_business_dwelling_limit_amt, 
+						sum(isnull(ps.prior_mtd_new_business_dwelling_limit_amt,0)) prior_mtd_new_business_dwelling_limit_amt, 
+						--
+						sum(isnull(ps.ytd_new_business_dwelling_limit_amt,0)) ytd_new_business_dwelling_limit_amt, 
+						sum(isnull(ps.qtd_new_business_dwelling_limit_amt,0)) qtd_new_business_dwelling_limit_amt, 
+						sum(isnull(ps.mtd_new_business_dwelling_limit_amt,0)) mtd_new_business_dwelling_limit_amt, 
+						--
+						sum(isnull(ps.prior_ytd_new_business_tiv_amt,0)) prior_ytd_new_business_tiv_amt, 
+						sum(isnull(ps.prior_qtd_new_business_tiv_amt,0)) prior_qtd_new_business_tiv_amt, 
+						sum(isnull(ps.prior_mtd_new_business_tiv_amt,0)) prior_mtd_new_business_tiv_amt, 
+						--
+						sum(isnull(ps.ytd_new_business_tiv_amt,0)) ytd_new_business_tiv_amt, 
+						sum(isnull(ps.qtd_new_business_tiv_amt,0)) qtd_new_business_tiv_amt, 
+						sum(isnull(ps.mtd_new_business_tiv_amt,0)) mtd_new_business_tiv_amt, 
+						--
 						sum(isnull(ps1.prior_mtd_gross_new_business_net_premium_amt,0)) prior_mtd_gross_new_business_net_premium_amt, 
 						sum(isnull(ps1.mtd_gross_new_business_net_premium_amt,0)) mtd_gross_new_business_net_premium_amt,
 						--
@@ -766,7 +841,15 @@ BEGIN
 						sum(isnull(ps.prior_inforce_ct,0)) prior_inforce_ct, 
 						sum(isnull(ps.prior_inforce_net_premium_amt,0)) prior_inforce_net_premium_amt,
 						sum(isnull(ps.inforce_ct,0)) inforce_ct, 
-						sum(isnull(ps.inforce_net_premium_amt,0)) inforce_net_premium_amt, 
+						sum(isnull(ps.inforce_net_premium_amt,0)) inforce_net_premium_amt,  
+						-- 
+						sum(isnull(ps.mtd_mt_cancels		  	,0)) mtd_mt_cancels, 
+						sum(isnull(ps.mtd_mt_cancels_home_sold	,0)) mtd_mt_cancels_home_sold,
+						sum(isnull(ps.mtd_mt_cancels_cov_rep	,0)) mtd_mt_cancels_cov_rep, 
+						sum(isnull(ps.mtd_mt_cancels_non_pay	,0)) mtd_mt_cancels_non_pay, 
+						--
+						sum(isnull(ps.inforce_dwelling_limit_amt,0)) inforce_dwelling_limit_amt, 
+						sum(isnull(ps.inforce_tiv_amt,0)) inforce_tiv_amt, 
 						--
 						sum(isnull(ps.one_year_earned_net_premium_amt,0)) one_year_earned_net_premium_amt, 
 						sum(isnull(ps.three_year_earned_net_premium_amt,0)) three_year_earned_net_premium_amt, 
@@ -857,6 +940,20 @@ BEGIN
 						prior_mtd_quote_net_premium_amt,
 						mtd_quote_net_premium_amt,
 						--
+						prior_ytd_quote_dwelling_limit_amt,
+						ytd_quote_dwelling_limit_amt,
+						prior_qtd_quote_dwelling_limit_amt,
+						qtd_quote_dwelling_limit_amt,
+						prior_mtd_quote_dwelling_limit_amt,
+						mtd_quote_dwelling_limit_amt,
+						--
+						prior_ytd_quote_tiv_amt,
+						ytd_quote_tiv_amt,
+						prior_qtd_quote_tiv_amt,
+						qtd_quote_tiv_amt,
+						prior_mtd_quote_tiv_amt,
+						mtd_quote_tiv_amt,
+						--
 						prior_customer_ct,
 						customer_ct,
 						prior_total_line_ct,
@@ -886,6 +983,22 @@ BEGIN
 						mtd_new_business_ct, 
 						mtd_new_business_net_premium_amt, 
 						--
+						prior_ytd_new_business_dwelling_limit_amt, 
+						prior_qtd_new_business_dwelling_limit_amt, 
+						prior_mtd_new_business_dwelling_limit_amt, 
+						--
+						ytd_new_business_dwelling_limit_amt, 
+						qtd_new_business_dwelling_limit_amt, 
+						mtd_new_business_dwelling_limit_amt, 
+						--
+						prior_ytd_new_business_tiv_amt, 
+						prior_qtd_new_business_tiv_amt, 
+						prior_mtd_new_business_tiv_amt, 
+						--
+						ytd_new_business_tiv_amt, 
+						qtd_new_business_tiv_amt, 
+						mtd_new_business_tiv_amt, 
+						--
 						prior_mtd_gross_new_business_net_premium_amt, 
 						mtd_gross_new_business_net_premium_amt,
 						--
@@ -901,7 +1014,15 @@ BEGIN
 						prior_inforce_ct, 
 						prior_inforce_net_premium_amt,
 						inforce_ct, 
-						inforce_net_premium_amt, 
+						inforce_net_premium_amt,  
+						-- 
+						mtd_mid_term_cancellation_ct,
+						mtd_mid_term_cancellation_home_sold_ct,
+						mtd_mid_term_cancellation_coverage_replaced_ct,
+						mtd_mid_term_cancellation_non_pay_ct,
+						--
+						inforce_dwelling_limit_amt, 
+						inforce_tiv_amt, 
 						--
 						one_year_earned_net_premium_amt, 
 						three_year_earned_net_premium_amt, 
@@ -996,6 +1117,20 @@ BEGIN
 						sum(summ.prior_mtd_quote_net_premium_amt), 
 						sum(summ.mtd_quote_net_premium_amt),  
 						--
+						sum(summ.prior_ytd_quote_dwelling_limit_amt), 
+						sum(summ.ytd_quote_dwelling_limit_amt),
+						sum(summ.prior_qtd_quote_dwelling_limit_amt), 
+						sum(summ.qtd_quote_dwelling_limit_amt),
+						sum(summ.prior_mtd_quote_dwelling_limit_amt), 
+						sum(summ.mtd_quote_dwelling_limit_amt),  
+						--
+						sum(summ.prior_ytd_quote_tiv_amt), 
+						sum(summ.ytd_quote_tiv_amt),
+						sum(summ.prior_qtd_quote_tiv_amt), 
+						sum(summ.qtd_quote_tiv_amt),
+						sum(summ.prior_mtd_quote_tiv_amt), 
+						sum(summ.mtd_quote_tiv_amt),  
+						--
 						sum(summ.prior_customer_ct) prior_customer_ct, 
 						sum(summ.customer_ct) customer_ct, 
 						sum(summ.prior_total_line_ct),
@@ -1025,6 +1160,22 @@ BEGIN
 						sum(summ.mtd_new_business_ct), 
 						sum(summ.mtd_new_business_net_premium_amt), 
 						--
+						sum(summ.prior_ytd_new_business_dwelling_limit_amt),  
+						sum(summ.prior_qtd_new_business_dwelling_limit_amt),  
+						sum(summ.prior_mtd_new_business_dwelling_limit_amt),  
+						--
+						sum(summ.ytd_new_business_dwelling_limit_amt),  
+						sum(summ.qtd_new_business_dwelling_limit_amt),  
+						sum(summ.mtd_new_business_dwelling_limit_amt),  
+						--
+						sum(summ.prior_ytd_new_business_tiv_amt),  
+						sum(summ.prior_qtd_new_business_tiv_amt),  
+						sum(summ.prior_mtd_new_business_tiv_amt),  
+						--
+						sum(summ.ytd_new_business_tiv_amt),  
+						sum(summ.qtd_new_business_tiv_amt),  
+						sum(summ.mtd_new_business_tiv_amt),  
+						--
 						sum(summ.prior_mtd_gross_new_business_net_premium_amt) prior_mtd_gross_new_business_net_premium_amt, 
 						sum(summ.mtd_gross_new_business_net_premium_amt) mtd_gross_new_business_net_premium_amt, 
 						--
@@ -1038,7 +1189,14 @@ BEGIN
 						sum(summ.three_year_written_premium_amt) three_year_written_premium_amt,   
 						--
 						sum(summ.prior_inforce_ct), sum(summ.prior_inforce_net_premium_amt),  
-						sum(summ.inforce_ct), sum(summ.inforce_net_premium_amt),   
+						sum(summ.inforce_ct), sum(summ.inforce_net_premium_amt),  
+						--
+						sum(summ.mtd_mt_cancels), 
+						sum(summ.mtd_mt_cancels_home_sold),  
+						sum(summ.mtd_mt_cancels_cov_rep), 
+						sum(summ.mtd_mt_cancels_non_pay),  
+						--
+						sum(summ.inforce_dwelling_limit_amt), sum(summ.inforce_tiv_amt),   
 						--
 						sum(summ.one_year_earned_net_premium_amt), 
 						sum(summ.three_year_earned_net_premium_amt), 
@@ -1154,8 +1312,8 @@ BEGIN
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_pols; 
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_pols1; 
 				DROP TABLE IF EXISTS edw_temp.tbroker_summ_claims;
-				DROP TABLE IF EXISTS edw_temp.tbroker_summ_retention;
-				 
+				DROP TABLE IF EXISTS edw_temp.tbroker_summ_retention; 
+								 
 				FETCH NEXT FROM c2_rec INTO @yearmonth, @year;
 			END; 
 		CLOSE c2_rec;
