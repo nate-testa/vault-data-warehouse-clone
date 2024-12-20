@@ -9,8 +9,9 @@ GO
 ---------------------------------------------------------------------------------------------------
 -- Change date		|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 11/15/2023		Yunus Mohammed				1. Created this procedure 
--- 03/11/2024		Yunus Mohammed				2. Logic corrected to calculate amount columns
+-- 11/15/23			Yunus Mohammed				1. Created this procedure 
+-- 03/11/24			Yunus Mohammed				2. Logic corrected to calculate amount columns
+-- 12/18/24			Yunus Mohammed				3. AD7660 - Added new column
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_auto_pel_api]
@@ -41,6 +42,7 @@ BEGIN
 		NULL as IncidentDescription,
 		NULL as IncidentCode,
 		cl.claim_status as IncidentStatus,
+		cl.first_party_driver_nm as FirstPartyDriverName,
 		TotalPayout,BodilyInjuryPayment,CollisionPayment,
 		ComprehensivePayment,GlassPayment,MedicalExpensePayment,MedicalPaymentPayment,
 		PropertyDamagePayment,PersonalInjuryProtectionPayment,SpousalLiabilityPayment,
@@ -99,14 +101,15 @@ BEGIN
 			IncidentDate,PolicyNumber,FileNumber,IncidentType,IncidentDescription,IncidentCode,TotalPayout,IncidentStatus,BodilyInjuryPayment,
 			CollisionPayment,ComprehensivePayment,GlassPayment,MedicalExpensePayment,MedicalPaymentPayment,OtherPayment,PropertyDamagePayment,
 			PersonalInjuryProtectionPayment,RentalReimbursementPayment,SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,
-			UnderinsuredMotoristPayment,ViolationPointClass,create_ts,update_ts,etl_audit_sk
+			UnderinsuredMotoristPayment,ViolationPointClass,FirstPartyDriverName,
+			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
 		(
 			IncidentDate,PolicyNumber,FileNumber,IncidentType,IncidentDescription,IncidentCode,TotalPayout,IncidentStatus,BodilyInjuryPayment,
 			CollisionPayment,ComprehensivePayment,GlassPayment,MedicalExpensePayment,MedicalPaymentPayment,NULL,  -- OtherPayment
 			PropertyDamagePayment,PersonalInjuryProtectionPayment,NULL , -- RentalReimbursementPayment
-			SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,
+			SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,FirstPartyDriverName,
 			UnderinsuredMotoristPayment,
 			NULL, -- ViolationPointClass
 			GETDATE(),GETDATE(),@etl_audit_sk
@@ -137,6 +140,7 @@ BEGIN
 			Target.UninsuredMotoristPayment	=	Source.UninsuredMotoristPayment,
 			Target.UnderinsuredMotoristPayment	=	Source.UnderinsuredMotoristPayment,
 			Target.ViolationPointClass	=	NULL,
+			Target.FirstPartyDriverName = Source.FirstPartyDriverName,
 			Target.update_ts = GETDATE();
 			
 		SET @rows_affected=@@ROWCOUNT;
