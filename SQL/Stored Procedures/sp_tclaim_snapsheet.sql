@@ -4,6 +4,8 @@
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 10/23/2023		Architha Gudimalla		1. Created this procedure - AD7391
+-- 12/18/2024		Alberto Almario			2. Add new columns first_party_driver_nm,source_of_fire and source_of_water, add rownumber() function and changes on some joins
+-- 12/20/2024		Alberto Almario			3. Add GREATEST() function to update etl_control table.
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
@@ -100,7 +102,7 @@ BEGIN
 			cpcmp.value as contact_phone,
 			CASE WHEN TRIM(cpcme.value)='' THEN NULL ELSE cpcme.value END AS contact_person_email,
 			NULL as sub_cause_of_loss_sk,
-			c.updated_at update_time,
+			c.updated_at AS update_time,
 			c.first_closed_at as claim_first_closed_dt,
 			CAST(NULL AS DATE) as claim_first_reopen_dt, 
 			c.created_at AS claim_created_ts,
@@ -206,7 +208,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(update_time) FROM edw_temp.tclaim_snapsheet_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT GREATEST(claim_created_ts,update_time) FROM edw_temp.tclaim_snapsheet_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
