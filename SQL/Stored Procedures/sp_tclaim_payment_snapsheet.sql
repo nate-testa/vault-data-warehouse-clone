@@ -5,6 +5,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 11/15/24		Architha Gudimalla			1. Created this procedure 
 -- 11/20/24		Alberto Almario				2. Changes on some columns and tables
+-- 12/20/24		Alberto Almario				3. Add cost_category column, remove columns from update statement on merge and change columns used to get deltas.
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment_snapsheet]
 
@@ -37,8 +38,9 @@ BEGIN
 				-- concat(fpi.financial_transaction_id , '-' , fpi.exposure_id) AS payment_sequence_no,
 				1 AS payment_sequence_no,
 				ft.stage AS payment_status,
-				null AS payment_no,
+				fpi.financial_transaction_id AS payment_no,
 				fpi.cost_type AS claim_type_cd,
+				fpi.cost_category,
 				concat(cp.first_name,' ',cp.last_name) AS payee_nm,
 				fpd.party_type AS party_role_nm, 
 				ISNULL(fpi.amount,0) AS paid_amt,
@@ -57,7 +59,9 @@ BEGIN
 				ft.financial_transaction_type as payment_category_nm,--(CASE WHEN settle.claim_type = 'LOS' THEN 'Payment' ELSE 'Recovery' END) AS payment_category_nm,
 				fpi.payment_type as partial_final_payment_desc,--(CASE WHEN fpi.pay_final = 4 THEN 'Final' ELSE 'Partial' END) AS partial_final_payment_desc,
 				null as expert_subtype_role, --party.expert_subtype_role, --pending
-				5 AS source_system_sk
+				5 AS source_system_sk,
+				ft.created_at,
+				ft.updated_at
 
 		INTO 	edw_temp.tclaim_payment_snapsheet_temp1 
 
@@ -70,7 +74,7 @@ BEGIN
 		LEFT JOIN 	edw_stage_snapsheet.claim_parties cp on fpd.party_id = cp.id
 		LEFT JOIN 	edw_stage_snapsheet.financial_transactions ft on ft.id = fpi.financial_transaction_id
 		LEFT JOIN 	edw_stage_snapsheet.users u on ft.creator_user_id = u.id 
-		WHERE		greatest(fpi.created_at,fpi.updated_at) > @last_source_extract_ts;   
+		WHERE		greatest(ft.created_at,ft.updated_at) > @last_source_extract_ts;   
 
 		MERGE edw_core.tclaim_payment  AS Target
 		USING edw_temp.tclaim_payment_snapsheet_temp1 AS Source
@@ -81,14 +85,14 @@ BEGIN
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
 					claim_no,claim_sk,claim_feature_sk,payment_sequence_no,payment_no,payment_status,
-					claim_type_cd,payee_nm,party_role_nm,paid_amt,payee_address,
+					claim_type_cd,cost_category,payee_nm,party_role_nm,paid_amt,payee_address,
 					remark,payment_submitter_nm,payment_approver_nm,payment_submitted_dt,payment_approver_dt,
 					payment_category_nm,partial_final_payment_desc,party_subtype_role_nm,source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 		VALUES
 			(
 					claim_no,claim_sk,claim_feature_sk,payment_sequence_no,payment_no,payment_status,
-					claim_type_cd,payee_nm,party_role_nm,paid_amt,payee_address,
+					claim_type_cd,cost_category,payee_nm,party_role_nm,paid_amt,payee_address,
 					remark,payment_submitter_nm,payment_approver_nm,payment_submitted_dt,payment_approver_dt,
 					payment_category_nm,partial_final_payment_desc,expert_subtype_role,source_system_sk,@current_date,@current_date,@etl_audit_sk
 			)
@@ -96,25 +100,14 @@ BEGIN
 		WHEN MATCHED THEN UPDATE 
 		SET
 			Target.payment_status=Source.payment_status,
-			Target.claim_type_cd=Source.claim_type_cd,
-			Target.payee_nm=Source.payee_nm,
-			Target.party_role_nm=Source.party_role_nm,
-			Target.paid_amt=Source.paid_amt,
-			Target.payee_address=Source.payee_address,
-			Target.remark=Source.remark,
-			Target.payment_submitter_nm=Source.payment_submitter_nm,
 			Target.payment_approver_nm=Source.payment_approver_nm,
-			Target.payment_submitted_dt=Source.payment_submitted_dt,
 			Target.payment_approver_dt=Source.payment_approver_dt,
-			Target.payment_category_nm=Source.payment_category_nm,
-			Target.partial_final_payment_desc=Source.partial_final_payment_desc,
-			Target.party_subtype_role_nm=Source.expert_subtype_role,
 			Target.update_ts=@current_date;
 
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(payment_approver_dt) FROM edw_temp.tclaim_payment_snapsheet_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT GREATEST(created_at,updated_at) FROM edw_temp.tclaim_payment_snapsheet_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
