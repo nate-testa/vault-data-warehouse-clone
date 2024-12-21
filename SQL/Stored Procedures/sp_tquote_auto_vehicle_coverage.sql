@@ -24,6 +24,7 @@ GO
 -- 08/20/24     Yunus Mohammed                  14. Used garage_unique_id while assigning defualt garage location
 -- 08/30/24	    Architha Gudimalla				15. Added eff dt in merge-update
 -- 11/16/24	    Architha Gudimalla				16. Added temp for last insert
+-- 12/10/24     Alberto Almario                 17. Add column rater_pip_discount
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
@@ -184,7 +185,8 @@ BEGIN
                 [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
                 [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
                 [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-                [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, vehicle_unique_id, [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal]
+                [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, vehicle_unique_id, [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal],
+                [RaterPIPDiscount]
             
             FROM
                 (
@@ -237,7 +239,7 @@ BEGIN
                         [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
                         [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
                         [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-                        [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal]
+                        [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal], [RaterPIPDiscount]
                     )
                 ) pivottable
         )
@@ -454,6 +456,7 @@ BEGIN
             ,t1.[NewlyPurchasedVehicle] as newly_purchased_vehicle_override_in
             ,t1.[NewlyPurchasedVehicleDate] as newly_purchased_vehicle_dt
             ,t1.[NewlyPurchasedVehicleFinal] as newly_purchased_vehicle_final_in
+            ,t1.[RaterPIPDiscount] as rater_pip_discount
         into edw_temp.[tquote_auto_vehicle_coverage_temp3]
         FROM 
             [edw_temp].[tquote_auto_vehicle_coverage_temp1] AS t1
@@ -620,6 +623,7 @@ BEGIN
             ,newly_purchased_vehicle_override_in
             ,newly_purchased_vehicle_dt
             ,newly_purchased_vehicle_final_in
+            ,rater_pip_discount
 		)
         SELECT 
             t1.quote_no,
@@ -775,6 +779,7 @@ BEGIN
             ,t1.newly_purchased_vehicle_override_in
             ,t1.newly_purchased_vehicle_dt
             ,t1.newly_purchased_vehicle_final_in
+            ,t1.rater_pip_discount
         FROM 
             [edw_temp].[tquote_auto_vehicle_coverage_temp3] AS t1;
 
