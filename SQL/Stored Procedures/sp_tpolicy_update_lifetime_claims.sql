@@ -4,6 +4,7 @@
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------------------------
 -- 11/14/23		Architha Gudimalla		    1. VI34680|AD7653 - Created this procedure 
+-- 12/30/24		Alberto Almario				2. VI34680 - Exclude rejected claims
 -- ========================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_lifetime_claims]
@@ -51,6 +52,7 @@ BEGIN
 		where exists ( select policy_sk from edw_core.tclaim c1
 						where  c1.policy_sk is not null
 						and c1.policy_sk = c.policy_sk)
+		and c.source_claim_status <> 'REJECTED'
 		group by pol.policy_no, pol.original_policy_no, pol.term_no
 		order by 1
 
