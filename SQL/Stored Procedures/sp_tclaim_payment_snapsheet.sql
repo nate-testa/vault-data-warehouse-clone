@@ -81,6 +81,8 @@ BEGIN
 		ON  Source.claim_feature_sk=Target.claim_feature_sk AND 
 			Source.payment_no=Target.payment_no AND 
 			Source.payment_sequence_no=Target.payment_sequence_no
+			AND Source.claim_type_cd=Target.claim_type_cd
+			AND Source.cost_category=Target.cost_category
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
