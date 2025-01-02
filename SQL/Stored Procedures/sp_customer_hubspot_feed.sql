@@ -52,7 +52,6 @@ BEGIN
 		SELECT
 			pol.policy_no,
 			pi.first_nm,
-			pi.last_nm,
 			case when pi.insured_type = 'Entity' then pi.insured_nm  else pi.last_nm end as last_nm,
 			case when cust.email like '%papermail%' or cust.email like '%@%@%' then null else cust.email end email, 
 			pol.risk_state_cd,
