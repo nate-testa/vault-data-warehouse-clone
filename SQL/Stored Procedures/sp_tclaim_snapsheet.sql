@@ -1,34 +1,39 @@
-﻿-- ======================================================================================================== 
+﻿SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- ======================================================================================================== 
 -- Description: This procedures inserts and updates claim data
 -----------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date 		|Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 10/23/2023		Architha Gudimalla		1. Created this procedure - AD7391
--- 12/18/2024		Alberto Almario			2. Add new columns first_party_driver_nm,source_of_fire and source_of_water, add rownumber() function and changes on some joins
--- 12/20/2024		Alberto Almario			3. Add GREATEST() function to update etl_control table.
+-- 10/23/2023		Architha Gudimalla			1. Created this procedure - AD7391
+-- 12/18/2024		Alberto Almario				2. Add new columns first_party_driver_nm,source_of_fire and source_of_water, add rownumber() function and changes on some joins
+-- 12/20/2024		Alberto Almario				3. Add GREATEST() function to update etl_control table.
+-- 12/27/2024		Alberto Almario				4. Add new columns fault_decision, responsible_party and at_fault_pct
 -- ======================================================================================================== 
-
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
-
 AS	
 BEGIN
-	DECLARE @ProcedureName NVARCHAR(120)
-    SET @ProcedureName = OBJECT_NAME(@@PROCID)
     -- SET NOCOUNT ON added to prevent extra result sets from
     -- interfering with SELECT statements.
     SET NOCOUNT ON
-		BEGIN TRY
+	
+	BEGIN TRY
 		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
 		DECLARE @rows_affected INT
-		DECLARE @process_nm VARCHAR(255)=@ProcedureName
+		DECLARE @process_nm VARCHAR(255)=OBJECT_NAME(@@PROCID)
 		DECLARE @current_date DATETIME=GETDATE()
 		DECLARE @parameter_desc VARCHAR(255)
-
 		-- Get last source extract date
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
+		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+
+		--************Start************
 
 		DROP TABLE IF exists edw_temp.tclaim_snapsheet_temp1;
 		DROP TABLE IF exists edw_temp.tclaim_snapsheet_temp2;
@@ -57,6 +62,7 @@ BEGIN
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
 		claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
 		5 AS source_system_sk,sub_cause_of_loss_sk,update_time,first_party_driver_nm,source_of_fire,source_of_water
+		,fault_decision,responsible_party,at_fault_pct
 		INTO edw_temp.tclaim_snapsheet_temp1
 		FROM
 		(
@@ -111,7 +117,13 @@ BEGIN
 			NULL AS claim_reject_reason_desc,
 			NULLIF(TRIM(CONCAT(ISNULL(cpd.first_name, ''), ' ', ISNULL(cpd.last_name, ''))),'') as first_party_driver_nm,
 			pidfd.source_of_fire,
-			pidwd.source_of_water 
+			pidwd.source_of_water
+			,la.fault_decision
+			,CASE 
+				WHEN cpr.company IS NULL THEN NULLIF(TRIM(CONCAT(ISNULL(cpr.first_name, ''), ' ', ISNULL(cpr.last_name, ''))),'') 
+				ELSE cpr.company 
+			END as responsible_party
+			,ld.fault_percentage AS at_fault_pct
 		FROM edw_stage_snapsheet.claims c
 		LEFT JOIN edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
 		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcmp.claim_party_id and  cpcmp.contact_method_type = 'phone'
@@ -120,6 +132,9 @@ BEGIN
 		LEFT JOIN edw_stage_snapsheet.claim_parties cpd on v.driver_claim_party_id = cpd.id
 		LEFT JOIN edw_stage_snapsheet.property_incident_detail_fire_damages pidfd on c.id = pidfd.claim_id
 		LEFT JOIN edw_stage_snapsheet.property_incident_detail_water_damages pidwd on c.id = pidwd.claim_id
+		LEFT JOIN edw_stage_snapsheet.liability_assignments la on la.claim_id = c.id
+		LEFT JOIN edw_stage_snapsheet.liability_determinations ld on ld.claim_id = c.id
+		LEFT JOIN edw_stage_snapsheet.claim_parties cpr on ld.responsible_party_claim_party_id = cpr.id
 		LEFT JOIN edw_core.tpolicy_history tph ON TRIM(c.policy_number) = tph.policy_no
 												AND tph.policy_history_sk = (
 																	SELECT TOP 1 policy_history_sk
@@ -150,10 +165,11 @@ BEGIN
 			,policy_effective_dt,policy_sk,cause_of_loss_sk,sub_cause_of_loss_sk,loss_desc,claim_status
 			,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,loss_address,loss_city_nm
 			,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_id,contact_nm,contact_type
-			,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
-			claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
-			source_system_sk,create_ts,update_ts,etl_audit_sk,
-			first_party_driver_nm,source_of_fire,source_of_water
+			,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt
+			,claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc
+			,source_system_sk,create_ts,update_ts,etl_audit_sk
+			,first_party_driver_nm,source_of_fire,source_of_water
+			,fault_decision,responsible_party,at_fault_pct
 		)
 	VALUES
 		(
@@ -161,10 +177,11 @@ BEGIN
 		,policy_effective_dt,policy_sk,cause_of_loss_sk,sub_cause_of_loss_sk,loss_desc,claim_status
 		,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,loss_address,loss_city_nm
 		,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_id,contact_nm,contact_type
-		,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,claim_created_ts ,claim_created_by_nm,
-		policy_history_sk,claim_reject_reason_desc,
-		source_system_sk,@current_date,@current_date,@etl_audit_sk,
-		first_party_driver_nm,source_of_fire,source_of_water
+		,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,claim_created_ts ,claim_created_by_nm
+		,policy_history_sk,claim_reject_reason_desc
+		,source_system_sk,@current_date,@current_date,@etl_audit_sk
+		,first_party_driver_nm,source_of_fire,source_of_water
+		,fault_decision,responsible_party,at_fault_pct
 		)
 	-- For Updates
 	WHEN MATCHED THEN UPDATE 
@@ -203,14 +220,18 @@ BEGIN
 		Target.first_party_driver_nm=Source.first_party_driver_nm,
 		Target.source_of_fire=Source.source_of_fire,
 		Target.source_of_water=Source.source_of_water
+		,Target.fault_decision=Source.fault_decision
+		,Target.responsible_party=Source.responsible_party
+		,Target.at_fault_pct=Source.at_fault_pct
 		;
+		
+		--************End************
 
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT GREATEST(claim_created_ts,update_time) FROM edw_temp.tclaim_snapsheet_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(claim_created_ts,update_time)) FROM edw_temp.tclaim_snapsheet_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
@@ -218,15 +239,17 @@ BEGIN
 		-- Drop temp table
 		DROP TABLE IF EXISTS edw_temp.tclaim_snapsheet_temp1;
 		DROP TABLE IF exists edw_temp.tclaim_snapsheet_temp2;
-
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
-		SET @error_message = 'Error Number:' + CAST(ERROR_NUMBER() AS NVARCHAR(100)) + ' Error State:' + CAST(ERROR_STATE() AS NVARCHAR(100))
-							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
-							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
-							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		SET @error_message = 'Error Number:' + ISNULL(CAST(ERROR_NUMBER() AS NVARCHAR(100)),'') + 
+						    ' Error State:' + ISNULL(CAST(ERROR_STATE() AS NVARCHAR(100)),'')
+							+ ' Error Severity:' + ISNULL(CAST(ERROR_SEVERITY() AS NVARCHAR(100)),'') +
+							CHAR(13) + 'Error Procedure:' + ISNULL(ERROR_PROCEDURE(),'') + ' Error Line:' + ISNULL(CAST(ERROR_LINE() AS NVARCHAR(100)),'') +
+							CHAR(13) + 'Error Message:' + ISNULL(ERROR_MESSAGE(),'')
+
+		EXEC [edw_core].[sp_upd_error_tetl_audit] @etl_audit_sk,@error_message;
+
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END

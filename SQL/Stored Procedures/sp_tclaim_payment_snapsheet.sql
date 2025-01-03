@@ -81,6 +81,8 @@ BEGIN
 		ON  Source.claim_feature_sk=Target.claim_feature_sk AND 
 			Source.payment_no=Target.payment_no AND 
 			Source.payment_sequence_no=Target.payment_sequence_no
+			AND Source.claim_type_cd=Target.claim_type_cd
+			AND Source.cost_category=Target.cost_category
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
@@ -107,7 +109,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT GREATEST(created_at,updated_at) FROM edw_temp.tclaim_payment_snapsheet_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(created_at,updated_at)) FROM edw_temp.tclaim_payment_snapsheet_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
