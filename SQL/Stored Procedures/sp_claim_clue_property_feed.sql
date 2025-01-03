@@ -10,7 +10,7 @@ GO
 -- ---------------------------------------------------------------------------------------------------
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
--- 01-02-2025				Alberto Almario				1. Add snasheet mapping to causeOfLoss column.
+-- 01-03-2025				Alberto Almario				1. Add snasheet mapping to causeOfLoss column.
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_property_feed]
 AS
@@ -159,7 +159,6 @@ BEGIN
             END AS [policyType],
             RIGHT('00000000' + FORMAT(c.loss_dt, 'MMddyyyy'), 8) AS [claimDate],
             CASE cof.cause_of_loss_desc
-                WHEN 'Collapse' THEN 'OTHER'
                 WHEN 'Damage by Animals' THEN 'PHYDA'
                 WHEN 'Equipment Breakdown' THEN 'APPL'
                 WHEN 'Fire' THEN 'FIRE'
@@ -169,13 +168,10 @@ BEGIN
                 WHEN 'Glass Breakage' THEN 'PHYDA'
                 WHEN 'Hail' THEN 'HAIL'
                 WHEN 'Hurricane' THEN 'WIND'
-                WHEN 'Ice Dam' THEN 'OTHER'
                 WHEN 'Liability' THEN 'LIAB'
                 WHEN 'Lightning' THEN 'LIGHT'
-                WHEN 'Loss Assessment' THEN 'OTHER'
                 WHEN 'Mysterious Disappearance' THEN 'DISAP'
                 WHEN 'Named Storms Other than Hurricanes' THEN 'WIND'
-                WHEN 'Power Outage' THEN 'OTHER'
                 WHEN 'Service Line' 	 THEN 'EXTEN'
                 WHEN 'Sewer and Drain' THEN 'ACCDL'
                 WHEN 'Smoke' THEN 'SMOKE'
@@ -185,16 +181,9 @@ BEGIN
                 WHEN 'Wind' THEN 'WIND'
                 WHEN 'Workers Compensation' THEN 'WC'
                 WHEN 'Collision' THEN 'COLL'
-                WHEN 'Other' THEN 'OTHER'
                 WHEN 'Libel, Slander, Defamation of Character' THEN 'LIAB'
                 WHEN 'Hit and Run' THEN 'COLL'
-                WHEN 'Property Damage' THEN 'DAMAG'
-                WHEN 'Fall, Slip, or Trip on Insured''s Exterior Premises' THEN 'SLIP'
-                WHEN 'Boat / Jet Ski' THEN 'CRAFT' 
                 WHEN 'property_claim_water_damage' THEN 'WATER'
-                WHEN 'property_claim_other' THEN 'OTHER'
-                WHEN 'property_claim_building_collapse' THEN 'OTHER'
-                WHEN 'property_claim_power_surge' THEN 'OTHER'
                 WHEN 'property_claim_broken_window' THEN 'PHYDA'
                 WHEN 'property_claim_thirdparty_dog_bite' THEN 'PHYDA'
                 WHEN 'property_claim_fire' THEN 'FIRE'
@@ -206,7 +195,6 @@ BEGIN
                 WHEN 'property_claim_flood' THEN 'FLOOD'
                 WHEN 'property_claim_freezing_water' THEN 'FREEZ'
                 WHEN 'property_claim_hail' THEN 'HAIL'
-                WHEN 'property_claim_ice_damage' THEN 'OTHER'
                 WHEN 'property_claim_lightning' THEN 'LIGHT'
                 WHEN 'property_claim_theft' THEN 'THEFT'
                 WHEN 'property_claim_weather' THEN 'WIND'

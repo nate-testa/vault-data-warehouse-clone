@@ -10,7 +10,7 @@ GO
 -- ---------------------------------------------------------------------------------------------------
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
--- 01-02-2025				Alberto Almario				1. Add snasheet mapping to ClaimType column.
+-- 01-03-2025				Alberto Almario				1. Add snasheet mapping to ClaimType column.
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
@@ -117,14 +117,13 @@ BEGIN
                     WHEN claim_coverage_desc = 'Towing & Labor ' THEN 'TL'
                     WHEN claim_coverage_desc = 'Towing' THEN 'TL'
                     WHEN claim_coverage_desc = 'Uninsured Motorist' THEN 'UM'
-                    WHEN claim_coverage_desc = 'Underinsured Motorist' THEN 'UN'
-                    WHEN claim_coverage_desc = 'Uninsured / Underinsured Motorist' THEN 'UN'
                     WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TL'
                     WHEN claim_coverage_desc = 'Combined Single Limits' THEN 'BI'
                     WHEN claim_coverage_desc = 'Full Glass' THEN 'GL'
                     WHEN claim_coverage_desc = 'PIP' THEN 'OT'
                     WHEN claim_coverage_desc = 'PD Liability Limit' THEN 'PD'
                     WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UN'
+                    WHEN claim_coverage_desc = 'Medical Payments' THEN 'MP'
                     ELSE 'OT'
                 END AS [ClaimType],
                 SUM(
