@@ -1,6 +1,3 @@
-
---Policy Webhook--11222024--
-
 -- =================================================================================================
 -- Description: This procedures insert policy webhook data for snapsheet
 ---------------------------------------------------------------------------------------------------
@@ -8,7 +5,7 @@
 ---------------------------------------------------------------------------------------------------
 --	09-30-2024				Yunus Mohammed				Created procedure
 -- ================================================================================================= 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
+CREATE OR ALTER   PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -27,6 +24,7 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200));	
 
+
         DROP TABLE IF EXISTS [edw_temp].[claim_policy_webhook_snapsheet_api_temp1];
         DROP TABLE IF EXISTS [edw_temp].[claim_policy_webhook_snapsheet_api_temp2];
         DROP TABLE IF EXISTS edw_temp.policy_webhook_home_coverages
@@ -39,8 +37,9 @@ BEGIN
         from
         [edw_integration].[claim_policy_search_snapsheet_api] cpsa
         where  
-			cpsa.create_ts > @last_source_extract_ts
-			-- cpsa.policyNumber = 'EX400048037' -- 'EX100001751-02'
+		    cpsa.create_ts > @last_source_extract_ts and
+			-- cpsa.policyNumber = 'EX400048049' AND
+			cpsa.policyNumber not in ('FPP9999', 'COV9999') 
 			-- cpsa.policyType = 'property'
 			and cpsa.source_system_nm != 'NFP'
 
@@ -231,7 +230,7 @@ BEGIN
 						(
                         SELECT
             'us' as country,
-                            '1' as countryCode,
+                    '1' as countryCode,
 --                            'true' preferredMethod,
                             'phone' as [type],
                             '7272901574' as [value]
@@ -547,7 +546,7 @@ BEGIN
                                     or ( a.coverage_type = 'Indicator' and  [limits.amount] ='Yes')
                )
                         ) as tbl
-                        for json path, include_null_values
+        for json path, include_null_values
                         )
                     ) as coverages
                 from
@@ -580,7 +579,7 @@ BEGIN
                 cast(location_identifier as varchar(255)) as [externalLocationIdentifier],
                 cast(ISNULL(vehicle_identifier,location_identifier) as varchar(255)) as [externalRiskIdentifier],
                 prd.product_nm as code,
-                'general_liability' as [type],
+				case when tpv.pel_vehicle_sk is null then 'general_liability' else 'motor' end as [type],
                 json_query
                 ((
                     select
@@ -607,8 +606,10 @@ BEGIN
 
                         json_query((
                             select
-                                'Test' as businessName,
-                                'individual_sole_proprietor ' as businessType
+                                -- 'Test' as businessName,
+                                --'individual_sole_proprietor ' as businessType
+							'' as businessName,
+							'' as businessType
                             for json path, include_null_values, without_array_wrapper
                         )) as generalLiabilityDetails,
 
@@ -631,7 +632,7 @@ isnull(
 --                tpv.vehicle_make as [vehicle.make],
 --                tpv.vehicle_model as [vehicle.model],
 --                tpv.vehicle_vin as [vehicle.vinNumber],
---                tpv.vehicle_year as [vehicle.year],
+--        tpv.vehicle_year as [vehicle.year],
 --END - COMMENTED OUT FOR TESTING - 11142024--
             isnull(
                 json_query((
@@ -714,7 +715,7 @@ isnull(
                         cl.address_line_1 as address1, 
                         cl.address_line_2 as address2,
                         cl.city_nm  as city,
-                        cl.zip_cd as postalCode,
+                   cl.zip_cd as postalCode,
                         cl.state_cd as region,
                         cl.country_nm as country
                     for json path, include_null_values, without_array_wrapper
@@ -881,7 +882,7 @@ isnull(
                                 [coverage.limits.amount],
                               [coverage.limits.coverageLimitType]
                                 */
-                            from 
+from 
                                 edw_temp.policy_webhook_auto_coverages a
                             where
                                 a.policy_history_sk = tph.policy_history_sk
@@ -971,7 +972,7 @@ isnull(
                         unpivot
                         (
                             Limit For coverageCode in (COBL,COSC)
-                        ) as unpvt
+                     ) as unpvt
                         WHERE
                             ISNULL(Limit,0) > 0
                         for json path, include_null_values
@@ -1040,20 +1041,20 @@ isnull(
             cancelledAt, cancelledReason, effectiveAt, expirationAt, inceptionAt, policyNumber,
             policyType, [status], [version], transaction_seq_no, agentInformation, product, reservation, underwriting,
             businesses,	people,	risks, coverages, endorsements, notes, versions,deductibles, [data] ,source_system_nm, create_ts, etl_audit_sk
-        )
+        )	
 		
         SELECT distinct
                 cancelledAt, cancelledReason,	effectiveAt, expirationAt, inceptionAt, policyNumber,
             policyType, [status], [version], transaction_seq_no, agentInformation, product,reservation, underwriting,
             businesses,	people,	risks, coverages, endorsements, notes, versions, deductibles, [data] ,source_system_nm,
-            getdate() as create_ts  , @etl_audit_sk as etl_audit_sk
+            getdate() as create_ts , @etl_audit_sk as etl_audit_sk
         FROM [edw_temp].[claim_policy_webhook_snapsheet_api_temp2];  
 
-
+		
 		SET @rows_affected=@@ROWCOUNT;
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.create_ts) FROM [edw_temp].[claim_policy_webhook_snapsheet_api_temp1] t1),@last_source_extract_ts);
-		
+	
 
         DROP TABLE IF EXISTS [edw_temp].[claim_policy_webhook_snapsheet_api_temp1];
         DROP TABLE IF EXISTS [edw_temp].[claim_policy_webhook_snapsheet_api_temp2];
@@ -1062,12 +1063,13 @@ isnull(
         DROP TABLE IF EXISTS edw_temp.policy_webhook_auto_vehicle_coverages
         DROP TABLE IF EXISTS edw_temp.policy_webhook_pel_coverages
 	
+	
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
-		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
+		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;	
 
 	END TRY
 	BEGIN CATCH

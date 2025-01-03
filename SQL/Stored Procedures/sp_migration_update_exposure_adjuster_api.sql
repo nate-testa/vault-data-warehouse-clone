@@ -1,8 +1,3 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 -- =================================================================================================
 -- Description: This procedures load table migration_update_exposure_adjuster_api
 ---------------------------------------------------------------------------------------------------
@@ -128,5 +123,3 @@ BEGIN
 	
     END CATCH
 END
-
-

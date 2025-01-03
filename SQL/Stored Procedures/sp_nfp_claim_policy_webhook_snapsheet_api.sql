@@ -5,7 +5,8 @@
 ---------------------------------------------------------------------------------------------------
 --	09-30-2024				Yunus Mohammed				Created procedure
 -- ================================================================================================= 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_nfp_claim_policy_webhook_snapsheet_api]
+
+CREATE OR ALTER   PROCEDURE [edw_core].[sp_nfp_claim_policy_webhook_snapsheet_api]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -25,7 +26,7 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
-		
+
 		DROP TABLE IF EXISTS [edw_temp].[nfp_claim_policy_webhook_snapsheet_api_temp1];
         with policy_webhook as
         (
@@ -46,22 +47,25 @@ BEGIN
                         nfp.group_name as agencyName,
                         'broker' as agencyType,
                         null as agencyAddress,
+/*
                         json_query((
                             SELECT
                                 'us' as country,
                                 '1' as countryCode,
-                                'true' preferredMethod,
+--                                'true' preferredMethod,
                                 'phone' as [type],
                                 '7272900434'as [value] --  put it from claim.
                             for json path, include_null_values
                         )) as agencyContactMethods
+*/
+null as agencyContactMethods
                     for json path, include_null_values, without_array_wrapper
                 )) AS agentInformation,
             JSON_QUERY
             ((
                 select
-                    'PEL' as code,
-                    'general_liability' as [name]
+                    'Excess Liability' as code,
+                    'Excess Liability' as [name]
                 for json path, include_null_values, without_array_wrapper
             )
             ) as product,
@@ -78,9 +82,9 @@ BEGIN
                 (
                     select
                     case coverageCode
-                        when 'GEXL' then 'Excess Liability'
-                        when 'EXLUM' then 'UM/UIM Motorist Liability'
-                        when 'EXLEPL' then 'Employment Practices Liability'
+                        when 'EXL' then 'Excess Liability'
+                        when 'EXUMOT' then 'UM/UIM Motorist Liability'
+                        when 'EMPL' then 'Employment Practices Liability'
                     end as [name],
                     coverageCode,
                     null as [limits.amount],
@@ -96,17 +100,17 @@ BEGIN
                 from
                 (
                         SELECT
-                            CAST(NULLIF(nfp.group_excess_liability_coverage,0) AS VARCHAR(255)) as GEXL,
-                            CAST(NULLIF(nfp.uninsured_motorist_liability_coverage,0) AS VARCHAR(255)) as EXLUM,
-                            CAST(NULLIF(NULLIF(CAST(nfp.employment_practises_liability_coverage AS VARCHAR(MAX)),''),'0') AS VARCHAR(255)) as EXLEPL
+                            CAST(NULLIF(nfp.group_excess_liability_coverage,0) AS VARCHAR(255)) as EXL,
+                            CAST(NULLIF(nfp.uninsured_motorist_liability_coverage,0) AS VARCHAR(255)) as EXUMOT,
+                            CAST(NULLIF(NULLIF(CAST(nfp.employment_practises_liability_coverage AS VARCHAR(MAX)),''),'0') AS VARCHAR(255)) as EMPL
                         FROM
                             edw_stage.nfp_policy nfp
                         where
-                            nfp.insured_cert_no = cpsa.policyNumber
+                            nfp.insured_cert_no = cpsa.policyNumber 
                     ) as sourcetable
                 unpivot
                 (
-                    Limit For coverageCode in (GEXL,EXLUM,EXLEPL)
+                    Limit For coverageCode in (EXL,EXUMOT,EMPL)
                 ) as unpvt
                 for json path, include_null_values
                 )
@@ -130,21 +134,24 @@ BEGIN
                             'us' as country
                             for json path, include_null_values, without_array_wrapper			
                     )) as [address],
+/*
                     json_query((
                     SELECT
                         'us' as country,
                         '1' as countryCode,
                         'true' preferredMethod,
                         'phone' as [type],
-                        '7272900434'as [value] --  put it from claim.
+                        '7272900434'as [value] 
                     for json path, include_null_values
                     )) as contactMethods   
+*/
+null as contactMethods   
                 for json path, include_null_values
             )) as people,
             json_query((
             select
                  cast(cpsa.policyNumber as varchar(255)) + '-' + cast(cpsa.transaction_seq_no  as varchar(255)) as id,
-                'pel' as coverageCode,
+                'Excess Liability' as code,
                 '1' as externalLocationIdentifier,
                 '1' as externalRiskIdentifier,
                 'general_liability' as [type],
@@ -158,20 +165,35 @@ BEGIN
                         'us' as country
                     for json path, include_null_values, without_array_wrapper
                 )) as [address],
-                json_query((
-                    select
-                        'building_and_personal_property' as propertyType,
-                        'policy_address' as propertyLocation
-                    for json path, include_null_values, without_array_wrapper
-                )) as property,
+/*
+--START - ADDED FOR TESTING - 11132024--
+
+                        json_query((
+                            select
+                                'building_and_personal_property' as propertyType,
+                                'policy_address' as propertyLocation
+                            for json path, include_null_values, without_array_wrapper
+                        )) as property,
+--END - ADDED FOR TESTING - 11132024--
+*/
+--START - ADDED per new documentation - 11142024--
+
+                        json_query((
+                            select
+                                '' as businessName,
+                                '' as businessType
+                            for json path, include_null_values, without_array_wrapper
+                        )) as generalLiabilityDetails,
+
+--END - ADDED per new documentation - 11142024--
                 json_query
             (
                 (
                     select
                     case coverageCode
-                        when 'GEXL' then 'Excess Liability'
-                        when 'EXLUM' then 'UM/UIM Motorist Liability'
-                        when 'EXLEPL' then 'Employment Practices Liability'
+                        when 'EXL' then 'Excess Liability'
+                        when 'EXUMOT' then 'UM/UIM Motorist Liability'
+                        when 'EMPL' then 'Employment Practices Liability'
                     end as [name],
                     coverageCode,
                     null as [limits.amount],
@@ -187,9 +209,9 @@ BEGIN
                 from
                 (
                         SELECT
-                            CAST(NULLIF(nfp.group_excess_liability_coverage,0) AS VARCHAR(255)) as GEXL,
-                            CAST(NULLIF(nfp.uninsured_motorist_liability_coverage,0) AS VARCHAR(255)) as EXLUM,
-                            CAST(NULLIF(NULLIF(CAST(nfp.employment_practises_liability_coverage AS VARCHAR(MAX)),''),'0') AS VARCHAR(255)) as EXLEPL
+                            CAST(NULLIF(nfp.group_excess_liability_coverage,0) AS VARCHAR(255)) as EXL,
+                            CAST(NULLIF(nfp.uninsured_motorist_liability_coverage,0) AS VARCHAR(255)) as EXUMOT,
+                            CAST(NULLIF(NULLIF(CAST(nfp.employment_practises_liability_coverage AS VARCHAR(MAX)),''),'0') AS VARCHAR(255)) as EMPL
                         FROM
                             edw_stage.nfp_policy nfp
                         where
@@ -197,7 +219,7 @@ BEGIN
                     ) as sourcetable
                 unpivot
                 (
-                    Limit For coverageCode in (GEXL,EXLUM,EXLEPL)
+                    Limit For coverageCode in (EXL,EXUMOT,EMPL)
                 ) as unpvt
                 for json path, include_null_values
                 )
@@ -242,7 +264,7 @@ BEGIN
                 FROM
                     edw_stage.nfp_policy
                 WHERE
-                    insured_cert_no is not null
+                    insured_cert_no is not null 
                     
                 ) as temp
             ) as nfp on cpsa.policyNumber = nfp.policy_no and cpsa.inceptionDate = nfp.effective_dt and cpsa.transaction_seq_no = nfp.transaction_seq_no
@@ -277,6 +299,7 @@ BEGIN
 			policyType, [status], [version], transaction_seq_no, agentInformation, product, underwriting,
 			businesses,	people,	risks, coverages, versions, deductibles,[data] ,source_system_nm, create_ts, etl_audit_sk
 		)
+
 		SELECT distinct
 			 cancelledAt, cancelledReason,	effectiveAt, expirationAt, inceptionAt, policyNumber,
 			policyType, [status], [version], transaction_seq_no, agentInformation, product, underwriting,
