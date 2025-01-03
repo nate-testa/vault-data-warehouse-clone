@@ -7,12 +7,12 @@ import logging
 import time
 from datetime import datetime
 from urllib.parse import urlencode
-
+from airflow.models import Variable
 
 # Parameters
-P_SECRET = 'CJNWgmHUMiQnpRFJoZvb'
-P_KEY = 'vault_us_api'
-P_BASE_URL = 'https://test.snapsheetvice.com'
+P_SECRET = Variable.get("snapsheet-secret")
+P_KEY = Variable.get("snapsheet-API-key")
+P_BASE_URL = Variable.get("snapsheet-url")
 
 class SnapsheetAPI:
     # Class-level variables to maintain shared state across instances
