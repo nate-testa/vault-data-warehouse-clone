@@ -21,6 +21,7 @@
 -- 10/02/24		Archtha Gudimalla			13. Add mailing address country
 -- 10/02/24		Archtha Gudimalla			14. Excluded Yacht
 -- 10/25/24		Archtha Gudimalla			15. Added isnull to code when checking names for test quotes
+-- 12/30/24		Alberto Almario				16. VI35256 - Insured name update for entity/trust LLC
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -51,7 +52,7 @@ BEGIN
 		SELECT
 			pol.policy_no,
 			pi.first_nm,
-			pi.last_nm,
+			case when pi.insured_type = 'Entity' then pi.insured_nm  else pi.last_nm end as last_nm,
 			case when cust.email like '%papermail%' or cust.email like '%@%@%' then null else cust.email end email, 
 			pol.risk_state_cd,
 			pol.product_cd AS product_nm,

@@ -16,6 +16,7 @@
 -- 10/07/24		        Archtha Gudimalla			11. Added Contruction
 -- 10/16/24		        Archtha Gudimalla			12. Excluded cancelled pols in pending_non_renewal recampaign
 -- 10/25/24		        Archtha Gudimalla			13. Added isnull to code when checking names for test quotes
+-- 12/30/24		        Alberto Almario				14. VI35256 - Insured name update for entity/trust LLC
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -57,7 +58,8 @@ BEGIN
             q.quote_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,
             q.customer_id,
             br.broker_id, br.broker_nm, br.broker_tier, br.national_agency_in,
-            bvt.team_member_nm as bdm_nm,cust.vip_in,i.first_nm as insured_first_nm, i.last_nm as insured_last_nm,
+            bvt.team_member_nm as bdm_nm,cust.vip_in,i.first_nm as insured_first_nm, 
+            case when i.insured_type = 'Entity' then i.insured_nm  else i.last_nm end as insured_last_nm,
             h.underwriter_nm, q.uw_company_nm,
             CASE
             WHEN pr.product_cd IN ('HO','CO') THEN tqhl.address_line_1
@@ -175,7 +177,8 @@ BEGIN
             q.policy_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,
             q.customer_id,
             br.broker_id, br.broker_nm, br.broker_tier, br.national_agency_in,
-            bvt.team_member_nm as bdm_nm,cust.vip_in,i.first_nm as insured_first_nm, i.last_nm as insured_last_nm,
+            bvt.team_member_nm as bdm_nm,cust.vip_in,i.first_nm as insured_first_nm, 
+            case when i.insured_type = 'Entity' then i.insured_nm  else i.last_nm end as insured_last_nm,
             h.underwriter_nm, q.uw_company_nm,
             CASE
             WHEN pr.product_cd IN ('HO','CO') THEN tqhl.address_line_1
