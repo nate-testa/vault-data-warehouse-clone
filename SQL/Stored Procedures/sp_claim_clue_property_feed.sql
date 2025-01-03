@@ -3,11 +3,15 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =============================================
+-- ================================================================================================= 
 -- Author:		Alberto Almario
 -- Create Date: 2024-03-29
 -- Description: This stored procedure insert info related to claim_clue_property_feed.
--- =============================================
+-- ---------------------------------------------------------------------------------------------------
+-- Change date 				|Author						|	Change Description
+-- ---------------------------------------------------------------------------------------------------
+-- 01-02-2025				Alberto Almario				1. Add snasheet mapping to causeOfLoss column.
+-- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_property_feed]
 AS
 BEGIN
@@ -187,6 +191,34 @@ BEGIN
                 WHEN 'Property Damage' THEN 'DAMAG'
                 WHEN 'Fall, Slip, or Trip on Insured''s Exterior Premises' THEN 'SLIP'
                 WHEN 'Boat / Jet Ski' THEN 'CRAFT' 
+                WHEN 'property_claim_water_damage' THEN 'WATER'
+                WHEN 'property_claim_other' THEN 'OTHER'
+                WHEN 'property_claim_building_collapse' THEN 'OTHER'
+                WHEN 'property_claim_power_surge' THEN 'OTHER'
+                WHEN 'property_claim_broken_window' THEN 'PHYDA'
+                WHEN 'property_claim_thirdparty_dog_bite' THEN 'PHYDA'
+                WHEN 'property_claim_fire' THEN 'FIRE'
+                WHEN 'property_claim_earthquake' THEN 'QUAKE'
+                WHEN 'property_claim_equipment_breakdown' THEN 'APPL'
+                WHEN 'property_claim_explosion' THEN 'EXTEN'
+                WHEN 'property_claim_smoke' THEN 'SMOKE'
+                WHEN 'property_claim_earth_movement' THEN 'MOVE'
+                WHEN 'property_claim_flood' THEN 'FLOOD'
+                WHEN 'property_claim_freezing_water' THEN 'FREEZ'
+                WHEN 'property_claim_hail' THEN 'HAIL'
+                WHEN 'property_claim_ice_damage' THEN 'OTHER'
+                WHEN 'property_claim_lightning' THEN 'LIGHT'
+                WHEN 'property_claim_theft' THEN 'THEFT'
+                WHEN 'property_claim_weather' THEN 'WIND'
+                WHEN 'property_claim_riot' THEN 'EXTEN'
+                WHEN 'property_claim_service_line' THEN 'EXTEN'
+                WHEN 'property_claim_sewer_backup' THEN 'ACCDL'
+                WHEN 'property_claim_sinkhole' THEN 'SINK'
+                WHEN 'property_claim_thirdparty_fall' THEN 'LIAB'
+                WHEN 'property_claim_wind' THEN 'WIND'
+                WHEN 'property_claim_vandalism' THEN 'VMM'
+                WHEN 'property_claim_volcano' THEN 'MOVE'
+                WHEN 'property_claim_thirdparty_injury' THEN 'WC'
                 ELSE 'OTHER'
             END AS [causeOfLoss],
             'U' AS [locationOfLoss],
@@ -346,6 +378,34 @@ BEGIN
                         WHEN 'Property Damage' THEN 'DAMAG'
                         WHEN 'Fall, Slip, or Trip on Insured''s Exterior Premises' THEN 'SLIP'
                         WHEN 'Boat / Jet Ski' THEN 'CRAFT' 
+                        WHEN 'property_claim_water_damage' THEN 'WATER'
+                        WHEN 'property_claim_other' THEN 'OTHER'
+                        WHEN 'property_claim_building_collapse' THEN 'OTHER'
+                        WHEN 'property_claim_power_surge' THEN 'OTHER'
+                        WHEN 'property_claim_broken_window' THEN 'PHYDA'
+                        WHEN 'property_claim_thirdparty_dog_bite' THEN 'PHYDA'
+                        WHEN 'property_claim_fire' THEN 'FIRE'
+                        WHEN 'property_claim_earthquake' THEN 'QUAKE'
+                        WHEN 'property_claim_equipment_breakdown' THEN 'APPL'
+                        WHEN 'property_claim_explosion' THEN 'EXTEN'
+                        WHEN 'property_claim_smoke' THEN 'SMOKE'
+                        WHEN 'property_claim_earth_movement' THEN 'MOVE'
+                        WHEN 'property_claim_flood' THEN 'FLOOD'
+                        WHEN 'property_claim_freezing_water' THEN 'FREEZ'
+                        WHEN 'property_claim_hail' THEN 'HAIL'
+                        WHEN 'property_claim_ice_damage' THEN 'OTHER'
+                        WHEN 'property_claim_lightning' THEN 'LIGHT'
+                        WHEN 'property_claim_theft' THEN 'THEFT'
+                        WHEN 'property_claim_weather' THEN 'WIND'
+                        WHEN 'property_claim_riot' THEN 'EXTEN'
+                        WHEN 'property_claim_service_line' THEN 'EXTEN'
+                        WHEN 'property_claim_sewer_backup' THEN 'ACCDL'
+                        WHEN 'property_claim_sinkhole' THEN 'SINK'
+                        WHEN 'property_claim_thirdparty_fall' THEN 'LIAB'
+                        WHEN 'property_claim_wind' THEN 'WIND'
+                        WHEN 'property_claim_vandalism' THEN 'VMM'
+                        WHEN 'property_claim_volcano' THEN 'MOVE'
+                        WHEN 'property_claim_thirdparty_injury' THEN 'WC'
                         ELSE 'OTHER'
                     END AS [causeOfLoss] 
                 FROM edw_core.tcause_of_loss
