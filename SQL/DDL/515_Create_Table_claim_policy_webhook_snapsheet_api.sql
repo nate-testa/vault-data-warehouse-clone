@@ -1,5 +1,5 @@
 IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'edw_integration'
-and TABLE_name = 'claim_policy_search_snapsheet_api')
+and TABLE_name = 'claim_policy_webhook_snapsheet_api')
 BEGIN
 CREATE TABLE [edw_integration].[claim_policy_webhook_snapsheet_api](
 	[cancelledAt] [datetime] NULL,

@@ -1,5 +1,5 @@
 IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'edw_stage'
-and TABLE_name = 'migration_update_exposure_status_ap')
+and TABLE_name = 'migration_update_exposure_status_api')
 BEGIN
 CREATE TABLE [edw_stage].[migration_update_exposure_status_api](
 	[claim_no] [varchar](255) NOT NULL,
