@@ -1,9 +1,10 @@
 -- =================================================================================================
 -- Description: This procedures insert policy webhook data for snapsheet
 ---------------------------------------------------------------------------------------------------
--- Change date 				|Author						|	Change Description
+-- Change date 				|Author						                |	Change Description
 ---------------------------------------------------------------------------------------------------
 --	09-30-2024				Yunus Mohammed				Created procedure
+-- 01-06-2025               Yunus Mohammed             Enabled actual phone no and email (sending actual email and phone no). 
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
@@ -177,16 +178,16 @@ BEGIN
                             '1' as countryCode,
 --                            'true' preferredMethod,
                             'phone' as [type],
-							'7272901574' as [value]
-							 --tbrk.broker_phone_no as [value]
+							--'7272901574' as [value]
+							tbrk.broker_phone_no as [value]
 						UNION
 						SELECT
                             null as country,
                            null as countryCode,
 --                            'true' preferredMethod,
                             'email' as [type],
-							'Farhad.Imam@Vault.Insurance' as [value]
-							 --tbrk.broker_email as [value]
+							--'Farhad.Imam@Vault.Insurance' as [value]
+							tbrk.broker_email as [value]
 						) as a
                         for json path, include_null_values
                     )) as agencyContactMethods
@@ -233,16 +234,16 @@ BEGIN
                     '1' as countryCode,
 --                            'true' preferredMethod,
                             'phone' as [type],
-                            '7272901574' as [value]
-							 --phone_no as [value]                            
+                           -- '7272901574' as [value]
+							phone_no as [value]                            
 						UNION
 						SELECT
                             null as country,
                             null as countryCode,
 --                            'true' preferredMethod,
                             'email' as [type],
-							'Farhad.Imam@Vault.Insurance' as [value]
-							 --email as [value]                        
+							--'Farhad.Imam@Vault.Insurance' as [value]
+							email as [value]                        
 						) as temp
                         for json path, include_null_values
                     )) as contactMethods
@@ -311,16 +312,16 @@ BEGIN
                         '1' as countryCode,
 --                        'true' preferredMethod,
                         'phone' as [type],
-                        '7272901574' as [value] 
-                         --coalesce(home_phone_no,mobile_phone_no) as [value]
+                       --'7272901574' as [value] 
+                        coalesce(home_phone_no,mobile_phone_no) as [value]
                     UNION
                      SELECT
                         null as country,
                         null as countryCode,
 --                        'true' preferredMethod,
                         'email' as [type],
-                        'Farhad.Imam@Vault.Insurance' as [value] 
-                         --email as [value]
+                       -- 'Farhad.Imam@Vault.Insurance' as [value] 
+                        email as [value]
                     ) as a
                     for json path, include_null_values
                     )) as contactMethods
