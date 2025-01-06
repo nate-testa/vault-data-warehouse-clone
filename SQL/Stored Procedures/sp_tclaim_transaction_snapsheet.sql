@@ -109,7 +109,12 @@ BEGIN
 		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(res.created_at AS DATE)
 		LEFT JOIN edw_core.tclaim_cost_category as tcc on tcc.claim_cost_category_nm = res.cost_category
 		LEFT JOIN edw_core.tproduct tpr
-			ON tpr.product_cd = tp.product_cd
+		ON tpr.product_cd = (CASE 
+								WHEN c.claim_type = 'auto' THEN 'AU' 
+								WHEN c.claim_type = 'liability' THEN 'PEL' 
+								WHEN c.claim_type = 'property' THEN 'HO' 
+								ELSE c.claim_type 
+							END)
 		WHERE 1=1
 			and fta.code in ('submitted','cancel') 
 			and ft.approved_at is not null --> Added this filter to exclude pending approvals reserves and subsequent cancel records
@@ -262,7 +267,12 @@ BEGIN
 		LEFT JOIN edw_core.tclaim_cost_category as tcc on tcc.claim_cost_category_nm = res.cost_category
 		LEFT JOIN edw_core.tclaim_payment as cp on cp.payment_no = res.financial_transaction_id and cp.claim_type_cd = pay.cost_type and cp.cost_category = pay.cost_category
 		LEFT JOIN edw_core.tproduct tpr
-		ON tpr.product_cd = tp.product_cd
+		ON tpr.product_cd = (CASE 
+									WHEN c.claim_type = 'auto' THEN 'AU' 
+									WHEN c.claim_type = 'liability' THEN 'PEL' 
+									WHEN c.claim_type = 'property' THEN 'HO' 
+									ELSE c.claim_type 
+								END)
 		WHERE 1=1
 			AND fta.code in ('submitted','cancel','stop','failed')
 			AND fta.created_at > @last_source_extract_ts
