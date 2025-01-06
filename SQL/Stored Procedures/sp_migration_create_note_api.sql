@@ -1,8 +1,3 @@
-/****** Object:  StoredProcedure [edw_core].[sp_nfp_claim_policy_webhook_snapsheet_api]    Script Date: 10-10-2024 01:06:48 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 -- =================================================================================================
 -- Description: This procedures migrates claim level notes for snapsheet
 ---------------------------------------------------------------------------------------------------
