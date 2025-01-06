@@ -111,8 +111,9 @@ BEGIN
 		LEFT JOIN edw_core.tproduct tpr
 		ON tpr.product_cd = (CASE 
 								WHEN c.claim_type = 'auto' THEN 'AU' 
-								WHEN c.claim_type = 'liability' THEN 'PEL' 
-								WHEN c.claim_type = 'property' THEN 'HO' 
+								WHEN c.claim_type = 'liability' THEN 'PEL'
+								WHEN c.claim_type = 'property' AND c.policy_number LIKE 'HO%' THEN 'HO'
+								WHEN c.claim_type = 'property' AND c.policy_number LIKE 'CO%' THEN 'LUX'
 								ELSE c.claim_type 
 							END)
 		WHERE 1=1
@@ -269,8 +270,9 @@ BEGIN
 		LEFT JOIN edw_core.tproduct tpr
 		ON tpr.product_cd = (CASE 
 									WHEN c.claim_type = 'auto' THEN 'AU' 
-									WHEN c.claim_type = 'liability' THEN 'PEL' 
-									WHEN c.claim_type = 'property' THEN 'HO' 
+									WHEN c.claim_type = 'liability' THEN 'PEL'
+									WHEN c.claim_type = 'property' AND c.policy_number LIKE 'HO%' THEN 'HO'
+									WHEN c.claim_type = 'property' AND c.policy_number LIKE 'CO%' THEN 'LUX'
 									ELSE c.claim_type 
 								END)
 		WHERE 1=1
