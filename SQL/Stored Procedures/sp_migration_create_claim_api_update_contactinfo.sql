@@ -1,9 +1,10 @@
 -- =================================================================================================
 -- Description: This procedures update claim phone no and email
 ---------------------------------------------------------------------------------------------------
--- Change date 				|Author						|	Change Description
+-- Change date 				|Author						                   |	Change Description
 ---------------------------------------------------------------------------------------------------
---	11-27-2024				Yunus Mohammed				Created procedure
+--	11-27-2024				Yunus Mohammed                  Created procedure
+-- 01-06-2025               Yunus Mohammed                  Updated record count logic
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api_update_contactinfo]
 AS
@@ -71,7 +72,8 @@ BEGIN
 
 		DEALLOCATE cur_main;
 		
-		SET @rows_affected=@@ROWCOUNT;
+		-- SET @rows_affected=@@ROWCOUNT;
+        SELECT @rows_affected  = COUNT(*) FROM edw_temp.migration_create_claim_api_update_contactinfo_temp1
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.create_ts) FROM edw_temp.migration_create_claim_api_update_contactinfo_temp1 t1),@last_source_extract_ts);
 		
