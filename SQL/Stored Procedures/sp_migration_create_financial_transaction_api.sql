@@ -1,9 +1,10 @@
 -- =================================================================================================
  -- Description: This procedures load table migration_create_financial_transaction_api
  ---------------------------------------------------------------------------------------------------
- -- Change date 				|Author						|	Change Description
+ -- Change date 			|Author						        |	Change Description
  ---------------------------------------------------------------------------------------------------
  --	11-08-2024				Alberto Almario				1. Created procedure
+ -- 01-07-2025              Yunus Mohammed         2. payee_type updated to claim_party only
  -- ================================================================================================= 
  CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_financial_transaction_api]
  AS
@@ -273,10 +274,11 @@
 			-- party.EMAIL AS [payee_email],
             p.claimPartyReferenceNumber AS PAYEE_ID,
           -- party.pty_PARTY_ID AS PAYEE_ID,
-            CASE 
+            /*CASE 
                 WHEN party_role.ROLE_CODE in ('02','03','05','06','08','10','15','16','19','21','22','23') THEN 'vendor' 
                 ELSE 'claim_party' 
-            END AS payee_type,
+            END*/
+             'claim_party' AS payee_type,
             'standard' AS [data.attributes.shipping_option],
             party.PARTY_NAME AS [name],
             tpa.ADDRESS_LINE_1 AS [address1],
