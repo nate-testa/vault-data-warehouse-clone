@@ -225,7 +225,7 @@ def main():
                 ROW_NUMBER() OVER (PARTITION BY policyNumber , inceptionDate ORDER BY transaction_seq_no DESC) AS rank
             from
                 edw_integration.claim_policy_search_snapsheet_api
-            where api_status in ('Error','pending')
+            where api_status in ('pending')
         ) a
         WHERE a.rank = 1
     """
@@ -235,21 +235,21 @@ def main():
             claimNumber, claimType, status, policyNumber, firstOpenedAt, firstClosedAt, openedAt, closedAt, datetimeOfLoss, datetimeOfNotification, fraudScore, fraudLevelIndicator, providerCode, coverageCheck,
          accountCode, lossType, notes, reservation, claimIncidentDetails, emergencyServicesDetail, notifier, notificationMethod, exposures, claimParties, vehicles, financialTransactions
         from edw_stage.migration_create_claim_api
-        where api_status  in ('Error', 'pending')
+        where api_status  in ('pending')
     """
 
     notes_qry = """
         select
             claim_no, note_created_ts, note_json as data
         from edw_stage.migration_create_note_api
-        where api_status in ('Error', 'pending')
+        where api_status in ('pending')
     """
 
     financial_transactions_qry = """
         select
             financial_transaction_id, claim_no, data
         from edw_stage.migration_create_financial_transaction_api
-        where api_status in ('Error', 'pending')
+        where api_status in ('pending')
         order by financial_transaction_id
     """
 

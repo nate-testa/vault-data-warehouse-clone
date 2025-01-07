@@ -154,28 +154,28 @@ def main():
         select 
             exposureReferenceNumber, data
         from edw_stage.migration_update_exposure_adjuster_api
-        where api_status  in ('Error', 'pending')
+        where api_status  in ('pending')
     """
 
     update_exposure_status_qry = """
         select 
             exposureReferenceNumber, data
         from edw_stage.migration_update_exposure_status_api
-        where api_status  in ('Error', 'pending')
+        where api_status  in ('pending')
     """
 
     update_claim_status_qry = """
         select 
             id, data
         from edw_stage.migration_create_claim_api_update_status
-        where api_status  in ('Error', 'pending')
+        where api_status  in ('pending')
     """
 
     update_claim_catastrophe_qry = """
         select 
             claimRerenceNumber, data
         from edw_stage.migration_create_claim_api_update_catastrophe
-        where api_status  in ('Error', 'pending')
+        where api_status  in ('pending')
     """
 
     parser = argparse.ArgumentParser(
