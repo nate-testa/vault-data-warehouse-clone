@@ -219,14 +219,14 @@ BEGIN
 			itd_loss_incurred_gt_250k_ct=(CASE WHEN itd_total_incurred_amt>250000 THEN 1 ELSE 0 END),
 			itd_loss_incurred_gt_500k_ct=(CASE WHEN itd_total_incurred_amt>500000 THEN 1 ELSE 0 END),
 			feature_closed_with_pay_ct=(CASE WHEN feature_closed_ct=1 AND
-				 (itd_total_paid_amt-subrogation_recovery_amt - salvage_recovery_amt -salvage_expense_recovery_amt-subrogation_expense_recovery_amt-
+				 (itd_total_paid_amt   + defense_paid_amt + expense_paid_amt-subrogation_recovery_amt - salvage_recovery_amt -salvage_expense_recovery_amt-subrogation_expense_recovery_amt-
 				deductible_recovery_amt-reinsurance_recovery_amt-overpayment_recovery_amt-deductible_expense_recovery_amt-
 			reinsurance_expense_recovery_amt-overpayment_expense_recovery_amt-subrogation_defense_recovery_amt-
 		salvage_defense_recovery_amt-deductible_defense_recovery_amt-reinsurance_defense_recovery_amt- overpayment_defense_recovery_amt
 		)>0 THEN 1 ELSE 0 END),
 			feature_closed_without_pay_ct=(CASE WHEN feature_closed_ct=1 AND
 			 (
-					itd_total_paid_amt-subrogation_recovery_amt - salvage_recovery_amt -salvage_expense_recovery_amt-subrogation_expense_recovery_amt-
+					itd_total_paid_amt  + defense_paid_amt + expense_paid_amt - subrogation_recovery_amt - salvage_recovery_amt -salvage_expense_recovery_amt-subrogation_expense_recovery_amt-
 				deductible_recovery_amt-reinsurance_recovery_amt-overpayment_recovery_amt-deductible_expense_recovery_amt-
 				reinsurance_expense_recovery_amt-overpayment_expense_recovery_amt-subrogation_defense_recovery_amt-
 				salvage_defense_recovery_amt-deductible_defense_recovery_amt-reinsurance_defense_recovery_amt- overpayment_defense_recovery_amt
