@@ -1,14 +1,10 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 -- =================================================================================================
 -- Author:		Yunus Mohammed
 -- Description: This proceudre return policy detail for claim
 ---------------------------------------------------------------------------------------------------
 -- Change date      |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 10/07/23		    Yunus Mohammed				1. Created this procedure 
+-- 10/07/24		    Yunus Mohammed				1. Created this procedure 
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_claim_policy_webhook_snapsheet_api]
 (
