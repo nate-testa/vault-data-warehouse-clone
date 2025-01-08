@@ -399,21 +399,17 @@ with DAG(
     with TaskGroup("claim_group") as claim_group:
 
         claim_group_items = [
-            'sp_update_ebao_stage',
-            'sp_tcatastrophe',
-            'sp_tcause_of_loss',
-            'sp_tsub_cause_of_loss',
-            'sp_tclaim',
-            'sp_ebao_tclaim_onetime_datafix',
-            'sp_tclaim_feature',
-            'sp_tclaim_payment',
-            'sp_tclaim_transaction',
-            'sp_tclaim_note',
-            'sp_tclaim_diary',
-            'sp_update_tclaim',
-            'sp_update_tclaim_feature',
-            'sp_treconciliation_ebao',
-            'sp_tclaim_litigation',
+            'sp_tcatastrophe_snapsheet',
+            'sp_tclaim_cost_category_snapsheet',
+            'sp_tcause_of_loss_snapsheet',
+            'sp_tclaim_snapsheet',
+            'sp_tclaim_feature_snapsheet',
+            'sp_tclaim_payment_snapsheet',
+            'sp_tclaim_transaction_snapsheet',
+            'sp_tclaim_note_snapsheet',
+            'sp_tclaim_task_snapsheet',
+            'sp_update_tclaim_snapsheet',
+            'sp_update_tclaim_feature_snapsheet',
             'sp_tpolicy_update_lifetime_claims'
             ]
 
