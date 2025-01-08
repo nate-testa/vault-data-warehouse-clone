@@ -1,13 +1,18 @@
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 -- =================================================================================================
 -- Author:		Yunus Mohammed
 -- Create Date: 11/15/2023
 -- Description: This procedures inserts and updates data for claim renewal rating for auto and pel
 ---------------------------------------------------------------------------------------------------
--- Change date		|Author										|	Change Description
+-- Change date		|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 11/15/2023		Yunus Mohammed				1. Created this procedure 
--- 03/11/2024		Yunus Mohammed				2. Logic corrected to calculate amount columns
--- 01/08/2025		Yunus Mohammed				3. AD-8090 Added new columns
+-- 11/15/23			Yunus Mohammed				1. Created this procedure 
+-- 03/11/24			Yunus Mohammed				2. Logic corrected to calculate amount columns
+-- 12/18/24			Yunus Mohammed				3. AD7660 - Added new column
+-- 01/08/2025	 Yunus Mohammed				4. AD8990 Added new columns
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_auto_pel_api]
@@ -38,6 +43,7 @@ BEGIN
 		NULL as IncidentDescription,
 		NULL as IncidentCode,
 		cl.claim_status as IncidentStatus,
+		cl.first_party_driver_nm as FirstPartyDriverName,
 		cl.fault_decision,
 		cl.responsible_party,
 		cl.at_fault_pct,
@@ -99,7 +105,7 @@ BEGIN
 			IncidentDate,PolicyNumber,FileNumber,IncidentType,IncidentDescription,IncidentCode,TotalPayout,IncidentStatus,BodilyInjuryPayment,
 			CollisionPayment,ComprehensivePayment,GlassPayment,MedicalExpensePayment,MedicalPaymentPayment,OtherPayment,PropertyDamagePayment,
 			PersonalInjuryProtectionPayment,RentalReimbursementPayment,SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,
-			UnderinsuredMotoristPayment,ViolationPointClass,fault_decision,responsible_party,at_fault_pct,
+			UnderinsuredMotoristPayment,ViolationPointClass,FirstPartyDriverName,fault_decision,responsible_party,at_fault_pct,
 			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -107,7 +113,8 @@ BEGIN
 			IncidentDate,PolicyNumber,FileNumber,IncidentType,IncidentDescription,IncidentCode,TotalPayout,IncidentStatus,BodilyInjuryPayment,
 			CollisionPayment,ComprehensivePayment,GlassPayment,MedicalExpensePayment,MedicalPaymentPayment,NULL,  -- OtherPayment
 			PropertyDamagePayment,PersonalInjuryProtectionPayment,NULL , -- RentalReimbursementPayment
-			SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,	UnderinsuredMotoristPayment,
+			SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,FirstPartyDriverName,
+			UnderinsuredMotoristPayment,
 			NULL, -- ViolationPointClass
 			fault_decision,responsible_party,at_fault_pct,
 			GETDATE(),GETDATE(),@etl_audit_sk
@@ -138,6 +145,7 @@ BEGIN
 			Target.UninsuredMotoristPayment	=	Source.UninsuredMotoristPayment,
 			Target.UnderinsuredMotoristPayment	=	Source.UnderinsuredMotoristPayment,
 			Target.ViolationPointClass	=	NULL,
+			Target.FirstPartyDriverName = Source.FirstPartyDriverName,
 			Target.fault_decision = Source.fault_decision,
 			Target.responsible_party = Source.responsible_party,
 			Target.at_fault_pct = Source.at_fault_pct,
