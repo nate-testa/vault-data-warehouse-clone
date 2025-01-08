@@ -1,7 +1,3 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 -- =================================================================================================
 -- Description: This procedures insert NFP policies to Claim Policy Search API for snapsheet
 ---------------------------------------------------------------------------------------------------
@@ -9,7 +5,7 @@ GO
 ---------------------------------------------------------------------------------------------------
 --	09-30-2024				Yunus Mohammed				Created procedure
 -- ================================================================================================= 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_nfp_claim_policy_search_snapsheet_api]
+CREATE OR ALTER   PROCEDURE [edw_core].[sp_nfp_claim_policy_search_snapsheet_api]
 AS 
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -78,7 +74,7 @@ BEGIN
 		)
 		select
             policy_no,
-            'professional_liability' as policy_type,
+            'general_liability' as policy_type,
             NULL as [status],
             'Excess Liability' as product_code,
             effective_dt as inception_date,
