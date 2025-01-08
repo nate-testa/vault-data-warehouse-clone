@@ -1,0 +1,23 @@
+ALTER TABLE edw_core.tbroker_summary
+ADD 
+open_submission_ct [int],
+last30_days_submission_ct [int],
+policy_renewal_offered_over_50k_ct [int],
+    [two_year_claim_ct] [int],
+    [two_year_loss_incurred_amt] [decimal](15, 2),
+    [two_year_non_cat_claim_ct] [int],
+    [two_year_non_cat_loss_incurred_amt] [decimal](15, 2),
+    [two_year_earned_net_premium_amt] [decimal](15, 4),
+    [two_year_non_cat_earned_net_premium_amt] [decimal](15, 4),  
+    [five_year_claim_ct] [int],
+    [five_year_loss_incurred_amt] [decimal](15, 2),
+    [five_year_non_cat_claim_ct] [int],
+    [five_year_non_cat_loss_incurred_amt] [decimal](15, 2),
+    [five_year_earned_net_premium_amt] [decimal](15, 4),
+    [five_year_non_cat_earned_net_premium_amt] [decimal](15, 4),  
+prior_ytd_bind_ct [int],
+ytd_bind_ct [int],
+prior_qtd_bind_ct [int],
+qtd_bind_ct [int],
+prior_mtd_bind_ct [int],
+mtd_bind_ct [int];

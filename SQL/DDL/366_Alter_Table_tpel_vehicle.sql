@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tpel_vehicle ADD vehicle_unique_id varchar(255);

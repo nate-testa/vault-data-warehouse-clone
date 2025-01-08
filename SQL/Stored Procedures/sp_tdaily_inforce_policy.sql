@@ -5,7 +5,10 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 06/16/23		Architha Gudimalla				1. Created this procedure 
--- 02/07/24		Architha Gudimalla				2. Added annual net prm 
+-- 02/07/24		Architha Gudimalla				2. Added annual net prm  
+-- 03/20/24		Architha Gudimalla				3. Added commission_amt
+-- 07/03/24		Yunus Mohammed					4. Added policy_history_sk
+-- 07/17/24		Architha Gudimalla				5. Updated logic for @last_source_extract_ts
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tdaily_inforce_policy]
@@ -35,8 +38,8 @@ BEGIN
 		union 
 		select	date_sk, actual_dt
 		from	edw_core.tdate
-		where	actual_dt >  case when @in_inforce_dt is not null then @in_inforce_dt else @last_source_extract_ts end
-		  and   actual_dt <= case when @in_inforce_dt is not null then @in_inforce_dt else getdate() end 
+		where	actual_dt >= case when @in_inforce_dt is not null then @in_inforce_dt else @last_source_extract_ts end
+		  and   actual_dt <  case when @in_inforce_dt is not null then @in_inforce_dt else cast(getdate() as date) end  
 		order by 1; 
 		
 		DECLARE @inforce_dt DATETIME
@@ -56,7 +59,7 @@ BEGIN
 				sET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 		
 				delete from edw_core.tdaily_inforce_policy
-				where inforce_dt_sk = @var_date_sk;
+				where inforce_dt_sk = @var_date_sk; 
 				
 				with max_tr as
 				(
@@ -66,7 +69,8 @@ BEGIN
 				 		sum(premium_amt) over (partition by policy_sk) prm,
 				 		sum(annual_premium_amt) over (partition by policy_sk) ann_prm,
 				 		sum(case when tax_fee_surcharge_sk = 0 then annual_premium_amt else 0 end) over (partition by policy_sk) annual_net_premium_amt,
-				 		sum(tax_fee_surcharge_amt) over (partition by policy_sk) tfs
+				 		sum(tax_fee_surcharge_amt) over (partition by policy_sk) tfs,
+				 		sum(commission_amt) over (partition by policy_sk) commission_amt
 				 FROM edw_core.tpolicy_transaction 
 				 where effective_dt_sk <= @var_date_sk
 				 and   transaction_effective_dt_sk <= @var_date_sk
@@ -74,14 +78,16 @@ BEGIN
 				)
 				INSERT INTO edw_core.tdaily_inforce_policy
 					( 
-						policy_sk, customer_sk, broker_sk, product_sk, source_system_sk, inforce_dt_sk, 
+						policy_sk, policy_history_sk, customer_sk, broker_sk, product_sk, source_system_sk, inforce_dt_sk, 
 						premium_amt, annual_premium_amt, net_premium_amt , update_ts, etl_audit_sk
 						,annual_net_premium_amt
+						,commission_amt
 			        )
-			    select 	tr.policy_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.sourcE_system_sk, 
+			    select 	tr.policy_sk, tr.policy_history_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.sourcE_system_sk, 
 						@var_date_sk, 
 						max_tr.prm, max_tr.ann_prm, max_tr.prm-max_tr.tfs, getdate(), @etl_audit_sk
 						,max_tr.annual_net_premium_amt
+						,max_tr.commission_amt
 				from  edw_core.tpolicy_transaction tr, edw_core.tpolicy_transaction_type tt, max_tr
 				where tr.policy_transaction_type_sk = tt.policy_transaction_type_sk
 				  and tr.policy_sk = max_tr.policy_sk
@@ -98,7 +104,7 @@ BEGIN
 				begin
 					set @new_last_source_extract_ts= @last_source_extract_ts
 				end 
-				EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
+				EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts; 
 		
 				-- Update audit table
 				SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

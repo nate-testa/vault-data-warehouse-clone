@@ -6,14 +6,18 @@ GO
 -- =====================================================================================================================
 -- Description: This stored procedure insert and update info related to tquote_auto_policy_coverage.
 -----------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
--- 10/23/23		Alberto Almario				    1. Created this procedure  
--- 03/07/24     Architha Gudimalla              2. Added NCRB
--- 03/11/24     Architha Gudimalla              3. Added Discounts for ratePIP
+-- 10/23/23		        Alberto Almario				    1. Created this procedure  
+-- 03/07/24             Architha Gudimalla              2. Added NCRB
+-- 03/11/24             Architha Gudimalla              3. Added Discounts for ratePIP
+-- 02/04/24             Alberto Almario                 4. add 3 new columns
+-- 04/19/24             Architha Gudimalla              5. Added limit converion to front end display value
+-- 07/10/24             Yunus Mohammed                  6. Removed rater_pip_discount
+-- 07/25/24             Tuba Mohsin                     7. Added new coverage EnhancedUIM
 -- ===================================================================================================================== 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage] 
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -51,8 +55,9 @@ BEGIN
             [AutoLockCoverageEnhancementEndorsement], [SparePartsEnhancementEndorsement], [CoverageforAccidentalDeployAirbagEnhancementEndorsement], [IsthisOneYearPolicy], [Tier], 
             [NumberofTotalVehiclesonPolicy], [TotalNumberofPPAs], [TotalOwnedPPAs], [NumberofPPAwithPhysDam], [NumberofCollectorCars], [TotalInsuredLocations], [HOClaims], [NumberofDriversonPolicy], 
             [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
-            [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], [RaterPIPDiscount],
-			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal]
+            [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied],
+			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay],
+            [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM]
 		
         INTO [edw_temp].[tquote_auto_policy_coverage_temp1]
 		
@@ -103,9 +108,48 @@ BEGIN
                     [NumberofTotalVehiclesonPolicy], [TotalNumberofPPAs], [TotalOwnedPPAs], [NumberofPPAwithPhysDam], [NumberofCollectorCars], [TotalInsuredLocations], [HOClaims], [NumberofDriversonPolicy], 
                     [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
                     [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], 
-                    [RaterPIPDiscount], [NCRBPPACOLLTotal],[NCRBPPAOTCTotal]
+                    [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay],
+                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM]
                 )
 			) pivottable
+
+        declare @edw_field_nm VARCHAR(255)
+        declare @metal_field_nm VARCHAR(255)
+        declare @sql nvarchar(max)
+
+        DECLARE c1_rec CURSOR
+        FOR 
+        select 'AdditionalPIP'			as edw_field_nm, 'AdditionalPIP'		metal_field_nm union all
+        select 'BasicPIP'				as edw_field_nm, 'BasicPIP'				metal_field_nm union all
+        select 'BILimit'				as edw_field_nm, 'BILimit'				metal_field_nm union all
+        select 'DeductibleAppliesTo'	as edw_field_nm, 'DeductibleAppliesTo'	metal_field_nm union all
+        select 'UIMLimit'				as edw_field_nm, 'UIMLimit'				metal_field_nm union all
+        select 'UMBIPolicyLimit'		as edw_field_nm, 'UMBIPolicyLimit'		metal_field_nm union all
+        select 'UMLimit'				as edw_field_nm, 'UMLimit'				metal_field_nm union all 
+        select 'WorkLossExclusion'		as edw_field_nm, 'WorkLossExclusion'	metal_field_nm
+
+        open c1_rec; 
+            FETCH NEXT FROM c1_rec INTO @edw_field_nm, @metal_field_nm; 
+            WHILE @@FETCH_STATUS = 0
+                BEGIN 
+
+                    set @sql =	'
+                            update		avc 
+                            set			avc.' + @edw_field_nm + ' = replace( pfvd.ValueDisplay,''$'','''') 
+                            from		[edw_temp].[tquote_auto_policy_coverage_temp1] avc
+                            inner join	edw_core.tquote pol on  avc.quote_no = pol.quote_no and avc.effective_dt = pol.effective_dt
+                            inner join	[edw_stage].[ProductObjectFieldValueDisplay] pfvd 
+                                                    on pfvd.StateCode = pol.risk_state_cd and pfvd.ObjectType = ''Automobile'' and pfvd.field = ''' + @metal_field_nm + ''' and avc.' + @edw_field_nm + ' = pfvd.Value
+                            where		avc.' + @edw_field_nm + ' is not null and replace( pfvd.ValueDisplay,''$'','''') is not null
+                            '
+                    --print @sql
+
+                    EXECUTE sp_executesql @sql
+                    
+                    FETCH NEXT FROM c1_rec INTO @edw_field_nm, @metal_field_nm;
+                END; 
+            CLOSE c1_rec;
+            DEALLOCATE c1_rec;
 
 		-- Start Insert process
 		INSERT INTO [edw_core].[tquote_auto_policy_coverage]
@@ -209,10 +253,18 @@ BEGIN
             update_ts,
             etl_audit_sk,
             change_in_terms_summary_in,
-            year_clean_discount_applied,
-            rater_pip_discount,
+            year_clean_discount_applied,            
             collision_ncrb_premium_amt,
             otc_ncrb_premium_amt
+            ,transportation_expense_amt
+            ,transportation_expense_daily_limit_amt
+            ,transportation_expense_copay_amt
+            ,permissive_driver_unique_liability_limits_in
+            ,permissive_driver_unique_combined_single_limit_amt
+            ,permissive_driver_unique_bi_limit_amt
+            ,permissive_driver_unique_pd_limit_amt
+            ,emergency_extension_notice_in
+            ,enhanced_underinsured_motorist_coverage_in
 		)
         SELECT 
             t1.quote_no,
@@ -314,10 +366,18 @@ BEGIN
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
             t1.[IncludeChangeInTermsSummary] as change_in_terms_summary_in,
-            t1.[YearCleanDiscountApplied] as year_clean_discount_applied,
-            t1.[RaterPIPDiscount] as rater_pip_discount,
+            t1.[YearCleanDiscountApplied] as year_clean_discount_applied,            
             t1.[NCRBPPACOLLTotal],
             t1.[NCRBPPAOTCTotal]
+            ,t1.[TransportationExpense] as transportation_expense_amt
+            ,t1.[TransportationExpenseDailyLimit] as transportation_expense_daily_limit_amt
+            ,t1.[TransportationExpenseCoPay] as transportation_expense_copay_amt
+            ,t1.[PermissiveDriverUniqueLiabilityLimits] as permissive_driver_unique_liability_limits_in
+            ,t1.[PermissiveDriverUniqueCombinedSingleLimit] as permissive_driver_unique_combined_single_limit_amt
+            ,t1.[PermissiveDriverUniqueBILimit] as permissive_driver_unique_bi_limit_amt
+            ,t1.[PermissiveDriverUniquePDLimit] as permissive_driver_unique_pd_limit_amt
+            ,t1.[EmergencyExtensionNotice] as emergency_extension_notice_in
+            ,t1.[EnhancedUIM] as enhanced_underinsured_motorist_coverage_in
         FROM 
             [edw_temp].[tquote_auto_policy_coverage_temp1] AS t1
         ;

@@ -1,0 +1,2 @@
+ALTER TABLE edw_integration.customer_hubspot_feed
+ADD mailing_address_country_nm varchar(255);

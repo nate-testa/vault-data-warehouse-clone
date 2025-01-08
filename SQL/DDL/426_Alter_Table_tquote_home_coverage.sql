@@ -1,0 +1,1 @@
+ALTER TABLE  edw_core.tquote_home_coverage ADD fortified_roof_credit VARCHAR(255);

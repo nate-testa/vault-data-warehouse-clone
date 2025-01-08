@@ -12,7 +12,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.providers.microsoft.azure.operators.data_factory import AzureDataFactoryRunPipelineOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
 
-to_email = "sandeep.gundreddy@vault.insurance, architha.gudimalla@vault.insurance, yunus.mohammed@vault.insurance, tuba.mohsin@vault.insurance, rushin.shah@vault.insurance, hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
+to_email = "itdatateam@vault.insurance"
 # to_email = "hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
 cc_email = ""
 

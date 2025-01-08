@@ -12,6 +12,8 @@ GO
 -----------------------------------------------------------------------------------------------------------
 -- 23/10/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 11/14/23		Sandeep Gundreddy			    2. modified  quote_collection_class_type_sk logic
+-- 11/09/24		Alberto Almario					3. Include Condo data
+-- 10/31/24		Architha Gudimalla				4. VI34577/AD7581 - Added scheduled item deleted in
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_scheduled_item]
@@ -52,6 +54,7 @@ BEGIN
 			source_system_sk, --20230717 added
 			CreatedDate,
 			UpdatedDate
+			,scheduled_item_deleted_in
 		INTO [edw_temp].[tquote_collection_scheduled_item_temp1]
 		FROM
 			(
@@ -62,6 +65,7 @@ BEGIN
 				,tqcct.[quote_collection_class_type_sk]
 				,acct.[Index]
 				,accto.Field, accto.[Value]
+				,CASE WHEN acct.IsDeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END as scheduled_item_deleted_in
 				,acc.CreatedDate, acc.UpdatedDate
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
@@ -89,7 +93,7 @@ BEGIN
 						and tqcct.effective_dt=acc.EffectiveDate
 						and tqcct.transaction_seq_no = acc.number and pid.value = tqcct.class_type 
 			WHERE
-				p.[Name] in ('Collections','Homeowners')
+				p.[Name] in ('Collections','Homeowners','Condo')
 				AND acct.ObjectType = 'CollectionClassScheduleItem'
 				AND p.ProductLine='PersonalLines' --20230717 added
 			) t
@@ -118,6 +122,7 @@ BEGIN
            ,[create_ts]
            ,[update_ts]
            ,[etl_audit_sk]
+			,scheduled_item_deleted_in
 			)
 		SELECT 
 			[quote_no],[EffectiveDate],[ExpirationDate],[Number]
@@ -125,6 +130,7 @@ BEGIN
 			,[scheduled_item_no]
 			,[Description],[CoverageLimit],[SeeScheduleOnFileWithTheCompany],[AppraisalDate],[CollectorCar]
 			,[source_system_sk],getdate(),getdate(), @etl_audit_sk
+			,scheduled_item_deleted_in
 		FROM 
 			[edw_temp].[tquote_collection_scheduled_item_temp1]
 

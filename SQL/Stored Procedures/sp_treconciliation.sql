@@ -1,16 +1,17 @@
-﻿-- =================================================================================================
+﻿-- =============================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This procedure reconciles data 
----------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------
 -- 07/24/23		Architha Gudimalla				1. Created this procedure 
 -- 10/23/23		Architha Gudimalla				2. Updated the proc to run for 30 days
 -- 11/27/23		Architha Gudimalla				3. Add source_system_sk and datamart
 -- 12/01/23		Architha Gudimalla				4. Using dbo for metal tables
 -- 12/04/23		Architha Gudimalla				5. Updated the proc to run for 7 days
 -- 01/23/24		Architha Gudimalla				6. Rounded the premiums
--- ================================================================================================= 
+-- 03/27/24		Architha Gudimalla				7. Replaced AccountTransaction with AccountTransactionCoveragePremium,AccountTransactionTaxAndFee
+-- ===============================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_treconciliation]
 @in_start_dt date = null,
@@ -42,7 +43,7 @@ BEGIN
 		
 		with src_metal as
 		(
-			select cast(acct.IssuedDate as date) iss_dt, count(*) cnt, 
+			/*select cast(acct.IssuedDate as date) iss_dt, count(*) cnt, 
 					round(sum(coalesce(totalpremiumdeltaprorated, totalpremium)),2) prm ,
 					case when acct.ExternalSourceId is not NULL 
 					 then 2 --(AV2) 
@@ -59,6 +60,42 @@ BEGIN
 					 then 2 --(AV2) 
 					 Else 4 --(Metal)
 					end
+					*/
+			select  iss_dt , --policy_no, transaction_seq_no, 
+					count(distinct policy_no||transaction_seq_no) cnt, 
+					round(sum(prm),2) prm , ssk 
+			from 
+			(
+				select acct.PolicyNumber policy_no, acctr.policychangenumber transaction_seq_no,
+							cast(acctr.IssuedDate as date) iss_dt,  
+							round(COALESCE (acctrcp.PremiumDeltaProRated ,premium),2) prm ,
+							iif(acctr.ExternalSourceId is null,4,2) ssk 
+				FROM edw_stage.AccountTransaction acctr 
+				inner join edw_stage.Account acct on acct.id = acctr.AccountId
+				left join edw_stage.Product pr on acct.ProductId = pr.id 
+				inner join edw_stage.AccountTransactionCoveragePremium acctrcp on acctrcp.AccountTransactionId = acctr.Id
+				where acctr.PolicyNumber  is not null 
+				  and acctr.State ='ISSUED' 
+				  and pr.ProductLine='PersonalLines' 
+				  AND cast(acctr.IssuedDate as date) >= @last_source_extract_ts
+
+				union all
+
+				select acct.PolicyNumber policy_no, acctr.policychangenumber transaction_seq_no,
+							cast(acctr.IssuedDate as date) iss_dt, 
+							round(COALESCE (acctrtf.AmountDeltaProRated ,acctrtf.Amount),2) prm ,
+							iif(acctr.ExternalSourceId is null,4,2) ssk 
+				FROM edw_stage.AccountTransaction acctr 
+				inner join edw_stage.Account acct on acct.id = acctr.AccountId
+				left join edw_stage.Product pr on acct.ProductId = pr.id 
+				inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = acctr.Id 
+				left join edw_stage.coverage cov on cov.id = acctrtf.coverageid 
+				where acctr.PolicyNumber  is not null 
+				  and acctr.State ='ISSUED' 
+				  and pr.ProductLine='PersonalLines' 
+				  AND cast(acctr.IssuedDate as date) >= @last_source_extract_ts
+			) a 
+			group by  iss_dt,  ssk --, policy_no, transaction_seq_no
 		),
 		src_edw as
 		(

@@ -1,0 +1,5 @@
+alter table edw_core.trenewal_summary add expiring_mid_term_endorsement_premium_amt decimal(15,2)
+alter table edw_core.trenewal_summary add expiring_price_sqft decimal(15,2)
+alter table edw_core.trenewal_summary add issued_price_sqft decimal(15,2)
+alter table edw_core.trenewal_summary add renewal_offered_price_sqft decimal(15,2)
+alter table edw_core.trenewal_summary add cancellation_reason_desc VARCHAR(255)

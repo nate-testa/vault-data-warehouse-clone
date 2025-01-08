@@ -5,7 +5,9 @@
 -- Change date 			|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 08/20/23				Yunus Mohammed				1. Create the proc
--- 03/15/22				Rushin Shah					2. Addition of broker_tier column
+-- 03/15/24				Rushin Shah					2. Addition of broker_tier column
+-- 03/20/24				Rushin Shah					3. Updated the join to inner from left
+-- 06/19/24				Yunus Mohammed				4. Corrected bug in broker_commission_status
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker_commission]
 
@@ -40,18 +42,18 @@ BEGIN
 			ctp.EffectiveDate AS effective_dt,ctp.ExpirationDate AS expiration_dt,CommissionPercent commission_pc,
 			ct.Name as broker_tier,
 			CASE ctp.IsExpired
-				WHEN 1 THEN 'Active'
-				WHEN 0 THEN 'Expired'
+				WHEN 0 THEN 'Active'
+				WHEN 1 THEN 'Expired'
 			END AS broker_commission_status,ctp.CreatedDate,ctp.UpdatedDate
 		INTO edw_temp.tbroker_commission_temp
 		FROM
 			edw_stage.Brokerage as brk
 			inner join edw_core.tbroker tbrk on CAST(brk.ProducerId AS VARCHAR(255))=tbrk.broker_id
 			--	inner join edw_stage.BrokerageCommission brkc on brk.Id=brkc.BrokerageId -- This needs to be removed because the table has been decommissioned
-			left join edw_stage.CommissionTierBrokerage ctb on ctb.BrokerageId = brk.Id
-			left join edw_stage.CommissionTierPercentage ctp on  ctp.CommissionTierID = ctb.CommissionTierID
-			left join edw_stage.CommissionTier ct on ct.Id = ctp.CommissionTierId
-			left join edw_stage.Product prd on ctp.ProductId=prd.Id
+			inner join edw_stage.CommissionTierBrokerage ctb on ctb.BrokerageId = brk.Id
+			inner join edw_stage.CommissionTierPercentage ctp on  ctp.CommissionTierID = ctb.CommissionTierID
+			inner join edw_stage.CommissionTier ct on ct.Id = ctp.CommissionTierId
+			inner join edw_stage.Product prd on ctp.ProductId=prd.Id
 			left join [edw_stage].[Coverage] cov on ctp.CoverageId=cov.Id
 		WHERE
 			GREATEST(ctp.CreatedDate,ctp.UpdatedDate) > @last_source_extract_ts

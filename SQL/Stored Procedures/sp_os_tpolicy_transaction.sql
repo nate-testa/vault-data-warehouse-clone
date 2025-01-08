@@ -1,8 +1,11 @@
--- =============================================
--- Author:		Yunus Mohammed
--- Create Date: 10/20/2023
+-- =============================================================================================================================
 -- Description: This procedures insert OneShied policy into tpolicy transaction table
--- =============================================
+-------------------------------------------------------------------------------------------------------------------------------
+-- Change date 		|Author						|	Change Description
+-------------------------------------------------------------------------------------------------------------------------------
+-- 10/20/23			Yunus Mohammed					1. Created this procedure 
+-- 11/14/24			Architha Gudimalla				2. AD7698 - Added policy_history_sk
+-- =============================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tpolicy_transaction]
 
 AS
@@ -49,12 +52,14 @@ BEGIN
 		tptt.policy_transaction_type_sk,
 		null as internal_coverage_sk,tps.policy_status_sk,
 		null as tax_fee_surcharge_sk,NULL AS user_sk,1 as source_system_sk
+		,polh.policy_history_sk
 		INTO edw_temp.os_tpolicy_transaction_temp1
 		FROM
 		edw_stage.dragon_policy p
 		inner join edw_stage.dragon_policy_trx pt ON p.policy_id=pt.policy_id
 		inner JOIN edw_core.tpolicy tph on tph.policy_no = pt.policy_trx_policy_number and tph.source_system_sk = 1
-		left join edw_core.tpolicy tp on  tp.policy_no = pt.policy_trx_policy_number  -- tp.policy_no=p.policy_number
+		left join edw_core.tpolicy tp on  tp.policy_no = pt.policy_trx_policy_number  -- tp.policy_no=p.policy_number 
+		LEFT JOIN edw_core.tpolicy_history polh on polh.policy_sk = tp.policy_sk and polh.transaction_seq_no = pt.policy_trx_seq_num 
 		left join edw_core.tproduct tprd on tprd.product_cd=tp.product_cd
 		INNER JOIN edw_core.tbroker tb ON tb.broker_id=pt.policy_trx_partner_id
 		LEFT JOIN edw_core.tcustomer tcust on tcust.customer_id=pt.customer_id
@@ -138,6 +143,7 @@ BEGIN
 		tax_fee_surcharge_sk,user_sk,source_system_sk,create_ts,update_ts,etl_audit_sk
 		-- ceded_premium_amt
 		-- ceded_annual_premium_amt
+		,policy_history_sk
 		)
 		SELECT
 			policy_sk,effective_dt_sk,expiration_dt_sk,transaction_effective_dt_sk,transaction_seq_no,broker_sk,
@@ -146,6 +152,7 @@ BEGIN
 			product_sk,policy_transaction_type_sk,internal_coverage_sk,policy_status_sk,
 			tax_fee_surcharge_sk,user_sk,
 			source_system_sk,GETDATE() AS create_ts,GETDATE() update_ts,@etl_audit_sk AS etl_audit_sk
+			,policy_history_sk
 		FROM
 			edw_temp.os_tpolicy_transaction_temp1
 			

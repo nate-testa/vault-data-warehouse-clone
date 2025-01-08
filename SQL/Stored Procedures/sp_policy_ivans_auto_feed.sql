@@ -35,10 +35,9 @@ BEGIN
         DROP TABLE IF EXISTS [edw_temp].[policy_ivans_auto_feed_temp2];
 
         SELECT 
-            policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
-            MAX(create_ts) as create_ts, 
-            SUM(premium_amt) as premium_amt,
-            --SUM(annual_premium_amt) as annual_premium_amt
+            pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk,
+            MAX(ph.transaction_ts) as transaction_ts, 
+            SUM(pt.premium_amt) as premium_amt,
             CASE WHEN pt.policy_transaction_type_sk = 5
 				THEN
         			(SELECT SUM(subpt.premium_amt)
@@ -54,10 +53,13 @@ BEGIN
         INTO [edw_temp].[policy_ivans_auto_feed_temp2]
         FROM edw_core.tpolicy_transaction as pt
         INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
+        INNER JOIN edw_core.tpolicy_history as ph 
+        ON pt.policy_sk = ph.policy_sk
+        AND pt.transaction_seq_no = ph.transaction_seq_no
         WHERE 1=1
             AND pr.product_cd = 'AU'
-            AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-        GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
+            AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
+        GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk
         ;
 
 
@@ -114,15 +116,25 @@ BEGIN
                         FROM 
                             (
                                 SELECT 
-                                    policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk,
-                                    SUM(annual_premium_amt) AS annual_premium_amt, 
-                                    SUM(premium_amt) AS premium_amt 
+                                    pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk,
+                                    (
+                                        SELECT SUM(subpt.annual_premium_amt)
+                                        FROM edw_core.tpolicy_transaction subpt 
+                                        WHERE subpt.policy_sk = pt.policy_sk
+                                        AND subpt.effective_dt_sk = pt.effective_dt_sk
+                                        AND subpt.internal_coverage_sk = pt.internal_coverage_sk
+                                        AND subpt.transaction_seq_no <= pt.transaction_seq_no
+                                    ) as annual_premium_amt,
+                                    SUM(pt.premium_amt) AS premium_amt 
                                 FROM edw_core.tpolicy_transaction as pt
                                 INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
+                                INNER JOIN edw_core.tpolicy_history as ph 
+                                ON pt.policy_sk = ph.policy_sk
+                                AND pt.transaction_seq_no = ph.transaction_seq_no
                                 WHERE 1=1
                                     AND pr.product_cd = 'AU'
-                                AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-                                GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk
+                                AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
+                                GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk
                             ) as pt 
                             INNER JOIN edw_core.tauto_policy_coverage as apc ON pt.coverage_sk = apc.auto_policy_coverage_sk
                             INNER JOIN edw_core.tinternal_coverage as ic ON pt.internal_coverage_sk = ic.internal_coverage_sk
@@ -154,23 +166,46 @@ BEGIN
                     WHEN ic.internal_coverage_desc IN ('Underinsured Motorist','Uninsured Motorist') THEN 'um_uim_Prem'
                     ELSE ic.internal_coverage_desc
                 END AS coverageDesc,
+                CASE 
+                    WHEN apc.limit_type = 'Combined' then apc.combined_single_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Added First Party' then apc.added_first_party_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Bodily Injury' then apc.bodily_injury_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Basic First Party' then apc.combination_fpb_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Auto Death Disability' then apc.accidental_death_benefit_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Medical Payments' then apc.medical_payment_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Personal Injury Protection' then apc.pip_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Property Damage' then apc.property_damage_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Underinsured Motorist' AND apc.limit_type = 'Combined' then apc.combined_underinsured_motorist_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Underinsured Motorist' AND apc.limit_type = 'Split' then apc.underinsured_motorist_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Uninsured Motorist' AND apc.limit_type = 'Combined' then apc.combined_uninsured_motorist_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Uninsured Bodily Injury' AND apc.limit_type = 'Combined' then apc.combined_um_bi_policy_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Uninsured Property Damage' AND apc.limit_type = 'Combined' then apc.combined_um_pd_policy_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Uninsured Motorist' AND apc.limit_type = 'Split' then apc.uninsured_motorist_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Uninsured Bodily Injury' AND apc.limit_type = 'Split' then apc.um_bi_policy_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Uninsured Property Damage' AND apc.limit_type = 'Split' then apc.um_pd_policy_limit_amt 
+                    ELSE '' 
+                END 	AS limits,
                 pt.premium_amt as netChangeAmt,
                 pt.annual_premium_amt as currentTermAmt
             FROM 
                 (
                     SELECT 
-                        policy_sk, effective_dt_sk, transaction_seq_no, vehicle_coverage_sk, internal_coverage_sk,
-                        SUM(annual_premium_amt) AS annual_premium_amt, 
-                        SUM(premium_amt) AS premium_amt 
+                        pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.vehicle_coverage_sk, pt.internal_coverage_sk,
+                        SUM(pt.annual_premium_amt) AS annual_premium_amt, 
+                        SUM(pt.premium_amt) AS premium_amt 
                     FROM edw_core.tpolicy_transaction as pt
                     INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
+                    INNER JOIN edw_core.tpolicy_history as ph 
+                    ON pt.policy_sk = ph.policy_sk
+                    AND pt.transaction_seq_no = ph.transaction_seq_no
                     WHERE 1=1
                         AND pr.product_cd = 'AU'
-                    AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-                    GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, vehicle_coverage_sk, internal_coverage_sk
+                    AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
+                    GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.vehicle_coverage_sk, pt.internal_coverage_sk
                 ) as pt 
                 INNER JOIN edw_core.tauto_vehicle_coverage as avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
                 INNER JOIN edw_core.tinternal_coverage as ic ON pt.internal_coverage_sk = ic.internal_coverage_sk
+                INNER JOIN edw_core.tauto_policy_coverage as apc ON pt.coverage_sk = apc.auto_policy_coverage_sk
         ),
         json_au_vehicles AS (
 			SELECT avcf.policy_no, avcf.effective_dt, avcf.transaction_seq_no,
@@ -184,7 +219,7 @@ BEGIN
 						avc.annual_miles as numUnits,
 						'Vehicle' as riskType,
 						(
-							SELECT coverageCd, deductibles, coverageDesc, netChangeAmt, currentTermAmt
+							SELECT coverageCd, deductibles, coverageDesc, limits, netChangeAmt, currentTermAmt
 							FROM json_au_vehicles_sub_coverages AS javsc
 							WHERE javsc.policy_no = avc.policy_no 
 								AND javsc.effective_dt = avc.effective_dt
@@ -213,7 +248,7 @@ BEGIN
 						END as multiCarDiscount,
 						(
 							SELECT 
-								ai.additional_interest_nm as commercialName,
+								COALESCE(ai.additional_interest_nm, ai.loss_payee_nm) as commercialName,
 								ai.address_line_1 as address1,
 								ai.city_nm as city,
 								ai.state_cd as stateProvCd,
@@ -238,6 +273,8 @@ BEGIN
 								END AS natureInterestCd
 							FROM edw_core.tadditional_interest as ai 
 							WHERE avc.policy_no = ai.policy_no AND avc.effective_dt = ai.effective_dt AND avc.transaction_seq_no = ai.transaction_seq_no
+                            AND avc.auto_vehicle_sk = ai.auto_vehicle_sk
+                            AND ai.additional_interest_deleted_in = 'No'
 							FOR JSON PATH, INCLUDE_NULL_VALUES 
 						) AS additionalInterests,
 						'' as numDaysDrivenPerWeek,
@@ -308,6 +345,7 @@ BEGIN
                     WHERE ad.policy_no = adf.policy_no
                         AND ad.effective_dt = adf.effective_dt
                         AND ad.transaction_seq_no = adf.transaction_seq_no
+                        AND ad.driver_deleted_in = 'No'
                     FOR JSON PATH
                 ) AS AU_Drivers
             FROM edw_core.tauto_driver AS adf
@@ -318,7 +356,7 @@ BEGIN
                 aglf.policy_no, aglf.effective_dt, aglf.transaction_seq_no,
                 (
                     SELECT 
-                        CONCAT('L',agl.garage_location_no) as locationNo,
+                        CONCAT('L',ROW_NUMBER() OVER(PARTITION BY agl.policy_no, agl.effective_dt, agl.transaction_seq_no ORDER BY agl.garage_unique_id)) AS locationNo,
                         agl.garage_address_line1 as addr1,
                         agl.garage_address_city_nm as city,
                         agl.garage_address_state_cd as [state],
@@ -443,7 +481,7 @@ BEGIN
             getdate() as update_ts,
             @etl_audit_sk as etl_audit_sk,
             tprc.national_producer_no as NIPRid_200,
-            pt.create_ts as policy_transaction_create_ts
+            pt.transaction_ts as policy_history_transaction_ts
         INTO [edw_temp].[policy_ivans_auto_feed_temp1] 
         FROM [edw_temp].[policy_ivans_auto_feed_temp2] AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
@@ -467,7 +505,7 @@ BEGIN
             ON p.policy_no = jad.policy_no AND p.effective_dt = jad.effective_dt AND pt.transaction_seq_no = jad.transaction_seq_no
         LEFT JOIN (
 				select broker_sk, broker_id, national_producer_no
-				    ,ROW_NUMBER() OVER (PARTITION BY broker_id ORDER BY broker_sk DESC) AS rn
+				    ,ROW_NUMBER() OVER (PARTITION BY broker_id ORDER BY producer_sk DESC) AS rn
 				from edw_core.tproducer
 			) tprc
 		ON p.broker_id = tprc.broker_id
@@ -647,7 +685,7 @@ BEGIN
 
 		
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(policy_transaction_create_ts) FROM edw_temp.[policy_ivans_auto_feed_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(policy_history_transaction_ts) FROM edw_temp.[policy_ivans_auto_feed_temp1]),@last_source_extract_ts);
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

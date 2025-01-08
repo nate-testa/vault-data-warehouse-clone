@@ -8,6 +8,8 @@
 ---------------------------------------------------------------------------------------------------
 -- 				Yunus Mohammed			    1. Created this procedure
 -- 01/08/24		Yunus Mohammed			    2. Added deleted_on_policy_change_in
+-- 02/05/24		Hernando Gonzalez			3. Added Limits Indicator
+-- 11/19/24		Architha Gudimalla		    4. AD7757 - Added driver unique id
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_driver]
 
@@ -36,7 +38,9 @@ BEGIN
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,policy_history_sk,source_system_sk,[Index],
 			IssuedDate,FirstName,LastName,Birthdate,InsuredType,LicenseStatus,LicenseNumber,
 			Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,
-			CASE IsDeletedOnPolicyChange WHEN 0 THEN 'No' WHEN 1 THEN 'Yes' END AS IsDeletedOnPolicyChange			
+			CASE IsDeletedOnPolicyChange WHEN 0 THEN 'No' WHEN 1 THEN 'Yes' END AS IsDeletedOnPolicyChange,
+			DriverLimitsIndicator
+			,driver_unique_id		
 			into edw_temp.tpel_driver_temp1
 		from
 		(
@@ -50,6 +54,7 @@ BEGIN
 			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,atvo.[Index],
 			act.IssuedDate,CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value],
 			atvo.IsDeletedOnPolicyChange
+			,atvo.[UniqueId] driver_unique_id
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
@@ -69,7 +74,7 @@ BEGIN
 				and atvof.Field IN 
 				(
 					'FirstName','LastName','Birthdate','InsuredType','LicenseStatus','LicenseNumber',
-					'Model','LicenseCountry','LicenseState','MiddleName','Suffix','Prefix','LicenseYear'
+					'Model','LicenseCountry','LicenseState','MiddleName','Suffix','Prefix','LicenseYear','DriverLimitsIndicator'
 				)
 				and act.IssuedDate > @last_source_extract_ts
 			) as t
@@ -77,14 +82,15 @@ BEGIN
 		pivot 
 		(
 			max(Value) FOR Field IN (FirstName,LastName,Birthdate,InsuredType,LicenseStatus,LicenseNumber,
-					Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear)
+					Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,DriverLimitsIndicator)
 		) as pivottable
 			
 		INSERT INTO [edw_core].[tpel_driver]
 		(
 			policy_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no,policy_history_sk,
 			driver_no,prefix,first_nm,middle_nm,last_nm,suffix,birth_dt,license_status,license_country_nm,license_state_cd,license_year,
-			license_no,driver_deleted_in,source_system_sk,create_ts,update_ts,etl_audit_sk
+			license_no,driver_deleted_in,source_system_sk,create_ts,update_ts,etl_audit_sk, driver_limit_type
+			,driver_unique_id
 		)
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
@@ -93,7 +99,8 @@ BEGIN
 			LastName AS last_nm,Suffix AS suffix,Birthdate AS birth_dt,LicenseStatus AS license_status,
 			LicenseCountry AS license_country_nm,LicenseState AS license_state_cd,LicenseYear AS license_year,
 			LicenseNumber AS license_no,IsDeletedOnPolicyChange AS driver_deleted_in,
-			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
+			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,DriverLimitsIndicator as driver_limit_type
+			,driver_unique_id
 		FROM
 			edw_temp.tpel_driver_temp1 AS ttlc
 

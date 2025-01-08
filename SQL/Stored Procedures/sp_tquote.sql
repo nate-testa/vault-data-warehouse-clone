@@ -3,16 +3,21 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
--- =====================================================================================================================
+-- ===========================================================================================================================
 -- Description: This procedures inserts and updates tquote 
------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- 11/16/23		Architha Gudimalla				2. Updated the prior policy logic
--- ===================================================================================================================== 
+-- 03/22/24		Rushin Shah						3. Added close_reason_desc column
+-- 08/29/24		Yunus Mohammed					4. Added expiration_dt in update stmt
+-- 09/04/24		Yunus Mohammed					5. Added term_no
+-- 09/18/24		Architha Gudimalla		        6. Updated term_no
+-- 11/01/24		Architha Gudimalla		        7. AD7593 - Added update to fix null EffectiveDate/ExpirationDate in Metal
+-- =========================================================================================================================== 
 
-create or ALTER      PROCEDURE [edw_core].[sp_tquote]
+CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
 
 AS 
 BEGIN
@@ -33,6 +38,11 @@ BEGIN
 	
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+
+		update 	edw_stage.Account
+		set 	EffectiveDate = cast(createddate as date), ExpirationDate  = cast(createddate as date)
+		where 	EffectiveDate is null
+		AND 	greatest(CreatedDate,UpdatedDate)>@last_source_extract_ts;
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.tquote_temp1;
@@ -189,7 +199,15 @@ BEGIN
 					  else upper(substring(tmp1.state,1,1)) + lower(substring(tmp1.state, 2, len(tmp1.state)-1))  
 				end as [state],
 				case when tmp1.ExternalSourceId is not null then 'Yes' else 'No' end  migrated_in,
-				prior_pol.policy_sk prior_pol_policy_sk
+				prior_pol.policy_sk prior_pol_policy_sk,
+				tmp1.CloseReasonType as close_reason_desc
+				,'Term ' || case 
+								when charindex('-',tmp1.PolicyNumber) <> 0 then cast(substring(tmp1.PolicyNumber,charindex('-',tmp1.PolicyNumber)+1,len(tmp1.PolicyNumber)) as int)+1
+								when tmp1.PolicyNumber like '%A'		   then 1
+								when tmp1.PolicyNumber like '%B'		   then 2
+								when tmp1.PolicyNumber like '%C'		   then 3
+							 	else 1
+							end term_no
 				--select *
 			FROM 
 				edw_temp.tquote_temp1 tmp1
@@ -243,6 +261,8 @@ BEGIN
            ,[quote_source_status]
 		   ,migrated_in
 		   ,prior_term_policy_sk
+		   ,close_reason_desc
+		   ,term_no
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -274,11 +294,15 @@ BEGIN
 				getdate(), getdate(), @etl_audit_sk
                 ,source.state
 				,source.migrated_in
-				,source.prior_pol_policy_sk)
+				,source.prior_pol_policy_sk
+				,source.close_reason_desc
+				,source.term_no
+				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
         Target.Effective_dt					= Source.EffectiveDate,
+		Target.expiration_dt				= Source.ExpirationDate,
         Target.broker_id					= Source.BrokerId,
         Target.customer_id					= Source.customer_id,
         Target.risk_state_cd				= Source.RiskStateCode,
@@ -304,6 +328,7 @@ BEGIN
 		Target.quote_source_status			= source.state, 
 		Target.migrated_in			    	= source.migrated_in, 
 		Target.prior_term_policy_sk			= source.prior_pol_policy_sk, 
+		Target.close_reason_desc			= source.close_reason_desc,
         Target.update_ts 					= getdate()
 		;
 

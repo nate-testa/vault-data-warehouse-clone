@@ -4,11 +4,16 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =============================================
+-- ========================================================================================================================================
 -- Author:		Hernando Gonzalez Garcia
 -- Create Date: 2023-08-28
 -- Description: This procedures insert and update info related to IVANS Home
--- =============================================
+-- 04/05/2024                      sandeep Gundreddy                             repush to Git Repo
+-- 04/09/2024					   Rushin Shah									Update SP to identify delta based on last_source_extract_ts
+-- 18/09/2024					   Hernando Gonzalez							Fixed Earthquake Coverage
+-- 09/11/2024					   Hernando Gonzalez							VI-34591 | Fixed Contents and Loss of Use
+-- ========================================================================================================================================= 
+
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_home]
 AS
 BEGIN
@@ -42,11 +47,11 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp8];
 
         SELECT 
-            policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk,
-            MAX(create_ts) as create_ts, 
-            SUM(premium_amt) as premium_amt,
+             pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk,
+            MAX(ph.transaction_ts) as transaction_ts, -- MAX(create_ts) as create_ts, RS Updated
+            SUM(pt.premium_amt) as premium_amt,
             --SUM(annual_premium_amt) as annual_premium_amt,
-			CASE WHEN policy_transaction_type_sk = 5
+			CASE WHEN pt.policy_transaction_type_sk = 5
 				THEN
         			(SELECT SUM(subpt.premium_amt)
         			    FROM edw_core.tpolicy_transaction subpt
@@ -60,11 +65,12 @@ BEGIN
     		END AS annual_premium_amt
 			,coverage_sk
 		INTO [edw_temp].[policy_ivans_home_temp1]
-        FROM edw_core.tpolicy_transaction as pt
-        WHERE product_sk in (1, 5) -- Home
-            AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-        GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, transaction_effective_dt_sk, transaction_dt_sk, customer_sk, policy_transaction_type_sk, source_system_sk
-		,coverage_sk
+        FROM edw_core.tpolicy_transaction as pt	
+		INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
+		WHERE pt.product_sk in (1, 5) -- Home
+            AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
+        GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk
+		,pt.coverage_sk
 
 		SELECT temp3.*
 		INTO [edw_temp].[policy_ivans_home_temp3]
@@ -74,17 +80,43 @@ BEGIN
 					SELECT
 						hc.policy_no as policyNumber,
 						--ic.primary_coverage_cd as coverageCd,
-						ic.internal_coverage_cd as coverageCd,
-						ic.internal_coverage_desc as coverageDesc,
+						CASE
+							WHEN ic.internal_coverage_cd = 'Loss of Use'
+								THEN 'LOU'
+							WHEN ic.internal_coverage_cd = 'AOP' AND hc.residence_type = 'Homeowners'
+								THEN 'DWELL'
+							WHEN ic.internal_coverage_cd = 'AOP' AND hc.residence_type = 'Condo/Co-op'
+								THEN 'CONTENTS'
+							ELSE ic.internal_coverage_cd
+						END as coverageCd,
+						CASE 
+						    WHEN ic.internal_coverage_cd = 'AOP' AND hc.residence_type = 'Homeowners'
+								THEN 'Dwelling'
+							WHEN ic.internal_coverage_cd = 'AOP' AND hc.residence_type = 'Condo/Co-op'
+								THEN 'Contents'
+							ELSE ic.internal_coverage_desc
+						END as coverageDesc,
 						--ic.internal_coverage_desc as IVANS_coverage_desc,
 						pt.premium_amt AS changeAmount,
-						pt.annual_premium_amt AS currentAmount,
+						--pt.annual_premium_amt AS currentAmount,
+						(
+                            SELECT SUM(subpt.annual_premium_amt)
+                            FROM edw_core.tpolicy_transaction subpt
+                            WHERE subpt.policy_sk = pt.policy_sk
+                            AND subpt.effective_dt_sk = pt.effective_dt_sk
+                            AND subpt.internal_coverage_sk = pt.internal_coverage_sk
+                            AND subpt.transaction_seq_no <= pt.transaction_seq_no
+                        ) AS currentAmount,
 						CASE
+							WHEN ic.internal_coverage_cd = 'AOP' AND hc.residence_type = 'Homeowners'
+								THEN CAST(hc.dwelling_limit_amt as NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'AOP' AND hc.residence_type = 'Condo/Co-op'
+								THEN CAST(hc.contents_limit_amt as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Systems Protection'
 						        THEN CAST(hac.home_systems_protection_limit_amt as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Cyber Protection'
 						        THEN CAST(hac.home_cyber_protection_coverage_limit_amt as NVARCHAR(255))
-						    WHEN ic.internal_coverage_cd = 'Earthquake Coverage Extended for Loss Assessment'
+						    WHEN ic.internal_coverage_cd = 'Earthquake Coverage Extended for Loss Assessment'  or ic.internal_coverage_cd = 'Earthquake Coverage Extended'
 						        THEN CAST(hac.earthquake_coverage_extension_loss_assessment_limit_amt as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Fungi Liability Extension'
 						        THEN CAST(hac.fungi_bacteria_increase_limit as NVARCHAR(255))
@@ -100,22 +132,16 @@ BEGIN
 						        THEN CAST(hac.loss_assessment_increase_limit_amt as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Workers Compensation'
 						        THEN CAST(hac.workercompensation_liability_occurance_limit_amt as NVARCHAR(255))
-						    WHEN ic.internal_coverage_cd = 'Dwelling Reconstruction Cost'
-						        THEN CAST(hc.dwelling_limit_amt as NVARCHAR(255))
-						    WHEN (ic.internal_coverage_cd = 'Other')
-						        THEN CAST(hc.other_structures_limit_amt as NVARCHAR(255))
-							WHEN (ic.internal_coverage_cd = 'Other Structures Away Residence Premises')
-						        THEN CAST(hc.other_structures_limit_amt as NVARCHAR(255))
-						    WHEN (ic.internal_coverage_cd = 'Contents Extended')
-						        THEN CAST(hc.contents_limit_amt as NVARCHAR(255))
-							WHEN (ic.internal_coverage_cd = 'Contents Off Premises Loss Exclusion')
-						        THEN CAST(hc.contents_limit_amt as NVARCHAR(255))
-						    WHEN ic.internal_coverage_cd = 'Loss of Use'
-						        THEN CAST(hc.loss_of_use_limit_amt as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Liability Coverage'
 						        THEN CAST(hc.personal_liability_limit_amt as NVARCHAR(255))
-							WHEN ic.internal_coverage_cd = 'Liability Extension'
-						        THEN CAST(hc.personal_liability_limit_amt as NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Deductible Waiver for Large Losses'
+						        THEN CAST(hac.deductible_waiver_large_losses_limit_amt as NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Damage To Property Of Others'
+						        THEN CAST(hac.damage_to_property_of_others_increased_limit_amt as NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Mine Subsidence'
+						        THEN CAST(hac.mine_subsidence_coverage_limit_amt as NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Loss of Use'
+						        THEN CAST(hc.loss_of_use_limit_amt AS NVARCHAR(255))
 						    ELSE NULL 
 						END AS [limit],
 						CASE 
@@ -123,24 +149,35 @@ BEGIN
 						        THEN CAST(hc.aop_deductible as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Cyber Protection'
 						        THEN CAST(hac.home_cyber_protection_coverage_deductible as NVARCHAR(255))
-						    WHEN ic.internal_coverage_cd = 'Earthquake Coverage Extended for Loss Assessment'
-						        THEN CAST(hac.earthquake_coverage_extension_loss_assessment_limit_amt as NVARCHAR(255))
+						    WHEN ic.internal_coverage_cd = 'Earthquake Coverage Extended for Loss Assessment'  or ic.internal_coverage_cd = 'Earthquake Coverage Extended'
+								THEN CAST(
+									COALESCE(
+									NULLIF(LTRIM(RTRIM(hac.earthquake_coverage_extension_deductible)), ''), 
+									NULLIF(LTRIM(RTRIM(hac.earthquake_endorsement_deductible)), '')
+								) AS NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Other Wind'
+						        THEN CAST(hc.wind_derived_deductible as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Hurricane'
-						        THEN CAST(hc.hurricane_deductible as NVARCHAR(255))
+						        THEN CAST(hc.wind_derived_deductible as NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Wind/Hail'
+						        THEN CAST(hc.wind_derived_deductible as NVARCHAR(255))
 						    WHEN ic.internal_coverage_cd = 'Wildfire'
 						        THEN CAST(hc.wildfire_deductible AS NVARCHAR(255))
+							WHEN ic.internal_coverage_cd = 'Loss of Use'
+						        THEN '0.0'
 						    ELSE NULL 
 						END AS deductible
 					FROM 
 					(
 						SELECT 
-							policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk,
-							SUM(annual_premium_amt) AS annual_premium_amt, 
-							SUM(premium_amt) AS premium_amt 
+							pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk,
+							SUM(pt.annual_premium_amt) AS annual_premium_amt, 
+							SUM(pt.premium_amt) AS premium_amt 
 						FROM edw_core.tpolicy_transaction as pt
-						WHERE product_sk in (1, 5) -- Home and Condo
-						AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-						GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk
+						INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
+						WHERE pt.product_sk in (1, 5) -- Home and Condo
+						AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
+						GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk
 					) as pt 
 					LEFT JOIN edw_core.thome_coverage as hc ON pt.coverage_sk = hc.home_coverage_sk
 					LEFT JOIN edw_core.thome_additional_coverage as hac ON hc.home_coverage_sk = hac.home_coverage_sk
@@ -164,6 +201,90 @@ BEGIN
 					WHERE  pt.policy_sk = ptf.policy_sk
 						AND pt.effective_dt_sk = ptf.effective_dt_sk
 						AND pt.transaction_seq_no = ptf.transaction_seq_no
+						AND LEN(TRIM(CAST(hc.medical_payments_limit_amt as NVARCHAR(255)))) != 0
+					UNION ALL
+					SELECT DISTINCT
+						hc.policy_no as policyNumber
+						,'WATERDED' as coverageCd
+						,'Waterdeductible' as coverageDesc
+						,0.0 as changeAmount
+						,0.0 as currentAmount
+						,CAST(hac.waterdamage_sublimit_amt as NVARCHAR(255)) as [limit]
+						,CAST(hc.water_deductible as NVARCHAR(255)) as [deductible]
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
+					INNER JOIN edw_core.thome_coverage as hc ON pt.coverage_sk = hc.home_coverage_sk
+					LEFT JOIN edw_core.thome_additional_coverage as hac ON hc.home_coverage_sk = hac.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
+						AND (LEN(TRIM(CAST(hac.waterdamage_sublimit_amt as NVARCHAR(255)))) != 0 OR LEN(TRIM(CAST(hc.water_deductible as NVARCHAR(255)))) != 0)
+					UNION ALL
+					SELECT DISTINCT
+						hc.policy_no as policyNumber
+						,'OS' as coverageCd
+						,'Other Structures' as coverageDesc
+						,0.0 as changeAmount
+						,0.0 as currentAmount
+						,CAST(hc.other_structures_limit_amt as NVARCHAR(255)) as [limit]
+						,'0.0' as deductible
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
+					INNER JOIN edw_core.thome_coverage as hc
+					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
+						AND LEN(TRIM(CAST(hc.other_structures_limit_amt as NVARCHAR(255)))) != 0
+					UNION ALL
+ 					SELECT DISTINCT
+						hc.policy_no as policyNumber
+						,'CONTENTS' as coverageCd
+						,'Contents' as coverageDesc
+						,0.0 as changeAmount
+						,0.0 as currentAmount
+						,CAST(hc.contents_limit_amt as NVARCHAR(255)) as [limit]
+						,'0.0' as deductible
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
+					INNER JOIN edw_core.thome_coverage as hc
+					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
+						AND NOT EXISTS (
+					        SELECT 1
+					        FROM edw_core.tpolicy_transaction pt_main
+					        LEFT JOIN edw_core.tinternal_coverage ic ON pt_main.internal_coverage_sk = ic.internal_coverage_sk
+					        LEFT JOIN edw_core.thome_coverage hc_main ON pt_main.coverage_sk = hc_main.home_coverage_sk
+					        WHERE pt_main.policy_sk = ptf.policy_sk
+					            AND pt_main.effective_dt_sk = ptf.effective_dt_sk
+					            AND pt_main.transaction_seq_no = ptf.transaction_seq_no
+					            AND ic.internal_coverage_cd = 'AOP'
+					            AND hc_main.residence_type = 'Condo/Co-op'
+				    	)
+					UNION ALL
+					SELECT DISTINCT
+						hc.policy_no as policyNumber
+						,'LOU' as coverageCd
+						,'Loss of Use' as coverageDesc
+						,0.0 as changeAmount
+						,0.0 as currentAmount
+						,CAST(hc.loss_of_use_limit_amt as NVARCHAR(255)) as [limit]
+						,'0.0' as deductible
+					FROM [edw_temp].[policy_ivans_home_temp1] as pt 
+					INNER JOIN edw_core.thome_coverage as hc
+					ON pt.coverage_sk = hc.home_coverage_sk
+					WHERE  pt.policy_sk = ptf.policy_sk
+						AND pt.effective_dt_sk = ptf.effective_dt_sk
+						AND pt.transaction_seq_no = ptf.transaction_seq_no
+						AND NOT EXISTS (
+					        SELECT 1
+					        FROM edw_core.tpolicy_transaction pt_main
+					        LEFT JOIN edw_core.tinternal_coverage ic ON pt_main.internal_coverage_sk = ic.internal_coverage_sk
+					        LEFT JOIN edw_core.thome_coverage hc_main ON pt_main.coverage_sk = hc_main.home_coverage_sk
+					        WHERE pt_main.policy_sk = ptf.policy_sk
+					            AND pt_main.effective_dt_sk = ptf.effective_dt_sk
+					            AND pt_main.transaction_seq_no = ptf.transaction_seq_no
+					            AND ic.internal_coverage_cd = 'Loss of Use'
+						)
 				) jd FOR JSON PATH, INCLUDE_NULL_VALUES
 			) AS Home_Coverages
 			FROM [edw_temp].[policy_ivans_home_temp1] as ptf
@@ -193,6 +314,8 @@ BEGIN
 						'MORTG' as natureInterestCd,
 						COALESCE(tm.loan_no, '') as accountNumberId
 					FROM [edw_core].[tmortgagee] tm
+					INNER JOIN edw_core.tpolicy_history ph ON tm.policy_history_sk = ph.policy_history_sk
+					WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
 					UNION ALL
 					SELECT
 						ai.policy_no, ai.effective_dt, ai.transaction_seq_no,
@@ -225,16 +348,23 @@ BEGIN
 						END as natureInterestCd,
 						COALESCE(tp.customer_id, '') as accountNumberId
 					FROM edw_core.tadditional_interest as ai
-					LEFT JOIN edw_core.tpolicy tp ON ai.policy_no = tp.policy_no AND ai.effective_dt = tp.effective_dt
+					INNER JOIN edw_core.tpolicy_history ph ON ai.policy_history_sk = ph.policy_history_sk
+					INNER JOIN edw_core.tpolicy tp ON ai.policy_no = tp.policy_no AND ai.effective_dt = tp.effective_dt
+					WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
 				) AS jdata
 					WHERE  ptf.policy_no = jdata.policy_no
 						AND ptf.effective_dt = jdata.effective_dt
 						AND ptf.transaction_seq_no = jdata.transaction_seq_no
 				FOR JSON PATH, INCLUDE_NULL_VALUES 
 			) AS Additional_Interests
-			FROM (SELECT policy_no, effective_dt, transaction_seq_no FROM [edw_core].[tmortgagee]
+			FROM (SELECT tm.policy_no, tm.effective_dt, tm.transaction_seq_no FROM [edw_core].[tmortgagee] tm
+					INNER JOIN edw_core.tpolicy_history ph ON tm.policy_history_sk = ph.policy_history_sk
+					WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
 					UNION 
-				SELECT policy_no, effective_dt, transaction_seq_no FROM edw_core.tadditional_interest) as ptf
+				SELECT ai.policy_no, ai.effective_dt, ai.transaction_seq_no FROM edw_core.tadditional_interest ai
+				INNER JOIN edw_core.tpolicy_history ph ON ai.policy_history_sk = ph.policy_history_sk
+				WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
+				) as ptf
 		) temp4
 
 		SELECT temp5.*
@@ -252,6 +382,8 @@ BEGIN
 						,COALESCE(csi.schedule_on_file_in, '') as onFile
 						,cct.class_type as classtype
 						FROM edw_core.tcollection_scheduled_item csi
+						INNER JOIN edw_core.tpolicy_history ph ON csi.policy_history_sk = ph.policy_history_sk
+						AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
 						LEFT JOIN edw_core.tcollection_class_type cct
 						on csi.collection_class_type_sk = cct.collection_class_type_sk
 						WHERE  ptf.policy_no = csi.policy_no
@@ -260,6 +392,8 @@ BEGIN
 					FOR JSON PATH, INCLUDE_NULL_VALUES 
 				) AS Scheduled_Items
 				FROM edw_core.tcollection_scheduled_item as ptf
+				INNER JOIN edw_core.tpolicy_history ph ON ptf.policy_history_sk = ph.policy_history_sk
+				WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
 				group by ptf.policy_no, ptf.effective_dt, ptf.transaction_seq_no
 		) temp5
 
@@ -271,7 +405,7 @@ BEGIN
 			    (
 					SELECT 
 						policyNumber
-						,CONCAT('L', ROW_NUMBER() OVER (PARTITION BY policyNumber, transaction_seq_no ORDER BY policyNumber, transaction_seq_no, (CONCAT(address1, '-', city, '-', [state], '-', RIGHT('00000' + zip, 5), '-', county)))) as location_no
+						,'L1' as location_no
 						,coverageType, coverageCd, coverageTypeDesc, scheduledInd, inVaultInd, classType, [limit], premium, saLimit, hviLimit, address1, address2, city, county, [state], zip, riskType
 					FROM
 					(
@@ -304,7 +438,15 @@ BEGIN
 							,CASE WHEN tcct.class_type = 'Bank Vaulted Jewelry' THEN 1 ELSE 0 END AS inVaultInd
 							,tcct.class_type as classType
 							,floor(tcct.scheduled_limit_amt) as [limit]
-							,pt.premium_amt as premium
+							--,pt.premium_amt as premium
+							,(
+                            	SELECT SUM(subpt.annual_premium_amt)
+                            	FROM edw_core.tpolicy_transaction subpt
+                            	WHERE subpt.policy_sk = pt.policy_sk
+                            	AND subpt.effective_dt_sk = pt.effective_dt_sk
+                            	AND subpt.internal_coverage_sk = pt.internal_coverage_sk
+                            	AND subpt.transaction_seq_no <= pt.transaction_seq_no
+                        	) AS premium
 							,0 as saLimit
 							,floor(tcct.scheduled_highest_value_limit_amt) as hviLimit
 							,tcl.address_line_1 as address1
@@ -330,11 +472,13 @@ BEGIN
 						AND pt.transaction_seq_no = thc.transaction_seq_no
 						LEFT JOIN edw_core.tcollection_location tcl
 						on tcc.collection_location_sk = tcl.collection_location_sk
-						LEFT JOIN edw_core.tcollection_class_type tcct
+						INNER JOIN edw_core.tcollection_class_type tcct
 						on thc.home_coverage_sk = tcct.home_coverage_sk
+						and pt.collection_class_type_sk = tcct.collection_class_type_sk
 						LEFT JOIN edw_core.tinternal_coverage as ic
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
-						WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+						INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
+						WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
 						and coalesce(pt.premium_amt, 0) + coalesce(tcct.scheduled_limit_amt, 0) + coalesce(tcct.scheduled_highest_value_limit_amt, 0) <> 0 
 						and ic.aslob_cd in ('090', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%chedule%' or ic.internal_coverage_cd like '%lux%')
 						--
@@ -369,7 +513,15 @@ BEGIN
 							,0 as inVaultInd
 							,tcct.class_type as classType
 							,floor(tcct.blanket_limit_amt) as [limit]
-							,pt.premium_amt as premium
+							--,pt.premium_amt as premium
+							,(
+                            	SELECT SUM(subpt.annual_premium_amt)
+                            	FROM edw_core.tpolicy_transaction subpt
+                            	WHERE subpt.policy_sk = pt.policy_sk
+                            	AND subpt.effective_dt_sk = pt.effective_dt_sk
+                            	AND subpt.internal_coverage_sk = pt.internal_coverage_sk
+                            	AND subpt.transaction_seq_no <= pt.transaction_seq_no
+                        	) AS premium
 							,floor(tcct.blanket_single_article_limit_amt) as saLimit
 							,floor(tcct.blanket_highest_value_limit_amt) as hviLimit
 							,tcl.address_line_1 as address1
@@ -395,11 +547,13 @@ BEGIN
 						AND pt.transaction_seq_no = thc.transaction_seq_no
 						LEFT JOIN edw_core.tcollection_location tcl
 						on tcc.collection_location_sk = tcl.collection_location_sk
-						LEFT JOIN edw_core.tcollection_class_type tcct
+						INNER JOIN edw_core.tcollection_class_type tcct
 						on thc.home_coverage_sk = tcct.home_coverage_sk
+						and pt.collection_class_type_sk = tcct.collection_class_type_sk
 						LEFT JOIN edw_core.tinternal_coverage as ic
 						ON pt.internal_coverage_sk = ic.internal_coverage_sk
-						WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+						INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
+						WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
 						and coalesce(pt.premium_amt, 0) + coalesce(tcct.blanket_limit_amt, 0) + coalesce(tcct.blanket_single_article_limit_amt, 0) + coalesce(tcct.blanket_highest_value_limit_amt, 0) <> 0 
 						and ic.aslob_cd in ('090', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%lanket%' or ic.internal_coverage_cd like '%lux%')
 					) ud
@@ -542,7 +696,7 @@ BEGIN
 			WHEN LOWER(hc.residence_type) = 'tenant' THEN '04'
 			WHEN LOWER(hc.residence_type) = 'homeowners' THEN '05'
 			WHEN LOWER(hc.residence_type) IN (
-				'condominium', 'condminium', 'condo'
+				'condominium', 'condminium', 'condo', 'condo/co-op'
 			) THEN '06'
 			ELSE 'NA'
 			END as [092_PolicyTypeCd]
@@ -698,7 +852,7 @@ BEGIN
 		,jsi.Scheduled_Items
 		,pt.transaction_seq_no as [transaction_seq_no]
 		--
-		,pt.create_ts as policy_transaction_create_ts
+		,pt.transaction_ts as policy_history_transaction_ts
 		--
 		,tprc.national_producer_no
 		INTO [edw_temp].[policy_ivans_home_temp2]
@@ -757,11 +911,11 @@ BEGIN
            AND pt.transaction_seq_no = jsi.transaction_seq_no
 		LEFT JOIN (
 				select broker_sk, broker_id, national_producer_no
-				,ROW_NUMBER() OVER (PARTITION BY broker_id ORDER BY broker_sk DESC) AS rn
+				    ,ROW_NUMBER() OVER (PARTITION BY broker_id ORDER BY producer_sk DESC) AS rn
 				from edw_core.tproducer
 			) tprc
 		ON p.broker_id = tprc.broker_id AND tprc.rn = 1
-		WHERE cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+		WHERE cast(pt.transaction_ts as datetime2(7)) > @last_source_extract_ts
 		AND b.ivans_y_account IS NOT NULL
 
 		-- Start Insert process
@@ -1181,7 +1335,7 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_transaction_create_ts) FROM [edw_temp].[policy_ivans_home_temp2] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_history_transaction_ts) FROM [edw_temp].[policy_ivans_home_temp2] t1),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp1];
 		DROP TABLE IF EXISTS [edw_temp].[policy_ivans_home_temp2];

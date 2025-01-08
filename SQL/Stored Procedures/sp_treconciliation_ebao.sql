@@ -6,6 +6,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 11/08/23		Yunus Mohammed				1. Created this procedure 
 -- 11/27/23		Yunus Mohammed				2. Updated Merge Statement
+-- 07/23/24		Yunus Mohammed				3. Updated 30 days to 90 days
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_treconciliation_ebao]
@@ -99,7 +100,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=CAST(DATEADD(DAY, -30, GETDATE()) AS DATE);
+		SET @new_last_source_extract_ts=CAST(DATEADD(DAY, -90, GETDATE()) AS DATE);
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts
 		
 		-- Update audit table

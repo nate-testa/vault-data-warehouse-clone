@@ -1,19 +1,31 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_tvendor_report_stage_data]    Script Date: 2/27/2024 11:09:14 AM ******/
+﻿/****** Object:  StoredProcedure [edw_core].[sp_tvendor_report_stage_data]    Script Date: 5/8/2024 11:56:21 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
--- =================================================================================================
+-- =======================================================================================================================
 -- Author:	Architha Gudimalla		
 -- Description: This procedures loads vendor reports data
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------
 -- 11/28/23		Architha Gudimalla				1. Created this procedure  
--- 03/10/23		Architha Gudimalla				2. Updated the label in marge
--- ================================================================================================= 
+-- 03/10/23		Architha Gudimalla				2. Updated the label in merge
+-- 03/10/24		Architha Gudimalla				3. Updated the label with replace for some too long labels for LC360
+-- 05/08/24		Architha Gudimalla				4. Updated the label for another long label for LC360
+-- 05/20/24		Architha Gudimalla				5. Added accri.Label = accri.[Group] to table main case statement
+-- 05/28/24		Architha Gudimalla				6. Updated the label for another long label for LC360
+-- 06/11/24		Architha Gudimalla				7. Updated the label for another long label for LC360
+-- 06/12/24		Architha Gudimalla				8. Excluded null label for LC360
+-- 09/21/24		Architha Gudimalla				9. Updated the label for another long label for LC360
+-- 10/09/24		Architha Gudimalla				10. Updated to left join for insert into @tablename_main
+-- 10/09/24		Architha Gudimalla				11. Added new column - IsReportFromCache, VI33823
+-- 10/17/24		Architha Gudimalla				12. Updated logic for IsReportFromCache
+-- 10/20/24		Architha Gudimalla				13. Updated the label for another long label for LC360
+-- 12/17/24		Architha Gudimalla				14. Updated the label for another long label for LC360
+-- ======================================================================================================================= 
 
-CREATE OR ALTER     PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
+CREATE OR ALTER       PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
 @in_source varchar(255) = null
 AS
 BEGIN
@@ -64,13 +76,30 @@ BEGIN
 		merge into edw_stage.tvendor_report_field as target
 		using
 		(
-			select  accr.source, accr.reporttype, accri.Category, accri.[Group], replace(replace(replace(replace(Label,'[',' - '),']',''),'''',''),',','') Label, 
-					max(accri.CreatedDate) CreatedDate, max(GREATEST(accri.UpdatedDate,accri.CreatedDate)) UpdatedDate 
-			from	edw_stage.Account acc, edw_stage.AccountReport accr, edw_stage.AccountReportItem accri
-			where	accr.AccountId=acc.Id  and source <> 'HazardHub'
-			and		accr.Id =accri.ReportId 
-			AND		GREATEST(accri.UpdatedDate,accri.CreatedDate)>@last_source_extract_ts
-			group by accr.source, accr.reporttype, accri.Category, accri.[Group], replace(replace(replace(replace(Label,'[',' - '),']',''),'''',''),',','')
+			select a.source, a.reporttype, a.Category, a.[Group], a.Label, 
+					max(a.CreatedDate) CreatedDate, max(a.UpdatedDate) UpdatedDate 
+			from
+			(
+				select  accr.source, accr.reporttype, accri.Category, accri.[Group], 
+						replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(label,
+						',',''),
+						'Could not get over to dock. Odd situation. Their dock is on the neighbors side due to the neighbors tram to his dock. With lake so low, could not navigate the loose rocks in my business attire. ','Could not get to dock as its on the neighbors side. '),
+						'Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)','Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)'),
+						' Toilet Supply Lines That Have Plastic B-nut Connectors and',' Toilet Lines having Plastic B-nut Conn and'),
+						'when construction starts on second floor','construction on 2nd fl'),
+						'Water Leak Detection Alarm Systems','Water Leak Detectn Alarm Sys'),
+						'Bar sink cabinet next to icemaker. Water in and under cab. Client called plumber while I was there.','Bar sink cab next to icemaker. Water in under cab. Client called plumber while I was there.'),
+						'[',' - '),
+						']',''),
+						'''','') Label, 
+						accri.CreatedDate, GREATEST(accri.UpdatedDate,accri.CreatedDate) UpdatedDate 
+				from	edw_stage.Account acc, edw_stage.AccountReport accr, edw_stage.AccountReportItem accri
+				where	accr.AccountId=acc.Id  and source <> 'HazardHub'
+				and		accr.Id =accri.ReportId  
+				AND		GREATEST(accri.UpdatedDate,accri.CreatedDate)>@last_source_extract_ts
+			) a
+			where isnull(label,'') <> ''
+			group by a.source, a.reporttype, a.Category, a.[Group], a.label
 		) as source 
 		on source.source = target.source 
 		and source.reporttype = target.reporttype 
@@ -111,22 +140,23 @@ BEGIN
 		select @sql='insert into ' 
 					+  @tablename_main 
 					+ ' select	 acc.policynumber, acc.effectivedate, 
-												GREATEST(accri.UpdatedDate,accri.CreatedDate) UpdatedDate ,  accri.CreatedDate, 
+												GREATEST(accr.UpdatedDate,accri.CreatedDate) UpdatedDate ,  accr.CreatedDate, 
 												accr.dateordered, accr.dateTimeRecieved, accr.dateTimeCompleted, accr.TransactionStatus, accr.[source], accr.reporttype, 
-												case when accri.Category  = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(accri.Label,''['','' - ''),'']'',''''),'''''''',''''))
-													when accri.Category <> accri.[Group] then concat(accri.Category, '' - '', accri.[Group], '' - '',replace(replace(replace(accri.Label,''['','' - ''),'']'',''''),'''''''',''''))
-													else ''''
-												end field_name,accri.[Value] 
-										from	edw_stage.[Account] acc, edw_stage.[AccountReport] accr, edw_stage.AccountReportItem accri
-										where	accr.AccountId=acc.Id 
-										and		accr.Id =accri.ReportId 
-										and source <> ''HazardHub'' AND GREATEST(accr.UpdatedDate,accr.CreatedDate) > '''
+												case when accri.Category = accri.[Group] or accri.Label = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(replace(replace(replace(replace(replace(replace(accri.label,''Could not get over to dock. Odd situation. Their dock is on the neighbors side due to the neighbors tram to his dock. With lake so low, could not navigate the loose rocks in my business attire. '',''Could not get to dock as its on the neighbors side. ''),''Water Leak Detection Alarm Systems'',''Water Leak Detectn Alarm Sys''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''Bar sink cabinet next to icemaker. Water in and under cab. Client called plumber while I was there.'',''Bar sink cab next to icemaker. Water in under cab. Client called plumber while I was there.''),''['','' - ''),'']'',''''),'''''''',''''))
+													 when accri.Category <> accri.[Group] then concat(accri.Category, '' - '', accri.[Group], '' - '',replace(replace(replace(replace(replace(replace(replace(replace(replace(accri.label,''Could not get over to dock. Odd situation. Their dock is on the neighbors side due to the neighbors tram to his dock. With lake so low, could not navigate the loose rocks in my business attire. '',''Could not get to dock as its on the neighbors side. ''),''Water Leak Detection Alarm Systems'',''Water Leak Detectn Alarm Sys''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''Bar sink cabinet next to icemaker. Water in and under cab. Client called plumber while I was there.'',''Bar sink cab next to icemaker. Water in under cab. Client called plumber while I was there.''),''['','' - ''),'']'',''''),'''''''',''''))
+													 else ''''
+												end field_name,accri.[Value], case when accr.IsReportFromCache = 1 then ''Yes'' else ''No'' end IsReportFromCache
+										from	edw_stage.[Account] acc
+										inner join edw_stage.[AccountReport] accr on accr.AccountId=acc.Id 
+										left join edw_stage.AccountReportItem accri on accr.Id =accri.ReportId 
+										where source <> ''HazardHub'' 
+										AND GREATEST(accr.UpdatedDate,accr.CreatedDate) > '''
 					+  cast(@last_source_extract_ts as varchar(255))
 					--+ ''' and source = '''
 					--+  @in_source 
 					+ ''''
 
-		--print @sql
+		print @sql
 		EXECUTE sp_executesql @sql 
 
 		SET @rows_affected=@rows_affected + @@ROWCOUNT;  

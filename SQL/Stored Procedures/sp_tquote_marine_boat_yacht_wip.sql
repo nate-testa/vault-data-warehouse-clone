@@ -1,0 +1,155 @@
+-- ====================================================================================================================================
+-- Author:		Yunus Mohammed
+-- Description: This stored procedure insert and update info related to marine boat and yacht quote in progress
+---------------------------------------------------------------------------------------------------------------------------------------
+-- Change date          |Author						|	Change Description
+---------------------------------------------------------------------------------------------------------------------------------------
+-- 11/22/24     		Yunus Mohammed			    1. Created the procedure
+-- ====================================================================================================================================
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_marine_boat_yacht_wip]
+AS
+BEGIN
+    -- SET NOCOUNT ON added to prevent extra result sets from
+    -- interfering with SELECT statements.
+    SET NOCOUNT ON
+
+	BEGIN TRY
+		DECLARE @last_source_extract_ts DATETIME2(7)
+		DECLARE @etl_audit_sk INT
+		DECLARE @new_last_source_extract_ts DATETIME2(7)
+		DECLARE @rows_affected INT
+		DECLARE @process_nm VARCHAR(255)=OBJECT_NAME(@@PROCID)
+		DECLARE @current_date DATETIME=GETDATE()
+		DECLARE @parameter_desc VARCHAR(255)
+		-- Get last source extract date
+		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
+		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+
+		--************Start************
+
+        -- Step1 limit amount of rows.
+		DROP TABLE IF EXISTS [edw_temp].[tquote_marine_boat_yacht_wip_temp1];
+		SELECT            
+            PolicyNumber AS quote_no, EffectiveDate as effective_dt,ExpirationDate as expiration_dt,           
+            CreatedDate,UpdatedDate,
+            [Product] as boat_yatch_product_type,                
+            make as boat_yacht_make,
+            Model as boat_yacht_model,
+            [Type] as boat_yatch_type,
+            [Year] as boat_yacht_year,
+            HullId as boat_yatch_hull_id,
+            HullLength as boat_yatch_hull_length,
+            EngineMake as boat_yatch_engine_make,
+            EngineModel as boat_yatch_engine_model,                
+            HorsePowerPerEngine as boat_yatch_horse_power_per_engine,
+            SpeedFactor as boat_yatch_speed,
+            MinimumEarnedPremiumEndorsementLimit as boat_yatch_mep,
+            NumberOfEngines as boat_yatch_no_of_engines,
+            source_system_sk
+		INTO [edw_temp].[tquote_marine_boat_yacht_wip_temp1]
+        FROM
+            (
+                SELECT
+                    acc.PolicyNumber, acc.EffectiveDate, acc.ExpirationDate, acc.CreatedDate, acc.UpdatedDate,
+                    acco.[Index], acco.[UniqueId], accof.[Field], accof.[Value],
+                    CASE 
+                        WHEN acc.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
+                        ELSE 4 --(Metal)
+                    END as [source_system_sk]
+                FROM
+                    (
+                      SELECT *
+                            FROM [edw_stage].[Account] AS a
+                            WHERE
+                            NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where b.AccountId=a.id)
+                            AND GREATEST(CreatedDate,UpdatedDate) > @last_source_extract_ts
+                            AND a.PolicyNumber IS NOT NULL
+                    ) acc
+                INNER JOIN [edw_stage].[Product] p ON p.Id = acc.ProductId
+                INNER JOIN [edw_stage].[AccountObject] acco ON acco.AccountId = acc.Id
+                INNER JOIN [edw_stage].[AccountObjectField] accof ON accof.ObjectId = acco.id
+                WHERE
+                    p.[Name] = 'Marine Boat & Yacht'
+                    AND p.ProductLine = 'PersonalLines'
+                    AND acco.[ObjectType] = 'BoatYacht'
+            ) t
+        PIVOT 
+            (
+                MAX([Value]) FOR [Field] IN 
+                (
+                    [Product],make,Model,[Type],[Year],HullId,HullLength,EngineMake,EngineModel,HorsePowerPerEngine,
+                    SpeedFactor,MinimumEarnedPremiumEndorsementLimit,NumberOfEngines
+                )
+            ) pivottable       
+        
+
+		-- Start Merge process
+		MERGE [edw_core].[tquote_marine_boat_yacht] AS [target]
+		USING [edw_temp].[tquote_marine_boat_yacht_wip_temp1] AS [source]
+		ON [source].quote_no = target.quote_no
+		-- For Inserts
+		WHEN NOT MATCHED BY TARGET THEN
+		INSERT (
+            quote_no,effective_dt,expiration_dt,boat_yatch_product_type,boat_yatch_mep,boat_yacht_make,
+            boat_yacht_model,boat_yatch_type,boat_yacht_year,boat_yatch_hull_id,boat_yatch_hull_length,boat_yatch_engine_make,
+            boat_yatch_engine_model,boat_yatch_no_of_engines,boat_yatch_horse_power_per_engine,boat_yatch_speed,
+            source_system_sk,create_ts,update_ts,etl_audit_sk
+			)
+		VALUES (
+            quote_no,effective_dt,expiration_dt,boat_yatch_product_type,boat_yatch_mep,boat_yacht_make,
+            boat_yacht_model,boat_yatch_type,boat_yacht_year,boat_yatch_hull_id,boat_yatch_hull_length,boat_yatch_engine_make,
+            boat_yatch_engine_model,boat_yatch_no_of_engines,boat_yatch_horse_power_per_engine,boat_yatch_speed,
+            source_system_sk,getdate(),getdate(),@etl_audit_sk
+            )
+		-- For Updates
+		WHEN MATCHED THEN UPDATE 
+		SET
+            [target].effective_dt = [source].effective_dt,
+            [target].expiration_dt = [source].expiration_dt,
+            [target].boat_yatch_product_type = [source].boat_yatch_product_type,
+            [target].boat_yatch_mep = [source].boat_yatch_mep,
+            [target].boat_yacht_make = [source].boat_yacht_make,
+            [target].boat_yacht_model = [source].boat_yacht_model,
+            [target].boat_yatch_type = [source].boat_yatch_type,
+            [target].boat_yacht_year = [source].boat_yacht_year,
+            [target].boat_yatch_hull_id = [source].boat_yatch_hull_id,
+            [target].boat_yatch_hull_length = [source].boat_yatch_hull_length,
+            [target].boat_yatch_engine_make = [source].boat_yatch_engine_make,
+            [target].boat_yatch_engine_model = [source].boat_yatch_engine_model,
+            [target].boat_yatch_no_of_engines = [source].boat_yatch_no_of_engines,
+            [target].boat_yatch_horse_power_per_engine = [source].boat_yatch_horse_power_per_engine,
+            [target].boat_yatch_speed = [source].boat_yatch_speed,
+            [target].update_ts = getdate()
+        ;
+
+        --************End************
+
+		SET @rows_affected=@@ROWCOUNT;
+		
+		-- Update control table
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(Greatest(CreatedDate,UpdatedDate)) FROM edw_temp.[tquote_marine_boat_yacht_wip_temp1]),@last_source_extract_ts);
+        EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
+		-- Update audit table
+		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
+
+        -- Drop temp table
+        DROP TABLE IF EXISTS edw_temp.[tquote_marine_boat_yacht_wip_temp1];
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @error_message nvarchar(4000)
+		SET @error_message = 'Error Number:' + ISNULL(CAST(ERROR_NUMBER() AS NVARCHAR(100)),'') + 
+						    ' Error State:' + ISNULL(CAST(ERROR_STATE() AS NVARCHAR(100)),'')
+							+ ' Error Severity:' + ISNULL(CAST(ERROR_SEVERITY() AS NVARCHAR(100)),'') +
+							CHAR(13) + 'Error Procedure:' + ISNULL(ERROR_PROCEDURE(),'') + ' Error Line:' + ISNULL(CAST(ERROR_LINE() AS NVARCHAR(100)),'') +
+							CHAR(13) + 'Error Message:' + ISNULL(ERROR_MESSAGE(),'')
+	
+		EXEC [edw_core].[sp_upd_error_tetl_audit] @etl_audit_sk,@error_message;
+
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
+	
+    END CATCH
+END
+GO

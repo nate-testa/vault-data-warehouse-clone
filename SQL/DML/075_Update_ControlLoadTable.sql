@@ -1,0 +1,5 @@
+update [edw_stage].[ControlLoadTable]
+set CopySourceSettings = '{              "isolationLevel": "ReadUncommitted",              "partitionOption": "None",              "sqlReaderQuery": null,              "partitionLowerBound": null,              "partitionUpperBound": null,              "partitionColumnName": null,              "partitionNames": null          }'
+,CopySinkSettings = '{   "preCopyScript": "TRUNCATE TABLE edw_stage.BrokerAge",   "tableOption": null,   "writeBehavior": "insert",   "sqlWriterUseTableLock": true,   "disableMetricsCollection": false,   "upsertSettings": null  }'
+,DataLoadingBehaviorSettings = '{   "dataLoadingBehavior": "FullLoad",   "watermarkColumnName": null,   "watermarkColumnType": null,   "watermarkColumnStartValue": null  }'
+where JSON_value(SourceObjectSettings,'$.table') = 'BrokerAge';

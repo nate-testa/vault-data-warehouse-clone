@@ -3,12 +3,17 @@ GO
 
 SET QUOTED_IDENTIFIER ON
 GO
-
--- =============================================
--- Author:		Hernando Gonzalez Garcia
--- Create Date: <Create Date, , >
+ 
+-- ================================================================================================================================================
 -- Description: This procedures insert and update info related to Additional Interest
--- =============================================
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- 09/15/23		Hernando Gonzalez Garcia		1. Created the proc
+-- 08/12/24     Architha Gudimalla              2. Added logic for additional_interest_deleted_in
+-- 08/12/24     Architha Gudimalla              3. Added additional interest vehicle
+-- 08/15/24     Architha Gudimalla              4. Update additional_interest_deleted_in to use Yes/No instead of 1/0
+-- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tadditional_interest]
 AS
 BEGIN
@@ -39,12 +44,16 @@ BEGIN
 			,[index] as additional_interest_seq_no
 			,InterestType, EntityType
 			,[EntityName] as EntityName
-			,DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew
+			,DescriptionOfProperty, FirstName, LastName
+			,AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry
+			,AnyCommercialExposures, WatercraftOrEmployCrew
 			,[Name]
+			,vehicle
 			--,4 as [source_system_sk] --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
 			,product_cd
+			,IsDeletedOnPolicyChange as additional_interest_deleted_in
 		INTO [edw_temp].[tadditional_interest_temp1]
 		FROM
 			(
@@ -52,12 +61,17 @@ BEGIN
 				acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, acc.PolicyChangeNumber
 				,his.[policy_history_sk] as [policy_history_sk]
 				,acct.[Index]
-				,accto.[Field], accto.[Value]
+				,accto.[Field]
+				,CASE
+                        WHEN accto.Field = 'Vehicle' THEN CAST(accto.ReferenceObjectId AS nvarchar(3800))
+                        ELSE accto.[Value]
+                    END AS [Value]  
 				,acc.CreatedDate, acc.UpdatedDate
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
 				 end as [source_system_sk] --20230717 added
-				 ,ProductCode as product_cd
+				 ,ProductCode as product_cd 
+				 ,CASE WHEN acct.IsDeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END as IsDeletedOnPolicyChange
 			FROM
 				(SELECT
 					*
@@ -80,9 +94,37 @@ BEGIN
 		PIVOT 
 			(
 				MAX([Value]) FOR [Field] IN (
-					InterestType, EntityType, EntityName, DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew, [Name]
+					InterestType, EntityType, EntityName, DescriptionOfProperty, FirstName, LastName, 
+					AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, 
+					AnyCommercialExposures, WatercraftOrEmployCrew, [Name], vehicle
 					)
-			) pivottable
+			) pivottable 
+
+			
+		drop table if EXISTS [edw_temp].[tadditional_interest_temp2]
+
+		--Get auto_vehicle_sk
+		SELECT 
+			acct.Id AS ReferenceObjectId,
+			acct.UniqueId,
+			av.auto_vehicle_sk
+		INTO [edw_temp].[tadditional_interest_temp2]
+		FROM
+			(
+				SELECT
+				*
+				FROM [edw_stage].[AccountTransaction]
+				WHERE [State] ='ISSUED'
+				AND PolicyNumber in (SELECT DISTINCT PolicyNumber FROM [edw_temp].[tadditional_interest_temp1])
+			) acc
+			INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
+			INNER JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
+			inner join (select distinct vehicle from [edw_temp].[tadditional_interest_temp1]) a on a.vehicle = acct.id
+			LEFT JOIN [edw_core].[tauto_vehicle] AS av
+				ON av.policy_no = acc.PolicyNumber
+				AND av.effective_dt = acc.EffectiveDate
+				AND av.vehicle_unique_id = acct.[UniqueId]
+			WHERE acct.ObjectType = 'Vehicle'
 			
 		-- Start Insert process
 		INSERT INTO [edw_core].[tadditional_interest] (
@@ -116,6 +158,8 @@ BEGIN
       ,[update_ts]
       ,[etl_audit_sk]
 	  ,[product_cd]
+	  ,additional_interest_deleted_in
+	  ,auto_vehicle_sk
 		)
 		SELECT [PolicyNumber]
       ,[EffectiveDate]
@@ -142,13 +186,16 @@ BEGIN
       ,[AddressCountry]
       ,[AnyCommercialExposures]
       ,[WatercraftOrEmployCrew]
-      ,[source_system_sk]
+      ,a.[source_system_sk]
       ,getdate()
       ,getdate()
 	  ,@etl_audit_sk
 	  ,[product_cd]
+	  ,additional_interest_deleted_in
+	  ,t2.auto_vehicle_sk
 		FROM 
-			[edw_temp].[tadditional_interest_temp1]
+			[edw_temp].[tadditional_interest_temp1] a
+		LEFT JOIN [edw_temp].[tadditional_interest_temp2] AS t2	ON a.vehicle = t2.ReferenceObjectId;
 
 		SET @rows_affected=@@ROWCOUNT;
 

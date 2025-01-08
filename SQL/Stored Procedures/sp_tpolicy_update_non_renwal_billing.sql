@@ -7,6 +7,7 @@
 -- 09/08/23		Architha Gudimalla			1. Created this procedure  
 -- 10/05/23		Architha Gudimalla			2. Added update statements for policy_status, latest_term_in
 -- 10/17/23		Architha Gudimalla			3. Added logic for non_renewal_in, pending_non_renewal_in, non_renewal_note_desc, non_renewal_sub_note_desc
+-- 05/03/24		Yunus Mohammed				4. Delta identifier updated
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_non_renwal_billing]
@@ -52,7 +53,7 @@ BEGIN
 			non_renewal_sub_note_desc 	= b.NonRenewalStateSubNote
 		from edw_core.tpolicy a
 		inner join (select policynumber, EffectiveDate, NonRenewalState, NonRenewalStateNote, NonRenewalStateSubNote, IsConditionalRenewal  from edw_stage.Account  acct  
-					where	CreatedDate --UpdatedDate 
+					where	UpdatedDate --CreatedDate
 							> @last_source_extract_ts
 					) b on	a.policy_no = b.policynumber and		a.effective_dt = cast(b.EffectiveDate as date);
 

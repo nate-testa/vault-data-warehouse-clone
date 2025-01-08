@@ -1,8 +1,12 @@
-﻿-- =============================================
+﻿-- ================================================================================================================================================
 -- Author:		Yunus Mohammed
--- Create Date: <Create Date, , >
+-- Create Date: 2023-07-01
 -- Description: This procedures insert pel watercraft data
--- =============================================
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+--------------------------------------------------------------------------------------------------------------------------------------------------
+-- 15/08/24		Alberto Almario					1. New Column watercraft_deleted_in
+-- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_watercraft]
 
 AS
@@ -28,7 +32,9 @@ BEGIN
 		drop table if exists edw_temp.tpel_watercraft_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,[Index],policy_history_sk,source_system_sk,
-			IssuedDate,[Year],Make,Model,[Length],HullValue,Horsepower,AnyWatercraftOwnedTrustOrLlc,AnyWatercraftCaptainOrCrew
+			IssuedDate,[Year],Make,Model,[Length],HullValue,Horsepower,AnyWatercraftOwnedTrustOrLlc,AnyWatercraftCaptainOrCrew,
+			MotorType,MilesPerHour,SailboatPowerType
+			,watercraft_deleted_in
 			into edw_temp.tpel_watercraft_temp1
 		from
 		(
@@ -42,6 +48,7 @@ BEGIN
 			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,act.IssuedDate,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			atvof.Field,atvof.[Value]
+			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END as watercraft_deleted_in
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
@@ -60,14 +67,16 @@ BEGIN
 				and atvo.ObjectType='Watercraft'
 				and atvof.Field IN 
 				(
-					'Year','Make','Model','Length','HullValue','Horsepower','AnyWatercraftOwnedTrustOrLlc','AnyWatercraftCaptainOrCrew'
+					'Year','Make','Model','Length','HullValue','Horsepower','AnyWatercraftOwnedTrustOrLlc','AnyWatercraftCaptainOrCrew',
+					'MotorType','MilesPerHour','SailboatPowerType'
 				)
 				and act.IssuedDate > @last_source_extract_ts
 			) as t
 		) as t
 		pivot 
 		(
-			max([Value]) FOR Field IN ([Year],Make,Model,[Length],HullValue,Horsepower,AnyWatercraftOwnedTrustOrLlc,AnyWatercraftCaptainOrCrew)
+			max([Value]) FOR Field IN ([Year],Make,Model,[Length],HullValue,Horsepower,AnyWatercraftOwnedTrustOrLlc,AnyWatercraftCaptainOrCrew,
+										MotorType,MilesPerHour,SailboatPowerType)
 		) as pivottable
 
 		INSERT INTO [edw_core].[tpel_watercraft]
@@ -75,7 +84,9 @@ BEGIN
 			policy_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no,policy_history_sk,
 			watercraft_no,watercraft_year,watercraft_make,watercraft_model,	watercraft_length,watercraft_hull_value,
 			watercraft_horsepower,vessels_owned_trust_llc_in,vessels_with_captain_crew_in,
-			source_system_sk,create_ts,	update_ts,etl_audit_sk
+			source_system_sk,create_ts,	update_ts,etl_audit_sk,
+			watercraft_motor_type, watercraft_miles_per_hr, watercraft_sailboat_power_type
+			,watercraft_deleted_in
 		)
 		SELECT
 			PolicyNumber AS policy_no,EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
@@ -83,7 +94,9 @@ BEGIN
 			[Index] as watercraft_no,[Year] AS watercraft_year,Make AS watercraft_make,Model AS watercraft_model,
 			[Length] AS watercraft_length,HullValue AS watercraft_hull_value,Horsepower AS watercraft_horsepower,
 			AnyWatercraftOwnedTrustOrLlc AS vessels_owned_trust_llc_in,AnyWatercraftCaptainOrCrew AS vessels_with_captain_crew_in,
-			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
+			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,
+			MotorType AS watercraft_motor_type,MilesPerHour AS watercraft_miles_per_hr,SailboatPowerType AS watercraft_sailboat_power_type
+			,watercraft_deleted_in
 		FROM
 			edw_temp.tpel_watercraft_temp1 AS ttpv
 

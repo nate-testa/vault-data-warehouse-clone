@@ -8,6 +8,8 @@
 ------------------------------------------------------------------------------------------------------------------------------
 -- 10/24/2023 			Yunus Mohammed					1. Created this procedure 
 -- 11/11/23		        Sandeep Gundreddy		        2. modified quote_history_sk logic and removed transaction_effective_dt
+-- 02/05/24				Hernando Gonzalez				3. Added Limits Indicator
+-- 11/19/24				Yunus Mohammed					4. AD7763 - Added driver_unique_id
 -- =========================================================================================================================== 
 CREATE or alter  PROCEDURE [edw_core].[sp_tquote_pel_driver]
 
@@ -35,7 +37,8 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,policy_history_sk,source_system_sk,[Index],
 			CreatedDate,FirstName,LastName,Birthdate,InsuredType,LicenseStatus,LicenseNumber,
-			Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear
+			Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,DriverLimitsIndicator,
+			driver_unique_id
 			into edw_temp.tquote_pel_driver_temp1
 		from
 		(
@@ -47,7 +50,8 @@ BEGIN
 			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
 			CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.quote_history_sk policy_history_sk,
 			act.[Number] AS transaction_seq_no ,atvo.[Index],
-			act.CreatedDate,CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value]
+			act.CreatedDate,CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
+			atvof.Field,atvof.[Value],atvo.UniqueId as driver_unique_id
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
@@ -67,7 +71,7 @@ BEGIN
 				and atvof.Field IN 
 				(
 					'FirstName','LastName','Birthdate','InsuredType','LicenseStatus','LicenseNumber',
-					'Model','LicenseCountry','LicenseState','MiddleName','Suffix','Prefix','LicenseYear'
+					'Model','LicenseCountry','LicenseState','MiddleName','Suffix','Prefix','LicenseYear','DriverLimitsIndicator'
 				)
 				and act.CreatedDate > @last_source_extract_ts
 			) as t
@@ -75,14 +79,14 @@ BEGIN
 		pivot 
 		(
 			max(Value) FOR Field IN (FirstName,LastName,Birthdate,InsuredType,LicenseStatus,LicenseNumber,
-					Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear)
+					Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,DriverLimitsIndicator)
 		) as pivottable
 			
 		INSERT INTO [edw_core].[tquote_pel_driver]
 		(
 			quote_no,effective_dt,expiration_dt,transaction_seq_no,quote_history_sk,
 			driver_no,prefix,first_nm,middle_nm,last_nm,suffix,birth_dt,license_status,license_country_nm,license_state_cd,license_year,
-			license_no,source_system_sk,create_ts,update_ts,etl_audit_sk
+			license_no,source_system_sk,create_ts,update_ts,etl_audit_sk, driver_limit_type,driver_unique_id
 		)
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,
@@ -91,7 +95,8 @@ BEGIN
 			LastName AS last_nm,Suffix AS suffix,Birthdate AS birth_dt,LicenseStatus AS license_status,
 			LicenseCountry AS license_country_nm,LicenseState AS license_state_cd,LicenseYear AS license_year,
 			LicenseNumber AS license_no,
-			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
+			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk, 
+			DriverLimitsIndicator as driver_limit_type,driver_unique_id
 		FROM
 			edw_temp.tquote_pel_driver_temp1 AS ttlc
 

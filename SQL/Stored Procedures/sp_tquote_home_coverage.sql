@@ -4,12 +4,20 @@
 ------------------------------------------------------------------------------------------------------------------------------
 -- Change date			|Author						|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
--- 10/23/2023 			Yunus Mohammed				1. Created this procedure 
+-- 10/23/23 			Yunus Mohammed				1. Created this procedure 
 -- 11/11/23				Sandeep Gundreddy		    2. modified  logic
 -- 11/13/23				Sandeep Gundreddy		    3. modified quote_home_location_sk logic
 -- 11/30/23				Yunus Mohammed		        3. added new columns
 -- 12/06/23				Alberto Almario				4. Added new field WindstormOrHailDeductibleManual
 -- 22/02/24		        Hernando Gonzalez			5. Added new fields aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt
+-- 12/06/24			    Alberto Almario				6. Added new filed nc_bureau_rate
+-- 07/12/24				Yunus Mohammed				7. Added new fields stated_limits_policy_in and risk_sharing_policy_in
+-- 08/13/24				Yunus Mohammed				8. Updated wind_derived_deductible logic
+-- 08/20/24				Yunus Mohammed				9. Updated wind_derived_deductible logic
+-- 09/03/24				Yunus Mohammed				10. Added new column no_of_family_units_in_structures
+-- 10/02/24				Yunus Mohammed				11. Added new column fortified_roof_credit
+-- 10/31/24		        Hernando Gonzalez			12. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
+-- 12/02/24				Yunus Mohammed				13. AD-7834 Added new fields.
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage]
 
@@ -137,8 +145,15 @@ BEGIN
 				reinsurance_designation, reinsurance_layered_program_in, reinsurance_attachment_limit_amt, reinsurance_total_tiv_amt,
 				wildfire_threat, wildfire_hazard_severity,
 				aop_deductible_manual,water_deductible_manual,wildfire_deductible_manual,wind_or_hailstorm_deductible_manual,
-				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt, 
+				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, 
+				aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt, 
 				waive_inspection_in, waive_inspection_reason, inspection_note, rms_reviewed_in,
+				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,no_of_family_units_in_structures,fortified_roof_credit,
+				facultative_reinsurance_in, layered_limits_in, [dwelling_limit_100_pc_value_amt], [other_structures_limit_100_pc_value_amt], 
+				[contents_limit_100_pc_value_amt], [loss_of_use_100_pc_value_amt], facultative_attachment_point, facultative_limit_amt, 
+				facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, 
+				newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
+				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			OUTPUT inserted.quote_home_coverage_sk INTO edw_temp.tquote_home_coverage_temp2
@@ -163,13 +178,32 @@ BEGIN
 				tthc.ExcludeInflationFactor AS exclude_inflation_factor_in,tthc.AopDeductible AS aop_deductible,
 				tthc.HurricaneDeductible AS hurricane_deductible,
 				tthc.WaterDeductible AS water_deductible,
-				tthc.WildfireDeductible AS wildfire_deductible,
+				tthc.WildfireDeductible AS wildfire_deductible,				
 				CASE
-					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' THEN HurricaneDeductible
-					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' THEN HurricaneOrNamedStormDeductible
-					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' THEN NamedStormDeductible
-					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' THEN TornadoorHailstormDeductible
-					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') != '' THEN WindStormOrHailDeductible
+					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' AND tthc.HurricaneDeductible like '%Exclude Wind%' THEN 'Exclude'
+					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' AND tthc.HurricaneOrNamedStormDeductible like '%Exclude Wind%' THEN 'Exclude'
+					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' AND (tthc.HurricaneOrNamedStormDeductible like '%aop applies%' or tthc.HurricaneOrNamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' AND tthc.NamedStormDeductible like '%Exclude Wind%' THEN 'Exclude'
+					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' AND (tthc.NamedStormDeductible like '%aop applies%' or tthc.NamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND tthc.TornadoorHailstormDeductible like '%Exclude Wind%' THEN 'Exclude'
+					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND (tthc.TornadoorHailstormDeductible like '%aop applies%' or tthc.TornadoorHailstormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') != '' AND tthc.WindStormOrHailDeductible like '%Exclude Wind%' THEN 'Exclude'
+					WHEN ISNULL(tthc.WindStormOrHailDeductible,'') != '' AND
+					(
+						tthc.WindStormOrHailDeductible like '%aop applies%' OR 
+						tthc.WindStormOrHailDeductible like '%aopApplies%' OR
+						tthc.WindStormOrHailDeductible like '%AOP Deductible%'
+
+					) THEN 'AOP Applies'				
+					WHEN ISNULL(tthc.HurricaneDeductible,'')  NOT IN ('','0') THEN HurricaneDeductible
+					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') NOT IN ('','0') THEN HurricaneOrNamedStormDeductible
+					WHEN ISNULL(tthc.NamedStormDeductible,'') NOT IN ('','0') THEN NamedStormDeductible
+					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') NOT IN ('','0') THEN TornadoorHailstormDeductible
+					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') NOT IN ('','0','Other') THEN WindStormOrHailDeductible
+					
+					WHEN ISNULL(tthc.WindstormOrHailDeductibleManual ,'') NOT IN ('','0') THEN WindstormOrHailDeductibleManual
+
 				END AS wind_derived_deductible,
 				tthc.NumberOfMortgagees AS no_of_mortgagees,
 				tthc.PriorClaims AS prior_claim_last5yr_in,tthc.PriorNonWaterClaims AS prior_nonwater_claim_ct,
@@ -249,6 +283,29 @@ BEGIN
 				tthc.AOPDeductiblemanual, tthc.Waterdeductiblemanual,tthc.wildfiredeductiblemanual,tthc.WindstormOrHailDeductibleManual,
 				tthc.CATModeling_CATScore, tthc.CATModeling_ReinsuranceMargin, tthc.CATModeling_CededLoss, tthc.CATModeling_ReinsurancePremium, tthc.CATModeling_CapitalCost, tthc.CATModeling_CATScoreToPremiumRatio_Hurricane, tthc.CATModeling_AALToPremium, tthc.AAL, 
 				tthc.WaiveInspection as waive_inspection_in, tthc.WaiveReason as waive_inspection_reason, tthc.InspectionNotes as inspection_note, tthc.RMSReviewed as rms_reviewed_in,
+				tthc.NCRBManualRate AS nc_bureau_rate, StatedLimitsPolicy as stated_limits_policy_in , 
+				tthc.RiskSharingPolicy as risk_sharing_policy_in,tthc.NumberofFamilyUnitsinStructure as no_of_family_units_in_structures,
+				tthc.FortifiedRoofCredit as fortified_roof_credit,
+				tthc.FacultativeReinsurance as facultative_reinsurance_in,
+				tthc.LayeredLimits as layered_limits_in,
+				tthc.[100PercentCoverageAValue] as [dwelling_limit_100_pc_value_amt],
+				tthc.[100PercentCoverageBValue] as [other_structures_limit_100_pc_value_amt],
+				tthc.[100PercentCoverageCValue] as [contents_limit_100_pc_value_amt],
+				tthc.[100PercentCoverageDValue] as [loss_of_use_100_pc_value_amt],
+				tthc.FACAttachmentPoint as facultative_attachment_point,
+				tthc.FACLimit as facultative_limit_amt,
+				tthc.FACPremiumCeded as facultative_ceded_premium_amt,
+				tthc.FACReinsurer as facultative_reinsurer_nm,
+				tthc.CoverageLayer as coverage_layer,
+				TRY_CAST(REPLACE(tthc.PercentagePlaced, '%', '') AS FLOAT) / 100 AS coverage_layer_placed_pc,
+				tthc.LayerLimit as coverage_layer_limit_amt,
+				tthc.NewlyPurchasedHome as newly_purchased_home_in,
+				tthc.TargetClosingDate as target_closing_dt,
+				tthc.CurrentPolicyAnniversaryDate as current_policy_anniversary_dt,
+				CONCAT(tthc.HomeInsuranceCompany, ' ', tthc.OtherCarrierName) as current_underlying_company_nm,
+				tthc.NewClientForTheAgency as new_client_for_agency_in,
+				tthc.NumberOfBathrooms as no_of_bathrooms,tthc.NumberOfFireplaces as no_of_fireplaces,
+				tthc.FoundationType as foundation_type,tthc.WaivedInflationFactor as waived_inflation_factor_in,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.tquote_home_coverage_temp1 AS tthc

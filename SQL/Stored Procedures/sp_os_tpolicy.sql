@@ -1,12 +1,14 @@
 -- =============================================
 -- Author:		Yunus Mohammed
--- Create Date: 10/20/2023
 -- Description: This procedures insert OneShied policy into tpolicy table
 ---------------------------------------------------------------------------------------------------
 -- Change date 		|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 10/20/23			Mohammed Yunus					1. Created this procedure
--- 12/15/23			Mohammed Yunus					2. Updated program_type logic
+-- 10/20/23			Yunus Mohammed					1. Created this procedure
+-- 12/15/23			Yunus Mohammed					2. Updated program_type logic
+-- 04/15/24			Yunus Mohammed					3. Updated logic for original policy no and effective date
+-- 06/28/24			Yunus Mohammed					4. Updated logic for policy_term
+-- 11/14/24			Architha Gudimalla				5. AD7713 - Added term_no
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tpolicy]
@@ -61,7 +63,8 @@ BEGIN
 			END as risk_state_cd,
 			trx.policy_trx_insured_name as insured_nm,
 			null as insured_type,
-			trx.policy_trx_type_name as policy_term, -- some transformation may require
+			case when trx.policy_rank = 1 then 'New'
+			else 'Renewal' end as policy_term,
 			case
 				when p.writing_company_name='Vault Reciprocal Exchange' then 'Vault Reciprocal Exchange'
 				when p.writing_company_name='Vault E&S Insurance Company' then 'Vault E & S Insurance Company'
@@ -81,13 +84,15 @@ BEGIN
 			SELECT TOP 1 trx1.policy_trx_policy_number FROM edw_stage.dragon_policy_trx trx1
 			WHERE
 				trx1.policy_id = trx.policy_id
-			ORDER BY trx1.policy_trx_seq_num DESC
+				and trx1.policy_trx_policy_number is not null
+			ORDER BY trx1.policy_trx_seq_num
 		)  as original_policy_no,
 		(
 			SELECT TOP 1 trx1.policy_trx_image_eff_date FROM edw_stage.dragon_policy_trx trx1
 			WHERE
 				trx1.policy_id = trx.policy_id
-			ORDER BY trx1.policy_trx_seq_num DESC
+				and trx1.policy_trx_image_eff_date is not null
+			ORDER BY trx1.policy_trx_seq_num
 		)  as original_policy_effective_dt,
 		ba.address_line1 as mailing_address_line1,
 		null as mailing_address_line2,
@@ -102,19 +107,25 @@ BEGIN
 		ba.billingaccount_id
 		FROM
 			edw_stage.dragon_policy p
-			INNER JOIN edw_stage.dragon_policy_trx trx ON p.policy_id = trx.policy_id
-			LEFT JOIN edw_stage.dragon_policy_term ptrm on ptrm.policy_term_id=trx.policy_term_id -- trx.policy_id = ptrm.policy_id
+			INNER JOIN
+			(
+				SELECT dense_rank()over(partition by policy_id order by policy_trx_policy_number) as policy_rank,*
+				FROM
+					edw_stage.dragon_policy_trx trx
+				WHERE
+					trx.policy_trx_process_date IS NOT NULL
+					AND trx.policy_trx_policy_number IS NOT NULL
+					AND trx.policy_trx_risk_state IS NOT NULL
+			) AS trx ON p.policy_id = trx.policy_id
+			LEFT JOIN edw_stage.dragon_policy_term ptrm on ptrm.policy_term_id=trx.policy_term_id
 			LEFT JOIN (SELECT DISTINCT policy_transaction_id,billing_account_id from edw_stage.dragon_fitem f) f on trx.policy_trx_id = f.policy_transaction_id
 			LEFT JOIN edw_stage.dragon_billingaccount ba on ba.billingaccount_id = f.billing_account_id
 			LEFT JOIN edw_core.tbroker tbrk on tbrk.broker_id=cast(trx.policy_trx_partner_id as varchar(255))
 			LEFT JOIN edw_core.tcustomer tcust on tcust.customer_id=cast(trx.customer_id as varchar(255))
 			LEFT JOIN edw_core.tpolicy tph on tph.policy_no = trx.policy_trx_policy_number
 			LEFT JOIN edw_core.tstate tst on tst.state_nm = trx.policy_trx_risk_state
-		WHERE 
-			trx.policy_trx_process_date IS NOT NULL
-			AND trx.policy_trx_policy_number IS NOT NULL
-			AND tbrk.broker_id IS NOT NULL
-			AND trx.policy_trx_risk_state IS NOT NULL
+		WHERE
+			tbrk.broker_id IS NOT NULL
 			AND tph.policy_sk is null
 		) a
 		WHERE rn=1
@@ -127,6 +138,7 @@ BEGIN
 		mailing_address_zip_cd,mailing_address_county_nm,mailing_address_country_nm,non_renewal_in,prior_policy_no,
 		billingaccount_sk,source_system_sk,create_ts,update_ts,etl_audit_sk
 		-- ,latest_term_in
+		,term_no
 		)
 		SELECT
 			policy_no,effective_dt,expiration_dt,broker_id,customer_id,product_cd,risk_state_cd,insured_nm,insured_type,
@@ -134,6 +146,13 @@ BEGIN
 			mailing_address_line1,mailing_address_line2,mailing_address_unit_no,mailing_address_city_nm,mailing_address_state_cd,
 			mailing_address_zip_cd,mailing_address_county_nm,mailing_address_country_nm,non_renewal_in,prior_policy_no,NULL billingaccount_id,
 			source_system_sk,GETDATE() AS create_ts,GETDATE() update_ts,@etl_audit_sk AS etl_audit_sk
+			,'Term ' || case 
+								when charindex('-',policy_no) <> 0 then cast(substring(policy_no,charindex('-',policy_no)+1,len(policy_no)) as int) + 1
+								when policy_no like '%A'		   then 1
+								when policy_no like '%B'		   then 2
+								when policy_no like '%C'		   then 3
+							 	else 1
+							end term_no
 		FROM
 			edw_temp.os_tpolicy_temp1
 			

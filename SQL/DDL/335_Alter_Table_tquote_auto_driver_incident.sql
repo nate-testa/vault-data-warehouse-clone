@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote_auto_driver_incident ADD increase_premium_on_renewal_in varchar(255);

@@ -1,0 +1,8 @@
+ALTER TABLE edw_core.tquote_home_additional_coverage ADD trampoline_liability_exclusion_in varchar(255);
+ALTER TABLE edw_core.tquote_home_additional_coverage ADD fine_arts_exclusion_in varchar(255);
+ALTER TABLE edw_core.tquote_home_additional_coverage ADD screen_enclosure_coverage_in varchar(255);
+ALTER TABLE edw_core.tquote_home_additional_coverage ADD screen_enclosure_limit_amt varchar(255);
+ALTER TABLE edw_core.tquote_home_additional_coverage ADD matching_undamaged_property_in varchar(255);
+ALTER TABLE edw_core.tquote_home_additional_coverage ADD matching_undamaged_property_limit_amt varchar(255);
+ALTER TABLE edw_core.tquote_home_additional_coverage ADD roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in varchar(255);
+ALTER TABLE edw_core.tquote_home_additional_coverage ADD all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in varchar(255);

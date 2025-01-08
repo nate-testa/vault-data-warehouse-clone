@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.thome_additional_coverage ADD risk_score_fire VARCHAR(255);

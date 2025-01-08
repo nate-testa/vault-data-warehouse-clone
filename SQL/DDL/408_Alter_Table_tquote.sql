@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote ADD term_no VARCHAR(255);

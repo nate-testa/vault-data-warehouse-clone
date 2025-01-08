@@ -7,6 +7,8 @@ GO
 -- Author:		Alberto Almario
 -- Create Date: 2023-10-17
 -- Description: This stored procedure insert and update info related to policy_ivans_pel_feed.
+-- 04/05/2024 repush to Git Repo
+-- 04/05/2024                      sandeep Gundreddy                             repush to Git Repo
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_pel_feed]
 AS
@@ -36,7 +38,7 @@ BEGIN
 
         SELECT 
             pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.transaction_dt_sk, pt.customer_sk, p.customer_id, pt.policy_transaction_type_sk, pt.source_system_sk, p.policy_no, p.effective_dt,
-            MAX(pt.create_ts) as create_ts, 
+            MAX(ph.transaction_ts) as transaction_ts, 
             SUM(pt.premium_amt) as premium_amt,
             --SUM(pt.annual_premium_amt) as annual_premium_amt
             CASE WHEN pt.policy_transaction_type_sk = 5
@@ -55,9 +57,12 @@ BEGIN
         FROM edw_core.tpolicy_transaction as pt
         INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
         INNER JOIN edw_core.tpolicy as p ON pt.policy_sk = p.policy_sk
+        INNER JOIN edw_core.tpolicy_history as ph 
+        ON pt.policy_sk = ph.policy_sk
+        AND pt.transaction_seq_no = ph.transaction_seq_no
         WHERE 1=1
             AND pr.product_cd = 'PEL'
-            AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+            AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
         GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.transaction_dt_sk, pt.customer_sk, p.customer_id, pt.policy_transaction_type_sk, pt.source_system_sk, p.policy_no, p.effective_dt
         ;
 
@@ -129,14 +134,25 @@ BEGIN
                         FROM 
                             (
                                 SELECT 
-                                    policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk,
-                                    SUM(annual_premium_amt) AS annual_premium_amt, 
-                                    SUM(premium_amt) AS premium_amt 
+                                    pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk,
+                                    (
+                                        SELECT SUM(subpt.annual_premium_amt)
+                                        FROM edw_core.tpolicy_transaction subpt 
+                                        WHERE subpt.policy_sk = pt.policy_sk
+                                        AND subpt.effective_dt_sk = pt.effective_dt_sk
+                                        AND subpt.internal_coverage_sk = pt.internal_coverage_sk
+                                        AND subpt.transaction_seq_no <= pt.transaction_seq_no
+                                    ) as annual_premium_amt,
+                                    SUM(pt.premium_amt) AS premium_amt 
                                 FROM edw_core.tpolicy_transaction as pt
+                                INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
+                                INNER JOIN edw_core.tpolicy_history as ph 
+                                ON pt.policy_sk = ph.policy_sk
+                                AND pt.transaction_seq_no = ph.transaction_seq_no
                                 WHERE 1=1
-                                    AND product_sk = 4
-                                AND cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-                                GROUP BY policy_sk, effective_dt_sk, transaction_seq_no, coverage_sk, internal_coverage_sk
+                                    AND pr.product_cd = 'PEL'
+                                AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
+                                GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.coverage_sk, pt.internal_coverage_sk
                             ) as pt 
                             INNER JOIN edw_core.tpel_coverage as pc ON pt.coverage_sk = pc.pel_coverage_sk
                             INNER JOIN edw_core.tinternal_coverage as ic ON pt.internal_coverage_sk = ic.internal_coverage_sk
@@ -217,13 +233,14 @@ BEGIN
                         pw.watercraft_year as yearbuilt,
                         pw.watercraft_make as manufacturer,
                         pw.watercraft_model as model,
-                        pw.watercraft_length as [length],
-                        pw.watercraft_horsepower as horsepower
+                        REPLACE(REPLACE(pw.watercraft_length,'<','less than'),'>','greater than') as [length],
+                        REPLACE(REPLACE(pw.watercraft_horsepower,'<','less than'),'>','greater than') as horsepower
                     FROM edw_core.tpel_watercraft as pw
                     INNER JOIN edw_core.tpolicy_history as ph ON pw.policy_history_sk = ph.policy_history_sk
                     WHERE pw.policy_no = phf.policy_no
                     AND pw.effective_dt = phf.effective_dt
                     AND pw.transaction_seq_no = phf.transaction_seq_no
+                    AND pw.watercraft_deleted_in = 'No'
                     FOR JSON PATH, INCLUDE_NULL_VALUES
                 ) AS PEL_Watercrafts
             FROM edw_core.tpolicy_history AS phf
@@ -419,7 +436,7 @@ BEGIN
             getdate() as update_ts,
             @etl_audit_sk as etl_audit_sk,
             tprc.national_producer_no as [NIPRid_200],
-            pt.create_ts as policy_transaction_create_ts
+            pt.transaction_ts as policy_history_transaction_ts
         INTO [edw_temp].[policy_ivans_pel_feed_temp1] 
         FROM [edw_temp].[policy_ivans_pel_feed_temp2] AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
@@ -445,7 +462,7 @@ BEGIN
             ON p.policy_no = jppu.policy_no AND p.effective_dt = jppu.effective_dt AND pt.transaction_seq_no = jppu.transaction_seq_no
         LEFT JOIN (
 				select broker_sk, broker_id, national_producer_no
-				    ,ROW_NUMBER() OVER (PARTITION BY broker_id ORDER BY broker_sk DESC) AS rn
+				    ,ROW_NUMBER() OVER (PARTITION BY broker_id ORDER BY producer_sk DESC) AS rn
 				from edw_core.tproducer
 			) tprc
 		ON p.broker_id = tprc.broker_id
@@ -660,7 +677,7 @@ BEGIN
 
 		
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(policy_transaction_create_ts) FROM edw_temp.[policy_ivans_pel_feed_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(policy_history_transaction_ts) FROM edw_temp.[policy_ivans_pel_feed_temp1]),@last_source_extract_ts);
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

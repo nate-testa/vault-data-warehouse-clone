@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tpolicy ADD term_no VARCHAR(255);

@@ -6,7 +6,10 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 08/30/23		Architha Gudimalla				1. Created this procedure  
--- 10/05/23		Architha Gudimalla				2. Fixed division by 0 error for EP calculation 
+-- 10/05/23		Architha Gudimalla				2. Fixed division by 0 error for EP calculation  
+-- 03/20/24		Architha Gudimalla				3. Added commission_amt
+-- 07/03/24		Yunus Mohammed					4. Added policy_history_sk
+-- 07/18/24		Architha Gudimalla				5. Updated logic for @last_source_extract_ts
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction_summary]
@@ -52,8 +55,8 @@ BEGIN
 		union 
 		select	yearmonth, max(calendar_year) year 
 		from	edw_core.tdate
-		where	actual_dt >  case when @in_month_end_dt is not null then @in_month_end_dt else @last_source_extract_ts end
-		  and   actual_dt <= case when @in_month_end_dt is not null then @in_month_end_dt else getdate() end
+		where	actual_dt >= case when @in_month_end_dt is not null then @in_month_end_dt else @last_source_extract_ts end
+		  and   actual_dt <  case when @in_month_end_dt is not null then @in_month_end_dt else cast(getdate()  as date) end
 		group by yearmonth
 		order by 1;  
 	
@@ -96,7 +99,7 @@ BEGIN
 				with
 				prm as
 				(
-				 SELECT tr.policy_sk, tr.item_sk, tr.internal_coverage_sk, tr.transaction_seq_no, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk,
+				 SELECT tr.policy_sk, tr.policy_history_sk, tr.item_sk, tr.internal_coverage_sk, tr.transaction_seq_no, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk,
 						tr.effective_dt_sk,
 						tr.transaction_effective_dt_sk,
 						tr.expiration_dt_sk,
@@ -114,7 +117,8 @@ BEGIN
 									* tr.premium_amt/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
 								else 0
 								end
-						   ) mtd_ep 
+						   ) mtd_ep ,
+				 		sum(commission_amt) commission_amt
 				 FROM edw_core.tpolicy_transaction tr, edw_core.tpolicy pol 
 				 where tr.policy_sk = pol.policy_sk
 				 and 	tr.internal_coverage_sk <> 0 
@@ -122,7 +126,7 @@ BEGIN
 				 and   transaction_effective_dt_sk <= @end_dt_sk
 				 and   transaction_dt_sk <= @end_dt_sk
 				 and   expiration_dt > @month_begin_dt
-				 group by tr.policy_sk, tr.item_sk, tr.internal_coverage_sk, tr.transaction_seq_no, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk,
+				 group by tr.policy_sk, tr.policy_history_sk, tr.item_sk, tr.internal_coverage_sk, tr.transaction_seq_no, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk,
 						tr.effective_dt_sk,
 						tr.transaction_effective_dt_sk,
 						tr.expiration_dt_sk,
@@ -131,15 +135,16 @@ BEGIN
 				)
 				INSERT INTO edw_core.tpolicy_transaction_summary
 					( 
-						month_sk, policy_sk, item_sk, transaction_seq_no, internal_coverage_sk, coverage_sk, vehicle_coverage_sk, customer_sk, broker_sk, product_sk, 
+						month_sk, policy_sk,policy_history_sk, item_sk, transaction_seq_no, internal_coverage_sk, coverage_sk, vehicle_coverage_sk, customer_sk, broker_sk, product_sk, 
 						effective_dt_sk,
 						transaction_effective_dt_sk,
 						expiration_dt_sk,
 						transaction_dt_sk,
 						policy_transaction_type_sk, premium_amt,  
 						earned_premium_amt, unearned_premium_amt,  source_system_sk, update_ts, etl_audit_sk
+						,commission_amt
 					)
-				select 	@month_end_dt_sk, prm.policy_sk, prm.item_sk, prm.transaction_seq_no,  prm.internal_coverage_sk,
+				select 	@month_end_dt_sk, prm.policy_sk,prm.policy_history_sk, prm.item_sk, prm.transaction_seq_no,  prm.internal_coverage_sk,
 						prm.coverage_sk, prm.vehicle_coverage_sk, 
 						prm.customer_sk, prm.broker_sk, prm.product_sk,  
 						prm.effective_dt_sk,
@@ -149,6 +154,7 @@ BEGIN
 						prm.policy_transaction_type_sk, prm.premium_amt,  
 						prm.mtd_ep earned_premium_amt, (1.0000 * prm.premium_amt)-mtd_ep unearned_premium_amt, 
 						source_system_sk, getdate(), @etl_audit_sk
+						, prm.commission_amt
 				from prm
 				where prm.premium_amt <> 0
 				   or prm.mtd_ep <> 0;

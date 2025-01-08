@@ -1,0 +1,5 @@
+ALTER TABLE edw_integration.quote_hubspot_feed ADD primary_home_risk_address VARCHAR(255);
+ALTER TABLE edw_integration.quote_hubspot_feed ADD primary_home_policy_effective_dt DATE;
+ALTER TABLE edw_integration.quote_hubspot_feed ADD primary_home_policy_expiration_dt DATE;
+ALTER TABLE edw_integration.quote_hubspot_feed ADD primary_home_carrier_nm VARCHAR(255);
+ALTER TABLE edw_integration.quote_hubspot_feed ADD primary_home_coverage_a_threshold VARCHAR(255);

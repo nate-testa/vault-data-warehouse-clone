@@ -8,6 +8,8 @@
 -- 07/28/23		Yunus Mohammed				1. Created this procedure 
 -- 11/29/23		Yunus Mohammed				2. Update logic to get begin and end date
 -- 11/30/23		Yunus Mohammed				3. Updated insured name for NFP
+-- 09/18/24		Yunus Mohammed				4. Added Throw in catch block
+-- 11/26/24		Yunus Mohammed				5. Updated "Marine Boat & Yacht" to "Marine_Boat&Yacht"
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_reserve_feed]
 
@@ -79,6 +81,7 @@ BEGIN
 				WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
 				WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
 				WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
+				WHEN tprd.product_cd = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
 				ELSE tprd.product_nm END AS product,
 				tcf.claim_coverage_desc AS policycoveragetype,
 				CASE
@@ -171,6 +174,7 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END

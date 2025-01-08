@@ -1,8 +1,14 @@
--- =============================================
+-- ===============================================================================================
 -- Author:		Yunus Mohammed
 -- Create Date: 10/20/2023
 -- Description: This procedures insert OneShied Broker into tbroker table
--- =============================================
+---------------------------------------------------------------------------------------------------
+-- Change date 		|Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 10/20/23			Yunus Mohammed			    1. Created this procedure
+-- 07/31/24			Yunus Mohammed			    2. Updated logic to get broker only
+-- =================================================================================================
+
 CREATE OR ALTER PROCEDURE [edw_core].[sp_os_broker]
 
 AS
@@ -50,7 +56,9 @@ BEGIN
 		partner_county AS primary_address_county_nm
 		INTO edw_temp.os_tbroker_temp1
 		FROM edw_stage.dragon_partner
-		WHERE partner_name IS NOT NULL
+		WHERE
+			partner_id in (select policy_partner_id from edw_stage.dragon_policy)
+			AND CAST(partner_id AS VARCHAR(255)) not in (select broker_id from edw_core.tbroker)
 
 		INSERT INTO edw_core.tbroker
 		(

@@ -2,7 +2,13 @@
 -- Author:		Yunus Mohammed
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert pel vehicle data
--- =============================================
+------------------------------------------------------------------------------------------------------------------------------
+-- Change date			|Author							|	Change Description
+------------------------------------------------------------------------------------------------------------------------------
+-- 10/24/2023 			Yunus Mohammed					1. Created this procedure 
+-- 07/19/2024 			Alberto Almario					2. Add new column vehicle_deleted_in 
+-- 07/31/2024 			Alberto Almario					3. Add new column vehicle_unique_id
+-- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_vehicle]
 
 AS
@@ -28,7 +34,13 @@ BEGIN
 		drop table if exists edw_temp.tpel_vehicle_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,policy_history_sk,source_system_sk,
-			IssuedDate,[Index],VehicleType,Model,Vin,[ModelYear],Make
+			IssuedDate, [Index], VehicleType, Model, Vin, [ModelYear], Make,
+			[Body], Weight, Horsepower, EngineSize, EngineType, HighPerformanceVehicle, BasicModelName,
+			VINChangeIndicator, DistributionDate, Restraint, AntiLockBrakes, EngineCylinders, FieldChangeIndicator, FourWheelDriveIndicator, ElectronicStabilityControl, TonnageIndicator, PayloadCapacity, DaytimeRunningLightIndicator, Wheelbase, ClassCode, AntiTheftIndicator, GrossVehicleWeight, Height, StateException, VMPerformanceIndicator, NCICCode, Chassis, [Length], Width, BaseMSRP, SpecialHandlingIndicator, RAPAInterimIndicator, SpecialInfoSelector, ModelSeriesInfo, BodyInfo, EngineInfo, RestraintInfo, TransmissionInfo, OtherInfo, ReleaseDate,
+			CollectorCarType, MotorHomeClass,
+			GaragingAddressLine1, GaragingAddressLine2, GaragingAddressLineUnit, GaragingAddressCity, GaragingAddressZipCode, GaragingAddressState, GaragingAddressCounty, GaragingAddressCountry
+			,vehicle_deleted_in
+			,vehicle_unique_id
 			into edw_temp.tpel_vehicle_temp1
 		from
 		(
@@ -43,6 +55,8 @@ BEGIN
 			act.IssuedDate,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			atvof.Field,atvof.[Value]
+			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END AS vehicle_deleted_in
+			,atvo.[UniqueId] as vehicle_unique_id
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
@@ -61,28 +75,43 @@ BEGIN
 				and atvo.ObjectType='Vehicle'
 				and atvof.Field IN 
 				(
-					'VehicleType','Model','Vin','ModelYear','Make'
+					'VehicleType','Model','Vin','ModelYear','Make', 'Body', 'Weight', 'Horsepower', 'EngineSize', 'EngineType', 'HighPerformanceVehicle', 'BasicModelName', 'VINChangeIndicator', 'DistributionDate', 'Restraint', 'AntiLockBrakes', 'EngineCylinders', 'FieldChangeIndicator', 'FourWheelDriveIndicator', 'ElectronicStabilityControl', 'TonnageIndicator', 'PayloadCapacity', 'DaytimeRunningLightIndicator', 'Wheelbase', 'ClassCode', 'AntiTheftIndicator', 'GrossVehicleWeight', 'Height', 'StateException', 'VMPerformanceIndicator', 'NCICCode', 'Chassis', 'Length', 'Width', 'BaseMSRP', 'SpecialHandlingIndicator', 'RAPAInterimIndicator', 'SpecialInfoSelector', 'ModelSeriesInfo', 'BodyInfo', 'EngineInfo', 'RestraintInfo', 'TransmissionInfo', 'OtherInfo', 'ReleaseDate',
+					'CollectorCarType', 'MotorHomeClass',
+					'GaragingAddressLine1', 'GaragingAddressLine2', 'GaragingAddressLineUnit', 'GaragingAddressCity', 'GaragingAddressZipCode', 'GaragingAddressState', 'GaragingAddressCounty', 'GaragingAddressCountry'
 				)
 				and IssuedDate > @last_source_extract_ts
 			) as t
 		) as t
 		pivot 
 		(
-			max([Value]) FOR Field IN (VehicleType,Model,Vin,[ModelYear],Make)
+			max([Value]) FOR Field IN (VehicleType, Model, Vin, [ModelYear], Make, [Body], Weight, Horsepower, EngineSize, EngineType, HighPerformanceVehicle, BasicModelName, VINChangeIndicator, DistributionDate, Restraint, AntiLockBrakes, EngineCylinders, FieldChangeIndicator, FourWheelDriveIndicator, ElectronicStabilityControl, TonnageIndicator, PayloadCapacity, DaytimeRunningLightIndicator, Wheelbase, ClassCode, AntiTheftIndicator, GrossVehicleWeight, Height, StateException, VMPerformanceIndicator, NCICCode, Chassis, [Length], Width, BaseMSRP, SpecialHandlingIndicator, RAPAInterimIndicator, SpecialInfoSelector, ModelSeriesInfo, BodyInfo, EngineInfo, RestraintInfo, TransmissionInfo, OtherInfo, ReleaseDate,
+										CollectorCarType, MotorHomeClass,
+										GaragingAddressLine1, GaragingAddressLine2, GaragingAddressLineUnit, GaragingAddressCity, GaragingAddressZipCode, GaragingAddressState, GaragingAddressCounty, GaragingAddressCountry
+										)
 		) as pivottable
 
 		INSERT INTO [edw_core].[tpel_vehicle]
 		(
 			policy_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no,policy_history_sk,
 			[vehicle_no],[vehicle_type],[vehicle_year],[vehicle_make],[vehicle_model],[vehicle_vin],
-			[source_system_sk],[create_ts],[update_ts],[etl_audit_sk]
+			[vehicle_body], [vehicle_curb_weight], [vehicle_horsepower], [vehicle_engine_size], [vehicle_engine_type], [high_performance_vehicle], [vehicle_basic_model_nm],
+			[vehicle_vin_change_in], [vehicle_distribution_dt], [vehicle_restraint], [vehicle_antilock_brakes], [vehicle_engine_cylinders], [vehicle_field_change_in], [vehicle_four_wheel_drive_in], [vehicle_electronic_stability_control], [vehicle_tonnage_in], [vehicle_payload_capacity], [vehicle_daytime_running_light_in], [vehicle_wheel_base], [vehicle_class_cd], [vehicle_antitheft_in], [vehicle_gross_weight], [vehicle_height], [vehicle_state_exception], [vm_performance_in], [vehicle_ncic_cd], [vehicle_chassis], [vehicle_length], [vehicle_width], [vehicle_base_msrp], [special_handling_in], [rapa_interim_in], [special_info_selector], [vehicle_model_series_info], [vehicle_body_info], [vehicle_engine_info], [vehicle_restraint_info], [vehicle_transmission_info], [vehicle_other_info], [vehicle_release_dt],
+			[source_system_sk],[create_ts],[update_ts],[etl_audit_sk], collector_car_type, motor_home_class,
+			garage_address_line1,garage_address_line2,garage_address_unit_no,garage_address_city_nm,garage_address_zip_cd,garage_address_state_cd,garage_address_county_nm,garage_address_country_nm
+			,vehicle_deleted_in
+			,vehicle_unique_id
 		)
 		SELECT
 			PolicyNumber AS policy_no,EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
 			ExpirationDate AS expiration_dt,TransactionDate AS transaction_dt,transaction_seq_no AS transaction_seq_no,policy_history_sk,
 			[Index] AS [vehicle_no], VehicleType AS [vehicle_type], [ModelYear] AS vehicle_year,Make AS vehicle_make,
 			Model AS vehicle_model,Vin AS vehicle_vin,
-			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
+			[Body], Weight, Horsepower, EngineSize, EngineType, HighPerformanceVehicle, BasicModelName,
+			VINChangeIndicator, DistributionDate, Restraint, AntiLockBrakes, EngineCylinders, FieldChangeIndicator, FourWheelDriveIndicator, ElectronicStabilityControl, TonnageIndicator, PayloadCapacity, DaytimeRunningLightIndicator, Wheelbase, ClassCode, AntiTheftIndicator, GrossVehicleWeight, Height, StateException, VMPerformanceIndicator, NCICCode, Chassis, Length, Width, BaseMSRP, SpecialHandlingIndicator, RAPAInterimIndicator, SpecialInfoSelector, ModelSeriesInfo, BodyInfo, EngineInfo, RestraintInfo, TransmissionInfo, OtherInfo, ReleaseDate,
+			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk, CollectorCarType AS collector_car_type, MotorHomeClass AS motor_home_class,
+			GaragingAddressLine1 AS garage_address_line1, GaragingAddressLine2 AS garage_address_line2, GaragingAddressLineUnit AS garage_address_unit_no, GaragingAddressCity AS garage_address_city_nm, GaragingAddressZipCode AS garage_address_zip_cd, GaragingAddressState AS garage_address_state_cd, GaragingAddressCounty AS garage_address_county_nm, GaragingAddressCountry AS garage_address_country_nm
+			,vehicle_deleted_in
+			,vehicle_unique_id
 		FROM
 			edw_temp.tpel_vehicle_temp1 AS ttpv
 
@@ -112,4 +141,3 @@ BEGIN
 
 	END CATCH
 END
-
