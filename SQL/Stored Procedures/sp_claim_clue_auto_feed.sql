@@ -7,6 +7,10 @@ GO
 -- Author:		Alberto Almario
 -- Create Date: 2024-05-18
 -- Description: This stored procedure insert info related to claim_clue_auto_feed.
+-- ---------------------------------------------------------------------------------------------------
+-- Change date 				|Author						|	Change Description
+-- ---------------------------------------------------------------------------------------------------
+-- 01-03-2025				Alberto Almario				1. Add snasheet mapping to ClaimType column.
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
@@ -86,7 +90,7 @@ BEGIN
                 a.claim_sk,
                 a.item_sk,
                 b.transaction_ts,
-                SUM(a.subro_expense_paid_amt + a.subro_recovery_amt) AS sum_subro_exp_rec_amt,
+                SUM(a.subrogation_expense_recovery_amt + a.subrogation_recovery_amt) AS sum_subro_exp_rec_amt,
                 MAX(
                     CASE 
                         WHEN a.claim_feature_status = 'CLOSED' THEN 1
@@ -95,27 +99,15 @@ BEGIN
                 )
                 AS claim_feature_status_no,
                 CASE
-                    WHEN claim_coverage_desc = 'Bodily Injury' THEN 'BI'
+                    WHEN claim_coverage_desc = 'Combined Single Limits' THEN 'BI'
                     WHEN claim_coverage_desc = 'Collision' THEN 'CO'
                     WHEN claim_coverage_desc = 'Comprehensive' THEN 'CP'
-                    WHEN claim_coverage_desc = 'Glass' THEN 'GL'
-                    WHEN claim_coverage_desc = 'Medical Expenses' THEN 'ME'
-                    WHEN claim_coverage_desc = 'Medical Payment' THEN 'MP'
-                    WHEN claim_coverage_desc = 'Other' THEN 'OT'
-                    WHEN claim_coverage_desc = 'No-Fault' THEN 'OT'
-                    WHEN claim_coverage_desc IS NULL THEN 'OT'
-                    WHEN claim_coverage_desc = 'Property Damage' THEN 'PD'
-                    WHEN claim_coverage_desc = 'Property Protection (MI Only)' THEN 'PD'
-                    WHEN claim_coverage_desc = 'Personal Injury Protection' THEN 'PI'
-                    WHEN claim_coverage_desc = 'Rental Reimbursement' THEN 'RR'
-                    WHEN claim_coverage_desc = 'Rental' THEN 'RR'
-                    WHEN claim_coverage_desc = 'Spousal Liability' THEN 'SL'
-                    WHEN claim_coverage_desc = 'Towing & Labor ' THEN 'TL'
-                    WHEN claim_coverage_desc = 'Towing' THEN 'TL'
-                    WHEN claim_coverage_desc = 'Uninsured Motorist' THEN 'UM'
-                    WHEN claim_coverage_desc = 'Underinsured Motorist' THEN 'UN'
-                    WHEN claim_coverage_desc = 'Uninsured / Underinsured Motorist' THEN 'UN'
+                    WHEN claim_coverage_desc = 'Full Glass' THEN 'GL'
+                    WHEN claim_coverage_desc = 'Medical Payments' THEN 'MP'
+                    WHEN claim_coverage_desc = 'PIP' THEN 'OT'
+                    WHEN claim_coverage_desc = 'PD Liability Limit' THEN 'PD'
                     WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TL'
+                    WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UN'
                     ELSE 'OT'
                 END AS [ClaimType],
                 SUM(
@@ -123,9 +115,16 @@ BEGIN
                             (
                                 a.loss_paid_amt             + 
                                 a.expense_paid_amt          + 
-                                a.adjusting_other_paid_amt  + 
-                                a.refund_indemnity_paid_amt + 
-                                a.refund_expense_paid_amt
+                                a.deductible_defense_recovery_amt  + 
+                                a.deductible_expense_recovery_amt + 
+                                a.defense_paid_amt +
+                                a.overpayment_defense_recovery_amt +
+                                a.overpayment_expense_recovery_amt +
+                                a.overpayment_recovery_amt +
+                                a.reinsurance_defense_recovery_amt +
+                                a.reinsurance_expense_recovery_amt +
+                                a.reinsurance_recovery_amt +
+                                a.deductible_recovery_amt
                             ), 0)
                     ) AS [claimAmount]
             FROM edw_core.tclaim_feature AS a
@@ -143,27 +142,15 @@ BEGIN
                 a.item_sk,
                 b.transaction_ts,
                 CASE
-                    WHEN claim_coverage_desc = 'Bodily Injury' THEN 'BI'
+                    WHEN claim_coverage_desc = 'Combined Single Limits' THEN 'BI'
                     WHEN claim_coverage_desc = 'Collision' THEN 'CO'
                     WHEN claim_coverage_desc = 'Comprehensive' THEN 'CP'
-                    WHEN claim_coverage_desc = 'Glass' THEN 'GL'
-                    WHEN claim_coverage_desc = 'Medical Expenses' THEN 'ME'
-                    WHEN claim_coverage_desc = 'Medical Payment' THEN 'MP'
-                    WHEN claim_coverage_desc = 'Other' THEN 'OT'
-                    WHEN claim_coverage_desc = 'No-Fault' THEN 'OT'
-                    WHEN claim_coverage_desc IS NULL THEN 'OT'
-                    WHEN claim_coverage_desc = 'Property Damage' THEN 'PD'
-                    WHEN claim_coverage_desc = 'Property Protection (MI Only)' THEN 'PD'
-                    WHEN claim_coverage_desc = 'Personal Injury Protection' THEN 'PI'
-                    WHEN claim_coverage_desc = 'Rental Reimbursement' THEN 'RR'
-                    WHEN claim_coverage_desc = 'Rental' THEN 'RR'
-                    WHEN claim_coverage_desc = 'Spousal Liability' THEN 'SL'
-                    WHEN claim_coverage_desc = 'Towing & Labor ' THEN 'TL'
-                    WHEN claim_coverage_desc = 'Towing' THEN 'TL'
-                    WHEN claim_coverage_desc = 'Uninsured Motorist' THEN 'UM'
-                    WHEN claim_coverage_desc = 'Underinsured Motorist' THEN 'UN'
-                    WHEN claim_coverage_desc = 'Uninsured / Underinsured Motorist' THEN 'UN'
+                    WHEN claim_coverage_desc = 'Full Glass' THEN 'GL'
+                    WHEN claim_coverage_desc = 'Medical Payments' THEN 'MP'
+                    WHEN claim_coverage_desc = 'PIP' THEN 'OT'
+                    WHEN claim_coverage_desc = 'PD Liability Limit' THEN 'PD'
                     WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TL'
+                    WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UN'
                     ELSE 'OT'
                 END
         )
