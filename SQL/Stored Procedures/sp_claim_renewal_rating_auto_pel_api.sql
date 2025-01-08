@@ -113,10 +113,10 @@ BEGIN
 			IncidentDate,PolicyNumber,FileNumber,IncidentType,IncidentDescription,IncidentCode,TotalPayout,IncidentStatus,BodilyInjuryPayment,
 			CollisionPayment,ComprehensivePayment,GlassPayment,MedicalExpensePayment,MedicalPaymentPayment,NULL,  -- OtherPayment
 			PropertyDamagePayment,PersonalInjuryProtectionPayment,NULL , -- RentalReimbursementPayment
-			SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,FirstPartyDriverName,
+			SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,
 			UnderinsuredMotoristPayment,
 			NULL, -- ViolationPointClass
-			fault_decision,responsible_party,at_fault_pct,
+			FirstPartyDriverName,fault_decision,responsible_party,at_fault_pct,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
