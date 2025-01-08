@@ -153,10 +153,17 @@ with DAG(
             # parameters={"myParam": "value"},
         )
 
-        adf_etl_load_ebao_mqq_diary: BaseOperator = AzureDataFactoryRunPipelineOperator(
-            task_id="adf_etl_load_ebao_mqq_diary",
+        adf_etl_load_ebao_pub_user: BaseOperator = AzureDataFactoryRunPipelineOperator(
+            task_id="adf_etl_load_ebao_pub_user",
             azure_data_factory_conn_id='azure_data_factory_vault_data',
-            pipeline_name="MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_TopLevel_t_pub_diary",
+            pipeline_name="t_pub_user_eBao_to_Edw_stage_FullLoad",
+            # parameters={"myParam": "value"},
+        )
+
+        adf_etl_load_ebao_pub_diary: BaseOperator = AzureDataFactoryRunPipelineOperator(
+            task_id="adf_etl_load_ebao_pub_diary",
+            azure_data_factory_conn_id='azure_data_factory_vault_data',
+            pipeline_name="t_pub_diary_eBao_to_Edw_stage_FullLoad",
             # parameters={"myParam": "value"},
         )
 
@@ -174,7 +181,7 @@ with DAG(
             html_content=get_HTML_on_vault_format('The Azure Data Factory pipelines executed successfully',''),
         )
 
-        adf_etl_load_stage >> adf_etl_load_ebao_mqq >> adf_etl_load_ebao_mqq_address >> adf_etl_load_ebao_mqq_diary >> adf_etl_load_ls_aws_dms >> send_adf_email
+        adf_etl_load_stage >> adf_etl_load_ebao_mqq >> adf_etl_load_ebao_mqq_address >> adf_etl_load_ebao_pub_user >> adf_etl_load_ebao_pub_diary >> adf_etl_load_ls_aws_dms >> send_adf_email
 
 
     with TaskGroup("home_group") as home_group:
@@ -210,6 +217,10 @@ with DAG(
 
         operators[-1] >> send_home_email
 
+    
+    collection_marine = DummyOperator(
+        task_id='collection_marine',
+    )
 
     with TaskGroup("collection_group") as collection_group:
 
@@ -242,6 +253,40 @@ with DAG(
             operators[i] >> operators[i + 1]
 
         operators[-1] >> send_collection_email
+
+
+    with TaskGroup("marine_group") as marine_group:
+
+        marine_group_items = [
+            'sp_tmarine_boat_yacht',
+            'sp_tmarine_boat_yacht_location',
+            'sp_tmarine_boat_yacht_coverage',
+            'sp_tmarine_boat_yacht_operator',
+            'sp_tmarine_boat_yacht_watercraft'
+        ]
+
+        operators = []
+        for item in marine_group_items:
+            operator = MsSqlOperator(
+                task_id=item,
+                mssql_conn_id='Vault_EDW',
+                sql=f"EXEC edw_core.{item}",
+                database="vault_edw",
+                autocommit=True,
+            )
+            operators.append(operator)
+
+        send_marine_email = EmailOperator(
+            task_id='send_marine_email',
+            to=to_email,
+            subject='Airflow - Marine tables loaded successfully',
+            html_content=get_sp_success_data_HTML(marine_group_items, 'All stored procedures executed successfully for all the Marine tables'),
+        )
+
+        for i in range(len(operators) - 1):
+            operators[i] >> operators[i + 1]
+
+        operators[-1] >> send_marine_email
 
 
     with TaskGroup("PEL_group") as PEL_group:
@@ -354,21 +399,18 @@ with DAG(
     with TaskGroup("claim_group") as claim_group:
 
         claim_group_items = [
-            'sp_update_ebao_stage',
-            'sp_tcatastrophe',
-            'sp_tcause_of_loss',
-            'sp_tsub_cause_of_loss',
-            'sp_tclaim',
-            'sp_ebao_tclaim_onetime_datafix',
-            'sp_tclaim_feature',
-            'sp_tclaim_payment',
-            'sp_tclaim_transaction',
-            'sp_tclaim_note',
-            'sp_tclaim_diary',
-            'sp_update_tclaim',
-            'sp_update_tclaim_feature',
-            'sp_treconciliation_ebao',
-            'sp_tclaim_litigation'
+            'sp_tcatastrophe_snapsheet',
+            'sp_tclaim_cost_category_snapsheet',
+            'sp_tcause_of_loss_snapsheet',
+            'sp_tclaim_snapsheet',
+            'sp_tclaim_feature_snapsheet',
+            'sp_tclaim_payment_snapsheet',
+            'sp_tclaim_transaction_snapsheet',
+            'sp_tclaim_note_snapsheet',
+            'sp_tclaim_task_snapsheet',
+            'sp_update_tclaim_snapsheet',
+            'sp_update_tclaim_feature_snapsheet',
+            'sp_tpolicy_update_lifetime_claims'
             ]
 
         operators = []
@@ -672,4 +714,4 @@ with DAG(
     )
 
 
-start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group] >> collection_group >> policy_transaction_group >> claim_group >> datamart_group >> validation_result_group >> integration_group >> exec_vault_edw_data_load_quotes >> end
+start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group] >> collection_marine >> [collection_group, marine_group] >> policy_transaction_group >> claim_group >> datamart_group >> validation_result_group >> integration_group >> exec_vault_edw_data_load_quotes >> end
