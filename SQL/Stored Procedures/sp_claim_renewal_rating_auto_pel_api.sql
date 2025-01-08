@@ -44,9 +44,9 @@ BEGIN
 		NULL as IncidentCode,
 		cl.claim_status as IncidentStatus,
 		cl.first_party_driver_nm as FirstPartyDriverName,
-		cl.fault_decision,
-		cl.responsible_party,
-		cl.at_fault_pct,
+		cl.fault_decision as FaultDecision,
+		cl.responsible_party as ResponsibleParty,
+		cl.at_fault_pct as AtFaultPercent,
 		TotalPayout,BodilyInjuryPayment,CollisionPayment,
 		ComprehensivePayment,GlassPayment,MedicalExpensePayment,MedicalPaymentPayment,
 		PropertyDamagePayment,PersonalInjuryProtectionPayment,SpousalLiabilityPayment,
@@ -105,7 +105,7 @@ BEGIN
 			IncidentDate,PolicyNumber,FileNumber,IncidentType,IncidentDescription,IncidentCode,TotalPayout,IncidentStatus,BodilyInjuryPayment,
 			CollisionPayment,ComprehensivePayment,GlassPayment,MedicalExpensePayment,MedicalPaymentPayment,OtherPayment,PropertyDamagePayment,
 			PersonalInjuryProtectionPayment,RentalReimbursementPayment,SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,
-			UnderinsuredMotoristPayment,ViolationPointClass,FirstPartyDriverName,fault_decision,responsible_party,at_fault_pct,
+			UnderinsuredMotoristPayment,ViolationPointClass,FirstPartyDriverName,FaultDecision,ResponsibleParty,AtFaultPercent,
 			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -116,7 +116,7 @@ BEGIN
 			SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,
 			UnderinsuredMotoristPayment,
 			NULL, -- ViolationPointClass
-			FirstPartyDriverName,fault_decision,responsible_party,at_fault_pct,
+			FirstPartyDriverName,FaultDecision,ResponsibleParty,AtFaultPercent,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -146,11 +146,11 @@ BEGIN
 			Target.UnderinsuredMotoristPayment	=	Source.UnderinsuredMotoristPayment,
 			Target.ViolationPointClass	=	NULL,
 			Target.FirstPartyDriverName = Source.FirstPartyDriverName,
-			Target.fault_decision = Source.fault_decision,
-			Target.responsible_party = Source.responsible_party,
-			Target.at_fault_pct = Source.at_fault_pct,
+			Target.FaultDecision = Source.FaultDecision,
+			Target.ResponsibleParty = Source.ResponsibleParty,
+			Target.AtFaultPercent = Source.AtFaultPercent,
 			Target.update_ts = GETDATE();
-			
+
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update audit table
