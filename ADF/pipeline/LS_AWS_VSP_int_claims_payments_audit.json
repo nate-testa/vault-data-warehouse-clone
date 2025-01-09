@@ -16,7 +16,7 @@
 				"userProperties": [
 					{
 						"name": "Source",
-						"value": "vsp_core.int_claims_payments_audit"
+						"value": "`int_claims_payments_audit`"
 					},
 					{
 						"name": "Destination",
