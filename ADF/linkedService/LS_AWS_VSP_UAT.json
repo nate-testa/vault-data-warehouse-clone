@@ -1,0 +1,22 @@
+{
+	"name": "LS_AWS_VSP_UAT",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "MySql",
+		"typeProperties": {
+			"server": "vlt-mysql-ods-uat.cluster-ctaeroxllezw.us-east-1.rds.amazonaws.com",
+			"port": 3306,
+			"database": "vsp_core",
+			"username": "vltDmsUserUAT",
+			"sslMode": 1,
+			"useSystemTrustStore": 0,
+			"driverVersion": "v2",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiJmMTk4OWZiZi03MzcwLTQ0NDgtOTQ5My04MmI0ZjcxY2MzN2MiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "AWS-UAT",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
