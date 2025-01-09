@@ -8,7 +8,7 @@
 -- 08/09/24		        Architha Gudimalla			3. Exclude notes before 20240601
 -- 10/11/24		        Architha Gudimalla			4. Exclude yacht
 -- 10/25/24		        Architha Gudimalla			5. Include notes for only those quotes that are in the quote feed
--- 01/07/25		        Alberto Almario				6. VI35257 - Add note_user_id
+-- 01/08/25		        Alberto Almario				6. VI35257 - Add note_user_nm
 -- ==================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_note_hubspot_feed]
@@ -35,7 +35,7 @@ BEGIN
 
 		DROP TABLE IF exists edw_temp.quote_note_hubspot_feed_temp1;
 
-        select n.policy_no as quote_no, n.note_desc, n.note_created_ts, n.note_updated_ts, n.note_id, n.create_ts,n.update_ts, u.user_id as note_user_id
+        select n.policy_no as quote_no, n.note_desc, n.note_created_ts, n.note_updated_ts, n.note_id, n.create_ts,n.update_ts, CONCAT(u.first_nm,' ',u.last_nm) as note_user_nm
         into edw_temp.quote_note_hubspot_feed_temp1
         from [edw_core].[tnote] n
 		left join [edw_core].[tuser] u on n.user_sk = u.user_sk
@@ -51,19 +51,19 @@ BEGIN
         WHEN NOT MATCHED BY Target THEN
         INSERT
         (
-            quote_no, note_desc, note_created_ts, note_updated_ts, note_id, create_ts, update_ts, etl_audit_sk, note_user_id 
+            quote_no, note_desc, note_created_ts, note_updated_ts, note_id, create_ts, update_ts, etl_audit_sk, note_user_nm 
         )
         VALUES
         (
-            quote_no , note_desc, note_created_ts, note_updated_ts, note_id, getdate(), getdate(), @etl_audit_sk, note_user_id
+            quote_no , note_desc, note_created_ts, note_updated_ts, note_id, getdate(), getdate(), @etl_audit_sk, note_user_nm
         )
         WHEN MATCHED THEN UPDATE
         SET        
             [target].note_desc	        =	[source].note_desc, 
             [target].note_updated_ts	=	[source].note_updated_ts,
             [target].update_ts	        =	GETDATE(),
-            [target].etl_audit_sk	    =	@etl_audit_sk
-			[target].note_user_id		=	[source].note_user_id;
+            [target].etl_audit_sk	    =	@etl_audit_sk,
+			[target].note_user_nm		=	[source].note_user_nm;
         
         SET @rows_affected=@@ROWCOUNT;
         -- Update control table
