@@ -11,6 +11,7 @@ GO
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 10/06/2023		Mohammed Yunus				1. Created this procedure 
+-- 01/08/2025		Rushin Shah					2. AD7660 - Added new columns
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_home_collection_api]
@@ -45,7 +46,7 @@ BEGIN
 			cl.loss_dt AS [LossDate],
 			'Customer-Location Loss' AS [LossIdentifier],
 			l.cause_of_loss_desc AS LossType,
-			sub_cause_of_loss_desc AS [SubCauseOfLoss],
+			NULL AS [SubCauseOfLoss],
 			cl.loss_desc AS [LossDescription],
 			p.policy_term AS PolicyType,
 			CASE
@@ -65,15 +66,27 @@ BEGIN
 			cl.expense_reserve_amt AS ReserveExpense,
 			cl.loss_reserve_amt AS ReserveIndemnity,
 			cl.expense_paid_amt AS PaidExpense,
-			cl.loss_paid_amt AS PaidIndemnity
+			cl.loss_paid_amt AS PaidIndemnity,
+			cl.source_of_fire as SourceOfFire,
+			cl.source_of_water as SourceOfWater
 		INTO edw_temp.claim_renewal_rating_home_collection_api_temp1
 		FROM
 			edw_core.tclaim cl
 			inner join edw_core.tproduct tp on tp.product_sk=cl.product_sk
 			LEFT JOIN edw_core.tcause_of_loss l on cl.cause_of_loss_sk = l.cause_of_loss_sk 
-			LEFT JOIN edw_core.tsub_cause_of_loss s on cl.sub_cause_of_loss_sk =s.sub_cause_of_loss_sk 
+			--LEFT JOIN edw_core.tsub_cause_of_loss s on cl.sub_cause_of_loss_sk =s.sub_cause_of_loss_sk 
 			Left join edw_core.tpolicy p on p.policy_no = cl.policy_no 
 			left join edw_core.tcatastrophe cat on cat.catastrophe_sk=cl.catastrophe_sk
+			INNER JOIN
+			(
+				SELECT 
+					row_number() over(partition by claim_sk order by sum(clf.expense_reserve_amt + clf.loss_reserve_amt + clf.expense_paid_amt + clf.loss_paid_amt) desc) as row_no, 
+				claim_sk,claim_coverage_desc
+				FROM
+					edw_core.tclaim_feature clf				
+				group by claim_sk,claim_coverage_desc
+
+			) cf on cf.claim_sk= cl.claim_sk and cf.row_no = 1
 		WHERE
 			cl.product_sk in(1,2)
 
@@ -88,6 +101,7 @@ BEGIN
 			PropertyOrLiability,PolicyNumber,FileNumber,ClaimStatus,Claimant,LossDate,LossIdentifier,LossType,SubCauseOfLoss,
 			LossDescription,PolicyType,CatIndicator,CatCode,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressZipCode,
 			AddressState,AddressCounty,AddressCountry,Coverage,ReserveExpense,ReserveIndemnity,PaidExpense,PaidIndemnity,
+			SourceOfFire,SourceOfWater,
 			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -95,6 +109,7 @@ BEGIN
 			PropertyOrLiability,PolicyNumber,FileNumber,ClaimStatus,Claimant,LossDate,LossIdentifier,LossType,SubCauseOfLoss,
 			LossDescription,PolicyType,CatIndicator,CatCode,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressZipCode,
 			AddressState,AddressCounty,AddressCountry,Coverage,ReserveExpense,ReserveIndemnity,PaidExpense,PaidIndemnity,
+			SourceOfFire,SourceOfWater,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -125,6 +140,8 @@ BEGIN
 		Target.ReserveIndemnity = Source.ReserveIndemnity,
 		Target.PaidExpense = Source.PaidExpense,
 		Target.PaidIndemnity = Source.PaidIndemnity,
+		Target.SourceOfFire = Source.SourceOfFire,
+		Target.SourceOfWater = Source.SourceOfWater,
 		Target.update_ts = GETDATE();
 
 		SET @rows_affected=@@ROWCOUNT;

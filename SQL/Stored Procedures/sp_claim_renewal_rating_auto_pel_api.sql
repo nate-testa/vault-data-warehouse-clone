@@ -11,6 +11,7 @@ GO
 ---------------------------------------------------------------------------------------------------
 -- 11/15/2023		Yunus Mohammed				1. Created this procedure 
 -- 03/11/2024		Yunus Mohammed				2. Logic corrected to calculate amount columns
+-- 01/08/2025		Rushin Shah					3. AD8990 - Added new columns
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_auto_pel_api]
@@ -41,6 +42,10 @@ BEGIN
 		NULL as IncidentDescription,
 		NULL as IncidentCode,
 		cl.claim_status as IncidentStatus,
+		cl.first_party_driver_nm as FirstPartyDriverName,
+		cl.fault_decision as FaultDecision,
+		cl.responsible_party as ResponsibleParty,
+		cl.at_fault_pct as AtFaultPercent,
 		TotalPayout,BodilyInjuryPayment,CollisionPayment,
 		ComprehensivePayment,GlassPayment,MedicalExpensePayment,MedicalPaymentPayment,
 		PropertyDamagePayment,PersonalInjuryProtectionPayment,SpousalLiabilityPayment,
@@ -49,13 +54,13 @@ BEGIN
 		FROM
 		edw_core.tclaim cl
 		LEFT JOIN edw_core.tcause_of_loss l on cl.cause_of_loss_sk = l.cause_of_loss_sk 
-		LEFT JOIN edw_core.tsub_cause_of_loss s on cl.sub_cause_of_loss_sk =s.sub_cause_of_loss_sk 
+		--LEFT JOIN edw_core.tsub_cause_of_loss s on cl.sub_cause_of_loss_sk =s.sub_cause_of_loss_sk 
 		LEFT JOIN edw_core.tpolicy p on p.policy_no = cl.policy_no 
 		INNER JOIN
 		(
 			SELECT
 				cl.claim_sk,
-				SUM(clf.loss_paid_amt + clf.expense_paid_amt + clf.adjusting_other_paid_amt) as TotalPayout,
+				SUM(clf.loss_paid_amt + clf.expense_paid_amt) as TotalPayout,
 				SUM(Case When clf.claim_coverage_desc = 'Bodily Injury' then clf.loss_paid_amt+clf.expense_paid_amt End) as BodilyInjuryPayment,
 				SUM(Case When clf.claim_coverage_desc = 'Collision' then clf.loss_paid_amt+clf.expense_paid_amt End) as CollisionPayment,
 				SUM(Case When clf.claim_coverage_desc = 'Comprehensive' then clf.loss_paid_amt+clf.expense_paid_amt End) as ComprehensivePayment,
@@ -99,7 +104,8 @@ BEGIN
 			IncidentDate,PolicyNumber,FileNumber,IncidentType,IncidentDescription,IncidentCode,TotalPayout,IncidentStatus,BodilyInjuryPayment,
 			CollisionPayment,ComprehensivePayment,GlassPayment,MedicalExpensePayment,MedicalPaymentPayment,OtherPayment,PropertyDamagePayment,
 			PersonalInjuryProtectionPayment,RentalReimbursementPayment,SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,
-			UnderinsuredMotoristPayment,ViolationPointClass,create_ts,update_ts,etl_audit_sk
+			UnderinsuredMotoristPayment,ViolationPointClass,FirstPartyDriverName,FaultDecision,ResponsibleParty,AtFaultPercent,
+			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
 		(
@@ -109,6 +115,7 @@ BEGIN
 			SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,
 			UnderinsuredMotoristPayment,
 			NULL, -- ViolationPointClass
+			FirstPartyDriverName,FaultDecision,ResponsibleParty,AtFaultPercent,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -137,6 +144,10 @@ BEGIN
 			Target.UninsuredMotoristPayment	=	Source.UninsuredMotoristPayment,
 			Target.UnderinsuredMotoristPayment	=	Source.UnderinsuredMotoristPayment,
 			Target.ViolationPointClass	=	NULL,
+			Target.FirstPartyDriverName = Source.FirstPartyDriverName,
+			Target.FaultDecision = Source.FaultDecision,
+			Target.ResponsibleParty = Source.ResponsibleParty,
+			Target.AtFaultPercent = Source.AtFaultPercent,
 			Target.update_ts = GETDATE();
 			
 		SET @rows_affected=@@ROWCOUNT;
