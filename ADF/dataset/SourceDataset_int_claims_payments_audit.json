@@ -5,6 +5,9 @@
 			"referenceName": "LS_AWS_VSP_UAT",
 			"type": "LinkedServiceReference"
 		},
+		"folder": {
+			"name": "Dataset_int_claims_payments_audit"
+		},
 		"annotations": [],
 		"type": "MySqlTable",
 		"schema": [],
