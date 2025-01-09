@@ -25,7 +25,8 @@
 				],
 				"typeProperties": {
 					"source": {
-						"type": "MySqlSource"
+						"type": "MySqlSource",
+						"query": "SELECT *\nFROM vsp_core.int_claims_payments_audit"
 					},
 					"sink": {
 						"type": "AzureSqlSink",
