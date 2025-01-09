@@ -12,6 +12,7 @@ GO
 -- 12/18/2024		Alberto Almario				2. Add new columns first_party_driver_nm,source_of_fire and source_of_water, add rownumber() function and changes on some joins
 -- 12/20/2024		Alberto Almario				3. Add GREATEST() function to update etl_control table.
 -- 12/27/2024		Alberto Almario				4. Add new columns fault_decision, responsible_party and at_fault_pct
+-- 01/09/2025		Alberto Almario				5. remove column sub_cause_of_loss_sk
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -61,7 +62,7 @@ BEGIN
 		loss_address ,loss_city_nm ,loss_state_cd ,loss_zip_cd,loss_country_nm,broker_id,customer_id,underwriting_company_nm,
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
 		claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
-		5 AS source_system_sk,sub_cause_of_loss_sk,update_time,first_party_driver_nm,source_of_fire,source_of_water
+		5 AS source_system_sk,update_time,first_party_driver_nm,source_of_fire,source_of_water
 		,fault_decision,responsible_party,at_fault_pct
 		INTO edw_temp.tclaim_snapsheet_temp1
 		FROM
@@ -107,7 +108,6 @@ BEGIN
 			cp.relation_to_insured AS contact_type,
 			cpcmp.value as contact_phone,
 			CASE WHEN TRIM(cpcme.value)='' THEN NULL ELSE cpcme.value END AS contact_person_email,
-			NULL as sub_cause_of_loss_sk,
 			c.updated_at AS update_time,
 			c.first_closed_at as claim_first_closed_dt,
 			CAST(NULL AS DATE) as claim_first_reopen_dt, 
@@ -162,7 +162,7 @@ BEGIN
 	WHEN NOT MATCHED BY Target THEN
 	INSERT (
 			claim_no,loss_dt,report_dt,policy_no
-			,policy_effective_dt,policy_sk,cause_of_loss_sk,sub_cause_of_loss_sk,loss_desc,claim_status
+			,policy_effective_dt,policy_sk,cause_of_loss_sk,loss_desc,claim_status
 			,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,loss_address,loss_city_nm
 			,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_id,contact_nm,contact_type
 			,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt
@@ -174,7 +174,7 @@ BEGIN
 	VALUES
 		(
 		claim_no,loss_dt,report_dt,policy_no
-		,policy_effective_dt,policy_sk,cause_of_loss_sk,sub_cause_of_loss_sk,loss_desc,claim_status
+		,policy_effective_dt,policy_sk,cause_of_loss_sk,loss_desc,claim_status
 		,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,loss_address,loss_city_nm
 		,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_id,contact_nm,contact_type
 		,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,claim_created_ts ,claim_created_by_nm
@@ -215,7 +215,6 @@ BEGIN
 		Target.claim_created_ts=Source.claim_created_ts,
 		Target.claim_created_by_nm=Source.claim_created_by_nm,
 		Target.update_ts=@current_date,
-		Target.sub_cause_of_loss_sk=Source.sub_cause_of_loss_sk,
 		Target.claim_reject_reason_desc=Source.claim_reject_reason_desc,
 		Target.first_party_driver_nm=Source.first_party_driver_nm,
 		Target.source_of_fire=Source.source_of_fire,
