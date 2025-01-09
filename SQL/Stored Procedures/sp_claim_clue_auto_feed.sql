@@ -3,7 +3,7 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =================================================================================================
+-- =============================================
 -- Author:		Alberto Almario
 -- Create Date: 2024-05-18
 -- Description: This stored procedure insert info related to claim_clue_auto_feed.
@@ -11,7 +11,7 @@ GO
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
 -- 01-03-2025				Alberto Almario				1. Add snasheet mapping to ClaimType column.
--- ================================================================================================= 
+-- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
 BEGIN
@@ -90,7 +90,7 @@ BEGIN
                 a.claim_sk,
                 a.item_sk,
                 b.transaction_ts,
-                SUM(a.subro_expense_paid_amt + a.subro_recovery_amt) AS sum_subro_exp_rec_amt,
+                SUM(a.subrogation_expense_recovery_amt + a.subrogation_recovery_amt) AS sum_subro_exp_rec_amt,
                 MAX(
                     CASE 
                         WHEN a.claim_feature_status = 'CLOSED' THEN 1
@@ -115,9 +115,16 @@ BEGIN
                             (
                                 a.loss_paid_amt             + 
                                 a.expense_paid_amt          + 
-                                a.adjusting_other_paid_amt  + 
-                                a.refund_indemnity_paid_amt + 
-                                a.refund_expense_paid_amt
+                                a.deductible_defense_recovery_amt  + 
+                                a.deductible_expense_recovery_amt + 
+                                a.defense_paid_amt +
+                                a.overpayment_defense_recovery_amt +
+                                a.overpayment_expense_recovery_amt +
+                                a.overpayment_recovery_amt +
+                                a.reinsurance_defense_recovery_amt +
+                                a.reinsurance_expense_recovery_amt +
+                                a.reinsurance_recovery_amt +
+                                a.deductible_recovery_amt
                             ), 0)
                     ) AS [claimAmount]
             FROM edw_core.tclaim_feature AS a

@@ -8,10 +8,10 @@ GO
 -- Create Date: 10/06/2023
 -- Description: This procedures inserts and updates data for claim renewal rating for home and collection
 ---------------------------------------------------------------------------------------------------
--- Change date 			|Author						|	Change Description
+-- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 10/06/23				Yunus Mohammed				1. Created this procedure 
--- 12/18/24				Yunus Mohammed				2. AD7660 - Added new columns
+-- 10/06/2023		Mohammed Yunus				1. Created this procedure 
+-- 01/08/2025		Rushin Shah					2. AD7660 - Added new columns
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_home_collection_api]
@@ -46,7 +46,7 @@ BEGIN
 			cl.loss_dt AS [LossDate],
 			'Customer-Location Loss' AS [LossIdentifier],
 			l.cause_of_loss_desc AS LossType,
-			sub_cause_of_loss_desc AS [SubCauseOfLoss],
+			NULL AS [SubCauseOfLoss],
 			cl.loss_desc AS [LossDescription],
 			p.policy_term AS PolicyType,
 			CASE
@@ -62,21 +62,21 @@ BEGIN
 			cl.loss_state_cd AS	AddressState,
 			NULL AS	 AddressCounty,
 			CL.loss_country_nm AS AddressCountry,
-			cf.claim_coverage_desc AS Coverage,
+			NULL AS Coverage,
 			cl.expense_reserve_amt AS ReserveExpense,
 			cl.loss_reserve_amt AS ReserveIndemnity,
 			cl.expense_paid_amt AS PaidExpense,
 			cl.loss_paid_amt AS PaidIndemnity,
 			cl.source_of_fire as SourceOfFire,
-			cl.source_of_water as SourceOfWater			
+			cl.source_of_water as SourceOfWater
 		INTO edw_temp.claim_renewal_rating_home_collection_api_temp1
 		FROM
 			edw_core.tclaim cl
 			inner join edw_core.tproduct tp on tp.product_sk=cl.product_sk
 			LEFT JOIN edw_core.tcause_of_loss l on cl.cause_of_loss_sk = l.cause_of_loss_sk 
-			LEFT JOIN edw_core.tsub_cause_of_loss s on cl.sub_cause_of_loss_sk =s.sub_cause_of_loss_sk 
+			--LEFT JOIN edw_core.tsub_cause_of_loss s on cl.sub_cause_of_loss_sk =s.sub_cause_of_loss_sk 
 			Left join edw_core.tpolicy p on p.policy_no = cl.policy_no 
-			left join edw_core.tcatastrophe cat on cat.catastrophe_sk=cl.catastrophe_sk			
+			left join edw_core.tcatastrophe cat on cat.catastrophe_sk=cl.catastrophe_sk
 			INNER JOIN
 			(
 				SELECT 
