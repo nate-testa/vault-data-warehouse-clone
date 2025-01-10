@@ -35,7 +35,7 @@ BEGIN
 
 		DROP TABLE IF exists edw_temp.quote_note_hubspot_feed_temp1;
 
-        select n.policy_no as quote_no, n.note_desc, n.note_created_ts, n.note_updated_ts, n.note_id, n.create_ts,n.update_ts, CONCAT(u.first_nm,' ',u.last_nm) as note_user_nm
+        select n.policy_no as quote_no, n.note_desc, n.note_created_ts, n.note_updated_ts, n.note_id, n.create_ts,n.update_ts, nullif(trim(CONCAT(isnull(u.first_nm,''),' ',isnull(u.last_nm,''))),'') as note_user_nm
         into edw_temp.quote_note_hubspot_feed_temp1
         from [edw_core].[tnote] n
 		left join [edw_core].[tuser] u on n.user_sk = u.user_sk
