@@ -1,14 +1,10 @@
-﻿SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- ========================================================================================================
+﻿-- ========================================================================================================
 -- Description: This procedures updates claim snapsheet
 -----------------------------------------------------------------------------------------------------------
--- Change date 		|Author						|	Change Description
+-- Change date 		|Author									|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 11/22/2024		Alberto Almario				1. Created this procedure
+-- 11/22/2024		Alberto Almario					1. Created this procedure
+-- 01/10/2025		Yunus Mohammed				2. Incorrect Rowcount issue resolved
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_update_tclaim_snapsheet]
 AS
@@ -162,8 +158,6 @@ BEGIN
 
 		--************End************
 
-		SET @rows_affected=@@ROWCOUNT;
-
 		-- Update control table
 		-- SET @new_last_source_extract_ts=COALESCE((SELECT MAX(created_ts) FROM edw_temp.update_tclaim_snapsheet_temp1),@last_source_extract_ts);
 		-- EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
@@ -171,9 +165,6 @@ BEGIN
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 	
-		-- Drop temp table
-		-- DROP TABLE IF EXISTS edw_temp.update_tclaim_snapsheet_temp1
-
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
