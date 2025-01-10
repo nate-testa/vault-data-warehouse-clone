@@ -2,9 +2,10 @@
 -- Author:		Yunus Mohammed
 -- Description: This procedure calculates claim amounts at coverage level
 ---------------------------------------------------------------------------------------------------
--- Change date 			|Author							|	Change Description
+-- Change date 				|Author											|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 12/30/2024			Yunus Mohammed					1. Procedure created
+-- 01/10/2024			Yunus Mohammed					2. Removed feature_status_sk and used claim_feature_status
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_summary_snapsheet]
@@ -104,8 +105,8 @@ BEGIN
 			SUM(ct.salvage_expense_recovery_amt) AS itd_salvage_expense_recovery_amt,
             SUM(CASE WHEN ct.transaction_dt_sk BETWEEN @begin_dt_sk AND @end_dt_sk THEN ct.subrogation_expense_recovery_amt ELSE 0 END) AS subrogation_expense_recovery_amt,
 			SUM(ct.subrogation_expense_recovery_amt) AS itd_subrogation_expense_recovery_amt,
-            MAX(CASE WHEN cs.claim_status_category_nm='OPEN' THEN 1 ELSE 0 END) AS feature_open_ct,
-			MAX(CASE WHEN cs.claim_status_category_nm='CLOSED' THEN 1 ELSE 0 END) AS feature_closed_ct,
+            MAX(CASE WHEN claim_feature_status IN ('OPEN','DRAFT') THEN 1 ELSE 0 END) AS feature_open_ct,
+			MAX(CASE WHEN claim_feature_status IN('CLOSED' ,'CANCELLED')THEN 1 ELSE 0 END) AS feature_closed_ct,
             SUM(
 				ct.loss_reserve_amt+ct.expense_reserve_amt+ct.subrogation_recovery_reserve_amt+ct.salvage_recovery_reserve_amt+
 				ct.salvage_recovery_expense_reserve_amt+ct.subrogation_recovery_expense_reserve_amt+ct.loss_paid_amt+
@@ -206,10 +207,8 @@ BEGIN
 					WHERE tt.transaction_dt_sk <= @end_dt_sk
 				)b
 				WHERE rn=1
-			) AS fs ON ct.claim_feature_sk =fs.claim_feature_sk
-			INNER JOIN edw_core.tclaim_status cs ON fs.feature_status_sk =cs.claim_status_sk
-			WHERE ct.transaction_dt_sk <=@end_dt_sk
-			AND fs.feature_status_sk =cs.claim_status_sk
+			) AS fs ON ct.claim_feature_sk =fs.claim_feature_sk			
+			WHERE ct.transaction_dt_sk <=@end_dt_sk			
 			GROUP BY ct.claim_sk,ct.claim_feature_sk,cf.aslob_sk,ct.product_sk,ct.policy_sk, broker_sk,customer_sk,ct.source_system_sk;
 		
 			SET @rows_affected=@@ROWCOUNT
