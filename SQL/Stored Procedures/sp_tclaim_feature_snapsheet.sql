@@ -6,10 +6,11 @@ GO
 -- ========================================================================================================
 -- Description: This procedures inserts tclaim_feature snapsheet data
 -----------------------------------------------------------------------------------------------------------
--- Change date 		|Author						|	Change Description
+-- Change date				|Author									|Change Description
 -----------------------------------------------------------------------------------------------------------
--- 11/21/2024		Yunus Mohammd				1. Created this procedure
--- 11/22/2024		Alberto Almario				2. Changes on some columns and tables
+-- 11/21/2024				Yunus Mohammd			1. Created this procedure
+-- 11/22/2024				Alberto Almario				2. Changes on some columns and tables
+-- 01/10/2024				Yunus Mohammed		  3. Upated total_loss_in to Yes and No
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet]
 AS
@@ -42,8 +43,8 @@ BEGIN
 			exps.coverage_name as claim_coverage_desc,
 			exps.claimant_name as claimant_nm,		
 			case
-				when veh.potential_total_loss = 'true' then 'Y' 
-				when prd.product_cd = 'AU' then 'N'
+				when veh.potential_total_loss = 'true' then 'Yes' 
+				when prd.product_cd = 'AU' then 'No'
 				else NULL
 			end AS total_loss_in,
 			prd.product_sk,
