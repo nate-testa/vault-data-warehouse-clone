@@ -9,6 +9,7 @@ GO
 -- Change date 		|Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 11/15/2024		Alberto Almario				1. Created this procedure
+-- 01/10/2025		Alberto Almario				2. Change logic for cause_of_loss_cd column
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcause_of_loss_snapsheet]
 AS
@@ -44,52 +45,18 @@ BEGIN
 			WHERE loss_type NOT IN (
 				SELECT cause_of_loss_desc 
 				FROM edw_core.tcause_of_loss 
-				WHERE cause_of_loss_cd LIKE 'SS_%'
 			)
 			AND updated_at > @last_source_extract_ts
 			GROUP BY claim_type, loss_type
-		),
-		last_sequence AS (
-			SELECT 
-				CASE 
-					WHEN cause_of_loss_cd LIKE 'SS_AU_%' THEN 'auto'
-					WHEN cause_of_loss_cd LIKE 'SS_PEL_%' THEN 'liability'
-					WHEN cause_of_loss_cd LIKE 'SS_HO_%' THEN 'property'
-					WHEN cause_of_loss_cd LIKE 'SS_CO_%' THEN 'condo'
-					WHEN cause_of_loss_cd LIKE 'SS_LUX_%' THEN 'collections'
-					ELSE 'other'
-				END AS claim_type,
-				MAX(CAST(SUBSTRING(cause_of_loss_cd, CHARINDEX('_', cause_of_loss_cd, CHARINDEX('_', cause_of_loss_cd) + 1) + 1, LEN(cause_of_loss_cd)) AS INT)) AS last_number
-			FROM edw_core.tcause_of_loss
-			WHERE cause_of_loss_cd LIKE 'SS_%'
-			GROUP BY 
-				CASE 
-					WHEN cause_of_loss_cd LIKE 'SS_AU_%' THEN 'auto'
-					WHEN cause_of_loss_cd LIKE 'SS_PEL_%' THEN 'liability'
-					WHEN cause_of_loss_cd LIKE 'SS_HO_%' THEN 'property'
-					WHEN cause_of_loss_cd LIKE 'SS_CO_%' THEN 'condo'
-					WHEN cause_of_loss_cd LIKE 'SS_LUX_%' THEN 'collections'
-					ELSE 'other'
-				END
 		)
+
 		SELECT 
-			CONCAT(
-				CASE 
-					WHEN c.claim_type = 'auto' THEN 'SS_AU_' 
-					WHEN c.claim_type = 'liability' THEN 'SS_PEL_' 
-					WHEN c.claim_type = 'property' THEN 'SS_HO_'
-					WHEN c.claim_type = 'condo' THEN 'SS_CO_'
-					WHEN c.claim_type = 'collections' THEN 'SS_LUX_'
-					ELSE '_OT_' 
-				END,
-				ROW_NUMBER() OVER (PARTITION BY c.claim_type ORDER BY c.loss_type ASC) + COALESCE(l.last_number, 0)
-			) AS cause_of_loss_cd,
+			c.loss_type AS cause_of_loss_cd,
 			c.loss_type AS cause_of_loss_desc,
 			5 AS source_system_sk,
 			c.updated_at
 		INTO edw_temp.tcause_of_loss_snapsheet_temp1
 		FROM claim_data c
-		LEFT JOIN last_sequence l ON c.claim_type = l.claim_type
 		;
 
 		-- Start Insert process
