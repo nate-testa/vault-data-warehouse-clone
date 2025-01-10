@@ -25,6 +25,7 @@
 -- 11/16/24		        Archtha Gudimalla			17. Updated column name error in last insert 
 --                                                      for ytd_offered_renewal_ct,ytd_offered_renewal_over50k_ct
 -- 11/18/24		        Archtha Gudimalla			18. AZ7643 - Updated retention rolling 12 month to go 12 month back from prior month
+-- 01/10/25		        Archtha Gudimalla			19. VI35984/AZ8173 - Excluded marine brokers
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -69,6 +70,7 @@ BEGIN
 					max(case when team_member_type = 'RenewalUnderwriter' then team_member_nm end) RenewalUnderwriter ,
 					count(distinct case when team_member_type = 'RenewalUnderwriter' then team_member_nm end) RenewalUnderwriter_distinct 
 			from edw_core.tbroker_vault_team bvt 
+            where product_nm <> 'Marine Boat & Yacht'
 			group by broker_id --, --product_nm, state_cd, program_type
         ),
         br_summ as
@@ -145,58 +147,58 @@ BEGIN
             group by broker_id 
         )
         SELECT
-        tb.broker_id,
-        tb.broker_nm,
-        tb.mailing_address_line_1,
-        tb.mailing_address_line_2,
-        tb.mailing_address_city_nm,
-        tb.mailing_address_state_cd,
-        tb.mailing_address_zip_cd, 
-        tb.mailing_address_country_nm,
-        tb.broker_tier,
-        case
-            when tb.broker_tier = 1 then 'Elite'
-            when tb.broker_tier in (2,4) then 'Signature'
-            When tb.broker_tier = 5 then 'Terminated'
-        end as broker_tier_nm,
-        tb.national_agency_in,
-        tb.broker_type,
-        tb.broker_status,
-        tb.contract_dt,
-        tb.primary_contact_nm,
-        tb.broker_email,
-        tb.broker_phone_no,
-        bvtm.bdm_nm,
-        null as bdm_email,
-        case when bvtm.Underwriter_distinct        = 1 then bvtm.[Underwriter]        else null end as new_business_uw_nm,
-        case when bvtm.RenewalUnderwriter_distinct = 1 then bvtm.[RenewalUnderwriter] else null end as renewal_uw_nm, 
-        bs.open_submissions_ct,
-        case when bs.one_year_non_cat_earned_net_premium_amt > 0 then round(100*cast(bs.one_year_non_cat_loss_incurred_amt as float)/bs.one_year_non_cat_earned_net_premium_amt,2) else 0 end as one_year_actual_non_cat_loss_ratio,
-        case when bs.two_year_non_cat_earned_net_premium_amt > 0 then round(100*cast(bs.two_year_non_cat_loss_incurred_amt as float)/bs.two_year_non_cat_earned_net_premium_amt,2) else 0 end as two_year_ultimate_non_cat_loss_ratio,
-        case when bs.five_year_non_cat_earned_net_premium_amt > 0 then round(100*cast(bs.five_year_non_cat_loss_incurred_amt as float)/bs.five_year_non_cat_earned_net_premium_amt,2) else 0 end as five_year_non_cat_loss_ratio,
-        bs.ytd_bind_ct,
-        bs.ytd_submission_ct,
-        bs.last30_days_submission_ct,
-        case when bs.ytd_quote_ct = 0 then 0 else round(100*cast(bs.ytd_new_business_ct as float)/bs.ytd_quote_ct,2) end as hit_ratio,
-        bs.ytd_offered_renewal_ct,
-        bs.ytd_offered_renewal_over50k_ct,
-        bs.inforce_ct as inforce_policy_ct,
-        case when ct.c_tier in ('Platinum','Gold','National','Wholesaler','A&WINS','Burns') then ct.c_tier else null end as commission_tier, 
-        bs.inforce_premium_amt,
-        null as target_yoy_inforce_premium_pc,
-        null as target_yoy_ytd_nb_prem_pc,
-        null as target_ytd_nb_premium_pc,
-        null as target_ytd_renewal_retention_pc
-        ,ytd_new_business_net_premium_amt as ytd_nb_premium_amt
-        ,case when rolling_12_policy_renewal_ct > 0 then round(100*cast(rolling_12_policy_renewal_accepted_ct as float)/rolling_12_policy_renewal_ct,2) else null end ytd_renewal_retention_pc
-        into edw_temp.broker_hubspot_feed_temp1
-        FROM edw_core.tbroker tb
+            tb.broker_id,
+            tb.broker_nm,
+            tb.mailing_address_line_1,
+            tb.mailing_address_line_2,
+            tb.mailing_address_city_nm,
+            tb.mailing_address_state_cd,
+            tb.mailing_address_zip_cd, 
+            tb.mailing_address_country_nm,
+            tb.broker_tier,
+            case
+                when tb.broker_tier = 1 then 'Elite'
+                when tb.broker_tier in (2,4) then 'Signature'
+                When tb.broker_tier = 5 then 'Terminated'
+            end as broker_tier_nm,
+            tb.national_agency_in,
+            tb.broker_type,
+            tb.broker_status,
+            tb.contract_dt,
+            tb.primary_contact_nm,
+            tb.broker_email,
+            tb.broker_phone_no,
+            bvtm.bdm_nm,
+            null as bdm_email,
+            case when bvtm.Underwriter_distinct        = 1 then bvtm.[Underwriter]        else null end as new_business_uw_nm,
+            case when bvtm.RenewalUnderwriter_distinct = 1 then bvtm.[RenewalUnderwriter] else null end as renewal_uw_nm, 
+            bs.open_submissions_ct,
+            case when bs.one_year_non_cat_earned_net_premium_amt > 0 then round(100*cast(bs.one_year_non_cat_loss_incurred_amt as float)/bs.one_year_non_cat_earned_net_premium_amt,2) else 0 end as one_year_actual_non_cat_loss_ratio,
+            case when bs.two_year_non_cat_earned_net_premium_amt > 0 then round(100*cast(bs.two_year_non_cat_loss_incurred_amt as float)/bs.two_year_non_cat_earned_net_premium_amt,2) else 0 end as two_year_ultimate_non_cat_loss_ratio,
+            case when bs.five_year_non_cat_earned_net_premium_amt > 0 then round(100*cast(bs.five_year_non_cat_loss_incurred_amt as float)/bs.five_year_non_cat_earned_net_premium_amt,2) else 0 end as five_year_non_cat_loss_ratio,
+            bs.ytd_bind_ct,
+            bs.ytd_submission_ct,
+            bs.last30_days_submission_ct,
+            case when bs.ytd_quote_ct = 0 then 0 else round(100*cast(bs.ytd_new_business_ct as float)/bs.ytd_quote_ct,2) end as hit_ratio,
+            bs.ytd_offered_renewal_ct,
+            bs.ytd_offered_renewal_over50k_ct,
+            bs.inforce_ct as inforce_policy_ct,
+            case when ct.c_tier in ('Platinum','Gold','National','Wholesaler','A&WINS','Burns') then ct.c_tier else null end as commission_tier, 
+            bs.inforce_premium_amt,
+            null as target_yoy_inforce_premium_pc,
+            null as target_yoy_ytd_nb_prem_pc,
+            null as target_ytd_nb_premium_pc,
+            null as target_ytd_renewal_retention_pc
+            ,ytd_new_business_net_premium_amt as ytd_nb_premium_amt
+            ,case when rolling_12_policy_renewal_ct > 0 then round(100*cast(rolling_12_policy_renewal_accepted_ct as float)/rolling_12_policy_renewal_ct,2) else null end ytd_renewal_retention_pc
+        into    edw_temp.broker_hubspot_feed_temp1
+        FROM    edw_core.tbroker tb
         left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
         left join br_summ as bs    on bs.broker_sk = tb.broker_sk
         left join comm_tier as ct   on ct.broker_id = tb.broker_id
-        where isnull(tb.broker_nm,'') not like '%test%'
-		and not (tb.broker_id like '1%' and len(tb.broker_id) = 5)
-		and not (len(tb.broker_id) > 6);
+        where   isnull(tb.broker_nm,'') not like '%test%'
+		and     not (tb.broker_id like '1%' and len(tb.broker_id) = 5)
+		and     not (len(tb.broker_id) > 6);
 
         truncate table edw_integration.broker_hubspot_feed       
     
