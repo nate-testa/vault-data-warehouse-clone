@@ -1,0 +1,15 @@
+{
+	"name": "SourceDataset_int_claims_payments_audit",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_AWS_VSP_UAT",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "MySqlTable",
+		"schema": [],
+		"typeProperties": {
+			"tableName": "`int_claims_payments_audit`"
+		}
+	}
+}
