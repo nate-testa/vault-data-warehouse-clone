@@ -26,6 +26,7 @@
 --                                                      for ytd_offered_renewal_ct,ytd_offered_renewal_over50k_ct
 -- 11/18/24		        Archtha Gudimalla			18. AZ7643 - Updated retention rolling 12 month to go 12 month back from prior month
 -- 01/10/25		        Archtha Gudimalla			19. VI35984/AZ8173 - Excluded marine brokers
+-- 01/13/25		        Alberto Almario 			20. AD8013 - Included yacht data
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -108,7 +109,7 @@ BEGIN
 			inner join edw_core.tdate td on td.date_sk = tbs.month_sk
             where td.yearmonth >= @ret_start_mn
 			and td.yearmonth <= @var_end_mn
-            and product_sk <> 6 
+            -- and product_sk <> 6 
             group by broker_sk
         ),
         comm_tier AS
