@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tclaim_feature ALTER COLUMN total_loss_in varchar(255)
