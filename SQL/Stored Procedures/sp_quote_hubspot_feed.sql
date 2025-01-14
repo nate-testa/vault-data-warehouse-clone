@@ -17,6 +17,7 @@
 -- 10/16/24		        Archtha Gudimalla			12. Excluded cancelled pols in pending_non_renewal recampaign
 -- 10/25/24		        Archtha Gudimalla			13. Added isnull to code when checking names for test quotes
 -- 12/30/24		        Alberto Almario				14. VI35256 - Insured name update for entity/trust LLC
+-- 01/13/25		        Alberto Almario				15. AD8013 - Included yacht data
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -159,7 +160,8 @@ BEGIN
 		and isnull(cust.last_nm,'') not like '%test%'
 		and isnull(cust.first_nm,'') not like '%test%' 
 		and isnull(cust.customer_nm,'') not like '%test%'      
-		and q.product_cd <> 'BY';         
+		-- and q.product_cd <> 'BY'
+        ;         
 
         --this is to pull in policies with pending non renewal = Y
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp2;
@@ -277,7 +279,7 @@ BEGIN
 			 isnull(non_renewal_sub_note_desc,'') like '%Renewal not taken%' or
 			 isnull(non_renewal_sub_note_desc,'') like '%Coverage no longer needed%' or
 			 isnull(non_renewal_sub_note_desc,'') like '%Coverage placed elseware%')       
-		and q.product_cd <> 'BY'
+		-- and q.product_cd <> 'BY'
         and q.policy_status <> 'Cancelled'
         ;
         --and q1.quote_no is null
