@@ -26,6 +26,8 @@
 --                                                      for ytd_offered_renewal_ct,ytd_offered_renewal_over50k_ct
 -- 11/18/24		        Archtha Gudimalla			18. AZ7643 - Updated retention rolling 12 month to go 12 month back from prior month
 -- 01/10/25		        Archtha Gudimalla			19. VI35984/AZ8173 - Excluded marine brokers
+-- 01/13/25		        Alberto Almario 			20. AD8013 - Included yacht data
+-- 01/10/25		        Archtha Gudimalla			21. VI35254/AZ8015 - Added ytd_nb_yacht_premium_amt
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -100,6 +102,7 @@ BEGIN
                 sum(case when td.yearmonth = @var_end_mn then tbs.ytd_new_business_ct					else 0 end) as ytd_new_business_ct,
                 sum(case when td.yearmonth = @var_end_mn then tbs.ytd_quote_ct							else 0 end) as ytd_quote_ct,
                 sum(case when td.yearmonth = @var_end_mn then tbs.ytd_new_business_net_premium_amt		else 0 end) as ytd_new_business_net_premium_amt,
+                sum(case when td.yearmonth = @var_end_mn and tbs.product_sk = 6 then tbs.ytd_new_business_net_premium_amt		else 0 end) as ytd_new_business_net_yacht_premium_amt,
                 --
                 sum(case when td.yearmonth between @ret_start_mn and @ret_end_mn and tbs.policy_renewal_accepted_ct is not null then tbs.policy_renewal_accepted_ct else 0 end) rolling_12_policy_renewal_accepted_ct,
                 sum(case when td.yearmonth between @ret_start_mn and @ret_end_mn and tbs.policy_renewal_ct          is not null then tbs.policy_renewal_ct          else 0 end) rolling_12_policy_renewal_ct
@@ -108,7 +111,7 @@ BEGIN
 			inner join edw_core.tdate td on td.date_sk = tbs.month_sk
             where td.yearmonth >= @ret_start_mn
 			and td.yearmonth <= @var_end_mn
-            and product_sk <> 6 
+            --and product_sk <> 6 
             group by broker_sk
         ),
         comm_tier AS
@@ -189,7 +192,8 @@ BEGIN
             null as target_yoy_ytd_nb_prem_pc,
             null as target_ytd_nb_premium_pc,
             null as target_ytd_renewal_retention_pc
-            ,ytd_new_business_net_premium_amt as ytd_nb_premium_amt
+            ,bs.ytd_new_business_net_premium_amt as ytd_nb_premium_amt
+            ,bs.ytd_new_business_net_yacht_premium_amt as ytd_nb_yacht_premium_amt
             ,case when rolling_12_policy_renewal_ct > 0 then round(100*cast(rolling_12_policy_renewal_accepted_ct as float)/rolling_12_policy_renewal_ct,2) else null end ytd_renewal_retention_pc
         into    edw_temp.broker_hubspot_feed_temp1
         FROM    edw_core.tbroker tb
@@ -213,6 +217,7 @@ BEGIN
             create_ts,update_ts,etl_audit_sk
             ,mailing_address_country_nm
             ,ytd_nb_premium_amt
+            ,ytd_nb_yacht_premium_amt
             ,ytd_renewal_retention_pc
         )
         SELECT        
@@ -225,6 +230,7 @@ BEGIN
             getdate(), getdate(), @etl_audit_sk 
             ,mailing_address_country_nm
             ,ytd_nb_premium_amt
+            ,ytd_nb_yacht_premium_amt
             ,ytd_renewal_retention_pc
         FROM edw_temp.broker_hubspot_feed_temp1
         
