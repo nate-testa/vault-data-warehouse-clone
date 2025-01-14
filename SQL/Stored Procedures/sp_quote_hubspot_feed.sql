@@ -160,7 +160,8 @@ BEGIN
 		and isnull(cust.last_nm,'') not like '%test%'
 		and isnull(cust.first_nm,'') not like '%test%' 
 		and isnull(cust.customer_nm,'') not like '%test%'      
-		-- and q.product_cd <> 'BY';         
+		-- and q.product_cd <> 'BY'
+        ;         
 
         --this is to pull in policies with pending non renewal = Y
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp2;
