@@ -13,6 +13,7 @@ GO
 -- 12/20/2024		Alberto Almario				3. Add GREATEST() function to update etl_control table.
 -- 12/27/2024		Alberto Almario				4. Add new columns fault_decision, responsible_party and at_fault_pct
 -- 01/09/2025		Alberto Almario				5. remove column sub_cause_of_loss_sk
+-- 01/14/2025		Yunus Mohammed		 6. Used datetime_of_notification instead of first_opened_at for report_dt
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -74,7 +75,7 @@ BEGIN
 			cr.customer_id,
 			c.claim_number, 
 			c.datetime_of_loss AS loss_dt, 
-			c.first_opened_at AS report_dt, 
+			c.datetime_of_notification AS report_dt, 
 			c.policy_number as policy_no, 
 			tph.policy_sk,
 			cl.cause_of_loss_sk,
