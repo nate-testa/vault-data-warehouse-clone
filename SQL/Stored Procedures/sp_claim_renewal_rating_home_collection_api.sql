@@ -8,10 +8,11 @@ GO
 -- Create Date: 10/06/2023
 -- Description: This procedures inserts and updates data for claim renewal rating for home and collection
 ---------------------------------------------------------------------------------------------------
--- Change date 			|Author						|	Change Description
+-- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 10/06/23				Yunus Mohammed				1. Created this procedure 
--- 12/18/24				Yunus Mohammed				2. AD7660 - Added new columns
+-- 10/06/2023		Mohammed Yunus				1. Created this procedure 
+-- 01/08/2025		Rushin Shah				    2. AD7660 - Added new columns
+-- 01/14/2025		Sandeep Gundreddy			3. AD7660 - Added product_sk=5(Condo)
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_home_collection_api]
@@ -37,6 +38,7 @@ BEGIN
 		SELECT DISTINCT
 			CASE cl.product_sk
 			WHEN 1 THEN 'Property'
+            WHEN 5 THEN 'Property'
 			WHEN 2 THEN 'Liability'
 			END AS PropertyOrLiability,
 			cl.policy_no AS [PolicyNumber],
@@ -46,7 +48,7 @@ BEGIN
 			cl.loss_dt AS [LossDate],
 			'Customer-Location Loss' AS [LossIdentifier],
 			l.cause_of_loss_desc AS LossType,
-			sub_cause_of_loss_desc AS [SubCauseOfLoss],
+			NULL AS [SubCauseOfLoss],
 			cl.loss_desc AS [LossDescription],
 			p.policy_term AS PolicyType,
 			CASE
@@ -68,19 +70,19 @@ BEGIN
 			cl.expense_paid_amt AS PaidExpense,
 			cl.loss_paid_amt AS PaidIndemnity,
 			cl.source_of_fire as SourceOfFire,
-			cl.source_of_water as SourceOfWater			
+			cl.source_of_water as SourceOfWater
 		INTO edw_temp.claim_renewal_rating_home_collection_api_temp1
 		FROM
 			edw_core.tclaim cl
 			inner join edw_core.tproduct tp on tp.product_sk=cl.product_sk
 			LEFT JOIN edw_core.tcause_of_loss l on cl.cause_of_loss_sk = l.cause_of_loss_sk 
-			LEFT JOIN edw_core.tsub_cause_of_loss s on cl.sub_cause_of_loss_sk =s.sub_cause_of_loss_sk 
+			--LEFT JOIN edw_core.tsub_cause_of_loss s on cl.sub_cause_of_loss_sk =s.sub_cause_of_loss_sk 
 			Left join edw_core.tpolicy p on p.policy_no = cl.policy_no 
-			left join edw_core.tcatastrophe cat on cat.catastrophe_sk=cl.catastrophe_sk			
+			left join edw_core.tcatastrophe cat on cat.catastrophe_sk=cl.catastrophe_sk
 			INNER JOIN
 			(
 				SELECT 
-					row_number() over(partition by claim_sk order by sum(clf.expense_reserve_amt + clf.loss_reserve_amt + clf.expense_paid_amt + clf.loss_paid_amt) desc) as row_no, 
+					row_number() over(partition by claim_sk order by sum(clf.expense_reserve_amt + clf.loss_reserve_amt + clf.expense_paid_amt + clf.loss_paid_amt+clf.defense_paid_amt+clf.defense_reserve_amt) desc) as row_no, 
 				claim_sk,claim_coverage_desc
 				FROM
 					edw_core.tclaim_feature clf				
@@ -88,7 +90,7 @@ BEGIN
 
 			) cf on cf.claim_sk= cl.claim_sk and cf.row_no = 1
 		WHERE
-			cl.product_sk in(1,2)
+			cl.product_sk in(1,5,2)
 
 
 	MERGE edw_integration.claim_renewal_rating_home_collection_api AS Target
