@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tclaim add migrated_in varchar(255);
