@@ -9,6 +9,7 @@ GO
 -- Change date 		|Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 10/29/2024		Alberto Almario				1. Created this procedure - AD7391
+-- 01/14/2025		Yunus Mohammed			2. Updated Merge statement join
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_task_snapsheet]
@@ -70,6 +71,7 @@ BEGIN
 		MERGE edw_core.tclaim_task AS Target
 		USING edw_temp.tclaim_task_snapsheet_temp1 AS Source
 			ON Source.claim_no = Target.claim_no
+			and Source.task_id = Target.task_id
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
