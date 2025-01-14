@@ -22,6 +22,7 @@
 -- 10/02/24		Archtha Gudimalla			14. Excluded Yacht
 -- 10/25/24		Archtha Gudimalla			15. Added isnull to code when checking names for test quotes
 -- 12/30/24		Alberto Almario				16. VI35256 - Insured name update for entity/trust LLC
+-- 01/13/25		Alberto Almario				17. AD8013 - Included yacht data
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -92,7 +93,7 @@ BEGIN
 		and isnull(cust.first_nm,'') not like '%test%' 
 		and isnull(cust.customer_nm,'') not like '%test%' 
 		and pol.effective_dt >= '01-jun-2023'
-		and pol.product_cd <> 'BY'
+		-- and pol.product_cd <> 'BY'
 		;
 
 		/*
