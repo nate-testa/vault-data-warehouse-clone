@@ -520,10 +520,7 @@ BEGIN
 					LEFT JOIN edw_stage.t_clm_subclaim_type sct ON p.subclaim_type = sct.subclaim_type_code
 					LEFT JOIN edw_stage.migration_exposure_type_mapping ext on ext.product_cd = prd.product_cd
 						and ext.coverage_name = cast(i.coverage_name as varchar(max))
-						and ext.subclaim_type_name = case
-															when cast(i.coverage_name as varchar(max)) = 'Dwelling' then ''
-															else cast(sct.subclaim_type_name as varchar(max))
-														end
+						and ext.subclaim_type_name = cast(sct.subclaim_type_name as varchar(max))
 				WHERE
 					p.CASE_ID = c.case_id 
 				for json path, include_null_values
