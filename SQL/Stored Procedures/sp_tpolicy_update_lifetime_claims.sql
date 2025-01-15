@@ -3,8 +3,9 @@
 -----------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------------------------
--- 11/14/23		Architha Gudimalla		    1. VI34680|AD7653 - Created this procedure 
+-- 11/14/24		Architha Gudimalla		    1. VI34680|AD7653 - Created this procedure 
 -- 12/30/24		Alberto Almario				2. VI34680 - Exclude rejected claims
+-- 01/15/25		Architha Gudimalla			3. AD8096 - updated loss incurred for snapsheet
 -- ========================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_lifetime_claims]
@@ -43,9 +44,19 @@ BEGIN
 		
 		--for non-cancel rewrites
 		select pol.policy_no, pol.original_policy_no, pol.term_no, count(c.claim_sk) claim_ct,
-				sum(c.loss_reserve_amt + c.expense_reserve_amt + c.adjusting_other_reserve_amt + c.subro_reserve_amt + c.salvage_reserve_amt + c.salvage_expense_reserve_amt + c.subro_expense_reserve_amt
-					+ c.loss_paid_amt + c.expense_paid_amt + c.adjusting_other_paid_amt + c.subro_recovery_amt + c.salvage_recovery_amt + c.salvage_expense_paid_amt + c.subro_expense_paid_amt
-					+ c.refund_indemnity_paid_amt + c.refund_expense_paid_amt ) AS li_amt
+				sum(c.loss_reserve_amt+c.expense_reserve_amt+c.subrogation_recovery_reserve_amt+c.salvage_recovery_reserve_amt+
+					c.salvage_recovery_expense_reserve_amt+c.subrogation_recovery_expense_reserve_amt+c.loss_paid_amt+
+					c.expense_paid_amt+c.subrogation_recovery_amt+c.salvage_recovery_amt+c.salvage_expense_recovery_amt+
+					c.subrogation_expense_recovery_amt+c.defense_reserve_amt+c.deductible_recovery_reserve_amt+
+					c.reinsurance_recovery_reserve_amt+c.overpayment_recovery_reserve_amt+c.deductible_recovery_expense_reserve_amt+
+					c.reinsurance_recovery_expense_reserve_amt+c.overpayment_recovery_expense_reserve_amt+
+					c.subrogation_recovery_defense_reserve_amt+c.salvage_recovery_defense_reserve_amt+
+					c.deductible_recovery_defense_reserve_amt+c.reinsurance_recovery_defense_reserve_amt+
+					c.overpayment_recovery_defense_reserve_amt+c.defense_paid_amt+c.deductible_recovery_amt+
+					c.reinsurance_recovery_amt+c.overpayment_recovery_amt+c.deductible_expense_recovery_amt+
+					c.reinsurance_expense_recovery_amt+c.overpayment_expense_recovery_amt+c.subrogation_defense_recovery_amt+
+					c.salvage_defense_recovery_amt+c.deductible_defense_recovery_amt+c.reinsurance_defense_recovery_amt+c.overpayment_defense_recovery_amt
+				) AS li_amt
 		into edw_temp.tpolicy_update_lifetime_claims_temp1
 		from edw_core.tclaim c
 		inner join edw_core.tpolicy pol on pol.policy_sk = c.policy_sk
