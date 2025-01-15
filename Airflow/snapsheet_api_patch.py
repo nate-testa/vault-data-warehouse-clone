@@ -7,6 +7,34 @@ from snapsheet_api import SnapsheetAPI
 logger = logging.getLogger(__name__) 
 logger.setLevel("DEBUG")
 
+# -- Q U E R I E S --
+update_exposure_adjuster_qry = """
+        select 
+            exposureReferenceNumber, data
+        from edw_stage.migration_update_exposure_adjuster_api
+        where api_status  in ('pending')
+    """
+
+update_exposure_status_qry = """
+        select 
+            exposureReferenceNumber, data
+        from edw_stage.migration_update_exposure_status_api
+        where api_status  in ('pending')
+    """
+
+update_claim_status_qry = """
+        select 
+            id, data
+        from edw_stage.migration_create_claim_api_update_status
+        where api_status  in ('pending')
+    """
+
+update_claim_catastrophe_qry = """
+        select 
+            claimRerenceNumber, data
+        from edw_stage.migration_create_claim_api_update_catastrophe
+        where api_status  in ('pending')
+    """
 
 def exposure_adjuster(qry):
     api = SnapsheetAPI(logger=logger)
@@ -149,34 +177,6 @@ def claim_catastrophe(qry):
         mssql_hook.run(qry_update_result)
 
 def main():
-
-    update_exposure_adjuster_qry = """
-        select 
-            exposureReferenceNumber, data
-        from edw_stage.migration_update_exposure_adjuster_api
-        where api_status  in ('pending')
-    """
-
-    update_exposure_status_qry = """
-        select 
-            exposureReferenceNumber, data
-        from edw_stage.migration_update_exposure_status_api
-        where api_status  in ('pending')
-    """
-
-    update_claim_status_qry = """
-        select 
-            id, data
-        from edw_stage.migration_create_claim_api_update_status
-        where api_status  in ('pending')
-    """
-
-    update_claim_catastrophe_qry = """
-        select 
-            claimRerenceNumber, data
-        from edw_stage.migration_create_claim_api_update_catastrophe
-        where api_status  in ('pending')
-    """
 
     parser = argparse.ArgumentParser(
         description='Execute Snapsheet API functions to update data'

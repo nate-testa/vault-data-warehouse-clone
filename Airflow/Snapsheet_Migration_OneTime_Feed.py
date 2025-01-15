@@ -8,7 +8,10 @@ from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
-from snapsheet_api_post import process_claims
+from snapsheet_api_post import process_claims, process_financial_transactions, process_notes, process_financial_transaction_action
+from snapsheet_api_post import claims_qry, financial_transactions_qry, notes_qry, financial_transaction_action_qry
+from snapsheet_api_patch import exposure_status, claim_status, exposure_adjuster, claim_catastrophe
+from snapsheet_api_patch import update_exposure_status_qry, update_claim_status_qry, update_exposure_adjuster_qry, update_claim_catastrophe_qry
 
 
 to_email = "itdatateam@vault.insurance"
@@ -59,15 +62,29 @@ def check_claim_executions(**kwargs):
 
     return result
 
-def execute_process_claims(**kwargs):
-    claims_qry = """
-        select
-            claimNumber, claimType, status, policyNumber, firstOpenedAt, firstClosedAt, openedAt, closedAt, datetimeOfLoss, datetimeOfNotification, fraudScore, fraudLevelIndicator, providerCode, coverageCheck,
-         accountCode, lossType, notes, reservation, claimIncidentDetails, emergencyServicesDetail, notifier, notificationMethod, exposures, claimParties, vehicles, financialTransactions
-        from edw_stage.migration_create_claim_api
-        where api_status  in ('pending')
-    """
+def execute_process_claims():
     process_claims(claims_qry)
+
+def execute_process_financial_transactions():
+    process_financial_transactions(financial_transactions_qry)
+
+def execute_process_notes():
+    process_notes(notes_qry)
+
+def execute_process_financial_transaction_action():
+    process_financial_transaction_action(financial_transaction_action_qry)
+
+def execute_exposure_status_update():
+    exposure_status(update_exposure_status_qry)
+
+def execute_claim_status_update():
+    claim_status(update_claim_status_qry)
+
+def execute_exposure_adjuster_update():
+    exposure_adjuster(update_exposure_adjuster_qry)
+
+def execute_claim_catastrophe_update():
+    claim_catastrophe(update_claim_catastrophe_qry)
 
 args = {
     'owner': 'airflow',
@@ -86,18 +103,6 @@ with DAG(
     schedule_interval=None,
     tags=["dag snapsheet onetime migration", "vault"],
 ) as dag:
-    
-    snapsheet_migration_group_items = [
-        'sp_migration_create_claim_api',
-        'sp_migration_create_claim_api_update_contactinfo',
-        'sp_migration_create_note_api',
-        'sp_migration_create_claim_api_update_catastrophe',
-        'sp_migration_update_exposure_adjuster_api',
-        'sp_migration_create_financial_transaction_api',
-        'sp_migration_create_financial_transaction_api_update_contactinfo',
-        'sp_migration_update_exposure_status_api',
-        'sp_migration_create_claim_api_update_status'
-    ]
 
     start = DummyOperator(
         task_id='start',
@@ -115,46 +120,251 @@ with DAG(
         task_id='continue_task',
     )
 
-    check_for_claim_executions = BranchPythonOperator(
-        task_id='check_for_claim_executions',
-        python_callable=check_claim_executions,
-        dag=dag,
-    )
 
-    operators = []
-    for item in snapsheet_migration_group_items:
-        operator = MsSqlOperator(
-            task_id=item,
+    with TaskGroup("phase_one") as phase_one:
+
+        phase_one_items = [
+            'sp_claim_policy_search_snapsheet_api',
+            'sp_nfp_claim_policy_search_snapsheet_api',
+            'sp_claim_policy_webhook_snapsheet_api',
+            'sp_claim_policy_webhook_snapsheet_api_update_contactinfo',
+            'sp_nfp_claim_policy_webhook_snapsheet_api',
+            'sp_migration_create_financial_transaction_action_api_update_stage',
+            'sp_get_claim_policy_webhook_snapsheet_api',
+            'sp_migration_create_claim_api',
+            'sp_migration_create_claim_api_update_contactinfo'      
+        ]
+
+        sp_claim_policy_search_snapsheet_api = MsSqlOperator(
+            task_id='sp_claim_policy_search_snapsheet_api',
             mssql_conn_id='Vault_EDW',
-            sql=f"EXEC edw_core.{item}",
+            sql="EXEC edw_core.sp_claim_policy_search_snapsheet_api",
             database="vault_edw",
             autocommit=True,
         )
-        operators.append(operator)
-    
-    py_process_claims = PythonOperator(
-            task_id='py_process_claims',
-            python_callable=execute_process_claims,
+
+        sp_nfp_claim_policy_search_snapsheet_api = MsSqlOperator(
+            task_id='sp_nfp_claim_policy_search_snapsheet_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_nfp_claim_policy_search_snapsheet_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_claim_policy_webhook_snapsheet_api = MsSqlOperator(
+            task_id='sp_claim_policy_webhook_snapsheet_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_claim_policy_webhook_snapsheet_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_claim_policy_webhook_snapsheet_api_update_contactinfo = MsSqlOperator(
+            task_id='sp_claim_policy_webhook_snapsheet_api_update_contactinfo',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_claim_policy_webhook_snapsheet_api_update_contactinfo",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_nfp_claim_policy_webhook_snapsheet_api = MsSqlOperator(
+            task_id='sp_nfp_claim_policy_webhook_snapsheet_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_nfp_claim_policy_webhook_snapsheet_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_migration_create_financial_transaction_action_api_update_stage = MsSqlOperator(
+            task_id='sp_migration_create_financial_transaction_action_api_update_stage',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_migration_create_financial_transaction_action_api_update_stage",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        py_process_financial_transaction_action = PythonOperator(
+            task_id='py_process_financial_transaction_action',
+            python_callable=execute_process_financial_transaction_action,
             provide_context=True,
             dag=dag,
         )
 
-    send_snapsheet_migration_email = EmailOperator(
-        task_id='send_snapsheet_migration_email',
-        to=to_email,
-        subject='Airflow - snapsheet migration stored procedures executed successfully',
-        html_content=get_sp_success_data_HTML(snapsheet_migration_group_items, 'All snapsheet migration stored procedures executed successfully'),
-    )
+        sp_get_claim_policy_webhook_snapsheet_api = MsSqlOperator(
+            task_id='sp_get_claim_policy_webhook_snapsheet_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_integration.sp_get_claim_policy_webhook_snapsheet_api",
+            database="vault_edw",
+            autocommit=True,
+        )
 
+        sp_migration_create_claim_api = MsSqlOperator(
+            task_id='sp_migration_create_claim_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_migration_create_claim_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_migration_create_claim_api_update_contactinfo = MsSqlOperator(
+            task_id='sp_migration_create_claim_api_update_contactinfo',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_migration_create_claim_api_update_contactinfo",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        py_process_claims = PythonOperator(
+            task_id='py_process_claims',
+            python_callable=execute_process_claims,
+            provide_context=True,
+            dag=dag,
+        )        
+
+        send_phase_one_email = EmailOperator(
+            task_id='send_phase_one_email',
+            to=to_email,
+            subject='Airflow - snapsheet migration phase one stored procedures executed successfully',
+            html_content=get_sp_success_data_HTML(phase_one_items, 'All snapsheet migration stored procedures executed successfully for phase one'),
+        )
+
+        sp_claim_policy_search_snapsheet_api >> sp_nfp_claim_policy_search_snapsheet_api >> sp_claim_policy_webhook_snapsheet_api >> sp_claim_policy_webhook_snapsheet_api_update_contactinfo >> sp_nfp_claim_policy_webhook_snapsheet_api >> sp_migration_create_financial_transaction_action_api_update_stage >> py_process_financial_transaction_action >> sp_get_claim_policy_webhook_snapsheet_api >> sp_migration_create_claim_api >> sp_migration_create_claim_api_update_contactinfo >> py_process_claims >> send_phase_one_email
+
+
+    check_for_claim_executions = BranchPythonOperator(
+            task_id='check_for_claim_executions',
+            python_callable=check_claim_executions,
+            dag=dag,
+        )
+    
     send_abort_process_email = EmailOperator(
-        task_id='send_abort_process_email',
-        to=to_email,
-        subject=f"Airflow - Error on DAG: Snapsheet Migration OneTime Feed.",
-        html_content=get_HTML_on_vault_format(f"DAG: Snapsheet Migration OneTime Feed.<br><br>Error Description: There are error rows on edw_stage.migration_create_claim_api table",'')
-    )
+            task_id='send_abort_process_email',
+            to=to_email,
+            subject=f"Airflow - Error on DAG: Snapsheet Migration OneTime Feed.",
+            html_content=get_HTML_on_vault_format(f"DAG: Snapsheet Migration OneTime Feed.<br><br>Error Description: There are error rows on edw_stage.migration_create_claim_api table",'')
+        )
+    
+    with TaskGroup("phase_two") as phase_two:
+
+        phase_two_items = [
+            'sp_migration_create_financial_transaction_api',
+            'sp_migration_create_financial_transaction_api_update_contactinfo',
+            'sp_migration_update_exposure_status_api',
+            'sp_migration_create_claim_api_update_status',
+            'sp_migration_create_note_api',
+            'sp_migration_update_exposure_adjuster_api',
+            'sp_migration_create_claim_api_update_catastrophe'        
+        ]
+
+        sp_migration_create_financial_transaction_api = MsSqlOperator(
+            task_id='sp_migration_create_financial_transaction_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_migration_create_financial_transaction_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_migration_create_financial_transaction_api_update_contactinfo = MsSqlOperator(
+            task_id='sp_migration_create_financial_transaction_api_update_contactinfo',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_migration_create_financial_transaction_api_update_contactinfo",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_migration_update_exposure_status_api = MsSqlOperator(
+            task_id='sp_migration_update_exposure_status_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_migration_update_exposure_status_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_migration_create_claim_api_update_status = MsSqlOperator(
+            task_id='sp_migration_create_claim_api_update_status',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_migration_create_claim_api_update_status",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_migration_create_note_api = MsSqlOperator(
+            task_id='sp_migration_create_note_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_migration_create_note_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_migration_update_exposure_adjuster_api = MsSqlOperator(
+            task_id='sp_migration_update_exposure_adjuster_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_migration_update_exposure_adjuster_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_migration_create_claim_api_update_catastrophe = MsSqlOperator(
+            task_id='sp_migration_create_claim_api_update_catastrophe',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_migration_create_claim_api_update_catastrophe",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        py_process_financial_transactions = PythonOperator(
+            task_id='py_process_financial_transactions',
+            python_callable=execute_process_financial_transactions,
+            provide_context=True,
+            dag=dag,
+        )
+
+        py_exposure_status_update = PythonOperator(
+            task_id='py_exposure_status_update',
+            python_callable=execute_exposure_status_update,
+            provide_context=True,
+            dag=dag,
+        )
+
+        py_claim_status_update = PythonOperator(
+            task_id='py_claim_status_update',
+            python_callable=execute_claim_status_update,
+            provide_context=True,
+            dag=dag,
+        )
+
+        py_process_notes = PythonOperator(
+            task_id='py_process_notes',
+            python_callable=execute_process_notes,
+            provide_context=True,
+            dag=dag,
+        )
+
+        py_exposure_adjuster_update = PythonOperator(
+            task_id='py_exposure_adjuster_update',
+            python_callable=execute_exposure_adjuster_update,
+            provide_context=True,
+            dag=dag,
+        )
+
+        py_claim_catastrophe_update = PythonOperator(
+            task_id='py_claim_catastrophe_update',
+            python_callable=execute_claim_catastrophe_update,
+            provide_context=True,
+            dag=dag,
+        )
+
+        send_phase_two_email = EmailOperator(
+            task_id='send_phase_two_email',
+            to=to_email,
+            subject='Airflow - snapsheet migration phase two stored procedures executed successfully',
+            html_content=get_sp_success_data_HTML(phase_two_items, 'All snapsheet migration stored procedures executed successfully for phase two'),
+        )
+
+        sp_migration_create_financial_transaction_api >> sp_migration_create_financial_transaction_api_update_contactinfo >> sp_migration_update_exposure_status_api >> sp_migration_create_claim_api_update_status >> sp_migration_create_note_api >> sp_migration_update_exposure_adjuster_api >> sp_migration_create_claim_api_update_catastrophe >> py_process_financial_transactions >> py_exposure_status_update >> py_claim_status_update >> py_process_notes >> py_exposure_adjuster_update >> py_claim_catastrophe_update >> send_phase_two_email
 
 
-start >> operators[0] >> operators[1] >> py_process_claims >> check_for_claim_executions >> [continue_task, abort_task] 
+start >> phase_one >> check_for_claim_executions >> [continue_task, abort_task] 
 abort_task >> send_abort_process_email >> end
-continue_task >> operators[2] >> operators[3] >> operators[4] >> operators[5] >> operators[6] >> operators[7] >> operators[8] >> send_snapsheet_migration_email >> end
+continue_task >> phase_two >> end
 
