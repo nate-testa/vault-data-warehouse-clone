@@ -2,12 +2,15 @@
 -- Author:		Yunus Mohammed
 -- Description: This procedures migrats ebao claims to snapsheet
 ---------------------------------------------------------------------------------------------------
--- Change date 		|Author						|	Change Description
+-- Change date 		|Author										|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 10/24/24			Yunus Mohammed					1. Created this procedure
+-- 01/15/2025	Yunus Mohammed					2. Enabled actual phone and email in claim parties
+--																						Existing claims won't be insert again
+--																						Removed condition on subclaim type on dwelling exposure																				
 -- ================================================================================================= 
-CREATE OR ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api]
 
+CREATE OR ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -380,10 +383,7 @@ BEGIN
 								LEFT JOIN edw_stage.t_clm_subclaim_type sct ON o.subclaim_type = sct.subclaim_type_code
 								left join edw_stage.migration_exposure_type_mapping ext on ext.product_cd = prd.product_cd
 								and ext.coverage_name =  cast(i.coverage_name as varchar(max))
-								and ext.subclaim_type_name = case
-																when cast(i.coverage_name as varchar(max)) = 'Dwelling' then ''
-																else cast(sct.subclaim_type_name as varchar(max))
-															end
+								and ext.subclaim_type_name = cast(sct.subclaim_type_name as varchar(max))
 						left join edw_stage.migration_coverage_mapping cov on cov.sub_claimtype_nm = cast(sct.subclaim_type_name as varchar(max))
 							and cov.coverage_nm = cast(i.coverage_name as varchar(max)) and cov.product_cd = prd.product_cd
 						WHERE
@@ -476,16 +476,16 @@ BEGIN
 							'1' as countryCode,
 							--'false' as preferredMethod,
 							'phone' as [type],
-							--c.contact_phone as [value]
-							'7272901574' as [value]
+							c.contact_phone as [value]
+							--'7272901574' as [value]
 							UNION
 							SELECT
 							null as country,
 							null as countryCode,
 							--'true' preferredMethod,
 							'email' as [type],
-							'Farhad.Imam@Vault.Insurance' as [value]
-							--c.contact_person_email as [value]
+							--'Farhad.Imam@Vault.Insurance' as [value]
+							c.contact_person_email as [value]
 						) as a
 						for json path, include_null_values
 					) ) as contactMethods,
@@ -520,16 +520,12 @@ BEGIN
 					LEFT JOIN edw_stage.t_clm_subclaim_type sct ON p.subclaim_type = sct.subclaim_type_code
 					LEFT JOIN edw_stage.migration_exposure_type_mapping ext on ext.product_cd = prd.product_cd
 						and ext.coverage_name = cast(i.coverage_name as varchar(max))
-						and ext.subclaim_type_name = case
-															when cast(i.coverage_name as varchar(max)) = 'Dwelling' then ''
-															else cast(sct.subclaim_type_name as varchar(max))
-														end
+						and ext.subclaim_type_name = cast(sct.subclaim_type_name as varchar(max))
 				WHERE
 					p.CASE_ID = c.case_id 
 				for json path, include_null_values
 			) as claimParties,	
 			'pending' as api_status
-
 		from
 		edw_stage.t_clm_case c
 		LEFT JOIN edw_stage.t_clm_policy cp ON c.case_id=cp.case_id
@@ -554,17 +550,17 @@ BEGIN
 				WHERE DATA_TABLE_ID=98100257349
 			) AS subcl
 		) as sclc on sclc.cause_of_loss_cd = c.sub_cause_of_loss_code
-		-- where c.claim_no  in('C23HOA00038','C23HOA00009')
+        left join edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber
+		 where -- c.claim_no  in ('C24HOA00081','C24AUA00071') and --insert these 01152025
+          mcca.claimNumber is null 
 		) as t ; 
 
-		
         insert into edw_stage.migration_create_claim_api
 			(
 			claimNumber, accidentCode, claimType, [status], policyNumber, datetimeOfLoss, datetimeOfNotification,
 			accountCode, lossType, attachments, notes, claimIncidentDetails, notifier, exposures, 
 			vehicles, claimParties, create_ts, api_status
 			)
-		
         select
             claimNumber, accidentCode, claimType, [status],policyNumber, datetimeOfLoss, datetimeOfNotification,
             accountCode, lossType, attachments, notes,claimIncidentDetails, notifier, exposures,
@@ -573,10 +569,8 @@ BEGIN
             edw_temp.migration_create_claim_api_temp1
 
 		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1
-
 		
-		SET @rows_affected=@@ROWCOUNT;
-		
+		SET @rows_affected=@@ROWCOUNT;	
 		
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
