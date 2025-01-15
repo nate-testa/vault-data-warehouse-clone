@@ -23,6 +23,7 @@
 -- 10/25/24		Archtha Gudimalla			15. Added isnull to code when checking names for test quotes
 -- 12/30/24		Alberto Almario				16. VI35256 - Insured name update for entity/trust LLC
 -- 01/13/25		Alberto Almario				17. AD8013 - Included yacht data
+-- 01/15/25		Alberto Almario				18. VI35255/AD8010 - Add quotes customers
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -96,13 +97,13 @@ BEGIN
 		-- and pol.product_cd <> 'BY'
 		;
 
-		/*
+		
 		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp2; 
 		--for quotes, just to create a customer record
 		SELECT
 			pol.quote_no,
 			pi.first_nm,
-			pi.last_nm,
+			case when pi.insured_type = 'Entity' then pi.insured_nm  else pi.last_nm end as last_nm,
 			case when cust.email like '%papermail%' or cust.email like '%@%@%' then null else cust.email end email, 
 			pol.risk_state_cd,
 			pol.product_cd AS product_nm,
@@ -135,15 +136,14 @@ BEGIN
 		INNER join edw_core.tquote_history ph on ph.quote_sk = pol.quote_sk and ph.latest_transaction_in = 'Y'
 		INNER join edw_core.tquote_insured pi on pi.quote_history_sk = ph.quote_history_sk and pi.primary_insured_in = 'Yes'
 		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk
-		WHERE   pol.insured_nm not like '%test%' 
-		and cust.last_nm not like '%test%'
-		and cust.first_nm not like '%test%' 
-		and cust.customer_nm not like '%test%' 
+		WHERE   isnull(pol.insured_nm,'') not like '%test%' 
+		and isnull(cust.last_nm,'') not like '%test%'
+		and isnull(cust.first_nm,'') not like '%test%' 
+		and isnull(cust.customer_nm,'') not like '%test%' 
 		and pol.effective_dt >= '01-jun-2023'
 		and quote_create_ts >= dateadd("mm",-1,cast(getdate() as date))
 		and not exists (select 'x' from edw_temp.customer_hubspot_feed_temp1 a where a.customer_id = cust.customer_id)
 		and not exists (select 'x' from edw_integration.customer_hubspot_feed b where b.customer_id = cust.customer_id);
-		*/
 
 		MERGE edw_integration.customer_hubspot_feed as TARGET
 		USING (
@@ -171,7 +171,7 @@ BEGIN
 				,customer_id
 			    ,producer_nm
 				,producer_id
-				FROM edw_temp.customer_hubspot_feed_temp1/*
+				FROM edw_temp.customer_hubspot_feed_temp1
 				union ALL 
 			SELECT 
 				policy_no
@@ -197,7 +197,7 @@ BEGIN
 				,customer_id
 			    ,producer_nm
 				,producer_id
-				FROM edw_temp.customer_hubspot_feed_temp2*/
+				FROM edw_temp.customer_hubspot_feed_temp2
 		) as SOURCE
 		ON Source.policy_no = Target.policy_no
 		-- For Inserts
