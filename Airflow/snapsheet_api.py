@@ -326,6 +326,38 @@ class SnapsheetAPI:
 
         return success, result_text
 
+    def create_financial_transaction_action(self, data_json):
+        path = '/api/v2/financial_transaction_actions'
+        url = f'{self.base_url}{path}'
+        
+        if isinstance(data_json, str):
+            try:
+                data_json = json.loads(data_json)
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Invalid JSON format for data_json: {data_json}")
+                return False, f"Error (JSONDecodeError): {str(e)}"
+
+        payload = {k: v for k, v in data_json.items() if v is not None}
+        payload_json = json.dumps(payload)
+        headers = self._generate_headers('POST', path, payload_json)
+
+        result = None
+        result_text = None
+        success = False
+
+        try:
+            result = self._post_request(url, headers, payload_json)
+            if result.status_code == 201:
+                success = True
+                result_text = result.text
+            else:
+                result_text = f"code: {result.status_code} | reason: {result.reason} | text: {result.text}"
+        except requests.exceptions.RequestException as e:
+            result_text = f"Error (RequestException): {str(e)}"
+            self.logger.error(f"Failed to create Financial Transaction: {result_text}")
+
+        return success, result_text
+
     # -------------------------------------------------------------
     # ---------------- GET METHODS --------------------------------
     # -------------------------------------------------------------

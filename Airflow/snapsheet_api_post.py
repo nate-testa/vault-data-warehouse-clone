@@ -56,7 +56,7 @@ financial_transactions_qry = """
 
 financial_transaction_action_qry = """
         select
-            financial_transaction_id, claim_no, data
+            id, data
         from edw_stage.migration_create_financial_transaction_action_api_update_stage
         where api_status  in ('pending')
     """
@@ -215,7 +215,7 @@ def process_financial_transactions(qry):
     for record in financial_transaction_data:
         (financial_transaction_id, claim_no, data_json) = record
         logging.info(f"*************** Start Processing *********************")
-        logging.info(f"Processing note record: {record}")
+        logging.info(f"Processing financial_transactions record: {record}")
 
         
         # Skipp transaction because claim_no has failed transactions
@@ -235,12 +235,12 @@ def process_financial_transactions(qry):
         success, result_text = api.create_financial_transaction(data_json)
 
         if success:
-            json_response_notes = json.loads(result_text)
+            json_response_financial_transactions = json.loads(result_text)
             qry_update_result = f"""
                 update edw_stage.migration_create_financial_transaction_api 
                 set update_ts = getdate(), api_status = 'Success',
                     api_Error_description = NULL,
-                    id = '{json_response_notes.get("data").get("id")}',
+                    id = '{json_response_financial_transactions.get("data").get("id")}',
                     api_response = '{result_text.replace("'","''")}'
                 where financial_transaction_id = '{financial_transaction_id}'
             """
@@ -259,13 +259,49 @@ def process_financial_transactions(qry):
         mssql_hook.run(qry_update_result)
 
 def process_financial_transaction_action(qry):
-    print('')
+    api = SnapsheetAPI(logger=logger)
+    mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
+
+    logging.info(f"Executing SQL query: {qry}")
+    financial_transaction_action_data = mssql_hook.get_records(qry)
+    logging.info(f"Query returned {len(financial_transaction_action_data)} records")
+
+    for record in financial_transaction_action_data:
+        (financial_transaction_action_id, data_json) = record
+        logging.info(f"*************** Start Processing *********************")
+        logging.info(f"Processing financial_transaction_action record: {record}")
+
+        success, result_text = api.create_financial_transaction_action(data_json)
+
+        if success:
+            json_response_financial_transaction_action = json.loads(result_text)
+            qry_update_result = f"""
+                update edw_stage.migration_create_financial_transaction_action_api_update_stage 
+                set update_ts = getdate(), api_status = 'Success',
+                    api_Error_description = NULL,
+                    id = '{json_response_financial_transaction_action.get("data").get("id")}',
+                    api_response = '{result_text.replace("'","''")}'
+                where id = '{financial_transaction_action_id}'
+            """
+        else:
+            qry_update_result = f"""
+                update edw_stage.migration_create_financial_transaction_action_api_update_stage
+                set update_ts = getdate(), api_status = 'Error',
+                api_Error_description = '{result_text.replace("'","''")}',
+                id = NULL,
+                api_response = NULL
+                where financial_transaction_id = '{financial_transaction_action_id}'
+            """
+
+
+        logging.info(f"Executing update query: {qry_update_result}")
+        mssql_hook.run(qry_update_result)
 
 
 def main():
 
     parser = argparse.ArgumentParser(description='Execute a snapsheet API')
-    parser.add_argument('function', choices=['policies', 'claims', 'notes', 'financial_transactions'], help='The function you want to execute')
+    parser.add_argument('function', choices=['policies', 'claims', 'notes', 'financial_transactions', 'financial_transaction_action'], help='The function you want to execute')
     args = parser.parse_args()
 
     if args.function == 'policies':
@@ -276,6 +312,8 @@ def main():
         process_notes(notes_qry)
     elif args.function == 'financial_transactions':
         process_financial_transactions(financial_transactions_qry)
+    elif args.function == 'financial_transaction_action':
+        process_financial_transaction_action(financial_transaction_action_qry)
 
 
 if __name__ == '__main__':
