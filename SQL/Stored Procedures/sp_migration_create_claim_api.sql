@@ -5,14 +5,14 @@
 -- Change date 		|Author										|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 10/24/24			Yunus Mohammed					1. Created this procedure
--- 01/15/2025	Yunus Mohammed					2. Enabled actual phone and email in claim parties
---																						Existing claims won't be insert again
---																						Removed condition on subclaim type on dwelling exposure																				
+-- 01/16/25			Yunus Mohammed					 2. Exposure Type code updated
+--																							InjuredPerson and vehicle object code updated
 -- ================================================================================================= 
+CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api]
 
-CREATE OR ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api]
 AS
 BEGIN
+
     -- SET NOCOUNT ON added to prevent extra result sets from
     -- interfering with SELECT statements.
     SET NOCOUNT ON
@@ -30,8 +30,8 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
-
-        DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1;
+        
+		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1;
 
 		SELECT claimNumber, accidentCode,claimType, 
 		-- case when [status] = 'OPEN' THEN 'DRAFT' ELSE [status] END AS [status],
@@ -131,7 +131,9 @@ BEGIN
 					(
 					SELECT				
 						ext.item_id as id,
-						ISNULL(case when rowNum > 1 and ext.snapsheet_exposure_type in('Dwelling', 'OtherStructures', 'PersonalProperty', 'LivingExpense') then 'Other'
+						ISNULL(case when rowNum > 1 
+						-- and ext.snapsheet_exposure_type in('Dwelling', 'OtherStructures', 'PersonalProperty', 'LivingExpense') 
+						then 'Other'
 						else ext.snapsheet_exposure_type  end,'Other') as exposureType,
 						CONCAT_WS('-', cast(ext.item_id as varchar(max)), cast(ext.subclaim_type_name as varchar(max)), cast(ext.coverage_name as varchar(max)) ) as externalReferenceNumber,
 		--				case when ext.STATUS_CODE = 'OPEN' THEN 'DRAFT' ELSE ext.STATUS_CODE END AS [status], 
@@ -163,11 +165,14 @@ BEGIN
 						JSON_QUERY
 						(
 							(
-								select ext.[OBJECT_ID] as vehicleId 
+								select
+                                ext.[OBJECT_ID]
+                                as vehicleId 
 								where
 									prd.product_cd = 'AU'
-		--As per Snapsheet, vehicle id should not be present for ('InjuredPerson', 'PipMedPay') exposure types--
+							--As per Snapsheet, vehicle id should not be present for ('InjuredPerson', 'PipMedPay') exposure types--
 									and ext.snapsheet_exposure_type not in ('InjuredPerson', 'PipMedPay')
+									and rowNum = 1  -- if it is greater than 1 it means exposure is other.
 								for json path, include_null_values, without_array_wrapper
 							)
 						) as vehicle,			
@@ -178,6 +183,7 @@ BEGIN
 								ext.PTY_PARTY_ID as [injuredParty.claimPartyId] 
 								where
 									ext.snapsheet_exposure_type in ('InjuredPerson', 'PipMedPay')
+                                    and rowNum = 1  -- if it is greater than 1 it means exposure is other.
 								for json path, include_null_values, without_array_wrapper
 							)
 						)
@@ -207,7 +213,9 @@ BEGIN
 							)) as [address]
 						where
 							ext.product_cd IN ('HO','CO','LUX') 
-							and ISNULL(case when rowNum > 1 and ext.snapsheet_exposure_type in('Dwelling', 'OtherStructures', 'PersonalProperty', 'LivingExpense') then 'Other'
+							and ISNULL(case when rowNum > 1 
+							--and ext.snapsheet_exposure_type in('Dwelling', 'OtherStructures', 'PersonalProperty', 'LivingExpense') 
+							then 'Other'
 								else ext.snapsheet_exposure_type  end,'Other')
 							in
 							('Property', 'Dwelling', 'OtherStructures', 'PersonalProperty') 
@@ -236,7 +244,9 @@ BEGIN
 		--					CONCAT_WS('-', cast(ext.item_id as varchar(max)), cast(ext.subclaim_type_name as varchar(max)), cast(ext.coverage_name as varchar(max)) ) as [name]
 							ext.coverage_name as [name]
 							where
-								ISNULL(case when rowNum > 1 and ext.snapsheet_exposure_type in('Dwelling', 'OtherStructures', 'PersonalProperty', 'LivingExpense') then 'Other'
+								ISNULL(case when rowNum > 1  
+                                -- and ext.snapsheet_exposure_type in('Dwelling', 'OtherStructures', 'PersonalProperty', 'LivingExpense') 
+                                then 'Other'
 								else ext.snapsheet_exposure_type  end,'Other') in
 								(
 									'BusinessInterruption', 'CyberLiability', 'DirectorsAndOfficers', 'EmploymentPracticesLiability', 
@@ -361,8 +371,19 @@ BEGIN
 					FROM
 						(
 							select
-								row_number() over(partition by ISNULL(ext.snapsheet_exposure_type,'Other')
+                            /*
+                                -- Commneted on 01/16/2025. New logic implemented
+								row_number() over(partition by o.[object_id] -- ISNULL(ext.snapsheet_exposure_type,'Other')
 									order by ISNULL(ext.snapsheet_exposure_type,'Other')) as rowNum,
+                            */
+                            case 
+		when ext.snapsheet_exposure_type = 'Vehicle' then 
+				row_number() over(partition by o.[object_id] order by ISNULL(ext.snapsheet_exposure_type,'Other'))
+		when ext.snapsheet_exposure_type in('PipMedPay','InjuredPerson') then 
+			row_number() over(partition by o.case_id,ext.snapsheet_exposure_type, par.PTY_PARTY_ID order by ISNULL(ext.snapsheet_exposure_type,'Other'))		
+	else
+		row_number() over(partition by o.case_id, ISNULL(ext.snapsheet_exposure_type,'Other')order by ISNULL(ext.snapsheet_exposure_type,'Other'))
+	end as rowNum,
 								ext.snapsheet_exposure_type,
 								cov.snapsheet_coverage_nm,
 								o.[OBJECT_ID],
@@ -375,7 +396,7 @@ BEGIN
 							from
 								edw_stage.t_clm_case clm
 								inner join edw_stage.t_clm_object o on clm.CASE_ID = o.CASE_ID
-								left join edw_stage.t_clm_item i ON o.[object_id] = i.[object_id]
+								inner join edw_stage.t_clm_item i ON o.[object_id] = i.[object_id]
 								left join edw_stage.t_clm_policy p on p.POLICY_NO = clm.POLICY_NO and p.CASE_ID = clm.CASE_ID
 								LEFT JOIN edw_core.tproduct prd ON prd.ebao_product_cd=c.product_code
 								left join edw_stage.t_clm_party par on o.CLAIMANT_ID = par.PARTY_ID
@@ -393,8 +414,10 @@ BEGIN
 				for json path, include_null_values
 			) as exposures
 			,(
-				select
-					obj.[OBJECT_ID] as id,pivottable.VIN as vinNumber,pivottable.Make as make,pivottable.Model as model,
+				select distinct
+					 obj.[OBJECT_ID] as id,
+                  --  i.item_id as id,
+                    pivottable.VIN as vinNumber,pivottable.Make as make,pivottable.Model as model,
 					pivottable.ModelYear as [year],pivottable.EngineSize as engineSize
 					-- ,pivottable.VehicleType as vehicleType,pivottable.VehicleUsage as vehicleUsage
 				from
@@ -430,7 +453,14 @@ BEGIN
 					max([Value]) for field in (VIN,ModelYear,Make,Model,EngineSize,VehicleType,VehicleUsage)
 				) as pivottable
 				INNER JOIN edw_stage.t_clm_object AS obj ON pivottable.case_id = obj.CASE_ID
-				INNER JOIN edw_stage.t_clm_pol_insured cpi ON obj.insured_id = cpi.insured_id and pivottable.VIN = cast(cpi.insured_name as varchar(max))
+                INNER JOIN edw_stage.t_clm_pol_insured cpi ON obj.insured_id = cpi.insured_id and pivottable.VIN = cast(cpi.insured_name as varchar(max))
+                LEFT JOIN edw_stage.t_clm_item i ON obj.[object_id] = i.[object_id]
+                LEFT JOIN edw_stage.t_clm_subclaim_type sct ON obj.subclaim_type = sct.subclaim_type_code
+                LEFT JOIN edw_stage.migration_exposure_type_mapping ext on ext.product_cd = prd.product_cd
+						and ext.coverage_name = cast(i.coverage_name as varchar(max))
+						and ext.subclaim_type_name = cast(sct.subclaim_type_name as varchar(max))
+                WHERE
+	                ext.snapsheet_exposure_type not in ('InjuredPerson', 'PipMedPay')
 				FOR JSON PATH, INCLUDE_NULL_VALUES
 			) as vehicles
 			,(
@@ -484,7 +514,7 @@ BEGIN
 							null as countryCode,
 							--'true' preferredMethod,
 							'email' as [type],
-							--'Farhad.Imam@Vault.Insurance' as [value]
+							-- 'Farhad.Imam@Vault.Insurance' as [value]
 							c.contact_person_email as [value]
 						) as a
 						for json path, include_null_values
@@ -520,12 +550,13 @@ BEGIN
 					LEFT JOIN edw_stage.t_clm_subclaim_type sct ON p.subclaim_type = sct.subclaim_type_code
 					LEFT JOIN edw_stage.migration_exposure_type_mapping ext on ext.product_cd = prd.product_cd
 						and ext.coverage_name = cast(i.coverage_name as varchar(max))
-						and ext.subclaim_type_name = cast(sct.subclaim_type_name as varchar(max))
+						and ext.subclaim_type_name =  cast(sct.subclaim_type_name as varchar(max))
 				WHERE
 					p.CASE_ID = c.case_id 
 				for json path, include_null_values
 			) as claimParties,	
 			'pending' as api_status
+
 		from
 		edw_stage.t_clm_case c
 		LEFT JOIN edw_stage.t_clm_policy cp ON c.case_id=cp.case_id
@@ -553,8 +584,9 @@ BEGIN
         left join edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber
 		 where -- c.claim_no  in ('C24HOA00081','C24AUA00071') and --insert these 01152025
           mcca.claimNumber is null 
+		--  and c.claim_no  in('C24HOA00360', 'C24HOA00078', 'C21HOA00278', 'C23HOA00118','C23XLA00028', 'C24COA00022')
 		) as t ; 
-
+	
         insert into edw_stage.migration_create_claim_api
 			(
 			claimNumber, accidentCode, claimType, [status], policyNumber, datetimeOfLoss, datetimeOfNotification,
@@ -569,8 +601,8 @@ BEGIN
             edw_temp.migration_create_claim_api_temp1
 
 		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1
-		
-		SET @rows_affected=@@ROWCOUNT;	
+
+		SET @rows_affected=@@ROWCOUNT;		
 		
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
