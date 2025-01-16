@@ -1,9 +1,4 @@
-﻿SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- ======================================================================================================== 
+﻿-- ======================================================================================================== 
 -- Description: This procedures inserts and updates claim data
 -----------------------------------------------------------------------------------------------------------
 -- Change date 		|Author						|	Change Description
@@ -14,6 +9,7 @@ GO
 -- 12/27/2024		Alberto Almario				4. Add new columns fault_decision, responsible_party and at_fault_pct
 -- 01/09/2025		Alberto Almario				5. remove column sub_cause_of_loss_sk
 -- 01/14/2025		Yunus Mohammed		 6. Used datetime_of_notification instead of first_opened_at for report_dt
+-- 01/15/2025		Yunus Mohammed		 7. Added new column migrated_in
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -54,8 +50,7 @@ BEGIN
 		FROM edw_stage_snapsheet.custom_field_claims_enumeration_values a
 		INNER JOIN edw_stage_snapsheet.custom_field_claims b
 		ON a.custom_field_claims_id = b.id
-		;
-		
+		;		
 		
 		SELECT
 		claim_number as claim_no, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS policy_effective_dt, 
@@ -64,7 +59,7 @@ BEGIN
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
 		claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
 		5 AS source_system_sk,update_time,first_party_driver_nm,source_of_fire,source_of_water
-		,fault_decision,responsible_party,at_fault_pct
+		,fault_decision,responsible_party,at_fault_pct,migrated_in
 		INTO edw_temp.tclaim_snapsheet_temp1
 		FROM
 		(
@@ -125,6 +120,10 @@ BEGIN
 				ELSE cpr.company 
 			END as responsible_party
 			,ld.fault_percentage AS at_fault_pct
+			,case
+				when c.claim_source = 'api' then 'Yes'
+				else 'No'
+			end as migrated_in
 		FROM edw_stage_snapsheet.claims c
 		LEFT JOIN edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
 		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcmp.claim_party_id and  cpcmp.contact_method_type = 'phone'
@@ -170,7 +169,7 @@ BEGIN
 			,claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc
 			,source_system_sk,create_ts,update_ts,etl_audit_sk
 			,first_party_driver_nm,source_of_fire,source_of_water
-			,fault_decision,responsible_party,at_fault_pct
+			,fault_decision,responsible_party,at_fault_pct,migrated_in
 		)
 	VALUES
 		(
@@ -182,7 +181,7 @@ BEGIN
 		,policy_history_sk,claim_reject_reason_desc
 		,source_system_sk,@current_date,@current_date,@etl_audit_sk
 		,first_party_driver_nm,source_of_fire,source_of_water
-		,fault_decision,responsible_party,at_fault_pct
+		,fault_decision,responsible_party,at_fault_pct,migrated_in
 		)
 	-- For Updates
 	WHEN MATCHED THEN UPDATE 
@@ -223,6 +222,7 @@ BEGIN
 		,Target.fault_decision=Source.fault_decision
 		,Target.responsible_party=Source.responsible_party
 		,Target.at_fault_pct=Source.at_fault_pct
+		,Target.migrated_in=Source.migrated_in
 		;
 		
 		--************End************
