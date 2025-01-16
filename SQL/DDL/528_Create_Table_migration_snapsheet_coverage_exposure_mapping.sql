@@ -1,4 +1,4 @@
-CREATE TABLE [edw_temp].[migration_snapsheet_coverage_exposure_mapping]
+CREATE TABLE [edw_stage].[migration_snapsheet_coverage_exposure_mapping]
 (
 product_cd VARChar(255),
 subclaim_type_name VARChar(255),
