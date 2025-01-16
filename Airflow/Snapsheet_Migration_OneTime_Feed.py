@@ -8,8 +8,8 @@ from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
-from snapsheet_api_post import process_claims, process_financial_transactions, process_notes, process_financial_transaction_action
-from snapsheet_api_post import claims_qry, financial_transactions_qry, notes_qry, financial_transaction_action_qry
+from snapsheet_api_post import process_claims, process_financial_transactions, process_notes
+from snapsheet_api_post import claims_qry, financial_transactions_qry, notes_qry
 from snapsheet_api_patch import exposure_status, claim_status, exposure_adjuster, claim_catastrophe
 from snapsheet_api_patch import update_exposure_status_qry, update_claim_status_qry, update_exposure_adjuster_qry, update_claim_catastrophe_qry
 
@@ -71,9 +71,6 @@ def execute_process_financial_transactions():
 def execute_process_notes():
     process_notes(notes_qry)
 
-def execute_process_financial_transaction_action():
-    process_financial_transaction_action(financial_transaction_action_qry)
-
 def execute_exposure_status_update():
     exposure_status(update_exposure_status_qry)
 
@@ -124,79 +121,9 @@ with DAG(
     with TaskGroup("phase_one") as phase_one:
 
         phase_one_items = [
-            'sp_claim_policy_search_snapsheet_api',
-            'sp_nfp_claim_policy_search_snapsheet_api',
-            'sp_claim_policy_webhook_snapsheet_api',
-            'sp_claim_policy_webhook_snapsheet_api_update_contactinfo',
-            'sp_nfp_claim_policy_webhook_snapsheet_api',
-            'sp_migration_create_financial_transaction_action_api_update_stage',
-            'sp_get_claim_policy_webhook_snapsheet_api',
             'sp_migration_create_claim_api',
             'sp_migration_create_claim_api_update_contactinfo'      
         ]
-
-        sp_claim_policy_search_snapsheet_api = MsSqlOperator(
-            task_id='sp_claim_policy_search_snapsheet_api',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_claim_policy_search_snapsheet_api",
-            database="vault_edw",
-            autocommit=True,
-        )
-
-        sp_nfp_claim_policy_search_snapsheet_api = MsSqlOperator(
-            task_id='sp_nfp_claim_policy_search_snapsheet_api',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_nfp_claim_policy_search_snapsheet_api",
-            database="vault_edw",
-            autocommit=True,
-        )
-
-        sp_claim_policy_webhook_snapsheet_api = MsSqlOperator(
-            task_id='sp_claim_policy_webhook_snapsheet_api',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_claim_policy_webhook_snapsheet_api",
-            database="vault_edw",
-            autocommit=True,
-        )
-
-        sp_claim_policy_webhook_snapsheet_api_update_contactinfo = MsSqlOperator(
-            task_id='sp_claim_policy_webhook_snapsheet_api_update_contactinfo',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_claim_policy_webhook_snapsheet_api_update_contactinfo",
-            database="vault_edw",
-            autocommit=True,
-        )
-
-        sp_nfp_claim_policy_webhook_snapsheet_api = MsSqlOperator(
-            task_id='sp_nfp_claim_policy_webhook_snapsheet_api',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_nfp_claim_policy_webhook_snapsheet_api",
-            database="vault_edw",
-            autocommit=True,
-        )
-
-        sp_migration_create_financial_transaction_action_api_update_stage = MsSqlOperator(
-            task_id='sp_migration_create_financial_transaction_action_api_update_stage',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_migration_create_financial_transaction_action_api_update_stage",
-            database="vault_edw",
-            autocommit=True,
-        )
-
-        py_process_financial_transaction_action = PythonOperator(
-            task_id='py_process_financial_transaction_action',
-            python_callable=execute_process_financial_transaction_action,
-            provide_context=True,
-            dag=dag,
-        )
-
-        sp_get_claim_policy_webhook_snapsheet_api = MsSqlOperator(
-            task_id='sp_get_claim_policy_webhook_snapsheet_api',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_integration.sp_get_claim_policy_webhook_snapsheet_api",
-            database="vault_edw",
-            autocommit=True,
-        )
 
         sp_migration_create_claim_api = MsSqlOperator(
             task_id='sp_migration_create_claim_api',
@@ -228,7 +155,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(phase_one_items, 'All snapsheet migration stored procedures executed successfully for phase one'),
         )
 
-        sp_claim_policy_search_snapsheet_api >> sp_nfp_claim_policy_search_snapsheet_api >> sp_claim_policy_webhook_snapsheet_api >> sp_claim_policy_webhook_snapsheet_api_update_contactinfo >> sp_nfp_claim_policy_webhook_snapsheet_api >> sp_migration_create_financial_transaction_action_api_update_stage >> py_process_financial_transaction_action >> sp_get_claim_policy_webhook_snapsheet_api >> sp_migration_create_claim_api >> sp_migration_create_claim_api_update_contactinfo >> py_process_claims >> send_phase_one_email
+        sp_migration_create_claim_api >> sp_migration_create_claim_api_update_contactinfo >> py_process_claims >> send_phase_one_email
 
 
     check_for_claim_executions = BranchPythonOperator(
