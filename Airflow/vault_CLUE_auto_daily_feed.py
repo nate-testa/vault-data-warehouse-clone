@@ -106,6 +106,10 @@ with DAG(
 
     with TaskGroup("CLUE_Auto_group") as CLUE_Auto_group:
 
+        CLUE_Auto_group_items = [
+            'sp_claim_clue_auto_feed'
+        ]
+
         sp_claim_clue_auto_feed = MsSqlOperator(
             task_id='sp_claim_clue_auto_feed',
             mssql_conn_id='Vault_EDW',
@@ -130,7 +134,7 @@ with DAG(
             task_id='send_clue_auto_email',
             to=to_email,
             subject='Airflow - CLUE Auto process completed successfully',
-            html_content=get_sp_success_data_HTML('sp_claim_clue_auto_feed', 'The Clue Auto process finished successfully.'),
+            html_content=get_sp_success_data_HTML(CLUE_Auto_group_items, 'The Clue Auto process finished successfully.'),
         )
 
         sp_claim_clue_auto_feed >> generate_clue_auto_txt_file >> upload_clue_auto_txt_to_sftp >> send_clue_auto_email

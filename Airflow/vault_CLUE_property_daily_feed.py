@@ -105,6 +105,10 @@ with DAG(
     )
 
     with TaskGroup("CLUE_Property_group") as CLUE_Property_group:
+
+        CLUE_Property_group_items = [
+            'sp_claim_clue_property_feed'
+        ]
         
         sp_claim_clue_property_feed = MsSqlOperator(
             task_id='sp_claim_clue_property_feed',
@@ -130,7 +134,7 @@ with DAG(
             task_id='send_clue_property_email',
             to=to_email,
             subject='Airflow - CLUE Property process completed successfully',
-            html_content=get_sp_success_data_HTML('sp_claim_clue_property_feed', 'The Clue Property process finished successfully.'),
+            html_content=get_sp_success_data_HTML(CLUE_Property_group_items, 'The Clue Property process finished successfully.'),
         )
 
         sp_claim_clue_property_feed >> generate_clue_property_txt_file >> upload_clue_property_txt_to_sftp >> send_clue_property_email
