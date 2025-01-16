@@ -44,12 +44,12 @@ BEGIN
 			fin.id,
 			'financial_transaction_action' as [data.type],
 			pay.pm_status as [data.attributes.code],
-			pay.pm_cleared_date as [data.attributes.originated_at],
+			FORMAT(pay.pm_paid_date, 'yyyy-MM-ddTHH:mm:ssZ')  as [data.attributes.originated_at],
 			fin.id as [data.relationships.financial_transaction.data.id],
 			'financial_transaction' as [relationships.financial_transaction.data.type]
 		from
 			edw_stage.migration_create_financial_transaction_api fin
-			inner join edw_stage.int_claims_payments_audit pay on fin.Id = pay.pm_reject_payee_id
+			inner join edw_stage.int_claims_payments_audit pay on fin.Id = pay.pm_cr_payment_id
 		where
 			api_status = 'Success'
 			and amount_type = 'Payment_Amount'
