@@ -26,11 +26,11 @@
 				"typeProperties": {
 					"source": {
 						"type": "MySqlSource",
-						"query": "SELECT id, uuid, session_id, `type`, `timestamp`, pm_cr_payment_id, pm_ip_payment_id, pm_amount, pm_funded, pm_status, pm_paid_date, pm_cleared_date, pm_escheat_date, pm_check_print_date, pm_check_number, pm_mail_tracking_number, pm_method_id, pm_monitored, pm_reject_payee_id, pm_reject_reason, pm_new_method, pm_orig_method, pm_selection, pm_method_last4digit, pm_re_issue, pm_error_code, pm_error_message, pm_carrier_id, pm_env, request_json, created_by, created_date\nFROM vsp_core.int_claims_payments_audit"
+						"query": "SELECT id, uuid, pm_cr_payment_id, pm_ip_payment_id, pm_amount, pm_funded, pm_status, pm_paid_date, pm_cleared_date, pm_escheat_date, pm_check_print_date, pm_check_number, pm_mail_tracking_number, pm_method_id, pm_monitored, pm_reject_payee_id, pm_reject_reason, pm_new_method, pm_orig_method, pm_selection, pm_method_last4digit, pm_re_issue, pm_error_code, pm_error_message, pm_carrier_id, pm_env, request_json, created_by, created_date\nFROM vsp_core.int_claims_payments_audit"
 					},
 					"sink": {
 						"type": "AzureSqlSink",
-						"preCopyScript": "TRUNCATE TABLE edw_stage.int_claims_payments_audit",
+						"preCopyScript": "/*TRUNCATE TABLE edw_stage.int_claims_payments_audit*/",
 						"writeBehavior": "insert",
 						"sqlWriterUseTableLock": true,
 						"tableOption": "autoCreate",
@@ -63,42 +63,6 @@
 									"name": "uuid",
 									"type": "String",
 									"physicalType": "nvarchar"
-								}
-							},
-							{
-								"source": {
-									"name": "session_id",
-									"type": "String",
-									"physicalType": "VarChar"
-								},
-								"sink": {
-									"name": "session_id",
-									"type": "String",
-									"physicalType": "nvarchar"
-								}
-							},
-							{
-								"source": {
-									"name": "type",
-									"type": "String",
-									"physicalType": "VarChar"
-								},
-								"sink": {
-									"name": "type",
-									"type": "String",
-									"physicalType": "nvarchar"
-								}
-							},
-							{
-								"source": {
-									"name": "timestamp",
-									"type": "DateTime",
-									"physicalType": "DateTime"
-								},
-								"sink": {
-									"name": "timestamp",
-									"type": "DateTime",
-									"physicalType": "datetime2"
 								}
 							},
 							{
