@@ -6,6 +6,7 @@
 -- 11/15/24		Architha Gudimalla			1. Created this procedure 
 -- 11/20/24		Alberto Almario				2. Changes on some columns and tables
 -- 12/20/24		Alberto Almario				3. Add cost_category column, remove columns from update statement on merge and change columns used to get deltas.
+-- 01/17/25		Hernando Gonzalez			4. add case statement for source_system_sk column
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment_snapsheet]
 
@@ -59,7 +60,10 @@ BEGIN
 				ft.financial_transaction_type as payment_category_nm,--(CASE WHEN settle.claim_type = 'LOS' THEN 'Payment' ELSE 'Recovery' END) AS payment_category_nm,
 				fpi.payment_type as partial_final_payment_desc,--(CASE WHEN fpi.pay_final = 4 THEN 'Final' ELSE 'Partial' END) AS partial_final_payment_desc,
 				null as expert_subtype_role, --party.expert_subtype_role, --pending
-				5 AS source_system_sk,
+				CASE
+					WHEN ft.is_historical = 'true' THEN 3
+					ELSE 5
+				END AS source_system_sk,
 				ft.created_at,
 				ft.updated_at
 

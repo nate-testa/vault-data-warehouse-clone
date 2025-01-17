@@ -11,6 +11,7 @@ GO
 -- 10/30/24		Hernando Gonzalez			1. Created this procedure - AD7391
 -- 11/20/24		Alberto Almario				2. Changes on some columns and tables
 -- 12/20/24     Sandeep Gundreddy           3. Update product_sk logic, reserve incremental date logic, added -ve logic to recovery reserves
+-- 01/17/25		Hernando Gonzalez			4. add case statement for source_system_sk column
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction_snapsheet]
 AS
@@ -94,7 +95,10 @@ BEGIN
 				ELSE res.amount -LAG(res.amount,1,0) over (partition by res.claim_id,res.exposure_id,res.cost_type,res.cost_category,res.reserve_method --,ft.id
 														order by res.claim_id,res.exposure_id,res.cost_type,res.cost_category,res.reserve_method,fta.created_at) 
 			END as reserve_amount
-			,5 AS source_system_sk
+			,CASE
+				WHEN ft.remote_identifier is not null and len(ft.remote_identifier)=8 THEN 3
+				ELSE 5
+			END AS source_system_sk
 		INTO edw_temp.tclaim_transaction_snapsheet_temp1
 		FROM edw_stage_snapsheet.financial_reserve_items res
 		LEFT JOIN edw_stage_snapsheet.financial_transactions ft on res.financial_transaction_id = ft.id
