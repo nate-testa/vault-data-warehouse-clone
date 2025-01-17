@@ -1,61 +1,33 @@
+-- Insert script [edw_stage].[migration_snapsheet_coverage_exposure_mapping]
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'FP_Bodily Injury', N'Uninsured / Underinsured Motorist', N'InjuredPerson', N'UM', N'Uninsured Motorist Liablity')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'FP_Property Damage', N'Underinsured Motorist', N'Vehicle', N'UM', N'Uninsured Motorist Liablity')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'FP_Property Damage', N'Collision', N'Vehicle', N'COL', N'Collision')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'FP_Rental', N'Collision', N'Vehicle', N'COL', N'Collision')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'FP_Towing', N'Collision', N'Vehicle', N'COL', N'Collision')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'FP_Property Damage', N'Comprehensive', N'Vehicle', N'COMP', N'Comprehensive')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'FP_Rental', N'Comprehensive', N'Vehicle', N'COMP', N'Comprehensive')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'FP_Towing', N'Comprehensive', N'Vehicle', N'COMP', N'Comprehensive')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'FP_Glass', N'Glass', N'Vehicle', N'GLS', N'Full Glass')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'FP_Towing', N'Roadside Assistance', N'Vehicle', N'RDS', N'Roadside Assistance')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'TP_Towing', N'Roadside Assistance', N'Vehicle', N'PDL', N'PD Liability Limit')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'TP_Bodily Injury', N'Bodily Injury', N'InjuredPerson', N'CSL', N'Combined Single Limits')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'FP_Bodily Injury', N'Underinsured Motorist', N'InjuredPerson', N'UM', N'Uninsured Motorist Liablity')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'FP_Bodily Injury', N'Uninsured Motorist', N'InjuredPerson', N'UM', N'Uninsured Motorist Liablity')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'FP_Bodily Injury', N'Medical Payment', N'PipMedPay', N'MEDP', N'Medical Payments')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'FP_Bodily Injury', N'No-Fault', N'PipMedPay', N'PIP', N'PIP')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'TP_Property Damage', N'Property Damage', N'Vehicle', N'PDL', N'PD Liability Limit')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'AU', N'TP_Property Damage', N'Property Protection (MI only)', N'Vehicle', N'PDL', N'PD Liability Limit')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'HO', N'TP_Bodily Injury', N'Employment Liability', N'InjuredPerson', N'LIAB', N'Personal Liability')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'HO', N'TP_Bodily Injury', N'Liability', N'InjuredPerson', N'LIAB', N'Personal Liability')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'HO', N'TP_Bodily Injury', N'Personal Liability', N'InjuredPerson', N'LIAB', N'Personal Liability')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'HO', N'TP_Personal Injury', N'Liability', N'InjuredPerson', N'LIAB', N'Personal Liability')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'HO', N'TP_Personal Injury', N'Personal Liability', N'InjuredPerson', N'LIAB', N'Personal Liability')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'HO', N'TP_WC Employers Liability Bodily Injury', N'Workers Compensation', N'InjuredPerson', N'WC', N'Workers Compensation')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'HO', N'TP_WC Medical Cost for Domestic Staff', N'Workers Compensation', N'InjuredPerson', N'WC', N'Workers Compensation')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'HO', N'TP_Bodily Injury', N'Medical Payments', N'PipMedPay', N'MEDPY', N'Medical Payment')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'HO', N'TP_Property Damage', N'Liability', N'Property', N'LIAB', N'Personal Liability')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'HO', N'TP_Property Damage', N'Personal Liability', N'Property', N'LIAB', N'Personal Liability')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'HO', N'FP_Property Damage', N'Dwelling', N'Dwelling', N'COV-A', N'Dwelling')
-
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'HO', N'FP_Property Damage', N'Other Permanent Structures - Off Premises', N'OtherStructures', N'COV-B', N'Other Structures')
 
 INSERT [edw_stage].[migration_snapsheet_coverage_exposure_mapping] ([product_cd], [subclaim_type_nm], [coverage_nm], [snapsheet_exposure_type], [snapsheet_coverage_cd], [snapsheet_coverage_nm]) VALUES (N'HO', N'FP_Property Damage', N'Other Permanent Structures - On Premises', N'OtherStructures', N'COV-B', N'Other Structures')
