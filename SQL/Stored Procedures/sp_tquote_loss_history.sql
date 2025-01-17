@@ -5,11 +5,15 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 
--- =============================================
+-- ================================================================================================= 
 -- Author:		Hernando Gonzalez Garcia
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert and update info related to Loss History
--- =============================================
+-- ---------------------------------------------------------------------------------------------------
+-- Change date 				|Author						|	Change Description
+-- ---------------------------------------------------------------------------------------------------
+-- 01-15-2025				Alberto Almario				1. Add include_in_rating_in column.
+-- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_loss_history]
 AS
 BEGIN
@@ -41,7 +45,7 @@ BEGIN
 			,PropertyOrLiability, [Source] as source_nm, ClaimStatus, Claimant, FileNumber, LossDate, LossIdentifier, LossType, 
 			SubCauseofLoss as sub_cause_of_loss, LossDescription, PolicyType, CatIndicator, Disputed,
 			AddressLine1, AddressLine2, AddressLineUnit, AddressCity, AddressState, AddressZipCode, Coverage,
-			ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred
+			ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred, IncludeInRating
 			--,4 as [source_system_sk] --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
@@ -82,83 +86,90 @@ BEGIN
 				MAX([Value]) FOR [Field] IN (
 					PropertyOrLiability, [Source], ClaimStatus, Claimant, FileNumber, LossDate, LossIdentifier, LossType, SubCauseofLoss, 
 					LossDescription, PolicyType, CatIndicator, Disputed, AddressLine1, AddressLine2, AddressLineUnit, AddressCity, AddressState, AddressZipCode, 
-					Coverage, ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred
+					Coverage, ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred, IncludeInRating
 					)
 			) pivottable
 			
 		-- Start Insert process
 		INSERT INTO [edw_core].[tquote_loss_history] (
 			[quote_no]
-      ,[effective_dt]
-      ,[expiration_dt]
-      ,[transaction_seq_no]
-      ,[quote_history_sk]
-      ,[loss_seq_no]
-      ,[property_or_liability]
-      ,[source_nm]
-      ,[claim_status]
-      ,[claimant_nm]
-      ,[file_no]
-      ,[loss_dt]
-      ,[loss_indentifier]
-      ,[type_of_loss]
-      ,[sub_cause_of_loss_desc]
-      ,[loss_desc]
-      ,[policy_type]
-      ,[cat_loss_in]
-      ,[disputed_in]
-      ,[loss_address_line_1]
-      ,[loss_address_line_2]
-      ,[loss_address_unit_no]
-      ,[loss_address_city_nm]
-      ,[loss_address_state_cd]
-      ,[loss_address_zip_cd]
-      ,[coverage_desc]
-      ,[indemnity_reserve_amt]
-      ,[expense_reserve_amt]
-      ,[indemnity_paid_amt]
-      ,[expense_paid_amt]
-      ,[total_incurred_amt]
-      ,[source_system_sk]
-      ,[create_ts]
-      ,[update_ts]
-      ,[etl_audit_sk]
+			,[effective_dt]
+			,[expiration_dt]
+			,[transaction_seq_no]
+			,[quote_history_sk]
+			,[loss_seq_no]
+			,[property_or_liability]
+			,[source_nm]
+			,[claim_status]
+			,[claimant_nm]
+			,[file_no]
+			,[loss_dt]
+			,[loss_indentifier]
+			,[type_of_loss]
+			,[sub_cause_of_loss_desc]
+			,[loss_desc]
+			,[policy_type]
+			,[cat_loss_in]
+			,[disputed_in]
+			,[loss_address_line_1]
+			,[loss_address_line_2]
+			,[loss_address_unit_no]
+			,[loss_address_city_nm]
+			,[loss_address_state_cd]
+			,[loss_address_zip_cd]
+			,[coverage_desc]
+			,[indemnity_reserve_amt]
+			,[expense_reserve_amt]
+			,[indemnity_paid_amt]
+			,[expense_paid_amt]
+			,[total_incurred_amt]
+			,[source_system_sk]
+			,[create_ts]
+			,[update_ts]
+			,[etl_audit_sk]
+			,include_in_rating_in
 		)
-		SELECT [quote_no]
-      ,[EffectiveDate]
-      ,[ExpirationDate]
-      ,[Number]
-      ,[quote_history_sk]
-      ,[loss_seq_no]
-      ,[PropertyOrLiability]
-      ,[Source_nm]
-      ,[ClaimStatus]
-      ,[Claimant]
-      ,[FileNumber]
-      ,[LossDate]
-      ,[LossIdentifier]
-      ,[LossType]
-      ,[sub_cause_of_loss]
-      ,[LossDescription]
-      ,[PolicyType]
-      ,[CatIndicator]
-      ,[Disputed]
-      ,[AddressLine1]
-      ,[AddressLine2]
-      ,[AddressLineUnit]
-      ,[AddressCity]
-      ,[AddressState]
-      ,[AddressZipCode]
-      ,[Coverage]
-      ,[ReserveIndemnity]
-      ,[ReserveExpense]
-      ,[PaidIndemnity]
-      ,[PaidExpense]
-      ,[TotalIncurred]
-      ,[source_system_sk]
-      ,getdate()
-      ,getdate()
-		   ,@etl_audit_sk
+		SELECT 
+			[quote_no]
+			,[EffectiveDate]
+			,[ExpirationDate]
+			,[Number]
+			,[quote_history_sk]
+			,[loss_seq_no]
+			,[PropertyOrLiability]
+			,[Source_nm]
+			,[ClaimStatus]
+			,[Claimant]
+			,[FileNumber]
+			,[LossDate]
+			,[LossIdentifier]
+			,[LossType]
+			,[sub_cause_of_loss]
+			,[LossDescription]
+			,[PolicyType]
+			,[CatIndicator]
+			,[Disputed]
+			,[AddressLine1]
+			,[AddressLine2]
+			,[AddressLineUnit]
+			,[AddressCity]
+			,[AddressState]
+			,[AddressZipCode]
+			,[Coverage]
+			,[ReserveIndemnity]
+			,[ReserveExpense]
+			,[PaidIndemnity]
+			,[PaidExpense]
+			,[TotalIncurred]
+			,[source_system_sk]
+			,getdate()
+			,getdate()
+			,@etl_audit_sk
+			,CASE 
+				WHEN IncludeInRating = 'true' THEN 'Yes'
+				WHEN IncludeInRating = 'false' THEN 'No'
+				ELSE IncludeInRating
+			END
 		FROM 
 			[edw_temp].[tquote_loss_history_temp1]
 
