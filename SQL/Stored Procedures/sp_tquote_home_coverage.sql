@@ -18,6 +18,7 @@
 -- 10/02/24				Yunus Mohammed				11. Added new column fortified_roof_credit
 -- 10/31/24		        Hernando Gonzalez			12. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
 -- 12/02/24				Yunus Mohammed				13. AD-7834 Added new fields.
+-- 01/17/25				Yunus Mohammed				14.  AD-8225 Roundoff ReinsuranceTotalTIV value
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage]
 
@@ -278,7 +279,7 @@ BEGIN
 				tthc.TornadoorHailstormDeductible AS tornado_or_hailstorm_deductible,
 				tthc.WindStormOrHailDeductible AS wind_or_hailstorm_deductible, 
 				tthc.FactorMethod, tthc.Factor, tthc.Retention, tthc.Reason,
-				tthc.ReinsuranceDesignation, tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit, tthc.ReinsuranceTotalTIV, 
+				tthc.ReinsuranceDesignation, tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit,ROUND( tthc.ReinsuranceTotalTIV,0), 
 				tthc.WildfireThreat, tthc.WildfireHazardSeverity,
 				tthc.AOPDeductiblemanual, tthc.Waterdeductiblemanual,tthc.wildfiredeductiblemanual,tthc.WindstormOrHailDeductibleManual,
 				tthc.CATModeling_CATScore, tthc.CATModeling_ReinsuranceMargin, tthc.CATModeling_CededLoss, tthc.CATModeling_ReinsurancePremium, tthc.CATModeling_CapitalCost, tthc.CATModeling_CATScoreToPremiumRatio_Hurricane, tthc.CATModeling_AALToPremium, tthc.AAL, 
