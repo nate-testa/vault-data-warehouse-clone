@@ -109,7 +109,12 @@ BEGIN
         ,Claimant,FileNumber,LossDate,LossIdentifier,LossType,sub_cause_of_loss,LossDescription,PolicyType,CatIndicator
         ,Disputed,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressState,AddressZipCode,Coverage,ReserveIndemnity
         ,ReserveExpense,PaidIndemnity,PaidExpense,TotalIncurred
-        ,source_system_sk,getdate(),getdate(),@etl_audit_sk,IncludeInRating
+        ,source_system_sk,getdate(),getdate(),@etl_audit_sk
+		,CASE 
+			WHEN IncludeInRating = 'true' THEN 'Yes'
+			WHEN IncludeInRating = 'false' THEN 'No'
+			ELSE IncludeInRating
+		END
 		)
         WHEN MATCHED THEN UPDATE
 		SET
@@ -142,7 +147,11 @@ BEGIN
 		Target.expense_paid_amt = Source.PaidExpense,
 		Target.total_incurred_amt = Source.TotalIncurred,
 		Target.update_ts = GETDATE(),
-		Target.include_in_rating_in = Source.IncludeInRating
+		Target.include_in_rating_in = 	CASE 
+											WHEN Source.IncludeInRating = 'true' THEN 'Yes'
+											WHEN Source.IncludeInRating = 'false' THEN 'No'
+											ELSE Source.IncludeInRating
+										END
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
