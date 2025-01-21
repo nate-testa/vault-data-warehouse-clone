@@ -4,12 +4,14 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date 		|Author										|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 10/24/24			Yunus Mohammed					1. Created this procedure
--- 01/16/25			Yunus Mohammed					 2. Exposure Type code updated
---																							InjuredPerson and vehicle object code updated
--- ================================================================================================= 
+-- 10/24/2024			Yunus Mohammed					1. Created this procedure
+-- 01/16/2025			Yunus Mohammed					2. Exposure Type code updated
+-- 01/17/2025  		    Yunus Mohammed                  3. InjuredPerson and vehicle object code updated
+-- 01/20/2025           Yunus Mohammed                  4. Claimant & Injured Person Claim Party Id adjusted for 'InjuredPerson' & 'PipMedPay' exposures and remoed product filer
+-- 01/21/2025			Yunus Mohammed					5. Passed optional param claim_no
+-- ==================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api]
-
+@claim_no varchar(max) = null
 AS
 BEGIN
 
@@ -30,8 +32,32 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
-        
+
 		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1;
+		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2;
+
+		IF(@claim_no is null) 
+		BEGIN			
+			SELECT c.* 
+			INTO edw_temp.migration_create_claim_api_temp1
+			FROM 
+				edw_stage.t_clm_case c
+			 	left join edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber
+			where 
+				mcca.claimNumber is null 
+		END
+		ELSE
+		BEGIN
+			SELECT c.*
+			INTO edw_temp.migration_create_claim_api_temp1
+			FROM 
+				edw_stage.t_clm_case c
+			 	left join edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber
+				INNER JOIN string_split(@claim_no,',') as t on t.[value]  = c.CLAIM_NO
+			where 
+				mcca.claimNumber is null
+		END
+
 
 		SELECT claimNumber, accidentCode,claimType, 
 		-- case when [status] = 'OPEN' THEN 'DRAFT' ELSE [status] END AS [status],
@@ -44,7 +70,7 @@ BEGIN
 		notifier,exposures,
 		-- causeOfAccident, incidentComments,
 		vehicles, claimParties, getdate() as create_ts,api_status
-		INTO edw_temp.migration_create_claim_api_temp1
+		INTO edw_temp.migration_create_claim_api_temp2
 		FROM
 		(
 		select
@@ -97,11 +123,13 @@ BEGIN
 			(
 				select
 					cast(c.ACCIDENT_DESC as varchar(max)) as incidentLocationDescription,
-					case
+/*					case
 					when prd.product_cd in ('HO','CO','LUX') then 'dwelling' 
-					when prd.product_cd in ('AU') then 'highway'
+					when prd.product_cd in ('AU') then 'other'
 					when prd.product_cd in ('PEL') then 'business_address'
-					end	as incidentLocationType,
+					end	
+*/
+					'other' as incidentLocationType,
 					JSON_QUERY((
 						SELECT
 							tpa.ADDRESS_LINE_1 as address1,
@@ -149,6 +177,15 @@ BEGIN
 						end	as lossParty,
 						JSON_QUERY((
 							select 	ext.PTY_PARTY_ID as claimPartyId
+/*
+--Start - testing below block--01202025--
+select CASE 
+    WHEN ext.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
+    THEN CONCAT(CONVERT(VARCHAR, ext.pty_party_id), '-9999')
+    ELSE CONVERT(VARCHAR, ext.pty_party_id)
+END AS claimPartyId
+--End - testing below block--01202025--
+*/
 							for json path, include_null_values, without_array_wrapper
 						)) as claimant,
 						JSON_QUERY((
@@ -180,7 +217,23 @@ BEGIN
 						(
 							(
 								select ext.PTY_PARTY_ID as id,
+/*
+select CASE 
+    WHEN ext.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
+    THEN CONCAT(CONVERT(VARCHAR, ext.pty_party_id), '-9999')
+    ELSE CONVERT(VARCHAR, ext.pty_party_id)
+END AS id, 
+--End - testing below block--01202025--       
+*/                         
 								ext.PTY_PARTY_ID as [injuredParty.claimPartyId] 
+/*
+CASE 
+    WHEN ext.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
+    THEN CONCAT(CONVERT(VARCHAR, ext.pty_party_id), '-9999')
+    ELSE CONVERT(VARCHAR, ext.pty_party_id)
+END AS [injuredParty.claimPartyId] 
+--End - testing below block--01202025--
+*/
 								where
 									ext.snapsheet_exposure_type in ('InjuredPerson', 'PipMedPay')
                                     and rowNum = 1  -- if it is greater than 1 it means exposure is other.
@@ -266,20 +319,9 @@ BEGIN
 								select 
 									'1' as riskIdentifier,
 									'1' as locationIdentifier,
-									ext.snapsheet_coverage_nm as coverageCode,
+--								ext.snapsheet_coverage_nm as coverageCode,
+                                ext.snapsheet_coverage_cd as coverageCode,
 									ext.coverage_name as externalCoverageDetails
-									-- '2024-06-07' as startDate,
-									-- '2025-06-07' as endDate,
-									-- 'exposure' as [limits.limitType],
-									--100 as [limits.amount],
-									-- i.coverage_name as [limits.description],
-									-- cov.snapsheet_coverage_cd as [limits.code]
-								/*FROM
-									edw_stage.t_clm_pol_insured cpi 
-									ON  and pivottable.VIN = cast(cpi.insured_name as varchar(max))
-								WHERE
-									cpi.insured_id = ext.insured_id
-								*/
 								for json path, include_null_values, without_array_wrapper
 							)
 						)
@@ -291,7 +333,8 @@ BEGIN
 						select
 							cast(tav.vehicle_identifier as varchar(255)) as riskIdentifier,
 							cast(tag.location_identifier as varchar(255)) as locationIdentifier,
-							ext.snapsheet_coverage_nm as coverageCode,
+--								ext.snapsheet_coverage_nm as coverageCode,
+                                ext.snapsheet_coverage_cd as coverageCode,
 							ext.coverage_name as externalCoverageDetails
 						from
 							(
@@ -330,7 +373,8 @@ BEGIN
 											ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt, transaction_seq_no ORDER BY location_no)
 											 as varchar(255)
 										) AS location_identifier,
-										ext.snapsheet_coverage_nm as coverageCode,
+--								ext.snapsheet_coverage_nm as coverageCode,
+                                ext.snapsheet_coverage_cd as coverageCode,
 										ext.coverage_name as externalCoverageDetails
 									FROM
 										edw_core.tpel_location pl
@@ -361,7 +405,8 @@ BEGIN
 								SELECT 
 								'1' as risk_identifier,
 								'1' AS location_identifier,
-								ext.snapsheet_coverage_nm as coverageCode,
+--								ext.snapsheet_coverage_nm as coverageCode,
+                                ext.snapsheet_coverage_cd as coverageCode,
 								ext.coverage_name as externalCoverageDetails
 								for json path, include_null_values, without_array_wrapper
 							)
@@ -386,6 +431,7 @@ BEGIN
 	end as rowNum,
 								ext.snapsheet_exposure_type,
 								cov.snapsheet_coverage_nm,
+                                cov.snapsheet_coverage_cd,
 								o.[OBJECT_ID],
 								o.insured_id,
 								i.item_id,sct.subclaim_type_name,i.coverage_name,
@@ -419,11 +465,9 @@ BEGIN
                   --  i.item_id as id,
                     pivottable.VIN as vinNumber,pivottable.Make as make,pivottable.Model as model,
 					pivottable.ModelYear as [year],pivottable.EngineSize as engineSize
-					-- ,pivottable.VehicleType as vehicleType,pivottable.VehicleUsage as vehicleUsage
 				from
 				(
 				SELECT
-					-- cast(obj.RISK_NAME as varchar(max)) as id
 					acctvo.[UniqueId] as id
 					,acctvof.Field
 					,acctvof.[Value]
@@ -465,8 +509,19 @@ BEGIN
 			) as vehicles
 			,(
 				select distinct
-					par.pty_party_id as id,			
-					case when ext.snapsheet_exposure_type in ('InjuredPerson', 'PipMedPay') and prd.product_cd in ('AU','PEL') then 'passenger'end 
+					par.pty_party_id as id,
+/*
+--Start - testing below block--01202025--
+CASE 
+    WHEN ext.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
+    THEN CONCAT(CONVERT(VARCHAR, par.pty_party_id), '-9999')
+    ELSE CONVERT(VARCHAR, par.pty_party_id)
+END AS id, 
+--End - testing below block--01202025--
+*/
+					case when ext.snapsheet_exposure_type in ('InjuredPerson', 'PipMedPay') 
+                    --and prd.product_cd in ('AU','PEL') 
+                    then 'passenger'end 
 					 as claimPartyType,
 					-- null as partyType
 					CASE
@@ -542,8 +597,9 @@ BEGIN
 									AND his.business_instance_id = settle_item.settle_item_id
 							LEFT JOIN edw_stage.t_clm_settle_payee settle_payee ON settle_payee.settle_payee_id = settle_item.settle_payee_id
 					) AS p
-					LEFT JOIN edw_stage.t_clm_item i ON p.[object_id] = i.[object_id]
-					INNER JOIN edw_stage.t_clm_party par on par.PARTY_ID = p.PARTY_ID
+					LEFT JOIN edw_stage.t_clm_item i ON p.[object_id] = i.[object_id] 
+--					INNER JOIN edw_stage.t_clm_party par on par.PARTY_ID = p.PARTY_ID -- removed on 01172025
+                    INNER JOIN edw_stage.t_clm_party par on par.case_id = p.case_id -- added on 01172025
 					LEFT JOIN edw_stage.t_clm_party_role parole on par.PARTY_ROLE = parole.ROLE_CODE
 					LEFT JOIN edw_stage.t_pty_party pp ON par.pty_party_id = pp.party_id
 					LEFT JOIN edw_stage.t_pty_party_type ppt ON ppt.party_type = pp.party_type
@@ -556,9 +612,8 @@ BEGIN
 				for json path, include_null_values
 			) as claimParties,	
 			'pending' as api_status
-
 		from
-		edw_stage.t_clm_case c
+		edw_temp.migration_create_claim_api_temp1 c
 		LEFT JOIN edw_stage.t_clm_policy cp ON c.case_id=cp.case_id
 		INNER JOIN edw_stage.t_clm_losscause clc on clc.LOSS_CAUSE_CODE = c.LOSS_CAUSE
 		LEFT JOIN edw_core.tproduct prd ON prd.ebao_product_cd=c.product_code
@@ -580,13 +635,9 @@ BEGIN
 				edw_stage.t_dd_busi_data_table_record 
 				WHERE DATA_TABLE_ID=98100257349
 			) AS subcl
-		) as sclc on sclc.cause_of_loss_cd = c.sub_cause_of_loss_code
-        left join edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber
-		 where -- c.claim_no  in ('C24HOA00081','C24AUA00071') and --insert these 01152025
-          mcca.claimNumber is null 
-		--  and c.claim_no  in('C24HOA00360', 'C24HOA00078', 'C21HOA00278', 'C23HOA00118','C23XLA00028', 'C24COA00022')
+		) as sclc on sclc.cause_of_loss_cd = c.sub_cause_of_loss_code       
 		) as t ; 
-	
+
         insert into edw_stage.migration_create_claim_api
 			(
 			claimNumber, accidentCode, claimType, [status], policyNumber, datetimeOfLoss, datetimeOfNotification,
@@ -598,9 +649,9 @@ BEGIN
             accountCode, lossType, attachments, notes,claimIncidentDetails, notifier, exposures,
             vehicles, claimParties,getdate() as  create_ts,api_status
         from
-            edw_temp.migration_create_claim_api_temp1
+            edw_temp.migration_create_claim_api_temp2
 
-		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1
+		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2
 
 		SET @rows_affected=@@ROWCOUNT;		
 		
@@ -610,6 +661,7 @@ BEGIN
 
 		-- Drop temp table
 		DROP TABLE IF EXISTS edw_temp.nfp_claim_policy_search_api_temp1
+		DROP TABLE IF EXISTS edw_temp.nfp_claim_policy_search_api_temp2
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
