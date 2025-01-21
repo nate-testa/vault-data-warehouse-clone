@@ -11,6 +11,7 @@ GO
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
 -- 01-03-2025				Alberto Almario				1. Add snasheet mapping to ClaimType column.
+-- 01-21-2025               Rushin Shah                 2. Updated the claim amount field logic
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
@@ -90,7 +91,7 @@ BEGIN
                 a.claim_sk,
                 a.item_sk,
                 b.transaction_ts,
-                SUM(a.subro_expense_paid_amt + a.subro_recovery_amt) AS sum_subro_exp_rec_amt,
+                SUM(a.subrogation_expense_recovery_amt + a.subrogation_recovery_amt) AS sum_subro_exp_rec_amt,
                 MAX(
                     CASE 
                         WHEN a.claim_feature_status = 'CLOSED' THEN 1
@@ -115,9 +116,7 @@ BEGIN
                             (
                                 a.loss_paid_amt             + 
                                 a.expense_paid_amt          + 
-                                a.adjusting_other_paid_amt  + 
-                                a.refund_indemnity_paid_amt + 
-                                a.refund_expense_paid_amt
+                                a.defense_paid_amt  
                             ), 0)
                     ) AS [claimAmount]
             FROM edw_core.tclaim_feature AS a
