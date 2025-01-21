@@ -1,0 +1,2 @@
+ALTER TABLE edw_core.tquote_home_additional_coverage ADD theft_or_loss_general_conditions_endorsement_in varchar(255);
+ALTER TABLE edw_core.tquote_home_additional_coverage ADD animal_related_liability_endorsement_in varchar(255);
