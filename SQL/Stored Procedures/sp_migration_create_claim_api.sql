@@ -649,9 +649,7 @@ END AS id,
             accountCode, lossType, attachments, notes,claimIncidentDetails, notifier, exposures,
             vehicles, claimParties,getdate() as  create_ts,api_status
         from
-            edw_temp.migration_create_claim_api_temp2
-
-		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2
+            edw_temp.migration_create_claim_api_temp2		
 
 		SET @rows_affected=@@ROWCOUNT;		
 		
@@ -660,8 +658,8 @@ END AS id,
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
 		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.nfp_claim_policy_search_api_temp1
-		DROP TABLE IF EXISTS edw_temp.nfp_claim_policy_search_api_temp2
+		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1
+		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
