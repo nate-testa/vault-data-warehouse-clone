@@ -8,8 +8,9 @@
 -- 12/20/2024		Alberto Almario				3. Add GREATEST() function to update etl_control table.
 -- 12/27/2024		Alberto Almario				4. Add new columns fault_decision, responsible_party and at_fault_pct
 -- 01/09/2025		Alberto Almario				5. remove column sub_cause_of_loss_sk
--- 01/14/2025		Yunus Mohammed		 6. Used datetime_of_notification instead of first_opened_at for report_dt
--- 01/15/2025		Yunus Mohammed		 7. Added new column migrated_in
+-- 01/14/2025		Yunus Mohammed		 		6. Used datetime_of_notification instead of first_opened_at for report_dt
+-- 01/15/2025		Yunus Mohammed		 		7. Added new column migrated_in
+-- 01/17/2025		Hernando Gonzalez			8. add case statement for source_system_sk column
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -58,7 +59,7 @@ BEGIN
 		loss_address ,loss_city_nm ,loss_state_cd ,loss_zip_cd,loss_country_nm,broker_id,customer_id,underwriting_company_nm,
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
 		claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
-		5 AS source_system_sk,update_time,first_party_driver_nm,source_of_fire,source_of_water
+		source_system_sk,update_time,first_party_driver_nm,source_of_fire,source_of_water
 		,fault_decision,responsible_party,at_fault_pct,migrated_in
 		INTO edw_temp.tclaim_snapsheet_temp1
 		FROM
@@ -124,6 +125,10 @@ BEGIN
 				when c.claim_source = 'api' then 'Yes'
 				else 'No'
 			end as migrated_in
+			,case
+				when c.claim_source = 'api' then 3
+				else 5
+			end as source_system_sk
 		FROM edw_stage_snapsheet.claims c
 		LEFT JOIN edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
 		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcmp.claim_party_id and  cpcmp.contact_method_type = 'phone'

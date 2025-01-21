@@ -3,9 +3,10 @@
 -----------------------------------------------------------------------------------------------------------
 -- Change date				|Author									|Change Description
 -----------------------------------------------------------------------------------------------------------
--- 11/21/2024				Yunus Mohammd			1. Created this procedure
+-- 11/21/2024				Yunus Mohammd				1. Created this procedure
 -- 11/22/2024				Alberto Almario				2. Changes on some columns and tables
--- 01/10/2024				Yunus Mohammed		  3. Upated total_loss_in to Yes and No
+-- 01/10/2024				Yunus Mohammed		  		3. Upated total_loss_in to Yes and No
+-- 01/17/2025				Hernando Gonzalez			4. add case statement for source_system_sk column
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet]
 AS
@@ -60,7 +61,10 @@ BEGIN
 				WHEN 'PEL' THEN tpcov.pel_coverage_sk
 				WHEN 'AU' THEN tacov.auto_policy_coverage_sk
 			END AS coverage_sk ,		
-			5 AS source_system_sk,		
+			CASE
+				WHEN exps.external_reference_number is not null THEN 3
+				ELSE 5
+			END AS source_system_sk,		
 			CASE
 				prd.product_cd
 				WHEN 'HO' THEN NULL
