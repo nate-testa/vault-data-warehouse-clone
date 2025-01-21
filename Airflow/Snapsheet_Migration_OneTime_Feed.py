@@ -246,19 +246,19 @@ with DAG(
             dag=dag,
         )
 
-        py_exposure_status_update = PythonOperator(
-            task_id='py_exposure_status_update',
-            python_callable=execute_exposure_status_update,
-            provide_context=True,
-            dag=dag,
-        )
+        # py_exposure_status_update = PythonOperator(
+        #     task_id='py_exposure_status_update',
+        #     python_callable=execute_exposure_status_update,
+        #     provide_context=True,
+        #     dag=dag,
+        # )
 
-        py_claim_status_update = PythonOperator(
-            task_id='py_claim_status_update',
-            python_callable=execute_claim_status_update,
-            provide_context=True,
-            dag=dag,
-        )
+        # py_claim_status_update = PythonOperator(
+        #     task_id='py_claim_status_update',
+        #     python_callable=execute_claim_status_update,
+        #     provide_context=True,
+        #     dag=dag,
+        # )
 
         py_process_notes = PythonOperator(
             task_id='py_process_notes',
@@ -288,7 +288,8 @@ with DAG(
             html_content=get_sp_success_data_HTML(phase_two_items, 'All snapsheet migration stored procedures executed successfully for phase two'),
         )
 
-        sp_migration_create_financial_transaction_api >> sp_migration_create_financial_transaction_api_update_contactinfo >> sp_migration_update_exposure_status_api >> sp_migration_create_claim_api_update_status >> sp_migration_create_note_api >> sp_migration_update_exposure_adjuster_api >> sp_migration_create_claim_api_update_catastrophe >> py_process_financial_transactions >> py_exposure_status_update >> py_claim_status_update >> py_process_notes >> py_exposure_adjuster_update >> py_claim_catastrophe_update >> send_phase_two_email
+        # sp_migration_create_financial_transaction_api >> sp_migration_create_financial_transaction_api_update_contactinfo >> sp_migration_update_exposure_status_api >> sp_migration_create_claim_api_update_status >> sp_migration_create_note_api >> sp_migration_update_exposure_adjuster_api >> sp_migration_create_claim_api_update_catastrophe >> py_process_financial_transactions >> py_exposure_status_update >> py_claim_status_update >> py_process_notes >> py_exposure_adjuster_update >> py_claim_catastrophe_update >> send_phase_two_email
+        sp_migration_create_financial_transaction_api >> sp_migration_create_financial_transaction_api_update_contactinfo >> sp_migration_update_exposure_status_api >> sp_migration_create_claim_api_update_status >> sp_migration_create_note_api >> sp_migration_update_exposure_adjuster_api >> sp_migration_create_claim_api_update_catastrophe >> py_process_financial_transactions >> py_process_notes >> py_exposure_adjuster_update >> py_claim_catastrophe_update >> send_phase_two_email
 
 
 start >> phase_one >> check_for_claim_executions >> [continue_task, abort_task] 
