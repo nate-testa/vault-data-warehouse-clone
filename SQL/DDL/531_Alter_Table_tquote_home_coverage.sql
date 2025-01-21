@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote_home_coverage ADD fenced_pool_in varchar(255);
