@@ -11,6 +11,7 @@ GO
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
 -- 01-03-2025				Alberto Almario				1. Add snasheet mapping to causeOfLoss column.
+-- 01-21-2025               Rushin Shah                 2. Updated the claim amount field logic
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_property_feed]
 AS
@@ -122,13 +123,11 @@ BEGIN
                     (
                         c.loss_paid_amt             + 
                         c.expense_paid_amt          + 
-                        c.adjusting_other_paid_amt  + 
-                        c.refund_indemnity_paid_amt + 
-                        c.refund_expense_paid_amt
+                        c.defense_paid_amt
                     ), 0
                 ) AS [claimAmount]
                 ,CASE 
-                    WHEN (c.subro_expense_paid_amt + c.subro_recovery_amt) < 0 THEN 'S'
+                    WHEN (c.subrogation_expense_recovery_amt + c.subrogation_recovery_amt) < 0 THEN 'S'
                     WHEN c.claim_status ='CLOSED' THEN 'C' 
                     ELSE 'O' 
                 END AS [claimDisposition]
