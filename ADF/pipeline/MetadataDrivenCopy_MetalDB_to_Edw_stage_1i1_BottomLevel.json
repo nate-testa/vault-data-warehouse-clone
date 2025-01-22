@@ -176,7 +176,7 @@
 													"source": {
 														"type": "AzureSqlSource",
 														"sqlReaderQuery": {
-															"value": "@concat(\n  'SELECT COALESCE(',\n  'MAX(CASE WHEN ',\n  json(item().DataLoadingBehaviorSettings).watermarkColumnName,\n  ' >= ',\n  json(item().DataLoadingBehaviorSettings).watermarkColumnNameUpdate,\n  ' THEN ',\n  json(item().DataLoadingBehaviorSettings).watermarkColumnName,\n  ' ELSE ',\n  json(item().DataLoadingBehaviorSettings).watermarkColumnNameUpdate,\n  ' END)',\n  ', ''1900-01-01T00:00:00.000Z'') AS CurrentMaxWaterMarkColumnValue ',\n  'FROM ',\n  json(item().SourceObjectSettings).schema,\n  '.',\n  json(item().SourceObjectSettings).table\n)",
+															"value": "@concat(\n  'SELECT COALESCE(',\n  'MAX(CASE WHEN ',\n  json(item().DataLoadingBehaviorSettings).watermarkColumnName,\n  ' >= ',\n  json(item().DataLoadingBehaviorSettings).watermarkColumnNameUpdate,\n  ' THEN ',\n  json(item().DataLoadingBehaviorSettings).watermarkColumnName,\n  ' ELSE ',\n  json(item().DataLoadingBehaviorSettings).watermarkColumnNameUpdate,\n  ' END)',\n  ', ''1900-01-01T00:00:00.000Z'') AS CurrentMaxWaterMarkColumnValue ',\n  'FROM ',\n  json(item().SourceObjectSettings).schema,\n  '.[',\n  json(item().SourceObjectSettings).table,\n  ']'\n)",
 															"type": "Expression"
 														},
 														"isolationLevel": "ReadUncommitted",
