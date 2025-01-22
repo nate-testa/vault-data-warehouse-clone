@@ -1,6 +1,7 @@
 import pendulum
-from datetime import timedelta
+from datetime import datetime, timedelta
 from airflow import DAG
+from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.operators.mssql_operator import MsSqlOperator
@@ -17,6 +18,8 @@ from snapsheet_api_patch import update_exposure_status_qry, update_claim_status_
 to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
 cc_email = ""
+
+ENVIRONMENT = Variable.get("environment")
 
 
 def on_failure_callback(context):
@@ -47,16 +50,19 @@ def on_failure_callback(context):
     email.execute(context)
 
 def check_claim_executions(**kwargs):
-    sql_qry = """
-                SELECT api_status, COUNT(1) as rc 
-                FROM edw_stage.migration_create_claim_api 
-                WHERE api_status <> 'Success'
-                GROUP BY api_status
-              """
-    mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
-    result = mssql_hook.get_first(sql_qry)
-    if result is not None:
-        result = 'abort_task'
+    if ENVIRONMENT == 'PRODUCTION':
+        sql_qry = """
+                    SELECT api_status, COUNT(1) as rc 
+                    FROM edw_stage.migration_create_claim_api 
+                    WHERE api_status <> 'Success'
+                    GROUP BY api_status
+                """
+        mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
+        result = mssql_hook.get_first(sql_qry)
+        if result is not None:
+            result = 'abort_task'
+        else:
+            result = 'continue_task'
     else:
         result = 'continue_task'
 
@@ -82,6 +88,50 @@ def execute_exposure_adjuster_update():
 
 def execute_claim_catastrophe_update():
     claim_catastrophe(update_claim_catastrophe_qry)
+
+
+def snapsheet_api_send_email_status(**kwargs):
+
+    current_date = datetime.now().strftime('%m/%d/%Y')
+    
+    sql_qry = """
+            WITH CombinedData AS (
+                SELECT CAST(update_ts AS DATE) AS update_ts, api_status, 'migration_create_claim_api' AS Table_Name FROM edw_stage.migration_create_claim_api WHERE CAST(update_ts AS DATE) = CAST(GETDATE() AS DATE)
+                UNION ALL
+                SELECT CAST(update_ts AS DATE) AS update_ts, api_status, 'migration_create_note_api' AS Table_Name FROM edw_stage.migration_create_note_api WHERE CAST(update_ts AS DATE) = CAST(GETDATE() AS DATE)
+                UNION ALL
+                SELECT CAST(update_ts AS DATE) AS update_ts, api_status, 'migration_update_exposure_adjuster_api' AS Table_Name FROM edw_stage.migration_update_exposure_adjuster_api WHERE CAST(update_ts AS DATE) = CAST(GETDATE() AS DATE)
+                UNION ALL
+                SELECT CAST(update_ts AS DATE) AS update_ts, api_status, 'migration_create_claim_api_update_catastrophe' AS Table_Name FROM edw_stage.migration_create_claim_api_update_catastrophe WHERE CAST(update_ts AS DATE) = CAST(GETDATE() AS DATE)
+                UNION ALL
+                SELECT CAST(update_ts AS DATE) AS update_ts, api_status, 'migration_create_financial_transaction_api' AS Table_Name FROM edw_stage.migration_create_financial_transaction_api WHERE CAST(update_ts AS DATE) = CAST(GETDATE() AS DATE)
+                UNION ALL
+                SELECT CAST(update_ts AS DATE) AS update_ts, api_status, 'migration_update_exposure_status_api' AS Table_Name FROM edw_stage.migration_update_exposure_status_api WHERE CAST(update_ts AS DATE) = CAST(GETDATE() AS DATE)
+                UNION ALL
+                SELECT CAST(update_ts AS DATE) AS update_ts, api_status, 'migration_create_claim_api_update_status' AS Table_Name FROM edw_stage.migration_create_claim_api_update_status WHERE CAST(update_ts AS DATE) = CAST(GETDATE() AS DATE)
+            )
+            SELECT 
+                update_ts,
+                api_status,
+                Table_Name,
+                COUNT(1) AS Row_Count
+            FROM CombinedData
+            GROUP BY update_ts, api_status, Table_Name
+              """
+    # mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
+    # result = mssql_hook.get_first(sql_qry)
+
+    msg_text = f"The following report provides the status of policies processed on [{current_date}] through the Snapsheet API."
+    
+    # if result is not None:
+    EmailOperator(
+        task_id='send_email_snapsheet',
+        to=to_email,
+        subject='Airflow - Snapsheet API status',
+        html_content=get_vault_data_HTML(sql_qry,msg_text),
+        dag=kwargs['dag'],
+    ).execute(context=kwargs)
+
 
 args = {
     'owner': 'airflow',
@@ -133,13 +183,15 @@ with DAG(
             autocommit=True,
         )
 
-        sp_migration_create_claim_api_update_contactinfo = MsSqlOperator(
-            task_id='sp_migration_create_claim_api_update_contactinfo',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_migration_create_claim_api_update_contactinfo",
-            database="vault_edw",
-            autocommit=True,
-        )
+        if ENVIRONMENT != 'PRODUCTION':
+
+            sp_migration_create_claim_api_update_contactinfo = MsSqlOperator(
+                task_id='sp_migration_create_claim_api_update_contactinfo',
+                mssql_conn_id='Vault_EDW',
+                sql="EXEC edw_core.sp_migration_create_claim_api_update_contactinfo",
+                database="vault_edw",
+                autocommit=True,
+            )
 
         py_process_claims = PythonOperator(
             task_id='py_process_claims',
@@ -155,7 +207,10 @@ with DAG(
             html_content=get_sp_success_data_HTML(phase_one_items, 'All snapsheet migration stored procedures executed successfully for phase one'),
         )
 
-        sp_migration_create_claim_api >> sp_migration_create_claim_api_update_contactinfo >> py_process_claims >> send_phase_one_email
+        if ENVIRONMENT != 'PRODUCTION':
+            sp_migration_create_claim_api >> sp_migration_create_claim_api_update_contactinfo >> py_process_claims >> send_phase_one_email
+        else:
+            sp_migration_create_claim_api >> py_process_claims >> send_phase_one_email
 
 
     check_for_claim_executions = BranchPythonOperator(
@@ -174,46 +229,14 @@ with DAG(
     with TaskGroup("phase_two") as phase_two:
 
         phase_two_items = [
+            'sp_migration_create_note_api',
+            'sp_migration_update_exposure_adjuster_api',
+            'sp_migration_create_claim_api_update_catastrophe',
             'sp_migration_create_financial_transaction_api',
             'sp_migration_create_financial_transaction_api_update_contactinfo',
             'sp_migration_update_exposure_status_api',
-            'sp_migration_create_claim_api_update_status',
-            'sp_migration_create_note_api',
-            'sp_migration_update_exposure_adjuster_api',
-            'sp_migration_create_claim_api_update_catastrophe'        
+            'sp_migration_create_claim_api_update_status'  
         ]
-
-        sp_migration_create_financial_transaction_api = MsSqlOperator(
-            task_id='sp_migration_create_financial_transaction_api',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_migration_create_financial_transaction_api",
-            database="vault_edw",
-            autocommit=True,
-        )
-
-        sp_migration_create_financial_transaction_api_update_contactinfo = MsSqlOperator(
-            task_id='sp_migration_create_financial_transaction_api_update_contactinfo',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_migration_create_financial_transaction_api_update_contactinfo",
-            database="vault_edw",
-            autocommit=True,
-        )
-
-        sp_migration_update_exposure_status_api = MsSqlOperator(
-            task_id='sp_migration_update_exposure_status_api',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_migration_update_exposure_status_api",
-            database="vault_edw",
-            autocommit=True,
-        )
-
-        sp_migration_create_claim_api_update_status = MsSqlOperator(
-            task_id='sp_migration_create_claim_api_update_status',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_migration_create_claim_api_update_status",
-            database="vault_edw",
-            autocommit=True,
-        )
 
         sp_migration_create_note_api = MsSqlOperator(
             task_id='sp_migration_create_note_api',
@@ -239,26 +262,39 @@ with DAG(
             autocommit=True,
         )
 
-        py_process_financial_transactions = PythonOperator(
-            task_id='py_process_financial_transactions',
-            python_callable=execute_process_financial_transactions,
-            provide_context=True,
-            dag=dag,
+        sp_migration_create_financial_transaction_api = MsSqlOperator(
+            task_id='sp_migration_create_financial_transaction_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_migration_create_financial_transaction_api",
+            database="vault_edw",
+            autocommit=True,
         )
 
-        # py_exposure_status_update = PythonOperator(
-        #     task_id='py_exposure_status_update',
-        #     python_callable=execute_exposure_status_update,
-        #     provide_context=True,
-        #     dag=dag,
-        # )
+        if ENVIRONMENT != 'PRODUCTION':
 
-        # py_claim_status_update = PythonOperator(
-        #     task_id='py_claim_status_update',
-        #     python_callable=execute_claim_status_update,
-        #     provide_context=True,
-        #     dag=dag,
-        # )
+            sp_migration_create_financial_transaction_api_update_contactinfo = MsSqlOperator(
+                task_id='sp_migration_create_financial_transaction_api_update_contactinfo',
+                mssql_conn_id='Vault_EDW',
+                sql="EXEC edw_core.sp_migration_create_financial_transaction_api_update_contactinfo",
+                database="vault_edw",
+                autocommit=True,
+            )
+
+        sp_migration_update_exposure_status_api = MsSqlOperator(
+            task_id='sp_migration_update_exposure_status_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_migration_update_exposure_status_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_migration_create_claim_api_update_status = MsSqlOperator(
+            task_id='sp_migration_create_claim_api_update_status',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_migration_create_claim_api_update_status",
+            database="vault_edw",
+            autocommit=True,
+        )
 
         py_process_notes = PythonOperator(
             task_id='py_process_notes',
@@ -281,6 +317,27 @@ with DAG(
             dag=dag,
         )
 
+        py_process_financial_transactions = PythonOperator(
+            task_id='py_process_financial_transactions',
+            python_callable=execute_process_financial_transactions,
+            provide_context=True,
+            dag=dag,
+        )
+
+        # py_exposure_status_update = PythonOperator(
+        #     task_id='py_exposure_status_update',
+        #     python_callable=execute_exposure_status_update,
+        #     provide_context=True,
+        #     dag=dag,
+        # )
+
+        # py_claim_status_update = PythonOperator(
+        #     task_id='py_claim_status_update',
+        #     python_callable=execute_claim_status_update,
+        #     provide_context=True,
+        #     dag=dag,
+        # )
+
         send_phase_two_email = EmailOperator(
             task_id='send_phase_two_email',
             to=to_email,
@@ -288,9 +345,19 @@ with DAG(
             html_content=get_sp_success_data_HTML(phase_two_items, 'All snapsheet migration stored procedures executed successfully for phase two'),
         )
 
-        # sp_migration_create_financial_transaction_api >> sp_migration_create_financial_transaction_api_update_contactinfo >> sp_migration_update_exposure_status_api >> sp_migration_create_claim_api_update_status >> sp_migration_create_note_api >> sp_migration_update_exposure_adjuster_api >> sp_migration_create_claim_api_update_catastrophe >> py_process_financial_transactions >> py_exposure_status_update >> py_claim_status_update >> py_process_notes >> py_exposure_adjuster_update >> py_claim_catastrophe_update >> send_phase_two_email
-        sp_migration_create_financial_transaction_api >> sp_migration_create_financial_transaction_api_update_contactinfo >> sp_migration_update_exposure_status_api >> sp_migration_create_claim_api_update_status >> sp_migration_create_note_api >> sp_migration_update_exposure_adjuster_api >> sp_migration_create_claim_api_update_catastrophe >> py_process_financial_transactions >> py_process_notes >> py_exposure_adjuster_update >> py_claim_catastrophe_update >> send_phase_two_email
+        py_snapsheet_api_send_email_status = PythonOperator(
+            task_id='py_snapsheet_api_send_email_status',
+            python_callable=snapsheet_api_send_email_status,
+            provide_context=True,
+            dag=dag,
+        )
 
+        if ENVIRONMENT != 'PRODUCTION':
+            # sp_migration_create_note_api >> sp_migration_update_exposure_adjuster_api >> sp_migration_create_claim_api_update_catastrophe >> sp_migration_create_financial_transaction_api >> sp_migration_create_financial_transaction_api_update_contactinfo >> sp_migration_update_exposure_status_api >> sp_migration_create_claim_api_update_status >> py_process_notes >> py_exposure_adjuster_update >> py_claim_catastrophe_update >> py_process_financial_transactions >> py_exposure_status_update >> py_claim_status_update >> send_phase_two_email >> py_snapsheet_api_send_email_status
+            sp_migration_create_note_api >> sp_migration_update_exposure_adjuster_api >> sp_migration_create_claim_api_update_catastrophe >> sp_migration_create_financial_transaction_api >> sp_migration_create_financial_transaction_api_update_contactinfo >> sp_migration_update_exposure_status_api >> sp_migration_create_claim_api_update_status >> py_process_notes >> py_exposure_adjuster_update >> py_claim_catastrophe_update >> py_process_financial_transactions >> send_phase_two_email >> py_snapsheet_api_send_email_status
+        else:
+            sp_migration_create_note_api >> sp_migration_update_exposure_adjuster_api >> sp_migration_create_claim_api_update_catastrophe >> sp_migration_create_financial_transaction_api >> sp_migration_update_exposure_status_api >> sp_migration_create_claim_api_update_status >> py_process_notes >> py_exposure_adjuster_update >> py_claim_catastrophe_update >> py_process_financial_transactions >> send_phase_two_email >> py_snapsheet_api_send_email_status
+            
 
 start >> phase_one >> check_for_claim_executions >> [continue_task, abort_task] 
 abort_task >> send_abort_process_email >> end
