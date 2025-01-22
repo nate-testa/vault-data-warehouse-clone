@@ -47,7 +47,7 @@ BEGIN
 			'financial_transaction_action' as [data.type],
 			case 
 			when pay.pm_status = 'In Progress' then 'submittted'
-			when pay.pm_status = 'Issued' then 'Issued'
+			when pay.pm_status = 'Issued' then 'issued'
 			when  pay.pm_status = 'Cancelled' then 'cancel'
 			when pay.pm_status in ('Stopped','Stop Pending') then 'stop'
 			when pay.pm_status = 'Error' then 'failed'
