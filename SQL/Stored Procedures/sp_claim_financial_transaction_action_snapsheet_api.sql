@@ -10,7 +10,7 @@ AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
     SET @ProcedureName = OBJECT_NAME(@@PROCID)
-	
+
 	BEGIN TRY
 		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
@@ -45,9 +45,13 @@ BEGIN
 		select
 			fin.id as settle_payee_id,
 			'financial_transaction_action' as [data.type],
-			case pay.pm_status
-			when 'Success' then 'cleared'
-			when 'Stopped' then 'stop'
+			case 
+			when pay.pm_status = 'In Progress' then 'submittted'
+			when pay.pm_status = 'Issued' then 'Issued'
+			when  pay.pm_status = 'Cancelled' then 'cancel'
+			when pay.pm_status in ('Stopped','Stop Pending') then 'stop'
+			when pay.pm_status = 'Error' then 'failed'
+			when pay.pm_status = 'Success' then 'cleared'			
 			else pay.pm_status
 			end as [data.attributes.code],
 			pay.pm_paid_date as [data.attributes.originated_at],
