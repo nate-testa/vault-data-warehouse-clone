@@ -9,7 +9,8 @@ GO
 -- Change date 			|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 10/06/23				Yunus Mohammed				1. Created this procedure 
--- 12/18/24				Yunus Mohammed				3. AD7660 - Added new column
+-- 12/18/24				Yunus Mohammed				2. AD7660 - Added new column
+-- 01/22/24				Yunus Mohammed				3. AD8090 - Added new columns
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_claim_renewal_rating_auto_pel_api]
 (
@@ -26,7 +27,8 @@ BEGIN
 		crra.TotalPayout,crra.BodilyInjuryPayment,crra.CollisionPayment,crra.ComprehensivePayment,crra.GlassPayment,crra.MedicalExpensePayment,
 		crra.MedicalPaymentPayment,crra.OtherPayment,crra.PropertyDamagePayment,crra.PersonalInjuryProtectionPayment,
 		crra.RentalReimbursementPayment,crra.SpousalLiabilityPayment,crra.TowingAndLaborPayment,crra.UninsuredMotoristPayment,
-		crra.UnderinsuredMotoristPayment,crra.ViolationPointClass,FirstPartyDriverName
+		crra.UnderinsuredMotoristPayment,crra.ViolationPointClass,FirstPartyDriverName,
+		crra.FaultDecision,crra.ResponsibleParty,crra.AtFaultPercent
 	FROM
 		edw_integration.claim_renewal_rating_auto_pel_api AS crra
 		INNER JOIN
