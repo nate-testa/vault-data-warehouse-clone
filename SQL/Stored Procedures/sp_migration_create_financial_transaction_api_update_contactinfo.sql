@@ -25,10 +25,10 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200));
 
-		DROP TABLE IF EXISTS edw_temp.sp_migration_create_financial_transaction_api_temp1;
+		DROP TABLE IF EXISTS edw_temp.migration_create_financial_transaction_api_update_contactinfo_temp1;
 
 		select financial_transaction_id,[data],create_ts
-		into edw_temp.sp_migration_create_financial_transaction_api_temp1
+		into edw_temp.migration_create_financial_transaction_api_update_contactinfo_temp1
 		from edw_stage.migration_create_financial_transaction_api
 		where create_ts > @last_source_extract_ts
 		
@@ -41,16 +41,16 @@ BEGIN
 			)
 		from
 			edw_stage.migration_create_financial_transaction_api [target]
-			inner join edw_temp.sp_migration_create_financial_transaction_api_temp1 as [source] on
+			inner join edw_temp.migration_create_financial_transaction_api_update_contactinfo_temp1 as [source] on
 			[target].financial_transaction_id = [source].financial_transaction_id
 		where
 			[target].amount_type = 'Payment_Amount'
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.create_ts) FROM [edw_temp].sp_migration_create_financial_transaction_api_temp1 t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.create_ts) FROM [edw_temp].migration_create_financial_transaction_api_update_contactinfo_temp1 t1),@last_source_extract_ts);
 		
-        DROP TABLE IF EXISTS [edw_temp].sp_migration_create_financial_transaction_api_temp1;
+        DROP TABLE IF EXISTS [edw_temp].migration_create_financial_transaction_api_update_contactinfo_temp1;
 	
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
