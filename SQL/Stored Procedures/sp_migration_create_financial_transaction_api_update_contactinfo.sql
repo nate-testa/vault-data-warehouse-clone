@@ -27,6 +27,11 @@ BEGIN
 
 		DROP TABLE IF EXISTS edw_temp.sp_migration_create_financial_transaction_api_temp1;
 
+		select financial_transaction_id,[data],create_ts
+		into edw_temp.sp_migration_create_financial_transaction_api_temp1
+		from edw_stage.migration_create_financial_transaction_api
+		where create_ts > @last_source_extract_ts
+		
 		update [target]
 		set
 			[target].[data] = JSON_MODIFY

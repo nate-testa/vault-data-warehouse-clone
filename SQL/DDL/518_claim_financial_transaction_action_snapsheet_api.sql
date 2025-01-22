@@ -1,7 +1,7 @@
-IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'edw_integraton'
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'edw_integration'
 and TABLE_name = 'claim_financial_transaction_action_snapsheet_api')
 BEGIN
-CREATE TABLE edw_integraton.claim_financial_transaction_action_snapsheet_api (
+CREATE TABLE edw_integration.claim_financial_transaction_action_snapsheet_api (
 settle_payee_id int not null,
 [data] nvarchar(MAX) null,
 create_ts datetime null,

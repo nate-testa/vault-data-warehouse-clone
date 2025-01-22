@@ -64,14 +64,14 @@ BEGIN
 		where
 			api_status = 'Success'
 			and amount_type = 'Payment_Amount'
-			and fin.create_ts > @last_source_extract_ts		
+			and fin.create_ts > @last_source_extract_ts	
 		) as temp
 
 		insert into edw_integraton.claim_financial_transaction_action_snapsheet_api
 		(
-			settle_payee_id,[data],create_ts,api_status
+			settle_payee_id,[data],create_ts,api_status,etl_audit_sk
 		)
-		select settle_payee_id,[data],getdate() as create_ts,'pending' as api_status
+		select settle_payee_id,[data],getdate() as create_ts,'pending' as api_status,@etl_audit_sk
 		from
 		edw_temp.claim_financial_transaction_action_snapsheet_api_temp1
 		
