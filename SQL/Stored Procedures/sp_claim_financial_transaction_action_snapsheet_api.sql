@@ -67,7 +67,7 @@ BEGIN
 			and fin.create_ts > @last_source_extract_ts	
 		) as temp
 
-		insert into edw_integraton.claim_financial_transaction_action_snapsheet_api
+		insert into edw_integration.claim_financial_transaction_action_snapsheet_api
 		(
 			settle_payee_id,[data],create_ts,api_status,etl_audit_sk
 		)
