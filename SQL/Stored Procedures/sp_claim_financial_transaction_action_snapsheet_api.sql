@@ -1,11 +1,11 @@
 -- =================================================================================================
 -- Description: This procedures update claim financial payment status
 ---------------------------------------------------------------------------------------------------
--- Change date 				|Author						|	Change Description
+-- Change date 				|Author										|	Change Description
 ---------------------------------------------------------------------------------------------------
---	01-19-2025				Yunus Mohammed				Created procedure
+--	01-22-2025				Yunus Mohammed				 Created procedure
 -- ================================================================================================= 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_financial_transaction_action_api_update_stage]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_financial_transaction_action_snapsheet_api]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -24,10 +24,10 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200));	
 
-		DROP TABLE IF EXISTS edw_temp.migration_create_financial_transaction_action_api_update_stage;
+		DROP TABLE IF EXISTS edw_temp.claim_financial_transaction_action_snapsheet_api_temp1;
 
-		select 
-		id,
+		SELECT 
+		settle_payee_id,
 		json_query((
 			SELECT
 			[data.type],
@@ -39,15 +39,19 @@ BEGIN
 
 		)) as [data],
 		create_ts
-		into edw_temp.migration_create_financial_transaction_action_api_update_stage
+		into edw_temp.claim_financial_transaction_action_snapsheet_api_temp1
 		from
 		(
 		select
-			fin.id as id,
+			fin.id as settle_payee_id,
 			'financial_transaction_action' as [data.type],
-			case pay.pm_status
-			when 'Success' then 'cleared'
-			when 'Stopped' then 'stop'
+			case 
+			when pay.pm_status = 'In Progress' then 'submittted'
+			when pay.pm_status = 'Issued' then 'issued'
+			when  pay.pm_status = 'Cancelled' then 'cancel'
+			when pay.pm_status in ('Stopped','Stop Pending') then 'stop'
+			when pay.pm_status = 'Error' then 'failed'
+			when pay.pm_status = 'Success' then 'cleared'			
 			else pay.pm_status
 			end as [data.attributes.code],
 			pay.pm_paid_date as [data.attributes.originated_at],
@@ -60,24 +64,22 @@ BEGIN
 		where
 			api_status = 'Success'
 			and amount_type = 'Payment_Amount'
-			and fin.create_ts > @last_source_extract_ts
-		
+			and fin.create_ts > @last_source_extract_ts	
 		) as temp
 
-		insert into edw_stage.migration_create_financial_transaction_action_api_update_stage
+		insert into edw_integration.claim_financial_transaction_action_snapsheet_api
 		(
-			id,[data],create_ts,api_status
+			settle_payee_id,[data],create_ts,api_status,etl_audit_sk
 		)
-		select id,[data],getdate() as create_ts,'pending' as api_status
+		select settle_payee_id,[data],getdate() as create_ts,'pending' as api_status,@etl_audit_sk
 		from
-		edw_temp.migration_create_financial_transaction_action_api_update_stage
-
+		edw_temp.claim_financial_transaction_action_snapsheet_api_temp1
 		
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.create_ts) FROM edw_temp.migration_create_financial_transaction_action_api_update_stage t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.create_ts) FROM edw_temp.claim_financial_transaction_action_snapsheet_api_temp1 t1),@last_source_extract_ts);
 		
-        DROP TABLE IF EXISTS edw_temp.migration_create_financial_transaction_action_api_update_stage;
+        DROP TABLE IF EXISTS edw_temp.claim_financial_transaction_action_snapsheet_api_temp1;
 	
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
