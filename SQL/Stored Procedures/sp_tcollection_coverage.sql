@@ -8,6 +8,7 @@
 -- 10/09/23		Architha Gudimalla				2. Made changes after sandeep renamed the coll tables
 -- 10/09/23		Sandeep Gundreddy				3. renamed temp table name
 -- 03/06/24		Alberto Almario 				4. new column emergency_extension_notice_in
+-- 01/22/25		Alberto Almario				    5. Added new column theft_or_loss_general_conditions_endorsement_in
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_coverage]
@@ -59,7 +60,7 @@ BEGIN
 			,collection_location_sk
 			,policy_history_sk
 			,UnoccupiedMoreThanThreeMonths,NumberOfLossesLastThreeYears,ProtectionClass,Terrain,DistanceToCoast,RoofGeometry,RoofCovering,RoofCoverDeck,RoofDeckAttachment,RoofWallAttachment,HailResistantRating,SecondaryWaterResistance,ConstructionType,YearBuilt,FireProtection,OpeningProtection,NumberOfStories,CentralReportingFireAlarm,CentralReportingBurglarAlarm,HomeSafe,FulltimeLiveInCaretaker,BackupGenerator,ResidentialSprinklerSystem,MarketValueScheduledItems,MarketScheduledClassBankVaultedJewelry,MarketScheduledClassCoins,MarketScheduledClassCollectibles,MarketScheduledClassFineArts,MarketScheduledClassFurs,MarketScheduledClassGuns,MarketScheduledClassWorldwideJewelry,MarketScheduledClassMiscellaneous,MarketScheduledClassMusicalInstruments,MarketScheduledClassSilver,MarketScheduledClassStamps,MarketScheduledClassWearableCollectibles,MarketScheduledClassWine,MinimumEarnedPremiumEndorsement,TRY_CONVERT(float, MinimumEarnedPremiumEndorsementLimit) as MinimumEarnedPremiumEndorsementLimit,WardrobeLossPrevention,CompanionCreditHomeowner,AgreedValue,AgreedValueSpecifiedClass,AgreedValueSpecifiedClassBankVaultedJewelry,AgreedValueSpecifiedClassCoins,AgreedValueSpecifiedClassCollectibles,AgreedValueSpecifiedClassFineArts,AgreedValueSpecifiedClassFurs,AgreedValueSpecifiedClassGuns,AgreedValueSpecifiedClassWorldwideJewelry,AgreedValueSpecifiedClassMiscellaneous,AgreedValueSpecifiedClassMusicalInstruments,AgreedValueSpecifiedClassSilver,AgreedValueSpecifiedClassStamps,AgreedValueSpecifiedClassWearableCollectibles,AgreedValueSpecifiedClassWine,AgreedValueSpecifiedItems,AlarmWarranty,BreakageExclusion,TerrorismLimitation,TerrorismLimitationAmount,TheftMysteriousDisappearanceExclusion,TransitLimit,TransitLimitAmount,HurricaneLossExclusion,HurricaneLossLimitation,HurricaneLossLimitationAmount,OutdoorFineArtHurricaneExclusion,TerrorismExclusion,DeletionofCosmeticMarringExclusion,EarthquakeExclusion,EarthquakeDeductibleLossLimitation,EarthquakeDeductibleLossLimitationLimit,HotelMotelExclusion,JewelryOffPremisesLossLimitation,SpoilageExclusion,ChangeinTermsSummary,ChangeinTermsOptions,Manuscript,CoverageDeductible,CoverageDeductibleAmount,HurricaneDeductible,HurricaneDeductibleType,HurricaneDeductibleLimit,EarthquakeDeductible,EarthquakeDeductibleAmount,WildfireDeductible,WildfireDeductibleType,WildfireDeductibleAmount,WildfireBarkMulchWithinTenFeetofAnyStructure,WildfireCombustibleDeckOrAttachedStructure,WildfireCombustibleWoodSiding,WildfireDefensibleSpace,WildfireDistanceToHighFuelFeet,WildfireDistanceToModerateFuelFeet,WildfireDistanceToVeryHighFuelFeet,WildfireEavesorEnclosedEaves,WildfireExteriorWildfireSprinklers,WildfireFireWoodOrCombustiblesStoredAgainstHome,WildfireFlammableVegetationWithinTenFeetofAnyStructure,WildfireGutterGuards,WildfireHazardSeverity,WildfireNearestDistanceToPerimeter,WildfireNumberOfOccurrencesNear,WildfireNumberOfOccurrences,WildfirePermanentlyInstalledSpraySystem,WildfirePortableFireBreakSystem,WildfireSpecialityEmberResistantVenting,WildfireThreat,WildfireWoodShakeOrShingleRoof,CoutureAndWearableCollectiblesClassCouture
-            ,EmergencyExtensionNotice
+            ,EmergencyExtensionNotice,TheftOrLossGeneralConditionsEndorsement
 			--,4 as [source_system_sk] --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
@@ -97,7 +98,7 @@ BEGIN
 			PIVOT 
 			(
 				max(Value) FOR Field IN (UnoccupiedMoreThanThreeMonths,NumberOfLossesLastThreeYears,ProtectionClass,Terrain,DistanceToCoast,RoofGeometry,RoofCovering,RoofCoverDeck,RoofDeckAttachment,RoofWallAttachment,HailResistantRating,SecondaryWaterResistance,ConstructionType,YearBuilt,FireProtection,OpeningProtection,NumberOfStories,CentralReportingFireAlarm,CentralReportingBurglarAlarm,HomeSafe,FulltimeLiveInCaretaker,BackupGenerator,ResidentialSprinklerSystem,MarketValueScheduledItems,MarketScheduledClassBankVaultedJewelry,MarketScheduledClassCoins,MarketScheduledClassCollectibles,MarketScheduledClassFineArts,MarketScheduledClassFurs,MarketScheduledClassGuns,MarketScheduledClassWorldwideJewelry,MarketScheduledClassMiscellaneous,MarketScheduledClassMusicalInstruments,MarketScheduledClassSilver,MarketScheduledClassStamps,MarketScheduledClassWearableCollectibles,MarketScheduledClassWine,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,WardrobeLossPrevention,CompanionCreditHomeowner,AgreedValue,AgreedValueSpecifiedClass,AgreedValueSpecifiedClassBankVaultedJewelry,AgreedValueSpecifiedClassCoins,AgreedValueSpecifiedClassCollectibles,AgreedValueSpecifiedClassFineArts,AgreedValueSpecifiedClassFurs,AgreedValueSpecifiedClassGuns,AgreedValueSpecifiedClassWorldwideJewelry,AgreedValueSpecifiedClassMiscellaneous,AgreedValueSpecifiedClassMusicalInstruments,AgreedValueSpecifiedClassSilver,AgreedValueSpecifiedClassStamps,AgreedValueSpecifiedClassWearableCollectibles,AgreedValueSpecifiedClassWine,AgreedValueSpecifiedItems,AlarmWarranty,BreakageExclusion,TerrorismLimitation,TerrorismLimitationAmount,TheftMysteriousDisappearanceExclusion,TransitLimit,TransitLimitAmount,HurricaneLossExclusion,HurricaneLossLimitation,HurricaneLossLimitationAmount,OutdoorFineArtHurricaneExclusion,TerrorismExclusion,DeletionofCosmeticMarringExclusion,EarthquakeExclusion,EarthquakeDeductibleLossLimitation,EarthquakeDeductibleLossLimitationLimit,HotelMotelExclusion,JewelryOffPremisesLossLimitation,SpoilageExclusion,ChangeinTermsSummary,ChangeinTermsOptions,Manuscript,CoverageDeductible,CoverageDeductibleAmount,HurricaneDeductible,HurricaneDeductibleType,HurricaneDeductibleLimit,EarthquakeDeductible,EarthquakeDeductibleAmount,WildfireDeductible,WildfireDeductibleType,WildfireDeductibleAmount,WildfireBarkMulchWithinTenFeetofAnyStructure,WildfireCombustibleDeckOrAttachedStructure,WildfireCombustibleWoodSiding,WildfireDefensibleSpace,WildfireDistanceToHighFuelFeet,WildfireDistanceToModerateFuelFeet,WildfireDistanceToVeryHighFuelFeet,WildfireEavesorEnclosedEaves,WildfireExteriorWildfireSprinklers,WildfireFireWoodOrCombustiblesStoredAgainstHome,WildfireFlammableVegetationWithinTenFeetofAnyStructure,WildfireGutterGuards,WildfireHazardSeverity,WildfireNearestDistanceToPerimeter,WildfireNumberOfOccurrencesNear,WildfireNumberOfOccurrences,WildfirePermanentlyInstalledSpraySystem,WildfirePortableFireBreakSystem,WildfireSpecialityEmberResistantVenting,WildfireThreat,WildfireWoodShakeOrShingleRoof,CoutureAndWearableCollectiblesClassCouture
-                                            ,EmergencyExtensionNotice
+                                            ,EmergencyExtensionNotice,TheftOrLossGeneralConditionsEndorsement
                                         )
 			) AS pivottable
 			'
@@ -231,6 +232,7 @@ BEGIN
            ,[update_ts]
            ,[etl_audit_sk]
            ,[emergency_extension_notice_in]
+           ,[theft_or_loss_general_conditions_endorsement_in]
 			)
 		SELECT 
 			[PolicyNumber],[EffectiveDate],[IssuedDate],[ExpirationDate],[transaction_dt],[PolicyChangeNumber],
@@ -258,7 +260,7 @@ BEGIN
             [WildfireGutterGuards],[WildfireHazardSeverity],[WildfireNearestDistanceToPerimeter],[WildfireNumberOfOccurrencesNear],[WildfireNumberOfOccurrences],
             [WildfirePermanentlyInstalledSpraySystem],[WildfirePortableFireBreakSystem],[WildfireSpecialityEmberResistantVenting],[WildfireThreat],
             [WildfireWoodShakeOrShingleRoof],[CoutureAndWearableCollectiblesClassCouture],[source_system_sk],getdate(),getdate(), @etl_audit_sk,
-            [EmergencyExtensionNotice]
+            [EmergencyExtensionNotice],[TheftOrLossGeneralConditionsEndorsement]
 		FROM
 			[edw_temp].[tcollection_coverage_temp1] 
 
