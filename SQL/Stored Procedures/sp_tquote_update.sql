@@ -133,7 +133,7 @@ BEGIN
 		from edw_core.tquote q
 		inner join (select  quote_sk, min(effective_dt) over (partition by original_policy_no) uw_company_original_policy_effective_dt
 					from edw_core.tquote) q1 on q.quote_sk = q1.quote_sk
-		; 
+		;  
 
 		DROP TABLE IF EXISTS edw_temp.tquote_update_temp1;
       

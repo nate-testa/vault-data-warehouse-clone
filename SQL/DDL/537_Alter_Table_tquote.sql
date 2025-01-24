@@ -4,4 +4,4 @@ IF NOT EXISTS (
     WHERE   TABLE_SCHEMA='edw_core'
     AND     TABLE_NAME = 'tquote'
     AND     COLUMN_NAME = 'uw_company_original_policy_effective_dt'
-) BEGIN ALTER TABLE edw_core.tquote ADD uw_company_original_policy_effective_dt date END; 
+) BEGIN ALTER TABLE edw_core.tquote ADD uw_company_original_policy_effective_dt date END;  
