@@ -19,6 +19,7 @@ GO
 -- 10/30/24				Hernando Gonzalez			8. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
 -- 12/02/24				Yunus Mohammed				9. AD-7834 Added new fields
 -- 12/18/24				Hernando Gonzalez			10. AD-7963 | Added Risk_Score_Fire
+-- 01/23/25				Alberto Almario				11. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage_wip]
@@ -320,6 +321,8 @@ BEGIN
 				,Risk_Score_Sinkhole_Mine as risk_score_sinkhole_mine
 				,Risk_Score_All_Perils as risk_score_all_perils
 				,Risk_Score_Fire as risk_score_fire
+				,TheftOrLossGeneralConditionsEndorsement as theft_or_loss_general_conditions_endorsement_in
+				,AnimalRelatedLiabilityEndorsement as animal_related_liability_endorsement_in
 				,source_system_sk
 				,GETDATE() AS create_ts
 				,GETDATE() AS update_ts
@@ -421,6 +424,7 @@ BEGIN
 			full_extended_replacement_cost_in, risk_score_water_non_weather, risk_score_water_weather,
 			risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
 			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
+			theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
@@ -511,6 +515,7 @@ BEGIN
 				full_extended_replacement_cost_in, risk_score_water_non_weather, risk_score_water_weather,
 				risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
 				risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
+				theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			WHEN MATCHED THEN UPDATE
@@ -717,7 +722,8 @@ BEGIN
 			[target].risk_score_sinkhole_mine = [source].risk_score_sinkhole_mine,
 			[target].risk_score_all_perils = [source].risk_score_all_perils,
 			[target].risk_score_fire = [source].risk_score_fire,
-			
+			[target].theft_or_loss_general_conditions_endorsement_in = [source].theft_or_loss_general_conditions_endorsement_in, 
+			[target].animal_related_liability_endorsement_in = [source].animal_related_liability_endorsement_in,
 			[target].update_ts = [source].update_ts;
 			
 
