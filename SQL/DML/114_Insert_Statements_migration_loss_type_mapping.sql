@@ -369,3 +369,9 @@ INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_c
 INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'PEL', N'COL_XL_49', N'Uninsured Motorist', N'SCOL_XL_49_01', N'Bodily Inury', N'liability_claim_bodily_injury',GETDATE())
 
 INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'PEL', N'COL_XL_49', N'Uninsured Motorist', N'SCOL_XL_49_02', N'Property Damage', N'liability_claim_fidelity',GETDATE())
+
+INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts])
+VALUES (N'AU', N'COL_AU_08', N'Other', N'SCOL_AU_08_01', N'Other', N'auto_claim_rollover',GETDATE())
+ 
+INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts])
+VALUES (N'AU', N'COL_AU_15', N'Impact With Animal', N'SCOL_AU_15_01', N'Impact With Animal', N'auto_claim_animal',GETDATE())
