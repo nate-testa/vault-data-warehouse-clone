@@ -157,7 +157,7 @@ BEGIN
 		update edw_core.tpolicy 
 		set prior_policy_no = null
 		where policy_no = 'EX100266882-03' and prior_policy_no = 'AU100266880-03'		
- 
+  
 		update edw_core.tpolicy 
 		set prior_policy_no = null
 		where policy_no = 'CO100243128-02' and prior_policy_no = 'AU100038397-01'
