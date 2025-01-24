@@ -129,7 +129,7 @@ BEGIN
 
 		--added on 1/23 for uw_company_original_policy_effective_dt
 		update q
-		set q.uw_company_original_policy_effective_dt = pol1.uw_company_original_policy_effective_dt
+		set q.uw_company_original_policy_effective_dt = q1.uw_company_original_policy_effective_dt
 		from edw_core.tquote q
 		inner join (select  quote_sk, min(effective_dt) over (partition by original_policy_no) uw_company_original_policy_effective_dt
 					from edw_core.tquote) q1 on q.quote_sk = q1.quote_sk
