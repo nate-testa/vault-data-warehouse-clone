@@ -11,6 +11,7 @@ GO
 -- 11/14/23		Sandeep Gundreddy			2. Modify logic  
 -- 11/22/23     Sandeep Gundreddy           3. Modified logic to fix quote_status for Issued quotes
 -- 09/08/23		Architha Gudimalla			4. VI34112|AD7632 - Added issued_quote_history_sk
+-- 01/23/25		Architha Gudimalla			5. VI33968/AD7635 - Added uwco orig eff dt
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_update]
@@ -125,6 +126,14 @@ BEGIN
 		set 	a.issued_quote_history_sk = b.quote_history_sk
 		from 	edw_core.tquote a
 		inner join edw_temp.tquote_update_temp1 b on a.quote_sk = b.quote_sk; 
+
+		--added on 1/23 for uw_company_original_policy_effective_dt
+		update q
+		set q.uw_company_original_policy_effective_dt = pol1.uw_company_original_policy_effective_dt
+		from edw_core.tquote q
+		inner join (select  quote_sk, min(effective_dt) over (partition by original_policy_no) uw_company_original_policy_effective_dt
+					from edw_core.tquote) q1 on q.quote_sk = q1.quote_sk
+		; 
 
 		DROP TABLE IF EXISTS edw_temp.tquote_update_temp1;
       
