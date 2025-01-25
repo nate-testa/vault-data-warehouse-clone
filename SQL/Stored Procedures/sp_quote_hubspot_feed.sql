@@ -17,6 +17,8 @@
 -- 10/16/24		        Archtha Gudimalla			12. Excluded cancelled pols in pending_non_renewal recampaign
 -- 10/25/24		        Archtha Gudimalla			13. Added isnull to code when checking names for test quotes
 -- 12/30/24		        Alberto Almario				14. VI35256 - Insured name update for entity/trust LLC
+-- 01/13/25		        Alberto Almario				15. AD8013 - Included yacht data
+-- 01/15/25		        Archtha Gudimalla			16. VI35258/AD8009 - Added new cols
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -129,6 +131,10 @@ BEGIN
 			tqhac.primary_home_policy_expiration_dt, 
 			tqhac.primary_home_carrier_nm, 
 			tqhac.primary_home_coverage_a_threshold
+            --added below on 1/15/25
+            ,tqhc.occupancy_type
+            ,tqhc.new_client_for_agency_in
+            ,tqhc.current_underlying_company_nm
 
         into edw_temp.quote_hubspot_feed_temp1
 
@@ -159,7 +165,8 @@ BEGIN
 		and isnull(cust.last_nm,'') not like '%test%'
 		and isnull(cust.first_nm,'') not like '%test%' 
 		and isnull(cust.customer_nm,'') not like '%test%'      
-		and q.product_cd <> 'BY';         
+		-- and q.product_cd <> 'BY'
+        ;         
 
         --this is to pull in policies with pending non renewal = Y
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp2;
@@ -244,7 +251,12 @@ BEGIN
 			tqhac.primary_home_policy_effective_dt, 
 			tqhac.primary_home_policy_expiration_dt, 
 			tqhac.primary_home_carrier_nm, 
-			tqhac.primary_home_coverage_a_threshold 
+			tqhac.primary_home_coverage_a_threshold
+            --added below on 1/15/25
+            ,tqhc.occupancy_type
+            ,tqhc.new_client_for_agency_in
+            ,tqhc.current_underlying_company_nm
+
         into edw_temp.quote_hubspot_feed_temp2
         
         from edw_core.tpolicy q 
@@ -277,7 +289,7 @@ BEGIN
 			 isnull(non_renewal_sub_note_desc,'') like '%Renewal not taken%' or
 			 isnull(non_renewal_sub_note_desc,'') like '%Coverage no longer needed%' or
 			 isnull(non_renewal_sub_note_desc,'') like '%Coverage placed elseware%')       
-		and q.product_cd <> 'BY'
+		-- and q.product_cd <> 'BY'
         and q.policy_status <> 'Cancelled'
         ;
         --and q1.quote_no is null
@@ -317,6 +329,10 @@ BEGIN
 			,primary_home_policy_expiration_dt 
 			,primary_home_carrier_nm
 			,primary_home_coverage_a_threshold
+            --added below on 1/15/25
+            ,occupancy_type
+            ,new_client_for_agency_in
+            ,current_underlying_company_nm
         )
         VALUES
         (
@@ -335,6 +351,9 @@ BEGIN
 			,primary_home_policy_expiration_dt 
 			,primary_home_carrier_nm
 			,primary_home_coverage_a_threshold
+            ,occupancy_type
+            ,new_client_for_agency_in
+            ,current_underlying_company_nm
         )
         WHEN MATCHED THEN UPDATE
         SET        
@@ -387,7 +406,10 @@ BEGIN
             [target].primary_home_policy_effective_dt	=	[source].primary_home_policy_effective_dt,
             [target].primary_home_policy_expiration_dt	=	[source].primary_home_policy_expiration_dt,
             [target].primary_home_carrier_nm	        =	[source].primary_home_carrier_nm,
-            [target].primary_home_coverage_a_threshold	=	[source].primary_home_coverage_a_threshold 
+            [target].primary_home_coverage_a_threshold	=	[source].primary_home_coverage_a_threshold,
+            [target].occupancy_type	                    =	[source].occupancy_type,
+            [target].new_client_for_agency_in	        =	[source].new_client_for_agency_in,
+            [target].current_underlying_company_nm	    =	[source].current_underlying_company_nm  
             ;
         
         SET @rows_affected=@@ROWCOUNT;

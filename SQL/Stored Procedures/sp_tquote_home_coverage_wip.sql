@@ -16,6 +16,8 @@
 -- 10/02/24				Yunus Mohammed				10. Added new column fortified_roof_credit
 -- 10/31/24		        Hernando Gonzalez			11. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
 -- 12/02/24				Yunus Mohammed				12. AD-7834 Added new fields.
+-- 01/17/25				Yunus Mohammed				13.  AD-8225 Roundoff ReinsuranceTotalTIV value
+-- 01/23/25				Alberto Almario				14. Added new column fenced_pool_in
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
 
@@ -220,7 +222,7 @@ BEGIN
 				tthc.FactorMethod as premium_adjustment_method, tthc.Factor as premium_adjustment_factor, tthc.Retention as premium_adjustment_retention, 
 				tthc.Reason as premium_adjustment_retention_reason,
 				tthc.ReinsuranceDesignation as reinsurance_designation, tthc.ReinsuranceLayedProgram as reinsurance_layered_program_in, 
-				tthc.ReinsuranceAttachmentLimit as reinsurance_attachment_limit_amt, tthc.ReinsuranceTotalTIV as reinsurance_total_tiv_amt, 
+				tthc.ReinsuranceAttachmentLimit as reinsurance_attachment_limit_amt, ROUND(tthc.ReinsuranceTotalTIV,0) as reinsurance_total_tiv_amt, 
 				tthc.WildfireThreat as wildfire_threat, tthc.WildfireHazardSeverity as wildfire_hazard_severity,
 				tthc.AOPDeductiblemanual as aop_deductible_manual, tthc.Waterdeductiblemanual as water_deductible_manual,
 				tthc.wildfiredeductiblemanual as wildfire_deductible_manual,tthc.WindstormOrHailDeductibleManual as wind_or_hailstorm_deductible_manual,
@@ -252,6 +254,7 @@ BEGIN
 				tthc.NewClientForTheAgency as new_client_for_agency_in,
 				tthc.NumberOfBathrooms as no_of_bathrooms,tthc.NumberOfFireplaces as no_of_fireplaces,
 				tthc.FoundationType as foundation_type,tthc.WaivedInflationFactor as waived_inflation_factor_in,
+				tthc.FencedPool as fenced_pool_in,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk				
 			FROM
 				edw_temp.tquote_home_coverage_wip_temp1 AS tthc
@@ -299,7 +302,7 @@ BEGIN
 				[contents_limit_100_pc_value_amt], [loss_of_use_100_pc_value_amt], facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, 
 				facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, 
 				current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
-				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,
+				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
@@ -344,7 +347,7 @@ BEGIN
 				[contents_limit_100_pc_value_amt], [loss_of_use_100_pc_value_amt], facultative_attachment_point, facultative_limit_amt, 
 				facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, 
 				newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
-				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,
+				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			WHEN MATCHED THEN UPDATE
@@ -498,6 +501,7 @@ BEGIN
 			[target].no_of_fireplaces = [source].no_of_fireplaces,
 			[target].foundation_type = [source].foundation_type,
 			[target].waived_inflation_factor_in = [source].waived_inflation_factor_in,
+			[target].fenced_pool_in = [source].fenced_pool_in,
 			[target].update_ts = GETDATE();
 
 			SET @rows_affected=@@ROWCOUNT; 

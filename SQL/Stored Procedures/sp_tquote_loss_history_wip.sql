@@ -12,6 +12,7 @@ GO
 -----------------------------------------------------------------------------------------------------
 -- 05/09/24		        Yunus Mohammed			    1. Created the proc
 -- 08/22/24				Yunus Mohammed				2. Removed effective date from merge and added in update clause
+-- 01/15/25				Alberto Almario				3. Add include_in_rating_in column.
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_loss_history_wip]
 AS
@@ -44,7 +45,7 @@ BEGIN
 			,PropertyOrLiability, Source as source_nm, ClaimStatus, Claimant, FileNumber, LossDate, LossIdentifier, LossType, 
 			SubCauseofLoss as sub_cause_of_loss, LossDescription, PolicyType, CatIndicator, Disputed,
 			AddressLine1, AddressLine2, AddressLineUnit, AddressCity, AddressState, AddressZipCode, Coverage,
-			ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred
+			ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred, IncludeInRating
 			--,4 as source_system_sk --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
@@ -84,7 +85,7 @@ BEGIN
 				MAX(Value) FOR Field IN (
 					PropertyOrLiability, Source, ClaimStatus, Claimant, FileNumber, LossDate, LossIdentifier, LossType, SubCauseofLoss, 
 					LossDescription, PolicyType, CatIndicator, Disputed, AddressLine1, AddressLine2, AddressLineUnit, AddressCity, AddressState, AddressZipCode, 
-					Coverage, ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred
+					Coverage, ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred, IncludeInRating
 					)
 			) pivottable
 
@@ -100,7 +101,7 @@ BEGIN
         ,claim_status,claimant_nm,file_no,loss_dt,loss_indentifier,type_of_loss,sub_cause_of_loss_desc,loss_desc,policy_type
         ,cat_loss_in,disputed_in,loss_address_line_1,loss_address_line_2,loss_address_unit_no,loss_address_city_nm,loss_address_state_cd
         ,loss_address_zip_cd,coverage_desc,indemnity_reserve_amt,expense_reserve_amt,indemnity_paid_amt,expense_paid_amt,total_incurred_amt
-        ,source_system_sk,create_ts,update_ts,etl_audit_sk
+        ,source_system_sk,create_ts,update_ts,etl_audit_sk,include_in_rating_in
         )
         VALUES 
 		(
@@ -109,6 +110,11 @@ BEGIN
         ,Disputed,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressState,AddressZipCode,Coverage,ReserveIndemnity
         ,ReserveExpense,PaidIndemnity,PaidExpense,TotalIncurred
         ,source_system_sk,getdate(),getdate(),@etl_audit_sk
+		,CASE 
+			WHEN IncludeInRating = 'true' THEN 'Yes'
+			WHEN IncludeInRating = 'false' THEN 'No'
+			ELSE IncludeInRating
+		END
 		)
         WHEN MATCHED THEN UPDATE
 		SET
@@ -140,7 +146,13 @@ BEGIN
 		Target.indemnity_paid_amt = Source.PaidIndemnity,
 		Target.expense_paid_amt = Source.PaidExpense,
 		Target.total_incurred_amt = Source.TotalIncurred,
-		Target.update_ts = GETDATE();
+		Target.update_ts = GETDATE(),
+		Target.include_in_rating_in = 	CASE 
+											WHEN Source.IncludeInRating = 'true' THEN 'Yes'
+											WHEN Source.IncludeInRating = 'false' THEN 'No'
+											ELSE Source.IncludeInRating
+										END
+		;
 
 		SET @rows_affected=@@ROWCOUNT;
 
