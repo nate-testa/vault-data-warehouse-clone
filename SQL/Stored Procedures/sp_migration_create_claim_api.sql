@@ -9,7 +9,7 @@
 -- 01/17/2025  		    Yunus Mohammed                  3. InjuredPerson and vehicle object code updated
 -- 01/20/2025           Yunus Mohammed                  4. Claimant & Injured Person Claim Party Id adjusted for 'InjuredPerson' & 'PipMedPay' exposures and remoed product filer
 -- 01/21/2025			Yunus Mohammed					5. Passed optional param claim_no
--- 01/27/2025			Yunus Mohammed					6. Added first open dt, first close dt,open dt and close dt
+-- -01/27/2025			Yunus Mohammed					6. Added first open dt, first close dt,open dt and close dt
 --																								Removed -ve payment amount on indemnity and -ve Reserve Amount on Indemnity
 --																												
 -- ==================================================================================================================================
@@ -142,7 +142,10 @@ BEGIN
 		-- case when [status] = 'OPEN' THEN 'DRAFT' ELSE [status] END AS [status],
 		'DRAFT' AS [status],
 		policyNumber,
-		firstOpenedAt,firstClosedAt,openedAt,closedAt,
+		FORMAT(firstOpenedAt, 'yyyy-MM-ddTHH:mm:ssZ') as firstOpenedAt ,
+		FORMAT(firstClosedAt, 'yyyy-MM-ddTHH:mm:ssZ')  as firstClosedAt,
+		FORMAT(openedAt, 'yyyy-MM-ddTHH:mm:ssZ')  as openedAt,
+		FORMAT(closedAt, 'yyyy-MM-ddTHH:mm:ssZ')  as closedAt,
 		FORMAT(datetimeOfLoss, 'yyyy-MM-ddTHH:mm:ssZ') as datetimeOfLoss, 
 		FORMAT(datetimeOfNotification, 'yyyy-MM-ddTHH:mm:ssZ') as datetimeOfNotification,
 		accountCode, lossType,
