@@ -9,6 +9,9 @@
 -- 01/17/2025  		    Yunus Mohammed                  3. InjuredPerson and vehicle object code updated
 -- 01/20/2025           Yunus Mohammed                  4. Claimant & Injured Person Claim Party Id adjusted for 'InjuredPerson' & 'PipMedPay' exposures and remoed product filer
 -- 01/21/2025			Yunus Mohammed					5. Passed optional param claim_no
+-- 01/27/2025			Yunus Mohammed					6. Added first open dt, first close dt,open dt and close dt
+--																								Removed -ve payment amount on indemnity and -ve Reserve Amount on Indemnity
+--																												
 -- ==================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api]
 @claim_no varchar(max) = null
@@ -28,23 +31,50 @@ BEGIN
 		DECLARE @current_date DATETIME=GETDATE()
 		DECLARE @parameter_desc VARCHAR(255)
 
+
 		-- Get last source extract date
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
-		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200));		
 
 		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1;
-		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2;
+		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2;	
 
+		-- Code start for -ve reserve and payment for Loss and Expanse
+		-- -ve Payment Amount on Indemnity--
+		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp3;
+		
+		SELECT distinct tcase.claim_no
+		INTO edw_temp.migration_create_claim_api_temp3
+		FROM edw_stage.t_clm_reserve_his AS a
+		INNER JOIN edw_stage.t_clm_item AS tci on tci.item_id = a.item_id and a.RESERVE_TYPE in ('RC_01', 'RC_02')
+		INNER JOIN edw_stage.t_clm_object AS e ON tci.[object_id] = e.[object_id]
+		LEFT JOIN edw_stage.t_clm_subclaim_type sct ON e.subclaim_type = sct.subclaim_type_code
+		INNER JOIN  edw_stage.t_clm_case AS tcase ON tcase.case_id=e.case_id
+		WHERE settle_changed < 0  --1184
+		
+		UNION  
+		-- -ve Reserve Amount on Indemnity--
+		
+		SELECT distinct tcase.claim_no --count (distinct tcase.claim_no)
+		FROM edw_stage.t_clm_reserve_his AS a
+		INNER JOIN edw_stage.t_clm_item AS tci on tci.item_id = a.item_id and a.RESERVE_TYPE in ('RC_01', 'RC_02')
+		INNER JOIN edw_stage.t_clm_object AS e ON tci.[object_id] = e.[object_id]
+		LEFT JOIN edw_stage.t_clm_subclaim_type sct ON e.subclaim_type = sct.subclaim_type_code
+		INNER JOIN  edw_stage.t_clm_case AS tcase ON tcase.case_id=e.case_id
+		WHERE outstanding_amount < 0
+		order by 1 ; --103
+		-- Code end for -ve reserve and payment for Loss and Expanse
 		IF(@claim_no is null) 
 		BEGIN			
 			SELECT c.* 
 			INTO edw_temp.migration_create_claim_api_temp1
 			FROM 
 				edw_stage.t_clm_case c
-			 	left join edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber
+			 	LEFT JOIN edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber				
 			where 
 				mcca.claimNumber is null 
+				and c.claim_no not in (select claim_no from edw_temp.migration_create_claim_api_temp3) -- Exclude -ve reserve and payment
 		END
 		ELSE
 		BEGIN
@@ -56,13 +86,63 @@ BEGIN
 				INNER JOIN string_split(@claim_no,',') as t on t.[value]  = c.CLAIM_NO
 			where 
 				mcca.claimNumber is null
-		END
-
+				and c.claim_no not in (select claim_no from edw_temp.migration_create_claim_api_temp3) -- Exclude -ve reserve and payment
+		END;
+		
+		WITH first_open_dt AS 
+		(
+			SELECT DISTINCT c.claim_no
+			,MIN(ch.insert_time) AS claim_first_open_dt
+			FROM
+				edw_stage.t_clm_case_his ch
+				INNER JOIN edw_stage.t_clm_case c ON ch.case_id = c.case_id
+			WHERE
+				ch.claim_type = 'LOS'
+				AND ch.new_status = 'OPEN'
+			GROUP BY c.claim_no
+		)
+		, first_close_dt as 
+		(
+			SELECT DISTINCT c.claim_no
+			,MIN(ch.insert_time) as claim_first_close_dt
+			FROM
+				edw_stage.t_clm_case_his ch
+				INNER JOIN edw_stage.t_clm_case c ON ch.case_id = c.case_id
+			WHERE
+				ch.claim_type = 'LOS'
+				and ch.new_status = 'CLOSED'
+			GROUP BY c.claim_no
+		)
+		, open_dt AS 
+		(
+			SELECT DISTINCT c.claim_no
+			,MAX(ch.insert_time) AS claim_open_dt
+			FROM
+				edw_stage.t_clm_case_his ch
+				INNER JOIN edw_stage.t_clm_case c ON ch.case_id = c.case_id
+			WHERE
+				ch.claim_type = 'LOS'
+				AND ch.new_status in ( 'OPEN','REOPEN')
+			GROUP BY c.claim_no
+		)
+		,close_dt as 
+		(
+			SELECT DISTINCT c.claim_no
+			,MAX(ch.insert_time) as claim_close_dt
+			FROM
+				edw_stage.t_clm_case_his ch
+				INNER JOIN edw_stage.t_clm_case c ON ch.case_id = c.case_id
+			WHERE
+				ch.claim_type = 'LOS'
+				and ch.new_status = 'CLOSED'
+			GROUP BY c.claim_no
+		)
 
 		SELECT claimNumber, accidentCode,claimType, 
 		-- case when [status] = 'OPEN' THEN 'DRAFT' ELSE [status] END AS [status],
 		'DRAFT' AS [status],
 		policyNumber,
+		firstOpenedAt,firstClosedAt,openedAt,closedAt,
 		FORMAT(datetimeOfLoss, 'yyyy-MM-ddTHH:mm:ssZ') as datetimeOfLoss, 
 		FORMAT(datetimeOfNotification, 'yyyy-MM-ddTHH:mm:ssZ') as datetimeOfNotification,
 		accountCode, lossType,
@@ -87,6 +167,10 @@ BEGIN
 						ELSE cstat.status_name
 					END) AS status,
 			c.POLICY_NO as policyNumber,
+			fod.claim_first_open_dt as firstOpenedAt,
+			fcd.claim_first_close_dt as firstClosedAt,
+			od.claim_open_dt as openedAt,
+			cd.claim_close_dt as closedAt,
 			c.ACCIDENT_TIME as datetimeOfLoss,
 			c.NOTICE_TIME as datetimeOfNotification,
 			CASE
@@ -617,7 +701,11 @@ END AS id,
 		LEFT JOIN edw_stage.t_clm_policy cp ON c.case_id=cp.case_id
 		INNER JOIN edw_stage.t_clm_losscause clc on clc.LOSS_CAUSE_CODE = c.LOSS_CAUSE
 		LEFT JOIN edw_core.tproduct prd ON prd.ebao_product_cd=c.product_code
-		LEFT JOIN edw_stage.t_clm_case_status cstat ON c.CASE_STATUS = cstat.STATUS_CODE
+		LEFT JOIN edw_stage.t_clm_case_status cstat ON c.CASE_STATUS = cstat.STATUS_CODE	
+		LEFT JOIN first_open_dt fod on fod.claim_no = c.claim_no
+		LEFT JOIN first_close_dt fcd on fcd.claim_no = c.claim_no
+		LEFT JOIN open_dt od on od.claim_no = c.claim_no
+		LEFT JOIN close_dt cd on cd.claim_no = c.claim_no
 		left join 
 		(
 			SELECT
@@ -640,18 +728,18 @@ END AS id,
 
         insert into edw_stage.migration_create_claim_api
 			(
-			claimNumber, accidentCode, claimType, [status], policyNumber, datetimeOfLoss, datetimeOfNotification,
-			accountCode, lossType, attachments, notes, claimIncidentDetails, notifier, exposures, 
+			claimNumber, accidentCode, claimType, [status], policyNumber, firstOpenedAt,firstClosedAt,openedAt,closedAt,
+			datetimeOfLoss, datetimeOfNotification,	accountCode, lossType, attachments, notes, claimIncidentDetails, notifier, exposures, 
 			vehicles, claimParties, create_ts, api_status
 			)
         select
-            claimNumber, accidentCode, claimType, [status],policyNumber, datetimeOfLoss, datetimeOfNotification,
-            accountCode, lossType, attachments, notes,claimIncidentDetails, notifier, exposures,
+            claimNumber, accidentCode, claimType, [status],policyNumber, firstOpenedAt,firstClosedAt,openedAt,closedAt,
+			datetimeOfLoss, datetimeOfNotification, accountCode, lossType, attachments, notes,claimIncidentDetails, notifier, exposures,
             vehicles, claimParties,getdate() as  create_ts,api_status
         from
-            edw_temp.migration_create_claim_api_temp2		
+            edw_temp.migration_create_claim_api_temp2
 
-		SET @rows_affected=@@ROWCOUNT;		
+		SET @rows_affected=@@ROWCOUNT;
 		
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
@@ -660,6 +748,7 @@ END AS id,
 		-- Drop temp table
 		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1
 		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2
+		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp3;
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
