@@ -10,7 +10,7 @@
   --01-17-2025              Yunus Mohammed        3. Option 3 --restrict sending -ve payments (stop/cancel/adjusting/etc.)
   --01-20-2025              Yunus Mohammed        4. Updated payment_status (stage)
   --01-23-2025              Yunus Mohammed        5. Sending eBao CANCEL & STOPPED payments
-  --01-27-2025              Yunus Mohammed        6. Added tpolicy  table to get UW Company Name when it's not availabel in eBao table
+  --01-27-2025              Yunus Mohammed        6. Added tpolicy  table to get UW Company Name when it's not available in eBao table
  -- ================================================================================================= 
 
  CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_financial_transaction_api]
