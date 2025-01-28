@@ -1,9 +1,10 @@
 -- =================================================================================================
 -- Description: This procedures insert and update info related to Claim Policy Search API
 ---------------------------------------------------------------------------------------------------
--- Change date 				|Author						|	Change Description
+-- Change date 				|Author										|	Change Description
 ---------------------------------------------------------------------------------------------------
 --	09-27-2024				Yunus Mohammed				Created procedure
+-- 01-28-2025				Yunus Mohammed				Used latest transaction for policy
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_search_snapsheet_api]
 AS
@@ -73,17 +74,26 @@ BEGIN
 					pt.create_ts as policy_transaction_create_ts
 		INTO [edw_temp].[claim_policy_search_snapsheet_api_temp1] 
 		FROM (
-				SELECT 
-					DISTINCT pt.policy_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, 
+
+				SELECT distinct
+					pt.policy_sk,pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, 
 					pt.source_system_sk, pt.item_sk, pt.vehicle_coverage_sk, pt.create_ts
-				FROM edw_core.tpolicy_transaction as pt
-				INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
-				LEFT JOIN edw_core.tauto_vehicle_coverage AS avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
-				WHERE
-				cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-				AND CASE WHEN pr.product_cd = 'AU' AND pt.item_sk = 0 THEN 0  ELSE 1 END = 1
-				AND CASE WHEN pr.product_cd = 'AU' AND avc.vehicle_deleted_in = 'Yes' THEN 0  ELSE 1 END = 1
-				AND pt.source_system_sk <> 1
+					FROM
+					(
+						select
+						dense_rank() OVER(PARTITION BY pt.policy_sk ORDER BY pt.transaction_seq_no desc) AS rn,pt. *
+						from
+							edw_core.tpolicy_transaction pt
+						where
+							cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+					)as pt
+					INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
+					LEFT JOIN edw_core.tauto_vehicle_coverage AS avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
+					WHERE
+					CASE WHEN pr.product_cd = 'AU' AND pt.item_sk = 0 THEN 0  ELSE 1 END = 1
+					AND CASE WHEN pr.product_cd = 'AU' AND avc.vehicle_deleted_in = 'Yes' THEN 0  ELSE 1 END = 1
+					AND pt.source_system_sk <> 1
+					and rn = 1
 			) AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
 		inner JOIN edw_core.tproduct AS pr ON p.product_cd = pr.product_cd
@@ -97,8 +107,7 @@ BEGIN
 		LEFT JOIN edw_core.tpolicy_insured AS [pi] ON p.policy_no = [pi].policy_no AND p.effective_dt = [pi].effective_dt
 			AND pt.transaction_seq_no = [pi].transaction_seq_no AND pi.primary_insured_in = 'Yes'
 		WHERE
-			pr.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability')		
-
+			pr.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability')	
 
 		-- Start Insert process
 		INSERT INTO [edw_integration].[claim_policy_search_snapsheet_api]
