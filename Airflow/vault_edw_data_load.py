@@ -720,4 +720,4 @@ with DAG(
     )
 
 
-start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group] >> collection_marine >> [collection_group, marine_group] >> policy_transaction_group >> claim_group >> datamart_group >> validation_result_group >> integration_group >> exec_vault_edw_data_load_quotes >> end
+start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group] >> collection_marine >> [collection_group, marine_group] >> policy_transaction_group >> claim_group >> datamart_group >> integration_group >> validation_result_group >> exec_vault_edw_data_load_quotes >> end
