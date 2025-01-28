@@ -5,6 +5,7 @@
 ---------------------------------------------------------------------------------------------------
 --	09-27-2024				Yunus Mohammed				Created procedure
 -- 01-28-2025				Yunus Mohammed				Used latest transaction for policy
+-- 01-28-2025	           Sandeep Gundreddy			removed source_system_sk<>1  filter to include OS data
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_search_snapsheet_api]
 AS
@@ -92,7 +93,6 @@ BEGIN
 					WHERE
 					CASE WHEN pr.product_cd = 'AU' AND pt.item_sk = 0 THEN 0  ELSE 1 END = 1
 					AND CASE WHEN pr.product_cd = 'AU' AND avc.vehicle_deleted_in = 'Yes' THEN 0  ELSE 1 END = 1
-					AND pt.source_system_sk <> 1
 					and rn = 1
 			) AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
