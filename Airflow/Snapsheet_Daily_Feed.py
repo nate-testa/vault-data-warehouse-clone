@@ -93,7 +93,9 @@ with DAG(
 
     snapsheet_items = [
             'sp_claim_policy_search_snapsheet_api',
+            'sp_nfp_claim_policy_search_snapsheet_api',
             'sp_claim_policy_webhook_snapsheet_api',
+            'sp_nfp_claim_policy_webhook_snapsheet_api',
             'sp_claim_policy_webhook_snapsheet_api_update_contactinfo'
         ]
 
@@ -101,6 +103,14 @@ with DAG(
             task_id='sp_claim_policy_search_snapsheet_api',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_claim_policy_search_snapsheet_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+    
+    sp_nfp_claim_policy_search_snapsheet_api = MsSqlOperator(
+            task_id='sp_nfp_claim_policy_search_snapsheet_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_nfp_claim_policy_search_snapsheet_api",
             database="vault_edw",
             autocommit=True,
         )
@@ -116,6 +126,14 @@ with DAG(
             task_id='sp_claim_policy_webhook_snapsheet_api',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_claim_policy_webhook_snapsheet_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+    
+    sp_nfp_claim_policy_webhook_snapsheet_api = MsSqlOperator(
+            task_id='sp_nfp_claim_policy_webhook_snapsheet_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_nfp_claim_policy_webhook_snapsheet_api",
             database="vault_edw",
             autocommit=True,
         )
@@ -146,4 +164,4 @@ with DAG(
         task_id='end',
     )
 
-start >> sp_claim_policy_search_snapsheet_api >> py_process_snapsheet_policies >> sp_claim_policy_webhook_snapsheet_api >> sp_claim_policy_webhook_snapsheet_api_update_contactinfo >> send_snapsheet_email >> py_snapsheet_api_policy_send_email >> end
+start >> sp_claim_policy_search_snapsheet_api >> sp_nfp_claim_policy_search_snapsheet_api >> py_process_snapsheet_policies >> sp_claim_policy_webhook_snapsheet_api >> sp_nfp_claim_policy_webhook_snapsheet_api >> sp_claim_policy_webhook_snapsheet_api_update_contactinfo >> send_snapsheet_email >> py_snapsheet_api_policy_send_email >> end
