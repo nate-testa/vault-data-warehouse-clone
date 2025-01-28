@@ -7,6 +7,7 @@
 -- 11/20/24		Alberto Almario				2. Changes on some columns and tables
 -- 12/20/24		Alberto Almario				3. Add cost_category column, remove columns from update statement on merge and change columns used to get deltas.
 -- 01/17/25		Hernando Gonzalez			4. add case statement for source_system_sk column
+-- 01/27/25     Sandeep Gundreddy			5. Exclude migrated payments 
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment_snapsheet]
 
@@ -76,9 +77,9 @@ BEGIN
 		INNER JOIN 	edw_stage_snapsheet.financial_payment_items fpi on fpi.claim_id = c.id and e.id = fpi.exposure_id
 		LEFT JOIN 	edw_stage_snapsheet.financial_payment_details fpd on fpd.claim_id = c.id and fpd.financial_transaction_id = fpi.financial_transaction_id
 		LEFT JOIN 	edw_stage_snapsheet.claim_parties cp on fpd.party_id = cp.id
-		LEFT JOIN 	edw_stage_snapsheet.financial_transactions ft on ft.id = fpi.financial_transaction_id
+		INNER JOIN 	edw_stage_snapsheet.financial_transactions ft on ft.id = fpi.financial_transaction_id
 		LEFT JOIN 	edw_stage_snapsheet.users u on ft.creator_user_id = u.id 
-		WHERE		greatest(ft.created_at,ft.updated_at) > @last_source_extract_ts;   
+		WHERE		greatest(ft.created_at,ft.updated_at) > @last_source_extract_ts and ft.is_historical='false';   
 
 		MERGE edw_core.tclaim_payment  AS Target
 		USING edw_temp.tclaim_payment_snapsheet_temp1 AS Source
