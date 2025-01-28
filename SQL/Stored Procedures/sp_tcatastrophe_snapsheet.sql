@@ -6,6 +6,7 @@
 -- 11/15/2024		Alberto Almario				1. Created this procedure
 -- 12/13/2024		Hernando Gonzalez			2. Implement Merge to prevent duplicates
 -- 01/09/2023		Alberto Almario				3. add row_number function
+-- 01/27/2023		Alberto Almario				4. add column source_system_sk on merge join, to update only source_system_sk = 5
 -- ======================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tcatastrophe_snapsheet]
 AS
@@ -72,6 +73,7 @@ BEGIN
 		MERGE INTO [edw_core].[tcatastrophe] as [Target]
 		USING (select * from [edw_temp].[tcatastrophe_snapsheet_temp1] where rn = 1) as Source
 			ON Target.catastrophe_cd = Source.catastrophe_cd
+			AND Target.source_system_sk = Source.source_system_sk
 		WHEN MATCHED THEN
 			UPDATE SET
 				Target.catastrophe_nm = Source.catastrophe_nm,
