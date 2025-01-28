@@ -4,6 +4,7 @@
 -- Change date 				|Author										|	Change Description
 ---------------------------------------------------------------------------------------------------
 --	01-22-2025				Yunus Mohammed				 Created procedure
+--  01-28-2025				Sandeep Gundreddy	       Added extra filters to limit data and modified date filter
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_financial_transaction_action_snapsheet_api]
 AS
@@ -57,14 +58,16 @@ BEGIN
 			pay.pm_paid_date as [data.attributes.originated_at],
 			cast(fin.id as varchar(255)) as [data.relationships.financial_transaction.data.id],
 			'financial_transaction' as [data.relationships.financial_transaction.data.type],
-			create_ts
+			pay.created_date as create_ts
 		from
 			edw_stage.migration_create_financial_transaction_api fin
 			inner join edw_stage.int_claims_payments_audit pay on fin.remote_identifier = cast( replace(pm_cr_payment_id,'PMM','' ) as decimal(15,0))
+			inner join edw_stage_snapsheet.financial_transactions ft on fin.id=ft.id
 		where
 			api_status = 'Success'
-			and amount_type = 'Payment_Amount'
-			and fin.create_ts > @last_source_extract_ts	
+			and amount_type = 'Payment_Amount' and ft.is_historical='true' and ft.stage='issued'
+			and pay.pm_status in ('Success','Stopped')
+			and pay.created_date > @last_source_extract_ts	
 		) as temp
 
 		insert into edw_integration.claim_financial_transaction_action_snapsheet_api
