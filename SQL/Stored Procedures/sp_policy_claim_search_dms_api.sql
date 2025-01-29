@@ -49,6 +49,9 @@ BEGIN
 
         SET @new_last_source_extract_ts=COALESCE((SELECT MAX(create_ts) FROM  edw_temp.policy_claim_search_dms_api_temp1 t1),@last_source_extract_ts);
 
+		-- Update Control
+		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts
+		
 		-- Update audit table
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 		
