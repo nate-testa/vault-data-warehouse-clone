@@ -266,5 +266,11 @@ IF NOT EXISTS (
 ) BEGIN ALTER TABLE edw_core.tclaim_transaction ADD  overpayment_defense_recovery_amt decimal(15,2) END;
 
 -- @rushin, not sure what needs to be changed here, please check -- Keep as is
-ALTER TABLE edw_core.tclaim_transaction ADD CONSTRAINT fk_tclaim_transaction_cost_category_sk FOREIGN KEY (claim_cost_category_sk) REFERENCES  edw_core.tclaim_cost_category(claim_cost_category_sk);
-			
+IF NOT EXISTS(
+SELECT 1
+FROM sys.foreign_keys
+WHERE name = 'fk_tclaim_transaction_cost_category_sk'
+)
+BEGIN
+	ALTER TABLE edw_core.tclaim_transaction ADD CONSTRAINT fk_tclaim_transaction_cost_category_sk FOREIGN KEY (claim_cost_category_sk) REFERENCES  edw_core.tclaim_cost_category(claim_cost_category_sk)
+END;
