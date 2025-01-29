@@ -56,8 +56,8 @@ financial_transactions_qry = """
 
 financial_transaction_action_qry = """
         select
-            id, data
-        from edw_stage.migration_create_financial_transaction_action_api_update_stage
+            settle_payee_id, data
+        from edw_integration.claim_financial_transaction_action_snapsheet_api
         where api_status  in ('pending')
     """
 
@@ -267,7 +267,7 @@ def process_financial_transaction_action(qry):
     logging.info(f"Query returned {len(financial_transaction_action_data)} records")
 
     for record in financial_transaction_action_data:
-        (financial_transaction_action_id, data_json) = record
+        (settle_payee_id, data_json) = record
         logging.info(f"*************** Start Processing *********************")
         logging.info(f"Processing financial_transaction_action record: {record}")
 
@@ -276,21 +276,19 @@ def process_financial_transaction_action(qry):
         if success:
             json_response_financial_transaction_action = json.loads(result_text)
             qry_update_result = f"""
-                update edw_stage.migration_create_financial_transaction_action_api_update_stage 
+                update edw_integration.claim_financial_transaction_action_snapsheet_api 
                 set update_ts = getdate(), api_status = 'Success',
                     api_Error_description = NULL,
-                    id = '{json_response_financial_transaction_action.get("data").get("id")}',
                     api_response = '{result_text.replace("'","''")}'
-                where id = '{financial_transaction_action_id}'
+                where settle_payee_id = '{settle_payee_id}'
             """
         else:
             qry_update_result = f"""
-                update edw_stage.migration_create_financial_transaction_action_api_update_stage
+                update edw_integration.claim_financial_transaction_action_snapsheet_api
                 set update_ts = getdate(), api_status = 'Error',
                 api_Error_description = '{result_text.replace("'","''")}',
-                id = NULL,
                 api_response = NULL
-                where financial_transaction_id = '{financial_transaction_action_id}'
+                where settle_payee_id = '{settle_payee_id}'
             """
 
 
