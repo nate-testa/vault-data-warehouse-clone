@@ -11,7 +11,7 @@
 -- 01/21/2025			Yunus Mohammed					5. Passed optional param claim_no
 -- -01/27/2025			Yunus Mohammed					6. Added first open dt, first close dt,open dt and close dt
 --																								Removed -ve payment amount on indemnity and -ve Reserve Amount on Indemnity
---																												
+--																								Added tpolicy  table to get UW Company Name when it's not available in eBao table				
 -- ==================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api]
 @claim_no varchar(max) = null
@@ -40,6 +40,7 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1;
 		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2;	
 
+		/*
 		-- Code start for -ve reserve and payment for Loss and Expanse
 		-- -ve Payment Amount on Indemnity--
 		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp3;
@@ -65,6 +66,7 @@ BEGIN
 		WHERE outstanding_amount < 0
 		order by 1 ; --103
 		-- Code end for -ve reserve and payment for Loss and Expanse
+		*/
 		IF(@claim_no is null) 
 		BEGIN			
 			SELECT c.* 
@@ -74,7 +76,7 @@ BEGIN
 			 	LEFT JOIN edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber				
 			where 
 				mcca.claimNumber is null 
-				and c.claim_no not in (select claim_no from edw_temp.migration_create_claim_api_temp3) -- Exclude -ve reserve and payment
+				-- and c.claim_no not in (select claim_no from edw_temp.migration_create_claim_api_temp3) -- Exclude -ve reserve and payment
 		END
 		ELSE
 		BEGIN
@@ -86,7 +88,7 @@ BEGIN
 				INNER JOIN string_split(@claim_no,',') as t on t.[value]  = c.CLAIM_NO
 			where 
 				mcca.claimNumber is null
-				and c.claim_no not in (select claim_no from edw_temp.migration_create_claim_api_temp3) -- Exclude -ve reserve and payment
+				-- and c.claim_no not in (select claim_no from edw_temp.migration_create_claim_api_temp3) -- Exclude -ve reserve and payment
 		END;
 		
 		WITH first_open_dt AS 
@@ -178,21 +180,27 @@ BEGIN
 			c.NOTICE_TIME as datetimeOfNotification,
 			CASE
 				WHEN cp.organ_id=1000000000002 THEN 'vault_reciprocal_exchange' 
-				WHEN cp.organ_id=1000000000001 THEN 'vault_es_insurance_company' ELSE ''
+				WHEN cp.organ_id=1000000000001 THEN 'vault_es_insurance_company'
+				WHEN tp.uw_company_nm='Vault Reciprocal Exchange' THEN 'vault_reciprocal_exchange' -- Added on 01/24/2025
+				WHEN tp.uw_company_nm='Vault E & S Insurance Company' THEN 'vault_es_insurance_company' -- Added on 01/24/2025
+				ELSE ''
 			END AS accountCode,
+			/*
 			case
 				when prd.product_nm in ( 'Condo', 'Homeowners') and c.sub_cause_of_loss_code is null then 'property_claim_other'
 			else
+			*/
 				(
 					select
-						distinct slt.lossType
+						top 1 slt.lossType
 					from
 						edw_stage.migration_loss_type_mapping slt
 						where slt.cause_of_loss_cd = c.LOSS_CAUSE and 
 						slt.sub_cause_of_loss_cd = isnull( c.sub_cause_of_loss_code,slt.sub_cause_of_loss_cd) and 
-						slt.product_cd = prd.product_cd                
+						slt.product_cd = prd.product_cd
 				)
-			end as lossType,
+			/*end*/
+			 as lossType,
 			(
 				select ISNULL( (SELECT 1 as a where 1=2 FOR JSON PATH), '[]')
 			) as attachments,
@@ -234,8 +242,8 @@ BEGIN
 					)) as incidentLocationAddress
 					for json path, include_null_values, without_array_wrapper
 			) as claimIncidentDetails,
-			clc.LOSS_CAUSE_NAME as causeOfAccident,
-			null as incidentComments,
+			--clc.LOSS_CAUSE_NAME as causeOfAccident,
+			-- null as incidentComments,
 			(
 				select
 					id,
@@ -480,7 +488,7 @@ END AS [injuredParty.claimPartyId]
 												edw_core.tpel_location pl1
 											WHERE
 												pl1.policy_no = pl.policy_no
-												and pl1.effective_Dt = pl.effective_dt
+												and pl1.effective_dt = pl.effective_dt
 										)									
 								for json path, include_null_values, without_array_wrapper
 								)
@@ -504,7 +512,7 @@ END AS [injuredParty.claimPartyId]
 						(
 							select
                             /*
-                                -- Commneted on 01/16/2025. New logic implemented
+                                -- Commented on 01/16/2025. New logic implemented
 								row_number() over(partition by o.[object_id] -- ISNULL(ext.snapsheet_exposure_type,'Other')
 									order by ISNULL(ext.snapsheet_exposure_type,'Other')) as rowNum,
                             */
@@ -565,7 +573,7 @@ END AS [injuredParty.claimPartyId]
 						select RANK()over(partition by c.claim_no order by acct.PolicyNumber,acct.PolicyChangeNumber desc) as row_no,
 							*,c.CASE_ID
 						from
-							AccountTransaction acct
+							edw_stage.AccountTransaction acct
 						where
 							acct.PolicyNumber = c.POLICY_NO
 							and acct.[State] = 'Issued'
@@ -702,7 +710,8 @@ END AS id,
 		from
 		edw_temp.migration_create_claim_api_temp1 c
 		LEFT JOIN edw_stage.t_clm_policy cp ON c.case_id=cp.case_id
-		INNER JOIN edw_stage.t_clm_losscause clc on clc.LOSS_CAUSE_CODE = c.LOSS_CAUSE
+		LEFT JOIN edw_core.tpolicy tp ON tp.policy_no = c.POLICY_NO -- Added on 01/24/2025
+		--INNER JOIN edw_stage.t_clm_losscause clc on clc.LOSS_CAUSE_CODE = c.LOSS_CAUSE
 		LEFT JOIN edw_core.tproduct prd ON prd.ebao_product_cd=c.product_code
 		LEFT JOIN edw_stage.t_clm_case_status cstat ON c.CASE_STATUS = cstat.STATUS_CODE	
 		LEFT JOIN first_open_dt fod on fod.claim_no = c.claim_no
