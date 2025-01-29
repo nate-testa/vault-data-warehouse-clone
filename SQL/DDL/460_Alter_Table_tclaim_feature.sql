@@ -1,58 +1,273 @@
-ALTER TABLE edw_core.tclaim_feature DROP CONSTRAINT uidx_tclaim_feature_claimno_subclaimseqno_claimcoveragecd;
+IF EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'subro_reserve_amt'
+)
+BEGIN EXEC sp_rename 'edw_core.tclaim_feature.subro_reserve_amt', 'subrogation_recovery_reserve_amt', 'COLUMN' END;
 
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN subclaim_type_nm;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN subclaim_seq_no;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN damage_severity;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN damage_type;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN possible_subrogation_in;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN possible_salvage_in;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN litigation_in;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN risk_item;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN assignment_of_benefits_contractor_in;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN public_adjuster_in;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN arbitration_in;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN mediation_in;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN appraisal_in;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN alternative_dispute_resolution_in;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN neutral_evaluation_in;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN setllement_conference_in;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN settlement_resolution_in;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN adjusting_other_reserve_amt;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN adjusting_other_paid_amt;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN refund_indemnity_paid_amt;
-ALTER TABLE edw_core.tclaim_feature DROP COLUMN refund_expense_paid_amt;
+IF EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'salvage_reserve_amt'
+)
+BEGIN EXEC sp_rename 'edw_core.tclaim_feature.salvage_reserve_amt', 'salvage_recovery_reserve_amt', 'COLUMN' END;
 
-EXEC sp_rename 'edw_core.tclaim_feature.subro_reserve_amt', 'subrogation_recovery_reserve_amt', 'COLUMN';
-EXEC sp_rename 'edw_core.tclaim_feature.salvage_reserve_amt', 'salvage_recovery_reserve_amt', 'COLUMN';
-EXEC sp_rename 'edw_core.tclaim_feature.subro_expense_reserve_amt', 'subrogation_recovery_expense_reserve_amt', 'COLUMN';
-EXEC sp_rename 'edw_core.tclaim_feature.salvage_expense_reserve_amt', 'salvage_recovery_expense_reserve_amt', 'COLUMN';
-EXEC sp_rename 'edw_core.tclaim_feature.subro_recovery_amt', 'subrogation_recovery_amt', 'COLUMN';
-EXEC sp_rename 'edw_core.tclaim_feature.salvage_expense_paid_amt', 'salvage_expense_recovery_amt', 'COLUMN';
-EXEC sp_rename 'edw_core.tclaim_feature.subro_expense_paid_amt', 'subrogation_expense_recovery_amt', 'COLUMN';
+IF EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'subro_expense_reserve_amt'
+)
+BEGIN EXEC sp_rename 'edw_core.tclaim_feature.subro_expense_reserve_amt', 'subrogation_recovery_expense_reserve_amt', 'COLUMN' END;
 
-ALTER TABLE edw_core.tclaim_feature ADD exposure_type varchar(255);
-ALTER TABLE edw_core.tclaim_feature ADD exposure_name varchar(255);
-ALTER TABLE edw_core.tclaim_feature ADD defense_reserve_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD deductible_recovery_reserve_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD reinsurance_recovery_reserve_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD overpayment_recovery_reserve_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD deductible_recovery_expense_reserve_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD reinsurance_recovery_expense_reserve_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD overpayment_recovery_expense_reserve_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD subrogation_recovery_defense_reserve_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD salvage_recovery_defense_reserve_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD deductible_recovery_defense_reserve_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD reinsurance_recovery_defense_reserve_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD overpayment_recovery_defense_reserve_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD defense_paid_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD deductible_recovery_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD reinsurance_recovery_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD overpayment_recovery_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD deductible_expense_recovery_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD reinsurance_expense_recovery_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD overpayment_expense_recovery_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD subrogation_defense_recovery_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD salvage_defense_recovery_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD deductible_defense_recovery_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD reinsurance_defense_recovery_amt decimal(15,2);
-ALTER TABLE edw_core.tclaim_feature ADD overpayment_defense_recovery_amt decimal(15,2);
+IF EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'salvage_expense_reserve_amt'
+)
+BEGIN EXEC sp_rename 'edw_core.tclaim_feature.salvage_expense_reserve_amt', 'salvage_recovery_expense_reserve_amt', 'COLUMN' END;
+
+IF EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'subro_recovery_amt'
+)
+BEGIN EXEC sp_rename 'edw_core.tclaim_feature.subro_recovery_amt', 'subrogation_recovery_amt', 'COLUMN' END;
+
+IF EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'salvage_expense_paid_amt'
+)
+BEGIN EXEC sp_rename 'edw_core.tclaim_feature.salvage_expense_paid_amt', 'salvage_expense_recovery_amt', 'COLUMN' END;
+
+IF EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'subro_expense_paid_amt'
+)
+BEGIN EXEC sp_rename 'edw_core.tclaim_feature.subro_expense_paid_amt', 'subrogation_expense_recovery_amt', 'COLUMN' END;
+
+--------------------------------------------
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'exposure_type'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD exposure_type varchar(255) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'exposure_name'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD exposure_name varchar(255) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'defense_reserve_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD defense_reserve_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'deductible_recovery_reserve_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD deductible_recovery_reserve_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'reinsurance_recovery_reserve_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD reinsurance_recovery_reserve_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'overpayment_recovery_reserve_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD overpayment_recovery_reserve_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'deductible_recovery_expense_reserve_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD deductible_recovery_expense_reserve_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'reinsurance_recovery_expense_reserve_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD reinsurance_recovery_expense_reserve_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'overpayment_recovery_expense_reserve_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD overpayment_recovery_expense_reserve_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'subrogation_recovery_defense_reserve_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD subrogation_recovery_defense_reserve_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'salvage_recovery_defense_reserve_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD salvage_recovery_defense_reserve_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'deductible_recovery_defense_reserve_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD deductible_recovery_defense_reserve_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'reinsurance_recovery_defense_reserve_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD reinsurance_recovery_defense_reserve_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'overpayment_recovery_defense_reserve_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD overpayment_recovery_defense_reserve_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'defense_paid_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD defense_paid_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'deductible_recovery_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD deductible_recovery_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'reinsurance_recovery_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD reinsurance_recovery_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'overpayment_recovery_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD overpayment_recovery_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'deductible_expense_recovery_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD deductible_expense_recovery_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'reinsurance_expense_recovery_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD reinsurance_expense_recovery_amt decimal(15,2) END;
+
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'overpayment_expense_recovery_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD overpayment_expense_recovery_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'subrogation_defense_recovery_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD subrogation_defense_recovery_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'salvage_defense_recovery_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD salvage_defense_recovery_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'deductible_defense_recovery_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD deductible_defense_recovery_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'reinsurance_defense_recovery_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD reinsurance_defense_recovery_amt decimal(15,2) END;
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_feature'
+    AND     COLUMN_NAME = 'overpayment_defense_recovery_amt'
+) BEGIN ALTER TABLE edw_core.tclaim_feature ADD overpayment_defense_recovery_amt decimal(15,2) END;

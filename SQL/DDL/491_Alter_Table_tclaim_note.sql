@@ -1,8 +1,27 @@
-ALTER TABLE edw_core.tclaim_note DROP COLUMN subclaim_seq_no;
-ALTER TABLE edw_core.tclaim_note DROP COLUMN send_message_to;
-ALTER TABLE edw_core.tclaim_note DROP COLUMN overview_desc;
+IF EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_note'
+    AND     COLUMN_NAME = 'category_nm'
+)
+BEGIN EXEC sp_rename 'edw_core.tclaim_note.category_nm', 'note_type', 'COLUMN' END;
 
-EXEC sp_rename 'edw_core.tclaim_note.category_nm', 'note_type', 'COLUMN';
-EXEC sp_rename 'edw_core.tclaim_note.user_type', 'contact_type', 'COLUMN';
+IF EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_note'
+    AND     COLUMN_NAME = 'user_type'
+)
+BEGIN EXEC sp_rename 'edw_core.tclaim_note.user_type', 'contact_type', 'COLUMN' END;
 
-ALTER TABLE edw_core.tclaim_note ADD claim_feature_sk int;
+-------------------------------
+
+IF NOT EXISTS (
+    SELECT  1
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   TABLE_SCHEMA='edw_core'
+    AND     TABLE_NAME = 'tclaim_note'
+    AND     COLUMN_NAME = 'claim_feature_sk'
+) BEGIN ALTER TABLE edw_core.tclaim_note ADD claim_feature_sk int END;
