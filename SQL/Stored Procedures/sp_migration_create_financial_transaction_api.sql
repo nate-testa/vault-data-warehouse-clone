@@ -1,12 +1,17 @@
+--01202025--WIP on -ve settle change for recoveries--
+
  -- =================================================================================================
  -- Description: This procedures load table migration_create_financial_transaction_api
  ---------------------------------------------------------------------------------------------------
  -- Change date 				|Author						|	Change Description
  ---------------------------------------------------------------------------------------------------
  --	11-08-2024				Alberto Almario				1. Created procedure
- -- 01-07-2025              Yunus Mohammed        2. payee_type updated to claim_party only
- -- 01-17-2025              Yunus Mohammed        3. Option 3 --restrict sending -ve payments (stop/cancel/adjusting/etc.)
- -- 01-20-2025              Yunus Mohammed        4. Updated payment_status (stage)
+  -- 01-07-2025             Yunus Mohammed        2. payee_type updated to claim_party only
+  --01-17-2025              Yunus Mohammed        3. Option 3 --restrict sending -ve payments (stop/cancel/adjusting/etc.)
+  --01-20-2025              Yunus Mohammed        4. Updated payment_status (stage)
+  --01-23-2025              Yunus Mohammed        5. Sending eBao CANCEL & STOPPED payments
+  --01-27-2025              Yunus Mohammed        6. Added TPOLICY  table to get UW Company Name when it's not available in eBao table
+  --01-29-2025              Yunus Mohammed        7. Shipping address join updated
  -- ================================================================================================= 
  
  CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_financial_transaction_api]
@@ -49,20 +54,11 @@
             exposures,
             update_ts as source_table_update_ts
         INTO [edw_temp].[migration_create_financial_transaction_api_temp0]
-        FROM edw_stage.migration_create_claim_api 
+        FROM edw_stage.migration_create_claim_api
         WHERE 1=1
         AND api_status = 'Success'
         AND api_response is not null
-        AND cast(update_ts as datetime2(7)) > @last_source_extract_ts
-       --AND claimNumber in ('C25AUA00012')
-       --('C25HOA00013', 'C25HOA00014', 'C25AUA00010', 'C25AUA00011', 'C25COA00002', 'C25AUA00012')
-        --('C25HOA00005', 'C25HOA00007') --01212025 migrated
-         --, 'C25HOA00013', 'C25HOA00014', 'C25AUA00010', 'C25AUA00011', 'C25COA00002') 
-
-         --, 'C25AUA00012' this will fail so removed for now -- 01212025
-
-        --('C24AUA00070') --('C25AUA00001','C25AUA00002') --('C23HOA00038','C23HOA00009')
-        --('C20HOA00002') 
+        AND cast(update_ts as datetime2(7)) > @last_source_extract_ts       
         ---------------------------------------------------------------------------------------------
         -- *** Create temp table using CROSS APPLY to extract exposures data from JSON column. *** --
         ---------------------------------------------------------------------------------------------
@@ -151,7 +147,8 @@
                 CASE
                     WHEN resh.reserve_type IN ('RC_04', 'RC_07') THEN 'subrogation'
                     WHEN resh.reserve_type IN ('RC_05', 'RC_06') THEN 'salvage'
-                END AS reserve_method
+                END AS reserve_method,
+				c.POLICY_NO -- Added on 01/24/2024
             FROM [edw_temp].[migration_create_financial_transaction_api_temp1] t
             LEFT JOIN edw_stage.t_clm_item i ON t.exposure_id = i.item_id
             LEFT JOIN edw_stage.t_clm_object o ON i.object_id = o.object_id
@@ -177,15 +174,16 @@
                 resh.outstanding_amount, 
                 resh.outstanding_changed, 
                 resh.settle_amount, 
-                resh.settle_changed,                
+                resh.settle_changed, 
                 CASE
-                    WHEN resh.reserve_type IN ('RC_01', 'RC_02', 'RC_03') THEN 'indemnity'
+                    WHEN resh.reserve_type IN ('RC_01', 'RC_02') THEN 'indemnity'
                     WHEN resh.reserve_type IN ('RC_04', 'RC_05', 'RC_06', 'RC_07') THEN 'recovery'
                 END AS financial_transaction_type,
                 CASE
                     WHEN resh.reserve_type IN ('RC_04', 'RC_07') THEN 'subrogation'
                     WHEN resh.reserve_type IN ('RC_05', 'RC_06') THEN 'salvage'
-                END AS reserve_method
+                END AS reserve_method,
+				c.POLICY_NO -- Added on 01/24/2024
             FROM [edw_temp].[migration_create_financial_transaction_api_temp1] t
             INNER JOIN edw_stage.t_clm_item i ON t.exposure_id = i.item_id
             INNER JOIN edw_stage.t_clm_object o ON i.object_id = o.object_id
@@ -217,6 +215,8 @@
             CASE
                 WHEN cp.organ_id = 1000000000002 THEN 'vault_reciprocal_exchange'
                 WHEN cp.organ_id = 1000000000001 THEN 'vault_es_insurance_company'
+				WHEN tp.uw_company_nm='Vault Reciprocal Exchange' THEN 'vault_reciprocal_exchange' -- Added on 01/24/2025
+				WHEN tp.uw_company_nm='Vault E & S Insurance Company' THEN 'vault_es_insurance_company' -- Added on 01/24/2025
                 ELSE ''
             END AS [data.attributes.accountCode],
             null as [data.attributes.original_transaction_id],
@@ -237,11 +237,11 @@
 				WHEN payment_status in ('ISSUED','IN_PROGRESS','PENDING','SUBMITTED_TO_ONE_INC') and resh.financial_transaction_type != 'recovery' THEN 'issued' --added on 01182025--
 				WHEN payment_status = 'SUCCESS' THEN 'cleared'
 				WHEN payment_status = 'ERROR' THEN 'failed'
---				WHEN payment_status = 'CANCEL' THEN 'canceled' 
---                WHEN payment_status = 'CANCEL'  and settle_changed > 0 then 'issued' 
-                WHEN payment_status in ('CANCEL', 'STOP', 'STOP_PENDING') and settle_changed > 0 THEN 'issued'
+				WHEN payment_status = 'CANCEL' THEN 'cancelled' 
+--                WHEN payment_status = 'CANCEL'  and settle_changed > 0 then 'issued' -- This is to migrate eBao CANCEL & STOPPED payments - 01232025
+--                WHEN payment_status in ('CANCEL', 'STOP', 'STOP_PENDING') and settle_changed > 0 THEN 'issued' -- This is to migrate eBao CANCEL & STOPPED payments - 01232025
                 WHEN payment_status in ('STOP', 'STOP_PENDING') then 'stopped' 
-                else 'cancelled' --added on 01172025 cause some claims initial payment transaction status has been updated to cancel when actual cancellation transaction came in--
+ --               else 'cancelled' --added on 01172025 cause some claims initial payment transaction status has been updated to cancel when actual cancellation transaction came in--
 			END
            AS [data.attributes.stage],
             CAST(1 AS BIT) AS [data.attributes.is_notification_only], 
@@ -276,10 +276,10 @@
             END AS payment_type,
             resh.reserve_type,
             resh.reserve_method,
-            '7272901574' AS [payee_phone_no],
+            REPLACE(REPLACE(JSON_VALUE(CAST(pty.DYNAMIC_FIELDS AS NVARCHAR(MAX)),'$.MobileTel'),'-',''),'+','') AS [payee_phone_no],
             'phone' AS [payee_contact_type],
-            'Farhad.Imam@Vault.Insurance' AS [payee_email],
-			-- party.EMAIL AS [payee_email],
+            --'Farhad.Imam@Vault.Insurance' AS [payee_email],
+			JSON_VALUE(CAST(pty.DYNAMIC_FIELDS AS NVARCHAR(MAX)),'$.Email') AS [payee_email],
             p.claimPartyReferenceNumber AS PAYEE_ID,
           -- party.pty_PARTY_ID AS PAYEE_ID,
 /*
@@ -299,15 +299,18 @@
         INTO [edw_temp].[migration_create_financial_transaction_api_temp5]
         FROM [edw_temp].[migration_create_financial_transaction_api_temp4] resh
         LEFT JOIN edw_stage.t_clm_policy cp ON resh.case_id = cp.case_id
+		LEFT JOIN edw_core.tpolicy tp ON tp.policy_no = resh.POLICY_NO -- Added on 01/24/2025
         LEFT JOIN edw_stage.t_clm_settle_item settle_item 
             ON resh.item_id = settle_item.item_id
             AND resh.business_instance_id = settle_item.settle_item_id
         LEFT JOIN edw_stage.t_clm_settle_payee settle_payee ON settle_payee.settle_payee_id = settle_item.settle_payee_id
         LEFT JOIN edw_stage.t_clm_settle settle ON settle.settle_id = settle_payee.settle_id
         LEFT JOIN edw_stage.t_clm_party party ON party.PARTY_ID = settle_payee.PAYEE_ID
+        LEFT JOIN edw_stage.t_pty_party pty on pty.PARTY_ID = party.PTY_PARTY_ID
         LEFT JOIN edw_stage.t_clm_party_role party_role on party_role.ROLE_CODE = party.PARTY_ROLE 
-        LEFT JOIN edw_stage.t_int_address tia ON tia.source_id = resh.case_id
-        LEFT JOIN edw_stage.t_pub_address tpa ON tia.T_ADDRESS_ID = tpa.ADDRESS_ID
+        -- LEFT JOIN edw_stage.t_int_address tia ON tia.source_id = resh.case_id -- commented on 01/29/2025
+        -- LEFT JOIN edw_stage.t_pub_address tpa ON tia.T_ADDRESS_ID = tpa.ADDRESS_ID -- commented on 01/29/2025
+        LEFT JOIN edw_stage.t_pub_address tpa on tpa.ADDRESS_ID= settle_payee.PTY_ADDRESS_ID -- added on 01/29/2025
         LEFT JOIN [edw_temp].[migration_create_financial_transaction_api_temp2] p 
             ON party.pty_PARTY_ID = p.externalReferenceNumber
         INNER JOIN [edw_temp].[migration_create_financial_transaction_api_temp3] et
@@ -485,16 +488,7 @@
         ORDER BY his_id
         ;
 
-        -- SELECT * FROM [edw_temp].[migration_create_financial_transaction_api_temp0];
-        -- SELECT * FROM [edw_temp].[migration_create_financial_transaction_api_temp1];
-        -- SELECT * FROM [edw_temp].[migration_create_financial_transaction_api_temp2];
-        -- SELECT * FROM [edw_temp].[migration_create_financial_transaction_api_temp3];
-        -- SELECT * FROM [edw_temp].[migration_create_financial_transaction_api_temp4];
-        -- SELECT * FROM [edw_temp].[migration_create_financial_transaction_api_temp5] order by his_id;
-         -- SELECT * FROM [edw_temp].[migration_create_financial_transaction_api_temp6] ORDER BY claim_no, post_date, HIS_ID, amount_type ; 
-		 
-        --  Start Insert process
-        
+       --  Start Insert process
          INSERT INTO edw_stage.migration_create_financial_transaction_api
          (
              claim_no, 
@@ -502,8 +496,7 @@
              create_ts,
              api_status,
              [data]
-         )
-	
+         )	
          SELECT
              claim_no, 
              reserve_type, POST_DATE, ITEM_ID, [data.attributes.remote_identifier], HIS_ID, amount_type,
@@ -514,10 +507,9 @@
          ORDER BY claim_no, ITEM_ID, reserve_type, post_date, HIS_ID, amount_type ;
 
         --************End************
-		
+
  		SET @rows_affected=@@ROWCOUNT;
 
-		
  		-- Update control table
  		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(source_table_update_ts) FROM [edw_temp].[migration_create_financial_transaction_api_temp4]),@last_source_extract_ts);
          EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
