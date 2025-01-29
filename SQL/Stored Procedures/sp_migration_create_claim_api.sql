@@ -40,33 +40,6 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1;
 		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2;	
 
-		/*
-		-- Code start for -ve reserve and payment for Loss and Expanse
-		-- -ve Payment Amount on Indemnity--
-		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp3;
-		
-		SELECT distinct tcase.claim_no
-		INTO edw_temp.migration_create_claim_api_temp3
-		FROM edw_stage.t_clm_reserve_his AS a
-		INNER JOIN edw_stage.t_clm_item AS tci on tci.item_id = a.item_id and a.RESERVE_TYPE in ('RC_01', 'RC_02')
-		INNER JOIN edw_stage.t_clm_object AS e ON tci.[object_id] = e.[object_id]
-		LEFT JOIN edw_stage.t_clm_subclaim_type sct ON e.subclaim_type = sct.subclaim_type_code
-		INNER JOIN  edw_stage.t_clm_case AS tcase ON tcase.case_id=e.case_id
-		WHERE settle_changed < 0  --1184
-		
-		UNION  
-		-- -ve Reserve Amount on Indemnity--
-		
-		SELECT distinct tcase.claim_no --count (distinct tcase.claim_no)
-		FROM edw_stage.t_clm_reserve_his AS a
-		INNER JOIN edw_stage.t_clm_item AS tci on tci.item_id = a.item_id and a.RESERVE_TYPE in ('RC_01', 'RC_02')
-		INNER JOIN edw_stage.t_clm_object AS e ON tci.[object_id] = e.[object_id]
-		LEFT JOIN edw_stage.t_clm_subclaim_type sct ON e.subclaim_type = sct.subclaim_type_code
-		INNER JOIN  edw_stage.t_clm_case AS tcase ON tcase.case_id=e.case_id
-		WHERE outstanding_amount < 0
-		order by 1 ; --103
-		-- Code end for -ve reserve and payment for Loss and Expanse
-		*/
 		IF(@claim_no is null) 
 		BEGIN			
 			SELECT c.* 
@@ -75,8 +48,7 @@ BEGIN
 				edw_stage.t_clm_case c
 			 	LEFT JOIN edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber				
 			where 
-				mcca.claimNumber is null 
-				-- and c.claim_no not in (select claim_no from edw_temp.migration_create_claim_api_temp3) -- Exclude -ve reserve and payment
+				mcca.claimNumber is null				
 		END
 		ELSE
 		BEGIN
@@ -88,7 +60,6 @@ BEGIN
 				INNER JOIN string_split(@claim_no,',') as t on t.[value]  = c.CLAIM_NO
 			where 
 				mcca.claimNumber is null
-				-- and c.claim_no not in (select claim_no from edw_temp.migration_create_claim_api_temp3) -- Exclude -ve reserve and payment
 		END;
 		
 		WITH first_open_dt AS 
@@ -759,8 +730,7 @@ END AS id,
 
 		-- Drop temp table
 		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1
-		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2
-		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp3;
+		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2		
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
