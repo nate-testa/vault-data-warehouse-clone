@@ -8,6 +8,7 @@
 -- 12/20/24		Alberto Almario				3. Add cost_category column, remove columns from update statement on merge and change columns used to get deltas.
 -- 01/17/25		Hernando Gonzalez			4. add case statement for source_system_sk column
 -- 01/27/25     Sandeep Gundreddy			5. Exclude migrated payments 
+-- 01/28/25     Sandeep Gundreddy			6. Updated payment_sequence_no mapping
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment_snapsheet]
 
@@ -37,8 +38,7 @@ BEGIN
 		SELECT	c.claim_number as claim_no,
 				tc.claim_sk,
 				tf.claim_feature_sk,
-				-- concat(fpi.financial_transaction_id , '-' , fpi.exposure_id) AS payment_sequence_no,
-				1 AS payment_sequence_no,
+				fpi.id AS payment_sequence_no,
 				ft.stage AS payment_status,
 				fpi.financial_transaction_id AS payment_no,
 				fpi.cost_type AS claim_type_cd,
