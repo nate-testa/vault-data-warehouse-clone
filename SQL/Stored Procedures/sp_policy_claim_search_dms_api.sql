@@ -31,7 +31,7 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.policy_claim_search_dms_api_temp1
 
 		SELECT
-            policy_no, CONCAT_WS(' | ',policy_no,claim_no) as claim_no,create_ts
+            policy_no, claim_no, create_ts
 		INTO edw_temp.policy_claim_search_dms_api_temp1
 		FROM
 		edw_core.tclaim cl
