@@ -10,9 +10,10 @@
   --01-17-2025              Yunus Mohammed        3. Option 3 --restrict sending -ve payments (stop/cancel/adjusting/etc.)
   --01-20-2025              Yunus Mohammed        4. Updated payment_status (stage)
   --01-23-2025              Yunus Mohammed        5. Sending eBao CANCEL & STOPPED payments
-  --01-27-2025              Yunus Mohammed        6. Added tpolicy  table to get UW Company Name when it's not available in eBao table
+  --01-27-2025              Yunus Mohammed        6. Added TPOLICY  table to get UW Company Name when it's not available in eBao table
+  --01-29-2025              Yunus Mohammed        7. Shipping address join updated
  -- ================================================================================================= 
-
+ 
  CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_financial_transaction_api]
  AS
  BEGIN
@@ -53,12 +54,11 @@
             exposures,
             update_ts as source_table_update_ts
         INTO [edw_temp].[migration_create_financial_transaction_api_temp0]
-        FROM edw_stage.migration_create_claim_api 
+        FROM edw_stage.migration_create_claim_api
         WHERE 1=1
         AND api_status = 'Success'
         AND api_response is not null
-        AND cast(update_ts as datetime2(7)) > @last_source_extract_ts
-      
+        AND cast(update_ts as datetime2(7)) > @last_source_extract_ts       
         ---------------------------------------------------------------------------------------------
         -- *** Create temp table using CROSS APPLY to extract exposures data from JSON column. *** --
         ---------------------------------------------------------------------------------------------
@@ -174,7 +174,7 @@
                 resh.outstanding_amount, 
                 resh.outstanding_changed, 
                 resh.settle_amount, 
-                resh.settle_changed,                
+                resh.settle_changed, 
                 CASE
                     WHEN resh.reserve_type IN ('RC_01', 'RC_02') THEN 'indemnity'
                     WHEN resh.reserve_type IN ('RC_04', 'RC_05', 'RC_06', 'RC_07') THEN 'recovery'
@@ -215,8 +215,8 @@
             CASE
                 WHEN cp.organ_id = 1000000000002 THEN 'vault_reciprocal_exchange'
                 WHEN cp.organ_id = 1000000000001 THEN 'vault_es_insurance_company'
-				WHEN tp.uw_company_nm='Vault Reciprocal Exchange' THEN 'vault_reciprocal_exchange' -- Added on 01/14/2025
-				WHEN tp.uw_company_nm='Vault E & S Insurance Company' THEN 'vault_es_insurance_company' -- Added on 01/14/2025
+				WHEN tp.uw_company_nm='Vault Reciprocal Exchange' THEN 'vault_reciprocal_exchange' -- Added on 01/24/2025
+				WHEN tp.uw_company_nm='Vault E & S Insurance Company' THEN 'vault_es_insurance_company' -- Added on 01/24/2025
                 ELSE ''
             END AS [data.attributes.accountCode],
             null as [data.attributes.original_transaction_id],
@@ -276,10 +276,10 @@
             END AS payment_type,
             resh.reserve_type,
             resh.reserve_method,
-            '7272901574' AS [payee_phone_no],
+            REPLACE(REPLACE(JSON_VALUE(CAST(pty.DYNAMIC_FIELDS AS NVARCHAR(MAX)),'$.MobileTel'),'-',''),'+','') AS [payee_phone_no],
             'phone' AS [payee_contact_type],
-            'Farhad.Imam@Vault.Insurance' AS [payee_email],
-			-- party.EMAIL AS [payee_email],
+            --'Farhad.Imam@Vault.Insurance' AS [payee_email],
+			JSON_VALUE(CAST(pty.DYNAMIC_FIELDS AS NVARCHAR(MAX)),'$.Email') AS [payee_email],
             p.claimPartyReferenceNumber AS PAYEE_ID,
           -- party.pty_PARTY_ID AS PAYEE_ID,
 /*
@@ -306,9 +306,11 @@
         LEFT JOIN edw_stage.t_clm_settle_payee settle_payee ON settle_payee.settle_payee_id = settle_item.settle_payee_id
         LEFT JOIN edw_stage.t_clm_settle settle ON settle.settle_id = settle_payee.settle_id
         LEFT JOIN edw_stage.t_clm_party party ON party.PARTY_ID = settle_payee.PAYEE_ID
+        LEFT JOIN edw_stage.t_pty_party pty on pty.PARTY_ID = party.PTY_PARTY_ID
         LEFT JOIN edw_stage.t_clm_party_role party_role on party_role.ROLE_CODE = party.PARTY_ROLE 
-        LEFT JOIN edw_stage.t_int_address tia ON tia.source_id = resh.case_id
-        LEFT JOIN edw_stage.t_pub_address tpa ON tia.T_ADDRESS_ID = tpa.ADDRESS_ID
+        -- LEFT JOIN edw_stage.t_int_address tia ON tia.source_id = resh.case_id -- commented on 01/29/2025
+        -- LEFT JOIN edw_stage.t_pub_address tpa ON tia.T_ADDRESS_ID = tpa.ADDRESS_ID -- commented on 01/29/2025
+        LEFT JOIN edw_stage.t_pub_address tpa on tpa.ADDRESS_ID= settle_payee.PTY_ADDRESS_ID -- added on 01/29/2025
         LEFT JOIN [edw_temp].[migration_create_financial_transaction_api_temp2] p 
             ON party.pty_PARTY_ID = p.externalReferenceNumber
         INNER JOIN [edw_temp].[migration_create_financial_transaction_api_temp3] et
@@ -484,8 +486,9 @@
         FROM [edw_temp].[migration_create_financial_transaction_api_temp5] a
         WHERE ISNULL(reserve_amt,0) != 0 OR ISNULL(paid_amt,0) != 0
         ORDER BY his_id
-        ;		 
-        --  Start Insert process
+        ;
+
+       --  Start Insert process
          INSERT INTO edw_stage.migration_create_financial_transaction_api
          (
              claim_no, 
@@ -507,7 +510,6 @@
 
  		SET @rows_affected=@@ROWCOUNT;
 
-		
  		-- Update control table
  		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(source_table_update_ts) FROM [edw_temp].[migration_create_financial_transaction_api_temp4]),@last_source_extract_ts);
          EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
@@ -539,4 +541,3 @@
 	
      END CATCH
  END
- 
