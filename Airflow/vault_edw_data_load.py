@@ -172,6 +172,13 @@ with DAG(
             azure_data_factory_conn_id='azure_data_factory_vault_data',
             pipeline_name="LS_AWS_DMS_dmsDocument",
             # parameters={"myParam": "value"},
+        )
+
+        adf_etl_load_ls_aws_vsp_claims_payments: BaseOperator = AzureDataFactoryRunPipelineOperator(
+            task_id="adf_etl_load_ls_aws_vsp_claims_payments",
+            azure_data_factory_conn_id='azure_data_factory_vault_data',
+            pipeline_name="LS_AWS_VSP_int_claims_payments_audit",
+            # parameters={"myParam": "value"},
         )        
 
         send_adf_email = EmailOperator(
@@ -181,7 +188,7 @@ with DAG(
             html_content=get_HTML_on_vault_format('The Azure Data Factory pipelines executed successfully',''),
         )
 
-        adf_etl_load_stage >> adf_etl_load_ebao_mqq >> adf_etl_load_ebao_mqq_address >> adf_etl_load_ebao_pub_user >> adf_etl_load_ebao_pub_diary >> adf_etl_load_ls_aws_dms >> send_adf_email
+        adf_etl_load_stage >> adf_etl_load_ebao_mqq >> adf_etl_load_ebao_mqq_address >> adf_etl_load_ebao_pub_user >> adf_etl_load_ebao_pub_diary >> adf_etl_load_ls_aws_dms >> adf_etl_load_ls_aws_vsp_claims_payments >> send_adf_email
 
 
     with TaskGroup("home_group") as home_group:
