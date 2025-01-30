@@ -11,6 +11,10 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'LS_AWS_DMS_UAT'"
 		},
+		"LS_AWS_VSP_UAT_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_AWS_VSP_UAT'"
+		},
 		"LS_eBao_uat_aw_uat_pub_password": {
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'LS_eBao_uat_aw_uat_pub'"
@@ -31,10 +35,6 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'LS_eBao_uat_aws_us_uat_vault'"
 		},
-		"LS_EDW_UAT_connectionString": {
-			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'LS_EDW_UAT'"
-		},
 		"AWS-UAT_properties_typeProperties_linkedInfo_resourceId": {
 			"type": "string",
 			"defaultValue": "/subscriptions/6c8f1314-e2b0-43e5-87b0-0538a6a6ca04/resourcegroups/AZR-DEV-DATA-ADF/providers/Microsoft.DataFactory/factories/AZR-VD-Metal-ADF/integrationruntimes/AWS-UAT"
@@ -48,6 +48,18 @@
 			"defaultValue": "dms_core"
 		},
 		"LS_AWS_DMS_UAT_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "vltDmsUserUAT"
+		},
+		"LS_AWS_VSP_UAT_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "vlt-mysql-ods-uat.cluster-ctaeroxllezw.us-east-1.rds.amazonaws.com"
+		},
+		"LS_AWS_VSP_UAT_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "vsp_core"
+		},
+		"LS_AWS_VSP_UAT_properties_typeProperties_username": {
 			"type": "string",
 			"defaultValue": "vltDmsUserUAT"
 		},
@@ -198,6 +210,35 @@
 					"password": {
 						"type": "SecureString",
 						"value": "[parameters('LS_AWS_DMS_UAT_password')]"
+					},
+					"driverVersion": "v2"
+				},
+				"connectVia": {
+					"referenceName": "AWS-UAT",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-UAT')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_AWS_VSP_UAT')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "MySql",
+				"typeProperties": {
+					"server": "[parameters('LS_AWS_VSP_UAT_properties_typeProperties_server')]",
+					"port": 3306,
+					"database": "[parameters('LS_AWS_VSP_UAT_properties_typeProperties_database')]",
+					"username": "[parameters('LS_AWS_VSP_UAT_properties_typeProperties_username')]",
+					"sslMode": 1,
+					"useSystemTrustStore": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_AWS_VSP_UAT_password')]"
 					},
 					"driverVersion": "v2"
 				},
@@ -578,6 +619,29 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_int_claims_payments_audit')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_AWS_VSP_UAT",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_int_claims_payments_audit"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "`int_claims_payments_audit`"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_AWS_VSP_UAT')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_diary')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -598,48 +662,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_uat_aws_us_diary_uat')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_user')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_eBao_uat_aw_uat_pub",
-					"type": "LinkedServiceReference"
-				},
-				"folder": {
-					"name": "Dataset_t_pub_user"
-				},
-				"annotations": [],
-				"type": "MySqlTable",
-				"schema": [],
-				"typeProperties": {
-					"tableName": "`t_pub_user`"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_uat_aw_uat_pub')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/LS_EDW_UAT')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"annotations": [],
-				"type": "AzureSqlDatabase",
-				"typeProperties": {
-					"connectionString": "[parameters('LS_EDW_UAT_connectionString')]"
-				},
-				"connectVia": {
-					"referenceName": "Data-UAT-ADF-IR-via-VNet",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/integrationRuntimes/Data-UAT-ADF-IR-via-VNet')]"
 			]
 		}
 	]

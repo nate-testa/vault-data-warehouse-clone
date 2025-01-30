@@ -11,6 +11,10 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'LS_AWS_DMS_UAT'"
 		},
+		"LS_AWS_VSP_UAT_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_AWS_VSP_UAT'"
+		},
 		"LS_EDW_UAT_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_EDW_UAT'"
@@ -48,6 +52,18 @@
 			"defaultValue": "dms_core"
 		},
 		"LS_AWS_DMS_UAT_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "vltDmsUserUAT"
+		},
+		"LS_AWS_VSP_UAT_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "vlt-mysql-ods-uat.cluster-ctaeroxllezw.us-east-1.rds.amazonaws.com"
+		},
+		"LS_AWS_VSP_UAT_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "vsp_core"
+		},
+		"LS_AWS_VSP_UAT_properties_typeProperties_username": {
 			"type": "string",
 			"defaultValue": "vltDmsUserUAT"
 		},
@@ -187,6 +203,9 @@
 					"LS_AWS_DMS_UAT_password": {
 						"value": "[parameters('LS_AWS_DMS_UAT_password')]"
 					},
+					"LS_AWS_VSP_UAT_password": {
+						"value": "[parameters('LS_AWS_VSP_UAT_password')]"
+					},
 					"LS_eBao_uat_aw_uat_pub_password": {
 						"value": "[parameters('LS_eBao_uat_aw_uat_pub_password')]"
 					},
@@ -202,9 +221,6 @@
 					"LS_eBao_uat_aws_us_uat_vault_password": {
 						"value": "[parameters('LS_eBao_uat_aws_us_uat_vault_password')]"
 					},
-					"LS_EDW_UAT_connectionString": {
-						"value": "[parameters('LS_EDW_UAT_connectionString')]"
-					},
 					"AWS-UAT_properties_typeProperties_linkedInfo_resourceId": {
 						"value": "[parameters('AWS-UAT_properties_typeProperties_linkedInfo_resourceId')]"
 					},
@@ -216,6 +232,15 @@
 					},
 					"LS_AWS_DMS_UAT_properties_typeProperties_username": {
 						"value": "[parameters('LS_AWS_DMS_UAT_properties_typeProperties_username')]"
+					},
+					"LS_AWS_VSP_UAT_properties_typeProperties_server": {
+						"value": "[parameters('LS_AWS_VSP_UAT_properties_typeProperties_server')]"
+					},
+					"LS_AWS_VSP_UAT_properties_typeProperties_database": {
+						"value": "[parameters('LS_AWS_VSP_UAT_properties_typeProperties_database')]"
+					},
+					"LS_AWS_VSP_UAT_properties_typeProperties_username": {
+						"value": "[parameters('LS_AWS_VSP_UAT_properties_typeProperties_username')]"
 					},
 					"LS_eBao_uat_aw_uat_pub_properties_typeProperties_server": {
 						"value": "[parameters('LS_eBao_uat_aw_uat_pub_properties_typeProperties_server')]"
@@ -306,6 +331,9 @@
 				"parameters": {
 					"factoryName": {
 						"value": "[parameters('factoryName')]"
+					},
+					"LS_EDW_UAT_connectionString": {
+						"value": "[parameters('LS_EDW_UAT_connectionString')]"
 					},
 					"LS_METAL_UAT_connectionString": {
 						"value": "[parameters('LS_METAL_UAT_connectionString')]"
