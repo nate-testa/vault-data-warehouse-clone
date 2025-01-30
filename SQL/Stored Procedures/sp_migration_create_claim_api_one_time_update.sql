@@ -34,25 +34,22 @@ BEGIN
     -- AD-8176
     --Update Loss Date in edw_stage.migration_create_claim_api before Snapsheet migration--
 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C23HOA00359' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2023-06-23 00:00:00.000' where claimnumber = 'C23XLA00017' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C23HOA00759' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C24HOA00023' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C22HOA01046' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C23HOA00090' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C23HOA00091' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C22HOA01151' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C23HOA00071' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C23HOA00089' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C23HOA00274' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C23HOA00312' ; 
-    --update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C23HOA00359' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C23HOA00433' ; 
-    --update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C23HOA00759' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C23HOA00880' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C23HOA00938' ; 
-    --update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-27 00:00:00.000' where claimnumber = 'C24HOA00023' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = '2022-09-28 00:00:00.000' where claimnumber = 'VAULTECC005' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT(CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00359' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2023-06-23 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23XLA00017' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00759' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C24HOA00023' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C22HOA01046' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00090' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00091' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss = FORMAT(CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C22HOA01151' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00071' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00089' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00274' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss = FORMAT(CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00312' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss = FORMAT(CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00433' ;     
+    update edw_stage.migration_create_claim_api set datetimeOfLoss = FORMAT(CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00880' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00938' ; 
+    -- update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-28 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'VAULTECC005' ; 
 
     --CauseofLoss Bakcfill--
 
