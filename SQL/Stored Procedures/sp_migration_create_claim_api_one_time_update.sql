@@ -2349,7 +2349,40 @@ update edw_stage.migration_create_claim_api set losstype = 'property_claim_flood
 update edw_stage.migration_create_claim_api set losstype = 'property_claim_vandalism' where claimnumber = 'C22COA00055' ;
 update edw_stage.migration_create_claim_api set losstype = 'property_claim_vandalism' where claimnumber = 'C22COA00066' ;
 
-		
+-- Task AD-8335 Update accountCode
+update edw_stage.migration_create_claim_api set accountCode = 'vault_reciprocal_exchange' where claimNumber = 'C21AUA00240'
+update edw_stage.migration_create_claim_api set accountCode = 'vault_es_insurance_company' where claimNumber = 'C21COA00053'
+update edw_stage.migration_create_claim_api set accountCode = 'vault_reciprocal_exchange' where claimNumber = 'C24HOA00151'
+update edw_stage.migration_create_claim_api set accountCode = 'vault_es_insurance_company' where claimNumber = 'C24HOA00502'
+
+
+-- Updates from sp_ebao_tclaim_onetime_datafix
+update edw_stage.migration_create_claim_api set accountCode = 'vault_reciprocal_exchange' where claimNumber in ('C20HOA00085','C21HOA00284')
+update edw_stage.migration_create_claim_api set accountCode = 'vault_es_insurance_company' where claimNumber in ('C22XLA00007')
+Update edw_stage.migration_create_claim_api set accountCode='vault_es_insurance_company' where claimNumber='C21HOA00377'
+
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = '9102103 215801A' WHERE claimNumber = 'C20HOA00085'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = '9100155 176001B' WHERE claimNumber = 'C21AUA00129'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = '9100834 123701A' WHERE claimNumber = 'C21AUA00169'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = '9102980 363901A' WHERE claimNumber = 'C21AUA00277'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = '9103318 415901A' WHERE claimNumber = 'C21AUA00288'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = '9102975 363101A' WHERE claimNumber = 'C21AUA00303'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = '9102922 355101A' WHERE claimNumber = 'C21AUA00339'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = '9103298 412901A' WHERE claimNumber = 'C21AUA00410'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = '9102307 256901A' WHERE claimNumber = 'C21AUA00416'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = '9100587 802001B' WHERE claimNumber = 'C21AUA00461'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = 'AUX10000860' WHERE claimNumber = 'C21AUA00240'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = '9103250 406001A' WHERE claimNumber = 'C21AUA00532'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = '9100833 123601B' WHERE claimNumber = 'C21AUA00645'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = 'AUX10003952-01' WHERE claimNumber = 'C21AUA00717'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = 'AUX10001740' WHERE claimNumber = 'C21AUA00721'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = 'HO100009103' WHERE claimNumber = 'C21HOA00135'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = 'HO100033995-01' WHERE claimNumber = 'C21HOA00284'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = 'AUX10001238' WHERE claimNumber = 'C22AUA00263'
+	UPDATE edw_stage.migration_create_claim_api SET policyNumber = 'HO37788288836-03' WHERE claimNumber = 'C22HOA00025'
+
+
+
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
