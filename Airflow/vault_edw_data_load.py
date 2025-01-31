@@ -708,6 +708,12 @@ with DAG(
             dag=dag,
         )
 
+        exec_Snapsheet_Financial_Transaction_Action_Daily_Feed = TriggerDagRunOperator(
+            task_id="exec_Snapsheet_Financial_Transaction_Action_Daily_Feed",
+            trigger_dag_id="Snapsheet_Financial_Transaction_Action_Daily_Feed",
+            dag=dag,
+        )
+
         send_integration_email = EmailOperator(
             task_id='send_integration_email',
             to=to_email,
@@ -715,7 +721,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
         )
 
-        exec_Snapsheet_Daily_Feed >> operators[0] >> operators[1] >> operators[2] >> operators[3] >> operators[4] >> operators[5] >> operators[6] >> operators[7] >> ivans_api_call >> operators[8] >> generate_livevox_file >> upload_livevox_file_to_sftp >> operators[9] >> operators[10] >> operators[11] >> exec_vault_redzone_feed >> exec_vault_CLUE_property_daily_feed >> send_integration_email
+        exec_Snapsheet_Daily_Feed >> operators[0] >> operators[1] >> operators[2] >> operators[3] >> operators[4] >> operators[5] >> operators[6] >> operators[7] >> ivans_api_call >> operators[8] >> generate_livevox_file >> upload_livevox_file_to_sftp >> operators[9] >> operators[10] >> operators[11] >> exec_vault_redzone_feed >> exec_vault_CLUE_property_daily_feed >> exec_Snapsheet_Financial_Transaction_Action_Daily_Feed >> send_integration_email
 
     exec_vault_edw_data_load_quotes = TriggerDagRunOperator(
         task_id="exec_vault_edw_data_load_quotes",
