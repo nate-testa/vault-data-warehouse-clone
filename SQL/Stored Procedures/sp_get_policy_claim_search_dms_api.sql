@@ -6,6 +6,7 @@
 -- Change date		           |Author						            |	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 01/16/2025		        Yunus Mohammed				1. Created this procedure 
+-- 01/31/2025               Yunus Mohammed              2. param used in where clause
 -- ================================================================================================ 
 
 CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_policy_claim_search_dms_api]
@@ -17,6 +18,6 @@ BEGIN
     FROM
         edw_integration.policy_claim_search_dms_api
     WHERE  
-        policy_no like '%' + policy_no + '%'
+        policy_no like '%' + @policy_no + '%'
 END
 GO
