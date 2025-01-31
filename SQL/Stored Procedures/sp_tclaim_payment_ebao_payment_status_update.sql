@@ -45,12 +45,12 @@ BEGIN
 		FROM 		edw_stage_snapsheet.claims c
 		INNER JOIN 	edw_core.tclaim tc ON tc.claim_no=c.claim_number
 		INNER JOIN 	edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no
-		INNER JOIN  edw_stage_snapsheet.exposures e on c.id = e.claim_id and tf.exposure_name = e.exposure_name and tf.exposure_type = e.exposure_type
+		INNER JOIN  edw_stage_snapsheet.exposures e on c.id = e.claim_id and tf.claim_coverage_cd=e.id
 		INNER JOIN 	edw_stage_snapsheet.financial_payment_items fpi on fpi.claim_id = c.id and e.id = fpi.exposure_id
 		INNER JOIN 	edw_stage_snapsheet.financial_transactions ft on ft.id = fpi.financial_transaction_id
 		WHERE ft.is_historical = 'true'
 		AND ft.stage in ('stopped','cleared')
-		AND ft.updated_at = @last_source_extract_ts
+		AND ft.updated_at > @last_source_extract_ts
 		;   
 
 		MERGE edw_core.tclaim_payment  AS Target
