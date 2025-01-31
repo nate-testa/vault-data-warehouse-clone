@@ -12,6 +12,7 @@ GO
 -- 11/20/24		Alberto Almario				2. Changes on some columns and tables
 -- 12/20/24     Sandeep Gundreddy           3. Update product_sk logic, reserve incremental date logic, added -ve logic to recovery reserves
 -- 01/17/25		Hernando Gonzalez			4. add case statement for source_system_sk column
+-- 01/29/25		Sandeep Gundreddy			5. Added source_system_sk=5 to reserve query to exclude ebao transactions
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction_snapsheet]
 AS
@@ -45,7 +46,7 @@ BEGIN
 		SELECT
 			tc.claim_sk 
 			,tf.claim_feature_sk AS claim_feature_sk
-			,tpr.product_sk 
+			,tc.product_sk 
 			,tc.policy_sk 
 			,tb.broker_sk 
 			,tcu.customer_sk 
@@ -101,25 +102,25 @@ BEGIN
 			END AS source_system_sk
 		INTO edw_temp.tclaim_transaction_snapsheet_temp1
 		FROM edw_stage_snapsheet.financial_reserve_items res
-		LEFT JOIN edw_stage_snapsheet.financial_transactions ft on res.financial_transaction_id = ft.id
-		LEFT JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = res.financial_transaction_id
+		INNER JOIN edw_stage_snapsheet.financial_transactions ft on res.financial_transaction_id = ft.id
+		INNER JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = res.financial_transaction_id
 		INNER JOIN edw_stage_snapsheet.claims c on c.id = res.claim_id
-		INNER JOIN edw_core.tclaim tc ON tc.claim_no = c.claim_number
-		INNER JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no and res.exposure_id = tf.claim_coverage_cd
-		INNER JOIN edw_stage_snapsheet.exposures e on e.claim_id = res.claim_id and tf.exposure_name = e.exposure_name and tf.exposure_type = e.exposure_type
+		INNER JOIN edw_stage_snapsheet.exposures e on e.claim_id = res.claim_id and e.id=res.exposure_id
+		LEFT JOIN edw_core.tclaim tc ON tc.claim_no = c.claim_number
+		LEFT JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no and e.id = tf.claim_coverage_cd
 		LEFT JOIN edw_core.tpolicy tp ON tp.policy_sk = tc.policy_sk
 		LEFT JOIN edw_core.tbroker tb ON tb.broker_id = tp.broker_id
 		LEFT JOIN edw_core.tcustomer tcu ON tcu.customer_id = tp.customer_id
-		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(res.created_at AS DATE)
+		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(fta.created_at AS DATE)
 		LEFT JOIN edw_core.tclaim_cost_category as tcc on tcc.claim_cost_category_nm = res.cost_category
-		LEFT JOIN edw_core.tproduct tpr
+		/*LEFT JOIN edw_core.tproduct tpr
 		ON tpr.product_cd = (CASE 
 								WHEN c.claim_type = 'auto' THEN 'AU' 
 								WHEN c.claim_type = 'liability' THEN 'PEL'
 								WHEN c.claim_type = 'property' AND c.policy_number LIKE 'HO%' THEN 'HO'
 								WHEN c.claim_type = 'property' AND c.policy_number LIKE 'CO%' THEN 'LUX'
 								ELSE c.claim_type 
-							END)
+							END)*/
 		WHERE 1=1
 			and fta.code in ('submitted','cancel') 
 			and ft.approved_at is not null --> Added this filter to exclude pending approvals reserves and subsequent cancel records
@@ -173,14 +174,14 @@ BEGIN
 		INTO edw_temp.tclaim_transaction_snapsheet_temp2
 		FROM edw_temp.tclaim_transaction_snapsheet_temp1 a
 		LEFT JOIN edw_core.tclaim_transaction_type ctt on a.claim_transaction_type_cd = ctt.claim_transaction_type_cd
-        where created_at > @last_source_extract_ts
+        where created_at > @last_source_extract_ts and a.source_system_sk=5-- to exclude migrated transactions
 		;
 
 
 		-- *** Create temp table 3 for payment data***
 		SELECT 
 			tc.claim_sk 
-			,tpr.product_sk 
+			,tc.product_sk 
 			,tc.policy_sk 
 			,tb.broker_sk 
 			,cp.claim_payment_sk
@@ -254,31 +255,25 @@ BEGIN
 		FROM edw_stage_snapsheet.financial_reserve_items res
 		INNER JOIN edw_stage_snapsheet.financial_payment_items pay ON pay.financial_transaction_id = res.financial_transaction_id AND pay.cost_type = res.cost_type AND pay.exposure_id = res.exposure_id AND pay.cost_category = res.cost_category
 		INNER JOIN edw_stage_snapsheet.financial_transactions ft on res.financial_transaction_id = ft.id
-		INNER JOIN (
-			select 
-				RANK() OVER(PARTITION BY financial_transaction_id ORDER BY id DESC) AS rn, *
-			from edw_stage_snapsheet.financial_transaction_actions
-			where code in ('submitted','cancel','stop','failed')
-		) fta on fta.financial_transaction_id = res.financial_transaction_id and fta.rn = 1
-		-- edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = res.financial_transaction_id
+		INNER JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = res.financial_transaction_id
 		INNER JOIN edw_stage_snapsheet.claims c on c.id = res.claim_id
+		INNER JOIN edw_stage_snapsheet.exposures e on e.claim_id = res.claim_id and res.exposure_id=e.id
 		INNER JOIN edw_core.tclaim tc ON tc.claim_no = c.claim_number
-		INNER JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no and res.exposure_id = tf.claim_coverage_cd
-		INNER JOIN edw_stage_snapsheet.exposures e on e.claim_id = res.claim_id and tf.exposure_name = e.exposure_name and tf.exposure_type = e.exposure_type
+		INNER JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no and e.id = tf.claim_coverage_cd
 		LEFT JOIN edw_core.tpolicy tp ON tp.policy_sk = tc.policy_sk
 		LEFT JOIN edw_core.tbroker tb ON tb.broker_id = tp.broker_id
 		LEFT JOIN edw_core.tcustomer tcu ON tcu.customer_id = tp.customer_id
 		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(res.created_at AS DATE)
 		LEFT JOIN edw_core.tclaim_cost_category as tcc on tcc.claim_cost_category_nm = res.cost_category
-		LEFT JOIN edw_core.tclaim_payment as cp on cp.payment_no = res.financial_transaction_id and cp.claim_type_cd = pay.cost_type and cp.cost_category = pay.cost_category
-		LEFT JOIN edw_core.tproduct tpr
+		LEFT JOIN edw_core.tclaim_payment as cp on cp.payment_no = res.financial_transaction_id and cp.payment_sequence_no=pay.id and cp.claim_feature_sk=tf.claim_feature_sk
+		/*LEFT JOIN edw_core.tproduct tpr
 		ON tpr.product_cd = (CASE 
 									WHEN c.claim_type = 'auto' THEN 'AU' 
 									WHEN c.claim_type = 'liability' THEN 'PEL'
 									WHEN c.claim_type = 'property' AND c.policy_number LIKE 'HO%' THEN 'HO'
 									WHEN c.claim_type = 'property' AND c.policy_number LIKE 'CO%' THEN 'LUX'
 									ELSE c.claim_type 
-								END)
+								END)*/
 		WHERE 1=1
 			AND fta.code in ('submitted','cancel','stop','failed')
 			AND fta.created_at > @last_source_extract_ts
@@ -340,8 +335,7 @@ BEGIN
 		FROM edw_temp.tclaim_transaction_snapsheet_temp2 a
 		LEFT JOIN edw_temp.tclaim_transaction_snapsheet_temp3 b
 			ON a.claim_sk = b.claim_sk
-			AND a.product_sk = b.product_sk
-			AND a.exposure_name = b.exposure_name
+			--AND a.product_sk = b.product_sk
 			AND a.transaction_ts = b.transaction_ts
 			AND a.financial_transaction_id = b.financial_transaction_id
 			AND a.cost_type = b.cost_type

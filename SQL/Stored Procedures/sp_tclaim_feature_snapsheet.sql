@@ -7,6 +7,7 @@
 -- 11/22/2024				Alberto Almario				2. Changes on some columns and tables
 -- 01/10/2024				Yunus Mohammed		  		3. Upated total_loss_in to Yes and No
 -- 01/17/2025				Hernando Gonzalez			4. add case statement for source_system_sk column
+-- 01/29/2025               Sandeep Gundreddy			5. Added condo to item_sk, coverage_sk logic
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet]
 AS
@@ -50,6 +51,7 @@ BEGIN
 			CASE
 				prd.product_cd
 				WHEN 'HO' THEN thcov.home_location_sk
+				WHEN 'CO' THEN thcov.home_location_sk
 				WHEN 'LUX' THEN tccov.collection_location_sk
 				WHEN 'PEL' THEN NULL
 				WHEN 'AU' THEN taveh.auto_vehicle_sk
@@ -57,6 +59,7 @@ BEGIN
 			CASE
 				prd.product_cd
 				WHEN 'HO' THEN thcov.home_coverage_sk
+				WHEN 'CO' THEN thcov.home_coverage_sk
 				WHEN 'LUX' THEN tccov.collection_coverage_sk
 				WHEN 'PEL' THEN tpcov.pel_coverage_sk
 				WHEN 'AU' THEN tacov.auto_policy_coverage_sk

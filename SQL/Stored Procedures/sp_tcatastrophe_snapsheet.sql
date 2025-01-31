@@ -1,4 +1,8 @@
-﻿-- ========================================================================================================
+﻿SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- ========================================================================================================
 -- Description: This procedures inserts catastrophe snapsheet data
 -----------------------------------------------------------------------------------------------------------
 -- Change date 		|Author						|	Change Description
@@ -6,8 +10,10 @@
 -- 11/15/2024		Alberto Almario				1. Created this procedure
 -- 12/13/2024		Hernando Gonzalez			2. Implement Merge to prevent duplicates
 -- 01/09/2023		Alberto Almario				3. add row_number function
+-- 01/27/2023		Alberto Almario				4. add filter to update only source_system_sk = 5 rows.
+-- 01/29/2023		Sandeep Gundreddy			5. modified the matched filter to target.source_system_sk = 5 instead of source
 -- ======================================================================================================== 
-CREATE OR ALTER  PROCEDURE [edw_core].[sp_tcatastrophe_snapsheet]
+CREATE OR ALTER   PROCEDURE [edw_core].[sp_tcatastrophe_snapsheet]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -72,7 +78,7 @@ BEGIN
 		MERGE INTO [edw_core].[tcatastrophe] as [Target]
 		USING (select * from [edw_temp].[tcatastrophe_snapsheet_temp1] where rn = 1) as Source
 			ON Target.catastrophe_cd = Source.catastrophe_cd
-		WHEN MATCHED THEN
+		WHEN MATCHED AND Target.source_system_sk = 5 THEN
 			UPDATE SET
 				Target.catastrophe_nm = Source.catastrophe_nm,
 				Target.catastrophe_desc = Source.catastrophe_desc,
@@ -128,5 +134,3 @@ BEGIN
 	END CATCH
 END
 GO
-
-
