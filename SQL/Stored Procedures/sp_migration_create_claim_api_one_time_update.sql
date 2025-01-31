@@ -2381,15 +2381,9 @@ Update edw_stage.migration_create_claim_api set accountCode='vault_es_insurance_
 	UPDATE edw_stage.migration_create_claim_api SET policyNumber = 'AUX10001238' WHERE claimNumber = 'C22AUA00263'
 	UPDATE edw_stage.migration_create_claim_api SET policyNumber = 'HO37788288836-03' WHERE claimNumber = 'C22HOA00025'
 
-
-
-		-- Update audit table
-		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+		-- Update audit table		
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
-		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1
-		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
