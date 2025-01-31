@@ -115,6 +115,10 @@ def process_claims(qry):
         logging.info(f"*************** Start Processing *********************")
         logging.info(f"Processing claim record: {record}")
 
+        firstOpenedAt = firstOpenedAt.strftime('%Y-%m-%dT%H:%M:%SZ') if firstOpenedAt else None
+        firstClosedAt = firstClosedAt.strftime('%Y-%m-%dT%H:%M:%SZ') if firstClosedAt else None
+        openedAt = openedAt.strftime('%Y-%m-%dT%H:%M:%SZ') if openedAt else None
+        closedAt = closedAt.strftime('%Y-%m-%dT%H:%M:%SZ') if closedAt else None
         datetimeOfLoss = datetimeOfLoss.strftime('%Y-%m-%dT%H:%M:%SZ') if datetimeOfLoss else None
         datetimeOfNotification = datetimeOfNotification.strftime('%Y-%m-%dT%H:%M:%SZ') if datetimeOfNotification else None
 
