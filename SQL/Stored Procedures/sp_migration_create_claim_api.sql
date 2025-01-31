@@ -11,7 +11,9 @@
 -- 01/21/2025			Yunus Mohammed					5. Passed optional param claim_no
 -- -01/27/2025			Yunus Mohammed					6. Added first open dt, first close dt,open dt and close dt
 --																								Removed -ve payment amount on indemnity and -ve Reserve Amount on Indemnity
---																								Added tpolicy  table to get UW Company Name when it's not available in eBao table				
+--																								Added tpolicy  table to get UW Company Name when it's not available in eBao table		
+-- 01/30/2025			Yunus Mohammed					7. claimParties logic updated to get claimParties for claims without coverage
+--																								 vehicles - removed check for InjuredPerson and PipMedPay.
 -- ==================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api]
 @claim_no varchar(max) = null
@@ -569,8 +571,7 @@ END AS [injuredParty.claimPartyId]
                 LEFT JOIN edw_stage.migration_exposure_type_mapping ext on ext.product_cd = prd.product_cd
 						and ext.coverage_name = cast(i.coverage_name as varchar(max))
 						and ext.subclaim_type_name = cast(sct.subclaim_type_name as varchar(max))
-                WHERE
-	                ext.snapsheet_exposure_type not in ('InjuredPerson', 'PipMedPay')
+                -- WHERE  ext.snapsheet_exposure_type not in ('InjuredPerson', 'PipMedPay')
 				FOR JSON PATH, INCLUDE_NULL_VALUES
 			) as vehicles
 			,(
@@ -648,9 +649,10 @@ END AS id,
 				FROM
 					(
 						SELECT
-							obj.CASE_ID, obj.[object_id],obj.subclaim_type, obj.CLAIMANT_ID AS PARTY_ID
-						FROM					
-							edw_stage.t_clm_object AS obj
+							cp.CASE_ID, obj.[object_id],obj.subclaim_type, cp.PARTY_ID
+						FROM
+							edw_stage.t_clm_party cp
+							LEFT JOIN edw_stage.t_clm_object AS obj on cp.CASE_ID = obj.CASE_ID
 						UNION
 						SELECT 
 							obj.CASE_ID, obj.[object_id], obj.subclaim_type, settle_payee.PAYEE_ID AS PARTY_ID
