@@ -9,6 +9,7 @@
 -- 01/17/25		Hernando Gonzalez			4. add case statement for source_system_sk column
 -- 01/27/25     Sandeep Gundreddy			5. Exclude migrated payments 
 -- 01/28/25     Sandeep Gundreddy			6. Updated payment_sequence_no mapping
+--01/29/25 		Sandeep Gundreddy			7.Modified join conditions to exposures
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment_snapsheet]
 
@@ -43,7 +44,8 @@ BEGIN
 				fpi.financial_transaction_id AS payment_no,
 				fpi.cost_type AS claim_type_cd,
 				fpi.cost_category,
-				concat(cp.first_name,' ',cp.last_name) AS payee_nm,
+				CASE WHEN cp.party_type='ORGANIZATION' then cp.company else 
+				concat(cp.first_name,' ',cp.last_name) End AS payee_nm,
 				fpd.party_type AS party_role_nm, 
 				ISNULL(fpi.amount,0) AS paid_amt,
 				concat( fpd.address_address_1,', ',
@@ -73,8 +75,8 @@ BEGIN
 		FROM 		edw_stage_snapsheet.claims c
 		INNER JOIN 	edw_core.tclaim tc ON tc.claim_no=c.claim_number
 		INNER JOIN 	edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no
-		INNER JOIN  edw_stage_snapsheet.exposures e on c.id = e.claim_id and tf.exposure_name = e.exposure_name and tf.exposure_type = e.exposure_type
-		INNER JOIN 	edw_stage_snapsheet.financial_payment_items fpi on fpi.claim_id = c.id and e.id = fpi.exposure_id
+		INNER JOIN  edw_stage_snapsheet.exposures e on c.id = e.claim_id and tf.claim_coverage_cd=e.id
+		INNER JOIN 	edw_stage_snapsheet.financial_payment_items fpi on fpi.claim_id = c.id and e.id = fpi.exposure_id 
 		LEFT JOIN 	edw_stage_snapsheet.financial_payment_details fpd on fpd.claim_id = c.id and fpd.financial_transaction_id = fpi.financial_transaction_id
 		LEFT JOIN 	edw_stage_snapsheet.claim_parties cp on fpd.party_id = cp.id
 		INNER JOIN 	edw_stage_snapsheet.financial_transactions ft on ft.id = fpi.financial_transaction_id
