@@ -14,6 +14,7 @@
 --																								Added tpolicy  table to get UW Company Name when it's not available in eBao table		
 -- 01/30/2025			Yunus Mohammed					7. claimParties logic updated to get claimParties for claims without coverage
 --																								 vehicles - removed check for InjuredPerson and PipMedPay.
+-- 01/31/2025			Yunus Mohammed					8. Removed special characters from policy_no stored in case table
 -- ==================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api]
 @claim_no varchar(max) = null
@@ -120,7 +121,7 @@ BEGIN
 		FORMAT(firstOpenedAt, 'yyyy-MM-ddTHH:mm:ssZ') as firstOpenedAt ,
 		FORMAT(firstClosedAt, 'yyyy-MM-ddTHH:mm:ssZ')  as firstClosedAt,
 		FORMAT(openedAt, 'yyyy-MM-ddTHH:mm:ssZ')  as openedAt,
-		FORMAT(closedAt, 'yyyy-MM-ddTHH:mm:ssZ')  as closedAt,
+		CASE WHEN closedAt < openedAt THEN null ELSE FORMAT(closedAt, 'yyyy-MM-ddTHH:mm:ssZ') END AS closedAt,
 		FORMAT(datetimeOfLoss, 'yyyy-MM-ddTHH:mm:ssZ') as datetimeOfLoss, 
 		FORMAT(datetimeOfNotification, 'yyyy-MM-ddTHH:mm:ssZ') as datetimeOfNotification,
 		accountCode, lossType,
@@ -144,7 +145,7 @@ BEGIN
 						WHEN cstat.status_code IN('3','4','6') THEN 'Closed'
 						ELSE cstat.status_name
 					END) AS status,
-			c.POLICY_NO as policyNumber,
+			LTRIM(RTRIM(REPLACE(REPLACE(REPLACE(REPLACE(c.POLICY_NO, CHAR(10), CHAR(32)),CHAR(13), CHAR(32)),CHAR(160), CHAR(32)),CHAR(9),CHAR(32)))) as policyNumber,
 			fod.claim_first_open_dt as firstOpenedAt,
 			fcd.claim_first_close_dt as firstClosedAt,
 			od.claim_open_dt as openedAt,
@@ -511,7 +512,8 @@ END AS [injuredParty.claimPartyId]
 								edw_stage.t_clm_case clm
 								inner join edw_stage.t_clm_object o on clm.CASE_ID = o.CASE_ID
 								inner join edw_stage.t_clm_item i ON o.[object_id] = i.[object_id]
-								left join edw_stage.t_clm_policy p on p.POLICY_NO = clm.POLICY_NO and p.CASE_ID = clm.CASE_ID
+								left join edw_stage.t_clm_policy p on p.POLICY_NO = LTRIM(RTRIM(REPLACE(REPLACE(REPLACE(REPLACE(clm.POLICY_NO, CHAR(10), CHAR(32)),CHAR(13), CHAR(32)),CHAR(160), CHAR(32)),CHAR(9),CHAR(32))))
+								and p.CASE_ID = clm.CASE_ID
 								LEFT JOIN edw_core.tproduct prd ON prd.ebao_product_cd=c.product_code
 								left join edw_stage.t_clm_party par on o.CLAIMANT_ID = par.PARTY_ID
 								left JOIN edw_stage.t_clm_party_role tcpr on par.PARTY_ROLE = tcpr.ROLE_CODE
@@ -548,7 +550,7 @@ END AS [injuredParty.claimPartyId]
 						from
 							edw_stage.AccountTransaction acct
 						where
-							acct.PolicyNumber = c.POLICY_NO
+							acct.PolicyNumber = LTRIM(RTRIM(REPLACE(REPLACE(REPLACE(REPLACE(c.policy_no, CHAR(10), CHAR(32)),CHAR(13), CHAR(32)),CHAR(160), CHAR(32)),CHAR(9),CHAR(32))))
 							and acct.[State] = 'Issued'
 							and acct.EffectiveDate < = cast(c.ACCIDENT_TIME as date)
 					) acct
@@ -683,7 +685,7 @@ END AS id,
 		from
 		edw_temp.migration_create_claim_api_temp1 c
 		LEFT JOIN edw_stage.t_clm_policy cp ON c.case_id=cp.case_id
-		LEFT JOIN edw_core.tpolicy tp ON tp.policy_no = c.POLICY_NO -- Added on 01/24/2025
+		LEFT JOIN edw_core.tpolicy tp ON tp.policy_no = LTRIM(RTRIM(REPLACE(REPLACE(REPLACE(REPLACE(c.policy_no, CHAR(10), CHAR(32)),CHAR(13), CHAR(32)),CHAR(160), CHAR(32)),CHAR(9),CHAR(32)))) -- Added on 01/24/2025
 		--INNER JOIN edw_stage.t_clm_losscause clc on clc.LOSS_CAUSE_CODE = c.LOSS_CAUSE
 		LEFT JOIN edw_core.tproduct prd ON prd.ebao_product_cd=c.product_code
 		LEFT JOIN edw_stage.t_clm_case_status cstat ON c.CASE_STATUS = cstat.STATUS_CODE	
