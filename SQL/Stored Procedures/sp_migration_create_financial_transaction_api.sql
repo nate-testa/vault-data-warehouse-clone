@@ -13,6 +13,7 @@
   --01-27-2025              Yunus Mohammed        6. Added TPOLICY  table to get UW Company Name when it's not available in eBao table
   --01-29-2025              Yunus Mohammed        7. Shipping address join updated
   --01-30-2025              Sandeep Gundreddy     8. Added logic to handle stop/cancelled/refund payments
+  --01-31-2025              Sandeep Gundreddy     9. Added logic to send $0 reserves for overpayment recovery(refunds in ebao)
  -- ================================================================================================= 
  
  CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_financial_transaction_api]
@@ -188,6 +189,40 @@
                 resh.reserve_type, 
                 settle_changed  --refund payments 
                      AS outstanding_amount, 
+                resh.outstanding_changed, 
+                resh.settle_amount, 
+                resh.settle_changed,                
+                'recovery' AS financial_transaction_type, 
+                'overpayment' --refunds are being sent as overpayment recovery
+                 AS reserve_method,
+				c.POLICY_NO -- Added on 01/24/2024
+            FROM [edw_temp].[migration_create_financial_transaction_api_temp1] t
+            LEFT JOIN edw_stage.t_clm_item i ON t.exposure_id = i.item_id
+            LEFT JOIN edw_stage.t_clm_object o ON i.object_id = o.object_id
+            LEFT JOIN edw_stage.t_clm_case c ON o.case_id = c.case_id
+            LEFT JOIN edw_stage.t_clm_reserve_his resh ON resh.item_id = i.item_id 
+            LEFT JOIN edw_stage.t_clm_settle_item settle_item ON resh.item_id = settle_item.item_id AND resh.business_instance_id = settle_item.settle_item_id
+            LEFT JOIN edw_stage.t_clm_settle_payee settle_payee ON settle_payee.settle_payee_id = settle_item.settle_payee_id			
+            WHERE resh.reserve_type IN ('RC_01', 'RC_02') AND settle_payee.payment_status='PENDING' AND resh.settle_changed<0
+            UNION ALL --- creating $0 reserve transaction for refunds
+            SELECT 
+                'Reserve_Amount' AS amount_type,
+                t.exposure_id,
+                t.claimNumber,
+                t.claimReferenceNumber,
+                t.exposureReferenceNumber,
+                t.source_table_update_ts,
+                i.item_id,
+                o.[object_id],
+                c.case_id,
+                resh.his_id, 
+                resh.item_id as resh_item_id, 
+                resh.business_instance_id, 
+                resh.post_date, 
+                /*CASE WHEN resh.reserve_type IN ('RC_01', 'RC_02') AND settle_payee.payment_status='PENDING' AND resh.settle_changed<0 THEN 'RC_00' 
+                ELSE resh.reserve_type  END AS */
+                resh.reserve_type, 
+                0  AS outstanding_amount, --refund payments 
                 resh.outstanding_changed, 
                 resh.settle_amount, 
                 resh.settle_changed,                
@@ -418,6 +453,7 @@
             reserve_method,
             CAST(reserve_amt AS VARCHAR(255)) AS amount,
             CAST(paid_amt AS VARCHAR(255)) AS paid_amt,
+            case when amount_type='Reserve_Amount' then reserve_amt else paid_amt end as reserve_paid_amount,
             amount_type,
             CASE
                 -- Reserve Section - Remove Payment Information -- 
@@ -605,7 +641,7 @@
              [data]
          FROM [edw_temp].[migration_create_financial_transaction_api_temp6]
          where reserve_method='overpayment'
-         ORDER BY claim_no, ITEM_ID, post_date,reserve_type,HIS_ID,amount_type desc  ;
+         ORDER BY claim_no, ITEM_ID, post_date,reserve_type,HIS_ID,reserve_paid_amount ;
 
         --************End************
 
