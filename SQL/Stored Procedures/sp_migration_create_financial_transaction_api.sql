@@ -14,6 +14,7 @@
   --01-29-2025              Yunus Mohammed        7. Shipping address join updated
   --01-30-2025              Sandeep Gundreddy     8. Added logic to handle stop/cancelled/refund payments
   --01-31-2025              Sandeep Gundreddy     9. Added logic to send $0 reserves for overpayment recovery(refunds in ebao)
+  --02-02-2025              Sandeep Gundreddy     10.UseD amount_type in the order by clause in final insert query
  -- ================================================================================================= 
  
  CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_financial_transaction_api]
@@ -641,7 +642,7 @@
              [data]
          FROM [edw_temp].[migration_create_financial_transaction_api_temp6]
          where reserve_method='overpayment'
-         ORDER BY claim_no, ITEM_ID, post_date,reserve_type,HIS_ID,reserve_paid_amount ;
+         ORDER BY claim_no, ITEM_ID, post_date,reserve_type,HIS_ID,reserve_paid_amount,amount_type desc ;
 
         --************End************
 
