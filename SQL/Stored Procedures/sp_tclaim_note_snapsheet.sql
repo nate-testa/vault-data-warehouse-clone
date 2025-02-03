@@ -49,7 +49,7 @@ BEGIN
 		INNER JOIN edw_stage_snapsheet.notes as n ON n.claim_id = c.id
 		LEFT JOIN edw_stage_snapsheet.users as u ON u.id = n.logged_by_user_id
 		LEFT JOIN edw_core.tclaim as tc ON tc.claim_no = c.claim_number
-		LEFT JOIN edw_core.tclaim_feature as cf ON cf.claim_no = c.claim_number
+		LEFT JOIN edw_core.tclaim_feature as cf ON cf.claim_no = c.claim_number and cf.claim_coverage_cd=n.exposure_id
 		WHERE c.created_at > @last_source_extract_ts
 		;
 

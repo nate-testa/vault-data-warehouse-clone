@@ -9,6 +9,12 @@
 -- 01/17/2025  		    Yunus Mohammed                  3. InjuredPerson and vehicle object code updated
 -- 01/20/2025           Yunus Mohammed                  4. Claimant & Injured Person Claim Party Id adjusted for 'InjuredPerson' & 'PipMedPay' exposures and remoed product filer
 -- 01/21/2025			Yunus Mohammed					5. Passed optional param claim_no
+-- -01/27/2025			Yunus Mohammed					6. Added first open dt, first close dt,open dt and close dt
+--																								Removed -ve payment amount on indemnity and -ve Reserve Amount on Indemnity
+--																								Added tpolicy  table to get UW Company Name when it's not available in eBao table		
+-- 01/30/2025			Yunus Mohammed					7. claimParties logic updated to get claimParties for claims without coverage
+--																								 vehicles - removed check for InjuredPerson and PipMedPay.
+-- 01/31/2025			Yunus Mohammed					8. Removed special characters from policy_no stored in case table
 -- ==================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api]
 @claim_no varchar(max) = null
@@ -28,13 +34,14 @@ BEGIN
 		DECLARE @current_date DATETIME=GETDATE()
 		DECLARE @parameter_desc VARCHAR(255)
 
+
 		-- Get last source extract date
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
-		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200));		
 
 		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1;
-		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2;
+		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2;	
 
 		IF(@claim_no is null) 
 		BEGIN			
@@ -42,9 +49,9 @@ BEGIN
 			INTO edw_temp.migration_create_claim_api_temp1
 			FROM 
 				edw_stage.t_clm_case c
-			 	left join edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber
+			 	LEFT JOIN edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber				
 			where 
-				mcca.claimNumber is null 
+				mcca.claimNumber is null				
 		END
 		ELSE
 		BEGIN
@@ -56,13 +63,65 @@ BEGIN
 				INNER JOIN string_split(@claim_no,',') as t on t.[value]  = c.CLAIM_NO
 			where 
 				mcca.claimNumber is null
-		END
-
+		END;
+		
+		WITH first_open_dt AS 
+		(
+			SELECT DISTINCT c.claim_no
+			,MIN(ch.insert_time) AS claim_first_open_dt
+			FROM
+				edw_stage.t_clm_case_his ch
+				INNER JOIN edw_stage.t_clm_case c ON ch.case_id = c.case_id
+			WHERE
+				ch.claim_type = 'LOS'
+				AND ch.new_status = 'OPEN'
+			GROUP BY c.claim_no
+		)
+		, first_close_dt as 
+		(
+			SELECT DISTINCT c.claim_no
+			,MIN(ch.insert_time) as claim_first_close_dt
+			FROM
+				edw_stage.t_clm_case_his ch
+				INNER JOIN edw_stage.t_clm_case c ON ch.case_id = c.case_id
+			WHERE
+				ch.claim_type = 'LOS'
+				and ch.new_status = 'CLOSED'
+			GROUP BY c.claim_no
+		)
+		, open_dt AS 
+		(
+			SELECT DISTINCT c.claim_no
+			,MAX(ch.insert_time) AS claim_open_dt
+			FROM
+				edw_stage.t_clm_case_his ch
+				INNER JOIN edw_stage.t_clm_case c ON ch.case_id = c.case_id
+			WHERE
+				ch.claim_type = 'LOS'
+				AND ch.new_status in ( 'OPEN','REOPEN')
+			GROUP BY c.claim_no
+		)
+		,close_dt as 
+		(
+			SELECT DISTINCT c.claim_no
+			,MAX(ch.insert_time) as claim_close_dt
+			FROM
+				edw_stage.t_clm_case_his ch
+				INNER JOIN edw_stage.t_clm_case c ON ch.case_id = c.case_id
+			WHERE
+				ch.claim_type = 'LOS'
+				and ch.new_status = 'CLOSED'
+			GROUP BY c.claim_no
+		)
 
 		SELECT claimNumber, accidentCode,claimType, 
 		-- case when [status] = 'OPEN' THEN 'DRAFT' ELSE [status] END AS [status],
 		'DRAFT' AS [status],
 		policyNumber,
+		FORMAT(firstOpenedAt, 'yyyy-MM-ddTHH:mm:ssZ') as firstOpenedAt ,
+		FORMAT(firstClosedAt, 'yyyy-MM-ddTHH:mm:ssZ')  as firstClosedAt,
+		FORMAT(openedAt, 'yyyy-MM-ddTHH:mm:ssZ')  as openedAt,
+		CASE WHEN closedAt < openedAt THEN null ELSE FORMAT(closedAt, 'yyyy-MM-ddTHH:mm:ssZ') END AS closedAt,
 		FORMAT(datetimeOfLoss, 'yyyy-MM-ddTHH:mm:ssZ') as datetimeOfLoss, 
 		FORMAT(datetimeOfNotification, 'yyyy-MM-ddTHH:mm:ssZ') as datetimeOfNotification,
 		accountCode, lossType,
@@ -86,26 +145,36 @@ BEGIN
 						WHEN cstat.status_code IN('3','4','6') THEN 'Closed'
 						ELSE cstat.status_name
 					END) AS status,
-			c.POLICY_NO as policyNumber,
+			LTRIM(RTRIM(REPLACE(REPLACE(REPLACE(REPLACE(c.POLICY_NO, CHAR(10), CHAR(32)),CHAR(13), CHAR(32)),CHAR(160), CHAR(32)),CHAR(9),CHAR(32)))) as policyNumber,
+			fod.claim_first_open_dt as firstOpenedAt,
+			fcd.claim_first_close_dt as firstClosedAt,
+			od.claim_open_dt as openedAt,
+			cd.claim_close_dt as closedAt,
 			c.ACCIDENT_TIME as datetimeOfLoss,
 			c.NOTICE_TIME as datetimeOfNotification,
 			CASE
 				WHEN cp.organ_id=1000000000002 THEN 'vault_reciprocal_exchange' 
-				WHEN cp.organ_id=1000000000001 THEN 'vault_es_insurance_company' ELSE ''
+				WHEN cp.organ_id=1000000000001 THEN 'vault_es_insurance_company'
+				WHEN tp.uw_company_nm='Vault Reciprocal Exchange' THEN 'vault_reciprocal_exchange' -- Added on 01/24/2025
+				WHEN tp.uw_company_nm='Vault E & S Insurance Company' THEN 'vault_es_insurance_company' -- Added on 01/24/2025
+				ELSE ''
 			END AS accountCode,
+			/*
 			case
 				when prd.product_nm in ( 'Condo', 'Homeowners') and c.sub_cause_of_loss_code is null then 'property_claim_other'
 			else
+			*/
 				(
 					select
-						distinct slt.lossType
+						top 1 slt.lossType
 					from
 						edw_stage.migration_loss_type_mapping slt
 						where slt.cause_of_loss_cd = c.LOSS_CAUSE and 
 						slt.sub_cause_of_loss_cd = isnull( c.sub_cause_of_loss_code,slt.sub_cause_of_loss_cd) and 
-						slt.product_cd = prd.product_cd                
+						slt.product_cd = prd.product_cd
 				)
-			end as lossType,
+			/*end*/
+			 as lossType,
 			(
 				select ISNULL( (SELECT 1 as a where 1=2 FOR JSON PATH), '[]')
 			) as attachments,
@@ -147,8 +216,8 @@ BEGIN
 					)) as incidentLocationAddress
 					for json path, include_null_values, without_array_wrapper
 			) as claimIncidentDetails,
-			clc.LOSS_CAUSE_NAME as causeOfAccident,
-			null as incidentComments,
+			--clc.LOSS_CAUSE_NAME as causeOfAccident,
+			-- null as incidentComments,
 			(
 				select
 					id,
@@ -393,7 +462,7 @@ END AS [injuredParty.claimPartyId]
 												edw_core.tpel_location pl1
 											WHERE
 												pl1.policy_no = pl.policy_no
-												and pl1.effective_Dt = pl.effective_dt
+												and pl1.effective_dt = pl.effective_dt
 										)									
 								for json path, include_null_values, without_array_wrapper
 								)
@@ -417,7 +486,7 @@ END AS [injuredParty.claimPartyId]
 						(
 							select
                             /*
-                                -- Commneted on 01/16/2025. New logic implemented
+                                -- Commented on 01/16/2025. New logic implemented
 								row_number() over(partition by o.[object_id] -- ISNULL(ext.snapsheet_exposure_type,'Other')
 									order by ISNULL(ext.snapsheet_exposure_type,'Other')) as rowNum,
                             */
@@ -443,7 +512,8 @@ END AS [injuredParty.claimPartyId]
 								edw_stage.t_clm_case clm
 								inner join edw_stage.t_clm_object o on clm.CASE_ID = o.CASE_ID
 								inner join edw_stage.t_clm_item i ON o.[object_id] = i.[object_id]
-								left join edw_stage.t_clm_policy p on p.POLICY_NO = clm.POLICY_NO and p.CASE_ID = clm.CASE_ID
+								left join edw_stage.t_clm_policy p on p.POLICY_NO = LTRIM(RTRIM(REPLACE(REPLACE(REPLACE(REPLACE(clm.POLICY_NO, CHAR(10), CHAR(32)),CHAR(13), CHAR(32)),CHAR(160), CHAR(32)),CHAR(9),CHAR(32))))
+								and p.CASE_ID = clm.CASE_ID
 								LEFT JOIN edw_core.tproduct prd ON prd.ebao_product_cd=c.product_code
 								left join edw_stage.t_clm_party par on o.CLAIMANT_ID = par.PARTY_ID
 								left JOIN edw_stage.t_clm_party_role tcpr on par.PARTY_ROLE = tcpr.ROLE_CODE
@@ -478,9 +548,9 @@ END AS [injuredParty.claimPartyId]
 						select RANK()over(partition by c.claim_no order by acct.PolicyNumber,acct.PolicyChangeNumber desc) as row_no,
 							*,c.CASE_ID
 						from
-							AccountTransaction acct
+							edw_stage.AccountTransaction acct
 						where
-							acct.PolicyNumber = c.POLICY_NO
+							acct.PolicyNumber = LTRIM(RTRIM(REPLACE(REPLACE(REPLACE(REPLACE(c.policy_no, CHAR(10), CHAR(32)),CHAR(13), CHAR(32)),CHAR(160), CHAR(32)),CHAR(9),CHAR(32))))
 							and acct.[State] = 'Issued'
 							and acct.EffectiveDate < = cast(c.ACCIDENT_TIME as date)
 					) acct
@@ -503,8 +573,7 @@ END AS [injuredParty.claimPartyId]
                 LEFT JOIN edw_stage.migration_exposure_type_mapping ext on ext.product_cd = prd.product_cd
 						and ext.coverage_name = cast(i.coverage_name as varchar(max))
 						and ext.subclaim_type_name = cast(sct.subclaim_type_name as varchar(max))
-                WHERE
-	                ext.snapsheet_exposure_type not in ('InjuredPerson', 'PipMedPay')
+                -- WHERE  ext.snapsheet_exposure_type not in ('InjuredPerson', 'PipMedPay')
 				FOR JSON PATH, INCLUDE_NULL_VALUES
 			) as vehicles
 			,(
@@ -582,9 +651,10 @@ END AS id,
 				FROM
 					(
 						SELECT
-							obj.CASE_ID, obj.[object_id],obj.subclaim_type, obj.CLAIMANT_ID AS PARTY_ID
-						FROM					
-							edw_stage.t_clm_object AS obj
+							cp.CASE_ID, obj.[object_id],obj.subclaim_type, cp.PARTY_ID
+						FROM
+							edw_stage.t_clm_party cp
+							LEFT JOIN edw_stage.t_clm_object AS obj on cp.CASE_ID = obj.CASE_ID
 						UNION
 						SELECT 
 							obj.CASE_ID, obj.[object_id], obj.subclaim_type, settle_payee.PAYEE_ID AS PARTY_ID
@@ -615,9 +685,14 @@ END AS id,
 		from
 		edw_temp.migration_create_claim_api_temp1 c
 		LEFT JOIN edw_stage.t_clm_policy cp ON c.case_id=cp.case_id
-		INNER JOIN edw_stage.t_clm_losscause clc on clc.LOSS_CAUSE_CODE = c.LOSS_CAUSE
+		LEFT JOIN edw_core.tpolicy tp ON tp.policy_no = LTRIM(RTRIM(REPLACE(REPLACE(REPLACE(REPLACE(c.policy_no, CHAR(10), CHAR(32)),CHAR(13), CHAR(32)),CHAR(160), CHAR(32)),CHAR(9),CHAR(32)))) -- Added on 01/24/2025
+		--INNER JOIN edw_stage.t_clm_losscause clc on clc.LOSS_CAUSE_CODE = c.LOSS_CAUSE
 		LEFT JOIN edw_core.tproduct prd ON prd.ebao_product_cd=c.product_code
-		LEFT JOIN edw_stage.t_clm_case_status cstat ON c.CASE_STATUS = cstat.STATUS_CODE
+		LEFT JOIN edw_stage.t_clm_case_status cstat ON c.CASE_STATUS = cstat.STATUS_CODE	
+		LEFT JOIN first_open_dt fod on fod.claim_no = c.claim_no
+		LEFT JOIN first_close_dt fcd on fcd.claim_no = c.claim_no
+		LEFT JOIN open_dt od on od.claim_no = c.claim_no
+		LEFT JOIN close_dt cd on cd.claim_no = c.claim_no
 		left join 
 		(
 			SELECT
@@ -640,18 +715,18 @@ END AS id,
 
         insert into edw_stage.migration_create_claim_api
 			(
-			claimNumber, accidentCode, claimType, [status], policyNumber, datetimeOfLoss, datetimeOfNotification,
-			accountCode, lossType, attachments, notes, claimIncidentDetails, notifier, exposures, 
+			claimNumber, accidentCode, claimType, [status], policyNumber, firstOpenedAt,firstClosedAt,openedAt,closedAt,
+			datetimeOfLoss, datetimeOfNotification,	accountCode, lossType, attachments, notes, claimIncidentDetails, notifier, exposures, 
 			vehicles, claimParties, create_ts, api_status
 			)
         select
-            claimNumber, accidentCode, claimType, [status],policyNumber, datetimeOfLoss, datetimeOfNotification,
-            accountCode, lossType, attachments, notes,claimIncidentDetails, notifier, exposures,
+            claimNumber, accidentCode, claimType, [status],policyNumber, firstOpenedAt,firstClosedAt,openedAt,closedAt,
+			datetimeOfLoss, datetimeOfNotification, accountCode, lossType, attachments, notes,claimIncidentDetails, notifier, exposures,
             vehicles, claimParties,getdate() as  create_ts,api_status
         from
-            edw_temp.migration_create_claim_api_temp2		
+            edw_temp.migration_create_claim_api_temp2
 
-		SET @rows_affected=@@ROWCOUNT;		
+		SET @rows_affected=@@ROWCOUNT;
 		
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
@@ -659,7 +734,7 @@ END AS id,
 
 		-- Drop temp table
 		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp1
-		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2
+		DROP TABLE IF EXISTS edw_temp.migration_create_claim_api_temp2		
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)

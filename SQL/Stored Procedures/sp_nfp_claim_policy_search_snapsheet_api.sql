@@ -1,9 +1,10 @@
 -- =================================================================================================
 -- Description: This procedures insert NFP policies to Claim Policy Search API for snapsheet
 ---------------------------------------------------------------------------------------------------
--- Change date 				|Author						|	Change Description
+-- Change date 				|Author						                |	Change Description
 ---------------------------------------------------------------------------------------------------
 --	09-30-2024				Yunus Mohammed				Created procedure
+-- 01-28-2025               Yunus Mohammed              Updated row_number. Included risk_group
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_nfp_claim_policy_search_snapsheet_api]
 AS 
@@ -32,8 +33,9 @@ BEGIN
         policy_no,effective_dt,expiration_dt,transaction_effective_dt,transaction_seq_no,policy_status,
         insured_first_name,insured_last_name,product_nm,transaction_type,
         source_system_nm,address1,address2,city,[state],zip,country,
-        row_number()over(partition by policy_no, effective_dt, transaction_seq_no
-        order by policy_no,effective_dt,transaction_seq_no) as rn,update_ts
+        row_number()over(partition by  policy_no, effective_dt, transaction_seq_no, cast(risk_item as varchar(max))
+        order by policy_no,effective_dt,transaction_seq_no) as rn
+        ,update_ts
         INTO edw_temp.nfp_claim_policy_search_snapsheet_api_temp1
         FROM
         (
@@ -42,9 +44,8 @@ BEGIN
         insured_first_name,insured_last_name,
         ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date, reporting_month) as transaction_seq_no,
         'PEL' as product_nm,transaction_type,
-        address1,address2,city,[state],zip,'us' as country,
+        address1,address2,city,[state],zip,'us' as country,risk_group as risk_item,
         'NFP' as source_system_nm,update_ts
-                
         FROM
             edw_stage.nfp_policy
         WHERE
@@ -112,7 +113,8 @@ BEGIN
             @etl_audit_sk as etl_audit_sk
             from
             edw_temp.nfp_claim_policy_search_snapsheet_api_temp1
-
+        WHERE
+            rn = 1
 		SET @rows_affected=@@ROWCOUNT;
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.update_ts) FROM [edw_temp].[nfp_claim_policy_search_snapsheet_api_temp1] t1),@last_source_extract_ts);

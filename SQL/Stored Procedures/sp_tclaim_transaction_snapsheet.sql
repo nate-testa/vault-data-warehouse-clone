@@ -12,6 +12,8 @@ GO
 -- 11/20/24		Alberto Almario				2. Changes on some columns and tables
 -- 12/20/24     Sandeep Gundreddy           3. Update product_sk logic, reserve incremental date logic, added -ve logic to recovery reserves
 -- 01/17/25		Hernando Gonzalez			4. add case statement for source_system_sk column
+-- 01/29/25		Sandeep Gundreddy			5. Added source_system_sk=5 to reserve query to exclude ebao transactions
+-- 01/31/25     Sandeep Gundreddy           6. Added logic to load cancel, stopped, failed payments
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction_snapsheet]
 AS
@@ -45,7 +47,7 @@ BEGIN
 		SELECT
 			tc.claim_sk 
 			,tf.claim_feature_sk AS claim_feature_sk
-			,tpr.product_sk 
+			,tc.product_sk 
 			,tc.policy_sk 
 			,tb.broker_sk 
 			,tcu.customer_sk 
@@ -101,25 +103,25 @@ BEGIN
 			END AS source_system_sk
 		INTO edw_temp.tclaim_transaction_snapsheet_temp1
 		FROM edw_stage_snapsheet.financial_reserve_items res
-		LEFT JOIN edw_stage_snapsheet.financial_transactions ft on res.financial_transaction_id = ft.id
-		LEFT JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = res.financial_transaction_id
+		INNER JOIN edw_stage_snapsheet.financial_transactions ft on res.financial_transaction_id = ft.id
+		INNER JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = res.financial_transaction_id
 		INNER JOIN edw_stage_snapsheet.claims c on c.id = res.claim_id
-		INNER JOIN edw_core.tclaim tc ON tc.claim_no = c.claim_number
-		INNER JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no and res.exposure_id = tf.claim_coverage_cd
-		INNER JOIN edw_stage_snapsheet.exposures e on e.claim_id = res.claim_id and tf.exposure_name = e.exposure_name and tf.exposure_type = e.exposure_type
+		INNER JOIN edw_stage_snapsheet.exposures e on e.claim_id = res.claim_id and e.id=res.exposure_id
+		LEFT JOIN edw_core.tclaim tc ON tc.claim_no = c.claim_number
+		LEFT JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no and e.id = tf.claim_coverage_cd
 		LEFT JOIN edw_core.tpolicy tp ON tp.policy_sk = tc.policy_sk
 		LEFT JOIN edw_core.tbroker tb ON tb.broker_id = tp.broker_id
 		LEFT JOIN edw_core.tcustomer tcu ON tcu.customer_id = tp.customer_id
-		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(res.created_at AS DATE)
+		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(fta.created_at AS DATE)
 		LEFT JOIN edw_core.tclaim_cost_category as tcc on tcc.claim_cost_category_nm = res.cost_category
-		LEFT JOIN edw_core.tproduct tpr
+		/*LEFT JOIN edw_core.tproduct tpr
 		ON tpr.product_cd = (CASE 
 								WHEN c.claim_type = 'auto' THEN 'AU' 
 								WHEN c.claim_type = 'liability' THEN 'PEL'
 								WHEN c.claim_type = 'property' AND c.policy_number LIKE 'HO%' THEN 'HO'
 								WHEN c.claim_type = 'property' AND c.policy_number LIKE 'CO%' THEN 'LUX'
 								ELSE c.claim_type 
-							END)
+							END)*/
 		WHERE 1=1
 			and fta.code in ('submitted','cancel') 
 			and ft.approved_at is not null --> Added this filter to exclude pending approvals reserves and subsequent cancel records
@@ -173,16 +175,19 @@ BEGIN
 		INTO edw_temp.tclaim_transaction_snapsheet_temp2
 		FROM edw_temp.tclaim_transaction_snapsheet_temp1 a
 		LEFT JOIN edw_core.tclaim_transaction_type ctt on a.claim_transaction_type_cd = ctt.claim_transaction_type_cd
-        where created_at > @last_source_extract_ts
+        where created_at > @last_source_extract_ts and a.source_system_sk=5-- to exclude migrated transactions
 		;
 
 
 		-- *** Create temp table 3 for payment data***
+/* Payment query will automatically excludes migrated payments becuase they are not loaded into financial_transaction_actions */    
 		SELECT 
-			tc.claim_sk 
-			,tpr.product_sk 
+			tc.claim_sk
+            ,tf.claim_feature_sk
+			,tc.product_sk 
 			,tc.policy_sk 
 			,tb.broker_sk 
+            ,tcu.customer_sk
 			,cp.claim_payment_sk
 			,c.claim_number
 			,e.exposure_name
@@ -190,12 +195,38 @@ BEGIN
 			,e.coverage_name
 			,pay.amount as source_paid_amt
 			,fta.created_at as transaction_ts
+            ,td1.date_sk as transaction_dt_sk
 			,res.reserve_method as reserve_method
 			,ft.id as source_transaction_id
 			,pay.financial_transaction_id
 			,pay.cost_type
 			,pay.exposure_id
-			,pay.cost_category
+			,pay.cost_category,
+            case 
+				when res.cost_type like '%_claim%' 		and res.reserve_method is NULL 			then 'claim'
+				when res.cost_type like '%_adjusting%' 	and res.reserve_method is NULL 			then 'adjusting'
+				when res.cost_type like '%_defense%' 	and res.reserve_method is NULL 			then 'defense'
+				when res.cost_type like '%_claim%' 		and res.reserve_method = 'subrogation' 	then 'claim-subrogation'
+				when res.cost_type like '%_claim%' 		and res.reserve_method = 'salvage' 		then 'claim-salvage'
+				when res.cost_type like '%_claim%' 		and res.reserve_method = 'overpayment' 	then 'claim-overpayment'
+				when res.cost_type like '%_claim%' 		and res.reserve_method = 'deductible' 	then 'claim-deductible'
+				when res.cost_type like '%_claim%' 		and res.reserve_method = 'reinsurance' 	then 'claim-reinsurance'
+				when res.cost_type like '%_adjusting%' 	and res.reserve_method = 'salvage'  	then 'adjusting-salvage'
+				when res.cost_type like '%_adjusting%' 	and res.reserve_method = 'subrogation'  then 'adjusting-subrogation'
+				when res.cost_type like '%_adjusting%' 	and res.reserve_method = 'overpayment'  then 'adjusting-overpayment'
+				when res.cost_type like '%_adjusting%' 	and res.reserve_method = 'deductible'   then 'adjusting-deductible'
+				when res.cost_type like '%_adjusting%' 	and res.reserve_method = 'reinsurance'  then 'adjusting-reinsurance'
+				when res.cost_type like '%_defense%' 	and res.reserve_method = 'salvage' 		then 'defense-salvage'
+				when res.cost_type like '%_defense%' 	and res.reserve_method = 'subrogation' 	then 'defense-subrogation'
+				when res.cost_type like '%_defense%' 	and res.reserve_method = 'overpayment' 	then 'defense-overpayment'
+				when res.cost_type like '%_defense%' 	and res.reserve_method = 'deductible' 	then 'defense-deductible'
+				when res.cost_type like '%_defense%' 	and res.reserve_method = 'reinsurance' 	then 'defense-reinsurance'
+			end as claim_transaction_type_cd,
+            5 as source_system_sk ,
+            NULL AS feature_status_sk,
+            tcc.claim_cost_category_sk,
+            fta.created_at,
+            fta.code
 			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method is NULL and fta.code='submitted' then pay.amount 
 				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method is NULL and fta.code in ('stop','cancel','failed') then -1 * pay.amount
 				ELSE 0 END) as loss_paid_amt
@@ -254,31 +285,25 @@ BEGIN
 		FROM edw_stage_snapsheet.financial_reserve_items res
 		INNER JOIN edw_stage_snapsheet.financial_payment_items pay ON pay.financial_transaction_id = res.financial_transaction_id AND pay.cost_type = res.cost_type AND pay.exposure_id = res.exposure_id AND pay.cost_category = res.cost_category
 		INNER JOIN edw_stage_snapsheet.financial_transactions ft on res.financial_transaction_id = ft.id
-		INNER JOIN (
-			select 
-				RANK() OVER(PARTITION BY financial_transaction_id ORDER BY id DESC) AS rn, *
-			from edw_stage_snapsheet.financial_transaction_actions
-			where code in ('submitted','cancel','stop','failed')
-		) fta on fta.financial_transaction_id = res.financial_transaction_id and fta.rn = 1
-		-- edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = res.financial_transaction_id
+		INNER JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = res.financial_transaction_id
 		INNER JOIN edw_stage_snapsheet.claims c on c.id = res.claim_id
+		INNER JOIN edw_stage_snapsheet.exposures e on e.claim_id = res.claim_id and res.exposure_id=e.id
 		INNER JOIN edw_core.tclaim tc ON tc.claim_no = c.claim_number
-		INNER JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no and res.exposure_id = tf.claim_coverage_cd
-		INNER JOIN edw_stage_snapsheet.exposures e on e.claim_id = res.claim_id and tf.exposure_name = e.exposure_name and tf.exposure_type = e.exposure_type
+		INNER JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no and e.id = tf.claim_coverage_cd
 		LEFT JOIN edw_core.tpolicy tp ON tp.policy_sk = tc.policy_sk
 		LEFT JOIN edw_core.tbroker tb ON tb.broker_id = tp.broker_id
 		LEFT JOIN edw_core.tcustomer tcu ON tcu.customer_id = tp.customer_id
 		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(res.created_at AS DATE)
 		LEFT JOIN edw_core.tclaim_cost_category as tcc on tcc.claim_cost_category_nm = res.cost_category
-		LEFT JOIN edw_core.tclaim_payment as cp on cp.payment_no = res.financial_transaction_id and cp.claim_type_cd = pay.cost_type and cp.cost_category = pay.cost_category
-		LEFT JOIN edw_core.tproduct tpr
+		LEFT JOIN edw_core.tclaim_payment as cp on cp.payment_no = res.financial_transaction_id and cp.payment_sequence_no=pay.id and cp.claim_feature_sk=tf.claim_feature_sk
+		/*LEFT JOIN edw_core.tproduct tpr
 		ON tpr.product_cd = (CASE 
 									WHEN c.claim_type = 'auto' THEN 'AU' 
 									WHEN c.claim_type = 'liability' THEN 'PEL'
 									WHEN c.claim_type = 'property' AND c.policy_number LIKE 'HO%' THEN 'HO'
 									WHEN c.claim_type = 'property' AND c.policy_number LIKE 'CO%' THEN 'LUX'
 									ELSE c.claim_type 
-								END)
+								END)*/
 		WHERE 1=1
 			AND fta.code in ('submitted','cancel','stop','failed')
 			AND fta.created_at > @last_source_extract_ts
@@ -340,14 +365,66 @@ BEGIN
 		FROM edw_temp.tclaim_transaction_snapsheet_temp2 a
 		LEFT JOIN edw_temp.tclaim_transaction_snapsheet_temp3 b
 			ON a.claim_sk = b.claim_sk
-			AND a.product_sk = b.product_sk
-			AND a.exposure_name = b.exposure_name
+			--AND a.product_sk = b.product_sk
 			AND a.transaction_ts = b.transaction_ts
 			AND a.financial_transaction_id = b.financial_transaction_id
 			AND a.cost_type = b.cost_type
 			AND a.exposure_id = b.exposure_id
 			AND a.cost_category = b.cost_category
-		;
+        UNION ALL
+       SELECT 
+			claim_sk,
+			claim_feature_sk,
+			product_sk,
+			policy_sk,
+			broker_sk,
+			customer_sk,
+			transaction_dt_sk,
+			transaction_ts,
+			claim_payment_sk,
+			ctt.claim_transaction_type_sk,
+			feature_status_sk,
+			0 AS loss_reserve_amt,
+			0 AS expense_reserve_amt,
+			0 AS subrogation_recovery_reserve_amt,
+			0 AS salvage_recovery_reserve_amt,
+			0 AS salvage_recovery_expense_reserve_amt,
+			0 AS subrogation_recovery_expense_reserve_amt,
+			loss_paid_amt,
+			expense_paid_amt,
+			subrogation_recovery_amt,
+			salvage_recovery_amt,
+			salvage_expense_recovery_amt,
+			subrogation_expense_recovery_amt,
+			source_system_sk,
+			created_at,
+			claim_cost_category_sk,
+			0 as defense_reserve_amt,
+			0 as deductible_recovery_reserve_amt,
+			0 as reinsurance_recovery_reserve_amt,
+			0 as overpayment_recovery_reserve_amt,
+			0 as deductible_recovery_expense_reserve_amt,
+			0 as reinsurance_recovery_expense_reserve_amt,
+			0 as overpayment_recovery_expense_reserve_amt,
+			0 as subrogation_recovery_defense_reserve_amt,
+			0 as salvage_recovery_defense_reserve_amt,
+			0 as deductible_recovery_defense_reserve_amt,
+			0 as reinsurance_recovery_defense_reserve_amt,
+			0 as overpayment_recovery_defense_reserve_amt,
+			b.defense_paid_amt,
+			b.deductible_recovery_amt,
+			b.reinsurance_recovery_amt,
+			b.overpayment_recovery_amt,
+			b.deductible_expense_recovery_amt,
+			b.reinsurance_expense_recovery_amt,
+			b.overpayment_expense_recovery_amt,
+			b.subrogation_defense_recovery_amt,
+			b.salvage_defense_recovery_amt,
+			b.deductible_defense_recovery_amt,
+			b.reinsurance_defense_recovery_amt,
+			b.overpayment_defense_recovery_amt 
+       FROM edw_temp.tclaim_transaction_snapsheet_temp3 b LEFT JOIN edw_core.tclaim_transaction_type ctt on b.claim_transaction_type_cd = ctt.claim_transaction_type_cd
+       WHERE code in ('cancel','stop','failed');
 
 
 	-- Start Insert process
@@ -492,3 +569,4 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
+GO
