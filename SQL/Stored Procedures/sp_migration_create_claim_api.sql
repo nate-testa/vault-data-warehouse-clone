@@ -15,6 +15,7 @@
 -- 01/30/2025			Yunus Mohammed					7. claimParties logic updated to get claimParties for claims without coverage
 --																								 vehicles - removed check for InjuredPerson and PipMedPay.
 -- 01/31/2025			Yunus Mohammed					8. Removed special characters from policy_no stored in case table
+-- 02/03/2025			Yunus Mohammed					9 datetimeOfLoss and datetimeOfNotification formatted to default timestamp to 12 PM
 -- ==================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api]
 @claim_no varchar(max) = null
@@ -122,8 +123,8 @@ BEGIN
 		FORMAT(firstClosedAt, 'yyyy-MM-ddTHH:mm:ssZ')  as firstClosedAt,
 		FORMAT(openedAt, 'yyyy-MM-ddTHH:mm:ssZ')  as openedAt,
 		CASE WHEN closedAt < openedAt THEN null ELSE FORMAT(closedAt, 'yyyy-MM-ddTHH:mm:ssZ') END AS closedAt,
-		FORMAT(datetimeOfLoss, 'yyyy-MM-ddTHH:mm:ssZ') as datetimeOfLoss, 
-		FORMAT(datetimeOfNotification, 'yyyy-MM-ddTHH:mm:ssZ') as datetimeOfNotification,
+		FORMAT(DATEADD(HOUR, 12, CAST(FORMAT(datetimeOfLoss, 'yyyy-MM-dd') AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') AS datetimeOfLoss,
+		FORMAT(DATEADD(HOUR, 12, CAST(FORMAT(datetimeOfNotification, 'yyyy-MM-dd') AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') AS datetimeOfNotification,		
 		accountCode, lossType,
 		attachments, notes,claimIncidentDetails,
 		notifier,exposures,
