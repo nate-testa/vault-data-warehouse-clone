@@ -73,7 +73,6 @@ def execute_process_claims():
     process_claims(claims_qry)
 
 def execute_process_financial_transactions():
-    # process_financial_transactions(financial_transactions_qry)
     process_ls = []
 
     for i in range(3): # Create 3 processes
