@@ -6,3 +6,4 @@ IF NOT EXISTS (
     AND     COLUMN_NAME = 'id'
 ) BEGIN ALTER TABLE edw_integration.claim_policy_search_snapsheet_api
 ADD id [int] IDENTITY(1,1) NOT NULL END
+--
