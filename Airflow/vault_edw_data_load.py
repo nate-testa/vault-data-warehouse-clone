@@ -172,6 +172,13 @@ with DAG(
             azure_data_factory_conn_id='azure_data_factory_vault_data',
             pipeline_name="LS_AWS_DMS_dmsDocument",
             # parameters={"myParam": "value"},
+        )
+
+        adf_etl_load_ls_aws_vsp_claims_payments: BaseOperator = AzureDataFactoryRunPipelineOperator(
+            task_id="adf_etl_load_ls_aws_vsp_claims_payments",
+            azure_data_factory_conn_id='azure_data_factory_vault_data',
+            pipeline_name="LS_AWS_VSP_int_claims_payments_audit",
+            # parameters={"myParam": "value"},
         )        
 
         send_adf_email = EmailOperator(
@@ -181,7 +188,7 @@ with DAG(
             html_content=get_HTML_on_vault_format('The Azure Data Factory pipelines executed successfully',''),
         )
 
-        adf_etl_load_stage >> adf_etl_load_ebao_mqq >> adf_etl_load_ebao_mqq_address >> adf_etl_load_ebao_pub_user >> adf_etl_load_ebao_pub_diary >> adf_etl_load_ls_aws_dms >> send_adf_email
+        adf_etl_load_stage >> adf_etl_load_ebao_mqq >> adf_etl_load_ebao_mqq_address >> adf_etl_load_ebao_pub_user >> adf_etl_load_ebao_pub_diary >> adf_etl_load_ls_aws_dms >> adf_etl_load_ls_aws_vsp_claims_payments >> send_adf_email
 
 
     with TaskGroup("home_group") as home_group:
@@ -403,9 +410,9 @@ with DAG(
             'sp_tclaim_cost_category_snapsheet',
             'sp_tcause_of_loss_snapsheet',
             'sp_tclaim_snapsheet',
+            'sp_ebao_tclaim_onetime_datafix',
             'sp_tclaim_feature_snapsheet',
             'sp_tclaim_payment_snapsheet',
-            'sp_tclaim_payment_ebao_payment_status_update',
             'sp_tclaim_transaction_snapsheet',
             'sp_tclaim_note_snapsheet',
             'sp_tclaim_task_snapsheet',
@@ -641,6 +648,7 @@ with DAG(
 
         integration_group_items = [
             'sp_tclaim_policy_search_api',
+            'sp_policy_claim_search_dms_api',
             'sp_tclaim_symbility_api', 
             'sp_billing_account_customer_portal_api', 
             'sp_policy_customer_portal_api',
@@ -701,6 +709,12 @@ with DAG(
             dag=dag,
         )
 
+        exec_Snapsheet_Financial_Transaction_Action_Daily_Feed = TriggerDagRunOperator(
+            task_id="exec_Snapsheet_Financial_Transaction_Action_Daily_Feed",
+            trigger_dag_id="Snapsheet_Financial_Transaction_Action_Daily_Feed",
+            dag=dag,
+        )
+
         send_integration_email = EmailOperator(
             task_id='send_integration_email',
             to=to_email,
@@ -708,7 +722,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
         )
 
-        exec_Snapsheet_Daily_Feed >> operators[0] >> operators[1] >> operators[2] >> operators[3] >> operators[4] >> operators[5] >> operators[6] >> ivans_api_call >> operators[7] >> generate_livevox_file >> upload_livevox_file_to_sftp >> operators[8] >> operators[9] >> operators[10] >> exec_vault_redzone_feed >> exec_vault_CLUE_property_daily_feed >> send_integration_email
+        exec_Snapsheet_Daily_Feed >> operators[0] >> operators[1] >> operators[2] >> operators[3] >> operators[4] >> operators[5] >> operators[6] >> operators[7] >> ivans_api_call >> operators[8] >> generate_livevox_file >> upload_livevox_file_to_sftp >> operators[9] >> operators[10] >> operators[11] >> exec_vault_redzone_feed >> exec_vault_CLUE_property_daily_feed >> exec_Snapsheet_Financial_Transaction_Action_Daily_Feed >> send_integration_email
 
     exec_vault_edw_data_load_quotes = TriggerDagRunOperator(
         task_id="exec_vault_edw_data_load_quotes",
