@@ -1,3 +1,6 @@
+
+/* Already deployed from staging branch on 20250125 hence commenting out for 20250207 release 
+
 -- tedw_release_summary
 INSERT INTO edw_core.tedw_release_summary (release_summary, send_email_in, send_email_dt, create_ts, update_ts)
 VALUES (
@@ -92,3 +95,5 @@ INSERT INTO edw_core.tedw_release_note (ticket_no, ticket_short_desc, ticket_typ
 INSERT INTO edw_core.tedw_release_note (ticket_no, ticket_short_desc, ticket_type, production_deployment_dt, resource_nm, database_change_type, impacted_table_schema, impacted_table_nm, impacted_column_nm, resolution_summary, edw_release_summary_sk, send_email_in, send_email_dt, create_ts, update_ts) VALUES ('VI36200;VI36198;VI36020;VI36021;VI35954;VI36121;VI36124','IVANS Policy Resent Request','Bug','2025-01-24','Rushin Shah','Datafix','edw_integration','policy_ivans_home_feed','','Resent a few home policies to IVANS','26','Yes','2025-01-27',getdate(),getdate());
 INSERT INTO edw_core.tedw_release_note (ticket_no, ticket_short_desc, ticket_type, production_deployment_dt, resource_nm, database_change_type, impacted_table_schema, impacted_table_nm, impacted_column_nm, resolution_summary, edw_release_summary_sk, send_email_in, send_email_dt, create_ts, update_ts) VALUES ('VI36200;VI36198;VI36020;VI36021;VI35954;VI36121;VI36124','IVANS Policy Resent Request','Bug','2025-01-24','Rushin Shah','Datafix','edw_integration','policy_ivans_auto_feed','','Resent a few auto policies to IVANS','26','Yes','2025-01-27',getdate(),getdate());
 INSERT INTO edw_core.tedw_release_note (ticket_no, ticket_short_desc, ticket_type, production_deployment_dt, resource_nm, database_change_type, impacted_table_schema, impacted_table_nm, impacted_column_nm, resolution_summary, edw_release_summary_sk, send_email_in, send_email_dt, create_ts, update_ts) VALUES ('VI36200;VI36198;VI36020;VI36021;VI35954;VI36121;VI36124','IVANS Policy Resent Request','Bug','2025-01-24','Rushin Shah','Datafix','edw_integration','policy_ivans_pel_feed','','Resent a few PEL policies to IVANS','26','Yes','2025-01-27',getdate(),getdate());
+
+*/
