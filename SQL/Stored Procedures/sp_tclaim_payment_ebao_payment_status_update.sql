@@ -38,6 +38,7 @@ BEGIN
 				fpi.cost_type AS claim_type_cd,
 				fpi.cost_category,
 				ft.stage AS payment_status,
+				ft.remote_identifier,
 				ft.updated_at
 
 		INTO 	edw_temp.tclaim_payment_ebao_payment_status_update_temp1 
@@ -56,10 +57,7 @@ BEGIN
 		MERGE edw_core.tclaim_payment  AS Target
 		USING edw_temp.tclaim_payment_ebao_payment_status_update_temp1 AS Source
 			ON  Source.claim_feature_sk=Target.claim_feature_sk 
-			AND Source.payment_no=Target.payment_no 
-			AND Source.payment_sequence_no=Target.payment_sequence_no
-			AND Source.claim_type_cd=Target.claim_type_cd
-			AND Source.cost_category=Target.cost_category
+			AND Source.remote_identifier=Target.settle_payee_id
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
