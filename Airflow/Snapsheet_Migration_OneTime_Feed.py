@@ -172,6 +172,7 @@ with DAG(
 
         phase_one_items = [
             'sp_migration_create_claim_api',
+            'sp_migration_create_claim_api_one_time_update',
             'sp_migration_create_claim_api_update_contactinfo'      
         ]
 
@@ -179,6 +180,14 @@ with DAG(
             task_id='sp_migration_create_claim_api',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_migration_create_claim_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_migration_create_claim_api_one_time_update = MsSqlOperator(
+            task_id='sp_migration_create_claim_api_one_time_update',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_migration_create_claim_api_one_time_update",
             database="vault_edw",
             autocommit=True,
         )
@@ -208,9 +217,9 @@ with DAG(
         )
 
         if ENVIRONMENT != 'PRODUCTION':
-            sp_migration_create_claim_api >> sp_migration_create_claim_api_update_contactinfo >> py_process_claims >> send_phase_one_email
+            sp_migration_create_claim_api >> sp_migration_create_claim_api_one_time_update >> sp_migration_create_claim_api_update_contactinfo >> py_process_claims >> send_phase_one_email
         else:
-            sp_migration_create_claim_api >> py_process_claims >> send_phase_one_email
+            sp_migration_create_claim_api >> sp_migration_create_claim_api_one_time_update >> py_process_claims >> send_phase_one_email
 
 
     check_for_claim_executions = BranchPythonOperator(
