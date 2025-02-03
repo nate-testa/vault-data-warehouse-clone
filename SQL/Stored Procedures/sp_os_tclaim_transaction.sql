@@ -3,6 +3,12 @@
 -- Create Date: 11/08/2023
 -- Description: This procedures insert OneShield claim transaction into tclaim transaction table
 -- =============================================
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 11/08/23		Yunus Mohammed				1. Created the procedure
+-- 02/03/25		Yunus Mohammed				2. Removed some columns and renamed some columns
+-- ================================================================================================= 
+
 CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tclaim_transaction]
 
 AS
@@ -32,13 +38,15 @@ BEGIN
 		temptrans.transaction_ts,NULL AS claim_payment_sk,temptrans.claim_transaction_type_sk AS claim_transaction_type_sk,
 		temptrans.feature_status_sk,
 		ROUND(temptrans.loss_reserve_amt,2) AS loss_reserve_amt,ROUND(temptrans.expense_reserve_amt,2) AS expense_reserve_amt,
-		ROUND(temptrans.adjusting_other_reserve_amt,2) AS adjusting_other_reserve_amt,ROUND(temptrans.subro_reserve_amt,2) AS subro_reserve_amt,
-		ROUND(temptrans.salvage_reserve_amt,2) AS salvage_reserve_amt,ROUND(temptrans.salvage_expense_reserve_amt,2) AS salvage_expense_reserve_amt,
-		ROUND(temptrans.subro_expense_reserve_amt,2) AS subro_expense_reserve_amt,ROUND(temptrans.loss_paid_amt,2) AS loss_paid_amt,
+		ROUND(temptrans.subrogation_recovery_reserve_amt,2) AS subrogation_recovery_reserve_amt,
+		ROUND(temptrans.salvage_recovery_reserve_amt,2) AS salvage_recovery_reserve_amt,
+		ROUND(temptrans.salvage_recovery_expense_reserve_amt,2) AS salvage_recovery_expense_reserve_amt,
+		ROUND(temptrans.subrogation_recovery_expense_reserve_amt,2) AS subrogation_recovery_expense_reserve_amt,
+		ROUND(temptrans.loss_paid_amt,2) AS loss_paid_amt,
 		ROUND(temptrans.expense_paid_amt,2) AS expense_paid_amt,ROUND(temptrans.adjusting_other_paid_amt,2) AS adjusting_other_paid_amt,
-		ROUND(temptrans.subro_recovery_amt,2) AS subro_recovery_amt,ROUND(temptrans.salvage_recovery_amt,2) AS salvage_recovery_amt,
-		ROUND(temptrans.salvage_expense_paid_amt,2) AS salvage_expense_paid_amt,ROUND(temptrans.subro_expense_paid_amt,2) AS subro_expense_paid_amt,
-		ROUND(temptrans.refund_indemnity_paid_amt,2) AS refund_indemnity_paid_amt,ROUND(temptrans.refund_expense_paid_amt,2) AS refund_expense_paid_amt,
+		ROUND(temptrans.subrogation_recovery_amt,2) AS subrogation_recovery_amt,ROUND(temptrans.salvage_recovery_amt,2) AS salvage_recovery_amt,
+		ROUND(temptrans.salvage_expense_recovery_amt,2) AS salvage_expense_recovery_amt,
+		ROUND(temptrans.subrogation_expense_recovery_amt,2) AS subrogation_expense_recovery_amt,		
 		temptrans.source_system_sk
 		INTO edw_temp.os_tclaim_transaction_temp1
 		FROM
@@ -57,23 +65,21 @@ BEGIN
 		INNER JOIN edw_core.tclaim_feature tcf ON temp.claim_sk=tcf.claim_sk
 		AND temp.subclaim_seq_no=tcf.subclaim_seq_no
 
-
 		INSERT INTO edw_core.tclaim_transaction
 		(
 		claim_sk,claim_feature_sk,product_sk,defense_cost_in,transaction_dt_sk,transaction_ts,
 		claim_payment_sk,claim_transaction_type_sk,feature_status_sk,
-		loss_reserve_amt,expense_reserve_amt,adjusting_other_reserve_amt,
-		subro_reserve_amt,salvage_reserve_amt,salvage_expense_reserve_amt,subro_expense_reserve_amt,loss_paid_amt,expense_paid_amt,
-		adjusting_other_paid_amt,subro_recovery_amt,salvage_recovery_amt,salvage_expense_paid_amt,subro_expense_paid_amt,
-		refund_indemnity_paid_amt,refund_expense_paid_amt,source_system_sk,create_ts,update_ts,etl_audit_sk
+		loss_reserve_amt,expense_reserve_amt,
+		subrogation_recovery_reserve_amt,salvage_recovery_reserve_amt,salvage_recovery_expense_reserve_amt,subrogation_recovery_expense_reserve_amt,loss_paid_amt,expense_paid_amt,
+		adjusting_other_paid_amt,subrogation_recovery_amt,salvage_recovery_amt,salvage_expense_recovery_amt,subrogation_expense_recovery_amt,
+		source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 		SELECT claim_sk,claim_feature_sk,product_sk,defense_cost_in,transaction_dt_sk,transaction_ts,
 		claim_payment_sk,claim_transaction_type_sk,feature_status_sk,
-		loss_reserve_amt,expense_reserve_amt,adjusting_other_reserve_amt,
-		subro_reserve_amt,salvage_reserve_amt,salvage_expense_reserve_amt,subro_expense_reserve_amt,loss_paid_amt,expense_paid_amt,
-		adjusting_other_paid_amt,subro_recovery_amt,salvage_recovery_amt,salvage_expense_paid_amt,subro_expense_paid_amt,
-		refund_indemnity_paid_amt,refund_expense_paid_amt,source_system_sk,
-		GETDATE() AS create_ts,GETDATE() AS update_ts, @etl_audit_sk AS etl_audit_sk
+		loss_reserve_amt,expense_reserve_amt,
+		subrogation_recovery_reserve_amt,salvage_recovery_reserve_amt,salvage_recovery_expense_reserve_amt,subrogation_recovery_expense_reserve_amt,loss_paid_amt,expense_paid_amt,
+		adjusting_other_paid_amt,subrogation_recovery_amt,salvage_recovery_amt,salvage_expense_recovery_amt,subrogation_expense_recovery_amt,
+		source_system_sk,GETDATE() AS create_ts,GETDATE() AS update_ts, @etl_audit_sk AS etl_audit_sk
 		FROM
 			edw_temp.os_tclaim_transaction_temp1
 

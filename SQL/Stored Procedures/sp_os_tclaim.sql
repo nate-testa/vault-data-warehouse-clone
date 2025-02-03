@@ -3,6 +3,11 @@
 -- Create Date: 11/08/2023
 -- Description: This procedures insert OneShied claim into tclaim table
 -- =============================================
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 11/08/23		Yunus Mohammed				1. Created the procedure
+-- 02/03/25		Yunus Mohammed				2. Removed some columns and renamed some columns
+-- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tclaim]
 
 AS
@@ -31,10 +36,10 @@ BEGIN
 		claim_no,loss_dt,report_dt,policy_no,policy_effective_dt,policy_sk,tcl.cause_of_loss_sk,
 		loss_desc,claim_status,source_claim_status,cat.catastrophe_sk,product_sk,underwriting_company_nm,
 		loss_address,loss_city_nm,loss_state_nm,loss_zip_cd,loss_country_nm,NULL AS agencyid,contact_nm,
-		contact_type,contact_phone,contact_person_email,loss_reserve_amt,expense_reserve_amt,adjusting_other_reserve_amt,
-		subro_reserve_amt,salvage_reserve_amt,salvage_expense_reserve_amt,subro_expense_reserve_amt,loss_paid_amt,
-		expense_paid_amt,adjusting_other_paid_amt,subro_recovery_amt,salvage_recovery_amt,salvage_expense_paid_amt,
-		subro_expense_paid_amt,refund_indemnity_paid_amt,refund_expense_paid_amt,
+		contact_type,contact_phone,contact_person_email,loss_reserve_amt,expense_reserve_amt,
+		subrogation_recovery_reserve_amt,salvage_recovery_reserve_amt,salvage_recovery_expense_reserve_amt,subrogation_recovery_expense_reserve_amt,loss_paid_amt,
+		expense_paid_amt,adjusting_other_paid_amt,subrogation_recovery_amt,salvage_recovery_amt,salvage_expense_recovery_amt,
+		subrogation_expense_recovery_amt,
 		tc.source_system_sk
 		INTO edw_temp.os_tclaim_temp1
 		FROM
@@ -51,18 +56,18 @@ BEGIN
 		claim_no,loss_dt,report_dt,policy_no,policy_effective_dt,policy_sk,cause_of_loss_sk,
 		loss_desc,claim_status,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,
 		loss_address,loss_city_nm,loss_state_cd,loss_zip_cd,loss_country_nm,contact_nm,
-		contact_type,contact_phone,contact_person_email,loss_reserve_amt,expense_reserve_amt,adjusting_other_reserve_amt,
-		subro_reserve_amt,salvage_reserve_amt,salvage_expense_reserve_amt,subro_expense_reserve_amt,loss_paid_amt,
-		expense_paid_amt,adjusting_other_paid_amt,subro_recovery_amt,salvage_recovery_amt,salvage_expense_paid_amt,
-		subro_expense_paid_amt,refund_indemnity_paid_amt,refund_expense_paid_amt,source_system_sk,create_ts,update_ts,etl_audit_sk
+		contact_type,contact_phone,contact_person_email,loss_reserve_amt,expense_reserve_amt,
+		subrogation_recovery_reserve_amt,salvage_recovery_reserve_amt,salvage_recovery_expense_reserve_amt,subrogation_recovery_expense_reserve_amt,loss_paid_amt,
+		expense_paid_amt,adjusting_other_paid_amt,subrogation_recovery_amt,salvage_recovery_amt,salvage_expense_recovery_amt,
+		subrogation_expense_recovery_amt,source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 		SELECT claim_no,loss_dt,report_dt,policy_no,policy_effective_dt,policy_sk,cause_of_loss_sk,
 		loss_desc,claim_status,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,
 		loss_address,loss_city_nm,loss_state_nm,loss_zip_cd,loss_country_nm,contact_nm,
-		contact_type,contact_phone,contact_person_email,loss_reserve_amt,expense_reserve_amt,adjusting_other_reserve_amt,
-		subro_reserve_amt,salvage_reserve_amt,salvage_expense_reserve_amt,subro_expense_reserve_amt,loss_paid_amt,
-		expense_paid_amt,adjusting_other_paid_amt,subro_recovery_amt,salvage_recovery_amt,salvage_expense_paid_amt,
-		subro_expense_paid_amt,refund_indemnity_paid_amt,refund_expense_paid_amt,source_system_sk,
+		contact_type,contact_phone,contact_person_email,loss_reserve_amt,expense_reserve_amt,
+		subrogation_recovery_reserve_amt,salvage_recovery_reserve_amt,salvage_recovery_expense_reserve_amt,subrogation_recovery_expense_reserve_amt,loss_paid_amt,
+		expense_paid_amt,adjusting_other_paid_amt,subrogation_recovery_amt,salvage_recovery_amt,salvage_expense_recovery_amt,
+		subrogation_expense_recovery_amt,source_system_sk,
 		GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM
 			edw_temp.os_tclaim_temp1
