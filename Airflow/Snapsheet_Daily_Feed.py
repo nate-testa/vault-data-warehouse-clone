@@ -8,7 +8,7 @@ from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
-from snapsheet_api_claim_policy_search import process_snapsheet_policies
+from snapsheet_api_claim_policy_search import process_snapsheet_policies_parallel
 
 to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
@@ -117,7 +117,7 @@ with DAG(
 
     py_process_snapsheet_policies = PythonOperator(
             task_id='py_process_snapsheet_policies',
-            python_callable=process_snapsheet_policies,
+            python_callable=process_snapsheet_policies_parallel,
             provide_context=True,
             dag=dag,
         )
