@@ -1,4 +1,5 @@
 import pendulum
+import multiprocessing
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.models import Variable
@@ -72,7 +73,27 @@ def execute_process_claims():
     process_claims(claims_qry)
 
 def execute_process_financial_transactions():
-    process_financial_transactions(financial_transactions_qry)
+    # process_financial_transactions(financial_transactions_qry)
+    process_ls = []
+
+    for i in range(3): # Create 3 processes
+        if i == 0:
+            financial_transactions_qry_1 = financial_transactions_qry.replace('and 1=1', 'and id between 1 and 33')
+            p = multiprocessing.Process(target=process_financial_transactions, args=(financial_transactions_qry_1,))
+        elif i == 1:
+            financial_transactions_qry_2 = financial_transactions_qry.replace('and 1=1', 'and id between 34 and 67')
+            p = multiprocessing.Process(target=process_financial_transactions, args=(financial_transactions_qry_2,))
+        elif i == 2:
+            financial_transactions_qry_3 = financial_transactions_qry.replace('and 1=1', 'and id between 68 and 100')
+            p = multiprocessing.Process(target=process_financial_transactions, args=(financial_transactions_qry_3,))        
+
+        process_ls.append(p)  # save process
+        p.start()  # start process
+
+    for p in process_ls:
+        p.join()  # wait for all processes to finish
+
+    print("All process have finished.")
 
 def execute_process_notes():
     process_notes(notes_qry)

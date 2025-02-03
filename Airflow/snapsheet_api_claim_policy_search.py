@@ -1,6 +1,7 @@
 import argparse
 import json
 import logging
+import multiprocessing
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.utils.log.logging_mixin import LoggingMixin
 from snapsheet_api import SnapsheetAPI
@@ -26,7 +27,8 @@ policies_qry = """
                 ROW_NUMBER() OVER (PARTITION BY policyNumber , inceptionDate ORDER BY transaction_seq_no DESC) AS rank
             from 
                 edw_integration.claim_policy_search_snapsheet_api
-            where api_status in ('Error','pending') 
+            where api_status in ('pending')
+            and 1=1
         ) a 
         WHERE a.rank = 1
     """
@@ -72,6 +74,30 @@ def process_policies(qry):
 
 def process_snapsheet_policies():
     process_policies(policies_qry)
+
+def process_snapsheet_policies_parallel():
+    
+    process_ls = []
+
+    for i in range(3): # Create 3 processes
+        if i == 0:
+            policies_qry_1 = policies_qry.replace('and 1=1', 'and id between 1 and 33')
+            p = multiprocessing.Process(target=process_policies, args=(policies_qry_1,))
+        elif i == 1:
+            policies_qry_2 = policies_qry.replace('and 1=1', 'and id between 34 and 67')
+            p = multiprocessing.Process(target=process_policies, args=(policies_qry_2,))
+        elif i == 2:
+            policies_qry_3 = policies_qry.replace('and 1=1', 'and id between 68 and 100')
+            p = multiprocessing.Process(target=process_policies, args=(policies_qry_3,))        
+
+        process_ls.append(p)  # save process
+        p.start()  # start process
+
+    for p in process_ls:
+        p.join()  # wait for all processes to finish
+
+    print("All process have finished.")
+    
 
 def main():
 
