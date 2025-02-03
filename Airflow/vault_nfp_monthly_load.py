@@ -75,13 +75,31 @@ with DAG(
     with TaskGroup("nfp_monthly_load_group") as nfp_monthly_load_group:
 
         nfp_monthly_load_group_items = [
-            'sp_nfp_claim_policy_search_api'
+            'sp_nfp_claim_policy_search_api',
+            'sp_nfp_claim_policy_search_snapsheet_api',
+            'sp_nfp_claim_policy_webhook_snapsheet_api'
          ]
         
         sp_nfp_claim_policy_search_api = MsSqlOperator(
             task_id='sp_nfp_claim_policy_search_api',
             mssql_conn_id='Vault_EDW',
             sql="EXEC edw_core.sp_nfp_claim_policy_search_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_nfp_claim_policy_search_snapsheet_api = MsSqlOperator(
+            task_id='sp_nfp_claim_policy_search_snapsheet_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_nfp_claim_policy_search_snapsheet_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_nfp_claim_policy_webhook_snapsheet_api = MsSqlOperator(
+            task_id='sp_nfp_claim_policy_webhook_snapsheet_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_nfp_claim_policy_webhook_snapsheet_api",
             database="vault_edw",
             autocommit=True,
         )
@@ -93,7 +111,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(nfp_monthly_load_group_items, 'The stored procedures executed successfully for nfp claim policy search api table'),
         )
 
-        sp_nfp_claim_policy_search_api >> send_nfp_email
+        sp_nfp_claim_policy_search_api >> sp_nfp_claim_policy_search_snapsheet_api >> sp_nfp_claim_policy_webhook_snapsheet_api >> send_nfp_email
 
 
 
