@@ -8,6 +8,8 @@
 -- 02-03-2025				Yunus Mohammed				Added distinct and removed dups from source table
 --																							Used pm_cleared_date as originated_at
 --																							Used remote_identifier as settle_payee_id
+-- 02-04-2025				Yunus Mohammed				Removed settle_payee_id column and used id column instead of it.
+--																							Used migration_create_financial_transaction_api.id column to insert data in it.
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_financial_transaction_action_snapsheet_api]
 AS
