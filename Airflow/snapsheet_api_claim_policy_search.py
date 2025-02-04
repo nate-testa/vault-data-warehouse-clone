@@ -84,10 +84,10 @@ def process_snapsheet_policies_parallel():
             policies_qry_1 = policies_qry.replace('and 1=1', 'and id between 1 and 50000')
             p = multiprocessing.Process(target=process_policies, args=(policies_qry_1,))
         elif i == 1:
-            policies_qry_2 = policies_qry.replace('and 1=1', 'and id between 50001 and 10000')
+            policies_qry_2 = policies_qry.replace('and 1=1', 'and id between 50001 and 100000')
             p = multiprocessing.Process(target=process_policies, args=(policies_qry_2,))
         elif i == 2:
-            policies_qry_3 = policies_qry.replace('and 1=1', 'and id > 10000')
+            policies_qry_3 = policies_qry.replace('and 1=1', 'and id > 100000')
             p = multiprocessing.Process(target=process_policies, args=(policies_qry_3,))        
 
         process_ls.append(p)  # save process
