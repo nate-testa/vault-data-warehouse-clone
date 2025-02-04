@@ -31,7 +31,7 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.claim_financial_transaction_action_snapsheet_api_temp1;
 
 		SELECT 
-		settle_payee_id,
+		id,
 		json_query((
 			SELECT
 			[data.type],
@@ -47,7 +47,7 @@ BEGIN
 		from
 		(
 		select
-			fin.remote_identifier as settle_payee_id,
+			fin.id,
 			'financial_transaction_action' as [data.type],
 			case 
 			when pay.pm_status = 'In Progress' then 'submittted'
@@ -76,9 +76,9 @@ BEGIN
 
 		insert into edw_integration.claim_financial_transaction_action_snapsheet_api
 		(
-			settle_payee_id,[data],create_ts,api_status,etl_audit_sk
+			id,[data],create_ts,api_status,etl_audit_sk
 		)
-		select settle_payee_id,[data],getdate() as create_ts,'pending' as api_status,@etl_audit_sk
+		select id,[data],getdate() as create_ts,'pending' as api_status,@etl_audit_sk
 		from
 		edw_temp.claim_financial_transaction_action_snapsheet_api_temp1
 		
