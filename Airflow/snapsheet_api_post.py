@@ -27,6 +27,7 @@ policies_qry = """
             from
                 edw_integration.claim_policy_search_snapsheet_api
             where api_status in ('pending')
+            and 1=1
         ) a
         WHERE a.rank = 1
     """
@@ -37,6 +38,7 @@ claims_qry = """
             accountCode, lossType, notes, reservation, claimIncidentDetails, emergencyServicesDetail, notifier, notificationMethod, exposures, claimParties, vehicles, financialTransactions
         from edw_stage.migration_create_claim_api
         where api_status  in ('pending')
+        and 1=1
     """
 
 notes_qry = """
@@ -44,6 +46,7 @@ notes_qry = """
             claim_no, note_created_ts, note_json as data
         from edw_stage.migration_create_note_api
         where api_status in ('pending')
+        and 1=1
     """
 
 financial_transactions_qry = """
@@ -51,7 +54,8 @@ financial_transactions_qry = """
             financial_transaction_id, claim_no, data
         from edw_stage.migration_create_financial_transaction_api
         where api_status in ('pending')
-        order by financial_transaction_id
+        and 1=1
+        order by claim_no, item_id, post_date, financial_transaction_id
     """
 
 financial_transaction_action_qry = """
@@ -59,6 +63,7 @@ financial_transaction_action_qry = """
             settle_payee_id, data
         from edw_integration.claim_financial_transaction_action_snapsheet_api
         where api_status  in ('pending')
+        and 1=1
     """
 
 

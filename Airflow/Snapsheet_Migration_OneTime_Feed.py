@@ -1,4 +1,5 @@
 import pendulum
+import multiprocessing
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.models import Variable
@@ -69,13 +70,70 @@ def check_claim_executions(**kwargs):
     return result
 
 def execute_process_claims():
-    process_claims(claims_qry)
+    process_ls = []
+
+    for i in range(3): # Create 3 processes
+        if i == 0:
+            claims_qry_1 = claims_qry.replace('and 1=1', 'and id between 1 and 3300')
+            p = multiprocessing.Process(target=process_claims, args=(claims_qry_1,))
+        elif i == 1:
+            claims_qry_2 = claims_qry.replace('and 1=1', 'and id between 3301 and 6600')
+            p = multiprocessing.Process(target=process_claims, args=(claims_qry_2,))
+        elif i == 2:
+            claims_qry_3 = claims_qry.replace('and 1=1', 'and id > 6600')
+            p = multiprocessing.Process(target=process_claims, args=(claims_qry_3,))        
+
+        process_ls.append(p)  # save process
+        p.start()  # start process
+
+    for p in process_ls:
+        p.join()  # wait for all processes to finish
+
+    print("*** All process have finished for claims data. ***")
 
 def execute_process_financial_transactions():
-    process_financial_transactions(financial_transactions_qry)
+    process_ls = []
+
+    for i in range(3): # Create 3 processes
+        if i == 0:
+            financial_transactions_qry_1 = financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id between 1 and 50000')
+            p = multiprocessing.Process(target=process_financial_transactions, args=(financial_transactions_qry_1,))
+        elif i == 1:
+            financial_transactions_qry_2 = financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id between 50001 and 100000')
+            p = multiprocessing.Process(target=process_financial_transactions, args=(financial_transactions_qry_2,))
+        elif i == 2:
+            financial_transactions_qry_3 = financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id > 100000')
+            p = multiprocessing.Process(target=process_financial_transactions, args=(financial_transactions_qry_3,))        
+
+        process_ls.append(p)  # save process
+        p.start()  # start process
+
+    for p in process_ls:
+        p.join()  # wait for all processes to finish
+
+    print("*** All process have finished for financial transactions data. ***")
 
 def execute_process_notes():
-    process_notes(notes_qry)
+    process_ls = []
+
+    for i in range(3): # Create 3 processes
+        if i == 0:
+            notes_qry_1 = notes_qry.replace('and 1=1', 'and id between 1 and 40000')
+            p = multiprocessing.Process(target=process_notes, args=(notes_qry_1,))
+        elif i == 1:
+            notes_qry_2 = notes_qry.replace('and 1=1', 'and id between 40001 and 80000')
+            p = multiprocessing.Process(target=process_notes, args=(notes_qry_2,))
+        elif i == 2:
+            notes_qry_3 = notes_qry.replace('and 1=1', 'and id > 80000')
+            p = multiprocessing.Process(target=process_notes, args=(notes_qry_3,))        
+
+        process_ls.append(p)  # save process
+        p.start()  # start process
+
+    for p in process_ls:
+        p.join()  # wait for all processes to finish
+
+    print("*** All process have finished for notes data. ***")
 
 def execute_exposure_status_update():
     exposure_status(update_exposure_status_qry)
