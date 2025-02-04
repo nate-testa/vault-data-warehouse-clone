@@ -60,7 +60,7 @@ financial_transactions_qry = """
 
 financial_transaction_action_qry = """
         select
-            settle_payee_id, data
+            id, data
         from edw_integration.claim_financial_transaction_action_snapsheet_api
         where api_status  in ('pending')
         and 1=1
@@ -276,7 +276,7 @@ def process_financial_transaction_action(qry):
     logging.info(f"Query returned {len(financial_transaction_action_data)} records")
 
     for record in financial_transaction_action_data:
-        (settle_payee_id, data_json) = record
+        (id, data_json) = record
         logging.info(f"*************** Start Processing *********************")
         logging.info(f"Processing financial_transaction_action record: {record}")
 
@@ -289,7 +289,7 @@ def process_financial_transaction_action(qry):
                 set update_ts = getdate(), api_status = 'Success',
                     api_Error_description = NULL,
                     api_response = '{result_text.replace("'","''")}'
-                where settle_payee_id = '{settle_payee_id}'
+                where id = '{id}'
             """
         else:
             qry_update_result = f"""
@@ -297,7 +297,7 @@ def process_financial_transaction_action(qry):
                 set update_ts = getdate(), api_status = 'Error',
                 api_Error_description = '{result_text.replace("'","''")}',
                 api_response = NULL
-                where settle_payee_id = '{settle_payee_id}'
+                where id = '{id}'
             """
 
 
