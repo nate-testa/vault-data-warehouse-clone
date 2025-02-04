@@ -8,6 +8,8 @@
 -- 02-03-2025				Yunus Mohammed				Added distinct and removed dups from source table
 --																							Used pm_cleared_date as originated_at
 --																							Used remote_identifier as settle_payee_id
+-- 02-04-2025				Yunus Mohammed				Removed settle_payee_id column and used id column instead of it.
+--																							Used migration_create_financial_transaction_api.id column to insert data in it.
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_financial_transaction_action_snapsheet_api]
 AS
@@ -31,7 +33,7 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.claim_financial_transaction_action_snapsheet_api_temp1;
 
 		SELECT 
-		settle_payee_id,
+		id,
 		json_query((
 			SELECT
 			[data.type],
@@ -47,7 +49,7 @@ BEGIN
 		from
 		(
 		select
-			fin.remote_identifier as settle_payee_id,
+			fin.id,
 			'financial_transaction_action' as [data.type],
 			case 
 			when pay.pm_status = 'In Progress' then 'submittted'
@@ -76,9 +78,9 @@ BEGIN
 
 		insert into edw_integration.claim_financial_transaction_action_snapsheet_api
 		(
-			settle_payee_id,[data],create_ts,api_status,etl_audit_sk
+			id,[data],create_ts,api_status,etl_audit_sk
 		)
-		select settle_payee_id,[data],getdate() as create_ts,'pending' as api_status,@etl_audit_sk
+		select id,[data],getdate() as create_ts,'pending' as api_status,@etl_audit_sk
 		from
 		edw_temp.claim_financial_transaction_action_snapsheet_api_temp1
 		
