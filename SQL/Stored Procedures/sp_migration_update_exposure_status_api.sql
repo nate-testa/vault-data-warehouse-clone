@@ -1,9 +1,10 @@
  -- =================================================================================================
  -- Description: This procedures load table migration_update_exposure_status_api
  ---------------------------------------------------------------------------------------------------
- -- Change date 				|Author						|	Change Description
+ -- Change date 				|Author						                |	Change Description
  ---------------------------------------------------------------------------------------------------
- --	11-14-2024					Alberto Almario				1. Created procedure
+ --	11-14-2024					Alberto Almario				       1. Created procedure
+ -- 02-05-2025				    Yunus Mohammed				2. Put check for "All financial transaction must be completed"
  -- ================================================================================================= 
  CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_update_exposure_status_api]
  AS
@@ -65,9 +66,12 @@
 			and i.STATUS_CODE not in ('OPEN','REOPEN')
 			AND api_response is not null
 			AND cast(update_ts as datetime2(7)) > @last_source_extract_ts
-        -- AND claimNumber = 'C24HOA00064'
-        ;
-
+            AND NOT EXISTS
+			(
+				SELECT 1 FROM edw_stage.migration_create_financial_transaction_api cft
+				where cft.claim_no = clm.CLAIM_NO
+				and cft.api_status != 'Success'
+			)
 
         -- * Start Insert process
          insert into edw_stage.migration_update_exposure_status_api
