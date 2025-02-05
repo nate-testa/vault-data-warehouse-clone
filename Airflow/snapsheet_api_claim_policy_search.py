@@ -1,7 +1,6 @@
 import argparse
 import json
 import logging
-import multiprocessing
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.utils.log.logging_mixin import LoggingMixin
 from snapsheet_api import SnapsheetAPI
