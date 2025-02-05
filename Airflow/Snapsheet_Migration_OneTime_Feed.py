@@ -328,21 +328,21 @@ with DAG(
             dag=dag,
         ).expand(op_args=financial_transactions_queries)
 
-        # py_exposure_status_update = PythonOperator(
-        #     task_id='py_exposure_status_update',
-        #     python_callable=exposure_status,
-        #     op_kwargs={"qry": update_exposure_status_qry},
-        #     provide_context=True,
-        #     dag=dag,
-        # )
+        py_exposure_status_update = PythonOperator(
+            task_id='py_exposure_status_update',
+            python_callable=exposure_status,
+            op_kwargs={"qry": update_exposure_status_qry},
+            provide_context=True,
+            dag=dag,
+        )
 
-        # py_claim_status_update = PythonOperator(
-        #     task_id='py_claim_status_update',
-        #     python_callable=claim_status,
-        #     op_kwargs={"qry": update_claim_status_qry},
-        #     provide_context=True,
-        #     dag=dag,
-        # )
+        py_claim_status_update = PythonOperator(
+            task_id='py_claim_status_update',
+            python_callable=claim_status,
+            op_kwargs={"qry": update_claim_status_qry},
+            provide_context=True,
+            dag=dag,
+        )
 
         send_phase_two_email = EmailOperator(
             task_id='send_phase_two_email',
@@ -360,9 +360,9 @@ with DAG(
 
         if ENVIRONMENT != 'PRODUCTION':
             # sp_migration_create_note_api >> sp_migration_update_exposure_adjuster_api >> sp_migration_create_claim_api_update_catastrophe >> sp_migration_create_financial_transaction_api >> sp_migration_create_financial_transaction_api_update_contactinfo >> sp_migration_update_exposure_status_api >> sp_migration_create_claim_api_update_status >> py_process_notes >> py_exposure_adjuster_update >> py_claim_catastrophe_update >> py_process_financial_transactions >> py_exposure_status_update >> py_claim_status_update >> send_phase_two_email >> py_snapsheet_api_send_email_status
-            sp_migration_create_note_api >> sp_migration_update_exposure_adjuster_api >> sp_migration_create_claim_api_update_catastrophe >> sp_migration_create_financial_transaction_api >> sp_migration_create_financial_transaction_api_update_contactinfo >> sp_migration_update_exposure_status_api >> sp_migration_create_claim_api_update_status >> py_process_notes >> py_exposure_adjuster_update >> py_claim_catastrophe_update >> py_process_financial_transactions >> send_phase_two_email >> py_snapsheet_api_send_email_status
+            sp_migration_create_note_api >> py_process_notes >> sp_migration_update_exposure_adjuster_api >> py_exposure_adjuster_update >> sp_migration_create_claim_api_update_catastrophe >> py_claim_catastrophe_update >> sp_migration_create_financial_transaction_api >> sp_migration_create_financial_transaction_api_update_contactinfo >> py_process_financial_transactions >> sp_migration_update_exposure_status_api >> py_exposure_status_update >> sp_migration_create_claim_api_update_status  >> py_claim_status_update >> send_phase_two_email >> py_snapsheet_api_send_email_status
         else:
-            sp_migration_create_note_api >> sp_migration_update_exposure_adjuster_api >> sp_migration_create_claim_api_update_catastrophe >> sp_migration_create_financial_transaction_api >> sp_migration_update_exposure_status_api >> sp_migration_create_claim_api_update_status >> py_process_notes >> py_exposure_adjuster_update >> py_claim_catastrophe_update >> py_process_financial_transactions >> send_phase_two_email >> py_snapsheet_api_send_email_status
+            sp_migration_create_note_api >> py_process_notes >> sp_migration_update_exposure_adjuster_api >> py_exposure_adjuster_update >> sp_migration_create_claim_api_update_catastrophe >> py_claim_catastrophe_update >> sp_migration_create_financial_transaction_api >> py_process_financial_transactions >> sp_migration_update_exposure_status_api >> py_exposure_status_update >> sp_migration_create_claim_api_update_status >> py_claim_status_update >> send_phase_two_email >> py_snapsheet_api_send_email_status
             
 
 start >> phase_one >> check_for_claim_executions >> [continue_task, abort_task] 
