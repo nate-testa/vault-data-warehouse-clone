@@ -1,9 +1,10 @@
 -- =================================================================================================
 -- Description: This procedures migrates claim level notes for snapsheet
 ---------------------------------------------------------------------------------------------------
--- Change date 				|Author						|	Change Description
+-- Change date 				|Author									|	Change Description
 ---------------------------------------------------------------------------------------------------
---	10-15-2024				Yunus Mohammed				Created procedure
+--	10-15-2024				Yunus Mohammed				1. Created procedure
+-- 02/05/2025			  Yunus Mohammed				2.	Added check for "exposure note should be migrated if content is blank"
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_note_api]
 AS
@@ -49,7 +50,8 @@ BEGIN
         inner join edw_stage.t_clm_note n on c.CASE_ID = n.CASE_ID
         inner join edw_stage.migration_create_claim_api capi on capi.claimNumber = c.CLAIM_NO
         where
-            n.NOTE_LEVEL = 'Claim'            
+            n.NOTE_LEVEL = 'Claim' 
+			and isnull(cast(n.NOTE_CONTENT as varchar(max)),'')!=''
             and capi.api_status = 'Success'
             and capi.claimReferenceNumber is not null
             and capi.create_ts > @last_source_extract_ts		

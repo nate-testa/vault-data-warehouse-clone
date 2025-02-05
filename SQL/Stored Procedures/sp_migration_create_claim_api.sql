@@ -16,7 +16,8 @@
 --																								 vehicles - removed check for InjuredPerson and PipMedPay.
 -- 01/31/2025			Yunus Mohammed					8. Removed special characters from policy_no stored in case table
 -- 02/03/2025			Yunus Mohammed					9 datetimeOfLoss and datetimeOfNotification formatted to default timestamp to 12 PM
--- 02/05/2025			Yunus Mohammed					10 	USed party_id instead of pty_party_id and update claimParties joins
+-- 02/05/2025			Yunus Mohammed					10 	Used party_id instead of pty_party_id and update claimParties joins
+-- 02/05/2025			Yunus Mohammed					 11	Added check for "exposure note should be migrated if content is blank"
 -- ==================================================================================================================================
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api]
 @claim_no varchar(max) = null
@@ -268,6 +269,7 @@ END AS claimPartyId
 						where
 							nt.note_level != 'Claim'
 							and ISNUMERIC(nt.note_level) =1 and ext.[OBJECT_ID] = cast(nt.note_level as [decimal](19, 0))
+							and isnull(cast(nt.NOTE_CONTENT as varchar(max)),'')!=''
 							for json path, include_null_values
 						)) as notes,
 						JSON_QUERY
