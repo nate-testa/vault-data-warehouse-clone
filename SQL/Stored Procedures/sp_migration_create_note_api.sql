@@ -4,7 +4,7 @@
 -- Change date 				|Author									|	Change Description
 ---------------------------------------------------------------------------------------------------
 --	10-15-2024				Yunus Mohammed				1. Created procedure
--- 02/05/2025			  Yunus Mohammed				2.	Added check for "exposure note should be migrated if content is blank"
+-- 02/05/2025			  Yunus Mohammed				2.	Added check for "claim note should be migrated if content is blank"
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_note_api]
 AS
