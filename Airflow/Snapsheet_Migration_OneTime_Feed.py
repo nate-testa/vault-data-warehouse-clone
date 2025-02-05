@@ -1,5 +1,4 @@
 import pendulum
-import multiprocessing
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.models import Variable
@@ -8,7 +7,7 @@ from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.operators.mssql_operator import MsSqlOperator
 from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.python_operator import PythonOperator, BranchPythonOperator
+from airflow.operators.python import PythonOperator, BranchPythonOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
 from snapsheet_api_post import process_claims, process_financial_transactions, process_notes
 from snapsheet_api_post import claims_qry, financial_transactions_qry, notes_qry
@@ -21,6 +20,24 @@ to_email = "itdatateam@vault.insurance"
 cc_email = ""
 
 ENVIRONMENT = Variable.get("environment")
+
+claims_queries = [
+            [claims_qry.replace('and 1=1', 'and id between 1 and 3300')],
+            [claims_qry.replace('and 1=1', 'and id between 3301 and 6600')],
+            [claims_qry.replace('and 1=1', 'and id > 6600')],
+        ] 
+
+notes_queries = [
+            [notes_qry.replace('and 1=1', 'and id between 1 and 40000')],
+            [notes_qry.replace('and 1=1', 'and id between 40001 and 80000')],
+            [notes_qry.replace('and 1=1', 'and id > 80000')],
+        ]
+
+financial_transactions_queries = [
+            [financial_transactions_qry.replace('and 1=1', 'and id between 1 and 50000')],
+            [financial_transactions_qry.replace('and 1=1', 'and id between 50001 and 100000')],
+            [financial_transactions_qry.replace('and 1=1', 'and id > 100000')],
+        ]
 
 
 def on_failure_callback(context):
@@ -68,85 +85,6 @@ def check_claim_executions(**kwargs):
         result = 'continue_task'
 
     return result
-
-def execute_process_claims():
-    process_ls = []
-
-    for i in range(3): # Create 3 processes
-        if i == 0:
-            claims_qry_1 = claims_qry.replace('and 1=1', 'and id between 1 and 3300')
-            p = multiprocessing.Process(target=process_claims, args=(claims_qry_1,))
-        elif i == 1:
-            claims_qry_2 = claims_qry.replace('and 1=1', 'and id between 3301 and 6600')
-            p = multiprocessing.Process(target=process_claims, args=(claims_qry_2,))
-        elif i == 2:
-            claims_qry_3 = claims_qry.replace('and 1=1', 'and id > 6600')
-            p = multiprocessing.Process(target=process_claims, args=(claims_qry_3,))        
-
-        process_ls.append(p)  # save process
-        p.start()  # start process
-
-    for p in process_ls:
-        p.join()  # wait for all processes to finish
-
-    print("*** All process have finished for claims data. ***")
-
-def execute_process_financial_transactions():
-    process_ls = []
-
-    for i in range(3): # Create 3 processes
-        if i == 0:
-            financial_transactions_qry_1 = financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id between 1 and 50000')
-            p = multiprocessing.Process(target=process_financial_transactions, args=(financial_transactions_qry_1,))
-        elif i == 1:
-            financial_transactions_qry_2 = financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id between 50001 and 100000')
-            p = multiprocessing.Process(target=process_financial_transactions, args=(financial_transactions_qry_2,))
-        elif i == 2:
-            financial_transactions_qry_3 = financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id > 100000')
-            p = multiprocessing.Process(target=process_financial_transactions, args=(financial_transactions_qry_3,))        
-
-        process_ls.append(p)  # save process
-        p.start()  # start process
-
-    for p in process_ls:
-        p.join()  # wait for all processes to finish
-
-    print("*** All process have finished for financial transactions data. ***")
-
-def execute_process_notes():
-    process_ls = []
-
-    for i in range(3): # Create 3 processes
-        if i == 0:
-            notes_qry_1 = notes_qry.replace('and 1=1', 'and id between 1 and 40000')
-            p = multiprocessing.Process(target=process_notes, args=(notes_qry_1,))
-        elif i == 1:
-            notes_qry_2 = notes_qry.replace('and 1=1', 'and id between 40001 and 80000')
-            p = multiprocessing.Process(target=process_notes, args=(notes_qry_2,))
-        elif i == 2:
-            notes_qry_3 = notes_qry.replace('and 1=1', 'and id > 80000')
-            p = multiprocessing.Process(target=process_notes, args=(notes_qry_3,))        
-
-        process_ls.append(p)  # save process
-        p.start()  # start process
-
-    for p in process_ls:
-        p.join()  # wait for all processes to finish
-
-    print("*** All process have finished for notes data. ***")
-
-def execute_exposure_status_update():
-    exposure_status(update_exposure_status_qry)
-
-def execute_claim_status_update():
-    claim_status(update_claim_status_qry)
-
-def execute_exposure_adjuster_update():
-    exposure_adjuster(update_exposure_adjuster_qry)
-
-def execute_claim_catastrophe_update():
-    claim_catastrophe(update_claim_catastrophe_qry)
-
 
 def snapsheet_api_send_email_status(**kwargs):
 
@@ -260,12 +198,11 @@ with DAG(
                 autocommit=True,
             )
 
-        py_process_claims = PythonOperator(
+        py_process_claims = PythonOperator.partial(
             task_id='py_process_claims',
-            python_callable=execute_process_claims,
-            provide_context=True,
+            python_callable=process_claims,
             dag=dag,
-        )        
+        ).expand(op_args=claims_queries)
 
         send_phase_one_email = EmailOperator(
             task_id='send_phase_one_email',
@@ -363,44 +300,46 @@ with DAG(
             autocommit=True,
         )
 
-        py_process_notes = PythonOperator(
+        py_process_notes = PythonOperator.partial(
             task_id='py_process_notes',
-            python_callable=execute_process_notes,
-            provide_context=True,
+            python_callable=process_notes,
             dag=dag,
-        )
+        ).expand(op_args=notes_queries)
 
         py_exposure_adjuster_update = PythonOperator(
             task_id='py_exposure_adjuster_update',
-            python_callable=execute_exposure_adjuster_update,
+            python_callable=exposure_adjuster,
+            op_kwargs={"qry": update_exposure_adjuster_qry},
             provide_context=True,
             dag=dag,
         )
 
         py_claim_catastrophe_update = PythonOperator(
             task_id='py_claim_catastrophe_update',
-            python_callable=execute_claim_catastrophe_update,
+            python_callable=claim_catastrophe,
+            op_kwargs={"qry": update_claim_catastrophe_qry},
             provide_context=True,
             dag=dag,
         )
-
-        py_process_financial_transactions = PythonOperator(
+        
+        py_process_financial_transactions = PythonOperator.partial(
             task_id='py_process_financial_transactions',
-            python_callable=execute_process_financial_transactions,
-            provide_context=True,
+            python_callable=process_financial_transactions,
             dag=dag,
-        )
+        ).expand(op_args=financial_transactions_queries)
 
         # py_exposure_status_update = PythonOperator(
         #     task_id='py_exposure_status_update',
-        #     python_callable=execute_exposure_status_update,
+        #     python_callable=exposure_status,
+        #     op_kwargs={"qry": update_exposure_status_qry},
         #     provide_context=True,
         #     dag=dag,
         # )
 
         # py_claim_status_update = PythonOperator(
         #     task_id='py_claim_status_update',
-        #     python_callable=execute_claim_status_update,
+        #     python_callable=claim_status,
+        #     op_kwargs={"qry": update_claim_status_qry},
         #     provide_context=True,
         #     dag=dag,
         # )
