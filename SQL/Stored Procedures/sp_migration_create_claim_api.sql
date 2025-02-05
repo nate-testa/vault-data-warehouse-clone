@@ -16,8 +16,9 @@
 --																								 vehicles - removed check for InjuredPerson and PipMedPay.
 -- 01/31/2025			Yunus Mohammed					8. Removed special characters from policy_no stored in case table
 -- 02/03/2025			Yunus Mohammed					9 datetimeOfLoss and datetimeOfNotification formatted to default timestamp to 12 PM
+-- 02/05/2025			Yunus Mohammed					10 	USed party_id instead of pty_party_id and update claimParties joins
 -- ==================================================================================================================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api]
+CREATE OR ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api]
 @claim_no varchar(max) = null
 AS
 BEGIN
@@ -63,7 +64,7 @@ BEGIN
 			 	left join edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber
 				INNER JOIN string_split(@claim_no,',') as t on t.[value]  = c.CLAIM_NO
 			where 
-				mcca.claimNumber is null
+			mcca.claimNumber is null
 		END;
 		
 		WITH first_open_dt AS 
@@ -183,7 +184,7 @@ BEGIN
 				select ISNULL( (SELECT 1 as a where 1=2 FOR JSON PATH), '[]')
 			) as notes,
 			(
-				select top 1 pty_party_id as claimPartyId
+				select top 1 PARTY_ID as claimPartyId
 				from
 					edw_stage.t_clm_party p
 				where p.[CASE_ID] = c.[CASE_ID] and PARTY_ROLE = '01' 
@@ -246,13 +247,13 @@ BEGIN
 							when ext.SUBCLAIM_TYPE_NAME like 'TP%' then 'third-party'
 						end	as lossParty,
 						JSON_QUERY((
-							select 	ext.PTY_PARTY_ID as claimPartyId
+							select 	ext.PARTY_ID as claimPartyId
 /*
 --Start - testing below block--01202025--
 select CASE 
     WHEN ext.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
-    THEN CONCAT(CONVERT(VARCHAR, ext.pty_party_id), '-9999')
-    ELSE CONVERT(VARCHAR, ext.pty_party_id)
+    THEN CONCAT(CONVERT(VARCHAR, ext.PARTY_ID), '-9999')
+    ELSE CONVERT(VARCHAR, ext.PARTY_ID)
 END AS claimPartyId
 --End - testing below block--01202025--
 */
@@ -286,21 +287,21 @@ END AS claimPartyId
 						JSON_QUERY
 						(
 							(
-								select ext.PTY_PARTY_ID as id,
+								select ext.PARTY_ID as id,
 /*
 select CASE 
     WHEN ext.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
-    THEN CONCAT(CONVERT(VARCHAR, ext.pty_party_id), '-9999')
-    ELSE CONVERT(VARCHAR, ext.pty_party_id)
+    THEN CONCAT(CONVERT(VARCHAR, ext.PARTY_ID), '-9999')
+    ELSE CONVERT(VARCHAR, ext.PARTY_ID)
 END AS id, 
 --End - testing below block--01202025--       
 */                         
-								ext.PTY_PARTY_ID as [injuredParty.claimPartyId] 
+								ext.PARTY_ID as [injuredParty.claimPartyId] 
 /*
 CASE 
     WHEN ext.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
-    THEN CONCAT(CONVERT(VARCHAR, ext.pty_party_id), '-9999')
-    ELSE CONVERT(VARCHAR, ext.pty_party_id)
+    THEN CONCAT(CONVERT(VARCHAR, ext.PARTY_ID), '-9999')
+    ELSE CONVERT(VARCHAR, ext.PARTY_ID)
 END AS [injuredParty.claimPartyId] 
 --End - testing below block--01202025--
 */
@@ -316,7 +317,7 @@ END AS [injuredParty.claimPartyId]
 							'policy_address' as propertyLocation ,
 							'personal_property' as propertyType,
 							JSON_QUERY((
-										select ext.PTY_PARTY_ID as claimPartyId
+										select ext.PARTY_ID as claimPartyId
 										for json path, include_null_values, without_array_wrapper
 									)) as [owner],
 							JSON_QUERY((
@@ -495,7 +496,7 @@ END AS [injuredParty.claimPartyId]
 		when ext.snapsheet_exposure_type = 'Vehicle' then 
 				row_number() over(partition by o.[object_id] order by ISNULL(ext.snapsheet_exposure_type,'Other'))
 		when ext.snapsheet_exposure_type in('PipMedPay','InjuredPerson') then 
-			row_number() over(partition by o.case_id,ext.snapsheet_exposure_type, par.PTY_PARTY_ID order by ISNULL(ext.snapsheet_exposure_type,'Other'))		
+			row_number() over(partition by o.case_id,ext.snapsheet_exposure_type, par.PARTY_ID order by ISNULL(ext.snapsheet_exposure_type,'Other'))		
 	else
 		row_number() over(partition by o.case_id, ISNULL(ext.snapsheet_exposure_type,'Other')order by ISNULL(ext.snapsheet_exposure_type,'Other'))
 	end as rowNum,
@@ -505,7 +506,7 @@ END AS [injuredParty.claimPartyId]
 								o.[OBJECT_ID],
 								o.insured_id,
 								i.item_id,sct.subclaim_type_name,i.coverage_name,
-								i.STATUS_CODE,par.PTY_PARTY_ID,
+								i.STATUS_CODE,par.PARTY_ID,
 								prd.product_cd,
 								p.policy_no,
 								p.eff_date
@@ -579,32 +580,26 @@ END AS [injuredParty.claimPartyId]
 			) as vehicles
 			,(
 				select distinct
-					par.pty_party_id as id,
-/*
---Start - testing below block--01202025--
-CASE 
-    WHEN ext.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
-    THEN CONCAT(CONVERT(VARCHAR, par.pty_party_id), '-9999')
-    ELSE CONVERT(VARCHAR, par.pty_party_id)
-END AS id, 
---End - testing below block--01202025--
-*/
-					case when ext.snapsheet_exposure_type in ('InjuredPerson', 'PipMedPay') 
-                    --and prd.product_cd in ('AU','PEL') 
-                    then 'passenger'end 
-					 as claimPartyType,
+					p.PARTY_ID as id,
+					/*
+					--Start - testing below block--01202025--
+					CASE 
+						WHEN ext.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
+						THEN CONCAT(CONVERT(VARCHAR, par.PARTY_ID), '-9999')
+						ELSE CONVERT(VARCHAR, par.PARTY_ID)
+					END AS id, 
+					--End - testing below block--01202025--
+					*/
+					p. claimPartyType,
 					-- null as partyType
+					p.partyType,
 					CASE
-						WHEN pp.IS_ORG_PARTY = 'Y' THEN 'ORGANIZATION'
-						ELSE 'PERSON'
-					END AS partyType,
-					CASE
-						WHEN pp.IS_ORG_PARTY != 'Y' THEN
-							substring(cast(par.party_name as varchar(255)),1,charindex(' ', cast(par.party_name as varchar(255)))-1)
+						WHEN p.IS_ORG_PARTY != 'Y' THEN
+							substring(cast(p.party_name as varchar(255)),1,charindex(' ', cast(p.party_name as varchar(255)))-1)
 						end	as firstName,
 					CASE
-						WHEN pp.IS_ORG_PARTY != 'Y' then SUBSTRING(cast(par.party_name as varchar(255)), CHARINDEX(' ', 
-						cast(par.party_name as varchar(255))) + 1, LEN(cast(par.party_name as varchar(255)))) 
+						WHEN p.IS_ORG_PARTY != 'Y' then SUBSTRING(cast(p.party_name as varchar(255)), CHARINDEX(' ', 
+						cast(p.party_name as varchar(255))) + 1, LEN(cast(p.party_name as varchar(255)))) 
 					end as lastName,
 					JSON_QUERY(
 							(
@@ -619,7 +614,7 @@ END AS id,
 									edw_stage.t_int_address tia 
 									LEFT JOIN edw_stage.t_pub_address tpa ON tia.T_ADDRESS_ID=tpa.ADDRESS_ID
 								WHERE
-									tia.SOURCE_ID = pp.PARTY_ID
+									tia.SOURCE_ID = p.PARTY_ID
 								for json path, include_null_values, without_array_wrapper
 							)) as [address],
 					json_query((
@@ -645,41 +640,51 @@ END AS id,
 						for json path, include_null_values
 					) ) as contactMethods,
 					CASE
-						WHEN pp.IS_ORG_PARTY = 'Y' THEN cast(par.party_name as varchar(255))
+						WHEN p.IS_ORG_PARTY = 'Y' THEN cast(p.party_name as varchar(255))
 					END AS company,
 					-- contact_person_email
-					par.pty_party_id as externalReferenceNumber
+					p.PARTY_ID as externalReferenceNumber
 				FROM
 					(
-						SELECT
-							cp.CASE_ID, obj.[object_id],obj.subclaim_type, cp.PARTY_ID
-						FROM
-							edw_stage.t_clm_party cp
-							LEFT JOIN edw_stage.t_clm_object AS obj on cp.CASE_ID = obj.CASE_ID
-						UNION
-						SELECT 
-							obj.CASE_ID, obj.[object_id], obj.subclaim_type, settle_payee.PAYEE_ID AS PARTY_ID
-						FROM					
-							edw_stage.t_clm_object AS obj
-							LEFT JOIN edw_stage.t_clm_item i ON obj.[object_id] = i.[object_id]
-							INNER JOIN edw_stage.t_clm_reserve_his his on his.ITEM_ID = i.ITEM_ID
-							LEFT JOIN edw_stage.t_clm_settle_item settle_item 
-									ON his.item_id = settle_item.item_id
-									AND his.business_instance_id = settle_item.settle_item_id
-							LEFT JOIN edw_stage.t_clm_settle_payee settle_payee ON settle_payee.settle_payee_id = settle_item.settle_payee_id
-					) AS p
-					LEFT JOIN edw_stage.t_clm_item i ON p.[object_id] = i.[object_id] 
---					INNER JOIN edw_stage.t_clm_party par on par.PARTY_ID = p.PARTY_ID -- removed on 01172025
-                    INNER JOIN edw_stage.t_clm_party par on par.case_id = p.case_id -- added on 01172025
-					LEFT JOIN edw_stage.t_clm_party_role parole on par.PARTY_ROLE = parole.ROLE_CODE
-					LEFT JOIN edw_stage.t_pty_party pp ON par.pty_party_id = pp.party_id
-					LEFT JOIN edw_stage.t_pty_party_type ppt ON ppt.party_type = pp.party_type
-					LEFT JOIN edw_stage.t_clm_subclaim_type sct ON p.subclaim_type = sct.subclaim_type_code
-					LEFT JOIN edw_stage.migration_exposure_type_mapping ext on ext.product_cd = prd.product_cd
-						and ext.coverage_name = cast(i.coverage_name as varchar(max))
-						and ext.subclaim_type_name =  cast(sct.subclaim_type_name as varchar(max))
-				WHERE
-					p.CASE_ID = c.case_id 
+						select distinct
+                        cp.CASE_ID, cp.PARTY_ID,case when ext.snapsheet_exposure_type in ('InjuredPerson', 'PipMedPay') 
+                        --and prd.product_cd in ('AU','PEL') 
+                        then 'passenger'
+                        end as claimPartyType,
+                    CASE
+                        WHEN pp.IS_ORG_PARTY = 'Y' THEN 'ORGANIZATION'
+                        ELSE 'PERSON'
+                    END AS partyType,
+                    IS_ORG_PARTY,
+                   cast(cp. party_name as varchar(max)) as party_name
+                    from 
+                    edw_stage.t_clm_party cp
+                    inner JOIN edw_stage.t_clm_object AS obj on cp.CASE_ID = obj.CASE_ID and cp.PARTY_ID = obj.CLAIMANT_ID
+                    LEFT JOIN edw_stage.t_clm_item i ON obj.[object_id] = i.[object_id] 
+                    LEFT JOIN edw_stage.t_clm_subclaim_type sct ON obj.subclaim_type = sct.subclaim_type_code
+                    LEFT JOIN edw_stage.migration_exposure_type_mapping ext on ext.product_cd = prd.product_cd
+                            and ext.coverage_name = cast(i.coverage_name as varchar(max))
+                            and ext.subclaim_type_name =  cast(sct.subclaim_type_name as varchar(max))
+                    LEFT JOIN edw_stage.t_pty_party pp ON [cp].pty_party_id = pp.party_id
+                    where
+                        cp.CASE_ID = c.case_id
+                    union
+                    select 
+                        cp.CASE_ID, cp.PARTY_ID ,null as claimPartyType,
+                        CASE
+                        WHEN pp.IS_ORG_PARTY = 'Y' THEN 'ORGANIZATION'
+                        ELSE 'PERSON'
+                    END AS partyType,
+                    IS_ORG_PARTY,
+                    cast(cp. party_name as varchar(max)) as party_name
+                    from 
+                    edw_stage.t_clm_party cp
+                    left JOIN edw_stage.t_clm_object AS obj on cp.CASE_ID = obj.CASE_ID and obj.CLAIMANT_ID= cp.PARTY_ID 
+                    LEFT JOIN edw_stage.t_pty_party pp ON [cp].pty_party_id = pp.party_id
+                    where
+                        cp.CASE_ID = c.case_id
+                        and obj.CLAIMANT_ID is null
+					) AS p					
 				for json path, include_null_values
 			) as claimParties,	
 			'pending' as api_status
