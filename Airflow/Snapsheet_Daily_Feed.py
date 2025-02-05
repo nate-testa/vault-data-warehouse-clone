@@ -6,9 +6,9 @@ from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.operators.mssql_operator import MsSqlOperator
 from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python import PythonOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
-from snapsheet_api_claim_policy_search import process_snapsheet_policies_parallel
+from snapsheet_api_claim_policy_search import process_policies, policies_qry
 
 to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
@@ -96,6 +96,12 @@ with DAG(
             'sp_claim_policy_webhook_snapsheet_api',
             'sp_claim_policy_webhook_snapsheet_api_update_contactinfo'
         ]
+    
+    policie_queries = [
+        [policies_qry.replace('and 1=1', 'and id between 1 and 50000')],
+        [policies_qry.replace('and 1=1', 'and id between 50001 and 100000')],
+        [policies_qry.replace('and 1=1', 'and id > 100000')],
+    ]
 
     sp_claim_policy_search_snapsheet_api = MsSqlOperator(
             task_id='sp_claim_policy_search_snapsheet_api',
@@ -104,13 +110,12 @@ with DAG(
             database="vault_edw",
             autocommit=True,
         )
-
-    py_process_snapsheet_policies = PythonOperator(
+    
+    py_process_snapsheet_policies = PythonOperator.partial(
             task_id='py_process_snapsheet_policies',
-            python_callable=process_snapsheet_policies_parallel,
-            provide_context=True,
+            python_callable=process_policies,
             dag=dag,
-        )
+        ).expand(op_args=policie_queries)
 
     sp_claim_policy_webhook_snapsheet_api = MsSqlOperator(
             task_id='sp_claim_policy_webhook_snapsheet_api',
