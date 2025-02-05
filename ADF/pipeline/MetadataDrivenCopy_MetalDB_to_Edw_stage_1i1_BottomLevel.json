@@ -179,7 +179,7 @@
 													"source": {
 														"type": "AzureSqlSource",
 														"sqlReaderQuery": {
-															"value": "@concat(\n  'SELECT',\n  '  COALESCE(',\n  '    CASE',\n  '      WHEN T.max_created >= T.max_updated THEN T.max_created',\n  '      ELSE T.max_updated',\n  '    END,',\n  '    ''1900-01-01T00:00:00.000Z''',\n  '  ) AS CurrentMaxWaterMarkColumnValue',\n  ' FROM (',\n  '    SELECT',\n  '      MAX(',\n  json(item().DataLoadingBehaviorSettings).watermarkColumnName,\n  ') AS max_created,',\n  '      MAX(',\n  json(item().DataLoadingBehaviorSettings).watermarkColumnNameUpdate,\n  ') AS max_updated',\n  '    FROM ',\n  json(item().SourceObjectSettings).schema,\n  '.[',\n  json(item().SourceObjectSettings).table,\n  ']',\n  ') AS T;'\n)",
+															"value": "@concat(\n  'SELECT COALESCE(',\n    'CASE ',\n      'WHEN T.max_updated IS NULL OR T.max_created >= T.max_updated THEN T.max_created ',\n      'ELSE T.max_updated ',\n    'END, ',\n    '''1900-01-01T00:00:00.000Z''',\n  ') AS CurrentMaxWaterMarkColumnValue ',\n  'FROM (',\n    'SELECT ',\n      'MAX(',\n        json(item().DataLoadingBehaviorSettings).watermarkColumnName,\n      ') AS max_created, ',\n      'MAX(',\n        json(item().DataLoadingBehaviorSettings).watermarkColumnNameUpdate,\n      ') AS max_updated ',\n    'FROM ',\n      json(item().SourceObjectSettings).schema,\n      '.[',\n      json(item().SourceObjectSettings).table,\n      ']',\n  ') AS T;'\n)",
 															"type": "Expression"
 														},
 														"isolationLevel": "ReadUncommitted",
