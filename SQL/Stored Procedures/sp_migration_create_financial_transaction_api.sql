@@ -15,6 +15,8 @@
   --01-30-2025              Sandeep Gundreddy     8. Added logic to handle stop/cancelled/refund payments
   --01-31-2025              Sandeep Gundreddy     9. Added logic to send $0 reserves for overpayment recovery(refunds in ebao)
   --02-02-2025              Sandeep Gundreddy     10.UseD amount_type in the order by clause in final insert query
+  -- 02-05-2025             Yunus Mohammed         11 Used party_id to join migration_create_financial_transaction_api_temp2 to party table
+  --                                                                                        and also used claimNumber 
  -- ================================================================================================= 
  
  CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_financial_transaction_api]
@@ -429,7 +431,8 @@
         -- LEFT JOIN edw_stage.t_pub_address tpa ON tia.T_ADDRESS_ID = tpa.ADDRESS_ID -- commented on 01/29/2025
         LEFT JOIN edw_stage.t_pub_address tpa on tpa.ADDRESS_ID= settle_payee.PTY_ADDRESS_ID -- added on 01/29/2025
         LEFT JOIN [edw_temp].[migration_create_financial_transaction_api_temp2] p 
-            ON party.pty_PARTY_ID = p.externalReferenceNumber
+            ON party.PARTY_ID = p.externalReferenceNumber 
+            and resh.claimNumber = p.claimNumber
         INNER JOIN [edw_temp].[migration_create_financial_transaction_api_temp3] et
             ON resh.exposure_id = et.exposureId
             AND resh.claimNumber = et.claimNumber
