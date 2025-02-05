@@ -62,7 +62,7 @@
 			INNER JOIN edw_stage.t_clm_item i ON i.[OBJECT_ID] = obj.[OBJECT_ID] AND
 				i.ITEM_ID = substring(exposure.externalReferenceNumber,1,charindex('-',exposure.externalReferenceNumber)-1)
         WHERE
-			api_status = 'Success'
+			mclm.api_status = 'Success'
 			and i.STATUS_CODE not in ('OPEN','REOPEN')
 			AND api_response is not null
 			AND cast(update_ts as datetime2(7)) > @last_source_extract_ts

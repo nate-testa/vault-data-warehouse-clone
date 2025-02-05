@@ -63,7 +63,7 @@ BEGIN
 			INNER JOIN edw_stage.t_clm_case c ON c.CLAIM_NO = mclm.claimNumber
 			LEFT JOIN edw_stage.t_clm_case_status cstat ON c.CASE_STATUS = cstat.STATUS_CODE
 			WHERE
-			api_status = 'Success'
+			mclm.api_status = 'Success'
 			-- If already open in that case we don't have to update status again
 			and cstat.status_code NOT IN ('1', '2', '5')
 			AND api_response is not null
