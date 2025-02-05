@@ -4,6 +4,7 @@
 -- Change date 				|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 --	12-02-2024				Yunus Mohammed				1. Created procedure
+-- 02-05-2025				Yunus Mohammed				2. Put check for "All financial transaction must be completed"
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api_update_status]
 AS
@@ -60,12 +61,18 @@ BEGIN
 			claimReferenceNumber NVARCHAR(250) '$.externalReferenceNumber'
 			) AS clm
 			INNER JOIN edw_stage.t_clm_case c ON c.CLAIM_NO = mclm.claimNumber
-			LEFT JOIN edw_stage.t_clm_case_status cstat ON c.CASE_STATUS = cstat.STATUS_CODE			
+			LEFT JOIN edw_stage.t_clm_case_status cstat ON c.CASE_STATUS = cstat.STATUS_CODE
 			WHERE
-			api_status = 'Success'
+			mclm.api_status = 'Success'
 			-- If already open in that case we don't have to update status again
 			and cstat.status_code NOT IN ('1', '2', '5')
 			AND api_response is not null
+			AND NOT EXISTS
+			(
+				SELECT 1 FROM edw_stage.migration_create_financial_transaction_api cft
+				where cft.claim_no = c.CLAIM_NO
+				and cft.api_status != 'Success'
+			)
 			AND cast(update_ts as datetime2(7)) > @last_source_extract_ts
 			-- case when [status] = 'OPEN' THEN 'DRAFT' ELSE [status] END AS [status],
 
