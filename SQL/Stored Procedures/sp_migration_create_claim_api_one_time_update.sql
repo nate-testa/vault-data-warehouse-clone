@@ -5,6 +5,8 @@
 -- Change date 		|Author										        |	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 01/28/2025			Yunus Mohammed					1. Created this procedure
+-- 02/06/2025			Yunus Mohammed					2. Added update stmts for loss_cause 
+--																								Format change for datetimeOfLoss update stmts
 -- ==================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api_one_time_update]
 AS
@@ -34,21 +36,21 @@ BEGIN
     -- AD-8176
     --Update Loss Date in edw_stage.migration_create_claim_api before Snapsheet migration--
 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT(CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00359' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2023-06-23 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23XLA00017' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00759' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C24HOA00023' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C22HOA01046' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00090' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00091' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = FORMAT(CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C22HOA01151' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00071' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00089' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00274' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = FORMAT(CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00312' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = FORMAT(CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00433' ;     
-    update edw_stage.migration_create_claim_api set datetimeOfLoss = FORMAT(CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00880' ; 
-    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-27 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00938' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT(DATEADD(HOUR, 12, CAST('2022-09-27' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00359' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT(DATEADD(HOUR, 12, CAST('2023-06-23' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23XLA00017' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT(DATEADD(HOUR, 12, CAST('2022-09-27' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00759' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT(DATEADD(HOUR, 12, CAST('2022-09-27' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C24HOA00023' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT(DATEADD(HOUR, 12, CAST('2022-09-27' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C22HOA01046' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT(DATEADD(HOUR, 12, CAST('2022-09-27' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00090' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT(DATEADD(HOUR, 12, CAST('2022-09-27' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00091' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss = FORMAT(DATEADD(HOUR, 12, CAST('2022-09-27' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C22HOA01151' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT(DATEADD(HOUR, 12, CAST('2022-09-27' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00071' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT(DATEADD(HOUR, 12, CAST( '2022-09-27' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00089' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT(DATEADD(HOUR, 12, CAST('2022-09-27' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00274' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT(DATEADD(HOUR, 12, CAST('2022-09-27' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00312' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss = FORMAT(DATEADD(HOUR, 12, CAST('2022-09-27' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00433' ;     
+    update edw_stage.migration_create_claim_api set datetimeOfLoss = FORMAT(DATEADD(HOUR, 12, CAST('2022-09-27' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00880' ; 
+    update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT(DATEADD(HOUR, 12, CAST('2022-09-27' AS DATETIME)), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'C23HOA00938' ; 
     -- update edw_stage.migration_create_claim_api set datetimeOfLoss =FORMAT( CAST('2022-09-28 00:00:00.000' AS DATETIME), 'yyyy-MM-ddTHH:mm:ssZ') where claimnumber = 'VAULTECC005' ; 
 
     --CauseofLoss Bakcfill--
@@ -2380,7 +2382,96 @@ Update edw_stage.migration_create_claim_api set accountCode='vault_es_insurance_
 	UPDATE edw_stage.migration_create_claim_api SET policyNumber = 'HO100033995-01' WHERE claimNumber = 'C21HOA00284'
 	UPDATE edw_stage.migration_create_claim_api SET policyNumber = 'AUX10001238' WHERE claimNumber = 'C22AUA00263'
 	UPDATE edw_stage.migration_create_claim_api SET policyNumber = 'HO37788288836-03' WHERE claimNumber = 'C22HOA00025'
+	-- 02/06/2025
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C20HOA00026'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C20COA00001'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C20HOA00096'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C21HOA00200'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C21AUA00277'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C21AUA00355'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C21AUA00367'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C21AUA00416'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C21AUA00435'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C21HOA00722'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C21AUA00518'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C21COA00062'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C21HOA00848'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C22HOA00025'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C22HOA00077'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C22HOA00118'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C22HOA00200'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA00415'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C22HOA00256'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA00444'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C22COA00024'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA00639'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA00737'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA00740'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA00844'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C22HOA00484'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA00914'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA01057'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA01134'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA01141'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA01168'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C22HOA00650'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C22HOA00870'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA01283'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA01328'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA01340'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C22AUA01374'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C23HOA00004'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C23HOA00009'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C23AUA00228'
+		update edw_stage.migration_create_claim_api set lossType = 'liability_claim_other_liability' where  claimNumber = 'C23XLA00007'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C23HOA00223'
+		update edw_stage.migration_create_claim_api set lossType = 'liability_claim_other_liability' where  claimNumber = 'C23XLA00009'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C23AUA00479'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C23HOA00406'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C23HOA00509'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C23AUA00797'
+		update edw_stage.migration_create_claim_api set lossType = 'liability_claim_other_liability' where  claimNumber = 'C23XLA00012'
+		update edw_stage.migration_create_claim_api set lossType = 'liability_claim_other_liability' where  claimNumber = 'C23XLA00013'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C23HOA00515'
+		update edw_stage.migration_create_claim_api set lossType = 'liability_claim_other_liability' where  claimNumber = 'C23XLA00016'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C23HOA00593'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C23HOA00604'
+		update edw_stage.migration_create_claim_api set lossType = 'liability_claim_other_liability' where  claimNumber = 'C23XLA00023'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C23HOA00786'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C23AUA01350'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C23AUA01396'
+		update edw_stage.migration_create_claim_api set lossType = 'liability_claim_other_liability' where  claimNumber = 'C23XLA00025'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C23AUA01598'
+		update edw_stage.migration_create_claim_api set lossType = 'liability_claim_other_liability' where  claimNumber = 'C23XLA00029'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C23HOA00928'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C23AUA01718'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C23HOA00970'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C23AUA01828'
+		update edw_stage.migration_create_claim_api set lossType = 'liability_claim_other_liability' where  claimNumber = 'C23XLA00037'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C23AUA01873'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C24HOA00044'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C24AUA00092'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C24AUA00223'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C24HOA00105'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C24AUA00303'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C24AUA00390'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C24AUA00403'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C24AUA00498'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C24AUA00518'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C24AUA00529'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C24AUA00607'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C24AUA00687'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C24AUA00743'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C24AUA00747'
+		update edw_stage.migration_create_claim_api set lossType = 'liability_claim_other_liability' where  claimNumber = 'C24XLA00035'
+		update edw_stage.migration_create_claim_api set lossType = 'liability_claim_other_liability' where  claimNumber = 'C24XLA00039'
+		update edw_stage.migration_create_claim_api set lossType = 'liability_claim_other_liability' where  claimNumber = 'C24XLA00042'
+		update edw_stage.migration_create_claim_api set lossType = 'liability_claim_other_liability' where  claimNumber = 'C24XLA00043'
+		update edw_stage.migration_create_claim_api set lossType = 'auto_claim_rollover' where  claimNumber = 'C24AUA00879'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C24HOA00445'
+		update edw_stage.migration_create_claim_api set lossType = 'property_claim_other' where  claimNumber = 'C24HOA00502'
 
+	
 		-- Update audit table		
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
