@@ -34,9 +34,9 @@ notes_queries = [
         ]
 
 financial_transactions_queries = [
-            [financial_transactions_qry.replace('and 1=1', 'and id between 1 and 50000')],
-            [financial_transactions_qry.replace('and 1=1', 'and id between 50001 and 100000')],
-            [financial_transactions_qry.replace('and 1=1', 'and id > 100000')],
+            [financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id between 1 and 50000')],
+            [financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id between 50001 and 100000')],
+            [financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id > 100000')],
         ]
 
 
