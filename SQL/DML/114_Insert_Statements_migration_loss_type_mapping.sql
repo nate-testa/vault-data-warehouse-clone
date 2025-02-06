@@ -204,7 +204,7 @@ INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_c
 
 INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'HO', N'COL_HO_28', N'', N'SCOL_HO_28_01', N'Sewer and Drain', N'property_claim_sewer_backup',GETDATE())
 
-INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'HO', N'COL_HO_29', N'Workers Compensation', N'SCOL_HO_29_01', N'Workers Compensation', N'property_claim_thirdparty_injury',GETDATE())
+INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'HO', N'COL_HO_29', N'Workers Compensation', N'SCOL_HO_29_01', N'Workers Compensation', N'property_claim_other',GETDATE())
 
 INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'HO', N'COL_HO_30', N'Mysterious Disappearance', N'SCOL_HO_30_01', N'Mysterious Disappearance', N'property_claim_robbery',GETDATE())
 
