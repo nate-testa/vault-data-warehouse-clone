@@ -18,6 +18,8 @@
 -- 02/03/2025			Yunus Mohammed					9 datetimeOfLoss and datetimeOfNotification formatted to default timestamp to 12 PM
 -- 02/05/2025			Yunus Mohammed					10 	Used party_id instead of pty_party_id and update claimParties joins
 -- 02/05/2025			Yunus Mohammed					 11	Added check for "exposure note should be migrated if content is blank"
+--02/06/2025			Yunus Mohammed					12 Used TransactionEffectiveDate instead of EffectiveDate to get vehicles from Metal
+--																									Updated join in vehicles object to ensure if VIN not matches with metal we always send object
 -- ==================================================================================================================================
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api]
 @claim_no varchar(max) = null
@@ -533,14 +535,17 @@ END AS [injuredParty.claimPartyId]
 					) as a
 				for json path, include_null_values
 			) as exposures
-			,(
+			,JSON_QUERY((
 				select distinct
 					 obj.[OBJECT_ID] as id,
                   --  i.item_id as id,
-                    pivottable.VIN as vinNumber,pivottable.Make as make,pivottable.Model as model,
+                    cast(cpi.insured_name as varchar(max)) as vinNumber,pivottable.Make as make,pivottable.Model as model,
 					pivottable.ModelYear as [year],pivottable.EngineSize as engineSize
 				from
-				(
+                 edw_stage.t_clm_object AS obj 
+                 INNER JOIN edw_stage.t_clm_pol_insured cpi ON obj.insured_id = cpi.insured_id
+				LEFT JOIN
+                (
 				SELECT
 					acctvo.[UniqueId] as id
 					,acctvof.Field
@@ -556,7 +561,7 @@ END AS [injuredParty.claimPartyId]
 						where
 							acct.PolicyNumber = LTRIM(RTRIM(REPLACE(REPLACE(REPLACE(REPLACE(c.policy_no, CHAR(10), CHAR(32)),CHAR(13), CHAR(32)),CHAR(160), CHAR(32)),CHAR(9),CHAR(32))))
 							and acct.[State] = 'Issued'
-							and acct.EffectiveDate < = cast(c.ACCIDENT_TIME as date)
+							and acct.TransactionEffectiveDate < = cast(c.ACCIDENT_TIME as date)
 					) acct
 					INNER JOIN edw_stage.[AccountTransactionVersion] AS acctv ON acctv.AccountTransactionId = acct.Id
 					INNER JOIN edw_stage.[AccountTransactionVersionObject] AS acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
@@ -569,17 +574,17 @@ END AS [injuredParty.claimPartyId]
 				pivot
 				(
 					max([Value]) for field in (VIN,ModelYear,Make,Model,EngineSize,VehicleType,VehicleUsage)
-				) as pivottable
-				INNER JOIN edw_stage.t_clm_object AS obj ON pivottable.case_id = obj.CASE_ID
-                INNER JOIN edw_stage.t_clm_pol_insured cpi ON obj.insured_id = cpi.insured_id and pivottable.VIN = cast(cpi.insured_name as varchar(max))
+				) as pivottable	ON pivottable.case_id = obj.CASE_ID  and pivottable.VIN = cast(cpi.insured_name as varchar(max))                
                 LEFT JOIN edw_stage.t_clm_item i ON obj.[object_id] = i.[object_id]
                 LEFT JOIN edw_stage.t_clm_subclaim_type sct ON obj.subclaim_type = sct.subclaim_type_code
                 LEFT JOIN edw_stage.migration_exposure_type_mapping ext on ext.product_cd = prd.product_cd
 						and ext.coverage_name = cast(i.coverage_name as varchar(max))
 						and ext.subclaim_type_name = cast(sct.subclaim_type_name as varchar(max))
                 -- WHERE  ext.snapsheet_exposure_type not in ('InjuredPerson', 'PipMedPay')
+                where
+                    obj.CASE_ID = c.CASE_ID
 				FOR JSON PATH, INCLUDE_NULL_VALUES
-			) as vehicles
+			)) as vehicles
 			,(
 				select distinct
 					p.PARTY_ID as id,
