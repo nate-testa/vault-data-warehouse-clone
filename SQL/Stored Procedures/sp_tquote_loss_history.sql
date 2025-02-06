@@ -13,6 +13,7 @@ GO
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
 -- 01-15-2025				Alberto Almario				1. Add include_in_rating_in column.
+-- 02-05-2025				Alberto Almario				2. Add new columns source_of_water, source_of_fire and include_in_rating_override_in.
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_loss_history]
 AS
@@ -46,6 +47,7 @@ BEGIN
 			SubCauseofLoss as sub_cause_of_loss, LossDescription, PolicyType, CatIndicator, Disputed,
 			AddressLine1, AddressLine2, AddressLineUnit, AddressCity, AddressState, AddressZipCode, Coverage,
 			ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred, IncludeInRating
+			,SourceOfWater, SourceOfFire, IncludeInRatingOverride
 			--,4 as [source_system_sk] --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
@@ -87,6 +89,7 @@ BEGIN
 					PropertyOrLiability, [Source], ClaimStatus, Claimant, FileNumber, LossDate, LossIdentifier, LossType, SubCauseofLoss, 
 					LossDescription, PolicyType, CatIndicator, Disputed, AddressLine1, AddressLine2, AddressLineUnit, AddressCity, AddressState, AddressZipCode, 
 					Coverage, ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred, IncludeInRating
+					,SourceOfWater, SourceOfFire, IncludeInRatingOverride
 					)
 			) pivottable
 			
@@ -128,6 +131,9 @@ BEGIN
 			,[update_ts]
 			,[etl_audit_sk]
 			,include_in_rating_in
+			,source_of_water
+			,source_of_fire
+			,include_in_rating_override_in
 		)
 		SELECT 
 			[quote_no]
@@ -169,6 +175,13 @@ BEGIN
 				WHEN IncludeInRating = 'true' THEN 'Yes'
 				WHEN IncludeInRating = 'false' THEN 'No'
 				ELSE IncludeInRating
+			END
+			,SourceOfWater
+			,SourceOfFire
+			,CASE 
+				WHEN IncludeInRatingOverride = 'true' THEN 'Yes'
+				WHEN IncludeInRatingOverride = 'false' THEN 'No'
+				ELSE IncludeInRatingOverride
 			END
 		FROM 
 			[edw_temp].[tquote_loss_history_temp1]
