@@ -257,7 +257,7 @@ BEGIN
 					(
 						SELECT *, 
 								--added replace x, to remove dupes
-								rank() over (partition by replace(prior_policy_no.'x','') order by pol_no_changed_in, quote_sk) rnk  
+								rank() over (partition by replace(prior_policy_no,'x','') order by pol_no_changed_in, quote_sk) rnk  
 						from edw_temp.tren_summ_quotes
 					) A
 				 	where rnk = 1
