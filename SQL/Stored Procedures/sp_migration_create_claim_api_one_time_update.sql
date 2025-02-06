@@ -6,6 +6,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 01/28/2025			Yunus Mohammed					1. Created this procedure
 -- 02/06/2025			Yunus Mohammed					2. Added update stmts for loss_cause 
+--																								Format change for datetimeOfLoss update stmts
 -- ==================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api_one_time_update]
 AS
