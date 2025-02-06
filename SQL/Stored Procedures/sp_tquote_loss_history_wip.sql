@@ -119,7 +119,12 @@ BEGIN
 			WHEN IncludeInRating = 'false' THEN 'No'
 			ELSE IncludeInRating
 		END
-		,SourceOfWater,SourceOfFire,IncludeInRatingOverride
+		,SourceOfWater,SourceOfFire
+		,CASE 
+			WHEN IncludeInRatingOverride = 'true' THEN 'Yes'
+			WHEN IncludeInRatingOverride = 'false' THEN 'No'
+			ELSE IncludeInRatingOverride
+		END
 		)
         WHEN MATCHED THEN UPDATE
 		SET
@@ -159,7 +164,11 @@ BEGIN
 										END
 		,Target.source_of_water=Source.SourceOfWater
 		,Target.source_of_fire=Source.SourceOfFire
-		,Target.include_in_rating_override_in=Source.IncludeInRatingOverride
+		,Target.include_in_rating_override_in=	CASE 
+													WHEN Source.IncludeInRatingOverride = 'true' THEN 'Yes'
+													WHEN Source.IncludeInRatingOverride = 'false' THEN 'No'
+													ELSE Source.IncludeInRatingOverride
+												END
 		;
 
 		SET @rows_affected=@@ROWCOUNT;

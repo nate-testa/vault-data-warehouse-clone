@@ -174,7 +174,11 @@ BEGIN
 			END
 			,SourceOfWater
 			,SourceOfFire
-			,IncludeInRatingOverride
+			,CASE 
+				WHEN IncludeInRatingOverride = 'true' THEN 'Yes'
+				WHEN IncludeInRatingOverride = 'false' THEN 'No'
+				ELSE IncludeInRatingOverride
+			END
 		FROM 
 			[edw_temp].[tloss_history_temp1]
 
