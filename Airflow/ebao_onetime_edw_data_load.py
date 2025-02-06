@@ -120,7 +120,7 @@ with DAG(
             html_content=get_HTML_on_vault_format('The Ebao Azure Data Factory pipelines executed successfully',''),
         )
 
-        adf_etl_load_stage >> adf_etl_load_ebao_mqq >> adf_etl_load_ebao_mqq_address >> adf_etl_load_ebao_pub_user >> adf_etl_load_ebao_pub_diary >> adf_etl_load_ls_aws_dms >> send_adf_email
+        adf_etl_load_ebao_mqq >> adf_etl_load_ebao_mqq_address >> adf_etl_load_ebao_pub_user >> adf_etl_load_ebao_pub_diary >> send_adf_email
 
     with TaskGroup("claim_group") as claim_group:
 
