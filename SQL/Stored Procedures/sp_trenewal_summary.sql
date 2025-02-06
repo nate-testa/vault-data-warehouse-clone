@@ -49,6 +49,7 @@ GO
 -- 08/14/24		Architha Gudimalla				25. updated uw_company_cd logic
 -- 08/14/24		Architha Gudimalla				26. updated offered_or_not_taken_quote_ct logic
 -- 08/15/24		Architha Gudimalla				27. Fixed errors for the code changes done in 23-26
+-- 02/06/25		Architha Gudimalla				28. AD8428 - Prod error due to dupes in quotes
 -- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -255,7 +256,8 @@ BEGIN
 					FROM
 					(
 						SELECT *, 
-								rank() over (partition by prior_policy_no order by pol_no_changed_in, quote_sk) rnk  
+								--added replace x, to remove dupes
+								rank() over (partition by replace(prior_policy_no,'x','') order by pol_no_changed_in, quote_sk) rnk  
 						from edw_temp.tren_summ_quotes
 					) A
 				 	where rnk = 1
