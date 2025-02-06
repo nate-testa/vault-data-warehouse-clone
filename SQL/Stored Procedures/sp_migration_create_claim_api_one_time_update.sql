@@ -5,6 +5,7 @@
 -- Change date 		|Author										        |	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 01/28/2025			Yunus Mohammed					1. Created this procedure
+-- 02/06/2025			Yunus Mohammed					2. Added update stmts for loss_cause 
 -- ==================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api_one_time_update]
 AS
@@ -2381,6 +2382,94 @@ Update edw_stage.migration_create_claim_api set accountCode='vault_es_insurance_
 	UPDATE edw_stage.migration_create_claim_api SET policyNumber = 'AUX10001238' WHERE claimNumber = 'C22AUA00263'
 	UPDATE edw_stage.migration_create_claim_api SET policyNumber = 'HO37788288836-03' WHERE claimNumber = 'C22HOA00025'
 
+	-- Update loss_cause
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 16712621
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 16713017
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 16756506
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 16813862
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 16943591
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 16990189
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 16996190
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17036745
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17045077
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 17077004
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17129790
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 17198873
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 17216355
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 17263821
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 17303409
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 17339748
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 17417464
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17447258
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 17463089
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17464058
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 17517062
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17546849
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17588673
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17591071
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17637821
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 17665096
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17665837
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17737208
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17765040
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17767649
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17778412
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 17793485
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 17835121
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17870496
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17892438
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17894877
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 17909833
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 18141759
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 18144604
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 18313936
+	update edw_stage.t_clm_case set new_loss_cause = 'liability_claim_other_liability' where  case_id = 18361030
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 18383689
+	update edw_stage.t_clm_case set new_loss_cause = 'liability_claim_other_liability' where  case_id = 18447333
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 18492149
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 18606514
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 18710507
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 18713427
+	update edw_stage.t_clm_case set new_loss_cause = 'liability_claim_other_liability' where  case_id = 18717014
+	update edw_stage.t_clm_case set new_loss_cause = 'liability_claim_other_liability' where  case_id = 18718055
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 18719359
+	update edw_stage.t_clm_case set new_loss_cause = 'liability_claim_other_liability' where  case_id = 18810580
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 18816372
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 18826267
+	update edw_stage.t_clm_case set new_loss_cause = 'liability_claim_other_liability' where  case_id = 19042891
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 19055772
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19071638
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19094674
+	update edw_stage.t_clm_case set new_loss_cause = 'liability_claim_other_liability' where  case_id = 19137948
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19208220
+	update edw_stage.t_clm_case set new_loss_cause = 'liability_claim_other_liability' where  case_id = 19258298
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 19282912
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19287483
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 19358709
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19376650
+	update edw_stage.t_clm_case set new_loss_cause = 'liability_claim_other_liability' where  case_id = 19390442
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19400255
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 19478908
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19506501
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19574010
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 19602621
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19650226
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19727946
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19734333
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19786797
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19793567
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19801434
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19866627
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19928409
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19975670
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 19977573
+	update edw_stage.t_clm_case set new_loss_cause = 'liability_claim_other_liability' where  case_id = 19981586
+	update edw_stage.t_clm_case set new_loss_cause = 'liability_claim_other_liability' where  case_id = 20024029
+	update edw_stage.t_clm_case set new_loss_cause = 'liability_claim_other_liability' where  case_id = 20064036
+	update edw_stage.t_clm_case set new_loss_cause = 'liability_claim_other_liability' where  case_id = 20084945
+	update edw_stage.t_clm_case set new_loss_cause = 'auto_claim_rollover' where  case_id = 20092667
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 20129076
+	update edw_stage.t_clm_case set new_loss_cause = 'property_claim_other' where  case_id = 20235948
 		-- Update audit table		
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
