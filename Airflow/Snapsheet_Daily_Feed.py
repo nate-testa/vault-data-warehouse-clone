@@ -2,6 +2,7 @@ import os
 import pendulum
 from datetime import datetime, timedelta
 from airflow import DAG
+from airflow.models import Variable
 from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.operators.mssql_operator import MsSqlOperator
 from airflow.operators.email_operator import EmailOperator
@@ -15,6 +16,7 @@ to_email = "itdatateam@vault.insurance"
 cc_email = ""
 
 HOME_PATH = os.path.expanduser('~')
+ENVIRONMENT = Variable.get("environment")
 
 def snapsheet_api_policy_send_email(**kwargs):
 
@@ -125,13 +127,14 @@ with DAG(
             autocommit=True,
         )
 
-    sp_claim_policy_webhook_snapsheet_api_update_contactinfo = MsSqlOperator(
-            task_id='sp_claim_policy_webhook_snapsheet_api_update_contactinfo',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_claim_policy_webhook_snapsheet_api_update_contactinfo",
-            database="vault_edw",
-            autocommit=True,
-        )
+    if ENVIRONMENT != 'PRODUCTION':
+        sp_claim_policy_webhook_snapsheet_api_update_contactinfo = MsSqlOperator(
+                task_id='sp_claim_policy_webhook_snapsheet_api_update_contactinfo',
+                mssql_conn_id='Vault_EDW',
+                sql="EXEC edw_core.sp_claim_policy_webhook_snapsheet_api_update_contactinfo",
+                database="vault_edw",
+                autocommit=True,
+            )
     
     send_snapsheet_email = EmailOperator(
             task_id='send_snapsheet_email',
@@ -150,5 +153,7 @@ with DAG(
     end = DummyOperator(
         task_id='end',
     )
-
-start >> sp_claim_policy_search_snapsheet_api >> py_process_snapsheet_policies >> sp_claim_policy_webhook_snapsheet_api >> sp_claim_policy_webhook_snapsheet_api_update_contactinfo >> send_snapsheet_email >> py_snapsheet_api_policy_send_email >> end
+if ENVIRONMENT != 'PRODUCTION':
+    start >> sp_claim_policy_search_snapsheet_api >> py_process_snapsheet_policies >> sp_claim_policy_webhook_snapsheet_api >> sp_claim_policy_webhook_snapsheet_api_update_contactinfo >> send_snapsheet_email >> py_snapsheet_api_policy_send_email >> end
+else:
+    start >> sp_claim_policy_search_snapsheet_api >> py_process_snapsheet_policies >> sp_claim_policy_webhook_snapsheet_api >> send_snapsheet_email >> py_snapsheet_api_policy_send_email >> end
