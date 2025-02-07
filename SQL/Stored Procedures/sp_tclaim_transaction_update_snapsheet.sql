@@ -1,15 +1,13 @@
 -- =================================================================================================
--- Description: This procedures inserts and updates claim notes snapsheet
+-- Description: This procedures feature_status_sk in tclaim_transaction table
 -----------------------------------------------------------------------------------------------------------
 -- Change date          |Author						            |	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 02/07/25		           Yunus Mohammed			1. Created this procedure - AD7391
+-- 02/07/25		           Yunus Mohammed			1. Created this procedure
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction_update_snapsheet]
 AS
 BEGIN
-    -- SET NOCOUNT ON added to prevent extra result sets from
-    -- interfering with SELECT statements.
     SET NOCOUNT ON
 
 	BEGIN TRY
@@ -51,7 +49,7 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp. tclaim_transaction_update_snapsheet_temp1;
 
 		SET @rows_affected=@@ROWCOUNT;
-        
+
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
