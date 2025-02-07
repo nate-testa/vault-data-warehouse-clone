@@ -20,6 +20,7 @@
 -- 02/05/2025			Yunus Mohammed					 11	Added check for "exposure note should be migrated if content is blank"
 --02/06/2025			Yunus Mohammed					12 Used TransactionEffectiveDate instead of EffectiveDate to get vehicles from Metal
 --																									Updated join in vehicles object to ensure if VIN not matches with metal we always send object
+--02/07/2025			Yunus Mohammed					13 Vehicles object - put check for product Auto and PEL.
 -- ==================================================================================================================================
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api]
 @claim_no varchar(max) = null
@@ -583,6 +584,10 @@ END AS [injuredParty.claimPartyId]
                 -- WHERE  ext.snapsheet_exposure_type not in ('InjuredPerson', 'PipMedPay')
                 where
                     obj.CASE_ID = c.CASE_ID
+					and prd.product_cd = 'AU'
+					--As per Snapsheet, vehicle id should not be present for ('InjuredPerson', 'PipMedPay') exposure types--
+					and ext.snapsheet_exposure_type not in ('InjuredPerson', 'PipMedPay')
+					
 				FOR JSON PATH, INCLUDE_NULL_VALUES
 			)) as vehicles
 			,(
