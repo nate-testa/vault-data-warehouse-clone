@@ -23,6 +23,7 @@
 --02/07/2025			Yunus Mohammed					13 Vehicles object - put check for product Auto.
 --																									Trim city, state, zip and country.
 --																									Updates made to pary first name and last name logic
+-- 02/07/2025			Yunus Mohammed					14 claimParties => if first name or last name is blank use Unspecified
 -- ==================================================================================================================================
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api]
 @claim_no varchar(max) = null
@@ -609,21 +610,29 @@ END AS [injuredParty.claimPartyId]
 					p.partyType,
 					CASE
 					WHEN p.IS_ORG_PARTY != 'Y' THEN
-						CASE 
+					trim(
+						CASE
+							WHEN ISNULL(cast(p.party_name as varchar(255)),'') = '' THEN
+							 	'Unspecified' 
 							WHEN charindex(' ' , trim(cast(p.party_name as varchar(255)))) > 0 THEN
-							substring(trim(cast(p.party_name as varchar(255))),1,charindex(' ', trim(cast(p.party_name as varchar(255))))-1)
+									substring(trim(cast(p.party_name as varchar(255))),1,charindex(' ', trim(cast(p.party_name as varchar(255))))-1)							 
 							ELSE
 								cast(p.party_name as varchar(255))
 						END
-					end	as firstName,
+					)
+					END	AS firstName,
 				CASE
 					WHEN p.IS_ORG_PARTY != 'Y' THEN
+					trim(
 						CASE
+							WHEN ISNULL(cast(p.party_name as varchar(255)),'') = '' THEN
+							 	'Unspecified' 
 							WHEN charindex(' ' , trim(cast(p.party_name as varchar(255)))) > 0 THEN
 								SUBSTRING(trim(cast(p.party_name as varchar(255))), CHARINDEX(' ', 	trim(cast(p.party_name as varchar(255)))) + 1,LEN(trim(cast(p.party_name as varchar(255))))) 
 							ELSE
 								cast(p.party_name as varchar(255))
-						END				
+						END
+					)	
 				end as lastName,
 					JSON_QUERY(
 							(
