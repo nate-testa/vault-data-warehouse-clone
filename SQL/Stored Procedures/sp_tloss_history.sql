@@ -6,7 +6,7 @@
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
 -- 01-15-2025				Alberto Almario				1. Add include_in_rating_in column.
--- 02-05-2025				Alberto Almario				2. Add new columns source_of_water, source_of_fire and include_in_rating_override_in.
+-- 02-05-2025				Alberto Almario				2. Add new columns source_of_water, source_of_fire and include_in_rating_override_in..
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tloss_history]
 AS
