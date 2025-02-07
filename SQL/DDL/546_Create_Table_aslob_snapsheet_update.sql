@@ -1,5 +1,5 @@
 IF NOT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'edw_stage'
-AND TABLE_NAME = 'claim_financial_transaction_action_snapsheet_api')
+AND TABLE_NAME = 'aslob_snapsheet_update')
 BEGIN
 CREATE TABLE [edw_stage].[aslob_snapsheet_update](
 	[product_cd] [varchar](16) NOT NULL,
