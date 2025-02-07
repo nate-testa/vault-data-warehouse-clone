@@ -22,9 +22,9 @@ cc_email = ""
 ENVIRONMENT = Variable.get("environment")
 
 claims_queries = [
-            [claims_qry.replace('and 1=1', 'and id between 1 and 3300')],
-            [claims_qry.replace('and 1=1', 'and id between 3301 and 6600')],
-            [claims_qry.replace('and 1=1', 'and id > 6600')],
+            [claims_qry.replace('and 1=1', 'and id between 1 and 3000')],
+            [claims_qry.replace('and 1=1', 'and id between 3001 and 6000')],
+            [claims_qry.replace('and 1=1', 'and id > 6000')],
         ] 
 
 notes_queries = [

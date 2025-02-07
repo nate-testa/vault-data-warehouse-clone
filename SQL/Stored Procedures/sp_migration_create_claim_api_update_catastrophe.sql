@@ -1,11 +1,19 @@
+/****** Object:  StoredProcedure [edw_core].[sp_migration_create_claim_api_update_catastrophe]    Script Date: 7/02/2025 10:55:29 a. m. ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 -- =================================================================================================
 -- Description: This procedures load data in table to update cat code for claim
 ---------------------------------------------------------------------------------------------------
 -- Change date 				|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 --	12-02-2024				Yunus Mohammed				1. Created procedure
+--	02-07-2025				Hernando Gonzalez			2. Included new logic for PROD
 -- ================================================================================================= 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api_update_catastrophe]
+ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api_update_catastrophe]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -25,41 +33,68 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-		--************Start************
-        
+		-- ************Start************
         DROP TABLE IF EXISTS [edw_temp].[migration_create_claim_api_update_catastrophe_temp1];
 
-		SELECT
-			distinct mclm.claimNumber,mclm.claimReferenceNumber,mclm.accidentCode,
+		SELECT DISTINCT
+			mclm.claimNumber,
+			mclm.claimReferenceNumber,
+			mclm.accidentCode,
 			(
-			SELECT
-				JSON_VALUE(api_response, '$.claimReferenceNumber') as [data.id],
-				'claim' as [data.type],				
-				cfclm.option_prefixed_code as [data.attributes.cf_cat_code_292e]
-			FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER
+				'{ "data": { ' +
+				'"id": "' + ISNULL(JSON_VALUE(api_response, '$.claimReferenceNumber'), '') + '", ' +
+				'"type": "claim", ' +
+				'"attributes": { ' +
+				'"cf_cat_code_' + ISNULL(cfdef.generated_code, 'unknown') + '": "' + ISNULL(cfdef.prefixed_code, 'unknown') + '"' +
+				' } } }' 
 			) AS [data],
 			update_ts,
-			getdate() as create_ts
+			GETDATE() AS create_ts
 		INTO [edw_temp].[migration_create_claim_api_update_catastrophe_temp1]
-		from
-			edw_stage.migration_create_claim_api mclm
-			CROSS APPLY
-			OPENJSON(api_response)
-			WITH (
+		FROM edw_stage.migration_create_claim_api mclm
+		CROSS APPLY OPENJSON(api_response)
+		WITH (
 			claimNumber NVARCHAR(100) '$.claimNumber',
 			claimReferenceNumber NVARCHAR(250) '$.externalReferenceNumber'
-			) AS clm
-			inner join edw_stage_snapsheet.custom_field_claims_enumeration_values cfclm on
-			cfclm.option_name like mclm.accidentCode + '%'
-		where
+		) AS clm
+		INNER JOIN edw_stage_snapsheet.custom_field_enumeration_options cfclm 
+			ON cfclm.name LIKE mclm.accidentCode + '%'
+		LEFT JOIN edw_stage_snapsheet.custom_field_definitions cfdef 
+			ON TRY_CAST(LEFT(cfclm.[name], 2) AS INT) = TRY_CAST(SUBSTRING(cfdef.[name], 3, 2) AS INT)
+			AND cfdef.[name] LIKE (
+				CASE 
+					-- 2024
+					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) < 72 AND LEFT(cfclm.[name], 2) = '24'
+						THEN '%Pt. 1%'
+					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) >= 72 AND LEFT(cfclm.[name], 2) = '24'
+						THEN '%Pt. 2%'
+					-- 2023
+					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) >= 24 AND LEFT(cfclm.[name], 2) = '23'
+						THEN '%Pt. 1%'
+					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) < 24 AND LEFT(cfclm.[name], 2) = '23'
+						THEN '%Pt. 2%'
+					-- 2022
+					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) >= 14 AND LEFT(cfclm.[name], 2) = '22'
+						THEN '%Pt. 1%'
+					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) < 14 AND LEFT(cfclm.[name], 2) = '22'
+						THEN '%Pt. 2%'
+					-- 2021
+					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) >= 25 AND LEFT(cfclm.[name], 2) = '21'
+						THEN '%Pt. 1%'
+					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) < 25 AND LEFT(cfclm.[name], 2) = '21'
+						THEN '%Pt. 2%'
+					-- 2020
+					ELSE '%2020 CAT Codes%'
+				END
+			)
+		WHERE 
 			api_status = 'Success'
-			and api_response is not null
-			and mclm.claimNumber = clm.claimNumber
+			AND api_response IS NOT NULL
+			AND mclm.claimNumber = clm.claimNumber
 			AND cast(update_ts as datetime2(7)) > @last_source_extract_ts
-			-- case when [status] = 'OPEN' THEN 'DRAFT' ELSE [status] END AS [status],		
-			
+			-- case when [status] = 'OPEN' THEN 'DRAFT' ELSE [status] END AS [status]
 
-        -- * Start Insert process
+        -- Start Insert process
         insert into edw_stage.migration_create_claim_api_update_catastrophe
         (
             claimNumber,claimRerenceNumber,accidentCode, [data] ,create_ts,api_status
@@ -70,10 +105,9 @@ BEGIN
             'pending' as api_status
         FROM [edw_temp].[migration_create_claim_api_update_catastrophe_temp1]
         ;
+		
         --************End************
-
 		SET @rows_affected=@@ROWCOUNT;
-
 		
 		-- Update control table
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(update_ts) FROM [edw_temp].[migration_create_claim_api_update_catastrophe_temp1]),@last_source_extract_ts);
@@ -100,3 +134,4 @@ BEGIN
 	
     END CATCH
 END
+GO
