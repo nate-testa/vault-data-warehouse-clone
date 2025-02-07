@@ -3,9 +3,10 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date 				|Author										|	Change Description
 ---------------------------------------------------------------------------------------------------
---	09-27-2024				Yunus Mohammed				Created procedure
--- 01-28-2025				Yunus Mohammed				Used latest transaction for policy
--- 01-28-2025	           Sandeep Gundreddy			removed source_system_sk<>1  filter to include OS data
+--	09-27-2024				Yunus Mohammed				1 - Created procedure
+-- 01-28-2025				Yunus Mohammed				2 - Used latest transaction for policy
+-- 01-28-2025	           Sandeep Gundreddy			3- Removed source_system_sk<>1  filter to include OS data
+-- 02-07-2025              Yunus Mohammed               4 - Used trim for city, state, zip and country
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_search_snapsheet_api]
 AS
@@ -55,10 +56,10 @@ BEGIN
 								SELECT 
 									p.mailing_address_line1 as [address1],
 									p.mailing_address_line2 as [address2],
-									p.mailing_address_city_nm as [city],
-									p.mailing_address_state_cd as [region],
-									p.mailing_address_zip_cd as [postalCode],
-									p.mailing_address_country_nm as [country]
+									trim(p.mailing_address_city_nm) as [city],
+									trim(p.mailing_address_state_cd) as [region],
+									trim(p.mailing_address_zip_cd) as [postalCode],
+									trim(p.mailing_address_country_nm) as [country]
 								for json path, include_null_values
 							) AS addresses,
 							(
