@@ -189,3 +189,5 @@ INSERT [edw_stage].[migration_coverage_mapping] ([product_cd], [sub_claimtype_nm
 
 INSERT [edw_stage].[migration_coverage_mapping] ([product_cd], [sub_claimtype_nm], [coverage_nm], [snapsheet_coverage_nm], [snapsheet_coverage_cd],[create_ts]) VALUES (N'PEL', N'TP_Wrongful Act', N'Employment Practices Liability', N'Employment Practices Liability', N'EMPL',GETDATE())
 
+INSERT [edw_stage].[migration_coverage_mapping] ([product_cd], [sub_claimtype_nm], [coverage_nm], [snapsheet_coverage_nm], [snapsheet_coverage_cd],[create_ts]) VALUES (N'HO', N'FP_Property Damage',N'Valuable Articles Coverage - Bank Vaulted Jewelry Scheduled', N'HO Collections - Scheduled', N'HCOSC',GETDATE())
+

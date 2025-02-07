@@ -428,3 +428,5 @@ INSERT [edw_stage].[migration_exposure_type_mapping] ([product_cd], [coverage_na
 INSERT [edw_stage].[migration_exposure_type_mapping] ([product_cd], [coverage_name], [subclaim_type_name], [snapsheet_exposure_type],[create_ts]) VALUES (N'LUX', N'Valuable Articles Coverage - Guns Blanket', N'FP_Property Damage', N'PersonalProperty',GETDATE())
 
 INSERT [edw_stage].[migration_exposure_type_mapping] ([product_cd], [coverage_name], [subclaim_type_name], [snapsheet_exposure_type],[create_ts]) VALUES (N'LUX', N'Valuable Articles Coverage - Wine Blanket', N'FP_Property Damage', N'PersonalProperty',GETDATE())
+
+INSERT [edw_stage].[migration_exposure_type_mapping] ([product_cd], [coverage_name], [subclaim_type_name], [snapsheet_exposure_type],[create_ts]) VALUES (N'HO', N'Valuable Articles Coverage - Bank Vaulted Jewelry Scheduled', N'FP_Property Damage', N'PersonalProperty',GETDATE())
