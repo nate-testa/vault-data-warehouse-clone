@@ -20,6 +20,10 @@
 -- 02/05/2025			Yunus Mohammed					 11	Added check for "exposure note should be migrated if content is blank"
 --02/06/2025			Yunus Mohammed					12 Used TransactionEffectiveDate instead of EffectiveDate to get vehicles from Metal
 --																									Updated join in vehicles object to ensure if VIN not matches with metal we always send object
+--02/07/2025			Yunus Mohammed					13 Vehicles object - put check for product Auto.
+--																									Trim city, state, zip and country.
+--																									Updates made to pary first name and last name logic
+-- 02/07/2025			Yunus Mohammed					14 claimParties => if first name or last name is blank use Unspecified
 -- ==================================================================================================================================
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api]
 @claim_no varchar(max) = null
@@ -208,10 +212,10 @@ BEGIN
 						SELECT
 							tpa.ADDRESS_LINE_1 as address1,
 							tpa.ADDRESS_LINE_2 as address2,
-							tpa.CITY as city,
-							tpa.POST_CODE as postalCode,
-							tpa.[STATE] as region,
-							tpa.COUNTRY as country
+							trim(tpa.CITY) as city,
+							trim(tpa.POST_CODE) as postalCode,
+							upper(trim(tpa.[STATE])) as region,
+							trim(tpa.COUNTRY) as country
 						FROM
 							edw_stage.t_int_address tia
 							LEFT JOIN edw_stage.t_pub_address tpa ON tia.T_ADDRESS_ID=tpa.ADDRESS_ID
@@ -328,10 +332,10 @@ END AS [injuredParty.claimPartyId]
 								SELECT
 									tpa.ADDRESS_LINE_1 as address1,
 									tpa.ADDRESS_LINE_2 as address2,
-									tpa.CITY as city,
-									tpa.POST_CODE as postalCode,
-									tpa.[STATE] as region,
-									tpa.COUNTRY as country
+									trim(tpa.CITY) as city,
+									trim(tpa.POST_CODE) as postalCode,
+									upper(trim(tpa.[STATE])) as region,
+									trim(tpa.COUNTRY) as country
 								FROM
 									edw_stage.t_int_address tia
 									LEFT JOIN edw_stage.t_pub_address tpa ON tia.T_ADDRESS_ID=tpa.ADDRESS_ID
@@ -539,7 +543,9 @@ END AS [injuredParty.claimPartyId]
 				select distinct
 					 obj.[OBJECT_ID] as id,
                   --  i.item_id as id,
-                    cast(cpi.insured_name as varchar(max)) as vinNumber,pivottable.Make as make,pivottable.Model as model,
+                    cast(cpi.insured_name as varchar(max)) as vinNumber,
+					CASE WHEN ISNULL(pivottable.Make,'')= '' THEN 'Unspecified' ELSE pivottable.Make END as make,
+					CASE WHEN ISNULL(pivottable.Model,'')= '' THEN 'Unspecified' ELSE pivottable.Model END as model,
 					pivottable.ModelYear as [year],pivottable.EngineSize as engineSize
 				from
                  edw_stage.t_clm_object AS obj 
@@ -583,6 +589,10 @@ END AS [injuredParty.claimPartyId]
                 -- WHERE  ext.snapsheet_exposure_type not in ('InjuredPerson', 'PipMedPay')
                 where
                     obj.CASE_ID = c.CASE_ID
+					and prd.product_cd = 'AU'
+					--As per Snapsheet, vehicle id should not be present for ('InjuredPerson', 'PipMedPay') exposure types--
+					and ext.snapsheet_exposure_type not in ('InjuredPerson', 'PipMedPay')
+					
 				FOR JSON PATH, INCLUDE_NULL_VALUES
 			)) as vehicles
 			,(
@@ -601,22 +611,40 @@ END AS [injuredParty.claimPartyId]
 					-- null as partyType
 					p.partyType,
 					CASE
-						WHEN p.IS_ORG_PARTY != 'Y' THEN
-							substring(cast(p.party_name as varchar(255)),1,charindex(' ', cast(p.party_name as varchar(255)))-1)
-						end	as firstName,
-					CASE
-						WHEN p.IS_ORG_PARTY != 'Y' then SUBSTRING(cast(p.party_name as varchar(255)), CHARINDEX(' ', 
-						cast(p.party_name as varchar(255))) + 1, LEN(cast(p.party_name as varchar(255)))) 
-					end as lastName,
+					WHEN p.IS_ORG_PARTY != 'Y' THEN
+					trim(
+						CASE
+							WHEN ISNULL(cast(p.party_name as varchar(255)),'') = '' THEN
+							 	'Unspecified' 
+							WHEN charindex(' ' , trim(cast(p.party_name as varchar(255)))) > 0 THEN
+									substring(trim(cast(p.party_name as varchar(255))),1,charindex(' ', trim(cast(p.party_name as varchar(255))))-1)							 
+							ELSE
+								cast(p.party_name as varchar(255))
+						END
+					)
+					END	AS firstName,
+				CASE
+					WHEN p.IS_ORG_PARTY != 'Y' THEN
+					trim(
+						CASE
+							WHEN ISNULL(cast(p.party_name as varchar(255)),'') = '' THEN
+							 	'Unspecified' 
+							WHEN charindex(' ' , trim(cast(p.party_name as varchar(255)))) > 0 THEN
+								SUBSTRING(trim(cast(p.party_name as varchar(255))), CHARINDEX(' ', 	trim(cast(p.party_name as varchar(255)))) + 1,LEN(trim(cast(p.party_name as varchar(255))))) 
+							ELSE
+								cast(p.party_name as varchar(255))
+						END
+					)	
+				end as lastName,
 					JSON_QUERY(
 							(
 								SELECT
 								tpa.ADDRESS_LINE_1 as address1,
 								tpa.ADDRESS_LINE_2 as address2,
-								tpa.CITY as city,
-								tpa.POST_CODE as postalCode,
-								tpa.[STATE] as [region],
-								tpa.country as [country]
+								trim(tpa.CITY) as city,
+								trim(tpa.POST_CODE) as postalCode,
+								upper(trim(tpa.[STATE])) as [region],
+								trim(tpa.country) as [country]
 								FROM
 									edw_stage.t_int_address tia 
 									LEFT JOIN edw_stage.t_pub_address tpa ON tia.T_ADDRESS_ID=tpa.ADDRESS_ID
@@ -691,7 +719,7 @@ END AS [injuredParty.claimPartyId]
                     where
                         cp.CASE_ID = c.case_id
                         and obj.CLAIMANT_ID is null
-					) AS p					
+					) AS p
 				for json path, include_null_values
 			) as claimParties,	
 			'pending' as api_status
