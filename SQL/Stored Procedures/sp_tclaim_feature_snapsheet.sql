@@ -8,6 +8,7 @@
 -- 01/10/2024				Yunus Mohammed		  		3. Upated total_loss_in to Yes and No
 -- 01/17/2025				Hernando Gonzalez			4. add case statement for source_system_sk column
 -- 01/29/2025               Sandeep Gundreddy			5. Added condo to item_sk, coverage_sk logic
+-- 02/07/2025				Yunus Mohammed				6. Added logic to insert aslob_sk
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet]
 AS
@@ -46,7 +47,7 @@ BEGIN
 			end AS total_loss_in,
 			prd.product_sk,
 			exps.[status] AS claim_feature_status,
-			null as aslob_sk, 
+			asl.aslob_sk,
 			exps.[user_name] AS claim_adjuster_nm,
 			CASE
 				prd.product_cd
@@ -82,6 +83,7 @@ BEGIN
 		INNER JOIN edw_stage_snapsheet.exposures exps on exps.claim_id = clm.id
 		LEFT JOIN edw_stage_snapsheet.vehicles veh on veh.claim_id = exps.claim_id and veh.exposure_id = exps.id
 		LEFT JOIN edw_core.tproduct prd ON prd.product_sk = tcl.product_sk
+		LEFT JOIN edw_core.taslob asl on asl.coverage_cd = exps.coverage_name and asl.product_cd = prd.product_cd
 		-- Home Coverage
 		LEFT JOIN edw_core.thome_coverage thcov ON
 		thcov.home_coverage_sk = (
@@ -152,10 +154,8 @@ BEGIN
 											AND tcl.loss_dt > = tavc1.transaction_effective_dt
 										ORDER BY tavc1.transaction_seq_no DESC
 								)
-		WHERE greatest(exps.created_at,exps.updated_at) > @last_source_extract_ts;   
-		
+		WHERE greatest(exps.created_at,exps.updated_at) > @last_source_extract_ts;
 
-		
 		MERGE edw_core.tclaim_feature AS Target
 		USING edw_temp.tclaim_feature_snapsheet_temp1 AS Source
 		ON cast(Source.claim_coverage_cd as varchar(255)) = Target.claim_coverage_cd
