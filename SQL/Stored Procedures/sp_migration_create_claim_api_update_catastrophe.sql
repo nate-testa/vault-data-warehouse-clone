@@ -63,6 +63,11 @@ BEGIN
 			ON TRY_CAST(LEFT(cfclm.[name], 2) AS INT) = TRY_CAST(SUBSTRING(cfdef.[name], 3, 2) AS INT)
 			AND cfdef.[name] LIKE (
 				CASE 
+					-- 2025
+					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) < 61 AND LEFT(cfclm.[name], 2) = '25'
+						THEN '%Pt. 1%'
+					/*WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) >= 61 AND LEFT(cfclm.[name], 2) = '25'
+						THEN '%Pt. 2%'*/
 					-- 2024
 					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) < 72 AND LEFT(cfclm.[name], 2) = '24'
 						THEN '%Pt. 1%'
