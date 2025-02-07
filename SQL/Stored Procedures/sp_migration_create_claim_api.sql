@@ -20,7 +20,7 @@
 -- 02/05/2025			Yunus Mohammed					 11	Added check for "exposure note should be migrated if content is blank"
 --02/06/2025			Yunus Mohammed					12 Used TransactionEffectiveDate instead of EffectiveDate to get vehicles from Metal
 --																									Updated join in vehicles object to ensure if VIN not matches with metal we always send object
---02/07/2025			Yunus Mohammed					13 Vehicles object - put check for product Auto and PEL.
+--02/07/2025			Yunus Mohammed					13 Vehicles object - put check for product Auto.
 --																									Trim city, state, zip and country.
 --																									Updates made to pary first name and last name logic
 -- ==================================================================================================================================
