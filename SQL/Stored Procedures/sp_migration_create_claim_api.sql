@@ -543,7 +543,9 @@ END AS [injuredParty.claimPartyId]
 				select distinct
 					 obj.[OBJECT_ID] as id,
                   --  i.item_id as id,
-                    cast(cpi.insured_name as varchar(max)) as vinNumber,pivottable.Make as make,pivottable.Model as model,
+                    cast(cpi.insured_name as varchar(max)) as vinNumber,
+					CASE WHEN ISNULL(pivottable.Make,'')= '' THEN 'Unspecified' ELSE pivottable.Make END as make,
+					CASE WHEN ISNULL(pivottable.Model,'')= '' THEN 'Unspecified' ELSE pivottable.Model END as model,
 					pivottable.ModelYear as [year],pivottable.EngineSize as engineSize
 				from
                  edw_stage.t_clm_object AS obj 
