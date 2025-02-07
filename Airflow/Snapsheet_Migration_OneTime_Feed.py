@@ -28,15 +28,15 @@ claims_queries = [
         ] 
 
 notes_queries = [
-            [notes_qry.replace('and 1=1', 'and id between 1 and 40000')],
-            [notes_qry.replace('and 1=1', 'and id between 40001 and 80000')],
-            [notes_qry.replace('and 1=1', 'and id > 80000')],
-        ]
+            [notes_qry.replace('and 1=1', 'and id between 1 and 35000')],
+            [notes_qry.replace('and 1=1', 'and id between 35001 and 70000')],
+            [notes_qry.replace('and 1=1', 'and id > 70000')],
+        ]   
 
 financial_transactions_queries = [
-            [financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id between 1 and 50000')],
-            [financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id between 50001 and 100000')],
-            [financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id > 100000')],
+            [financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id between 1 and 29999')],
+            [financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id between 30000 and 59993')],
+            [financial_transactions_qry.replace('and 1=1', 'and financial_transaction_id > 59993')],
         ]
 
 
@@ -128,6 +128,8 @@ def snapsheet_api_send_email_status(**kwargs):
         dag=kwargs['dag'],
     ).execute(context=kwargs)
 
+def rise_exception():
+    raise Exception("*** rise exception to stop DAG execution ***")
 
 args = {
     'owner': 'airflow',
@@ -274,6 +276,13 @@ with DAG(
             autocommit=True,
         )
 
+        py_rise_exception = PythonOperator(
+            task_id="py_rise_exception",
+            python_callable=rise_exception,
+            dag=dag,
+        )
+        
+
         if ENVIRONMENT != 'PRODUCTION':
 
             sp_migration_create_financial_transaction_api_update_contactinfo = MsSqlOperator(
@@ -359,9 +368,10 @@ with DAG(
         )
 
         if ENVIRONMENT != 'PRODUCTION':
-            sp_migration_create_financial_transaction_api >> sp_migration_create_financial_transaction_api_update_contactinfo >> py_process_financial_transactions >> sp_migration_create_note_api >> py_process_notes >> sp_migration_update_exposure_adjuster_api >> py_exposure_adjuster_update >> sp_migration_create_claim_api_update_catastrophe >> py_claim_catastrophe_update >> sp_migration_update_exposure_status_api >> py_exposure_status_update >> sp_migration_create_claim_api_update_status  >> py_claim_status_update >> send_phase_two_email >> py_snapsheet_api_send_email_status
+            # sp_migration_create_financial_transaction_api >> sp_migration_create_financial_transaction_api_update_contactinfo >> sp_migration_update_exposure_status_api >> sp_migration_create_note_api >> sp_migration_update_exposure_adjuster_api >> sp_migration_create_claim_api_update_catastrophe >> sp_migration_create_claim_api_update_status >> py_process_notes >> py_exposure_adjuster_update >> py_claim_catastrophe_update >> py_process_financial_transactions >> py_exposure_status_update >> py_claim_status_update >> send_phase_two_email >> py_snapsheet_api_send_email_status
+            sp_migration_create_financial_transaction_api >> py_rise_exception >> sp_migration_create_financial_transaction_api_update_contactinfo >> py_process_financial_transactions >> sp_migration_create_note_api >> py_process_notes >> sp_migration_update_exposure_adjuster_api >> py_exposure_adjuster_update >> sp_migration_create_claim_api_update_catastrophe >> py_claim_catastrophe_update >> sp_migration_update_exposure_status_api >> py_exposure_status_update >> sp_migration_create_claim_api_update_status  >> py_claim_status_update >> send_phase_two_email >> py_snapsheet_api_send_email_status
         else:
-            sp_migration_create_financial_transaction_api >> py_process_financial_transactions >> sp_migration_create_note_api >> py_process_notes >> sp_migration_update_exposure_adjuster_api >> py_exposure_adjuster_update >> sp_migration_create_claim_api_update_catastrophe >> py_claim_catastrophe_update >> sp_migration_update_exposure_status_api >> py_exposure_status_update >> sp_migration_create_claim_api_update_status >> py_claim_status_update >> send_phase_two_email >> py_snapsheet_api_send_email_status
+            sp_migration_create_financial_transaction_api >> py_rise_exception >> py_process_financial_transactions >> sp_migration_create_note_api >> py_process_notes >> sp_migration_update_exposure_adjuster_api >> py_exposure_adjuster_update >> sp_migration_create_claim_api_update_catastrophe >> py_claim_catastrophe_update >> sp_migration_update_exposure_status_api >> py_exposure_status_update >> sp_migration_create_claim_api_update_status >> py_claim_status_update >> send_phase_two_email >> py_snapsheet_api_send_email_status
             
 
 start >> phase_one >> check_for_claim_executions >> [continue_task, abort_task] 
