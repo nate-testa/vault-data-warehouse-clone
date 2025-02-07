@@ -1,0 +1,19 @@
+{
+	"name": "DestinationDataset_int_claims_payments_audit",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_PROD",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Dataset_int_claims_payments_audit"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edw_stage",
+			"table": "int_claims_payments_audit"
+		}
+	}
+}
