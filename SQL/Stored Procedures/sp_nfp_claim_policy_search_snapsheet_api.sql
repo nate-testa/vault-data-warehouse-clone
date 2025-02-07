@@ -3,8 +3,9 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date 				|Author						                |	Change Description
 ---------------------------------------------------------------------------------------------------
---	09-30-2024				Yunus Mohammed				Created procedure
--- 01-28-2025               Yunus Mohammed              Updated row_number. Included risk_group
+--	09-30-2024				Yunus Mohammed				1- Created procedure
+-- 01-28-2025               Yunus Mohammed              2 - Updated row_number. Included risk_group
+-- 02-07-2025              Yunus Mohammed               3 - Used trim for city, state and zip
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_nfp_claim_policy_search_snapsheet_api]
 AS 
@@ -44,7 +45,11 @@ BEGIN
         insured_first_name,insured_last_name,
         ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date, reporting_month) as transaction_seq_no,
         'PEL' as product_nm,transaction_type,
-        address1,address2,city,[state],zip,'us' as country,risk_group as risk_item,
+        address1,address2
+        ,trim(city) as city,
+        upper(trim([state])) as [state]
+        ,trim(zip) as zip,'us' as country
+        ,risk_group as risk_item,
         'NFP' as source_system_nm,update_ts
         FROM
             edw_stage.nfp_policy
