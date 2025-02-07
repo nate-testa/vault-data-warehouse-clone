@@ -57,7 +57,7 @@ BEGIN
 									p.mailing_address_line1 as [address1],
 									p.mailing_address_line2 as [address2],
 									trim(p.mailing_address_city_nm) as [city],
-									trim(p.mailing_address_state_cd) as [region],
+									upper(trim(p.mailing_address_state_cd)) as [region],
 									trim(p.mailing_address_zip_cd) as [postalCode],
 									trim(p.mailing_address_country_nm) as [country]
 								for json path, include_null_values

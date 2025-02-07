@@ -45,7 +45,11 @@ BEGIN
         insured_first_name,insured_last_name,
         ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date, reporting_month) as transaction_seq_no,
         'PEL' as product_nm,transaction_type,
-        address1,address2,trim(city) as city,trim([state]) as [state],trim(zip) as zip,'us' as country,risk_group as risk_item,
+        address1,address2
+        ,trim(city) as city,
+        upper(trim([state])) as [state]
+        ,trim(zip) as zip,'us' as country
+        ,risk_group as risk_item,
         'NFP' as source_system_nm,update_ts
         FROM
             edw_stage.nfp_policy
