@@ -17,6 +17,7 @@
   --02-02-2025              Sandeep Gundreddy     10.UseD amount_type in the order by clause in final insert query
   -- 02-05-2025             Yunus Mohammed         11 Used party_id to join migration_create_financial_transaction_api_temp2 to party table
   --                                                                                        and also used claimNumber 
+  -- 02-07-2025             Yunus Mohammed         12 data.attributes.stage - In case of recovery it should be submitted and cancelled only
  -- ================================================================================================= 
  
  CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_financial_transaction_api]
@@ -62,7 +63,7 @@
         FROM edw_stage.migration_create_claim_api
         WHERE 1=1
         AND api_status = 'Success'
-        AND api_response is not null
+        AND api_response is not null 
         AND cast(update_ts as datetime2(7)) > @last_source_extract_ts       
         ---------------------------------------------------------------------------------------------
         -- *** Create temp table using CROSS APPLY to extract exposures data from JSON column. *** --
@@ -352,13 +353,14 @@
             CASE WHEN amount_type = 'Payment_Amount' THEN CAST(1 AS BIT) END AS [data.attributes.is_historical],
 		    CASE
 --				WHEN payment_status in ('ISSUED','IN_PROGRESS','PENDING','SUBMITTED_TO_ONE_INC') THEN 'issued' --commented out on 01182025 cause added below--
-				WHEN payment_status in ('ISSUED','IN_PROGRESS','PENDING','SUBMITTED_TO_ONE_INC') and resh.financial_transaction_type = 'recovery' THEN 'submitted' --added on 01182025--
+				WHEN payment_status in ('ISSUED','IN_PROGRESS','PENDING','SUBMITTED_TO_ONE_INC','SUCCESS') and resh.financial_transaction_type = 'recovery' THEN 'submitted' --added on 01182025--
 				WHEN payment_status in ('ISSUED','IN_PROGRESS','PENDING','SUBMITTED_TO_ONE_INC') and resh.financial_transaction_type != 'recovery' THEN 'issued' --added on 01182025--
-				WHEN payment_status = 'SUCCESS' THEN 'cleared'
+                WHEN payment_status = 'SUCCESS' THEN 'cleared' 
 				WHEN payment_status = 'ERROR' THEN 'failed'
 				WHEN payment_status = 'CANCEL' THEN 'cancelled' 
 --                WHEN payment_status = 'CANCEL'  and settle_changed > 0 then 'issued' -- This is to migrate eBao CANCEL & STOPPED payments - 01232025
 --                WHEN payment_status in ('CANCEL', 'STOP', 'STOP_PENDING') and settle_changed > 0 THEN 'issued' -- This is to migrate eBao CANCEL & STOPPED payments - 01232025
+                WHEN payment_status in ('STOP', 'STOP_PENDING') and resh.financial_transaction_type = 'recovery' THEN 'cancelled' --added on 02072025--
                 WHEN payment_status in ('STOP', 'STOP_PENDING') then 'stopped' 
  --               else 'cancelled' --added on 01172025 cause some claims initial payment transaction status has been updated to cancel when actual cancellation transaction came in--
 			END
@@ -618,7 +620,8 @@
              create_ts,
              api_status,
              [data]
-         )	
+         )
+
          SELECT
              claim_no, 
              reserve_type, POST_DATE, ITEM_ID, [data.attributes.remote_identifier], HIS_ID, amount_type,
@@ -629,7 +632,7 @@
          where ISNULL(reserve_method,'XX')!='overpayment'
          ORDER BY claim_no, ITEM_ID, post_date,reserve_type,HIS_ID,amount_type;
 
-        INSERT INTO edw_stage.migration_create_financial_transaction_api
+       INSERT INTO edw_stage.migration_create_financial_transaction_api
          (
              claim_no, 
              reserve_type, POST_DATE, ITEM_ID, remote_identifier, HIS_ID, amount_type,
@@ -637,6 +640,7 @@
              api_status,
              [data]
          )
+
             SELECT
              claim_no, 
              reserve_type, POST_DATE, ITEM_ID, [data.attributes.remote_identifier], HIS_ID, amount_type,
