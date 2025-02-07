@@ -44,7 +44,7 @@ INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_c
 
 INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'AU', N'COL_AU_28', N'Insured Person Struck By OV', N'SCOL_AU_28_03', N'As Passenger', N'auto_claim_collision_with_pedestrian',GETDATE())
 
-INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'AU', N'COL_AU_30', N'IV Struck By Non Auto Vehicle', N'SCOL_AU_30_01', N'IV Struck By Non Auto Vehicle', N'auto_claim_collision_with_bus_or_train',GETDATE())
+INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'AU', N'COL_AU_30', N'IV Struck By Non Auto Vehicle', N'SCOL_AU_30_01', N'IV Struck By Non Auto Vehicle', N'auto_claim_collision_other',GETDATE())
 
 INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'AU', N'COL_AU_31', N'Emergency Movement Coverage', N'SCOL_AU_31_01', N'Emergency Movement Coverage', N'auto_claim_storm',GETDATE())
 
@@ -256,9 +256,9 @@ INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_c
 
 INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'LUX', N'COL_CO_33', N'In Transit', N'SCOL_CO_33_01', N'In Transit', N'property_claim_other',GETDATE())
 
-INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'LUX', N'COL_CO_26', N'Mysterious Disappearance', N'SCOL_CO_26_01', N'Mysterious Disappearance', N'property_claim_theft',GETDATE())
+INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'LUX', N'COL_CO_26', N'Mysterious Disappearance', N'SCOL_CO_26_01', N'Mysterious Disappearance', N'property_claim_robbery',GETDATE())
 
-INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'LUX', N'COL_CO_36', N'Mysterious Disappearance', N'SCOL_CO_26_01', N'Mysterious Disappearance', N'property_claim_theft',GETDATE())
+INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'LUX', N'COL_CO_36', N'Mysterious Disappearance', N'SCOL_CO_26_01', N'Mysterious Disappearance', N'property_claim_robbery',GETDATE())
 
 INSERT [edw_stage].[migration_loss_type_mapping] ([product_cd], [cause_of_loss_cd], [cause_of_loss_desc], [sub_cause_of_loss_cd], [sub_cause_of_loss_desc], [lossType],[create_ts]) VALUES (N'LUX', N'COL_CO_36', N'Not Defined/Other', N'SCOL_CO_36_01', N'Not DefinedOther', N'property_claim_other',GETDATE())
 
