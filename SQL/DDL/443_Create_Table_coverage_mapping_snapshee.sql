@@ -1,4 +1,5 @@
-CREATE TABLE [edw_stage].[coverage_mapping_snapsheet](
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'coverage_mapping_snapsheet' AND schema_name(schema_id) = 'edw_stage')
+BEGIN CREATE TABLE [edw_stage].[coverage_mapping_snapsheet](
 	[product_nm] [varchar](255) NULL,
 	[table_nm] [varchar](255) NULL,
 	[column_nm] [varchar](255) NULL,
@@ -9,4 +10,5 @@ CREATE TABLE [edw_stage].[coverage_mapping_snapsheet](
 	[create_ts] [datetime] NULL,
 	[update_ts] [datetime] NULL
 )
+END
 

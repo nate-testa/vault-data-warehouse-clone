@@ -1,3 +1,6 @@
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'edw_stage'
+and TABLE_name = 'migration_snapsheet_coverage_exposure_mapping')
+BEGIN
 CREATE TABLE [edw_stage].[migration_snapsheet_coverage_exposure_mapping]
 (
 product_cd varchar(255),
@@ -7,3 +10,4 @@ snapsheet_exposure_type varchar(255),
 snapsheet_coverage_cd varchar(255),
 snapsheet_coverage_nm  varchar(255)
 )
+END
