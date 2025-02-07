@@ -13,7 +13,7 @@ GO
 -- 05/09/24		        Yunus Mohammed			    1. Created the proc
 -- 08/22/24				Yunus Mohammed				2. Removed effective date from merge and added in update clause
 -- 01/15/25				Alberto Almario				3. Add include_in_rating_in column.
--- 02/05/25				Alberto Almario				4. Add new columns source_of_water, source_of_fire and include_in_rating_override_in.
+-- 02/05/25				Alberto Almario				4. Add new columns source_of_water, source_of_fire and include_in_rating_override_in..
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_loss_history_wip]
 AS

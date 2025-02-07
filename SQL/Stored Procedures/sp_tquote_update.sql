@@ -11,7 +11,7 @@ GO
 -- 11/14/23		Sandeep Gundreddy			2. Modify logic  
 -- 11/22/23     Sandeep Gundreddy           3. Modified logic to fix quote_status for Issued quotes
 -- 09/08/23		Architha Gudimalla			4. VI34112|AD7632 - Added issued_quote_history_sk
--- 01/23/25		Architha Gudimalla			5. VI33968/AD7635 - Added uwco orig eff dt
+-- 01/23/25		Architha Gudimalla			5. VI33968/AD7635 - Added uwco orig eff dt..
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_update]

@@ -11,5 +11,4 @@ where latitude is null or longitude is null' AS source_sql ,
        'Daily' AS frequency_desc ,
        getdate() AS create_ts ,
        getdate() AS update_ts;
-
 */
