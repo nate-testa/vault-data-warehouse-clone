@@ -5,6 +5,8 @@
 ---------------------------------------------------------------------------------------------------
 --	09-30-2024				Yunus Mohammed				Created procedure
 -- 01-06-2025               Yunus Mohammed             Enabled actual phone no and email (sending actual email and phone no). 
+-- 02-08-2025               Yunus Mohammed             Captured all policy transactions and replced claim_policy_seach_snapsheet_api table
+--                                                                                              with tpolicy_transaction
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
