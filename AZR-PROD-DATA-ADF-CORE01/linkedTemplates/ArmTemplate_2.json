@@ -13,6 +13,706 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/Metal_to_Vault_Manual_zue_DestinationDS')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_EDW_PROD",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"cw_schema": {
+						"type": "String"
+					},
+					"cw_table": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Metal_to_Vault_Manual_zue_20230705"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().cw_schema",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().cw_table",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Metal_to_Vault_Manual_zue_SourceDS')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_METALDB_PROD",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"cw_schema": {
+						"type": "String"
+					},
+					"cw_table": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "Metal_to_Vault_Manual_zue_20230705"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().cw_schema",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().cw_table",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_AWS_DMS_dmsDocument')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "dmsDocument",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "MySqlSource",
+								"query": "SELECT dd.dmsDocumentId, dd.claimNumber, ddd.type as document_type, ddd.subType as subtype, dd.documentName, dd.fileName as document_fileName, dda.name as attached_To, dd.createDate, dd.documentDate, dd.createBy,\n\"Unknown\" as paymentStatus, now() as create_ts\nFROM dms_core.DmsDocument dd,\ndms_core.DmsDocumentDetail ddd,\ndms_core.DmsDocumentAttachTo dda\nWHERE dd.dmsDocumentId = dda.dmsDocumentId \nand ddd.dmsDocumentId = dda.dmsDocumentId\nand ddd.type = 'Claim'\nand ddd.subType IN ('Estimate of Damages','BI/UM Demand')\norder by dd.createDate desc"
+							},
+							"sink": {
+								"type": "AzureSqlSink",
+								"preCopyScript": "TRUNCATE TABLE edw_stage.dms_claim_payment_estimate",
+								"writeBehavior": "insert",
+								"sqlWriterUseTableLock": true,
+								"tableOption": "autoCreate",
+								"disableMetricsCollection": false
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"mappings": [
+									{
+										"source": {
+											"name": "dmsDocumentId",
+											"type": "Int32"
+										},
+										"sink": {
+											"name": "dmsDocumentId",
+											"type": "Int32",
+											"physicalType": "int"
+										}
+									},
+									{
+										"source": {
+											"name": "claimNumber",
+											"type": "String"
+										},
+										"sink": {
+											"name": "claimNumber",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "document_type",
+											"type": "String"
+										},
+										"sink": {
+											"name": "document_type",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "subtype",
+											"type": "String"
+										},
+										"sink": {
+											"name": "subtype",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "documentName",
+											"type": "String"
+										},
+										"sink": {
+											"name": "documentName",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "document_fileName",
+											"type": "String"
+										},
+										"sink": {
+											"name": "document_fileName",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "attached_To",
+											"type": "String"
+										},
+										"sink": {
+											"name": "attached_to",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "createDate",
+											"type": "DateTime"
+										},
+										"sink": {
+											"name": "createDate",
+											"type": "DateTime",
+											"physicalType": "datetime"
+										}
+									},
+									{
+										"source": {
+											"name": "documentDate",
+											"type": "DateTime"
+										},
+										"sink": {
+											"name": "documentDate",
+											"type": "DateTime",
+											"physicalType": "datetime"
+										}
+									},
+									{
+										"source": {
+											"name": "createBy",
+											"type": "String"
+										},
+										"sink": {
+											"name": "createBy",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "paymentStatus",
+											"type": "String"
+										},
+										"sink": {
+											"name": "paymentStatus",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "create_ts",
+											"type": "DateTime"
+										},
+										"sink": {
+											"name": "create_ts",
+											"type": "DateTime",
+											"physicalType": "datetime"
+										}
+									}
+								],
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": false,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "MetadataDrivenCopy_LS_AWS_DMS_dd8_SourceDS",
+								"type": "DatasetReference",
+								"parameters": {
+									"cw_tableName": "`DmsDocument`"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "MetadataDrivenCopy_LS_AWS_DMS_dd8_DestinationDS",
+								"type": "DatasetReference",
+								"parameters": {
+									"cw_table": "dms_claim_payment_estimate",
+									"cw_schema": "edw_stage"
+								}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-08-30T14:57:09Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_AWS_VSP_int_claims_payments_audit')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy_akm",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [
+							{
+								"name": "Source",
+								"value": "`int_claims_payments_audit`"
+							},
+							{
+								"name": "Destination",
+								"value": "edw_stage.int_claims_payments_audit"
+							}
+						],
+						"typeProperties": {
+							"source": {
+								"type": "MySqlSource",
+								"query": "SELECT id, uuid, pm_cr_payment_id, pm_ip_payment_id, pm_amount, pm_funded, pm_status, pm_paid_date, pm_cleared_date, pm_escheat_date, pm_check_print_date, pm_check_number, pm_mail_tracking_number, pm_method_id, pm_monitored, pm_reject_payee_id, pm_reject_reason, pm_new_method, pm_orig_method, pm_selection, pm_method_last4digit, pm_re_issue, pm_error_code, pm_error_message, pm_carrier_id, pm_env, request_json, created_by, created_date\nFROM vsp_core.int_claims_payments_audit"
+							},
+							"sink": {
+								"type": "AzureSqlSink",
+								"preCopyScript": "/*TRUNCATE TABLE edw_stage.int_claims_payments_audit*/",
+								"writeBehavior": "insert",
+								"sqlWriterUseTableLock": true,
+								"tableOption": "autoCreate",
+								"disableMetricsCollection": false
+							},
+							"enableStaging": false,
+							"validateDataConsistency": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"mappings": [
+									{
+										"source": {
+											"name": "id",
+											"type": "Int32",
+											"physicalType": "Int32"
+										},
+										"sink": {
+											"name": "id",
+											"type": "Int32",
+											"physicalType": "int"
+										}
+									},
+									{
+										"source": {
+											"name": "uuid",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "uuid",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_cr_payment_id",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_cr_payment_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_ip_payment_id",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_ip_payment_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_amount",
+											"type": "Decimal",
+											"physicalType": "NewDecimal"
+										},
+										"sink": {
+											"name": "pm_amount",
+											"type": "Decimal",
+											"physicalType": "decimal"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_funded",
+											"type": "Boolean",
+											"physicalType": "Bool"
+										},
+										"sink": {
+											"name": "pm_funded",
+											"type": "Boolean",
+											"physicalType": "bit"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_status",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_status",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_paid_date",
+											"type": "DateTime",
+											"physicalType": "Date"
+										},
+										"sink": {
+											"name": "pm_paid_date",
+											"type": "DateTime",
+											"physicalType": "datetime2"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_cleared_date",
+											"type": "DateTime",
+											"physicalType": "Date"
+										},
+										"sink": {
+											"name": "pm_cleared_date",
+											"type": "DateTime",
+											"physicalType": "datetime2"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_escheat_date",
+											"type": "DateTime",
+											"physicalType": "Date"
+										},
+										"sink": {
+											"name": "pm_escheat_date",
+											"type": "DateTime",
+											"physicalType": "datetime2"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_check_print_date",
+											"type": "DateTime",
+											"physicalType": "Date"
+										},
+										"sink": {
+											"name": "pm_check_print_date",
+											"type": "DateTime",
+											"physicalType": "datetime2"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_check_number",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_check_number",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_mail_tracking_number",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_mail_tracking_number",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_method_id",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_method_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_monitored",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "pm_monitored",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_reject_payee_id",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_reject_payee_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_reject_reason",
+											"type": "String",
+											"physicalType": "Text"
+										},
+										"sink": {
+											"name": "pm_reject_reason",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_new_method",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_new_method",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_orig_method",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_orig_method",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_selection",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_selection",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_method_last4digit",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_method_last4digit",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_re_issue",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "pm_re_issue",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_error_code",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_error_code",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_error_message",
+											"type": "String",
+											"physicalType": "Text"
+										},
+										"sink": {
+											"name": "pm_error_message",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_carrier_id",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_carrier_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_env",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_env",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "request_json",
+											"type": "String",
+											"physicalType": "JSON"
+										},
+										"sink": {
+											"name": "request_json",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "created_by",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "created_by",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "created_date",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "created_date",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									}
+								],
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "SourceDataset_int_claims_payments_audit",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "DestinationDataset_int_claims_payments_audit",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/Master_SP_Pipeline')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -2958,7 +3658,10 @@
 				"annotations": [],
 				"lastPublishTime": "2024-08-30T14:57:08Z"
 			},
-			"dependsOn": []
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/Metal_to_Vault_Manual_zue_SourceDS')]",
+				"[concat(variables('factoryId'), '/datasets/Metal_to_Vault_Manual_zue_DestinationDS')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/t_pub_diary_eBao_to_Edw_stage_FullLoad')]",
@@ -5023,553 +5726,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/pipelines/MetadataDrivenCopy_LS_AWS_DMS_dd8_MiddleLevel')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_TopLevel')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "This pipeline will count the total number of objects (tables etc.) required to be copied in this run, come up with the number of sequential batches based on the max allowed concurrent copy task, and then execute another pipeline to copy different batches sequentially.",
-				"activities": [
-					{
-						"name": "GetSumOfObjectsToCopy",
-						"description": "Count the total number of objects (tables etc.) required to be copied in this run.",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.00:10:00",
-							"retry": 2,
-							"retryIntervalInSeconds": 300,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "AzureSqlSource",
-								"sqlReaderQuery": {
-									"value": "SELECT count(*) as count FROM @{pipeline().parameters.MainControlTableName} where TopLevelPipelineName='@{pipeline().Pipeline}' and CopyEnabled = 1",
-									"type": "Expression"
-								},
-								"isolationLevel": "ReadUncommitted",
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_ControlDS",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					},
-					{
-						"name": "CopyBatchesOfObjectsSequentially",
-						"description": "Come up with the number of sequential batches based on the max allowed concurrent copy tasks, and then execute another pipeline to copy different batches sequentially.",
-						"type": "ForEach",
-						"dependsOn": [
-							{
-								"activity": "GetSumOfObjectsToCopy",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"items": {
-								"value": "@range(0, add(div(activity('GetSumOfObjectsToCopy').output.firstRow.count,\n                    pipeline().parameters.MaxNumberOfConcurrentTasks),\n                    if(equals(mod(activity('GetSumOfObjectsToCopy').output.firstRow.count,\n                    pipeline().parameters.MaxNumberOfConcurrentTasks), 0), 0, 1)))",
-								"type": "Expression"
-							},
-							"isSequential": false,
-							"batchCount": 50,
-							"activities": [
-								{
-									"name": "CopyObjectsInOneBatch",
-									"description": "Execute another pipeline to copy one batch of objects. The objects belonging to this batch will be copied parallelly.",
-									"type": "ExecutePipeline",
-									"dependsOn": [],
-									"policy": {
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"pipeline": {
-											"referenceName": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_MiddleLevel",
-											"type": "PipelineReference"
-										},
-										"waitOnCompletion": true,
-										"parameters": {
-											"MaxNumberOfObjectsReturnedFromLookupActivity": {
-												"value": "@pipeline().parameters.MaxNumberOfObjectsReturnedFromLookupActivity",
-												"type": "Expression"
-											},
-											"TopLevelPipelineName": {
-												"value": "@{pipeline().Pipeline}",
-												"type": "Expression"
-											},
-											"TriggerName": {
-												"value": "@{pipeline().TriggerName}",
-												"type": "Expression"
-											},
-											"CurrentSequentialNumberOfBatch": {
-												"value": "@item()",
-												"type": "Expression"
-											},
-											"SumOfObjectsToCopy": {
-												"value": "@activity('GetSumOfObjectsToCopy').output.firstRow.count",
-												"type": "Expression"
-											},
-											"SumOfObjectsToCopyForCurrentBatch": {
-												"value": "@min(pipeline().parameters.MaxNumberOfConcurrentTasks, activity('GetSumOfObjectsToCopy').output.firstRow.count)",
-												"type": "Expression"
-											},
-											"MainControlTableName": {
-												"value": "@pipeline().parameters.MainControlTableName",
-												"type": "Expression"
-											}
-										}
-									}
-								}
-							]
-						}
-					}
-				],
-				"concurrency": 50,
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"parameters": {
-					"MaxNumberOfObjectsReturnedFromLookupActivity": {
-						"type": "Int",
-						"defaultValue": 5000
-					},
-					"MaxNumberOfConcurrentTasks": {
-						"type": "Int",
-						"defaultValue": 100
-					},
-					"MainControlTableName": {
-						"type": "String",
-						"defaultValue": "edw_stage.ControlLoadTable"
-					}
-				},
-				"folder": {
-					"name": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_20230530"
-				},
-				"annotations": [
-					"MetadataDrivenSolution"
-				],
-				"lastPublishTime": "2024-08-30T14:57:09Z"
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_MiddleLevel')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_TopLevel')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "This pipeline will count the total number of objects (tables etc.) required to be copied in this run, come up with the number of sequential batches based on the max allowed concurrent copy task, and then execute another pipeline to copy different batches sequentially.",
-				"activities": [
-					{
-						"name": "GetSumOfObjectsToCopy",
-						"description": "Count the total number of objects (tables etc.) required to be copied in this run.",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "AzureSqlSource",
-								"sqlReaderQuery": {
-									"value": "SELECT count(*) as count FROM @{pipeline().parameters.MainControlTableName} where TopLevelPipelineName='@{pipeline().Pipeline}' and CopyEnabled = 1",
-									"type": "Expression"
-								},
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					},
-					{
-						"name": "CopyBatchesOfObjectsSequentially",
-						"description": "Come up with the number of sequential batches based on the max allowed concurrent copy tasks, and then execute another pipeline to copy different batches sequentially.",
-						"type": "ForEach",
-						"dependsOn": [
-							{
-								"activity": "GetSumOfObjectsToCopy",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"items": {
-								"value": "@range(0, add(div(activity('GetSumOfObjectsToCopy').output.firstRow.count,\n                    pipeline().parameters.MaxNumberOfConcurrentTasks),\n                    if(equals(mod(activity('GetSumOfObjectsToCopy').output.firstRow.count,\n                    pipeline().parameters.MaxNumberOfConcurrentTasks), 0), 0, 1)))",
-								"type": "Expression"
-							},
-							"isSequential": true,
-							"activities": [
-								{
-									"name": "CopyObjectsInOneBatch",
-									"description": "Execute another pipeline to copy one batch of objects. The objects belonging to this batch will be copied parallelly.",
-									"type": "ExecutePipeline",
-									"dependsOn": [],
-									"policy": {
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"pipeline": {
-											"referenceName": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_MiddleLevel",
-											"type": "PipelineReference"
-										},
-										"waitOnCompletion": true,
-										"parameters": {
-											"MaxNumberOfObjectsReturnedFromLookupActivity": {
-												"value": "@pipeline().parameters.MaxNumberOfObjectsReturnedFromLookupActivity",
-												"type": "Expression"
-											},
-											"TopLevelPipelineName": {
-												"value": "@{pipeline().Pipeline}",
-												"type": "Expression"
-											},
-											"TriggerName": {
-												"value": "@{pipeline().TriggerName}",
-												"type": "Expression"
-											},
-											"CurrentSequentialNumberOfBatch": {
-												"value": "@item()",
-												"type": "Expression"
-											},
-											"SumOfObjectsToCopy": {
-												"value": "@activity('GetSumOfObjectsToCopy').output.firstRow.count",
-												"type": "Expression"
-											},
-											"SumOfObjectsToCopyForCurrentBatch": {
-												"value": "@min(pipeline().parameters.MaxNumberOfConcurrentTasks, activity('GetSumOfObjectsToCopy').output.firstRow.count)",
-												"type": "Expression"
-											},
-											"MainControlTableName": {
-												"value": "@pipeline().parameters.MainControlTableName",
-												"type": "Expression"
-											}
-										}
-									}
-								}
-							]
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"parameters": {
-					"MaxNumberOfObjectsReturnedFromLookupActivity": {
-						"type": "Int",
-						"defaultValue": 5000
-					},
-					"MaxNumberOfConcurrentTasks": {
-						"type": "Int",
-						"defaultValue": 32
-					},
-					"MainControlTableName": {
-						"type": "String",
-						"defaultValue": "edw_stage.ControlLoadTable"
-					}
-				},
-				"folder": {
-					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905"
-				},
-				"annotations": [
-					"MetadataDrivenSolution"
-				],
-				"lastPublishTime": "2024-08-30T14:57:10Z"
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_MiddleLevel')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_TopLevel_t_pub_address')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "This pipeline will count the total number of objects (tables etc.) required to be copied in this run, come up with the number of sequential batches based on the max allowed concurrent copy task, and then execute another pipeline to copy different batches sequentially.",
-				"activities": [
-					{
-						"name": "GetSumOfObjectsToCopy",
-						"description": "Count the total number of objects (tables etc.) required to be copied in this run.",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "AzureSqlSource",
-								"sqlReaderQuery": {
-									"value": "SELECT count(*) as count FROM @{pipeline().parameters.MainControlTableName} where TopLevelPipelineName='@{pipeline().Pipeline}' and CopyEnabled = 1",
-									"type": "Expression"
-								},
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					},
-					{
-						"name": "CopyBatchesOfObjectsSequentially",
-						"description": "Come up with the number of sequential batches based on the max allowed concurrent copy tasks, and then execute another pipeline to copy different batches sequentially.",
-						"type": "ForEach",
-						"dependsOn": [
-							{
-								"activity": "GetSumOfObjectsToCopy",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"items": {
-								"value": "@range(0, add(div(activity('GetSumOfObjectsToCopy').output.firstRow.count,\n                    pipeline().parameters.MaxNumberOfConcurrentTasks),\n                    if(equals(mod(activity('GetSumOfObjectsToCopy').output.firstRow.count,\n                    pipeline().parameters.MaxNumberOfConcurrentTasks), 0), 0, 1)))",
-								"type": "Expression"
-							},
-							"isSequential": true,
-							"activities": [
-								{
-									"name": "CopyObjectsInOneBatch",
-									"description": "Execute another pipeline to copy one batch of objects. The objects belonging to this batch will be copied parallelly.",
-									"type": "ExecutePipeline",
-									"dependsOn": [],
-									"policy": {
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"pipeline": {
-											"referenceName": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_MiddleLevel_t_pub_address",
-											"type": "PipelineReference"
-										},
-										"waitOnCompletion": true,
-										"parameters": {
-											"MaxNumberOfObjectsReturnedFromLookupActivity": {
-												"value": "@pipeline().parameters.MaxNumberOfObjectsReturnedFromLookupActivity",
-												"type": "Expression"
-											},
-											"TopLevelPipelineName": {
-												"value": "@{pipeline().Pipeline}",
-												"type": "Expression"
-											},
-											"TriggerName": {
-												"value": "@{pipeline().TriggerName}",
-												"type": "Expression"
-											},
-											"CurrentSequentialNumberOfBatch": {
-												"value": "@item()",
-												"type": "Expression"
-											},
-											"SumOfObjectsToCopy": {
-												"value": "@activity('GetSumOfObjectsToCopy').output.firstRow.count",
-												"type": "Expression"
-											},
-											"SumOfObjectsToCopyForCurrentBatch": {
-												"value": "@min(pipeline().parameters.MaxNumberOfConcurrentTasks, activity('GetSumOfObjectsToCopy').output.firstRow.count)",
-												"type": "Expression"
-											},
-											"MainControlTableName": {
-												"value": "@pipeline().parameters.MainControlTableName",
-												"type": "Expression"
-											}
-										}
-									}
-								}
-							]
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"parameters": {
-					"MaxNumberOfObjectsReturnedFromLookupActivity": {
-						"type": "Int",
-						"defaultValue": 5000
-					},
-					"MaxNumberOfConcurrentTasks": {
-						"type": "Int",
-						"defaultValue": 32
-					},
-					"MainControlTableName": {
-						"type": "String",
-						"defaultValue": "edw_stage.ControlLoadTable"
-					}
-				},
-				"folder": {
-					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_address"
-				},
-				"annotations": [
-					"MetadataDrivenSolution"
-				],
-				"lastPublishTime": "2024-08-30T14:57:10Z"
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_MiddleLevel_t_pub_address')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_TopLevel_t_pub_diary')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "This pipeline will count the total number of objects (tables etc.) required to be copied in this run, come up with the number of sequential batches based on the max allowed concurrent copy task, and then execute another pipeline to copy different batches sequentially.",
-				"activities": [
-					{
-						"name": "GetSumOfObjectsToCopy",
-						"description": "Count the total number of objects (tables etc.) required to be copied in this run.",
-						"type": "Lookup",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "AzureSqlSource",
-								"sqlReaderQuery": {
-									"value": "SELECT count(*) as count FROM @{pipeline().parameters.MainControlTableName} where TopLevelPipelineName='@{pipeline().Pipeline}' and CopyEnabled = 1",
-									"type": "Expression"
-								},
-								"partitionOption": "None"
-							},
-							"dataset": {
-								"referenceName": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						}
-					},
-					{
-						"name": "CopyBatchesOfObjectsSequentially",
-						"description": "Come up with the number of sequential batches based on the max allowed concurrent copy tasks, and then execute another pipeline to copy different batches sequentially.",
-						"type": "ForEach",
-						"dependsOn": [
-							{
-								"activity": "GetSumOfObjectsToCopy",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"items": {
-								"value": "@range(0, add(div(activity('GetSumOfObjectsToCopy').output.firstRow.count,\n                    pipeline().parameters.MaxNumberOfConcurrentTasks),\n                    if(equals(mod(activity('GetSumOfObjectsToCopy').output.firstRow.count,\n                    pipeline().parameters.MaxNumberOfConcurrentTasks), 0), 0, 1)))",
-								"type": "Expression"
-							},
-							"isSequential": true,
-							"activities": [
-								{
-									"name": "CopyObjectsInOneBatch",
-									"description": "Execute another pipeline to copy one batch of objects. The objects belonging to this batch will be copied parallelly.",
-									"type": "ExecutePipeline",
-									"dependsOn": [],
-									"policy": {
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"pipeline": {
-											"referenceName": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_MiddleLevel_t_pub_diary",
-											"type": "PipelineReference"
-										},
-										"waitOnCompletion": true,
-										"parameters": {
-											"MaxNumberOfObjectsReturnedFromLookupActivity": {
-												"value": "@pipeline().parameters.MaxNumberOfObjectsReturnedFromLookupActivity",
-												"type": "Expression"
-											},
-											"TopLevelPipelineName": {
-												"value": "@{pipeline().Pipeline}",
-												"type": "Expression"
-											},
-											"TriggerName": {
-												"value": "@{pipeline().TriggerName}",
-												"type": "Expression"
-											},
-											"CurrentSequentialNumberOfBatch": {
-												"value": "@item()",
-												"type": "Expression"
-											},
-											"SumOfObjectsToCopy": {
-												"value": "@activity('GetSumOfObjectsToCopy').output.firstRow.count",
-												"type": "Expression"
-											},
-											"SumOfObjectsToCopyForCurrentBatch": {
-												"value": "@min(pipeline().parameters.MaxNumberOfConcurrentTasks, activity('GetSumOfObjectsToCopy').output.firstRow.count)",
-												"type": "Expression"
-											},
-											"MainControlTableName": {
-												"value": "@pipeline().parameters.MainControlTableName",
-												"type": "Expression"
-											}
-										}
-									}
-								}
-							]
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"parameters": {
-					"MaxNumberOfObjectsReturnedFromLookupActivity": {
-						"type": "Int",
-						"defaultValue": 5000
-					},
-					"MaxNumberOfConcurrentTasks": {
-						"type": "Int",
-						"defaultValue": 32
-					},
-					"MainControlTableName": {
-						"type": "String",
-						"defaultValue": "edw_stage.ControlLoadTable"
-					}
-				},
-				"folder": {
-					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_diary"
-				},
-				"annotations": [
-					"MetadataDrivenSolution"
-				],
-				"lastPublishTime": "2024-08-30T14:57:10Z"
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_MiddleLevel_t_pub_diary')]"
 			]
 		}
 	]

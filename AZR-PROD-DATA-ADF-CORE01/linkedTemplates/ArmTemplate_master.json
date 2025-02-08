@@ -11,6 +11,10 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'LS_AWS_DMS_PROD'"
 		},
+		"LS_AWS_VSP_PROD_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_AWS_VSP_PROD'"
+		},
 		"LS_EDW_PROD_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_EDW_PROD'"
@@ -50,6 +54,18 @@
 		"LS_AWS_DMS_PROD_properties_typeProperties_username": {
 			"type": "string",
 			"defaultValue": "vltDmsUserPROD"
+		},
+		"LS_AWS_VSP_PROD_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "vlt-mysqla-ods-prod-instance-1.c3ze9u5b0sq7.us-east-1.rds.amazonaws.com"
+		},
+		"LS_AWS_VSP_PROD_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "vsp_core"
+		},
+		"LS_AWS_VSP_PROD_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "edwClaimRead"
 		},
 		"LS_eBao_aws_us_prod_address_properties_typeProperties_server": {
 			"type": "string",
@@ -169,6 +185,9 @@
 					"LS_AWS_DMS_PROD_password": {
 						"value": "[parameters('LS_AWS_DMS_PROD_password')]"
 					},
+					"LS_AWS_VSP_PROD_password": {
+						"value": "[parameters('LS_AWS_VSP_PROD_password')]"
+					},
 					"LS_eBao_aws_us_prod_address_password": {
 						"value": "[parameters('LS_eBao_aws_us_prod_address_password')]"
 					},
@@ -192,6 +211,15 @@
 					},
 					"LS_AWS_DMS_PROD_properties_typeProperties_username": {
 						"value": "[parameters('LS_AWS_DMS_PROD_properties_typeProperties_username')]"
+					},
+					"LS_AWS_VSP_PROD_properties_typeProperties_server": {
+						"value": "[parameters('LS_AWS_VSP_PROD_properties_typeProperties_server')]"
+					},
+					"LS_AWS_VSP_PROD_properties_typeProperties_database": {
+						"value": "[parameters('LS_AWS_VSP_PROD_properties_typeProperties_database')]"
+					},
+					"LS_AWS_VSP_PROD_properties_typeProperties_username": {
+						"value": "[parameters('LS_AWS_VSP_PROD_properties_typeProperties_username')]"
 					},
 					"LS_eBao_aws_us_prod_address_properties_typeProperties_server": {
 						"value": "[parameters('LS_eBao_aws_us_prod_address_properties_typeProperties_server')]"

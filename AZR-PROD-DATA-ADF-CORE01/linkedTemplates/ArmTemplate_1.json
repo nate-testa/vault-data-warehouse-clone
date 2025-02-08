@@ -21,6 +21,48 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_diary')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_aws_us_prod_diary",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "t_pub_dairy"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "`t_pub_diary`"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_user')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_aws_us_prod_pub",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "t_pub_user"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "`t_pub_user`"
+				}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/LS_EDW_PROD')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
@@ -348,6 +390,30 @@
 				},
 				"annotations": [],
 				"lastPublishTime": "2024-08-30T14:57:06Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_PROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DestinationDataset_int_claims_payments_audit')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_EDW_PROD",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_int_claims_payments_audit"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "edw_stage",
+					"table": "int_claims_payments_audit"
+				}
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_PROD')]"
@@ -709,288 +775,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_PROD')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/Metal_to_Vault_Manual_zue_DestinationDS')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_EDW_PROD",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"cw_schema": {
-						"type": "String"
-					},
-					"cw_table": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "Metal_to_Vault_Manual_zue_20230705"
-				},
-				"annotations": [],
-				"type": "AzureSqlTable",
-				"schema": [],
-				"typeProperties": {
-					"schema": {
-						"value": "@dataset().cw_schema",
-						"type": "Expression"
-					},
-					"table": {
-						"value": "@dataset().cw_table",
-						"type": "Expression"
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_PROD')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/Metal_to_Vault_Manual_zue_SourceDS')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_METALDB_PROD",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"cw_schema": {
-						"type": "String"
-					},
-					"cw_table": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "Metal_to_Vault_Manual_zue_20230705"
-				},
-				"annotations": [],
-				"type": "AzureSqlTable",
-				"schema": [],
-				"typeProperties": {
-					"schema": {
-						"value": "@dataset().cw_schema",
-						"type": "Expression"
-					},
-					"table": {
-						"value": "@dataset().cw_table",
-						"type": "Expression"
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_METALDB_PROD')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/LS_AWS_DMS_dmsDocument')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "dmsDocument",
-						"type": "Copy",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"source": {
-								"type": "MySqlSource",
-								"query": "SELECT dd.dmsDocumentId, dd.claimNumber, ddd.type as document_type, ddd.subType as subtype, dd.documentName, dd.fileName as document_fileName, dda.name as attached_To, dd.createDate, dd.documentDate, dd.createBy,\n\"Unknown\" as paymentStatus, now() as create_ts\nFROM dms_core.DmsDocument dd,\ndms_core.DmsDocumentDetail ddd,\ndms_core.DmsDocumentAttachTo dda\nWHERE dd.dmsDocumentId = dda.dmsDocumentId \nand ddd.dmsDocumentId = dda.dmsDocumentId\nand ddd.type = 'Claim'\nand ddd.subType IN ('Estimate of Damages','BI/UM Demand')\norder by dd.createDate desc"
-							},
-							"sink": {
-								"type": "AzureSqlSink",
-								"preCopyScript": "TRUNCATE TABLE edw_stage.dms_claim_payment_estimate",
-								"writeBehavior": "insert",
-								"sqlWriterUseTableLock": true,
-								"tableOption": "autoCreate",
-								"disableMetricsCollection": false
-							},
-							"enableStaging": false,
-							"translator": {
-								"type": "TabularTranslator",
-								"mappings": [
-									{
-										"source": {
-											"name": "dmsDocumentId",
-											"type": "Int32"
-										},
-										"sink": {
-											"name": "dmsDocumentId",
-											"type": "Int32",
-											"physicalType": "int"
-										}
-									},
-									{
-										"source": {
-											"name": "claimNumber",
-											"type": "String"
-										},
-										"sink": {
-											"name": "claimNumber",
-											"type": "String",
-											"physicalType": "varchar"
-										}
-									},
-									{
-										"source": {
-											"name": "document_type",
-											"type": "String"
-										},
-										"sink": {
-											"name": "document_type",
-											"type": "String",
-											"physicalType": "varchar"
-										}
-									},
-									{
-										"source": {
-											"name": "subtype",
-											"type": "String"
-										},
-										"sink": {
-											"name": "subtype",
-											"type": "String",
-											"physicalType": "varchar"
-										}
-									},
-									{
-										"source": {
-											"name": "documentName",
-											"type": "String"
-										},
-										"sink": {
-											"name": "documentName",
-											"type": "String",
-											"physicalType": "varchar"
-										}
-									},
-									{
-										"source": {
-											"name": "document_fileName",
-											"type": "String"
-										},
-										"sink": {
-											"name": "document_fileName",
-											"type": "String",
-											"physicalType": "nvarchar"
-										}
-									},
-									{
-										"source": {
-											"name": "attached_To",
-											"type": "String"
-										},
-										"sink": {
-											"name": "attached_to",
-											"type": "String",
-											"physicalType": "varchar"
-										}
-									},
-									{
-										"source": {
-											"name": "createDate",
-											"type": "DateTime"
-										},
-										"sink": {
-											"name": "createDate",
-											"type": "DateTime",
-											"physicalType": "datetime"
-										}
-									},
-									{
-										"source": {
-											"name": "documentDate",
-											"type": "DateTime"
-										},
-										"sink": {
-											"name": "documentDate",
-											"type": "DateTime",
-											"physicalType": "datetime"
-										}
-									},
-									{
-										"source": {
-											"name": "createBy",
-											"type": "String"
-										},
-										"sink": {
-											"name": "createBy",
-											"type": "String",
-											"physicalType": "varchar"
-										}
-									},
-									{
-										"source": {
-											"name": "paymentStatus",
-											"type": "String"
-										},
-										"sink": {
-											"name": "paymentStatus",
-											"type": "String",
-											"physicalType": "varchar"
-										}
-									},
-									{
-										"source": {
-											"name": "create_ts",
-											"type": "DateTime"
-										},
-										"sink": {
-											"name": "create_ts",
-											"type": "DateTime",
-											"physicalType": "datetime"
-										}
-									}
-								],
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": false,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "MetadataDrivenCopy_LS_AWS_DMS_dd8_SourceDS",
-								"type": "DatasetReference",
-								"parameters": {
-									"cw_tableName": "`DmsDocument`"
-								}
-							}
-						],
-						"outputs": [
-							{
-								"referenceName": "MetadataDrivenCopy_LS_AWS_DMS_dd8_DestinationDS",
-								"type": "DatasetReference",
-								"parameters": {
-									"cw_table": "dms_claim_payment_estimate",
-									"cw_schema": "edw_stage"
-								}
-							}
-						]
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:57:09Z"
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_LS_AWS_DMS_dd8_DestinationDS')]"
 			]
 		}
 	]

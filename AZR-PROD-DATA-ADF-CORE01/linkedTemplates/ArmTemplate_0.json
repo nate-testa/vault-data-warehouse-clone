@@ -11,6 +11,10 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'LS_AWS_DMS_PROD'"
 		},
+		"LS_AWS_VSP_PROD_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_AWS_VSP_PROD'"
+		},
 		"LS_eBao_aws_us_prod_address_password": {
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'LS_eBao_aws_us_prod_address'"
@@ -42,6 +46,18 @@
 		"LS_AWS_DMS_PROD_properties_typeProperties_username": {
 			"type": "string",
 			"defaultValue": "vltDmsUserPROD"
+		},
+		"LS_AWS_VSP_PROD_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "vlt-mysqla-ods-prod-instance-1.c3ze9u5b0sq7.us-east-1.rds.amazonaws.com"
+		},
+		"LS_AWS_VSP_PROD_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "vsp_core"
+		},
+		"LS_AWS_VSP_PROD_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "edwClaimRead"
 		},
 		"LS_eBao_aws_us_prod_address_properties_typeProperties_server": {
 			"type": "string",
@@ -210,6 +226,34 @@
 					"password": {
 						"type": "SecureString",
 						"value": "[parameters('LS_AWS_DMS_PROD_password')]"
+					},
+					"driverVersion": "v2"
+				},
+				"connectVia": {
+					"referenceName": "AWS-PROD",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-PROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_AWS_VSP_PROD')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "MySql",
+				"typeProperties": {
+					"server": "[parameters('LS_AWS_VSP_PROD_properties_typeProperties_server')]",
+					"port": 3306,
+					"database": "[parameters('LS_AWS_VSP_PROD_properties_typeProperties_database')]",
+					"username": "[parameters('LS_AWS_VSP_PROD_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_AWS_VSP_PROD_password')]"
 					},
 					"driverVersion": "v2"
 				},
@@ -580,49 +624,26 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_diary')]",
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_int_claims_payments_audit')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"linkedServiceName": {
-					"referenceName": "LS_eBao_aws_us_prod_diary",
+					"referenceName": "LS_AWS_VSP_PROD",
 					"type": "LinkedServiceReference"
 				},
 				"folder": {
-					"name": "t_pub_dairy"
+					"name": "Dataset_int_claims_payments_audit"
 				},
 				"annotations": [],
 				"type": "MySqlTable",
 				"schema": [],
 				"typeProperties": {
-					"tableName": "`t_pub_diary`"
+					"tableName": "`int_claims_payments_audit`"
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_aws_us_prod_diary')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_user')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_eBao_aws_us_prod_pub",
-					"type": "LinkedServiceReference"
-				},
-				"folder": {
-					"name": "t_pub_user"
-				},
-				"annotations": [],
-				"type": "MySqlTable",
-				"schema": [],
-				"typeProperties": {
-					"tableName": "`t_pub_user`"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_aws_us_prod_pub')]"
+				"[concat(variables('factoryId'), '/linkedServices/LS_AWS_VSP_PROD')]"
 			]
 		}
 	]

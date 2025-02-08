@@ -11,6 +11,10 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'LS_AWS_DMS_PROD'"
 		},
+		"LS_AWS_VSP_PROD_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_AWS_VSP_PROD'"
+		},
 		"LS_EDW_PROD_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_EDW_PROD'"
@@ -50,6 +54,18 @@
 		"LS_AWS_DMS_PROD_properties_typeProperties_username": {
 			"type": "string",
 			"defaultValue": "vltDmsUserPROD"
+		},
+		"LS_AWS_VSP_PROD_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "vlt-mysqla-ods-prod-instance-1.c3ze9u5b0sq7.us-east-1.rds.amazonaws.com"
+		},
+		"LS_AWS_VSP_PROD_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "vsp_core"
+		},
+		"LS_AWS_VSP_PROD_properties_typeProperties_username": {
+			"type": "string",
+			"defaultValue": "edwClaimRead"
 		},
 		"LS_eBao_aws_us_prod_address_properties_typeProperties_server": {
 			"type": "string",
@@ -349,6 +365,433 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_LS_AWS_DMS_dd8_SourceDS')]",
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_LS_AWS_DMS_dd8_DestinationDS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_AWS_VSP_int_claims_payments_audit')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy_akm",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [
+							{
+								"name": "Source",
+								"value": "`int_claims_payments_audit`"
+							},
+							{
+								"name": "Destination",
+								"value": "edw_stage.int_claims_payments_audit"
+							}
+						],
+						"typeProperties": {
+							"source": {
+								"type": "MySqlSource",
+								"query": "SELECT id, uuid, pm_cr_payment_id, pm_ip_payment_id, pm_amount, pm_funded, pm_status, pm_paid_date, pm_cleared_date, pm_escheat_date, pm_check_print_date, pm_check_number, pm_mail_tracking_number, pm_method_id, pm_monitored, pm_reject_payee_id, pm_reject_reason, pm_new_method, pm_orig_method, pm_selection, pm_method_last4digit, pm_re_issue, pm_error_code, pm_error_message, pm_carrier_id, pm_env, request_json, created_by, created_date\nFROM vsp_core.int_claims_payments_audit"
+							},
+							"sink": {
+								"type": "AzureSqlSink",
+								"preCopyScript": "/*TRUNCATE TABLE edw_stage.int_claims_payments_audit*/",
+								"writeBehavior": "insert",
+								"sqlWriterUseTableLock": true,
+								"tableOption": "autoCreate",
+								"disableMetricsCollection": false
+							},
+							"enableStaging": false,
+							"validateDataConsistency": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"mappings": [
+									{
+										"source": {
+											"name": "id",
+											"type": "Int32",
+											"physicalType": "Int32"
+										},
+										"sink": {
+											"name": "id",
+											"type": "Int32",
+											"physicalType": "int"
+										}
+									},
+									{
+										"source": {
+											"name": "uuid",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "uuid",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_cr_payment_id",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_cr_payment_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_ip_payment_id",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_ip_payment_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_amount",
+											"type": "Decimal",
+											"physicalType": "NewDecimal"
+										},
+										"sink": {
+											"name": "pm_amount",
+											"type": "Decimal",
+											"physicalType": "decimal"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_funded",
+											"type": "Boolean",
+											"physicalType": "Bool"
+										},
+										"sink": {
+											"name": "pm_funded",
+											"type": "Boolean",
+											"physicalType": "bit"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_status",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_status",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_paid_date",
+											"type": "DateTime",
+											"physicalType": "Date"
+										},
+										"sink": {
+											"name": "pm_paid_date",
+											"type": "DateTime",
+											"physicalType": "datetime2"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_cleared_date",
+											"type": "DateTime",
+											"physicalType": "Date"
+										},
+										"sink": {
+											"name": "pm_cleared_date",
+											"type": "DateTime",
+											"physicalType": "datetime2"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_escheat_date",
+											"type": "DateTime",
+											"physicalType": "Date"
+										},
+										"sink": {
+											"name": "pm_escheat_date",
+											"type": "DateTime",
+											"physicalType": "datetime2"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_check_print_date",
+											"type": "DateTime",
+											"physicalType": "Date"
+										},
+										"sink": {
+											"name": "pm_check_print_date",
+											"type": "DateTime",
+											"physicalType": "datetime2"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_check_number",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_check_number",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_mail_tracking_number",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_mail_tracking_number",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_method_id",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_method_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_monitored",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "pm_monitored",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_reject_payee_id",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_reject_payee_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_reject_reason",
+											"type": "String",
+											"physicalType": "Text"
+										},
+										"sink": {
+											"name": "pm_reject_reason",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_new_method",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_new_method",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_orig_method",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_orig_method",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_selection",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_selection",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_method_last4digit",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_method_last4digit",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_re_issue",
+											"type": "String",
+											"physicalType": "String"
+										},
+										"sink": {
+											"name": "pm_re_issue",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_error_code",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_error_code",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_error_message",
+											"type": "String",
+											"physicalType": "Text"
+										},
+										"sink": {
+											"name": "pm_error_message",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_carrier_id",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_carrier_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_env",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "pm_env",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "request_json",
+											"type": "String",
+											"physicalType": "JSON"
+										},
+										"sink": {
+											"name": "request_json",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "created_by",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "created_by",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "created_date",
+											"type": "String",
+											"physicalType": "VarChar"
+										},
+										"sink": {
+											"name": "created_date",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									}
+								],
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "SourceDataset_int_claims_payments_audit",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "DestinationDataset_int_claims_payments_audit",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/SourceDataset_int_claims_payments_audit')]",
+				"[concat(variables('factoryId'), '/datasets/DestinationDataset_int_claims_payments_audit')]"
 			]
 		},
 		{
@@ -6393,6 +6836,30 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/DestinationDataset_int_claims_payments_audit')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_EDW_PROD",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_int_claims_payments_audit"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "edw_stage",
+					"table": "int_claims_payments_audit"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_PROD')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/DestinationDataset_t_pub_diary')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -6982,6 +7449,29 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_int_claims_payments_audit')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_AWS_VSP_PROD",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_int_claims_payments_audit"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "`int_claims_payments_audit`"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_AWS_VSP_PROD')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_diary')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -7043,6 +7533,34 @@
 					"password": {
 						"type": "SecureString",
 						"value": "[parameters('LS_AWS_DMS_PROD_password')]"
+					},
+					"driverVersion": "v2"
+				},
+				"connectVia": {
+					"referenceName": "AWS-PROD",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-PROD')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_AWS_VSP_PROD')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "MySql",
+				"typeProperties": {
+					"server": "[parameters('LS_AWS_VSP_PROD_properties_typeProperties_server')]",
+					"port": 3306,
+					"database": "[parameters('LS_AWS_VSP_PROD_properties_typeProperties_database')]",
+					"username": "[parameters('LS_AWS_VSP_PROD_properties_typeProperties_username')]",
+					"sslMode": 0,
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_AWS_VSP_PROD_password')]"
 					},
 					"driverVersion": "v2"
 				},
