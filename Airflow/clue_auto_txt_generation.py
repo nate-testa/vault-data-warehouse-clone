@@ -91,7 +91,7 @@ QRY_CLUE = f"""
         [RecordVersionNumber]
     FROM [edw_integration].[claim_clue_auto_feed]
     WHERE 
-        CAST(create_ts AS DATE) = (SELECT MAX(CAST(create_ts AS DATE)) AS create_ts FROM [edw_integration].[claim_clue_auto_feed])
+        CAST(create_ts AS DATE) = CAST(GETDATE() AS DATE)
 """
 
 QRY_CLUE_START_END_DATE = """
@@ -99,7 +99,7 @@ QRY_CLUE_START_END_DATE = """
         CONVERT(VARCHAR(8), report_start_date, 112) + CONVERT(VARCHAR(8), report_end_date, 112) AS start_end_date
     FROM [edw_integration].[claim_clue_auto_feed]
     WHERE 
-        CAST(create_ts AS DATE) = (SELECT MAX(CAST(create_ts AS DATE)) AS create_ts FROM [edw_integration].[claim_clue_auto_feed])
+        CAST(create_ts AS DATE) = CAST(GETDATE() AS DATE)
 """
 
 

@@ -1,9 +1,9 @@
 ﻿-- ===========================================================================================================================
 -- Description: This procedures loads home coverage data
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date	 |Author										|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
---  			Yunus Mohammed					1. Created this procedure 
+--  						Yunus Mohammed					1. Created this procedure 
 -- 08/23/23		Architha Gudimalla				2. Added changes for residence type, loss_of_use_pc, total_insured_value_amt
 -- 10/02/23		Architha Gudimalla				3. Added replace to remove , from sq footage
 -- 10/05/23		Architha Gudimalla				4. Removed TIV update and moved to separate proc

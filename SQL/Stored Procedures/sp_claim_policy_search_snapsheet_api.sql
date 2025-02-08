@@ -1,13 +1,12 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 -- =================================================================================================
 -- Description: This procedures insert and update info related to Claim Policy Search API
 ---------------------------------------------------------------------------------------------------
--- Change date 				|Author						|	Change Description
+-- Change date 				|Author										|	Change Description
 ---------------------------------------------------------------------------------------------------
---	09-27-2024				Yunus Mohammed				Created procedure
+--	09-27-2024				Yunus Mohammed				1 - Created procedure
+-- 01-28-2025				Yunus Mohammed				2 - Used latest transaction for policy
+-- 01-28-2025	           Sandeep Gundreddy			3- Removed source_system_sk<>1  filter to include OS data
+-- 02-07-2025              Yunus Mohammed               4 - Used trim for city, state, zip and country
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_search_snapsheet_api]
 AS
@@ -57,10 +56,10 @@ BEGIN
 								SELECT 
 									p.mailing_address_line1 as [address1],
 									p.mailing_address_line2 as [address2],
-									p.mailing_address_city_nm as [city],
-									p.mailing_address_state_cd as [region],
-									p.mailing_address_zip_cd as [postalCode],
-									p.mailing_address_country_nm as [country]
+									trim(p.mailing_address_city_nm) as [city],
+									upper(trim(p.mailing_address_state_cd)) as [region],
+									trim(p.mailing_address_zip_cd) as [postalCode],
+									trim(p.mailing_address_country_nm) as [country]
 								for json path, include_null_values
 							) AS addresses,
 							(
@@ -77,17 +76,25 @@ BEGIN
 					pt.create_ts as policy_transaction_create_ts
 		INTO [edw_temp].[claim_policy_search_snapsheet_api_temp1] 
 		FROM (
-				SELECT 
-					DISTINCT pt.policy_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, 
+
+				SELECT distinct
+					pt.policy_sk,pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, 
 					pt.source_system_sk, pt.item_sk, pt.vehicle_coverage_sk, pt.create_ts
-				FROM edw_core.tpolicy_transaction as pt
-				INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
-				LEFT JOIN edw_core.tauto_vehicle_coverage AS avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
-				WHERE
-				cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-				AND CASE WHEN pr.product_cd = 'AU' AND pt.item_sk = 0 THEN 0  ELSE 1 END = 1
-				AND CASE WHEN pr.product_cd = 'AU' AND avc.vehicle_deleted_in = 'Yes' THEN 0  ELSE 1 END = 1
-				AND pt.source_system_sk <> 1
+					FROM
+					(
+						select
+						dense_rank() OVER(PARTITION BY pt.policy_sk ORDER BY pt.transaction_seq_no desc) AS rn,pt. *
+						from
+							edw_core.tpolicy_transaction pt
+						where
+							cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+					)as pt
+					INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
+					LEFT JOIN edw_core.tauto_vehicle_coverage AS avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
+					WHERE
+					CASE WHEN pr.product_cd = 'AU' AND pt.item_sk = 0 THEN 0  ELSE 1 END = 1
+					AND CASE WHEN pr.product_cd = 'AU' AND avc.vehicle_deleted_in = 'Yes' THEN 0  ELSE 1 END = 1
+					and rn = 1
 			) AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
 		inner JOIN edw_core.tproduct AS pr ON p.product_cd = pr.product_cd
@@ -101,8 +108,7 @@ BEGIN
 		LEFT JOIN edw_core.tpolicy_insured AS [pi] ON p.policy_no = [pi].policy_no AND p.effective_dt = [pi].effective_dt
 			AND pt.transaction_seq_no = [pi].transaction_seq_no AND pi.primary_insured_in = 'Yes'
 		WHERE
-			pr.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability')		
-
+			pr.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability')	
 
 		-- Start Insert process
 		INSERT INTO [edw_integration].[claim_policy_search_snapsheet_api]

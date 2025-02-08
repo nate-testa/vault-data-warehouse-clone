@@ -7,7 +7,7 @@
 -- 05/07/2024 			Yunus Mohammed				1. Created this procedure 
 -- 05/23/2024 			Yunus Mohammed				2. Updated join with AccountPremiumFactor
 -- 05/24/2024 			Sandeep Gundreddy			3. Added logic to read latest row from AccountPremiumFactor to avoid dups
--- 12/06/2024			Alberto Almario				4. Added new filed nc_bureau_rate
+-- 12/06/2024			Alberto Almario					4. Added new filed nc_bureau_rate
 -- 07/12/2024			Yunus Mohammed				5. Added new fields stated_limits_policy_in and risk_sharing_policy_in
 -- 08/13/24				Yunus Mohammed				6. Updated wind_derived_deductible logic
 -- 08/20/24				Yunus Mohammed				7. Updated wind_derived_deductible logic
