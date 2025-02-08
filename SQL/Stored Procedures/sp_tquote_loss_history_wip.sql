@@ -13,6 +13,7 @@ GO
 -- 05/09/24		        Yunus Mohammed			    1. Created the proc
 -- 08/22/24				Yunus Mohammed				2. Removed effective date from merge and added in update clause
 -- 01/15/25				Alberto Almario				3. Add include_in_rating_in column.
+-- 02/05/25				Alberto Almario				4. Add new columns source_of_water, source_of_fire and include_in_rating_override_in..
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_loss_history_wip]
 AS
@@ -46,6 +47,7 @@ BEGIN
 			SubCauseofLoss as sub_cause_of_loss, LossDescription, PolicyType, CatIndicator, Disputed,
 			AddressLine1, AddressLine2, AddressLineUnit, AddressCity, AddressState, AddressZipCode, Coverage,
 			ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred, IncludeInRating
+			,SourceOfWater, SourceOfFire, IncludeInRatingOverride
 			--,4 as source_system_sk --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
@@ -86,6 +88,7 @@ BEGIN
 					PropertyOrLiability, Source, ClaimStatus, Claimant, FileNumber, LossDate, LossIdentifier, LossType, SubCauseofLoss, 
 					LossDescription, PolicyType, CatIndicator, Disputed, AddressLine1, AddressLine2, AddressLineUnit, AddressCity, AddressState, AddressZipCode, 
 					Coverage, ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred, IncludeInRating
+					,SourceOfWater, SourceOfFire, IncludeInRatingOverride
 					)
 			) pivottable
 
@@ -102,6 +105,7 @@ BEGIN
         ,cat_loss_in,disputed_in,loss_address_line_1,loss_address_line_2,loss_address_unit_no,loss_address_city_nm,loss_address_state_cd
         ,loss_address_zip_cd,coverage_desc,indemnity_reserve_amt,expense_reserve_amt,indemnity_paid_amt,expense_paid_amt,total_incurred_amt
         ,source_system_sk,create_ts,update_ts,etl_audit_sk,include_in_rating_in
+		,source_of_water,source_of_fire,include_in_rating_override_in
         )
         VALUES 
 		(
@@ -114,6 +118,12 @@ BEGIN
 			WHEN IncludeInRating = 'true' THEN 'Yes'
 			WHEN IncludeInRating = 'false' THEN 'No'
 			ELSE IncludeInRating
+		END
+		,SourceOfWater,SourceOfFire
+		,CASE 
+			WHEN IncludeInRatingOverride = 'true' THEN 'Yes'
+			WHEN IncludeInRatingOverride = 'false' THEN 'No'
+			ELSE IncludeInRatingOverride
 		END
 		)
         WHEN MATCHED THEN UPDATE
@@ -152,6 +162,13 @@ BEGIN
 											WHEN Source.IncludeInRating = 'false' THEN 'No'
 											ELSE Source.IncludeInRating
 										END
+		,Target.source_of_water=Source.SourceOfWater
+		,Target.source_of_fire=Source.SourceOfFire
+		,Target.include_in_rating_override_in=	CASE 
+													WHEN Source.IncludeInRatingOverride = 'true' THEN 'Yes'
+													WHEN Source.IncludeInRatingOverride = 'false' THEN 'No'
+													ELSE Source.IncludeInRatingOverride
+												END
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
