@@ -13,7 +13,7 @@ GO
 --	12-02-2024				Yunus Mohammed				1. Created procedure
 --	02-07-2025				Hernando Gonzalez			2. Included new logic for PROD
 -- ================================================================================================= 
-ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api_update_catastrophe]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api_update_catastrophe]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -45,7 +45,7 @@ BEGIN
 				'"id": "' + ISNULL(JSON_VALUE(api_response, '$.claimReferenceNumber'), '') + '", ' +
 				'"type": "claim", ' +
 				'"attributes": { ' +
-				'"cf_cat_code_' + ISNULL(cfdef.generated_code, 'unknown') + '": "' + ISNULL(cfdef.prefixed_code, 'unknown') + '"' +
+				'"cf_cat_code_' + ISNULL(cfdef.generated_code, 'unknown') + '": "' + ISNULL(cfclm.prefixed_code, 'unknown') + '"' +
 				' } } }' 
 			) AS [data],
 			update_ts,
@@ -80,7 +80,7 @@ BEGIN
 						THEN '%Pt. 2%'
 					-- 2022
 					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) >= 14 AND LEFT(cfclm.[name], 2) = '22'
-						THEN '%Pt. 1%'
+						THEN '%Pt.1%'
 					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) < 14 AND LEFT(cfclm.[name], 2) = '22'
 						THEN '%Pt. 2%'
 					-- 2021
