@@ -1,0 +1,21 @@
+{
+	"name": "LS_AWS_VSP_PROD",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "MySql",
+		"typeProperties": {
+			"server": "vlt-mysqla-ods-prod-instance-1.c3ze9u5b0sq7.us-east-1.rds.amazonaws.com",
+			"port": 3306,
+			"database": "vsp_core",
+			"username": "edwClaimRead",
+			"sslMode": 0,
+			"driverVersion": "v2",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiIzZmJlNmI2ZC0wYTc4LTQyMGUtOGEzMy1jNzFlMWM1MTA3MGIiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "AWS-PROD",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
