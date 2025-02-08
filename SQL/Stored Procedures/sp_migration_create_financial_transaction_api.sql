@@ -395,10 +395,68 @@
             END AS payment_type,
             resh.reserve_type,
             resh.reserve_method,
-            REPLACE(REPLACE(JSON_VALUE(CAST(pty.DYNAMIC_FIELDS AS NVARCHAR(MAX)),'$.MobileTel'),'-',''),'+','') AS [payee_phone_no],
+            trim(
+							CASE
+								WHEN ISNULL(REPLACE(REPLACE(JSON_VALUE(CAST(pty.DYNAMIC_FIELDS AS NVARCHAR(MAX)),'$.MobileTel'),'-',''),'+',''),'') !='' 									
+									AND 
+									ISNUMERIC(
+													REPLACE(
+														REPLACE(
+														REPLACE(
+														REPLACE(
+														REPLACE(
+														REPLACE(
+														REPLACE(
+																REPLACE(REPLACE(JSON_VALUE(CAST(pty.DYNAMIC_FIELDS AS NVARCHAR(MAX)),'$.MobileTel'),'-',''),'+',''),
+																'(',''
+														),')',''),' ',''),'.',''),')',''),'(',''),' ','')						
+										) = 1
+										THEN
+										CAST(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+												 REPLACE(REPLACE(JSON_VALUE(CAST(pty.DYNAMIC_FIELDS AS NVARCHAR(MAX)),'$.MobileTel'),'-',''),'+',''),
+												 '(',''
+											),')',''),' ',''),'.',''),'(',''),')',''),' ','')
+											AS VARCHAR(MAX))
+								ELSE
+				 					CASE
+										WHEN ROLE_NAME  in ('Claimant','Policy Holder') and isnull(.contact_phone,'')!='' then 
+										REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(REPLACE(c.contact_phone,'-',''),'+',''),
+												 '(',''
+											),')',''),' ',''),'.',''),'(',''),')',''),' ','')
+										ELSE
+										'5555555555'
+									END
+				   			END
+							) AS [payee_phone_no],
             'phone' AS [payee_contact_type],
             --'Farhad.Imam@Vault.Insurance' AS [payee_email],
-			JSON_VALUE(CAST(pty.DYNAMIC_FIELDS AS NVARCHAR(MAX)),'$.Email') AS [payee_email],
+            CASE
+							WHEN isnull(JSON_VALUE(CAST(pty.DYNAMIC_FIELDS AS NVARCHAR(MAX)),'$.Email'),'')!=''
+                                                 and JSON_VALUE(CAST(pty.DYNAMIC_FIELDS AS NVARCHAR(MAX)),'$.Email') like '%@%'
+										then JSON_VALUE(CAST(pty.DYNAMIC_FIELDS AS NVARCHAR(MAX)),'$.Email')
+							WHEN isnull(email,'')!='' and email like '%@%' then email
+							ELSE
+								CASE
+									WHEN ROLE_NAME  in ('Claimant','Policy Holder')  AND isnull(c.CONTACT_PERSON_EMAIL,'')!='' and c.CONTACT_PERSON_EMAIL like '%@%' then
+										c.CONTACT_PERSON_EMAIL
+									ELSE
+										'unspecified@vaultinsurance.com'
+								END
+			END	 AS [payee_email],
             p.claimPartyReferenceNumber AS PAYEE_ID,
           -- party.pty_PARTY_ID AS PAYEE_ID,
 /*
@@ -417,6 +475,7 @@
             tpa.COUNTRY AS [country]
         INTO [edw_temp].[migration_create_financial_transaction_api_temp5]
         FROM [edw_temp].[migration_create_financial_transaction_api_temp4] resh
+        inner join edw_stage.t_clm_case c on c.CLAIM_NO = resh.claimNumber
         LEFT JOIN edw_stage.t_clm_policy cp ON resh.case_id = cp.case_id
 		LEFT JOIN edw_core.tpolicy tp ON tp.policy_no = resh.POLICY_NO -- Added on 01/24/2025
         LEFT JOIN edw_stage.t_clm_settle_item settle_item 

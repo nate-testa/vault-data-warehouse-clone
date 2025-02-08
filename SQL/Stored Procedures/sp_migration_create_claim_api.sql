@@ -26,7 +26,8 @@
 -- 02/07/2025			Yunus Mohammed					14 claimParties => if first name or last name is blank use Unspecified
 -- ==================================================================================================================================
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api]
-@claim_no varchar(max) = null
+@claim_no varchar(max) = NULL
+
 AS
 BEGIN
 
@@ -70,8 +71,7 @@ BEGIN
 				edw_stage.t_clm_case c
 			 	left join edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber
 				INNER JOIN string_split(@claim_no,',') as t on t.[value]  = c.CLAIM_NO
-			where 
-			mcca.claimNumber is null
+			where 			mcca.claimNumber is null
 		END;
 		
 		WITH first_open_dt AS 
@@ -660,17 +660,73 @@ END AS [injuredParty.claimPartyId]
 							'us'  as country,
 							'1' as countryCode,
 							--'false' as preferredMethod,
-							'phone' as [type],
-							c.contact_phone as [value]
-							--'7272901574' as [value]
+							'phone' as [type],							
+							trim(
+							CASE
+								WHEN ISNULL(REPLACE(REPLACE(JSON_VALUE(DYNAMIC_FIELDS,'$.MobileTel'),'-',''),'+',''),'') !='' 									
+									AND 
+									ISNUMERIC(
+													REPLACE(
+														REPLACE(
+														REPLACE(
+														REPLACE(
+														REPLACE(
+														REPLACE(
+														REPLACE(
+																REPLACE(REPLACE(JSON_VALUE(DYNAMIC_FIELDS,'$.MobileTel'),'-',''),'+',''),
+																'(',''
+														),')',''),' ',''),'.',''),')',''),'(',''),' ','')						
+										) = 1
+										THEN
+										CAST(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+												 REPLACE(REPLACE(JSON_VALUE(DYNAMIC_FIELDS,'$.MobileTel'),'-',''),'+',''),
+												 '(',''
+											),')',''),' ',''),'.',''),'(',''),')',''),' ','')
+											AS VARCHAR(MAX))
+								ELSE
+				 					CASE
+										WHEN ROLE_NAME  in ('Claimant','Policy Holder') and isnull(c.contact_phone,'')!='' then 
+										REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(
+											REPLACE(REPLACE(c.contact_phone,'-',''),'+',''),
+												 '(',''
+											),')',''),' ',''),'.',''),'(',''),')',''),' ','')
+										ELSE
+										'5555555555'
+									END
+				   			END
+							) as [value]
 							UNION
 							SELECT
 							null as country,
 							null as countryCode,
 							--'true' preferredMethod,
 							'email' as [type],
-							-- 'Farhad.Imam@Vault.Insurance' as [value]
-							c.contact_person_email as [value]
+						CASE
+							WHEN isnull(JSON_VALUE(DYNAMIC_FIELDS,'$.Email'),'')!='' and JSON_VALUE(DYNAMIC_FIELDS,'$.Email') like '%@%'
+										then JSON_VALUE(DYNAMIC_FIELDS,'$.Email')
+							WHEN isnull(email,'')!='' and email like '%@%' then email
+							ELSE
+								CASE
+									WHEN ROLE_NAME  in ('Claimant','Policy Holder')  AND isnull(c.CONTACT_PERSON_EMAIL,'')!='' and c.CONTACT_PERSON_EMAIL like '%@%' then
+										c.CONTACT_PERSON_EMAIL
+									ELSE
+										'unspecified@vaultinsurance.com'
+								END
+							END
+							as [value]
 						) as a
 						for json path, include_null_values
 					) ) as contactMethods,
@@ -691,9 +747,13 @@ END AS [injuredParty.claimPartyId]
                         ELSE 'PERSON'
                     END AS partyType,
                     IS_ORG_PARTY,
-                   cast(cp. party_name as varchar(max)) as party_name
+                   cast(cp. party_name as varchar(max)) as party_name,
+				   CAST(pp.DYNAMIC_FIELDS AS nVARCHAR(MAX)) as DYNAMIC_FIELDS,
+				   cp.EMAIL,
+				   cpr.ROLE_NAME
                     from 
                     edw_stage.t_clm_party cp
+					left JOIN edw_stage.t_clm_party_role cpr  on cp.PARTY_ROLE = cpr.ROLE_CODE
                     inner JOIN edw_stage.t_clm_object AS obj on cp.CASE_ID = obj.CASE_ID and cp.PARTY_ID = obj.CLAIMANT_ID
                     LEFT JOIN edw_stage.t_clm_item i ON obj.[object_id] = i.[object_id] 
                     LEFT JOIN edw_stage.t_clm_subclaim_type sct ON obj.subclaim_type = sct.subclaim_type_code
@@ -711,9 +771,13 @@ END AS [injuredParty.claimPartyId]
                         ELSE 'PERSON'
                     END AS partyType,
                     IS_ORG_PARTY,
-                    cast(cp. party_name as varchar(max)) as party_name
+                    cast(cp. party_name as varchar(max)) as party_name,
+					CAST(pp.DYNAMIC_FIELDS AS NVARCHAR(MAX)) AS DYNAMIC_FIELDS,
+					cp.EMAIL,
+					cpr.ROLE_NAME
                     from 
                     edw_stage.t_clm_party cp
+					left JOIN edw_stage.t_clm_party_role cpr  on cp.PARTY_ROLE = cpr.ROLE_CODE
                     left JOIN edw_stage.t_clm_object AS obj on cp.CASE_ID = obj.CASE_ID and obj.CLAIMANT_ID= cp.PARTY_ID 
                     LEFT JOIN edw_stage.t_pty_party pp ON [cp].pty_party_id = pp.party_id
                     where
@@ -753,7 +817,7 @@ END AS [injuredParty.claimPartyId]
 			) AS subcl
 		) as sclc on sclc.cause_of_loss_cd = c.sub_cause_of_loss_code       
 		) as t ; 
-
+		
         insert into edw_stage.migration_create_claim_api
 			(
 			claimNumber, accidentCode, claimType, [status], policyNumber, firstOpenedAt,firstClosedAt,openedAt,closedAt,
