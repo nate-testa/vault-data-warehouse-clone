@@ -5,7 +5,7 @@ from snapsheet_api import SnapsheetAPI
 
 
 logger = logging.getLogger(__name__) 
-logger.setLevel("DEBUG")
+# logger.setLevel("DEBUG")
 
 # -- Q U E R I E S --
 update_exposure_adjuster_qry = """
@@ -33,6 +33,13 @@ update_claim_catastrophe_qry = """
         select 
             claimRerenceNumber, data
         from edw_stage.migration_create_claim_api_update_catastrophe
+        where api_status  in ('pending')
+    """
+
+update_claim_party_qry = """
+        select 
+            claimpartyreferencenumber, data
+        from edw_stage.migration_create_claim_party_update_api
         where api_status  in ('pending')
     """
 
@@ -176,6 +183,41 @@ def claim_catastrophe(qry):
         logger.info(f"Executing update query: {qry_update_result}")
         mssql_hook.run(qry_update_result)
 
+def claim_party(qry):
+    api = SnapsheetAPI(logger=logger)
+    mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
+
+    logger.info(f"Executing SQL query: {qry}")
+    update_claim_party = mssql_hook.get_records(qry)
+    logger.info(f"Query returned {len(update_claim_party)} records")
+
+    for record in update_claim_party:
+        (claimpartyreferencenumber, data) = record
+        logger.info(f"*************** Start Processing *********************")
+        logger.info(f"Processing claim party record: {record}")
+
+        success, result_text = api.update_a_claim_party(claimpartyreferencenumber, data)
+
+        if success:
+            qry_update_result = f"""
+                update edw_stage.migration_create_claim_party_update_api 
+                set update_ts = getdate(), api_status = 'Success', 
+                    api_error_description = NULL, 
+                    api_response = '{result_text.replace("'","''")}'
+                where claimpartyreferencenumber = '{claimpartyreferencenumber}'
+            """
+        else:
+            qry_update_result = f"""
+                update edw_stage.migration_create_claim_party_update_api 
+                set update_ts = getdate(), api_status = 'Error', 
+                    api_error_description = '{result_text.replace("'","''")}',
+                    api_response = NULL
+                where claimpartyreferencenumber = '{claimpartyreferencenumber}'
+            """
+
+        logger.info(f"Executing update query: {qry_update_result}")
+        mssql_hook.run(qry_update_result)
+
 def main():
 
     parser = argparse.ArgumentParser(
@@ -183,7 +225,7 @@ def main():
     )
     parser.add_argument(
         'function',
-        choices=['exposure_adjuster','exposure_status','claim_status','claim_catastrophe'],
+        choices=['exposure_adjuster','exposure_status','claim_status','claim_catastrophe','claim_party'],
         help='The function you want to execute.'
     )
     args = parser.parse_args()
@@ -196,6 +238,8 @@ def main():
         claim_status(update_claim_status_qry)
     elif args.function == 'claim_catastrophe':
         claim_catastrophe(update_claim_catastrophe_qry)
+    elif args.function == 'claim_party':
+        claim_party(update_claim_party_qry)
     
 
 if __name__ == '__main__':
