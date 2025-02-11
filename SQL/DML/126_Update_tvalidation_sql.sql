@@ -13,4 +13,17 @@ having sum(ct.loss_reserve_amt+ct.expense_reserve_amt+ct.subrogation_recovery_re
 				ct.deductible_recovery_defense_reserve_amt+ct.reinsurance_recovery_defense_reserve_amt+
 				ct.overpayment_recovery_defense_reserve_amt) <> 0) a' 
 where validation_sql_desc = 	'tclaim_transaction - total reserves <> 0 for closed claim'
+
+update edw_core.tvalidation_sql 
+set source_sql = ' select count(*)  from  (  select claim_feature_sk  from edw_core.tclaim_feature  a  group by claim_feature_sk  
+ having SUM(  COALESCE(  ( a.loss_paid_amt+
+				a.expense_paid_amt+a.subrogation_recovery_amt+a.salvage_recovery_amt+a.salvage_expense_recovery_amt+
+				a.subrogation_expense_recovery_amt+a.defense_paid_amt+a.deductible_recovery_amt+
+				a.reinsurance_recovery_amt+a.overpayment_recovery_amt+a.deductible_expense_recovery_amt+
+				a.reinsurance_expense_recovery_amt+a.overpayment_expense_recovery_amt+a.subrogation_defense_recovery_amt+
+				a.salvage_defense_recovery_amt+a.deductible_defense_recovery_amt+
+				a.reinsurance_defense_recovery_amt+a.overpayment_defense_recovery_amt  ), 0)  )<0  
+ ) a ' 
+where validation_sql_desc = 	'tclaim_feature - negative paid'
+ 
  
