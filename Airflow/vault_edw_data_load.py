@@ -139,34 +139,6 @@ with DAG(
             # parameters={"myParam": "value"},
         )
 
-        adf_etl_load_ebao_mqq: BaseOperator = AzureDataFactoryRunPipelineOperator(
-            task_id="adf_etl_load_ebao_mqq",
-            azure_data_factory_conn_id='azure_data_factory_vault_data',
-            pipeline_name="MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_TopLevel",
-            # parameters={"myParam": "value"},
-        )
-
-        adf_etl_load_ebao_mqq_address: BaseOperator = AzureDataFactoryRunPipelineOperator(
-            task_id="adf_etl_load_ebao_mqq_address",
-            azure_data_factory_conn_id='azure_data_factory_vault_data',
-            pipeline_name="MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_TopLevel_t_pub_address",
-            # parameters={"myParam": "value"},
-        )
-
-        adf_etl_load_ebao_pub_user: BaseOperator = AzureDataFactoryRunPipelineOperator(
-            task_id="adf_etl_load_ebao_pub_user",
-            azure_data_factory_conn_id='azure_data_factory_vault_data',
-            pipeline_name="t_pub_user_eBao_to_Edw_stage_FullLoad",
-            # parameters={"myParam": "value"},
-        )
-
-        adf_etl_load_ebao_pub_diary: BaseOperator = AzureDataFactoryRunPipelineOperator(
-            task_id="adf_etl_load_ebao_pub_diary",
-            azure_data_factory_conn_id='azure_data_factory_vault_data',
-            pipeline_name="t_pub_diary_eBao_to_Edw_stage_FullLoad",
-            # parameters={"myParam": "value"},
-        )
-
         adf_etl_load_ls_aws_dms: BaseOperator = AzureDataFactoryRunPipelineOperator(
             task_id="adf_etl_load_ls_aws_dms",
             azure_data_factory_conn_id='azure_data_factory_vault_data',
@@ -188,7 +160,7 @@ with DAG(
             html_content=get_HTML_on_vault_format('The Azure Data Factory pipelines executed successfully',''),
         )
 
-        adf_etl_load_stage >> adf_etl_load_ebao_mqq >> adf_etl_load_ebao_mqq_address >> adf_etl_load_ebao_pub_user >> adf_etl_load_ebao_pub_diary >> adf_etl_load_ls_aws_dms >> adf_etl_load_ls_aws_vsp_claims_payments >> send_adf_email
+        adf_etl_load_stage >> adf_etl_load_ls_aws_dms >> adf_etl_load_ls_aws_vsp_claims_payments >> send_adf_email
 
 
     with TaskGroup("home_group") as home_group:
@@ -415,6 +387,7 @@ with DAG(
             'sp_tclaim_payment_snapsheet',
             'sp_tclaim_payment_ebao_payment_status_update',
             'sp_tclaim_transaction_snapsheet',
+            'sp_tclaim_transaction_update_snapsheet',
             'sp_tclaim_note_snapsheet',
             'sp_tclaim_task_snapsheet',
             'sp_update_tclaim_snapsheet',
