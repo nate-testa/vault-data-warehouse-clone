@@ -3,10 +3,11 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date 				|Author						                |	Change Description
 ---------------------------------------------------------------------------------------------------
---	09-30-2024				Yunus Mohammed				Created procedure
--- 01-06-2025               Yunus Mohammed             Enabled actual phone no and email (sending actual email and phone no). 
--- 02-08-2025               Yunus Mohammed             Captured all policy transactions and replced claim_policy_seach_snapsheet_api table
+--	09-30-2024				Yunus Mohammed				1 Created procedure
+-- 01-06-2025               Yunus Mohammed             2 Enabled actual phone no and email (sending actual email and phone no). 
+-- 02-08-2025               Yunus Mohammed             3 Captured all policy transactions and replced claim_policy_seach_snapsheet_api table
 --                                                                                              with tpolicy_transaction
+-- 02-12-2025              Yunus Mohammed               4 Removed deleted vehicles form Risks object
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
@@ -44,15 +45,16 @@ BEGIN
                 pt. *
             from
                 edw_core.tpolicy_transaction pt
-            where
-                cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts               
+            where        
+                cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+                and pt.source_system_sk != 1 and pt.product_sk != 6                 
             )as pt
             INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
             LEFT JOIN edw_core.tauto_vehicle_coverage AS avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
             WHERE
             CASE WHEN pr.product_cd = 'AU' AND pt.item_sk = 0 THEN 0  ELSE 1 END = 1
-            AND CASE WHEN pr.product_cd = 'AU' AND avc.vehicle_deleted_in = 'Yes' THEN 0  ELSE 1 END = 1
-            
+            AND CASE WHEN pr.product_cd = 'AU' AND avc.vehicle_deleted_in = 'Yes' THEN 0  ELSE 1 END = 1        
+
 	declare @home_sql varchar(max) = ''
         select @home_sql = @home_sql + 'select cpsa.policy_history_sk, ''' + snapsheet_coverage_nm + ''' as  [name],''' 
         + coverage_type + ''' as coverage_type,'''
@@ -506,9 +508,7 @@ BEGIN
                     from
                         edw_core.tauto_driver tad
                     where
-                        tad.policy_no = tp.policy_no and
-                        tad.effective_dt = tp.effective_dt and
-                        tad.transaction_seq_no = cpsa.transaction_seq_no
+                        tad.policy_history_sk = tph.policy_history_sk
                     for json path, include_null_values
                 )) as [drivers],
                 json_query
@@ -567,7 +567,8 @@ BEGIN
                         edw_core.tauto_vehicle 
                     ) as tav
                     inner join edw_core.tauto_vehicle_coverage as tavc on tavc.auto_vehicle_sk = tav.auto_vehicle_sk
-                    left JOIN
+                    and tavc.policy_history_sk = cpsa.policy_history_sk
+                    left join
                         (
                             select
                                 ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt, 
@@ -575,10 +576,18 @@ BEGIN
                             from
                             edw_core.tauto_garage_location
                         ) as tag ON tag.auto_garage_location_sk = tavc.auto_garage_location_sk
-                where
-                    tav.policy_no = tp.policy_no
+                where      
+                 tav.policy_no = tp.policy_no
                     and tav.effective_dt = tp.effective_dt
-                    and tavc.transaction_seq_no = cpsa.transaction_seq_no
+                    and tavc.transaction_seq_no = cpsa.transaction_seq_no             
+					and	exists(
+										select 1 from [edw_temp].[claim_policy_webhook_snapsheet_api_temp1] cpsa1
+										where
+											cpsa1.policy_history_sk = cpsa.policy_history_sk
+											and cpsa1.item_sk = tav.auto_vehicle_sk
+								)
+              
+                    
                 for json path, include_null_values
     ))
             when prd.product_cd = 'PEL' then
@@ -892,7 +901,7 @@ isnull(
                                 [coverage.limits.amount],
                               [coverage.limits.coverageLimitType]
                                 */
-from 
+                    from 
                                 edw_temp.policy_webhook_auto_coverages a
                             where
                                 a.policy_history_sk = tph.policy_history_sk
@@ -1047,22 +1056,21 @@ from
         into edw_temp.claim_policy_webhook_snapsheet_api_temp2
         from
         policy_webhook
-		
+
         INSERT INTO edw_integration.claim_policy_webhook_snapsheet_api
         (
             cancelledAt, cancelledReason, effectiveAt, expirationAt, inceptionAt, policyNumber,
             policyType, [status], [version], transaction_seq_no, agentInformation, product, reservation, underwriting,
             businesses,	people,	risks, coverages, endorsements, notes, versions,deductibles, [data] ,source_system_nm, create_ts, etl_audit_sk
         )	
-		
+	
         SELECT distinct
                 cancelledAt, cancelledReason,	effectiveAt, expirationAt, inceptionAt, policyNumber,
             policyType, [status], [version], transaction_seq_no, agentInformation, product,reservation, underwriting,
             businesses,	people,	risks, coverages, endorsements, notes, versions, deductibles, [data] ,source_system_nm,
             getdate() as create_ts , @etl_audit_sk as etl_audit_sk
         FROM [edw_temp].[claim_policy_webhook_snapsheet_api_temp2];  
-
-			
+    		
 		SET @rows_affected=@@ROWCOUNT;
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.create_ts) FROM [edw_temp].[claim_policy_webhook_snapsheet_api_temp1] t1),@last_source_extract_ts);
