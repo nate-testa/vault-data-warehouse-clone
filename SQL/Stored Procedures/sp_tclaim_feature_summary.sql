@@ -11,6 +11,8 @@
 -- 05/21/2024		Yunus Mohammed					5. Updates were made to calculate start month and end month
 -- 05/23/2024		Yunus Mohammed					6. Updates were made to select the previous month and obtain the last day's transaction from that month on the 1st of the current month
 -- 02/06/2025		Yunus Mohammed					7. Procedure updated for Snaphseet
+-- 02/12/2025		Yunus Mohammed					8. Used tclaim table for  source_system_sk, product_sk and policy_sk 
+--																							Added schema name to table name in Update stmt
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_summary]
@@ -85,7 +87,7 @@ BEGIN
 				aslob_sk,source_system_sk,update_ts,etl_audit_sk
 			)
 			SELECT
-			@end_dt_sk AS month_sk, ct.claim_sk,ct.claim_feature_sk,ct.product_sk,ct.policy_sk, broker_sk,customer_sk,
+			@end_dt_sk AS month_sk, ct.claim_sk,ct.claim_feature_sk,c.product_sk,c.policy_sk, ct.broker_sk,ct.customer_sk,
 			SUM(CASE WHEN ct.transaction_dt_sk BETWEEN @begin_dt_sk AND @end_dt_sk  THEN  ct.loss_reserve_amt ELSE 0 END) AS loss_reserve_amt,
 			SUM(ct.loss_reserve_amt) AS itd_loss_reserve_amt,
 			SUM(CASE WHEN ct.transaction_dt_sk BETWEEN @begin_dt_sk AND @end_dt_sk  THEN ct.expense_reserve_amt ELSE 0 END) AS expense_reserve_amt,
@@ -195,11 +197,12 @@ BEGIN
             SUM(CASE WHEN ct.transaction_dt_sk BETWEEN @begin_dt_sk AND @end_dt_sk THEN ct.overpayment_defense_recovery_amt ELSE 0 END) AS overpayment_defense_recovery_amt,
             SUM(ct.overpayment_defense_recovery_amt) AS itd_overpayment_defense_recovery_amt,            			
 			cf.aslob_sk ,
-			ct.source_system_sk,
+			c.source_system_sk,
 			GETDATE() AS update_ts,
 			@etl_audit_sk AS etl_audit_sk
 			FROM
 			edw_core.tclaim_transaction ct
+			INNER JOIN edw_core.tclaim c ON ct.claim_sk =c.claim_sk
 			INNER JOIN edw_core.tclaim_feature cf ON ct.claim_feature_sk =cf.claim_feature_sk 
 			INNER JOIN
 			(
@@ -216,11 +219,11 @@ BEGIN
 			INNER JOIN edw_core.tclaim_status cs ON fs.feature_status_sk =cs.claim_status_sk
 			WHERE ct.transaction_dt_sk <=@end_dt_sk
 			AND fs.feature_status_sk =cs.claim_status_sk
-			GROUP BY ct.claim_sk,ct.claim_feature_sk,cf.aslob_sk,ct.product_sk,ct.policy_sk, broker_sk,customer_sk,ct.source_system_sk;
+			GROUP BY ct.claim_sk,ct.claim_feature_sk,cf.aslob_sk,c.product_sk,c.policy_sk, ct.broker_sk,ct.customer_sk,c.source_system_sk;
 		
 			SET @rows_affected=@@ROWCOUNT
 		
-			UPDATE tclaim_feature_summary
+			UPDATE edw_core.tclaim_feature_summary
 			SET
 			itd_loss_incurred_gt_250k_ct=(CASE WHEN itd_total_incurred_amt>250000 THEN 1 ELSE 0 END),
 			itd_loss_incurred_gt_500k_ct=(CASE WHEN itd_total_incurred_amt>500000 THEN 1 ELSE 0 END),
@@ -236,8 +239,7 @@ BEGIN
 				deductible_recovery_amt-reinsurance_recovery_amt-overpayment_recovery_amt-deductible_expense_recovery_amt-
 				reinsurance_expense_recovery_amt-overpayment_expense_recovery_amt-subrogation_defense_recovery_amt-
 				salvage_defense_recovery_amt-deductible_defense_recovery_amt-reinsurance_defense_recovery_amt- overpayment_defense_recovery_amt
-				)=0 THEN 1 ELSE 0 END)
-			
+				)=0 THEN 1 ELSE 0 END)			
 			WHERE month_sk=@end_dt_sk;
 
 			-- Update control table
