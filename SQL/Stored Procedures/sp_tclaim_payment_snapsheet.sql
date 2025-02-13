@@ -9,7 +9,8 @@
 -- 01/17/25		Hernando Gonzalez			4. add case statement for source_system_sk column
 -- 01/27/25     Sandeep Gundreddy			5. Exclude migrated payments 
 -- 01/28/25     Sandeep Gundreddy			6. Updated payment_sequence_no mapping
---01/29/25 		Sandeep Gundreddy			7.Modified join conditions to exposures
+-- 01/29/25 	Sandeep Gundreddy			7.Modified join conditions to exposures
+-- 02/12/25 	Alberto Almario				8. Use claim_parties table to extract payee_address columns
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment_snapsheet]
 
@@ -48,12 +49,12 @@ BEGIN
 				concat(cp.first_name,' ',cp.last_name) End AS payee_nm,
 				fpd.party_type AS party_role_nm, 
 				ISNULL(fpi.amount,0) AS paid_amt,
-				concat( fpd.address_address_1,', ',
-						fpd.address_address_2,', ', 
-						fpd.address_city,', ', 
-						fpd.address_region,', ', 
-						fpd.address_postal_code,', ', 
-						fpd.address_country
+				concat( cp.address_address1,', ',
+						cp.address_address2,', ', 
+						cp.address_city,', ', 
+						cp.address_region,', ', 
+						cp.address_postal_code,', ', 
+						cp.address_country
 				) AS payee_address,
 				fpi.note_body AS remark, 
 				u.name AS payment_submitter_nm,
