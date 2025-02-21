@@ -59,6 +59,7 @@ GO
 --													any renewal that is not flat cancelled is termed as renewal accepted
 --													any policy that has a renewal quote offered is termed as renewal offered
 -- 12/17/24		Architha Gudimalla				32. VI35593 - new columns request 
+-- 02/13/25		Architha Gudimalla				33. AD8573 - excluded OS claims which do not have broker
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -707,6 +708,7 @@ BEGIN
 					and 	cs.policy_sk = pol.policy_sk 
 					 and 	pol.risk_state_cd = st.state_cd
 					and 	month_sk in (@month_end_dt_sk)
+					and cs.broker_sk is not null
 					group by cs.broker_sk, cs.product_sk, cs.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				
