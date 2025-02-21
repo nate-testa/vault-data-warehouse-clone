@@ -98,7 +98,7 @@ BEGIN
 					tcr.subrogation_recovery_expense_reserve_amt + tcr.subrogation_recovery_reserve_amt +tcr.subrogation_recovery_defense_reserve_amt
 			) AS reserve_amount,
 			YEAR(tc.loss_dt) AS accident_year,
-			CASE WHEN tc.policy_no LIKE 'NFP%' THEN np.risk_state ELSE COALESCE(st.state_cd,tp.risk_state_cd) END AS risk_state,
+			CASE WHEN tc.policy_no LIKE 'NFP%' THEN np.risk_state ELSE COALESCE(st.state_cd,tp.risk_state_cd) END AS risk_state,			
 			CAST(tasl.aslob_cd AS INT) AS aslob,
 			tcr.claim_transaction_sk AS transaction_id,
 			@last_day_month AS monthend,

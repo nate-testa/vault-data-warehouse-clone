@@ -163,7 +163,7 @@ BEGIN
 						UNION
 							
 						SELECT
-							claim_feature_sk,claim_payment_sk,SUM(subrogation_defense_recovery_amt+subrogation_expense_recovery_amt) AS amt, 'Subrogation Expense' AS cat_name
+							claim_feature_sk,claim_payment_sk,SUM(subrogation_expense_recovery_amt) AS amt, 'Subrogation Expense' AS cat_name
 						FROM edw_core.tclaim_transaction t
 						WHERE t.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
 						GROUP BY claim_feature_sk,claim_payment_sk

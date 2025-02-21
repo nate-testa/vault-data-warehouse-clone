@@ -116,14 +116,16 @@ BEGIN
 				CASE WHEN tc.policy_no LIKE 'NFP%' THEN np.risk_state ELSE COALESCE(st.state_cd,tp.risk_state_cd) END AS risk_state,				
 				tcr.claim_transaction_sk AS transaction_id,
 				@end_dt AS monthend,
-				CASE WHEN tc.policy_no like 'NFP%' THEN np.insured_nm ELSE tp.insured_nm END AS insured_nm,				
+				CASE WHEN tc.policy_no like 'NFP%' THEN np.insured_nm ELSE tp.insured_nm END AS insured_nm,		
+				CAST(tasl.aslob_cd AS INT) AS aslob,		
 				tc.claim_status AS claim_status,
 				tcf.claim_feature_status AS loss_status
 				FROM
 					edw_core.tclaim tc
 					LEFT JOIN edw_core.tcause_of_loss tcl ON tcl.cause_of_loss_sk=tc.cause_of_loss_sk
 					LEFT JOIN edw_core.tcatastrophe tcat ON tcat.catastrophe_sk=tc.catastrophe_sk					
-					INNER JOIN edw_core.tclaim_feature tcf ON tc.claim_sk=tcf.claim_sk					
+					INNER JOIN edw_core.tclaim_feature tcf ON tc.claim_sk=tcf.claim_sk		
+					LEFT JOIN edw_core.taslob tasl ON tasl.aslob_sk=tcf.aslob_sk			
 					INNER JOIN edw_core.tproduct tprd ON tprd.product_sk=tc.product_sk
 					INNER JOIN edw_core.tclaim_transaction tcr ON tcr.claim_feature_sk=tcf.claim_feature_sk
 					LEFT JOIN edw_core.tclaim_payment tpay ON tpay.claim_feature_sk=tcf.claim_feature_sk  AND tcr.claim_payment_sk=tpay.claim_payment_sk
@@ -147,13 +149,13 @@ BEGIN
 			(
 			company,claim_no,policy_no,transaction_date,policyeffectivedate,claimlossdate,claimreporteddate,[address],city,[state],
 			zip,causeofloss,catastrophecode,catastrophename,product,policycoveragetype,reserve_type,reserve_amount,accident_year,
-			risk_state,transaction_id,monthend,insuredname,claim_status,
+			risk_state,aslob,transaction_id,monthend,insuredname,claim_status,
 			loss_status,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
 				company,claim_no,policy_no,transaction_date,policyeffectivedate,claimlossdate,claimreporteddate,[address],city,[state],
 				zip,causeofloss,catastrophecode,catastrophename,product,policycoveragetype,reserve_type,reserve_amount,accident_year,
-				risk_state,transaction_id,monthend,insured_nm,claim_status,
+				risk_state,aslob,transaction_id,monthend,insured_nm,claim_status,
 				loss_status,GETDATE() AS create_ts,GETDATE() AS update_ts, @etl_audit_sk AS etl_audit_sk
 			FROM
 				claim_reserve_feed_temp
