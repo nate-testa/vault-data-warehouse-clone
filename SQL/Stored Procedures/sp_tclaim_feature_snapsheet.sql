@@ -53,7 +53,7 @@ BEGIN
 								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
 								and mcm.product_cd = prd.product_cd
 							) 
-					else
+					/*else
 						(			
 								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
 								where mcm.coverage_nm = RIGHT(exps.external_reference_number, CHARINDEX('-', REVERSE(exps.external_reference_number)) - 1)								
@@ -63,6 +63,7 @@ BEGIN
 											- CHARINDEX('-', exps.external_reference_number) - 1)
 								and mcm.product_cd = prd.product_cd
 						)
+						*/
 				end as claim_coverage_desc,
 			exps.claimant_name as claimant_nm,		
 			case
@@ -126,7 +127,7 @@ BEGIN
 								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
 								and mcm.product_cd = prd.product_cd
 							) 
-					else
+					/*else
 						(			
 								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
 								where mcm.coverage_nm = RIGHT(exps.external_reference_number, CHARINDEX('-', REVERSE(exps.external_reference_number)) - 1)								
@@ -136,6 +137,7 @@ BEGIN
 											- CHARINDEX('-', exps.external_reference_number) - 1)
 								and mcm.product_cd = prd.product_cd
 						)
+						*/
 				end
 		and 
 		CASE asl.product_cd
