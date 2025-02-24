@@ -9,7 +9,8 @@
 -- 11/15/23		Yunus Mohammed				2. Updated logic for cancelled and expired policies  
 -- 03/20/24		Yunus Mohammed				3. Included condo policies
 -- 09/18/24		Yunus Mohammed				4. Added gross premium and added Throw in catch block
--- 10/24/24		Yunus Mohammed				5. Added gross premium in insert
+-- 10/24/24		Yunus Mohammed				5. Added gross premium in insert.
+-- 02/25/25		Yunus Mohammed				6. AD- 8657 Updated  accounting_date_begin_sk logic. Also updated contrubutioncuttoff date
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_ceded_premium_feed]
@@ -57,7 +58,7 @@ BEGIN
 
 			SELECT @accounting_date_end_sk=date_sk, @last_end_day_month=actual_dt FROM edw_core.tdate WHERE yearmonth=@year_month AND month_end_in='Y'
 			SELECT @accounting_date_begin_sk=date_sk,@last_begin_day_month=actual_dt FROM edw_core.tdate 
-			WHERE actual_dt = dateadd(year,-1,@last_end_day_month) and month_end_in='Y'
+			WHERE actual_dt = EOMONTH(dateadd(year,-1,@last_end_day_month)) and month_end_in='Y'
 			
 			DELETE FROM edw_integration.policy_workday_ceded_premium_feed WHERE accounting_date BETWEEN @last_begin_day_month AND @last_end_day_month;
 			
@@ -131,12 +132,21 @@ BEGIN
 			amount,gross_premium_amt,deleteddate,contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
-				accounting_date,policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
-				effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
-				[address],county,city,risk_state,zip,fire_protection,financial_category_id,coveragename,
-				amount,gross_premium_amt,null as deleteddate,null contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
+				cp.accounting_date,cp.policy_image_id,cp.policy_image_identifier_id,cp.policy_number,cp.product,cp.transaction_sequence,cp.company,cp.transaction_date,
+				cp.effective_date,cp.expiration_date,cp.transaction_type,cp.producer_code,cp.agency_name,cp.number_of_installments,cp.insured_name,
+				cp.[address],cp.county,cp.city,cp.risk_state,cp.zip,cp.fire_protection,cp.financial_category_id,cp.coveragename,
+				cp.amount,cp.gross_premium_amt,null as deleteddate,subscriber_contribution_end_dt as contribcutoffdate,cp.extraction_time,create_ts,update_ts,etl_audit_sk
 			FROM
-				policy_workday_ceded_premium_feed_temp
+				policy_workday_ceded_premium_feed_temp cp
+			left join
+			(
+			select
+			policy_no,effective_dt,transaction_seq_no,max(subscriber_contribution_end_dt) as subscriber_contribution_end_dt
+			from
+			edw_core.tpolicy_insured where subscriber_contribution_end_dt is not null
+			group by policy_no,effective_dt,transaction_seq_no
+			) as d on cp.policy_number = d.policy_no and cp.effective_date = d.effective_dt
+			and cp.transaction_sequence = d.transaction_seq_no
 
 			SET @rows_affected=@@ROWCOUNT;
 
