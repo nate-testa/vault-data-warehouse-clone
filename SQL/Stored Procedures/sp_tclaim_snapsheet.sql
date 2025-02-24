@@ -1,22 +1,21 @@
 ﻿-- ======================================================================================================== 
 -- Description: This procedures inserts and updates claim data
 -----------------------------------------------------------------------------------------------------------
--- Change date 		|Author						|	Change Description
+-- Change date 			|Author									|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 10/23/2023		Architha Gudimalla			1. Created this procedure - AD7391
--- 12/18/2024		Alberto Almario				2. Add new columns first_party_driver_nm,source_of_fire and source_of_water, add rownumber() function and changes on some joins
--- 12/20/2024		Alberto Almario				3. Add GREATEST() function to update etl_control table.
--- 12/27/2024		Alberto Almario				4. Add new columns fault_decision, responsible_party and at_fault_pct
--- 01/09/2025		Alberto Almario				5. remove column sub_cause_of_loss_sk
+-- 12/18/2024		Alberto Almario					2. Add new columns first_party_driver_nm,source_of_fire and source_of_water, add rownumber() function and changes on some joins
+-- 12/20/2024		Alberto Almario					3. Add GREATEST() function to update etl_control table.
+-- 12/27/2024		Alberto Almario					4. Add new columns fault_decision, responsible_party and at_fault_pct
+-- 01/09/2025		Alberto Almario					5. remove column sub_cause_of_loss_sk
 -- 01/14/2025		Yunus Mohammed		 		6. Used datetime_of_notification instead of first_opened_at for report_dt
 -- 01/15/2025		Yunus Mohammed		 		7. Added new column migrated_in
 -- 01/17/2025		Hernando Gonzalez			8. add case statement for source_system_sk column
+-- 02/24/2025		Yunus Mohammed				9. updated made for product_sk for NFP policies.
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
 BEGIN
-    -- SET NOCOUNT ON added to prevent extra result sets from
-    -- interfering with SELECT statements.
     SET NOCOUNT ON
 	
 	BEGIN TRY
@@ -83,7 +82,7 @@ BEGIN
 				else 'Closed' 
 			END) AS claim_status,
 			cat.catastrophe_sk, 
-			tph.product_sk,
+			CASE WHEN c.policy_number LIKE 'NFP%' THEN 4 ELSE tph.product_sk END as product_sk,
 			CONCAT(	'',
 					TRIM(c.address_address1), 
 					CASE WHEN TRIM(ISNULL(c.address_address1,''))='' THEN '' ELSE '' END,
