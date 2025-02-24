@@ -9,6 +9,8 @@
 -- 10/11/24		        Architha Gudimalla			4. Exclude yacht
 -- 10/25/24		        Architha Gudimalla			5. Include notes for only those quotes that are in the quote feed
 -- 01/08/25		        Alberto Almario				6. VI35257 - Add note_user_nm
+-- 01/08/25		        Architha Gudimalla			7. AD8650 - Fix the filter criteria to use create_ts 
+--														instead of not_create_ts
 -- ==================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_note_hubspot_feed]
@@ -40,7 +42,7 @@ BEGIN
         from [edw_core].[tnote] n
 		left join [edw_core].[tuser] u on n.user_sk = u.user_sk
         where n.object_type = 'Account' 
-		and greatest(n.note_created_ts, n.note_updated_ts) > @last_source_extract_ts
+		and greatest(n.create_ts, n.update_ts) > @last_source_extract_ts
 		and n.policy_no is not null 
 		and exists (select quote_no from edw_integration.quote_hubspot_feed q
 					where n.policy_no = q.quote_no );
