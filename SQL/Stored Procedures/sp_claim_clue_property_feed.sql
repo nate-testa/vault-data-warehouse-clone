@@ -123,7 +123,10 @@ BEGIN
                     (
                         c.loss_paid_amt             + 
                         c.expense_paid_amt          + 
-                        c.defense_paid_amt
+                        c.defense_paid_amt          +
+                        c.overpayment_recovery_amt  +
+                        c.overpayment_expense_recovery_amt +
+                        c.overpayment_defense_recovery_amt
                     ), 0
                 ) AS [claimAmount]
                 ,CASE 

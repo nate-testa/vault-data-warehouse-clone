@@ -1,3 +1,5 @@
+/*--- Sandeep Gundreddy 02/23/2025 ######## NO NEED TO DEPLOY--ONLY NEED IT TO BE IN THE REPO
+
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -29,7 +31,7 @@ GO
 --																									Updates made to pary first name and last name logic
 -- 02/07/2025			Yunus Mohammed					14 claimParties => if first name or last name is blank use Unspecified
 -- ==================================================================================================================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api]
+ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api]
 @claim_no varchar(max) = NULL
 
 AS
@@ -65,7 +67,8 @@ BEGIN
 				edw_stage.t_clm_case c
 			 	LEFT JOIN edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber				
 			where 
-				mcca.claimNumber is null
+				mcca.claimNumber is null and c.claim_no in 
+                ('C21HOA00803','C22HOA00338')
 		END
 		ELSE
 		BEGIN
@@ -767,6 +770,30 @@ END AS [injuredParty.claimPartyId]
                     LEFT JOIN edw_stage.t_pty_party pp ON [cp].pty_party_id = pp.party_id
                     where
                         cp.CASE_ID = c.case_id
+                    union --added logic create new parties
+                    			select distinct
+                        cp.CASE_ID, cp.PARTY_ID+999999999 as PARTY_ID,NULL as claimPartyType,
+                    CASE
+                        WHEN pp.IS_ORG_PARTY = 'Y' THEN 'ORGANIZATION'
+                        ELSE 'PERSON'
+                    END AS partyType,
+                    IS_ORG_PARTY,
+                   cast(cp. party_name as varchar(max)) as party_name,
+				   CAST(pp.DYNAMIC_FIELDS AS nVARCHAR(MAX)) as DYNAMIC_FIELDS,
+				   cp.EMAIL,
+				   cpr.ROLE_NAME
+                    from 
+                    edw_stage.t_clm_party cp
+					left JOIN edw_stage.t_clm_party_role cpr  on cp.PARTY_ROLE = cpr.ROLE_CODE
+                    inner JOIN edw_stage.t_clm_object AS obj on cp.CASE_ID = obj.CASE_ID and cp.PARTY_ID = obj.CLAIMANT_ID
+                    LEFT JOIN edw_stage.t_clm_item i ON obj.[object_id] = i.[object_id] 
+                    LEFT JOIN edw_stage.t_clm_subclaim_type sct ON obj.subclaim_type = sct.subclaim_type_code
+                    LEFT JOIN edw_stage.migration_exposure_type_mapping ext on ext.product_cd = prd.product_cd
+                            and ext.coverage_name = cast(i.coverage_name as varchar(max))
+                            and ext.subclaim_type_name =  cast(sct.subclaim_type_name as varchar(max))
+                    LEFT JOIN edw_stage.t_pty_party pp ON [cp].pty_party_id = pp.party_id
+                    where
+                        cp.CASE_ID = c.case_id
                     union
                     select 
                         cp.CASE_ID, cp.PARTY_ID ,null as claimPartyType,
@@ -859,3 +886,4 @@ END AS [injuredParty.claimPartyId]
 	END CATCH
 END
 GO
+*/

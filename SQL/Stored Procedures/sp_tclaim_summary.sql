@@ -10,6 +10,7 @@
 -- 05/21/2024		Yunus Mohammed					5. Updates were made to calculate start month and end month
 -- 05/23/2024		Yunus Mohammed					6. Updates were made to select the previous month and obtain the last day's transaction from that month on the 1st of the current month
 -- 02/06/2025		Yunus Mohammed					7. Procedure update for Snapsheet
+-- 02/12/2025       Yunus Mohammed                  8. Added schema name to table name in Update stmt
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_summary]
 AS
@@ -168,7 +169,7 @@ DECLARE @ProcedureName NVARCHAR(120)
 		
 			SET @rows_affected=@@ROWCOUNT
 
-			UPDATE tclaim_summary
+			UPDATE edw_core.tclaim_summary
 			SET
 			itd_loss_incurred_gt_250k_ct=(CASE WHEN itd_total_incurred_amt>250000 THEN 1 ELSE 0 END),
 			itd_loss_incurred_gt_500k_ct=(CASE WHEN itd_total_incurred_amt>500000 THEN 1 ELSE 0 END),
