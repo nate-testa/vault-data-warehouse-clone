@@ -1,7 +1,4 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+/*--- Sandeep Gundreddy 02/23/2025 ######## NO NEED TO DEPLOY--ONLY NEED IT TO BE IN THE REPO
 --01202025--WIP on -ve settle change for recoveries--
 
  -- =================================================================================================
@@ -495,8 +492,18 @@ GO
         -- LEFT JOIN edw_stage.t_int_address tia ON tia.source_id = resh.case_id -- commented on 01/29/2025
         -- LEFT JOIN edw_stage.t_pub_address tpa ON tia.T_ADDRESS_ID = tpa.ADDRESS_ID -- commented on 01/29/2025
         LEFT JOIN edw_stage.t_pub_address tpa on tpa.ADDRESS_ID= settle_payee.PTY_ADDRESS_ID -- added on 01/29/2025
+        ---added to fix payments made to injured person, pipmedpay
+        LEFT JOIN edw_stage.t_clm_item AS tci on tci.item_id = resh.item_id
+                LEFT JOIN edw_stage.t_clm_object AS tco ON tco.[object_id] = tci.[object_id] and tco.CLAIMANT_ID = settle_payee.PAYEE_ID
+                LEFT JOIN edw_stage.t_clm_subclaim_type sct ON tco.subclaim_type = sct.subclaim_type_code
+                LEFT JOIN edw_core.tproduct pr on pr.ebao_product_cd=c.PRODUCT_CODE
+                LEFT JOIN edw_stage.migration_exposure_type_mapping met on met.subclaim_type_name=cast(sct.SUBCLAIM_TYPE_NAME as varchar(max))
+					and met.coverage_name=cast(tci.COVERAGE_NAME as varchar(max)) and pr.product_cd=met.product_cd
         LEFT JOIN [edw_temp].[migration_create_financial_transaction_api_temp2] p 
-            ON party.PARTY_ID = p.externalReferenceNumber 
+            ON CASE 
+    WHEN met.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay')  and tco.CLAIMANT_ID is not null
+    THEN settle_payee.PAYEE_ID+99999999
+    ELSE settle_payee.PAYEE_ID END = p.externalReferenceNumber 
             and resh.claimNumber = p.claimNumber
         INNER JOIN [edw_temp].[migration_create_financial_transaction_api_temp3] et
             ON resh.exposure_id = et.exposureId
@@ -749,4 +756,4 @@ GO
 	
      END CATCH
  END
-GO
+ */

@@ -1,7 +1,5 @@
-/****** Object:  StoredProcedure [edw_core].[sp_migration_create_claim_api_update_catastrophe]    Script Date: 7/02/2025 10:55:29 a. m. ******/
 SET ANSI_NULLS ON
 GO
-
 SET QUOTED_IDENTIFIER ON
 GO
 
@@ -13,7 +11,7 @@ GO
 --	12-02-2024				Yunus Mohammed				1. Created procedure
 --	02-07-2025				Hernando Gonzalez			2. Included new logic for PROD
 -- ================================================================================================= 
-ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api_update_catastrophe]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api_update_catastrophe]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -45,7 +43,7 @@ BEGIN
 				'"id": "' + ISNULL(JSON_VALUE(api_response, '$.claimReferenceNumber'), '') + '", ' +
 				'"type": "claim", ' +
 				'"attributes": { ' +
-				'"cf_cat_code_' + ISNULL(cfdef.generated_code, 'unknown') + '": "' + ISNULL(cfdef.prefixed_code, 'unknown') + '"' +
+				'"' + ISNULL(cfdef.prefixed_code, 'unknown') + '": "' + ISNULL(cfclm.prefixed_code, 'unknown') + '"' +
 				' } } }' 
 			) AS [data],
 			update_ts,
@@ -58,14 +56,14 @@ BEGIN
 			claimReferenceNumber NVARCHAR(250) '$.externalReferenceNumber'
 		) AS clm
 		INNER JOIN edw_stage_snapsheet.custom_field_enumeration_options cfclm 
-			ON cfclm.name LIKE mclm.accidentCode + '%'
+			ON cfclm.name LIKE mclm.accidentCode + '%' and cfclm.status = 'published' 
 		LEFT JOIN edw_stage_snapsheet.custom_field_definitions cfdef 
 			ON TRY_CAST(LEFT(cfclm.[name], 2) AS INT) = TRY_CAST(SUBSTRING(cfdef.[name], 3, 2) AS INT)
 			AND cfdef.[name] LIKE (
 				CASE 
 					-- 2025
 					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) < 61 AND LEFT(cfclm.[name], 2) = '25'
-						THEN '%Pt. 1%'
+						THEN '%Pt 1%'
 					/*WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) >= 61 AND LEFT(cfclm.[name], 2) = '25'
 						THEN '%Pt. 2%'*/
 					-- 2024
@@ -80,7 +78,7 @@ BEGIN
 						THEN '%Pt. 2%'
 					-- 2022
 					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) >= 14 AND LEFT(cfclm.[name], 2) = '22'
-						THEN '%Pt. 1%'
+						THEN '%Pt.1%'
 					WHEN TRY_CAST(SUBSTRING(cfclm.[name], 3, 2) AS INT) < 14 AND LEFT(cfclm.[name], 2) = '22'
 						THEN '%Pt. 2%'
 					-- 2021
@@ -95,7 +93,8 @@ BEGIN
 		WHERE 
 			api_status = 'Success'
 			AND api_response IS NOT NULL
-			AND mclm.claimNumber = clm.claimNumber
+			AND mclm.claimNumber = clm.claimNumber  --and clm.claimnumber = 'C25HOA00008' ; 
+--            and clm.claimnumber in ('C20HOA00031', 'C21AUA00097', 'C22AUA00403', 'C23AUA01145', 'C24AUA00866', 'C25HOA00008', 'C22HOA00937') 
 			AND cast(update_ts as datetime2(7)) > @last_source_extract_ts
 			-- case when [status] = 'OPEN' THEN 'DRAFT' ELSE [status] END AS [status]
 
