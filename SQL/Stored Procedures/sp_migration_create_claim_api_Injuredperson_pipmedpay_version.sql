@@ -1,7 +1,4 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+/*--- Sandeep Gundreddy 02/23/2025 ######## NO NEED TO DEPLOY--ONLY NEED IT TO BE IN THE REPO
 -- =============================================
 -- Author:		Yunus Mohammed
 -- Description: This procedures migrats ebao claims to snapsheet
@@ -28,8 +25,9 @@ GO
 --																									Trim city, state, zip and country.
 --																									Updates made to pary first name and last name logic
 -- 02/07/2025			Yunus Mohammed					14 claimParties => if first name or last name is blank use Unspecified
+-- 02/07/2025          Sandeep/Yunus					15. updated contact mail and contact phone number logic
 -- ==================================================================================================================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_migration_create_claim_api]
+CREATE OR ALTER   PROCEDURE [edw_core].[sp_migration_create_claim_api]
 @claim_no varchar(max) = NULL
 
 AS
@@ -65,7 +63,8 @@ BEGIN
 				edw_stage.t_clm_case c
 			 	LEFT JOIN edw_stage.migration_create_claim_api mcca on c.CLAIM_NO = mcca.claimnumber				
 			where 
-				mcca.claimNumber is null
+				mcca.claimNumber is null and c.claim_no in 
+				(select claim_no from edw_temp.migration_create_claim_api_reprocess_batch6)
 		END
 		ELSE
 		BEGIN
@@ -195,10 +194,21 @@ BEGIN
 				select ISNULL( (SELECT 1 as a where 1=2 FOR JSON PATH), '[]')
 			) as notes,
 			(
-				select top 1 PARTY_ID as claimPartyId
+				select top 1 CASE 
+    WHEN met.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
+    THEN p.PARTY_ID+99999999--CONCAT(CONVERT(VARCHAR, ext.PARTY_ID), '-01')
+    ELSE p.PARTY_ID --CONVERT(VARCHAR, ext.PARTY_ID)
+END AS claimPartyId
 				from
-					edw_stage.t_clm_party p
-				where p.[CASE_ID] = c.[CASE_ID] and PARTY_ROLE = '01' 
+				    edw_stage.t_clm_case tcase
+					INNER JOIN edw_stage.t_clm_party p on p.case_id=tcase.case_id and PARTY_ROLE = '01' 
+				LEFT JOIN edw_stage.t_clm_object AS tco on tcase.case_id=tco.case_id
+				LEFT JOIN edw_stage.t_clm_item AS tci ON tco.[object_id] = tci.[object_id]
+                LEFT JOIN edw_stage.t_clm_subclaim_type sct ON tco.subclaim_type = sct.subclaim_type_code
+                LEFT JOIN edw_core.tproduct pr on pr.ebao_product_cd=tcase.PRODUCT_CODE
+                LEFT JOIN edw_stage.migration_exposure_type_mapping met on met.subclaim_type_name=cast(sct.SUBCLAIM_TYPE_NAME as varchar(max))
+					and met.coverage_name=cast(tci.COVERAGE_NAME as varchar(max)) and pr.product_cd=met.product_cd
+				where tcase.[CASE_ID] = c.[CASE_ID] 
 				-- and cast( p.PARTY_NAME as varchar(max)) = c.CONTACT_NAME
 				for json path, include_null_values, without_array_wrapper
 			) as notifier,
@@ -258,16 +268,15 @@ BEGIN
 							when ext.SUBCLAIM_TYPE_NAME like 'TP%' then 'third-party'
 						end	as lossParty,
 						JSON_QUERY((
-							select 	ext.PARTY_ID as claimPartyId
+						--	select 	ext.PARTY_ID as claimPartyId
 /*
---Start - testing below block--01202025--
+--Start - testing below block--01202025-- */
 select CASE 
     WHEN ext.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
-    THEN CONCAT(CONVERT(VARCHAR, ext.PARTY_ID), '-9999')
-    ELSE CONVERT(VARCHAR, ext.PARTY_ID)
+    THEN ext.PARTY_ID+99999999--CONCAT(CONVERT(VARCHAR, ext.PARTY_ID), '-01')
+    ELSE ext.PARTY_ID --CONVERT(VARCHAR, ext.PARTY_ID)
 END AS claimPartyId
 --End - testing below block--01202025--
-*/
 							for json path, include_null_values, without_array_wrapper
 						)) as claimant,
 						JSON_QUERY((
@@ -299,24 +308,20 @@ END AS claimPartyId
 						JSON_QUERY
 						(
 							(
-								select ext.PARTY_ID as id,
-/*
-select CASE 
+							select 
+							--ext.PARTY_ID as id,
+								CASE 
     WHEN ext.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
-    THEN CONCAT(CONVERT(VARCHAR, ext.PARTY_ID), '-9999')
-    ELSE CONVERT(VARCHAR, ext.PARTY_ID)
-END AS id, 
---End - testing below block--01202025--       
-*/                         
-								ext.PARTY_ID as [injuredParty.claimPartyId] 
-/*
-CASE 
+    THEN ext.PARTY_ID+99999999--CONCAT(CONVERT(VARCHAR, ext.PARTY_ID), '-01')
+    ELSE ext.PARTY_ID --CONVERT(VARCHAR, ext.PARTY_ID)
+END AS id,
+                       
+								--ext.PARTY_ID AS [injuredParty.claimPartyId]
+	CASE 
     WHEN ext.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
-    THEN CONCAT(CONVERT(VARCHAR, ext.PARTY_ID), '-9999')
-    ELSE CONVERT(VARCHAR, ext.PARTY_ID)
+    THEN ext.PARTY_ID+99999999--CONCAT(CONVERT(VARCHAR, ext.PARTY_ID), '-01')
+    ELSE ext.PARTY_ID --CONVERT(VARCHAR, ext.PARTY_ID)
 END AS [injuredParty.claimPartyId] 
---End - testing below block--01202025--
-*/
 								where
 									ext.snapsheet_exposure_type in ('InjuredPerson', 'PipMedPay')
                                     and rowNum = 1  -- if it is greater than 1 it means exposure is other.
@@ -601,16 +606,15 @@ END AS [injuredParty.claimPartyId]
 			)) as vehicles
 			,(
 				select distinct
-					p.PARTY_ID as id,
+					--p.PARTY_ID as id,
 					/*
-					--Start - testing below block--01202025--
+					--converting party for 2 exposure types */
 					CASE 
-						WHEN ext.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
-						THEN CONCAT(CONVERT(VARCHAR, par.PARTY_ID), '-9999')
-						ELSE CONVERT(VARCHAR, par.PARTY_ID)
-					END AS id, 
+    WHEN p.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
+    THEN p.PARTY_ID+99999999--CONCAT(CONVERT(VARCHAR, ext.PARTY_ID), '-01')
+    ELSE p.PARTY_ID --CONVERT(VARCHAR, ext.PARTY_ID)
+END AS id, 
 					--End - testing below block--01202025--
-					*/
 					p. claimPartyType,
 					-- null as partyType
 					p.partyType,
@@ -738,14 +742,20 @@ END AS [injuredParty.claimPartyId]
 						WHEN p.IS_ORG_PARTY = 'Y' THEN cast(p.party_name as varchar(255))
 					END AS company,
 					-- contact_person_email
-					p.PARTY_ID as externalReferenceNumber
-				FROM
+				--	p.PARTY_ID as externalReferenceNumber
+					CASE 
+    WHEN p.snapsheet_exposure_type IN ('InjuredPerson', 'PipMedPay') 
+    THEN p.PARTY_ID+99999999--CONCAT(CONVERT(VARCHAR, ext.PARTY_ID), '-01')
+    ELSE p.PARTY_ID --CONVERT(VARCHAR, ext.PARTY_ID)
+END AS externalReferenceNumber
+    FROM
 					(
 						select distinct
                         cp.CASE_ID, cp.PARTY_ID,case when ext.snapsheet_exposure_type in ('InjuredPerson', 'PipMedPay') 
                         and prd.product_cd in ('AU','PEL') 
                         then 'passenger'
                         end as claimPartyType,
+						ext.snapsheet_exposure_type,
                     CASE
                         WHEN pp.IS_ORG_PARTY = 'Y' THEN 'ORGANIZATION'
                         ELSE 'PERSON'
@@ -770,6 +780,7 @@ END AS [injuredParty.claimPartyId]
                     union
                     select 
                         cp.CASE_ID, cp.PARTY_ID ,null as claimPartyType,
+						null as snapsheet_exposure_type,
                         CASE
                         WHEN pp.IS_ORG_PARTY = 'Y' THEN 'ORGANIZATION'
                         ELSE 'PERSON'
@@ -858,4 +869,4 @@ END AS [injuredParty.claimPartyId]
 
 	END CATCH
 END
-GO
+*/
