@@ -10,7 +10,8 @@
 -- 01/27/25     Sandeep Gundreddy			5. Exclude migrated payments 
 -- 01/28/25     Sandeep Gundreddy			6. Updated payment_sequence_no mapping
 -- 01/29/25 	Sandeep Gundreddy			7.Modified join conditions to exposures
--- 02/12/25 	Alberto Almario				8. Use claim_parties table to extract payee_address columns
+-- 02/12/25 	Alberto Almario					8. Use claim_parties table to extract payee_address columns
+-- 02/25/25		Yunus Mohammed				9. AD-8665 - Use coaleasce for payee_nm
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment_snapsheet]
 
@@ -45,8 +46,20 @@ BEGIN
 				fpi.financial_transaction_id AS payment_no,
 				fpi.cost_type AS claim_type_cd,
 				fpi.cost_category,
-				CASE WHEN cp.party_type='ORGANIZATION' then cp.company else 
-				concat(cp.first_name,' ',cp.last_name) End AS payee_nm,
+				CASE WHEN TRIM
+												( ISNULL
+													(
+														CASE WHEN cp.party_type='ORGANIZATION' THEN cp.company
+														ELSE
+														CONCAT(cp.first_name,' ',cp.last_name) 
+														End
+														,''
+													)
+												) != '' THEN 
+        						CASE WHEN cp.party_type='ORGANIZATION' THEN cp.company ELSE concat(cp.first_name,' ',cp.last_name) END
+    			ELSE
+        		fpd.payee_line1
+     			END AS payee_nm,
 				fpd.party_type AS party_role_nm, 
 				ISNULL(fpi.amount,0) AS paid_amt,
 				concat( cp.address_address1,', ',
