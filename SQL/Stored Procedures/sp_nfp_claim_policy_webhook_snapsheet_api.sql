@@ -1,9 +1,10 @@
 -- =================================================================================================
 -- Description: This procedures insert policy webhook data for snapsheet
 ---------------------------------------------------------------------------------------------------
--- Change date 				|Author						|	Change Description
+-- Change date 				|Author						                |	Change Description
 ---------------------------------------------------------------------------------------------------
---	09-30-2024				Yunus Mohammed				Created procedure
+--	09-30-2024				Yunus Mohammed				 1-  Created procedure
+-- 02/14/2024              Yunus Mohammed               2 - Applied trim and upper to state.
 -- ================================================================================================= 
 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_nfp_claim_policy_webhook_snapsheet_api]
@@ -252,20 +253,18 @@ null as contactMethods
                     group_name,insured_first_name,insured_last_name, policy_no,effective_dt,expiration_dt,transaction_effective_dt,transaction_seq_no,policy_status,
                     insured_nm,insured_type,uw_company_nm,product_nm,transaction_type,risk_item,address1,address2,city,[state],zip,
                     row_number()over(partition by  policy_no, effective_dt, transaction_seq_no, cast(risk_item as varchar(max))
-                    order by policy_no,effective_dt,transaction_seq_no) as rn		
+                    order by policy_no,effective_dt,transaction_seq_no) as rn
                 FROM
                 (
                 SELECT group_name, insured_cert_no as policy_no,effective_date as effective_dt,expiration_date as expiration_dt,
                 transaction_date as transaction_effective_dt,null as policy_status,CONCAT_WS(' ' , insured_first_name,insured_last_name) insured_nm,
                 ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date, reporting_month) as transaction_seq_no,
-                null as insured_type,'Vault E&S Insurance Company' as uw_company_nm,'PEL' as product_nm,transaction_type, insured_first_name,insured_last_name,
-                risk_group as risk_item,address1,address2,city,[state],zip
-                
+                null as insured_type,'Vault E&S Insurance Company' as uw_company_nm,'PEL' as product_nm,transaction_type, insured_first_name,
+                insured_last_name,risk_group as risk_item,address1,address2,city,upper(trim([state])) as [state],zip                
                 FROM
                     edw_stage.nfp_policy
                 WHERE
-                    insured_cert_no is not null 
-                    
+                    insured_cert_no is not null                     
                 ) as temp
             ) as nfp on cpsa.policyNumber = nfp.policy_no and cpsa.inceptionDate = nfp.effective_dt and cpsa.transaction_seq_no = nfp.transaction_seq_no
 
