@@ -60,7 +60,7 @@ BEGIN
 			SELECT @accounting_date_begin_sk=date_sk,@last_begin_day_month=actual_dt FROM edw_core.tdate 
 			WHERE actual_dt = EOMONTH(dateadd(year,-1,@last_end_day_month)) and month_end_in='Y'
 			
-			DELETE FROM edw_integration.policy_workday_ceded_premium_feed WHERE accounting_date BETWEEN @last_begin_day_month AND @last_end_day_month;
+			DELETE FROM edw_integration.policy_workday_ceded_premium_feed WHERE accounting_date = @last_end_day_month;
 			
 			WITH policy_workday_ceded_premium_feed_temp AS
 			(
