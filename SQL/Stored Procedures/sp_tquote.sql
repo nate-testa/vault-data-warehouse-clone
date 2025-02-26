@@ -99,7 +99,13 @@ BEGIN
 				nullif(trim(MailingAddressZipCode),'') MailingAddressZipCode, 
 				nullif(trim(MailingAddressCounty),'') MailingAddressCounty, 
 				nullif(trim(MailingAddressCountry),'') MailingAddressCountry, 
-				nullif(trim(Program),'') Program
+				nullif(trim(SubmissionCloseReasonCarrier),'') competitor_carrier_nm,
+				nullif(trim(SubmissionCloseReasonDetails),'') quote_close_reason_details_desc,
+				nullif(trim(SubmissionCloseReasonDetailOther),'') quote_close_reason_details_other_desc,
+				case when SubmissionCloseReasonCategory is null 
+                                then null 
+                                else SubmissionCloseReasonCategory 
+                         end as quote_status
 		INTO edw_temp.tquote_temp2
 		FROM
 			(
@@ -139,7 +145,7 @@ BEGIN
 			(
 				MAX(Value) FOR Field IN (InsuredType, NamedInsured, FirstName, LastName, MiddleName, Prefix, Suffix, 
 										 CompanyName, MailingAddressLine1, MailingAddressLine2, MailingAddressLineUnit, 
-				MailingAddressCity, MailingAddressState, MailingAddressZipCode, MailingAddressCounty, MailingAddressCountry, Program)
+				MailingAddressCity, MailingAddressState, MailingAddressZipCode, MailingAddressCounty, MailingAddressCountry, Program, SubmissionCloseReasonCarrier, SubmissionCloseReasonDetails, SubmissionCloseReasonDetailOther, SubmissionCloseReasonCategory)
 			) pivottable
 
 			
@@ -208,6 +214,10 @@ BEGIN
 								when tmp1.PolicyNumber like '%C'		   then 3
 							 	else 1
 							end term_no
+				,tmp2.competitor_carrier_nm
+				,tmp2.quote_close_reason_details_desc
+				,tmp2.quote_close_reason_details_other_desc
+				,tmp2.quote_status
 				--select *
 			FROM 
 				edw_temp.tquote_temp1 tmp1
@@ -263,6 +273,10 @@ BEGIN
 		   ,prior_term_policy_sk
 		   ,close_reason_desc
 		   ,term_no
+		   ,competitor_carrier_nm
+		   ,quote_close_reason_details_desc
+		   ,quote_close_reason_details_other_desc
+		   ,quote_status
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -297,38 +311,46 @@ BEGIN
 				,source.prior_pol_policy_sk
 				,source.close_reason_desc
 				,source.term_no
+				,source.competitor_carrier_nm
+				,source.quote_close_reason_details_desc
+				,source.quote_close_reason_details_other_desc
+				,source.quote_status
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-        Target.Effective_dt					= Source.EffectiveDate,
-		Target.expiration_dt				= Source.ExpirationDate,
-        Target.broker_id					= Source.BrokerId,
-        Target.customer_id					= Source.customer_id,
-        Target.risk_state_cd				= Source.RiskStateCode,
-        Target.insured_nm					= Source.insured_nm,
-        Target.insured_type					= Source.insured_type, 
-        Target.uw_company_nm				= Source.uw_company_nm,
-        Target.program_type					= Source.program,
-        Target.original_policy_no			= Source.original_policy_no,
-        Target.original_policy_effective_dt	= Source.OriginalEffectiveDate,
-        Target.mailing_address_line1		= Source.MailingAddressLine1,
-        Target.mailing_address_line2		= Source.MailingAddressLine2,
-        Target.mailing_address_unit_no		= Source.UnitFloor,
-        Target.mailing_address_city_nm		= Source.MailingAddressCity,
-        Target.mailing_address_state_cd		= Source.MailingAddressState,
-		Target.mailing_address_zip_cd		= Source.MailingAddressZipCode,
-        Target.mailing_address_county_nm	= Source.MailingAddressCounty,
-		Target.mailing_address_country_nm	= Source.MailingAddressCountry, 
-		Target.prior_policy_no				= source.prior_policy_no, 
-		Target.prior_term_policy_no			= source.renewalofpolicynumber, 
-		Target.quote_term					= source.policy_term, 
-		Target.billingaccount_sk			= source.billingaccount_sk, 
-		Target.source_system_sk			    = source.source_system_sk, 
-		Target.quote_source_status			= source.state, 
-		Target.migrated_in			    	= source.migrated_in, 
-		Target.prior_term_policy_sk			= source.prior_pol_policy_sk, 
-		Target.close_reason_desc			= source.close_reason_desc,
+        Target.Effective_dt								= Source.EffectiveDate,
+		Target.expiration_dt							= Source.ExpirationDate,
+        Target.broker_id								= Source.BrokerId,
+        Target.customer_id								= Source.customer_id,
+        Target.risk_state_cd							= Source.RiskStateCode,
+        Target.insured_nm								= Source.insured_nm,
+        Target.insured_type								= Source.insured_type, 
+        Target.uw_company_nm							= Source.uw_company_nm,
+        Target.program_type								= Source.program,
+        Target.original_policy_no						= Source.original_policy_no,
+        Target.original_policy_effective_dt				= Source.OriginalEffectiveDate,
+        Target.mailing_address_line1					= Source.MailingAddressLine1,
+        Target.mailing_address_line2					= Source.MailingAddressLine2,
+        Target.mailing_address_unit_no					= Source.UnitFloor,
+        Target.mailing_address_city_nm					= Source.MailingAddressCity,
+        Target.mailing_address_state_cd					= Source.MailingAddressState,
+		Target.mailing_address_zip_cd					= Source.MailingAddressZipCode,
+        Target.mailing_address_county_nm				= Source.MailingAddressCounty,
+		Target.mailing_address_country_nm				= Source.MailingAddressCountry, 
+		Target.prior_policy_no							= source.prior_policy_no, 
+		Target.prior_term_policy_no						= source.renewalofpolicynumber, 
+		Target.quote_term								= source.policy_term, 
+		Target.billingaccount_sk						= source.billingaccount_sk, 
+		Target.source_system_sk			    			= source.source_system_sk, 
+		Target.quote_source_status						= source.state, 
+		Target.migrated_in			    				= source.migrated_in, 
+		Target.prior_term_policy_sk						= source.prior_pol_policy_sk, 
+		Target.close_reason_desc						= source.close_reason_desc,
+		Target.competitor_carrier_nm					= source.competitor_carrier_nm,
+		Target.quote_close_reason_details_desc 			= source.quote_close_reason_details_desc,
+		Target.quote_close_reason_details_other_desc 	= source.quote_close_reason_details_other_desc,
+		Target.quote_status 							= source.quote_status,
         Target.update_ts 					= getdate()
 		;
 
