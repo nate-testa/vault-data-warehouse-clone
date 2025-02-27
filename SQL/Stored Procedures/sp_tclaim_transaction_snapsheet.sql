@@ -100,7 +100,8 @@ BEGIN
 			,CASE
 				WHEN ft.remote_identifier is not null and len(ft.remote_identifier)=8 THEN 3
 				ELSE 5
-			END AS source_system_sk
+			END AS source_system_sk,
+            res.id as reserve_item_id
 		INTO edw_temp.tclaim_transaction_snapsheet_temp1
 		FROM edw_stage_snapsheet.financial_reserve_items res
 		INNER JOIN edw_stage_snapsheet.financial_transactions ft on res.financial_transaction_id = ft.id
@@ -124,8 +125,8 @@ BEGIN
 							END)*/
 		WHERE 1=1
 			and fta.code in ('submitted','cancel') 
-			and ft.approved_at is not null --> Added this filter to exclude pending approvals reserves and subsequent cancel records
-		ORDER BY res.claim_id,res.exposure_id,res.cost_type,res.cost_category,res.reserve_method,fta.created_at
+			and ft.approved_at is not null --> Added this filter to exclude pending approvals reserves and subsequent cancel records 
+        ORDER BY res.claim_id,res.exposure_id,res.cost_type,res.cost_category,res.reserve_method,fta.created_at
 		;
 
 
@@ -175,7 +176,12 @@ BEGIN
 		INTO edw_temp.tclaim_transaction_snapsheet_temp2
 		FROM edw_temp.tclaim_transaction_snapsheet_temp1 a
 		LEFT JOIN edw_core.tclaim_transaction_type ctt on a.claim_transaction_type_cd = ctt.claim_transaction_type_cd
-        where created_at > @last_source_extract_ts and a.source_system_sk=5-- to exclude migrated transactions
+        where created_at > @last_source_extract_ts 
+        /* This filter can be used to exclude snapsheet system generated transactions on migrated transactions(closed)
+        a.reserve_item_id not in (select a.id from edw_stage_snapsheet.financial_reserve_items a, edw_stage_snapsheet.financial_transactions b 
+where a.exposure_id in (select exposureReferenceNumber from edw_stage.migration_update_exposure_status_api) and a.amount=0
+and a.financial_transaction_id=b.id and creator_user_id is null and b.remote_identifier is null)*/
+        and a.source_system_sk=5-- to exclude migrated transactions
 		;
 
 
@@ -306,7 +312,7 @@ BEGIN
 								END)*/
 		WHERE 1=1
 			AND fta.code in ('submitted','cancel','stop','failed')
-			AND fta.created_at > @last_source_extract_ts
+            AND fta.created_at > @last_source_extract_ts 
 		;
 
 		
