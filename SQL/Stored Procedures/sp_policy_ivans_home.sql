@@ -645,7 +645,7 @@ BEGIN
 		,'' as [025_PhoneTypeCd]
 		,RIGHT(REPLACE(TRANSLATE(c.home_phone_no, '+-/()#', '      '), ' ', ''), 10) as [026_HomePhoneNumber]
 		,RIGHT(REPLACE(TRANSLATE(c.mobile_phone_no, '+-/()#', '      '), ' ', ''), 10) as [026_MobilePhoneNumber]
-		,c.email as [027_EmailAddr]
+		,COALESCE(c.email, poi.email) as [027_EmailAddr]
 		,CASE WHEN poi.primary_insured_in = 'Yes' then 'Primary' ELSE 'Secondary' END as [028_InsuredOrPrincipalRoleCd]
 		,CASE WHEN poi.primary_insured_in = 'Yes' then 'Primary' ELSE 'Secondary' END as [029_InsuredOrPrincipalRoleDesc]
 		,p.policy_no as [030_PolicyNumber]

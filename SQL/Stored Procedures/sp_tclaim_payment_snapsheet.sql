@@ -10,7 +10,8 @@
 -- 01/27/25     Sandeep Gundreddy			5. Exclude migrated payments 
 -- 01/28/25     Sandeep Gundreddy			6. Updated payment_sequence_no mapping
 -- 01/29/25 	Sandeep Gundreddy			7.Modified join conditions to exposures
--- 02/12/25 	Alberto Almario				8. Use claim_parties table to extract payee_address columns
+-- 02/12/25 	Alberto Almario					8. Use claim_parties table to extract payee_address columns
+-- 02/25/25		Yunus Mohammed				9. AD-8665 - Use coaleasce for payee_nm
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment_snapsheet]
 
@@ -45,8 +46,20 @@ BEGIN
 				fpi.financial_transaction_id AS payment_no,
 				fpi.cost_type AS claim_type_cd,
 				fpi.cost_category,
-				CASE WHEN cp.party_type='ORGANIZATION' then cp.company else 
-				concat(cp.first_name,' ',cp.last_name) End AS payee_nm,
+				CASE WHEN TRIM
+												( ISNULL
+													(
+														CASE WHEN cp.party_type='ORGANIZATION' THEN cp.company
+														ELSE
+														CONCAT(cp.first_name,' ',cp.last_name) 
+														End
+														,''
+													)
+												) != '' THEN 
+        						CASE WHEN cp.party_type='ORGANIZATION' THEN cp.company ELSE concat(cp.first_name,' ',cp.last_name) END
+    			ELSE
+        		fpd.payee_line1
+     			END AS payee_nm,
 				fpd.party_type AS party_role_nm, 
 				ISNULL(fpi.amount,0) AS paid_amt,
 				concat( cp.address_address1,', ',
@@ -58,7 +71,7 @@ BEGIN
 				) AS payee_address,
 				fpi.note_body AS remark, 
 				u.name AS payment_submitter_nm,
-				null as payment_approver_nm, --ISNULL(tpu1.REAL_NAME,tpu2.REAL_NAME) AS payment_approver_nm, --pending
+				apprvu.name as payment_approver_nm, 
 				ft.created_at AS payment_submitted_dt,
 				ft.approved_at AS payment_approver_dt,
 				ft.financial_transaction_type as payment_category_nm,--(CASE WHEN settle.claim_type = 'LOS' THEN 'Payment' ELSE 'Recovery' END) AS payment_category_nm,
@@ -81,7 +94,9 @@ BEGIN
 		LEFT JOIN 	edw_stage_snapsheet.financial_payment_details fpd on fpd.claim_id = c.id and fpd.financial_transaction_id = fpi.financial_transaction_id
 		LEFT JOIN 	edw_stage_snapsheet.claim_parties cp on fpd.party_id = cp.id
 		INNER JOIN 	edw_stage_snapsheet.financial_transactions ft on ft.id = fpi.financial_transaction_id
+        LEFT JOIN   edw_stage_snapsheet.financial_transaction_actions fta on ft.id = fta.financial_transaction_id and code='approve'
 		LEFT JOIN 	edw_stage_snapsheet.users u on ft.creator_user_id = u.id 
+        LEFT JOIN   edw_stage_snapsheet.users apprvu on fta.actor_user_id=apprvu.id
 		WHERE		greatest(ft.created_at,ft.updated_at) > @last_source_extract_ts and ft.is_historical='false';   
 
 		MERGE edw_core.tclaim_payment  AS Target

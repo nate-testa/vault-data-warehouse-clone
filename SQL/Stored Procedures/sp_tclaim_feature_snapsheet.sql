@@ -4,11 +4,12 @@
 -- Change date				|Author									|Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 11/21/2024				Yunus Mohammd				1. Created this procedure
--- 11/22/2024				Alberto Almario				2. Changes on some columns and tables
+-- 11/22/2024				Alberto Almario					2. Changes on some columns and tables
 -- 01/10/2024				Yunus Mohammed		  		3. Upated total_loss_in to Yes and No
 -- 01/17/2025				Hernando Gonzalez			4. add case statement for source_system_sk column
 -- 01/29/2025               Sandeep Gundreddy			5. Added condo to item_sk, coverage_sk logic
 -- 02/07/2025				Yunus Mohammed				6. Added logic to insert aslob_sk
+-- 02/21/2025				Yunus Mohammed				7. Code updated fornull aslob_sk	
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet]
 AS
@@ -38,7 +39,32 @@ BEGIN
 			tcl.claim_sk,tcl.claim_no,exps.exposure_type,exps.exposure_name,
 			-- exps.coverage_premium_class as claim_coverage_cd,
 			exps.id as claim_coverage_cd,
-			exps.coverage_name as claim_coverage_desc,
+							case
+
+						when exps.coverage_name is not null then exps.coverage_name
+						when  exists
+							(
+								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
+								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
+								and mcm.product_cd = prd.product_cd
+							) then		
+							(
+								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
+								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
+								and mcm.product_cd = prd.product_cd
+							) 
+					/*else
+						(			
+								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
+								where mcm.coverage_nm = RIGHT(exps.external_reference_number, CHARINDEX('-', REVERSE(exps.external_reference_number)) - 1)								
+								and mcm.sub_claimtype_nm = SUBSTRING(exps.external_reference_number, 
+												CHARINDEX('-', exps.external_reference_number) + 1, 
+											CHARINDEX('-', exps.external_reference_number, CHARINDEX('-', exps.external_reference_number) + 1) 
+											- CHARINDEX('-', exps.external_reference_number) - 1)
+								and mcm.product_cd = prd.product_cd
+						)
+						*/
+				end as claim_coverage_desc,
 			exps.claimant_name as claimant_nm,		
 			case
 				when veh.potential_total_loss = 'true' then 'Yes' 
@@ -83,7 +109,45 @@ BEGIN
 		INNER JOIN edw_stage_snapsheet.exposures exps on exps.claim_id = clm.id
 		LEFT JOIN edw_stage_snapsheet.vehicles veh on veh.claim_id = exps.claim_id and veh.exposure_id = exps.id
 		LEFT JOIN edw_core.tproduct prd ON prd.product_sk = tcl.product_sk
-		LEFT JOIN edw_core.taslob asl on asl.coverage_cd = exps.coverage_name and asl.product_cd = prd.product_cd
+		LEFT JOIN 
+		(
+					select ROW_NUMBER()over(partition by product_cd,coverage_cd order by aslob_cd) as row_no, *
+				from edw_core.taslob
+		) as asl on asl.row_no = 1 and asl.coverage_cd = 
+						case
+						when exps.coverage_name is not null then exps.coverage_name
+						when  exists
+							(
+								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
+								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
+								and mcm.product_cd = prd.product_cd
+							) then		
+							(
+								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
+								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
+								and mcm.product_cd = prd.product_cd
+							) 
+					/*else
+						(			
+								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
+								where mcm.coverage_nm = RIGHT(exps.external_reference_number, CHARINDEX('-', REVERSE(exps.external_reference_number)) - 1)								
+								and mcm.sub_claimtype_nm = SUBSTRING(exps.external_reference_number, 
+												CHARINDEX('-', exps.external_reference_number) + 1, 
+											CHARINDEX('-', exps.external_reference_number, CHARINDEX('-', exps.external_reference_number) + 1) 
+											- CHARINDEX('-', exps.external_reference_number) - 1)
+								and mcm.product_cd = prd.product_cd
+						)
+						*/
+				end
+		and 
+		CASE asl.product_cd
+					WHEN 'Homeowners' THEN 'HO'
+					WHEN 'Excess Liability' THEN 'PEL'
+					WHEN 'Auto' THEN 'AU'
+					WHEN 'Collections' THEN 'LUX'
+					WHEN 'Marine Boat & Yacht' THEN 'BY'
+					ELSE asl.product_cd
+		END= prd.product_cd
 		-- Home Coverage
 		LEFT JOIN edw_core.thome_coverage thcov ON
 		thcov.home_coverage_sk = (
