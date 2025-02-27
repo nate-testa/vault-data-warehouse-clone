@@ -61,7 +61,8 @@ BEGIN
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-			Target.payment_status=Source.payment_status;
+			Target.payment_status=Source.payment_status,
+			Target.update_ts=@current_date;
 
 		SET @rows_affected=@@ROWCOUNT;
 
