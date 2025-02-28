@@ -440,7 +440,7 @@ BEGIN
 							,'SPP' as coverageType
 							,case when tcct.class_type = 'Coins' then 'SCHCOINS'
 								when tcct.class_type = 'Collectibles' then 'SCHCLTBLS'
-								when tcct.class_type = 'Fine Arts' then 'SCHFA'
+								when tcct.class_type = 'Fine Art' then 'SCHFA'
 								when tcct.class_type = 'Furs' then 'SCHFURS'
 								when tcct.class_type = 'Guns' then 'SCHGUNS'
 								when tcct.class_type = 'Jewelry' or tcct.class_type = 'Worldwide Jewelry' then 'SCHJWLRY'
@@ -515,7 +515,7 @@ BEGIN
 							,'BPP' as coverageType
 							,case when tcct.class_type = 'Coins' then 'SCHCOINS'
 								when tcct.class_type = 'Collectibles' then 'SCHCLTBLS'
-								when tcct.class_type = 'Fine Arts' then 'SCHFA'
+								when tcct.class_type = 'Fine Art' then 'SCHFA'
 								when tcct.class_type = 'Furs' then 'SCHFURS'
 								when tcct.class_type = 'Guns' then 'SCHGUNS'
 								when tcct.class_type = 'Jewelry' or tcct.class_type = 'Worldwide Jewelry' then 'SCHJWLRY'
