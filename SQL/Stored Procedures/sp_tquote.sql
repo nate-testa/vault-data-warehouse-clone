@@ -99,6 +99,7 @@ BEGIN
 				nullif(trim(MailingAddressZipCode),'') MailingAddressZipCode, 
 				nullif(trim(MailingAddressCounty),'') MailingAddressCounty, 
 				nullif(trim(MailingAddressCountry),'') MailingAddressCountry, 
+				nullif(trim(Program),'') Program,
 				nullif(trim(SubmissionCloseReasonCarrier),'') competitor_carrier_nm,
 				nullif(trim(SubmissionCloseReasonDetailOther),'') close_reason_other_desc,
 				case when SubmissionCloseReasonCategory is no null 
