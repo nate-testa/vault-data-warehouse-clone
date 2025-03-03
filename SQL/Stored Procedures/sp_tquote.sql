@@ -102,7 +102,7 @@ BEGIN
 				nullif(trim(Program),'') Program,
 				nullif(trim(SubmissionCloseReasonCarrier),'') competitor_carrier_nm,
 				nullif(trim(SubmissionCloseReasonDetailOther),'') close_reason_other_desc,
-				case when SubmissionCloseReasonCategory is no null 
+				case when SubmissionCloseReasonCategory is not null 
                                 then SubmissionCloseReasonDetails  
                                 else acc.CloseReasonType 
                          end as close_reason_desc
