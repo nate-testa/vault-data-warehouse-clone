@@ -15,6 +15,7 @@ GO
 -- 09/04/24		Yunus Mohammed					5. Added term_no
 -- 09/18/24		Architha Gudimalla		        6. Updated term_no
 -- 11/01/24		Architha Gudimalla		        7. AD7593 - Added update to fix null EffectiveDate/ExpirationDate in Metal
+-- 03/03/25		Hernando Gonzalez		        8. AD8316 - Added competitor_carrier_nm, close_reason_other_desc
 -- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -99,13 +100,7 @@ BEGIN
 				nullif(trim(MailingAddressZipCode),'') MailingAddressZipCode, 
 				nullif(trim(MailingAddressCounty),'') MailingAddressCounty, 
 				nullif(trim(MailingAddressCountry),'') MailingAddressCountry, 
-				nullif(trim(Program),'') Program,
-				nullif(trim(SubmissionCloseReasonCarrier),'') competitor_carrier_nm,
-				nullif(trim(SubmissionCloseReasonDetailOther),'') close_reason_other_desc,
-				case when SubmissionCloseReasonCategory is not null 
-                                then SubmissionCloseReasonDetails  
-                                else acc.CloseReasonType 
-                         end as close_reason_desc
+				nullif(trim(Program),'') Program
 		INTO edw_temp.tquote_temp2
 		FROM
 			(
@@ -145,7 +140,7 @@ BEGIN
 			(
 				MAX(Value) FOR Field IN (InsuredType, NamedInsured, FirstName, LastName, MiddleName, Prefix, Suffix, 
 										 CompanyName, MailingAddressLine1, MailingAddressLine2, MailingAddressLineUnit, 
-				MailingAddressCity, MailingAddressState, MailingAddressZipCode, MailingAddressCounty, MailingAddressCountry, Program, SubmissionCloseReasonCarrier, SubmissionCloseReasonDetails, SubmissionCloseReasonDetailOther, SubmissionCloseReasonCategory, CloseReasonType)
+				MailingAddressCity, MailingAddressState, MailingAddressZipCode, MailingAddressCounty, MailingAddressCountry, Program)
 			) pivottable
 
 			
@@ -206,7 +201,10 @@ BEGIN
 				end as [state],
 				case when tmp1.ExternalSourceId is not null then 'Yes' else 'No' end  migrated_in,
 				prior_pol.policy_sk prior_pol_policy_sk,
-				tmp2.close_reason_desc
+				case when tmp1.SubmissionCloseReasonCategory is not null
+					then tmp1.SubmissionCloseReasonDetails
+					else tmp1.CloseReasonType
+				end as close_reason_desc
 				,'Term ' || case 
 								when charindex('-',tmp1.PolicyNumber) <> 0 then cast(substring(tmp1.PolicyNumber,charindex('-',tmp1.PolicyNumber)+1,len(tmp1.PolicyNumber)) as int)+1
 								when tmp1.PolicyNumber like '%A'		   then 1
@@ -214,9 +212,8 @@ BEGIN
 								when tmp1.PolicyNumber like '%C'		   then 3
 							 	else 1
 							end term_no
-				,tmp2.competitor_carrier_nm
-				,tmp2.quote_close_reason_details_desc
-				,tmp2.quote_close_reason_details_other_desc
+				,tmp1.SubmissionCloseReasonCarrier as competitor_carrier_nm
+				,tmp1.SubmissionCloseReasonDetailOther as close_reason_other_desc
 				--select *
 			FROM 
 				edw_temp.tquote_temp1 tmp1
@@ -273,8 +270,7 @@ BEGIN
 		   ,close_reason_desc
 		   ,term_no
 		   ,competitor_carrier_nm
-		   ,quote_close_reason_details_desc
-		   ,quote_close_reason_details_other_desc
+		   ,close_reason_other_desc
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -310,8 +306,7 @@ BEGIN
 				,source.close_reason_desc
 				,source.term_no
 				,source.competitor_carrier_nm
-				,source.quote_close_reason_details_desc
-				,source.quote_close_reason_details_other_desc
+				,source.close_reason_other_desc
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -345,8 +340,7 @@ BEGIN
 		Target.prior_term_policy_sk						= source.prior_pol_policy_sk, 
 		Target.close_reason_desc						= source.close_reason_desc,
 		Target.competitor_carrier_nm					= source.competitor_carrier_nm,
-		Target.quote_close_reason_details_desc 			= source.quote_close_reason_details_desc,
-		Target.quote_close_reason_details_other_desc 	= source.quote_close_reason_details_other_desc,
+		Target.close_reason_other_desc 			= source.close_reason_other_desc,
         Target.update_ts 					= getdate()
 		;
 
