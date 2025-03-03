@@ -104,7 +104,7 @@ BEGIN
 				nullif(trim(SubmissionCloseReasonDetailOther),'') close_reason_other_desc,
 				case when SubmissionCloseReasonCategory is no null 
                                 then SubmissionCloseReasonDetails  
-                                else CloseReasonType 
+                                else acc.CloseReasonType 
                          end as close_reason_desc
 		INTO edw_temp.tquote_temp2
 		FROM
