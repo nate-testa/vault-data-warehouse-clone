@@ -311,7 +311,7 @@ BEGIN
 							count(distinct case when CAST(q.quote_create_ts AS DATE) between 		 	  @month_begin_dt and 				   @end_dt then q.quote_sk end) 	  mtd_submission_ct, 
 							--
 							count(distinct case when CAST(q.quote_create_ts AS DATE) between 	dateadd("dd",-30,@end_dt) and 				   @end_dt then q.quote_sk end) 	  last30_days_submission_ct, 
-							count(distinct case when CAST(q.quote_create_ts AS DATE)  <= @end_dt and q.quote_status not in ('Declined','Issued','Not taken by Insured') then q.quote_sk end) 	  open_submission_ct, 							
+							count(distinct case when CAST(q.quote_create_ts AS DATE)  <= @end_dt and q.quote_status not in ('Declined by Vault','Issued','Not taken by Insured') then q.quote_sk end) 	  open_submission_ct, 							
 							--
 							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 		@prior_year_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_ytd_quote_ct, 
 							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 			  @year_begin_dt and 				  @end_dt then q.quote_sk end) 		 ytd_quote_ct, 
