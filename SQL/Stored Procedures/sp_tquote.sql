@@ -100,12 +100,11 @@ BEGIN
 				nullif(trim(MailingAddressCounty),'') MailingAddressCounty, 
 				nullif(trim(MailingAddressCountry),'') MailingAddressCountry, 
 				nullif(trim(SubmissionCloseReasonCarrier),'') competitor_carrier_nm,
-				nullif(trim(SubmissionCloseReasonDetails),'') quote_close_reason_details_desc,
-				nullif(trim(SubmissionCloseReasonDetailOther),'') quote_close_reason_details_other_desc,
-				case when SubmissionCloseReasonCategory is null 
-                                then null 
-                                else SubmissionCloseReasonCategory 
-                         end as quote_status
+				nullif(trim(SubmissionCloseReasonDetailOther),'') close_reason_other_desc,
+				case when SubmissionCloseReasonCategory is no null 
+                                then SubmissionCloseReasonDetails  
+                                else CloseReasonType 
+                         end as close_reason_desc
 		INTO edw_temp.tquote_temp2
 		FROM
 			(
@@ -145,7 +144,7 @@ BEGIN
 			(
 				MAX(Value) FOR Field IN (InsuredType, NamedInsured, FirstName, LastName, MiddleName, Prefix, Suffix, 
 										 CompanyName, MailingAddressLine1, MailingAddressLine2, MailingAddressLineUnit, 
-				MailingAddressCity, MailingAddressState, MailingAddressZipCode, MailingAddressCounty, MailingAddressCountry, Program, SubmissionCloseReasonCarrier, SubmissionCloseReasonDetails, SubmissionCloseReasonDetailOther, SubmissionCloseReasonCategory)
+				MailingAddressCity, MailingAddressState, MailingAddressZipCode, MailingAddressCounty, MailingAddressCountry, Program, SubmissionCloseReasonCarrier, SubmissionCloseReasonDetails, SubmissionCloseReasonDetailOther, SubmissionCloseReasonCategory, CloseReasonType)
 			) pivottable
 
 			
@@ -206,7 +205,7 @@ BEGIN
 				end as [state],
 				case when tmp1.ExternalSourceId is not null then 'Yes' else 'No' end  migrated_in,
 				prior_pol.policy_sk prior_pol_policy_sk,
-				tmp1.CloseReasonType as close_reason_desc
+				tmp2.close_reason_desc
 				,'Term ' || case 
 								when charindex('-',tmp1.PolicyNumber) <> 0 then cast(substring(tmp1.PolicyNumber,charindex('-',tmp1.PolicyNumber)+1,len(tmp1.PolicyNumber)) as int)+1
 								when tmp1.PolicyNumber like '%A'		   then 1
@@ -217,7 +216,6 @@ BEGIN
 				,tmp2.competitor_carrier_nm
 				,tmp2.quote_close_reason_details_desc
 				,tmp2.quote_close_reason_details_other_desc
-				,tmp2.quote_status
 				--select *
 			FROM 
 				edw_temp.tquote_temp1 tmp1
@@ -276,7 +274,6 @@ BEGIN
 		   ,competitor_carrier_nm
 		   ,quote_close_reason_details_desc
 		   ,quote_close_reason_details_other_desc
-		   ,quote_status
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -314,7 +311,6 @@ BEGIN
 				,source.competitor_carrier_nm
 				,source.quote_close_reason_details_desc
 				,source.quote_close_reason_details_other_desc
-				,source.quote_status
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -350,7 +346,6 @@ BEGIN
 		Target.competitor_carrier_nm					= source.competitor_carrier_nm,
 		Target.quote_close_reason_details_desc 			= source.quote_close_reason_details_desc,
 		Target.quote_close_reason_details_other_desc 	= source.quote_close_reason_details_other_desc,
-		Target.quote_status 							= source.quote_status,
         Target.update_ts 					= getdate()
 		;
 
