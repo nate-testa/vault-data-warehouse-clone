@@ -4,6 +4,7 @@
 -- Change date          |Author						            |	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 02/07/25		           Yunus Mohammed			1. Created this procedure
+-- 03/04/25					Yunus Mohammed			2. Updated logic include partition by to correct close feature status
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction_update_snapsheet]
 AS
@@ -24,7 +25,8 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
         drop table if exists edw_temp.tclaim_transaction_update_snapsheet_temp1
-		select ct.claim_transaction_sk, [source].feature_status_sk
+
+		select ct.claim_transaction_sk, [source].feature_status_sk,ct.update_ts
         into edw_temp.tclaim_transaction_update_snapsheet_temp1
         from
         edw_core.tclaim_transaction ct
@@ -34,28 +36,31 @@ BEGIN
             from
             (
             select claim_transaction_sk,claim_feature_sk,
-            sum(loss_reserve_amt+expense_reserve_amt+defense_reserve_amt) over (order by transaction_ts) as reserve_running_total
-            from edw_core.tclaim_transaction-- where claim_feature_sk=198
+            sum(loss_reserve_amt+expense_reserve_amt+defense_reserve_amt) over (partition by claim_feature_sk order by transaction_ts) as reserve_running_total
+            from edw_core.tclaim_transaction
             ) as temp
         ) as [source] on ct.claim_transaction_sk = [source].claim_transaction_sk 
         where ct.source_system_sk = 5
+		and ct.update_ts > @last_source_extract_ts
 
         update [target]
         set [target].feature_status_sk = [source].feature_status_sk
         from
             edw_core.tclaim_transaction [target]
-            inner join edw_temp. tclaim_transaction_update_snapsheet_temp1 [source] on [target].claim_transaction_sk = [source].claim_transaction_sk        
-
-		DROP TABLE IF EXISTS edw_temp. tclaim_transaction_update_snapsheet_temp1;
+            inner join edw_temp. tclaim_transaction_update_snapsheet_temp1 [source] on [target].claim_transaction_sk = [source].claim_transaction_sk		
 
 		SET @rows_affected=@@ROWCOUNT;
+
+		-- Update control table
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(update_ts) FROM edw_temp.tclaim_transaction_update_snapsheet_temp1),@last_source_extract_ts);
+		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 	
 		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tclaim_transaction_snapsheet_temp1;
+		DROP TABLE IF EXISTS edw_temp.tclaim_transaction_update_snapsheet_temp1;
 
 	END TRY
 	BEGIN CATCH
