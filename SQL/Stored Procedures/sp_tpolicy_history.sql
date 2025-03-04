@@ -15,7 +15,7 @@
 -- 02/08/24		Alberto Almario					9. Added new column producer_sk
 -- 04/29/24		Hernando Gonzalez				10. Added new column insurance_score_last_run_dt
 -- 06/14/24		Alberto Almario					11. Added new column prorate_factor
--- 03/03/24		Alberto Almario					12. Added new column transaction_status
+-- 03/03/25		Alberto Almario					12. Added new column transaction_status
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
