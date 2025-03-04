@@ -7,6 +7,7 @@
 -- 05/16/2024				Architha Gudimalla 				2. Updated after errors 
 -- 09/07/24					Yunus Mohammed					3. Use ValueBlob if Value field is null for manuscript_title an desc
 -- 08/22/24					Yunus Mohammed					4. Used IncludeManuscript indicator
+-- 03/03/25					Alberto Almario					5. Change JOIN with tquote_history table
 -- ======================================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_manuscript_wip]
 AS
@@ -67,7 +68,7 @@ BEGIN
 				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
 				INNER JOIN [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
 				INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
-				INNER JOIN [edw_core].[tquote_history] tqh on tqh.quote_no=acc.PolicyNumber and tqh.effective_dt=acc.EffectiveDate and tqh.transaction_seq_no = acc.number
+				INNER JOIN [edw_core].[tquote_history] tqh on tqh.quote_no=acc.PolicyNumber and tqh.effective_dt=acc.EffectiveDate and tqh.transaction_seq_no = 0
 
 				INNER JOIN [edw_stage].[AccountObject] AS acco_in ON acco_in.AccountId = acc.Id
 				INNER JOIN [edw_stage].[AccountObjectField] accof_in ON accof_in.ObjectId = acco_in.id and accof_in.Field = 'IncludeManuscript'
