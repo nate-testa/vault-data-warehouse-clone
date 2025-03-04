@@ -97,7 +97,7 @@ BEGIN
             q.quote_status,
             (ISNULL(tqhc.prior_nonwater_claim_ct,0) + ISNULL(tqhc.prior_water_claim_ct,0)) as claim_ct,
             (select top 1 note_desc from edw_core.tnote tn where tn.policy_no = q.quote_no order by coalesce(note_updated_ts,note_created_ts) desc) as note_desc,
-            case when DATEDIFF("d",cast(getdate() as date),q.expiration_dt) between 0 and 90 and q.quote_status  in ('Not taken') 
+            case when DATEDIFF("d",cast(getdate() as date),q.expiration_dt) between 0 and 90 and q.quote_status  in ('Not taken by Insured')
 					 then 'Y' 
 					 else 'N' 
 				end AS recampaign_in,
