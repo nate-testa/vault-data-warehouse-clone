@@ -9,6 +9,7 @@
 -- 03/25/24		Architha Gudimalla			4. Added policy term update for cancel rewrites
 -- 04/15/24		Architha Gudimalla			5. Added filter on updated below to exlucde those pols when prior pol is same as prior term pol
 -- 01/23/25		Architha Gudimalla			6. VI33968/AD7635 - Added uwco orig eff dt
+-- 01/23/25		Architha Gudimalla			6. VI33968/AD8770 - Updated logic for uwco orig eff dt
 -- ========================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_cancels]
