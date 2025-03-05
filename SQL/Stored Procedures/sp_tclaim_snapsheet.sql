@@ -10,8 +10,9 @@
 -- 01/09/2025		Alberto Almario					5. remove column sub_cause_of_loss_sk
 -- 01/14/2025		Yunus Mohammed		 		6. Used datetime_of_notification instead of first_opened_at for report_dt
 -- 01/15/2025		Yunus Mohammed		 		7. Added new column migrated_in
--- 01/17/2025		Hernando Gonzalez			8. add case statement for source_system_sk column
--- 02/24/2025		Yunus Mohammed				9. updated made for product_sk for NFP policies.
+-- 01/17/2025		Hernando Gonzalez			8. Add case statement for source_system_sk column
+-- 02/24/2025		Yunus Mohammed				9. Updated made for product_sk for NFP policies.
+-- 03/04/2025		Yunus Mohammed				10. Ad-8729 Updates made for effective_dt of NFP policies
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -65,7 +66,7 @@ BEGIN
 		(
 		SELECT
 			ROW_NUMBER() OVER(PARTITION BY c.claim_number ORDER BY c.claim_number) as rn,
-			tph.effective_dt, 
+			CASE WHEN c.policy_number LIKE 'NFP%'  then nfp.effective_dt else tph.effective_dt  end as effective_dt,
 			tbrk.broker_id,
 			cr.customer_id,
 			c.claim_number, 
@@ -154,6 +155,12 @@ BEGIN
 		LEFT JOIN edw_temp.tclaim_snapsheet_temp2 cc ON cc.claim_id = c.id
 		LEFT JOIN edw_core.tcatastrophe cat ON cc.catastrophe_cd = cat.catastrophe_cd
 		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_desc = c.loss_type
+		LEFT JOIN
+		(
+			select ROW_NUMBER()over(partition by policyNumber order by transaction_seq_no desc) as rn,policyNumber as policy_no,
+			inceptionDate as effective_dt
+			from edw_integration.claim_policy_search_snapsheet_api
+		) nfp on nfp.policy_no = c.policy_number and nfp.rn = 1
 		WHERE greatest(c.created_at,c.updated_at) > @last_source_extract_ts
 	) AS t
 	WHERE
