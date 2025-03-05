@@ -166,7 +166,10 @@ BEGIN
 		update pol
 		set pol.uw_company_original_policy_effective_dt = pol1.uw_company_original_policy_effective_dt
 		from edw_core.tpolicy pol
-		inner join (select  policy_sk, min(effective_dt) over (partition by original_policy_no) uw_company_original_policy_effective_dt
+		inner join (select  policy_sk, min(effective_dt) over (partition by case when charindex('-',prior_policy_no) <> 0
+								 then substring(prior_policy_no,1,charindex('-',prior_policy_no)-1) 
+								 else original_policy_no  
+							end, uw_company_nm) uw_company_original_policy_effective_dt
 					from edw_core.tpolicy) pol1 on pol.policy_sk = pol1.policy_sk
 		; 
 
