@@ -101,7 +101,7 @@ BEGIN
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
 		inner join edw_stage.AccountTransactionCoveragePremium acctrcp on acctrcp.AccountTransactionId = tmp1.Id
 		left join edw_stage.AccountTransactionVersionObject acctrvo on acctrcp.objectid=acctrvo.id 
-		left join edw_core.tuser u on tmp1.CreatedById = u.user_id
+		left join edw_core.tuser u on u.user_id = CASE WHEN tmp1.ReviewedById IS NOT NULL and tmp1.ReviewedById <> '00000000-0000-0000-0000-000000000000' THEN ReviewedById ELSE CreatedById END
 		--where premium!=0  
 		union all
 		SELECT 
@@ -135,7 +135,7 @@ BEGIN
 		inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = tmp1.Id 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
 		left join edw_stage.coverage cov on cov.id = acctrtf.coverageid
-		left join edw_core.tuser u on tmp1.CreatedById = u.user_id
+		left join edw_core.tuser u on u.user_id = CASE WHEN tmp1.ReviewedById IS NOT NULL and tmp1.ReviewedById <> '00000000-0000-0000-0000-000000000000' THEN ReviewedById ELSE CreatedById END
 
 		-- Start Inserting records
 		INSERT INTO edw_core.tpolicy_transaction 
