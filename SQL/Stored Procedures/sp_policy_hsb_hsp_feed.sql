@@ -1,8 +1,12 @@
-﻿-- =============================================
+﻿-- ========================================================================================================
 -- Author:		Alberto Almario Valbuena
 -- Create Date: 2023-08-30
 -- Description: This procedures insert and update info related to HSB - HSP
--- =============================================
+-----------------------------------------------------------------------------------------------------------
+-- Change date 		|Author						|	Change Description
+-----------------------------------------------------------------------------------------------------------
+-- 03/06/2025		Alberto Almario				1. Change logic to extract last_source_extract_ts value
+-- ========================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_hsb_hsp_feed]
 AS
 BEGIN
@@ -22,7 +26,7 @@ BEGIN
 		DECLARE @parameter_desc VARCHAR(255)
 		-- Get last source extract date
 		SELECT @last_source_extract_ts = CASE 
-                                            WHEN edw_core.fn_get_last_source_extract_ts(@process_nm) < '2020-01-01 00:00:00' THEN '2024-05-31 00:00:00'
+                                            WHEN edw_core.fn_get_last_source_extract_ts(@process_nm) < '2020-01-01 00:00:00' THEN '2025-01-31 00:00:00'
                                             ELSE edw_core.fn_get_last_source_extract_ts(@process_nm)
                                          END;
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;

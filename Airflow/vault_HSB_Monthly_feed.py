@@ -74,28 +74,28 @@ with DAG(
     
     with TaskGroup("HSB_group") as HSB_group:
 
-        hsb_group_items = ['sp_tpolicy_hsb_cyber_feed','sp_tpolicy_hsb_hsp_feed','sp_tpolicy_hsb_slc_feed']
+        hsb_group_items = ['sp_policy_hsb_cyber_feed','sp_policy_hsb_hsp_feed','sp_policy_hsb_slc_feed']
 
-        sp_tpolicy_hsb_cyber_feed = MsSqlOperator(
-            task_id='sp_tpolicy_hsb_cyber_feed',
+        sp_policy_hsb_cyber_feed = MsSqlOperator(
+            task_id='sp_policy_hsb_cyber_feed',
             mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tpolicy_hsb_cyber_feed",
+            sql="EXEC edw_core.sp_policy_hsb_cyber_feed",
             database="vault_edw",
             autocommit=True,
         )
 
-        sp_tpolicy_hsb_hsp_feed = MsSqlOperator(
-            task_id='sp_tpolicy_hsb_hsp_feed',
+        sp_policy_hsb_hsp_feed = MsSqlOperator(
+            task_id='sp_policy_hsb_hsp_feed',
             mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tpolicy_hsb_hsp_feed",
+            sql="EXEC edw_core.sp_policy_hsb_hsp_feed",
             database="vault_edw",
             autocommit=True,
         )
 
-        sp_tpolicy_hsb_slc_feed = MsSqlOperator(
-            task_id='sp_tpolicy_hsb_slc_feed',
+        sp_policy_hsb_slc_feed = MsSqlOperator(
+            task_id='sp_policy_hsb_slc_feed',
             mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tpolicy_hsb_slc_feed",
+            sql="EXEC edw_core.sp_policy_hsb_slc_feed",
             database="vault_edw",
             autocommit=True,
         )
@@ -107,7 +107,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(hsb_group_items, 'All stored procedures executed successfully for all the HSB tables'),
         )
 
-        sp_tpolicy_hsb_cyber_feed >> sp_tpolicy_hsb_hsp_feed >> sp_tpolicy_hsb_slc_feed >> send_HSB_email
+        sp_policy_hsb_cyber_feed >> sp_policy_hsb_hsp_feed >> sp_policy_hsb_slc_feed >> send_HSB_email
 
 
     with TaskGroup("HSB_files_to_SFTP_group") as HSB_files_to_SFTP_group:
