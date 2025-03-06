@@ -39,7 +39,7 @@ BEGIN
 				case
 					when product_nm = 'Auto' then 'auto'
 					when product_nm in ('Homeowners','Condo','Collections') then 'property'
-					when product_nm = 'Excess Liability' then 'general_liability'					
+					when product_nm = 'Excess Liability' then 'general_liability'
 				end as policy_type,
 				p.policy_status as [status],
 				pr.product_nm as product_code,
@@ -124,8 +124,8 @@ BEGIN
 		JSON_QUERY((
 			select
 				case when [p].insured_type = 'Entity' then [p].insured_nm end as [name],
-				-- case when [p].Insured_type = 'Individual' then [p].first_nm end as [firstName],
-				-- case when [p].insured_type = 'Individual' then [p].last_nm end as [lastName],
+				case when [p].Insured_type = 'Individual' then [p].first_nm end as [firstName],
+				case when [p].insured_type = 'Individual' then [p].last_nm end as [lastName],
 				case
 					when [p].insured_type = 'Entity' then 'ORGANIZATION'
 					else 'PERSON'
@@ -157,7 +157,7 @@ BEGIN
 			inner join edw_core.tcustomer c on p.customer_id = c.customer_id
 			INNER JOIN edw_core.tproduct as pr ON p.product_cd = pr.product_cd
 		where
-			policy_no in ('FPP9999VES','FPP9999VRE','COV9999VES','COV9999VRE')
+			policy_no in ('FPP9999VES','FPP9999VRE','COV9999VES','COV9999VRE','','')
 
 		-- Start Insert process
 		INSERT INTO [edw_integration].[claim_policy_search_snapsheet_api]
