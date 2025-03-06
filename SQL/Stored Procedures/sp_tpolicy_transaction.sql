@@ -27,7 +27,7 @@
 --										   			Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S
 -- 										   			Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S
 --11/25/2024	Sandeep Gundreddy				19. Added logic to load item_sk and coverage_sk for Marine Boat & Yacht
--- 03/04/2025	Alberto Almario					20. Added new column user_sk
+-- 06/04/2025	Alberto Almario					20. Added new column user_sk
 -- ====================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -95,13 +95,13 @@ BEGIN
 			COALESCE(acctrcp.CededPremiumDelta,acctrcp.CededPremium) as ceded_annual_premium_amt,
 			COALESCE(acctrcp.CededPremiumDeltaProRated,acctrcp.CededPremium) as ceded_premium_amt,
 			null covID
-			,u.user_sk
+			,tmp1.ReviewedById
+			,tmp1.CreatedById
 		INTO edw_temp.tpolicy_transaction_temp2  
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
 		inner join edw_stage.AccountTransactionCoveragePremium acctrcp on acctrcp.AccountTransactionId = tmp1.Id
 		left join edw_stage.AccountTransactionVersionObject acctrvo on acctrcp.objectid=acctrvo.id 
-		left join edw_core.tuser u on u.user_id = CASE WHEN tmp1.ReviewedById IS NOT NULL and tmp1.ReviewedById <> '00000000-0000-0000-0000-000000000000' THEN tmp1.ReviewedById ELSE tmp1.CreatedById END
 		--where premium!=0  
 		union all
 		SELECT 
@@ -130,13 +130,13 @@ BEGIN
 			0 as ceded_annual_premium_amt,
 			0 as ceded_premium_amt,
 			cov.Name covID
-			,u.user_sk
+			,tmp1.ReviewedById
+			,tmp1.CreatedById
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
 		inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = tmp1.Id 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
 		left join edw_stage.coverage cov on cov.id = acctrtf.coverageid
-		left join edw_core.tuser u on u.user_id = CASE WHEN tmp1.ReviewedById IS NOT NULL and tmp1.ReviewedById <> '00000000-0000-0000-0000-000000000000' THEN tmp1.ReviewedById ELSE tmp1.CreatedById END
-
+		
 		-- Start Inserting records
 		INSERT INTO edw_core.tpolicy_transaction 
 			(policy_sk
@@ -204,7 +204,7 @@ BEGIN
 			isnull(tfs.internal_coverage_sk,0) , 
 			ceded_annual_premium_amt,
 		    ceded_premium_amt,
-			source.user_sk, 
+			u.user_sk, 
 			getdate(),getdate(), @etl_audit_sk 
 			,case when pr.product_sk not in (1,2,5) then 0
 			      when ic.internal_coverage_category_nm <> 'Premium' then 0
@@ -248,6 +248,7 @@ BEGIN
 																	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Fine Arts' then 'Fine Art' 
 																	else replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')
 																end = cc.class_type  
+		left join edw_core.tuser u on u.user_id = CASE WHEN source.ReviewedById IS NOT NULL and source.ReviewedById <> '00000000-0000-0000-0000-000000000000' THEN source.ReviewedById ELSE source.CreatedById END
 
 		SET @rows_affected=@@ROWCOUNT;  
 		
