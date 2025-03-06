@@ -6,6 +6,7 @@
 -- Change date		           |Author						                |	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 01/16/2025		        Yunus Mohammed				1. Created this procedure 
+-- 03/06/2025		        Hernando Gonzalez			2. AD8779 | Switch to merge to prevent duplicated key
 -- ================================================================================================ 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_claim_search_dms_api]
