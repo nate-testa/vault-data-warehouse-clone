@@ -19,6 +19,7 @@
 -- 12/30/24		        Alberto Almario				14. VI35256 - Insured name update for entity/trust LLC
 -- 01/13/25		        Alberto Almario				15. AD8013 - Included yacht data
 -- 01/15/25		        Archtha Gudimalla			16. VI35258/AD8009 - Added new cols
+-- 03/06/25		        Archtha Gudimalla			17. AD8781 - Send later broker info
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -158,7 +159,10 @@ BEGIN
         left join quote_collection_class_type as tcct on tcct.quote_history_sk = h.quote_history_sk
 
         where  h.latest_transaction_in = 'Y'
-		and greatest(q.create_ts,q.update_ts) > @last_source_extract_ts
+		and (greatest(q.create_ts,q.update_ts) > @last_source_extract_ts
+         or  greatest(br.create_ts,br.update_ts) > @last_source_extract_ts
+         or  greatest(bvt.create_ts,bvt.update_ts) > @last_source_extract_ts
+        )
         and q.broker_id <> '0'
         and q.effective_Dt >= '01-jun-2023'  
 		and isnull(q.insured_nm,'') not like '%test%' 
