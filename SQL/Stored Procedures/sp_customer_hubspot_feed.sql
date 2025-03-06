@@ -65,7 +65,7 @@ BEGIN
 		where a.broker_id <> br.broker_id
 		or a.broker_nm <> br.broker_nm
 		or a.broker_phone_no <> br.broker_phone_no 
-		or a.bdm_nm <> bvt.team_member_nm;;
+		or a.bdm_nm <> bvt.team_member_nm;
 
  		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp1; 
