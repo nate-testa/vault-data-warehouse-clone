@@ -19,6 +19,7 @@
 -- 12/30/24		        Alberto Almario				14. VI35256 - Insured name update for entity/trust LLC
 -- 01/13/25		        Alberto Almario				15. AD8013 - Included yacht data
 -- 01/15/25		        Archtha Gudimalla			16. VI35258/AD8009 - Added new cols
+-- 03/06/25		        Archtha Gudimalla			17. AD8781 - Send later broker info
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -43,8 +44,25 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 
-		DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp1;
+		DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp0;
 
+        --used to see if there are any changes on the broker/broker_vault
+        select a.quote_no
+        into edw_temp.quote_hubspot_feed_temp0
+		from  [edw_integration].[quote_hubspot_feed] a
+		inner join edw_core.tquote q on a.quote_no = q.quote_no
+        inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
+        left join edw_core.tbroker br on br.broker_id = q.broker_id
+        left join edw_core.tbroker_vault_team bvt on br.broker_id = bvt.broker_id and bvt.product_nm = pr.product_nm
+                                                    and bvt.team_member_type = 'BusinessDevelopmentManager' and q.program_type = bvt.program_type
+                                                    and  isnull(bvt.state_cd,q.risk_state_cd)=q.risk_state_cd
+		where a.broker_id <> br.broker_id
+		or a.bdm_nm <> bvt.team_member_nm
+		or a.broker_tier <> br.broker_tier
+		or a.national_agency_in <> br.national_agency_in
+		or a.broker_nm <> br.broker_nm;
+		
+        DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp1;
 		
         with quote_collection_class_type as
         (
@@ -156,9 +174,12 @@ BEGIN
         left join edw_core.tquote_auto_policy_coverage tqapc on tqapc.quote_history_sk=h.quote_history_sk
         left join edw_core.tquote_pel_coverage tqpc on tqpc.quote_history_sk=h.quote_history_sk
         left join quote_collection_class_type as tcct on tcct.quote_history_sk = h.quote_history_sk
+        left join edw_temp.quote_hubspot_feed_temp0 a on a.quote_no = q.quote_no
 
         where  h.latest_transaction_in = 'Y'
-		and greatest(q.create_ts,q.update_ts) > @last_source_extract_ts
+		and (greatest(q.create_ts,q.update_ts) > @last_source_extract_ts
+         or  a.quote_no is not null
+        )
         and q.broker_id <> '0'
         and q.effective_Dt >= '01-jun-2023'  
 		and isnull(q.insured_nm,'') not like '%test%' 
@@ -422,8 +443,11 @@ BEGIN
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 		
-		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.quote_hubspot_feed_temp1
+		-- Drop temp table 
+		DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp0;		
+        DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp1;		
+        DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp2;		
+        DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp3;
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
