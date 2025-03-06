@@ -116,6 +116,7 @@ BEGIN
 					act.PolicyNumber is not null 
 					and act.[State]  = 'ISSUED'
 					and atvo.ObjectType in ('ExtendedLiabilityLocation')
+					and atvo.IsDeletedOnPolicyChange = 0
 					and p.ProductLine = 'PersonalLines'
 					and act.IssuedDate > @last_source_extract_ts
 				group by act.PolicyNumber, act.EffectiveDate, act.PolicyChangeNumber
