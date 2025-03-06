@@ -54,7 +54,7 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 
-        SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(update_ts,create_ts) FROM edw_temp.policy_claim_search_dms_api_temp1 t1),@last_source_extract_ts);
+        SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(update_ts,create_ts)) FROM edw_temp.policy_claim_search_dms_api_temp1),@last_source_extract_ts);
 
 		-- Update Control
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts
