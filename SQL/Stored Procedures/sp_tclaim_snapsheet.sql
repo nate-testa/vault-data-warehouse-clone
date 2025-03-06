@@ -66,7 +66,7 @@ BEGIN
 		(
 		SELECT
 			ROW_NUMBER() OVER(PARTITION BY c.claim_number ORDER BY c.claim_number) as rn,
-			CASE WHEN c.policy_number LIKE 'NFP%'  then nfp.effective_dt else tph.effective_dt  end as effective_dt,
+			CASE WHEN c.policy_number LIKE 'NFP%'  then nfp.effective_dt else tph.effective_dt end as effective_dt,
 			tbrk.broker_id,
 			cr.customer_id,
 			c.claim_number, 
@@ -157,10 +157,10 @@ BEGIN
 		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_desc = c.loss_type
 		LEFT JOIN
 		(
-			select ROW_NUMBER()over(partition by policyNumber order by transaction_seq_no desc) as rn,policyNumber as policy_no,
-			inceptionDate as effective_dt
-			from edw_integration.claim_policy_search_snapsheet_api
-		) nfp on nfp.policy_no = c.policy_number and nfp.rn = 1
+			select ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date desc, reporting_month desc) as transaction_seq_no,
+			insured_cert_no as policy_no,effective_date as effective_dt
+			from edw_stage.nfp_policy	
+		) nfp on nfp.policy_no = c.policy_number and nfp.transaction_seq_no = 1
 		WHERE greatest(c.created_at,c.updated_at) > @last_source_extract_ts
 	) AS t
 	WHERE
