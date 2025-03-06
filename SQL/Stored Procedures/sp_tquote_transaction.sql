@@ -82,7 +82,6 @@ BEGIN
 			COALESCE(acctrcp.CededPremiumDelta,acctrcp.CededPremium) as ceded_annual_premium_amt,
 			COALESCE(acctrcp.CededPremiumDeltaProRated,acctrcp.CededPremium) as ceded_premium_amt,
 			null covID
-			,tmp1.ReviewedById
 			,tmp1.CreatedById
 		INTO edw_temp.TQuote_transaction_temp2  
 		FROM edw_temp.TQuote_transaction_temp1 tmp1 
@@ -117,7 +116,6 @@ BEGIN
 			0 as ceded_annual_premium_amt,
 			0 as ceded_premium_amt,
 			cov.Name covID
-			,tmp1.ReviewedById
 			,tmp1.CreatedById
 		FROM edw_temp.TQuote_transaction_temp1 tmp1 
 		inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = tmp1.Id 
