@@ -40,7 +40,7 @@ BEGIN
 			GREATEST(update_ts,create_ts) > @last_source_extract_ts;
 
 		MERGE edw_integration.policy_claim_search_dms_api AS Target
-	    USING edw_temp.tnote_policy_claim_search_dms_api_temp1temp1 AS Source
+	    USING edw_temp.policy_claim_search_dms_api_temp1 AS Source
 	    ON Source.claim_no=Target.claim_no
 		-- For Inserts
         WHEN NOT MATCHED BY Target THEN
