@@ -39,7 +39,7 @@ BEGIN
 				case
 					when product_nm = 'Auto' then 'auto'
 					when product_nm in ('Homeowners','Condo','Collections') then 'property'
-					when product_nm = 'Excess Liability' then 'general_liability'
+					when product_nm = 'Excess Liability' then 'general_liability'					
 				end as policy_type,
 				p.policy_status as [status],
 				pr.product_nm as product_code,
@@ -95,7 +95,7 @@ BEGIN
 					WHERE
 					CASE WHEN pr.product_cd = 'AU' AND pt.item_sk = 0 THEN 0  ELSE 1 END = 1
 					AND CASE WHEN pr.product_cd = 'AU' AND avc.vehicle_deleted_in = 'Yes' THEN 0  ELSE 1 END = 1
-					and rn = 1					
+					and rn = 1
 			) AS pt
 		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
 		inner JOIN edw_core.tproduct AS pr ON p.product_cd = pr.product_cd
@@ -110,54 +110,6 @@ BEGIN
 			AND pt.transaction_seq_no = [pi].transaction_seq_no AND pi.primary_insured_in = 'Yes'
 		WHERE
 			pr.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability')	
-
-		UNION
-
-		SELECT p.policy_no, 
-		case
-			when pr.product_nm = 'Auto' then 'auto'
-			when pr.product_nm in ('Homeowners','Condo','Collections') then 'property'
-			when pr.product_nm = 'Excess Liability' then 'general_liability'					
-		end as policy_type,
-		pr.product_nm as product_code,
-		p.effective_dt as inception_date,
-		JSON_QUERY((
-			select
-				case when [p].insured_type = 'Entity' then [p].insured_nm end as [name],
-				case when [p].Insured_type = 'Individual' then [p].first_nm end as [firstName],
-				case when [p].insured_type = 'Individual' then [p].last_nm end as [lastName],
-				case
-					when [p].insured_type = 'Entity' then 'ORGANIZATION'
-					else 'PERSON'
-				end as [entityType],
-				(
-					SELECT 
-						p.mailing_address_line1 as [address1],
-						p.mailing_address_line2 as [address2],
-						trim(p.mailing_address_city_nm) as [city],
-						upper(trim(p.mailing_address_state_cd)) as [region],
-						trim(p.mailing_address_zip_cd) as [postalCode],
-						trim(p.mailing_address_country_nm) as [country]
-					for json path, include_null_values
-				) AS addresses,
-				(
-					select ISNULL( (SELECT 1 as a where 1=2 FOR JSON PATH), '[]')
-				) as contactMethods
-				for json path, include_null_values
-		)) as policy_entities,
-		p.expiration_dt,
-		p.effective_dt as transaction_effective_dt,
-		0 as transaction_seq_no,
-		'New' as transaction_type,
-		'Metal' as source_system_nm,
-		'pending' as api_status,
-		p.create_ts as policy_transaction_create_ts
-		FROM
-			edw_core.tpolicy p
-			inner join edw_core.tcustomer c on p.customer_id = c.customer_id
-			INNER JOIN edw_core.tproduct as pr ON p.product_cd = pr.product_cd
-		where
-			policy_no in ('FPP9999VES','FPP9999VRE','COV9999VES','COV9999VRE','','')
 
 		-- Start Insert process
 		INSERT INTO [edw_integration].[claim_policy_search_snapsheet_api]
