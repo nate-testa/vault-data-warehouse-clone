@@ -7,9 +7,8 @@
 -- 01-28-2025				Yunus Mohammed				2 - Used latest transaction for policy
 -- 01-28-2025	           Sandeep Gundreddy			3- Removed source_system_sk<>1  filter to include OS data
 -- 02-07-2025              Yunus Mohammed               4 - Used trim for city, state, zip and country
--- 03-04-2025				Yunus Mohammed				5. Added Vault Litigation policies
 -- ================================================================================================= 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_search_snapsheet_api]
+CREATE OR ALTER   PROCEDURE [edw_core].[sp_claim_policy_search_snapsheet_api]
 AS
 BEGIN
 
