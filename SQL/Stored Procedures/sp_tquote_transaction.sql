@@ -14,6 +14,7 @@
 -- 										   Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S
 -- 08/30/24		Architha Gudimalla		8. Update product join to inner instead of left
 --11/25/2024	Sandeep Gundreddy		9. Added logic to load item_sk and coverage_sk for Marine Boat & Yacht
+-- 06/04/2025	Alberto Almario			10. Added new column user_sk
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction]
@@ -81,6 +82,7 @@ BEGIN
 			COALESCE(acctrcp.CededPremiumDelta,acctrcp.CededPremium) as ceded_annual_premium_amt,
 			COALESCE(acctrcp.CededPremiumDeltaProRated,acctrcp.CededPremium) as ceded_premium_amt,
 			null covID
+			,tmp1.CreatedById
 		INTO edw_temp.TQuote_transaction_temp2  
 		FROM edw_temp.TQuote_transaction_temp1 tmp1 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
@@ -114,6 +116,7 @@ BEGIN
 			0 as ceded_annual_premium_amt,
 			0 as ceded_premium_amt,
 			cov.Name covID
+			,tmp1.CreatedById
 		FROM edw_temp.TQuote_transaction_temp1 tmp1 
 		inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = tmp1.Id 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
@@ -142,7 +145,7 @@ BEGIN
            ,internal_coverage_sk -- not sure
            ,source_system_sk -- not sure ¿From Policy? 
            --,tax_fee_surcharge_sk
-		   ,user_sk -- not sure
+		   ,user_sk
            ,create_ts
            ,update_ts
            ,etl_audit_sk
@@ -175,7 +178,7 @@ BEGIN
 			isnull(ic.internal_coverage_sk,0), 
 			source.ssk,  
 			--isnull(ttfs.tax_fee_surcharge_sk,0), 
-			0 user_sk, 
+			u.user_sk, 
 			getdate(),getdate(), @etl_audit_sk, --select source.coverage, source.label,ic.*
 			ceded_annual_premium_amt,
 		    ceded_premium_amt
@@ -215,6 +218,7 @@ BEGIN
 																	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Jewelry' then 'Worldwide Jewelry'  
 																	else replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')
 																end = cc.class_type   
+		left join edw_core.tuser u on u.user_id = source.CreatedById
 		
 
 		SET @rows_affected=@@ROWCOUNT; 
