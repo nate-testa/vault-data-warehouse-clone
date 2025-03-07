@@ -1,13 +1,15 @@
-﻿-- ========================================================================================================
+﻿-- =============================================
 -- Author:		Alberto Almario Valbuena
 -- Create Date: 2023-09-05
 -- Description: This procedures insert info related to HSB - SLC
+-- =============================================
 -----------------------------------------------------------------------------------------------------------
 -- Change date 		|Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 03/06/2025		Alberto Almario				1. Change logic to extract last_source_extract_ts value
+-- 03/06/2025       Sandeep Gundreddy           2. Added logic to exclude trasactions processed and effective in future months
 -- ========================================================================================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_hsb_slc_feed]
+CREATE OR ALTER   PROCEDURE [edw_core].[sp_policy_hsb_slc_feed]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -163,7 +165,8 @@ BEGIN
                     from edw_core.tpolicy_transaction as pt
                     inner join edw_core.tdate d on pt.effective_dt_sk = d.date_sk
                     inner join edw_core.tdate d2 on pt.transaction_effective_dt_sk = d2.date_sk
-                    inner join edw_core.tinternal_coverage as ic on pt.internal_coverage_sk = ic.internal_coverage_sk
+                    inner join edw_core.tdate d3 on pt.transaction_dt_sk=d3.date_sk
+                    inner join edw_core.tinternal_coverage as ic on pt.internal_coverage_sk = ic.internal_coverage_sk and d2.actual_dt<=@CurrentLastDayOfMonth and d3.actual_dt<=@CurrentLastDayOfMonth
                     where ic.internal_coverage_cd = 'Service Line'
                     group by pt.policy_sk, d.actual_dt
                 ) AS pt 
@@ -187,7 +190,7 @@ BEGIN
                         dwelling_limit_amt, other_structures_limit_amt, contents_limit_amt, residence_type, 
                         occupancy_type, built_year, total_finished_square_feet, hvac_updated_year, electrical_updated_year, plumbing_updated_year,
                         ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt ORDER BY transaction_seq_no DESC) AS RN
-                    from edw_core.thome_coverage 
+                    from edw_core.thome_coverage where transaction_effective_dt<=@CurrentLastDayOfMonth and transaction_dt<=@CurrentLastDayOfMonth
                 ) AS hc 
                 ON hc.policy_no = p.policy_no 
                 AND hc.effective_dt = p.effective_dt
@@ -197,7 +200,7 @@ BEGIN
                     select 
                         policy_no, effective_dt, transaction_seq_no, home_systems_protection_limit_amt, serviceline_protection_in,
                         ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt ORDER BY transaction_seq_no DESC) AS RN
-                    from edw_core.thome_additional_coverage
+                    from edw_core.thome_additional_coverage where transaction_effective_dt<=@CurrentLastDayOfMonth and transaction_dt<=@CurrentLastDayOfMonth
                 ) AS hac
                 ON hac.policy_no = p.policy_no 
                 AND hac.effective_dt = p.effective_dt
@@ -360,4 +363,3 @@ BEGIN
 
 	END CATCH
 END
-
