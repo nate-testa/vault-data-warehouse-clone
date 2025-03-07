@@ -472,7 +472,7 @@ BEGIN
 						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
 						 	  when exp_pols_prm.cancel_ind <> 0 then 0 
 						 	  when ren_quotes.quote_no is not null 
-							   and (ren_quotes.quote_Status in ('Offered','Not taken') 
+							   and (ren_quotes.quote_Status in ('Offered','Not Taken by Insured')
 							   		or
 									ren_quotes.first_offered_quote_history_sk is not null
 							       ) then 1 

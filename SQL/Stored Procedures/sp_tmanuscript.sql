@@ -4,10 +4,11 @@
 -- Description: This procedures insert and update info related to Manuscript
 ------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date 			|Author								Change Description
-------------------------------------------------------------------------------------------------------------------------------------------
+	------------------------------------------------------------------------------------------------------------------------------------------
 -- 						Hernando Gonzalez Garcia			1. Created this procedure 
 -- 08/07/24				Yunus Mohammed						2. Use ValueBlob if Value field is null for manuscript_title an desc
 -- 08/14/24				Yunus Mohammed						3. Used IncludeManuscript indicator
+-- 03/01/15				Yunus Mohammed						4. Removed error "tempdb full"
 -- ======================================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tmanuscript]
 AS
@@ -33,13 +34,22 @@ BEGIN
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tmanuscript_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[tmanuscript_temp2];
+
+		SELECT *
+		INTO [edw_temp].[tmanuscript_temp1]
+		FROM [edw_stage].[AccountTransaction]
+		WHERE
+			[State] ='ISSUED'
+			AND GREATEST(IssuedDate)>@last_source_extract_ts
+
 		SELECT
 		PolicyNumber, EffectiveDate, IssuedDate, ExpirationDate, transaction_dt, PolicyChangeNumber as transaction_seq_no
 		,policy_history_sk
 		,ManuscriptTitle, ManuscriptNumber, ManuscriptDescription
 		,source_system_sk
 		,[Index] as manuscript_seq_no
-		INTO [edw_temp].[tmanuscript_temp1]
+		INTO [edw_temp].[tmanuscript_temp2]
 		FROM
 		(
 		SELECT
@@ -54,13 +64,7 @@ BEGIN
 			end as [source_system_sk]
 			,acctvo.[Index]
 		FROM
-			(SELECT
-				*
-			FROM [edw_stage].[AccountTransaction]
-			WHERE
-				[State] ='ISSUED'
-				AND GREATEST(IssuedDate)>@last_source_extract_ts --20230717 added
-			) acc
+			[edw_temp].[tmanuscript_temp1]  acc
 			INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
 			INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
 			INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
@@ -113,13 +117,14 @@ BEGIN
 		   ,@etl_audit_sk
 		   ,[manuscript_seq_no]
 		FROM 
-			[edw_temp].[tmanuscript_temp1]
+			[edw_temp].[tmanuscript_temp2]
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.IssuedDate) FROM edw_temp.[tmanuscript_temp1] t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.IssuedDate) FROM edw_temp.[tmanuscript_temp2] t1),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS edw_temp.[tmanuscript_temp1];
+		DROP TABLE IF EXISTS edw_temp.[tmanuscript_temp1];
+        DROP TABLE IF EXISTS edw_temp.[tmanuscript_temp2];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;

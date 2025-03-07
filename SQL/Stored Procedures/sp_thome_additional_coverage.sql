@@ -3,11 +3,11 @@
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert homeowners additional coverage data
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date			|Author						|	Change Description
+-- Change date			|Author									|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
---						Yunus Mohammed				1. Created this procedure 
+--									Yunus Mohammed				1. Created this procedure 
 -- 11/17/23				Yunus Mohammed				2. Added new columns
--- 01/16/24				Alberto Almario				3. Added new column extended_liability_location_ct
+-- 01/16/24				Alberto Almario					3. Added new column extended_liability_location_ct
 -- 01/25/24				Alberto Almario				4. Added new columns roof_exclusion_with_ensuing_loss_in, 
 --																		 roof_coverage_endorsement_wh_in, 
 --																		 roof_coverage_endorsement_ap_in,
@@ -20,6 +20,7 @@
 -- 12/02/24				Yunus Mohammed				10. AD-7834 Added new fields
 -- 12/18/24				Hernando Gonzalez			11. AD-7963 | Added Risk_Score_Fire
 -- 01/22/25				Alberto Almario				12. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
+-- 03/06/25				Yunus Mohammed		13 	AD-8771 Query corrected to count extended_liability_loc_ct
 -- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
 
@@ -106,7 +107,7 @@ BEGIN
 
 			WITH extended_liability_loc_ct AS (	
 				select 
-					act.PolicyNumber as pol_no, act.EffectiveDate as eff_dt, act.[Number] as tran_seq_no, count(atvo.ObjectGroupIdentifier) as extended_liability_location_ct
+					act.PolicyNumber as pol_no, act.EffectiveDate as eff_dt, act.PolicyChangeNumber as tran_seq_no, count(atvo.ObjectGroupIdentifier) as extended_liability_location_ct
 				from edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
@@ -115,9 +116,10 @@ BEGIN
 					act.PolicyNumber is not null 
 					and act.[State]  = 'ISSUED'
 					and atvo.ObjectType in ('ExtendedLiabilityLocation')
+					and atvo.IsDeletedOnPolicyChange = 0
 					and p.ProductLine = 'PersonalLines'
 					and act.IssuedDate > @last_source_extract_ts
-				group by act.PolicyNumber, act.EffectiveDate, act.[Number]
+				group by act.PolicyNumber, act.EffectiveDate, act.PolicyChangeNumber
 			)
 
 			INSERT INTO edw_core.thome_additional_coverage

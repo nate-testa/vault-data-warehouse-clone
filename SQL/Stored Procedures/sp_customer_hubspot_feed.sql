@@ -23,6 +23,7 @@
 -- 10/25/24		Archtha Gudimalla			15. Added isnull to code when checking names for test quotes
 -- 12/30/24		Alberto Almario				16. VI35256 - Insured name update for entity/trust LLC
 -- 01/13/25		Alberto Almario				17. AD8013 - Included yacht data
+-- 03/06/25		Archtha Gudimalla			18. AD8781 - Send later broker info
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -46,6 +47,25 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
 		--************Start************
+
+		
+
+		DROP TABLE IF exists edw_temp.customer_hubspot_feed_temp0;
+
+        --used to see if there are any changes on the broker/broker_vault
+        select a.policy_no
+		into  edw_temp.customer_hubspot_feed_temp0
+		from  [edw_integration].[customer_hubspot_feed] a
+		inner join edw_core.tpolicy q on a.policy_no = q.policy_no
+        inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
+        left join edw_core.tbroker br on br.broker_id = q.broker_id
+        left join edw_core.tbroker_vault_team bvt on br.broker_id = bvt.broker_id and bvt.product_nm = pr.product_nm
+                                                    and bvt.team_member_type = 'BusinessDevelopmentManager' and q.program_type = bvt.program_type
+                                                    and  isnull(bvt.state_cd,q.risk_state_cd)=q.risk_state_cd
+		where a.broker_id <> br.broker_id
+		or a.broker_nm <> br.broker_nm
+		or a.broker_phone_no <> br.broker_phone_no 
+		or a.bdm_nm <> bvt.team_member_nm;
 
  		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp1; 
@@ -87,7 +107,10 @@ BEGIN
 		INNER join edw_core.tpolicy_history ph on ph.policy_sk = pol.policy_sk and ph.latest_transaction_in = 'Y'
 		INNER join edw_core.tpolicy_insured pi on pi.policy_history_sk = ph.policy_history_sk and pi.primary_insured_in = 'Yes'
 		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk
-		WHERE greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
+        left join edw_temp.customer_hubspot_feed_temp0 a on a.policy_no = q.policy_no
+		WHERE (greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
+		or a.policy_no is not null
+		)
 		and isnull(pol.insured_nm,'') not like '%test%' 
 		and isnull(cust.last_nm,'') not like '%test%'
 		and isnull(cust.first_nm,'') not like '%test%' 
@@ -102,8 +125,8 @@ BEGIN
 		SELECT
 			pol.quote_no,
 			pi.first_nm,
-			pi.last_nm,
-			case when cust.email like '%papermail%' or cust.email like '%@%@%' then null else cust.email end email, 
+			case when pi.insured_type = 'Entity' then pi.insured_nm  else pi.last_nm end as last_nm,
+			case when cust.email like '%papermail%' or cust.email like '%@%@%' then null else cust.email end email,   
 			pol.risk_state_cd,
 			pol.product_cd AS product_nm,
 			br.broker_id,
@@ -135,10 +158,10 @@ BEGIN
 		INNER join edw_core.tquote_history ph on ph.quote_sk = pol.quote_sk and ph.latest_transaction_in = 'Y'
 		INNER join edw_core.tquote_insured pi on pi.quote_history_sk = ph.quote_history_sk and pi.primary_insured_in = 'Yes'
 		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk
-		WHERE   pol.insured_nm not like '%test%' 
-		and cust.last_nm not like '%test%'
-		and cust.first_nm not like '%test%' 
-		and cust.customer_nm not like '%test%' 
+		WHERE   isnull(pol.insured_nm,'') not like '%test%' 
+		and isnull(cust.last_nm,'') not like '%test%'
+		and isnull(cust.first_nm,'') not like '%test%' 
+		and isnull(cust.customer_nm,'') not like '%test%'  
 		and pol.effective_dt >= '01-jun-2023'
 		and quote_create_ts >= dateadd("mm",-1,cast(getdate() as date))
 		and not exists (select 'x' from edw_temp.customer_hubspot_feed_temp1 a where a.customer_id = cust.customer_id)
@@ -289,7 +312,8 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
         -- Drop temp table
-        DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp1;
+        DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp0;
+        DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp1; 
 
 	END TRY
 	BEGIN CATCH

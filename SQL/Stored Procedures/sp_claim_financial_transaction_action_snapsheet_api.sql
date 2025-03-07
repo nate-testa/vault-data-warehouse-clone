@@ -10,8 +10,9 @@
 --																							Used remote_identifier as settle_payee_id
 -- 02-04-2025				Yunus Mohammed				Removed settle_payee_id column and used id column instead of it.
 --																							Used migration_create_financial_transaction_api.id column to insert data in it.
+--03-05-2025                Yunus Mohammed              Added 'submitted' to stage filter to fetch recovery payment transactions
 -- ================================================================================================= 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_financial_transaction_action_snapsheet_api]
+CREATE OR ALTER   PROCEDURE [edw_core].[sp_claim_financial_transaction_action_snapsheet_api]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -71,7 +72,7 @@ BEGIN
 			inner join edw_stage_snapsheet.financial_transactions ft on fin.id=ft.id
 		where
 			api_status = 'Success'
-			and amount_type = 'Payment_Amount' and ft.is_historical='true' and ft.stage='issued'
+			and amount_type = 'Payment_Amount' and ft.is_historical='true' and ft.stage in ('issued', 'submitted')
 			and pay.pm_status in ('Success','Stopped')
 			and pay.created_date > @last_source_extract_ts
 		) as temp

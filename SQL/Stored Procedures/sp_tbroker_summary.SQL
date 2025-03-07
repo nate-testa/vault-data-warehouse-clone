@@ -60,6 +60,7 @@ GO
 --													any policy that has a renewal quote offered is termed as renewal offered
 -- 12/17/24		Architha Gudimalla				32. VI35593 - new columns request 
 -- 02/13/25		Architha Gudimalla				33. AD8573 - excluded OS claims which do not have broker
+-- 03/05/25		Hernando Gonzalez				34. AD8315 - Summary tables - Close Reasons
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -311,7 +312,7 @@ BEGIN
 							count(distinct case when CAST(q.quote_create_ts AS DATE) between 		 	  @month_begin_dt and 				   @end_dt then q.quote_sk end) 	  mtd_submission_ct, 
 							--
 							count(distinct case when CAST(q.quote_create_ts AS DATE) between 	dateadd("dd",-30,@end_dt) and 				   @end_dt then q.quote_sk end) 	  last30_days_submission_ct, 
-							count(distinct case when CAST(q.quote_create_ts AS DATE)  <= @end_dt and q.quote_status not in ('Declined','Issued','Not taken') then q.quote_sk end) 	  open_submission_ct, 							
+							count(distinct case when CAST(q.quote_create_ts AS DATE)  <= @end_dt and q.quote_status not in ('Declined by Vault','Issued','Not taken by Insured','Not Needed','No Response by Broker/Producer','Expired') then q.quote_sk end)      open_submission_ct,
 							--
 							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 		@prior_year_begin_dt and @prior_year_month_end_dt then q.quote_sk end) prior_ytd_quote_ct, 
 							count(distinct case when CAST(q.first_offered_quote_ts AS DATE) between 			  @year_begin_dt and 				  @end_dt then q.quote_sk end) 		 ytd_quote_ct, 
@@ -393,13 +394,13 @@ BEGIN
 							sum(r.renewal_ct) renewal_ct,  
 							sum(case when renewal_policy_sk > 0 
 									or (renewal_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_offered_quote_history_sk IS NOT NULL ) 
-									or (renewal_quote_sk > 0 and q.quote_status in ('Issued','Offered','Not taken') ) 
+									or (renewal_quote_sk > 0 and q.quote_status in ('Issued','Offered','Not taken by Insured') ) 
 									then 1 
 									else 0 
 								end) policy_renewal_offered_ct, 
 							sum(case when (renewal_policy_sk > 0 and renewal_initial_written_premium_amt > 50000)
 									   or (renewal_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_offered_quote_history_sk IS NOT NULL AND qh.net_premium_amt > 50000) 
-									   or (renewal_quote_sk > 0 and q.quote_status in ('Issued','Offered','Not taken')  AND qh.net_premium_amt > 50000) 
+									   or (renewal_quote_sk > 0 and q.quote_status in ('Issued','Offered','Not taken by Insured')  AND qh.net_premium_amt > 50000)
 									 then 1 
 									 else 0 
 								end) policy_renewal_offered_over_50k_ct, 

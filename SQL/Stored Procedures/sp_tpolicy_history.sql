@@ -15,6 +15,7 @@
 -- 02/08/24		Alberto Almario					9. Added new column producer_sk
 -- 04/29/24		Hernando Gonzalez				10. Added new column insurance_score_last_run_dt
 -- 06/14/24		Alberto Almario					11. Added new column prorate_factor
+-- 03/03/25		Alberto Almario					12. Added new column transaction_status
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -78,7 +79,9 @@ BEGIN
 				nullif(trim(pr.ProductCode),'') product_cd,
 				usr.name uw_nm, nullif(trim(acct.note),'') note,
 			pd.producer_sk,
-			acct.ProRateFactor
+			acct.ProRateFactor,
+			acct.IsReversed,
+			acct.IsReversal
 		INTO edw_temp.tpolicy_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
@@ -209,6 +212,7 @@ BEGIN
 		   ,producer_sk
 		   ,insurance_score_last_run_dt
 		   ,prorate_factor
+		   ,transaction_status
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.PolicyChangeNumber, 
 				pol.policy_sk, br.broker_sk, cust.customer_sk, br.Broker_Id, Source.customer_id, 
@@ -242,6 +246,11 @@ BEGIN
 				,source.producer_sk
 				,source1.InsuranceScoreLastRunDate
 				,source.ProRateFactor
+				,CASE 
+					WHEN source.IsReversed = 1 THEN 'Reversed'
+					WHEN source.IsReversal = 1 THEN 'Reversal'
+					ELSE 'Issued'
+				END AS transaction_status
 		FROM edw_temp.tpolicy_history_temp1 source
 		LEFT JOIN edw_temp.tpolicy_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tpolicy_history_temp2 source1 on source.id = source1.AccountTransactionId
