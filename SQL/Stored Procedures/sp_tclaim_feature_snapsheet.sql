@@ -10,6 +10,7 @@
 -- 01/29/2025               Sandeep Gundreddy			5. Added condo to item_sk, coverage_sk logic
 -- 02/07/2025				Yunus Mohammed				6. Added logic to insert aslob_sk
 -- 02/21/2025				Yunus Mohammed				7. Code updated fornull aslob_sk	
+-- 03/03/2025               Sandeep Gundreddy			8. updated logic to use created_at/updated_at from claims table
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet]
 AS
@@ -102,7 +103,7 @@ BEGIN
 				WHEN 'PEL' THEN NULL
 				WHEN 'AU' THEN tavc.auto_vehicle_coverage_sk
 			END AS vehicle_coverage_sk,
-			greatest(exps.created_at,exps.updated_at) AS greatest_created_updated
+			greatest(clm.created_at,clm.updated_at) AS greatest_created_updated
 		INTO edw_temp.tclaim_feature_snapsheet_temp1
 		FROM edw_stage_snapsheet.claims clm
 		INNER JOIN edw_core.tclaim tcl ON clm.claim_number = tcl.claim_no
@@ -218,7 +219,7 @@ BEGIN
 											AND tcl.loss_dt > = tavc1.transaction_effective_dt
 										ORDER BY tavc1.transaction_seq_no DESC
 								)
-		WHERE greatest(exps.created_at,exps.updated_at) > @last_source_extract_ts;
+		WHERE greatest(clm.created_at,clm.updated_at) > @last_source_extract_ts;
 
 		MERGE edw_core.tclaim_feature AS Target
 		USING edw_temp.tclaim_feature_snapsheet_temp1 AS Source

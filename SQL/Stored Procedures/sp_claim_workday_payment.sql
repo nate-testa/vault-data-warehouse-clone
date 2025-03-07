@@ -13,9 +13,10 @@
 --												added throw in catch block
 -- 11/26/24		Yunus Mohammed				6. Updated "Marine Boat & Yacht" to "Marine_Boat&Yacht"
 -- 02/19/25		Yunus Mohammed				7. Updated to use new columns after Snapsheet implementation
+-- 03/04/25     Sandeep Gundreddy			8. Removed defense_cost_in filter
 -- ================================================================================================= 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_payment]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_claim_workday_payment]
 AS
 BEGIN
 	DECLARE @ProcedureName NVARCHAR(120)
@@ -140,7 +141,7 @@ BEGIN
 							claim_feature_sk,claim_payment_sk,SUM(deductible_expense_recovery_amt+expense_paid_amt+overpayment_expense_recovery_amt) AS amt, 'Loss (Expense - A&O)' AS cat_name
 						FROM edw_core.tclaim_transaction t
 						WHERE t.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
-						AND t.defense_cost_in = 'N'
+					--	AND t.defense_cost_in = 'N'
 						GROUP BY claim_feature_sk,claim_payment_sk
 
 						UNION
@@ -149,7 +150,7 @@ BEGIN
 							claim_feature_sk,claim_payment_sk,SUM(deductible_defense_recovery_amt+defense_paid_amt+overpayment_defense_recovery_amt) AS amt, 'Loss (Expense - DCC)' AS cat_name
 						FROM edw_core.tclaim_transaction t
 						WHERE t.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
-						AND t.defense_cost_in = 'Y'
+					--	AND t.defense_cost_in = 'Y'
 						GROUP BY claim_feature_sk,claim_payment_sk
 							
 						UNION
