@@ -1,9 +1,4 @@
-﻿SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- =================================================================================================
+﻿-- =================================================================================================
 -- Description: This procedures inserts and updates claim notes snapsheet
 -----------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
@@ -14,6 +9,8 @@ GO
 -- 01/17/25		Hernando Gonzalez			4. add case statement for source_system_sk column
 -- 01/29/25		Sandeep Gundreddy			5. Added source_system_sk=5 to reserve query to exclude ebao transactions
 -- 01/31/25     Sandeep Gundreddy           6. Added logic to load cancel, stopped, failed payments
+-- 03/02/25     Sandeep Gundreddy			7. Added logic to ignore system generated migrated transactions
+-- 03/03/25     Sandeep Gundreddy			8. Update salvage and subo expense recovery logic after discussion with Dawn. will be loaded as +ve amounts
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction_snapsheet]
 AS
@@ -95,7 +92,7 @@ BEGIN
 			,CASE 
 				WHEN fta.code='cancel' THEN -1*res.amount
 				ELSE res.amount -LAG(res.amount,1,0) over (partition by res.claim_id,res.exposure_id,res.cost_type,res.cost_category,res.reserve_method --,ft.id
-														order by res.claim_id,res.exposure_id,res.cost_type,res.cost_category,res.reserve_method,fta.created_at) 
+														order by res.claim_id,res.exposure_id,res.cost_type,res.cost_category,res.reserve_method,fta.created_at,ft.created_at) 
 			END as reserve_amount
 			,CASE
 				WHEN ft.remote_identifier is not null and len(ft.remote_identifier)=8 THEN 3
@@ -177,7 +174,29 @@ BEGIN
 		FROM edw_temp.tclaim_transaction_snapsheet_temp1 a
 		LEFT JOIN edw_core.tclaim_transaction_type ctt on a.claim_transaction_type_cd = ctt.claim_transaction_type_cd
         where created_at > @last_source_extract_ts 
-        /* This filter can be used to exclude snapsheet system generated transactions on migrated transactions(closed)
+		--> EXCLUDE --> Closed by Users in Snapsheet , but these transactions already exists in EDW
+		and financial_transaction_id not in (8310275,8310070,8308701,8310172,8308257,8308258,8310191,8310241,8693161,8401360,8319503,8729659,8729648,8306435,8663036,8307254,8307255,8307534,8307456,8307952,8307907,8308308)
+       --> EXCLUDE System generated records--> Closed by system, but these transactions already exists in EDW
+	    and a.reserve_item_id not in 
+(
+select a.id from edw_stage_snapsheet.financial_reserve_items a, edw_stage_snapsheet.financial_transactions b 
+where a.amount=0 and a.financial_transaction_id=b.id and creator_user_id is null 
+and 
+((a.created_at between '2025-02-07 22:00:00' and '2025-02-10 08:00:00') or
+ (a.created_at between '2025-02-10 22:00:00' and '2025-02-11 01:30:00') or 
+(a.created_at between '2025-02-12 02:00:00' and '2025-02-12 08:00:00') or 
+(a.created_at between '2025-02-13 03:00:00' and '2025-02-13 08:00:00') or 
+(a.created_at between '2025-02-14 02:00:00' and '2025-02-14 08:00:00') or 
+(a.created_at between '2025-02-15 02:00:00' and '2025-02-15 08:00:00') or 
+(a.created_at between '2025-02-16 02:00:00' and '2025-02-16 08:00:00') or 
+(a.created_at between '2025-02-17 01:00:00' and '2025-02-17 08:00:00') or 
+(a.created_at between '2025-02-17 13:00:00' and '2025-02-17 17:00:00') or 
+(a.created_at between '2025-02-18 02:00:00' and '2025-02-18 08:00:00') or 
+(a.created_at between '2025-02-19 02:00:00' and '2025-02-19 08:00:00') or 
+(a.created_at between '2025-03-02 18:53:00' and '2025-03-02 18:57:00')
+)
+) 
+       /* This filter can be used to exclude snapsheet system generated transactions on migrated transactions(closed)
         a.reserve_item_id not in (select a.id from edw_stage_snapsheet.financial_reserve_items a, edw_stage_snapsheet.financial_transactions b 
 where a.exposure_id in (select exposureReferenceNumber from edw_stage.migration_update_exposure_status_api) and a.amount=0
 and a.financial_transaction_id=b.id and creator_user_id is null and b.remote_identifier is null)*/
@@ -257,11 +276,11 @@ and a.financial_transaction_id=b.id and creator_user_id is null and b.remote_ide
 			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'overpayment' and fta.code='submitted' then -1 * pay.amount 
 				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'overpayment' and fta.code in ('stop','cancel','failed') then  pay.amount 
 				ELSE 0 END) as overpayment_recovery_amt
-			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'subrogation' and fta.code='submitted' then -1 * pay.amount 
-				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'subrogation' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'subrogation' and fta.code='submitted' then  pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'subrogation' and fta.code in ('stop','cancel','failed') then  -1 * pay.amount 
 				ELSE 0 END) as subrogation_expense_recovery_amt
-			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'salvage' and fta.code='submitted' then -1 * pay.amount 
-				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'salvage' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'salvage' and fta.code='submitted' then  pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'salvage' and fta.code in ('stop','cancel','failed') then  -1 * pay.amount 
 				ELSE 0 END) as salvage_expense_recovery_amt
 			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'deductible' and fta.code='submitted' then -1 * pay.amount 
 				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'deductible' and fta.code in ('stop','cancel','failed') then  pay.amount 
@@ -299,7 +318,7 @@ and a.financial_transaction_id=b.id and creator_user_id is null and b.remote_ide
 		LEFT JOIN edw_core.tpolicy tp ON tp.policy_sk = tc.policy_sk
 		LEFT JOIN edw_core.tbroker tb ON tb.broker_id = tp.broker_id
 		LEFT JOIN edw_core.tcustomer tcu ON tcu.customer_id = tp.customer_id
-		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(res.created_at AS DATE)
+		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(fta.created_at AS DATE)
 		LEFT JOIN edw_core.tclaim_cost_category as tcc on tcc.claim_cost_category_nm = res.cost_category
 		LEFT JOIN edw_core.tclaim_payment as cp on cp.payment_no = res.financial_transaction_id and cp.payment_sequence_no=pay.id and cp.claim_feature_sk=tf.claim_feature_sk
 		/*LEFT JOIN edw_core.tproduct tpr
@@ -575,4 +594,3 @@ and a.financial_transaction_id=b.id and creator_user_id is null and b.remote_ide
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-GO
