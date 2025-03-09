@@ -106,10 +106,9 @@ BEGIN
 													AND isnull(bvt.state_cd,pol.risk_state_cd)=pol.risk_state_cd
 		INNER join edw_core.tpolicy_history ph on ph.policy_sk = pol.policy_sk and ph.latest_transaction_in = 'Y'
 		INNER join edw_core.tpolicy_insured pi on pi.policy_history_sk = ph.policy_history_sk and pi.primary_insured_in = 'Yes'
-		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk
-        left join edw_temp.customer_hubspot_feed_temp0 a on a.policy_no = q.policy_no
+		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk 
 		WHERE (greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
-		or a.policy_no is not null
+		or exists (select 'x' from edw_temp.customer_hubspot_feed_temp0 a where a.policy_no = pol.policy_no)
 		)
 		and isnull(pol.insured_nm,'') not like '%test%' 
 		and isnull(cust.last_nm,'') not like '%test%'

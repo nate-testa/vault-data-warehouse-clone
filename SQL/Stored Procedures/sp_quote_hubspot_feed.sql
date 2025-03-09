@@ -173,12 +173,11 @@ BEGIN
         left JOIN edw_core.tquote_home_additional_coverage AS tqhac ON tqhc.quote_home_coverage_sk = tqhac.quote_home_coverage_sk	
         left join edw_core.tquote_auto_policy_coverage tqapc on tqapc.quote_history_sk=h.quote_history_sk
         left join edw_core.tquote_pel_coverage tqpc on tqpc.quote_history_sk=h.quote_history_sk
-        left join quote_collection_class_type as tcct on tcct.quote_history_sk = h.quote_history_sk
-        left join edw_temp.quote_hubspot_feed_temp0 a on a.quote_no = q.quote_no
+        left join quote_collection_class_type as tcct on tcct.quote_history_sk = h.quote_history_sk 
 
         where  h.latest_transaction_in = 'Y'
-		and (greatest(q.create_ts,q.update_ts) > @last_source_extract_ts
-         or  a.quote_no is not null
+		and (greatest(q.create_ts,q.update_ts) > @last_source_extract_ts 
+		 or exists (select 'x' from edw_temp.quote_hubspot_feed_temp0 a where a.quote_no = q.quote_no)
         )
         and q.broker_id <> '0'
         and q.effective_Dt >= '01-jun-2023'  
