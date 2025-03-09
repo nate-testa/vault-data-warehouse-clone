@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tclaim_payment ALTER COLUMN remark nvarchar(max)
