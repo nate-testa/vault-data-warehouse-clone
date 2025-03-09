@@ -23,7 +23,7 @@
 -- 10/25/24		Archtha Gudimalla			15. Added isnull to code when checking names for test quotes
 -- 12/30/24		Alberto Almario				16. VI35256 - Insured name update for entity/trust LLC
 -- 01/13/25		Alberto Almario				17. AD8013 - Included yacht data
--- 03/06/25		Archtha Gudimalla			18. AD8781 - Send later broker info
+-- 03/06/25		Archtha Gudimalla			18. AD8781 - Send latest broker info
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -63,9 +63,9 @@ BEGIN
                                                     and bvt.team_member_type = 'BusinessDevelopmentManager' and q.program_type = bvt.program_type
                                                     and  isnull(bvt.state_cd,q.risk_state_cd)=q.risk_state_cd
 		where a.broker_id <> br.broker_id
-		or a.broker_nm <> br.broker_nm
-		or a.broker_phone_no <> br.broker_phone_no 
-		or a.bdm_nm <> bvt.team_member_nm;
+		or isnull(a.broker_nm,'') <> isnull(br.broker_nm,'')
+		or isnull(a.broker_phone_no,'') <> isnull(br.broker_phone_no,'') 
+		or isnull(a.bdm_nm,'') <> isnull(bvt.team_member_nm,''); 
 
  		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp1; 

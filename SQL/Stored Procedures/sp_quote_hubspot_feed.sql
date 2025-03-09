@@ -19,7 +19,7 @@
 -- 12/30/24		        Alberto Almario				14. VI35256 - Insured name update for entity/trust LLC
 -- 01/13/25		        Alberto Almario				15. AD8013 - Included yacht data
 -- 01/15/25		        Archtha Gudimalla			16. VI35258/AD8009 - Added new cols
--- 03/06/25		        Archtha Gudimalla			17. AD8781 - Send later broker info
+-- 03/06/25		        Archtha Gudimalla			17. AD8781 - Send latest broker info
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -57,10 +57,10 @@ BEGIN
                                                     and bvt.team_member_type = 'BusinessDevelopmentManager' and q.program_type = bvt.program_type
                                                     and  isnull(bvt.state_cd,q.risk_state_cd)=q.risk_state_cd
 		where a.broker_id <> br.broker_id
-		or a.bdm_nm <> bvt.team_member_nm
-		or a.broker_tier <> br.broker_tier
-		or a.national_agency_in <> br.national_agency_in
-		or a.broker_nm <> br.broker_nm;
+		or isnull(a.bdm_nm,'') <> isnull(bvt.team_member_nm,'')
+		or isnull(a.broker_tier,'') <> isnull(br.broker_tier,'')
+		or isnull(a.national_agency_in,'') <> isnull(br.national_agency_in,'')
+		or isnull(a.broker_nm,'') <> isnull(br.broker_nm,'');
 		
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp1;
 		
