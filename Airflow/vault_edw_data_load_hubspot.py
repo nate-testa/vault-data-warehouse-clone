@@ -104,7 +104,7 @@ with DAG(
         for i in range(len(operators) - 1):
             operators[i] >> operators[i + 1]
 
-        operators[-1] >> send_hubspot_email
+        operators[-1] >> exec_hubspot_integration_api_call >> send_hubspot_email
 
 
     end = DummyOperator(
