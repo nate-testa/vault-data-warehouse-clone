@@ -18,6 +18,7 @@
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
+@run_date DATETIME = null
 AS
 BEGIN
 	DECLARE @ProcedureName NVARCHAR(120)
@@ -37,11 +38,16 @@ BEGIN
 		DECLARE @year_month INT
 		DECLARE @acounting_date_sk int,@last_day_month date
 
+		IF @run_date IS NOT NULL
+		BEGIN
+			SET @current_date = @run_date
+		END
+
 		DECLARE cur_main CURSOR FOR
 		SELECT yearmonth
 		FROM edw_core.tdate
 		WHERE
-			actual_dt >= CAST(@last_source_extract_ts AS DATE)
+			actual_dt > CAST(@last_source_extract_ts AS DATE)
 			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
 		GROUP BY yearmonth
 		ORDER BY yearmonth

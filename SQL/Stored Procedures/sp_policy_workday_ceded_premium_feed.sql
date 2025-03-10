@@ -13,6 +13,7 @@
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_ceded_premium_feed]
+@run_date DATETIME = null
 AS
 BEGIN
 	DECLARE @ProcedureName NVARCHAR(120)
@@ -37,11 +38,16 @@ BEGIN
 		DECLARE @accounting_date_end_sk int,@last_end_day_month date
 		DECLARE @accounting_date_begin_sk int,@last_begin_day_month date
 
+		IF @run_date IS NOT NULL
+		BEGIN
+			SET @current_date = @run_date
+		END
+
 		DECLARE cur_main CURSOR FOR
 		SELECT yearmonth
 		FROM edw_core.tdate
 		WHERE
-			actual_dt >= CAST(@last_source_extract_ts AS DATE)
+			actual_dt > CAST(@last_source_extract_ts AS DATE)
 			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
 		GROUP BY yearmonth
 		ORDER BY yearmonth
@@ -57,9 +63,9 @@ BEGIN
 
 			SELECT @accounting_date_end_sk=date_sk, @last_end_day_month=actual_dt FROM edw_core.tdate WHERE yearmonth=@year_month AND month_end_in='Y'
 			SELECT @accounting_date_begin_sk=date_sk,@last_begin_day_month=actual_dt FROM edw_core.tdate 
-			WHERE actual_dt = dateadd(year,-1,@last_end_day_month) and month_end_in='Y'
+			WHERE actual_dt =EOMONTH( dateadd(year,-1,@last_end_day_month)) and month_end_in='Y'
 			
-			DELETE FROM edw_integration.policy_workday_ceded_premium_feed WHERE accounting_date BETWEEN @last_begin_day_month AND @last_end_day_month;
+			DELETE FROM edw_integration.policy_workday_ceded_premium_feed WHERE accounting_date = @last_end_day_month
 			
 			WITH policy_workday_ceded_premium_feed_temp AS
 			(
