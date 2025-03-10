@@ -108,8 +108,7 @@ BEGIN
 			TARGET.manuscript_seq_no = Source.manuscript_seq_no
 		WHEN MATCHED THEN
 		    UPDATE SET
-				TARGET.effective_dt = SOURCE.effective_dt,
-		        TARGET.transaction_seq_no = SOURCE.transaction_seq_no,
+				TARGET.effective_dt = SOURCE.effective_dt,        
 		        TARGET.manuscript_no = SOURCE.manuscript_no,
 		        TARGET.manuscript_title = SOURCE.manuscript_title,
 		        TARGET.manuscript_desc = SOURCE.manuscript_desc,
