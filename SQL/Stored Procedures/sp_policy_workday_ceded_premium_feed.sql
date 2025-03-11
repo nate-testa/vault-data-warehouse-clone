@@ -10,6 +10,8 @@
 -- 03/20/24		Yunus Mohammed				3. Included condo policies
 -- 09/18/24		Yunus Mohammed				4. Added gross premium and added Throw in catch block
 -- 10/24/24		Yunus Mohammed				5. Added gross premium in insert
+-- 03/11/25		Yunus Mohammed				6. Ad-8745 - Used risk address instead of mailing address
+--																				Corrected accounting begin date logic and delete stmt where clause.
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_ceded_premium_feed]
@@ -61,11 +63,13 @@ BEGIN
 	
 			SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-			SELECT @accounting_date_end_sk=date_sk, @last_end_day_month=actual_dt FROM edw_core.tdate WHERE yearmonth=@year_month AND month_end_in='Y'
+			SELECT @accounting_date_end_sk=date_sk, @last_end_day_month=actual_dt FROM edw_core.tdate 
+			WHERE yearmonth=@year_month AND month_end_in='Y'
+
 			SELECT @accounting_date_begin_sk=date_sk,@last_begin_day_month=actual_dt FROM edw_core.tdate 
 			WHERE actual_dt =EOMONTH( dateadd(year,-1,@last_end_day_month)) and month_end_in='Y'
 			
-			DELETE FROM edw_integration.policy_workday_ceded_premium_feed WHERE accounting_date = @last_end_day_month
+			DELETE FROM edw_integration.policy_workday_ceded_premium_feed WHERE accounting_date = @last_end_day_month;
 			
 			WITH policy_workday_ceded_premium_feed_temp AS
 			(
@@ -98,11 +102,41 @@ BEGIN
 					tb.broker_id AS [producer_code],
 					tb.broker_nm AS [agency_name],
 					tp.insured_nm AS [insured_name],
-					tp.mailing_address_line1 AS [address],
-					tp.mailing_address_county_nm AS [county],
-					tp.mailing_address_city_nm AS [city],
-					tp.risk_state_cd AS [RISK_STATE],
-					tp.mailing_address_zip_cd AS [zip],
+					CASE
+						WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.address_line_1
+						WHEN tprd.product_nm =  'Collections' THEN cl.address_line_1
+						WHEN tprd.product_nm =  'Excess Liability' THEN pl.address_line_1
+						WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.address_line_1
+					ELSE tp.mailing_address_line1
+					END AS [address],
+					CASE
+						WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.county_nm
+						WHEN tprd.product_nm =  'Collections' THEN cl.county_nm
+						WHEN tprd.product_nm =  'Excess Liability' THEN pl.county_nm
+						WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.county_nm
+					ELSE tp.mailing_address_county_nm
+					END AS [county],
+					CASE
+						WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.city_nm
+						WHEN tprd.product_nm =  'Collections' THEN cl.city_nm
+						WHEN tprd.product_nm =  'Excess Liability' THEN pl.city_nm
+						WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.city_nm
+					ELSE tp.mailing_address_city_nm
+					END AS [city],
+					CASE
+						WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.state_cd
+						WHEN tprd.product_nm =  'Collections' THEN cl.state_cd
+						WHEN tprd.product_nm =  'Excess Liability' THEN pl.state_cd
+						WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.state_cd
+					ELSE tp.risk_state_cd
+					END AS [RISK_STATE],
+					CASE
+						WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.zip_cd
+						WHEN tprd.product_nm =  'Collections' THEN cl.zip_cd
+						WHEN tprd.product_nm =  'Excess Liability' THEN pl.zip_cd
+						WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.zip_cd
+					ELSE tp.mailing_address_zip_cd
+					END AS [zip],
 					NULL AS fire_protection,
 					tic.internal_coverage_sk AS financial_category_id,
 					tic.internal_coverage_desc AS [coveragename],
@@ -117,6 +151,12 @@ BEGIN
 					INNER JOIN edw_core.tdate tdpro on tdpro.date_sk=tpt.transaction_dt_sk
 					INNER JOIN edw_core.tpolicy_transaction_type tptt on tptt.policy_transaction_type_sk=tpt.policy_transaction_type_sk
 					INNER JOIN edw_core.tbroker tb on tb.broker_sk=tpt.broker_sk
+					LEFT JOIN edw_core.thome_location hl on hl.policy_no = tp.policy_no and hl.effective_dt = tp.effective_dt
+					LEFT JOIN edw_core.tcollection_location cl on cl.policy_no = tp.policy_no and cl.effective_dt = tp.effective_dt
+					LEFT JOIN edw_core.tpel_location pl on pl.policy_no = tp.policy_no and pl.effective_dt = tp.effective_dt
+						and pl.transaction_seq_no = tpt.transaction_seq_no
+					LEFT JOIN edw_core.tmarine_boat_yacht_location mbyl on mbyl.policy_no = pl.policy_no and mbyl.effective_dt = tp.effective_dt
+						and mbyl.transaction_seq_no = tpt.transaction_seq_no
 				WHERE
 					tpt.accouting_month_sk BETWEEN @accounting_date_begin_sk AND @accounting_date_end_sk
 					AND tp.product_cd IN('HO','CO')
