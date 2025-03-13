@@ -14,6 +14,7 @@
 -- 11/26/24		Yunus Mohammed				6. Updated "Marine Boat & Yacht" to "Marine_Boat&Yacht"
 -- 02/19/25		Yunus Mohammed				7. Updated to use new columns after Snapsheet implementation
 -- 03/04/25     Sandeep Gundreddy			8. Removed defense_cost_in filter
+-- 03/13/25		Yunus Mohammed				9 Ad-8876 USed payment_no as transaction_id
 -- ================================================================================================= 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_claim_workday_payment]
@@ -99,7 +100,7 @@ BEGIN
 			YEAR(tc.loss_dt) AS accident_year,
 			CASE WHEN tc.policy_no LIKE 'NFP%' THEN np.risk_state ELSE COALESCE(st.state_cd,tp.risk_state_cd) END AS risk_state,
 			CAST(tasl.aslob_cd AS INT) AS aslob,
-			tpay.payment_sequence_no AS transaction_id,
+			tpay.payment_no AS transaction_id,
 			@end_dt AS monthend,			
 			tc.claim_status AS claim_status,
 			tcf.claim_feature_status AS loss_status,
