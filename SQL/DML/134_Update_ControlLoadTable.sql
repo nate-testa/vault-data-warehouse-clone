@@ -39,6 +39,30 @@ set CopyEnabled = 1
 			},
 			{
 				"source": {
+					"name": "ReferenceType",
+					"type": "String",
+					"physicalType": "nvarchar"
+				},
+				"sink": {
+					"name": "ReferenceType",
+					"type": "String",
+					"physicalType": "nvarchar"
+				}
+			},
+			{
+				"source": {
+					"name": "Version",
+					"type": "String",
+					"physicalType": "nvarchar"
+				},
+				"sink": {
+					"name": "Version",
+					"type": "String",
+					"physicalType": "nvarchar"
+				}
+			},
+			{
+				"source": {
 					"name": "RaterReferenceId",
 					"type": "String",
 					"physicalType": "nvarchar"
