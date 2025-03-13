@@ -80,11 +80,12 @@ BEGIN
 		union all
 		SELECT	nullif(trim(accttf.name),'') as tax_fee_surcharge_name, 
 				pr.ProductCode  as product_cd, 
-				case when pr.ProductCode = 'LUX' then '090'
+				case when pr.ProductCode = 'LUX' then '091'
 					 when pr.ProductCode in ('HO','CO') then '040'
 					 when pr.ProductCode = 'AU' and nullif(trim(accttf.name),'') = 'Clean Risk Loss Recoupment' then '192'
 					 when pr.ProductCode = 'AU' and nullif(trim(accttf.name),'') != 'Clean Risk Loss Recoupment' then '211'
 					 when pr.ProductCode = 'PEL' then '171'
+					 when pr.ProductCode = 'BY' then '080'
 					 else null
 				end aslob,
 				max(nullif(trim(accttf.Type),'')) as tax_fee_surcharge_type,
@@ -102,7 +103,7 @@ BEGIN
 		group by trim(accttf.name), pr.ProductCode
 		union all
 		SELECT  nullif(trim(accttf.name),'') as tax_fee_surcharge_name,
-                CASE WHEN c.aslob ='090' THEN 'LUX' ELSE pr.ProductCode END as product_cd,
+                CASE WHEN c.aslob ='091' THEN 'LUX' ELSE pr.ProductCode END as product_cd,
                 c.aslob as aslob,
                 max(nullif(trim(accttf.Type),'')) as tax_fee_surcharge_type,
                 max(nullif(trim(accttf.Type),'')) as coverage,
