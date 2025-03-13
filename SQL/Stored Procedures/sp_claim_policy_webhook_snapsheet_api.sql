@@ -8,6 +8,7 @@
 -- 02-08-2025               Yunus Mohammed             3 Captured all policy transactions and replced claim_policy_seach_snapsheet_api table
 --                                                                                              with tpolicy_transaction
 -- 02-12-2025              Yunus Mohammed               4 Removed deleted vehicles form Risks object
+-- 03-13-2025				Yunus Mohammed				5 - Added vault litigation policies
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
