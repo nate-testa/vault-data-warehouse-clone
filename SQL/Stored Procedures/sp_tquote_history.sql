@@ -10,6 +10,7 @@
 -- 05/15/24		Architha Gudimalla				5. Removed effecivedate from partiion in rnk used for latest_transaction_ind
 -- 07/31/24		Architha Gudimalla				6. Added number desc to the rank in main query
 -- 03/13/25		Yunus Mohammed				7. Ad-8848 Added premium_rater_version
+-- 03/14/25		Yunus Mohammed			  14. Used product internalName instead of Name
 -- ============================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history]
@@ -86,7 +87,7 @@ BEGIN
 		left join edw_stage.[Broker] br on acctv.BrokerId = br.id
 		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acctv.ProductId = pr.id
-		and pr.[Name] = acctvprr.ProductInternalName
+		and pr.[InternalName] = acctvprr.ProductInternalName
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acctv.BrokerId
 		WHERE acct.Stage in ('QUOTE','POLICY') --- Review BOUND transactions
 		and	acct.PolicyNumber is not null 
