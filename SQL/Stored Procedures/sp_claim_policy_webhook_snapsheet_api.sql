@@ -8,6 +8,7 @@
 -- 02-08-2025               Yunus Mohammed             3 Captured all policy transactions and replced claim_policy_seach_snapsheet_api table
 --                                                                                              with tpolicy_transaction
 -- 02-12-2025              Yunus Mohammed               4 Removed deleted vehicles form Risks object
+-- 03-13-2025				Yunus Mohammed				5 - Added vault litigation policies
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
@@ -30,6 +31,7 @@ BEGIN
 
         DROP TABLE IF EXISTS [edw_temp].[claim_policy_webhook_snapsheet_api_temp1];
         DROP TABLE IF EXISTS [edw_temp].[claim_policy_webhook_snapsheet_api_temp2];
+        DROP TABLE IF EXISTS [edw_temp].[claim_policy_webhook_snapsheet_api_temp3];
         DROP TABLE IF EXISTS edw_temp.policy_webhook_home_coverages
         DROP TABLE IF EXISTS edw_temp.policy_webhook_auto_coverages
         DROP TABLE IF EXISTS edw_temp.policy_webhook_auto_vehicle_coverages
@@ -1070,14 +1072,122 @@ isnull(
             businesses,	people,	risks, coverages, endorsements, notes, versions, deductibles, [data] ,source_system_nm,
             getdate() as create_ts , @etl_audit_sk as etl_audit_sk
         FROM [edw_temp].[claim_policy_webhook_snapsheet_api_temp2];  
-    		
+    	
 		SET @rows_affected=@@ROWCOUNT;
+
+        --Vault litigation
+        select *
+        into [edw_temp].[claim_policy_webhook_snapsheet_api_temp3]
+        from
+        (
+                select
+        null as cancelledAt,null as cancelledReason,'2020-01-01T00:00:00Z' as effectiveAt,'2026-12-31T00:00:00Z' as expirationAt,'2020-01-01T00:00:00Z' as inceptionAt, 'FPP9999VES' as policyNumber, 
+        'property' as policyType, 'Active' as [status], '2020-01-01' as [version], '0' as transaction_seq_no, 
+        '{"agencyCode":"56536","agencyName":"Vault Custom Risk Solutions, LLC","agencyType":"broker","agencyAddress":{"address1":"24 West","address2":"40th Street","city":"New York","postalCode":"10018","region":"NY","country":"US"},"agencyContactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}' as agentInformation, 
+        '{"code":"Homeowners","name":"Homeowners"}' as [product], null as reservation,'{"account":"vault_es_insurance_litigation_co"}' as underwriting, 
+        '[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Dwelling","coverageCode":"COV-A","limits":{"amount":null,"deductible":null}}]' as coverages, 
+        '[]' as endorsements,'[]' as notes,null as businesses, 
+        '[{"firstName":"Vault","middleName":null,"lastName":"Insurance","role":"policyholder","address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"contactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}]' as people, 
+        '[{"id":"FPP9999VES","code":"Homeowners","externalLocationIdentifier":"1","externalRiskIdentifier":"1","type":"home","address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"property":{"propertyType":"building_and_personal_property","propertyLocation":"policy_address"},"coverages":[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Dwelling","coverageCode":"COV-A","limits":{"amount":null,"deductible":null}}]}]' as risks,
+        '[{"effectiveAt":"2020-01-01","expirationAt":"2026-12-31","providerTypeDescription":"New"}]' as versions, 
+        '[{"deductibleType":"base","amount":null,"percent":null}]' as deductibles, 
+        'Metal' as source_system_nm, null as [data],GETDATE() as create_ts,@etl_audit_sk as etl_audit_sk
+        union 
+
+        --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        select
+        null as cancelledAt,null as cancelledReason,'2020-01-01T00:00:00Z' as effectiveAt,'2026-12-31T00:00:00Z' as expirationAt, '2020-01-01T00:00:00Z' as inceptionAt, 'FPP9999VRE' as policyNumber, 
+        'property' as policyType,'Active' as [status], '2020-01-01' as [version], '0' as transaction_seq_no, 
+        '{"agencyCode":"56536","agencyName":"Vault Custom Risk Solutions, LLC","agencyType":"broker","agencyAddress":{"address1":"24 West","address2":"40th Street","city":"New York","postalCode":"10018","region":"NY","country":"US"},"agencyContactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}' as agentInformation,
+        '{"code":"Homeowners","name":"Homeowners"}' as [product], null as reservation,'{"account":"vault_reciprocal_exchange_litigation"}' as underwriting, 
+        '[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Dwelling","coverageCode":"COV-A","limits":{"amount":null,"deductible":null}}]' as coverages, 
+        '[]' as endorsements,'[]' as notes,null as businesses,
+        '[{"firstName":"Vault","middleName":null,"lastName":"Insurance","role":"policyholder","address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"contactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}]' as people, 
+        '[{"id":"FPP9999VRE","code":"Homeowners","externalLocationIdentifier":"1","externalRiskIdentifier":"1","type":"home","address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"property":{"propertyType":"building_and_personal_property","propertyLocation":"policy_address"},"coverages":[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Dwelling","coverageCode":"COV-A","limits":{"amount":null,"deductible":null}}]}]' as risks,
+        '[{"effectiveAt":"2020-01-01","expirationAt":"2026-12-31","providerTypeDescription":"New"}]' as versions, 
+        '[{"deductibleType":"base","amount":null,"percent":null}]' as deductibles, 
+        'Metal' as source_system_nm, null as [data],GETDATE() as create_ts,@etl_audit_sk as etl_audit_sk
+        union 
+
+        select
+        null as cancelledAt,null as cancelledReason,'2020-01-01T00:00:00Z' as effectiveAt,'2026-12-31T00:00:00Z' as expirationAt, '2020-01-01T00:00:00Z' as inceptionAt, 'COV9999VES' as policyNumber, 
+        'general_liability' as policyType, 'Active' as [status], '2020-01-01' as [version],'0' as transaction_seq_no, 
+        '{"agencyCode":"56536","agencyName":"Vault Custom Risk Solutions, LLC","agencyType":"broker","agencyAddress":{"address1":"24 West","address2":"40th Street","city":"New York","postalCode":"10018","region":"NY","country":"US"},"agencyContactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}' as agentInformation, 
+        '{"code":"Excess Liability","name":"Excess Liability"}' as [product],null as reservation,'{"account":"vault_es_insurance_litigation_co"}' as underwriting, 
+        '[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Coverage","coverageCode":"COV","limits":{"amount":null,"deductible":null}}]' as coverages, 
+        '[]' as endorsements,'[]' as notes,null as businesses,
+        '[{"firstName":"Vault","middleName":null,"lastName":"Insurance","role":"policyholder","address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"contactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}]' as people, 
+        '[{"id":"COV9999VES","code":"Excess Liability","externalLocationIdentifier":"1","externalRiskIdentifier":"1","type":"general_liability","address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"generalLiabilityDetails":{"businessName":"","businessType":""},"vehicle":{},"drivers":[],"coverages":[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Coverage","coverageCode":"COV","limits":{"amount":null,"deductible":null}}]}]' as risks,
+        '[{"effectiveAt":"2020-01-01","expirationAt":"2026-12-31","providerTypeDescription":"New"}]' as versions, 
+        null as deductibles,
+        'Metal' as source_system_nm, null as [data],GETDATE() as create_ts,@etl_audit_sk as etl_audit_sk
+        union
+        select
+        null as cancelledAt,null as cancelledReason,'2020-01-01T00:00:00Z' as effectiveAt,'2026-12-31T00:00:00Z' as expirationAt, '2020-01-01T00:00:00Z' as inceptionAt, 'COV9999VRE' as policyNumber, 
+        'general_liability' as policyType, 'Active' as [status], '2020-01-01' as [version], '0' as transaction_seq_no, 
+        '{"agencyCode":"56536","agencyName":"Vault Custom Risk Solutions, LLC","agencyType":"broker","agencyAddress":{"address1":"24 West","address2":"40th Street","city":"New York","postalCode":"10018","region":"NY","country":"US"},"agencyContactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}' as agentInformation, 
+        '{"code":"Excess Liability","name":"Excess Liability"}' as [product], null  as reservation,'{"account":"vault_reciprocal_exchange_litigation"}' as underwriting, 
+        '[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Coverage","coverageCode":"COV","limits":{"amount":null,"deductible":null}}]' as coverages, 
+        '[]' as endorsements,'[]' as notes,null as businesses,
+        '[{"firstName":"Vault","middleName":null,"lastName":"Insurance","role":"policyholder","address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"contactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}]' as people, 
+        '[{"id":"COV9999VRE","code":"Excess Liability","externalLocationIdentifier":"1","externalRiskIdentifier":"1","type":"general_liability","address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"generalLiabilityDetails":{"businessName":"","businessType":""},"vehicle":{},"drivers":[],"coverages":[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Coverage","coverageCode":"COV","limits":{"amount":null,"deductible":null}}]}]' as risks,
+        '[{"effectiveAt":"2020-01-01","expirationAt":"2026-12-31","providerTypeDescription":"New"}]' as versions, 
+        null as deductibles,
+        'Metal' as source_system_nm, null as [data],GETDATE() as create_ts,@etl_audit_sk as etl_audit_sk
+        union
+        select
+        null as cancelledAt,null as cancelledReason,'2020-01-01T00:00:00Z' as effectiveAt,'2026-12-31T00:00:00Z' as expirationAt, '2020-01-01T00:00:00Z' as inceptionAt, 'AU9999VES' as policyNumber, 
+        'auto' as policyType, 'Active' as [status], '2020-01-01' as [version], '0' as transaction_seq_no, 
+        '{"agencyCode":"56536","agencyName":"Vault Custom Risk Solutions, LLC","agencyType":"broker","agencyAddress":{"address1":"24 West","address2":"40th Street","city":"New York","postalCode":"10018","region":"NY","country":"US"},"agencyContactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}' as agentInformation, 
+        '{"code":"Auto","name":"Auto"}' as [product], null as reservation,'{"account":"vault_es_insurance_litigation_co"}' as underwriting, 
+        '[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Liability","coverageCode":"LIB","limits":{"amount":null,"deductible":null}}]' as coverages, 
+        '[]' as endorsements,'[]' as notes,null as businesses,
+        '[{"firstName":"Vault","middleName":null,"lastName":"Insurance","role":"policyholder","address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"contactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}]' as people, 
+        '[{"id":"AU9999VES","externalLocationIdentifier":"1","externalRiskIdentifier":"1","code":"Auto","type":"motor","vehicle":{"make":"ABC","model":"ABC","vinNumber":"ABC","year":2020,"code":"Private Passenger Auto","codeDescription":"Private Passenger Auto"},"address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"drivers":[{"prefix":null,"firstName":"Vault","middleName":null,"lastName":"insurance","suffix":"","dateOfBirth":null,"gender":"","licenseIssuingCountry":"US","licenseNumber":""}],"coverages":[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Liability","coverageCode":"LIB","limits":{"amount":null,"deductible":null}}]}]' as risks,
+        '[{"effectiveAt":"2020-01-01","expirationAt":"2026-12-31","providerTypeDescription":"New"}]' as versions, 
+        null as deductibles,
+        'Metal' as source_system_nm, null as [data],GETDATE() as create_ts,@etl_audit_sk as etl_audit_sk
+        union
+        select
+        null as cancelledAt,null as cancelledReason,'2020-01-01T00:00:00Z' as effectiveAt,'2026-12-31T00:00:00Z' as expirationAt, '2020-01-01T00:00:00Z' as inceptionAt, 'AU9999VRE' as policyNumber, 
+        'auto' as policyType, 'Active' as [status], '2020-01-01' as [version], '0' as transaction_seq_no, 
+        '{"agencyCode":"56536","agencyName":"Vault Custom Risk Solutions, LLC","agencyType":"broker","agencyAddress":{"address1":"24 West","address2":"40th Street","city":"New York","postalCode":"10018","region":"NY","country":"US"},"agencyContactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}' as agentInformation, 
+        '{"code":"Auto","name":"Auto"}' as [product],null as reservation,'{"account":"vault_reciprocal_exchange_litigation"}' as underwriting, 
+        '[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Liability","coverageCode":"LIB","limits":{"amount":null,"deductible":null}}]' as coverages, 
+        '[]' as endorsements,'[]' as notes,null as businesses,
+        '[{"firstName":"Vault","middleName":null,"lastName":"Insurance","role":"policyholder","address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"contactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}]' as people, 
+        '[{"id":"AU9999VRE","externalLocationIdentifier":"1","externalRiskIdentifier":"1","code":"Auto","type":"motor","vehicle":{"make":"ABC","model":"ABC","vinNumber":"ABC","year":2020,"code":"Private Passenger Auto","codeDescription":"Private Passenger Auto"},"address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"drivers":[{"prefix":null,"firstName":"Vault","middleName":null,"lastName":"insurance","suffix":"","dateOfBirth":null,"gender":"","licenseIssuingCountry":"US","licenseNumber":""}],"coverages":[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Liability","coverageCode":"LIB","limits":{"amount":null,"deductible":null}}]}]' as risks,
+        '[{"effectiveAt":"2020-01-01","expirationAt":"2026-12-31","providerTypeDescription":"New"}]' as versions, 
+        null as deductibles,
+        'Metal' as source_system_nm, null as [data],GETDATE() as create_ts,@etl_audit_sk as etl_audit_sk
+    ) as a
+    where
+        not exists(select 1 from   
+        edw_integration.claim_policy_webhook_snapsheet_api cpw
+        where
+        cpw.policyNumber =a.policyNumber and cpw.effectiveAt= a.effectiveAt and cpw.transaction_seq_no= a.transaction_seq_no
+        )
+         INSERT INTO edw_integration.claim_policy_webhook_snapsheet_api
+        (
+            cancelledAt, cancelledReason, effectiveAt, expirationAt, inceptionAt, policyNumber,
+            policyType, [status], [version], transaction_seq_no, agentInformation, product, reservation, underwriting,
+            businesses,	people,	risks, coverages, endorsements, notes, versions,deductibles, [data] ,source_system_nm, create_ts, etl_audit_sk
+        )	
+	
+        SELECT distinct
+                cancelledAt, cancelledReason,	effectiveAt, expirationAt, inceptionAt, policyNumber,
+            policyType, [status], [version], transaction_seq_no, agentInformation, product,reservation, underwriting,
+            businesses,	people,	risks, coverages, endorsements, notes, versions, deductibles, [data] ,source_system_nm,
+           create_ts ,  etl_audit_sk
+        FROM [edw_temp].[claim_policy_webhook_snapsheet_api_temp3];  
+		
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.create_ts) FROM [edw_temp].[claim_policy_webhook_snapsheet_api_temp1] t1),@last_source_extract_ts);
 	
 
         DROP TABLE IF EXISTS [edw_temp].[claim_policy_webhook_snapsheet_api_temp1];
         DROP TABLE IF EXISTS [edw_temp].[claim_policy_webhook_snapsheet_api_temp2];
+        DROP TABLE IF EXISTS [edw_temp].[claim_policy_webhook_snapsheet_api_temp3];
         DROP TABLE IF EXISTS edw_temp.policy_webhook_home_coverages
         DROP TABLE IF EXISTS edw_temp.policy_webhook_auto_coverages
         DROP TABLE IF EXISTS edw_temp.policy_webhook_auto_vehicle_coverages
