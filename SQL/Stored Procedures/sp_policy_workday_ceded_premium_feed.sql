@@ -12,6 +12,8 @@
 -- 10/24/24		Yunus Mohammed				5. Added gross premium in insert
 -- 03/11/25		Yunus Mohammed				6. Ad-8745 - Used risk address instead of mailing address
 --																				Corrected accounting begin date logic and delete stmt where clause.
+--																				contribcutoffdate updated
+--																				Added run_date as param for pre-run
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_ceded_premium_feed]
@@ -180,9 +182,19 @@ BEGIN
 				accounting_date,policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,financial_category_id,coveragename,
-				amount,gross_premium_amt,null as deleteddate,null contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
+				amount,gross_premium_amt,null as deleteddate,d.subscriber_contribution_end_dt as contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
 			FROM
-				policy_workday_ceded_premium_feed_temp
+				policy_workday_ceded_premium_feed_temp cp
+				left join
+				(
+				select
+				policy_no,effective_dt,transaction_seq_no,max(subscriber_contribution_end_dt) as subscriber_contribution_end_dt
+				from
+				edw_core.tpolicy_insured where subscriber_contribution_end_dt is not null
+				group by policy_no,effective_dt,transaction_seq_no
+				) as d on cp.policy_number = d.policy_no and cp.effective_date = d.effective_dt
+				and cp.transaction_sequence = d.transaction_seq_no
+
 
 			SET @rows_affected=@@ROWCOUNT;
 

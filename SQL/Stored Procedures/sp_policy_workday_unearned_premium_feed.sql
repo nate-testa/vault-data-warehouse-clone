@@ -12,6 +12,7 @@
 -- 09/18/24		Yunus Mohammed				5. Added Throw in catch block
 -- 11/26/24		Yunus Mohammed				6. Updated Marine Boat & Yacht to Marine_Boat&Yacht
 -- 03/11/25		Yunus Mohammed				7. Ad-8745 - Used risk address instead of mailing address
+--																				Added run_date as param for pre-run
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
