@@ -7,9 +7,9 @@
 -- 01-28-2025				Yunus Mohammed				2 - Used latest transaction for policy
 -- 01-28-2025	           Sandeep Gundreddy			3- Removed source_system_sk<>1  filter to include OS data
 -- 02-07-2025              Yunus Mohammed               4 - Used trim for city, state, zip and country
--- 03-13-2025				Yunus Mohammed				5 - Added vault litigation policies
+-- 03-13-2025				Yunus Mohammed				5 - AD-8568 Added vault litigation policies
 -- ================================================================================================= 
-CREATE OR ALTER   PROCEDURE [edw_core].[sp_claim_policy_search_snapsheet_api]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_search_snapsheet_api]
 AS
 BEGIN
 
@@ -112,7 +112,7 @@ BEGIN
 			AND pt.transaction_seq_no = [pi].transaction_seq_no AND pi.primary_insured_in = 'Yes'
 		WHERE
 			pr.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability')	
-
+		
 		-- Start Insert process
 		INSERT INTO [edw_integration].[claim_policy_search_snapsheet_api]
 		(
@@ -148,6 +148,7 @@ BEGIN
 		    @etl_audit_sk
 		FROM [edw_temp].[claim_policy_search_snapsheet_api_temp1];
 		SET @rows_affected=@@ROWCOUNT;
+		
 		-- Vault litigation
 		SELECT * INTO [edw_temp].[claim_policy_search_snapsheet_api_temp2]
 		FROM
@@ -209,7 +210,7 @@ BEGIN
 						and cps.transaction_seq_no = temp.transaction_seq_no
 			)
 
-			INSERT INTO [edw_integration].[claim_policy_search_snapsheet_api]
+		INSERT INTO [edw_integration].[claim_policy_search_snapsheet_api]
 		(			
 			policyNumber,
 			policyType,
@@ -227,12 +228,12 @@ BEGIN
 			etl_audit_sk
 		)
 		SELECT
-			policy_no,
-			policy_type,
+			policyNumber,
+			policyType,
 			[status],
-			product_code,
-			policy_entities,
-			inception_date,			
+			productCode,
+			policyEntities,
+			inceptionDate,			
 			expiration_dt,
 			transaction_effective_dt,
 			transaction_seq_no,
@@ -246,7 +247,7 @@ BEGIN
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.policy_transaction_create_ts) FROM [edw_temp].[claim_policy_search_snapsheet_api_temp1] t1),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS [edw_temp].[claim_policy_search_snapsheet_api_temp1];
-		 DROP TABLE IF EXISTS [edw_temp].[claim_policy_search_snapsheet_api_temp2];
+		DROP TABLE IF EXISTS [edw_temp].[claim_policy_search_snapsheet_api_temp2];
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
