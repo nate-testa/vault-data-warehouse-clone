@@ -225,7 +225,7 @@ class SFTPUploadAllHsbFilesOperator(BaseOperator):
 
     def execute(self, context):
         if ENVIRONMENT == 'PRODUCTION':
-            REMOTE_PATH = '/prod'
+            REMOTE_PATH = '/'
             FILES_TO_LOAD = [
                 'HSP4271INF.txt',
                 'HSP4850INF.txt',
