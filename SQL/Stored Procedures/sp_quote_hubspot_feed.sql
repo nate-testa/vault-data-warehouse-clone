@@ -19,7 +19,7 @@
 -- 12/30/24		        Alberto Almario				14. VI35256 - Insured name update for entity/trust LLC
 -- 01/13/25		        Alberto Almario				15. AD8013 - Included yacht data
 -- 01/15/25		        Archtha Gudimalla			16. VI35258/AD8009 - Added new cols
--- 03/06/25		        Archtha Gudimalla			17. AD8781 - Send later broker info
+-- 03/06/25		        Archtha Gudimalla			17. AD8781 - Send latest broker info
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -57,10 +57,10 @@ BEGIN
                                                     and bvt.team_member_type = 'BusinessDevelopmentManager' and q.program_type = bvt.program_type
                                                     and  isnull(bvt.state_cd,q.risk_state_cd)=q.risk_state_cd
 		where a.broker_id <> br.broker_id
-		or a.bdm_nm <> bvt.team_member_nm
-		or a.broker_tier <> br.broker_tier
-		or a.national_agency_in <> br.national_agency_in
-		or a.broker_nm <> br.broker_nm;
+		or isnull(a.bdm_nm,'') <> isnull(bvt.team_member_nm,'')
+		or isnull(a.broker_tier,'') <> isnull(br.broker_tier,'')
+		or isnull(a.national_agency_in,'') <> isnull(br.national_agency_in,'')
+		or isnull(a.broker_nm,'') <> isnull(br.broker_nm,'');
 		
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp1;
 		
@@ -173,12 +173,11 @@ BEGIN
         left JOIN edw_core.tquote_home_additional_coverage AS tqhac ON tqhc.quote_home_coverage_sk = tqhac.quote_home_coverage_sk	
         left join edw_core.tquote_auto_policy_coverage tqapc on tqapc.quote_history_sk=h.quote_history_sk
         left join edw_core.tquote_pel_coverage tqpc on tqpc.quote_history_sk=h.quote_history_sk
-        left join quote_collection_class_type as tcct on tcct.quote_history_sk = h.quote_history_sk
-        left join edw_temp.quote_hubspot_feed_temp0 a on a.quote_no = q.quote_no
+        left join quote_collection_class_type as tcct on tcct.quote_history_sk = h.quote_history_sk 
 
         where  h.latest_transaction_in = 'Y'
-		and (greatest(q.create_ts,q.update_ts) > @last_source_extract_ts
-         or  a.quote_no is not null
+		and (greatest(q.create_ts,q.update_ts) > @last_source_extract_ts 
+		 or exists (select 'x' from edw_temp.quote_hubspot_feed_temp0 a where a.quote_no = q.quote_no)
         )
         and q.broker_id <> '0'
         and q.effective_Dt >= '01-jun-2023'  
