@@ -83,9 +83,10 @@ BEGIN
 		left join edw_stage.Product pr on acc.ProductId = pr.id
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acc.BrokerId
 		LEFT JOIN (SELECT * FROM edw_stage.AccountRaterReference WHERE ReferenceType = 'Premium') arr on arr.AccountId = acc.ID	
+		and pr.[InternalName] = arr.ProductInternalName  
 		WHERE --acct.Stage in ('QUOTE','POLICY')  and
 			acc.PolicyNumber is not null 
-		and pr.ProductLine = 'PersonalLines'  
+		and pr.ProductLine = 'PersonalLines'
 		and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
         and greatest(acc.CreatedDate,acc.UpdatedDate)>@last_source_extract_ts 
 
@@ -96,8 +97,7 @@ BEGIN
 		FROM edw_stage.Account acc 
         left join edw_stage.Accountpremium ap on ap.AccountId=acc.id 
 		INNER JOIN edw_stage.[AccountPremiumTaxAndFee] accptf on accptf.AccountPremiumId = ap.Id 
-		left join edw_stage.Product pr on acc.ProductId = pr.id
-		and pr.[InternalName] = arr.ProductInternalName  
+		left join edw_stage.Product pr on acc.ProductId = pr.id		
 		WHERE --acct.Stage in ('QUOTE','POLICY') and
 			acc.PolicyNumber is not null 
 		and pr.ProductLine = 'PersonalLines'  
