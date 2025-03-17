@@ -7,9 +7,9 @@ GO
 -- Author:		
 -- Description: This procedures loads inforce at item level 
 ---------------------------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author										|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------------------
--- 06/02/23										1. Created this procedure 
+-- 06/02/23															1. Created this procedure 
 -- 06/28/23		Architha Gudimalla				2. Modified after first run errors
 -- 07/25/23		Architha Gudimalla				3. Added TFS to internal coverages
 -- 09/20/23     Sandeep Gundreddy				4. Added PersonalLines Filter & modified ASLOB code
@@ -19,7 +19,8 @@ GO
 -- 11/16/23     Architha Gudimalla				8. Added update statement becuase of dupe issue for optional coverages
 -- 11/30/23     Sandeep Gundreddy				9. Added Aslob logic for Condo- CO
 -- 07/12/24     Architha Gudimalla				10.Added another union all to the main selet into tinternal_coverage_temp1 for legislatinve coverages
--- 11/12/24		Rushin Shah						11.Updated aslob for Clean Risk Loss Recoupment (VI-34651)    
+-- 11/12/24		Rushin Shah								11.Updated aslob for Clean Risk Loss Recoupment (VI-34651)    
+-- 03/17/25		Yunus Mohammed					13. AD-8825 Aslob_cd updated for Lux and Marine Boat and Yacht		
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tinternal_coverage]
