@@ -28,6 +28,7 @@
 -- 01/10/25		        Archtha Gudimalla			19. VI35984/AZ8173 - Excluded marine brokers
 -- 01/13/25		        Alberto Almario 			20. AD8013 - Included yacht data
 -- 01/10/25		        Archtha Gudimalla			21. VI35254/AZ8015 - Added ytd_new_business_yacht_premium_amt
+-- 03/17/25		        Archtha Gudimalla			22. VI36793/AZ8899 - Included yacht BDM
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -72,7 +73,7 @@ BEGIN
 					max(case when team_member_type = 'RenewalUnderwriter' then team_member_nm end) RenewalUnderwriter ,
 					count(distinct case when team_member_type = 'RenewalUnderwriter' then team_member_nm end) RenewalUnderwriter_distinct 
 			from edw_core.tbroker_vault_team bvt 
-            where product_nm <> 'Marine Boat & Yacht'
+            --where product_nm <> 'Marine Boat & Yacht'
 			group by broker_id --, --product_nm, state_cd, program_type
         ),
         br_summ as
