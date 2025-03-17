@@ -11,6 +11,7 @@
 -- 01/31/25     Sandeep Gundreddy           6. Added logic to load cancel, stopped, failed payments
 -- 03/02/25     Sandeep Gundreddy			7. Added logic to ignore system generated migrated transactions
 -- 03/03/25     Sandeep Gundreddy			8. Update salvage and subo expense recovery logic after discussion with Dawn. will be loaded as +ve amounts
+-- 03/13/25     Sandeep Gundreddy			9. Added logic to load migrated payments stopped in Snapsheet
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction_snapsheet]
 AS
@@ -38,6 +39,7 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.tclaim_transaction_snapsheet_temp2;
 		DROP TABLE IF EXISTS edw_temp.tclaim_transaction_snapsheet_temp3;
 		DROP TABLE IF EXISTS edw_temp.tclaim_transaction_snapsheet_temp4;
+		DROP TABLE IF EXISTS edw_temp.tclaim_transaction_snapsheet_temp5;
 
 
 		-- *** Create temp table 1 ***
@@ -196,11 +198,7 @@ and
 (a.created_at between '2025-03-02 18:53:00' and '2025-03-02 18:57:00')
 )
 ) 
-       /* This filter can be used to exclude snapsheet system generated transactions on migrated transactions(closed)
-        a.reserve_item_id not in (select a.id from edw_stage_snapsheet.financial_reserve_items a, edw_stage_snapsheet.financial_transactions b 
-where a.exposure_id in (select exposureReferenceNumber from edw_stage.migration_update_exposure_status_api) and a.amount=0
-and a.financial_transaction_id=b.id and creator_user_id is null and b.remote_identifier is null)*/
-        and a.source_system_sk=5-- to exclude migrated transactions
+and a.source_system_sk=5-- to exclude migrated transactions
 		;
 
 
@@ -334,6 +332,128 @@ and a.financial_transaction_id=b.id and creator_user_id is null and b.remote_ide
             AND fta.created_at > @last_source_extract_ts 
 		;
 
+------- *** Create temp table 4 to load stopped migrated payments***
+SELECT 
+			tc.claim_sk
+            ,tf.claim_feature_sk
+			,tc.product_sk 
+			,tc.policy_sk 
+			,tb.broker_sk 
+            ,tcu.customer_sk
+			,cp.claim_payment_sk
+			,c.claim_number
+			,e.exposure_name
+			,e.coverage_premium_class
+			,e.coverage_name
+			,pay.amount as source_paid_amt
+			,fta.created_at as transaction_ts
+            ,td1.date_sk as transaction_dt_sk
+			,NULL as reserve_method
+			,ft.id as source_transaction_id
+			,pay.financial_transaction_id
+			,pay.cost_type
+			,pay.exposure_id
+			,pay.cost_category,
+            case 
+				when pay.cost_type like '%_claim%' 		and res.reserve_method is NULL 			then 'claim'
+				when pay.cost_type like '%_adjusting%' 	and res.reserve_method is NULL 			then 'adjusting'
+				when pay.cost_type like '%_defense%' 	and res.reserve_method is NULL 			then 'defense'
+				when pay.cost_type like '%_claim%' 		and res.reserve_method = 'subrogation' 	then 'claim-subrogation'
+				when pay.cost_type like '%_claim%' 		and res.reserve_method = 'salvage' 		then 'claim-salvage'
+				when pay.cost_type like '%_claim%' 		and res.reserve_method = 'overpayment' 	then 'claim-overpayment'
+				when pay.cost_type like '%_claim%' 		and res.reserve_method = 'deductible' 	then 'claim-deductible'
+				when pay.cost_type like '%_claim%' 		and res.reserve_method = 'reinsurance' 	then 'claim-reinsurance'
+				when pay.cost_type like '%_adjusting%' 	and res.reserve_method = 'salvage'  	then 'adjusting-salvage'
+				when pay.cost_type like '%_adjusting%' 	and res.reserve_method = 'subrogation'  then 'adjusting-subrogation'
+				when pay.cost_type like '%_adjusting%' 	and res.reserve_method = 'overpayment'  then 'adjusting-overpayment'
+				when pay.cost_type like '%_adjusting%' 	and res.reserve_method = 'deductible'   then 'adjusting-deductible'
+				when pay.cost_type like '%_adjusting%' 	and res.reserve_method = 'reinsurance'  then 'adjusting-reinsurance'
+				when pay.cost_type like '%_defense%' 	and res.reserve_method = 'salvage' 		then 'defense-salvage'
+				when pay.cost_type like '%_defense%' 	and res.reserve_method = 'subrogation' 	then 'defense-subrogation'
+				when pay.cost_type like '%_defense%' 	and res.reserve_method = 'overpayment' 	then 'defense-overpayment'
+				when pay.cost_type like '%_defense%' 	and res.reserve_method = 'deductible' 	then 'defense-deductible'
+				when pay.cost_type like '%_defense%' 	and res.reserve_method = 'reinsurance' 	then 'defense-reinsurance'
+			end as claim_transaction_type_cd,
+            5 as source_system_sk ,
+            NULL AS feature_status_sk,
+            tcc.claim_cost_category_sk,
+            fta.created_at,
+            fta.code
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method is NULL and fta.code='submitted' then pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method is NULL and fta.code in ('stop','cancel','failed') then -1 * pay.amount
+				ELSE 0 END) as loss_paid_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method is NULL and fta.code='submitted' then pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method is NULL and fta.code in ('stop','cancel','failed') then -1 * pay.amount
+				ELSE 0 END) as expense_paid_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method is NULL and fta.code='submitted' then pay.amount
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method is NULL and fta.code in ('stop','cancel','failed') then -1 * pay.amount
+				ELSE 0 END) as defense_paid_amt 
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'subrogation' and fta.code='submitted' then -1 * pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'subrogation' and fta.code in ('stop','cancel','failed') then  pay.amount 
+				ELSE 0 END) as subrogation_recovery_amt 
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'salvage' and fta.code='submitted' then -1 * pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'salvage' and fta.code in ('stop','cancel','failed') then  pay.amount 
+				ELSE 0 END) as salvage_recovery_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'deductible' and fta.code='submitted' then -1 * pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'deductible' and fta.code in ('stop','cancel','failed') then  pay.amount 
+				ELSE 0 END) as deductible_recovery_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'reinsurance' and fta.code='submitted' then -1 * pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'reinsurance' and fta.code in ('stop','cancel','failed') then  pay.amount 
+				ELSE 0 END) as reinsurance_recovery_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'overpayment' and fta.code='submitted' then -1 * pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'overpayment' and fta.code in ('stop','cancel','failed') then  pay.amount 
+				ELSE 0 END) as overpayment_recovery_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'subrogation' and fta.code='submitted' then  pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'subrogation' and fta.code in ('stop','cancel','failed') then  -1 * pay.amount 
+				ELSE 0 END) as subrogation_expense_recovery_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'salvage' and fta.code='submitted' then  pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'salvage' and fta.code in ('stop','cancel','failed') then  -1 * pay.amount 
+				ELSE 0 END) as salvage_expense_recovery_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'deductible' and fta.code='submitted' then -1 * pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'deductible' and fta.code in ('stop','cancel','failed') then  pay.amount 
+				ELSE 0 END) as deductible_expense_recovery_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'reinsurance' and fta.code='submitted' then -1 * pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'reinsurance' and fta.code in ('stop','cancel','failed') then  pay.amount 
+				ELSE 0 END) as reinsurance_expense_recovery_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'overpayment' and fta.code='submitted' then -1 * pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'overpayment' and fta.code in ('stop','cancel','failed') then  pay.amount 
+				ELSE 0 END) as overpayment_expense_recovery_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'subrogation' and fta.code='submitted' then -1 * pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'subrogation' and fta.code in ('stop','cancel','failed') then  pay.amount 
+				ELSE 0 END) as subrogation_defense_recovery_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'salvage' and fta.code='submitted' then -1 * pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'salvage' and fta.code in ('stop','cancel','failed') then  pay.amount 
+				ELSE 0 END) as salvage_defense_recovery_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'deductible' and fta.code='submitted' then -1 * pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'deductible' and fta.code in ('stop','cancel','failed') then  pay.amount 
+				ELSE 0 END) as deductible_defense_recovery_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'reinsurance' and fta.code='submitted' then -1 * pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'reinsurance' and fta.code in ('stop','cancel','failed') then  pay.amount 
+				ELSE 0 END) as reinsurance_defense_recovery_amt
+			,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'overpayment' and fta.code='submitted' then -1 * pay.amount 
+				when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'overpayment' and fta.code in ('stop','cancel','failed') then  pay.amount 
+				ELSE 0 END) as overpayment_defense_recovery_amt 
+		INTO edw_temp.tclaim_transaction_snapsheet_temp4
+		FROM 
+		edw_stage_snapsheet.financial_payment_items pay 
+        LEFT JOIN edw_stage_snapsheet.financial_reserve_items res ON pay.financial_transaction_id = res.financial_transaction_id AND pay.cost_type = res.cost_type AND pay.exposure_id = res.exposure_id AND pay.cost_category = res.cost_category
+		INNER JOIN edw_stage_snapsheet.financial_transactions ft on pay.financial_transaction_id = ft.id
+		INNER JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = pay.financial_transaction_id
+		INNER JOIN edw_stage_snapsheet.claims c on c.id = pay.claim_id
+		INNER JOIN edw_stage_snapsheet.exposures e on e.claim_id = pay.claim_id and pay.exposure_id=e.id
+		INNER JOIN edw_core.tclaim tc ON tc.claim_no = c.claim_number
+		INNER JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no and e.id = tf.claim_coverage_cd
+		LEFT JOIN edw_core.tpolicy tp ON tp.policy_sk = tc.policy_sk
+		LEFT JOIN edw_core.tbroker tb ON tb.broker_id = tp.broker_id
+		LEFT JOIN edw_core.tcustomer tcu ON tcu.customer_id = tp.customer_id
+		LEFT JOIN edw_core.tdate as td1 ON td1.actual_dt = CAST(fta.created_at AS DATE)
+		LEFT JOIN edw_core.tclaim_cost_category as tcc on tcc.claim_cost_category_nm = pay.cost_category
+		LEFT JOIN edw_core.tclaim_payment as cp on  cp.claim_feature_sk=tf.claim_feature_sk and cp.settle_payee_id=ft.remote_identifier --> join on ebao payment column
+     	WHERE 1=1
+			AND fta.code in ('stop') and ft.is_historical='true' --> migrated payments
+            AND fta.created_at > @last_source_extract_ts 
+		;
+
 		
 		SELECT 
 			a.claim_sk,
@@ -386,7 +506,7 @@ and a.financial_transaction_id=b.id and creator_user_id is null and b.remote_ide
 			b.deductible_defense_recovery_amt,
 			b.reinsurance_defense_recovery_amt,
 			b.overpayment_defense_recovery_amt
-		INTO edw_temp.tclaim_transaction_snapsheet_temp4
+		INTO edw_temp.tclaim_transaction_snapsheet_temp5
 		FROM edw_temp.tclaim_transaction_snapsheet_temp2 a
 		LEFT JOIN edw_temp.tclaim_transaction_snapsheet_temp3 b
 			ON a.claim_sk = b.claim_sk
@@ -449,7 +569,61 @@ and a.financial_transaction_id=b.id and creator_user_id is null and b.remote_ide
 			b.reinsurance_defense_recovery_amt,
 			b.overpayment_defense_recovery_amt 
        FROM edw_temp.tclaim_transaction_snapsheet_temp3 b LEFT JOIN edw_core.tclaim_transaction_type ctt on b.claim_transaction_type_cd = ctt.claim_transaction_type_cd
-       WHERE code in ('cancel','stop','failed');
+       WHERE code in ('cancel','stop','failed')
+	           UNION ALL
+       SELECT 
+			claim_sk,
+			claim_feature_sk,
+			product_sk,
+			policy_sk,
+			broker_sk,
+			customer_sk,
+			transaction_dt_sk,
+			transaction_ts,
+			claim_payment_sk,
+			ctt.claim_transaction_type_sk,
+			feature_status_sk,
+			0 AS loss_reserve_amt,
+			0 AS expense_reserve_amt,
+			0 AS subrogation_recovery_reserve_amt,
+			0 AS salvage_recovery_reserve_amt,
+			0 AS salvage_recovery_expense_reserve_amt,
+			0 AS subrogation_recovery_expense_reserve_amt,
+			loss_paid_amt,
+			expense_paid_amt,
+			subrogation_recovery_amt,
+			salvage_recovery_amt,
+			salvage_expense_recovery_amt,
+			subrogation_expense_recovery_amt,
+			source_system_sk,
+			created_at,
+			claim_cost_category_sk,
+			0 as defense_reserve_amt,
+			0 as deductible_recovery_reserve_amt,
+			0 as reinsurance_recovery_reserve_amt,
+			0 as overpayment_recovery_reserve_amt,
+			0 as deductible_recovery_expense_reserve_amt,
+			0 as reinsurance_recovery_expense_reserve_amt,
+			0 as overpayment_recovery_expense_reserve_amt,
+			0 as subrogation_recovery_defense_reserve_amt,
+			0 as salvage_recovery_defense_reserve_amt,
+			0 as deductible_recovery_defense_reserve_amt,
+			0 as reinsurance_recovery_defense_reserve_amt,
+			0 as overpayment_recovery_defense_reserve_amt,
+			b.defense_paid_amt,
+			b.deductible_recovery_amt,
+			b.reinsurance_recovery_amt,
+			b.overpayment_recovery_amt,
+			b.deductible_expense_recovery_amt,
+			b.reinsurance_expense_recovery_amt,
+			b.overpayment_expense_recovery_amt,
+			b.subrogation_defense_recovery_amt,
+			b.salvage_defense_recovery_amt,
+			b.deductible_defense_recovery_amt,
+			b.reinsurance_defense_recovery_amt,
+			b.overpayment_defense_recovery_amt 
+       FROM edw_temp.tclaim_transaction_snapsheet_temp4 b LEFT JOIN edw_core.tclaim_transaction_type ctt on b.claim_transaction_type_cd = ctt.claim_transaction_type_cd
+       ;
 
 
 	-- Start Insert process
@@ -561,14 +735,14 @@ and a.financial_transaction_id=b.id and creator_user_id is null and b.remote_ide
 			ISNULL(deductible_defense_recovery_amt,0) AS deductible_defense_recovery_amt,
 			ISNULL(reinsurance_defense_recovery_amt,0) AS reinsurance_defense_recovery_amt,
 			ISNULL(overpayment_defense_recovery_amt,0) AS overpayment_defense_recovery_amt
-		FROM edw_temp.tclaim_transaction_snapsheet_temp4;
+		FROM edw_temp.tclaim_transaction_snapsheet_temp5;
 
 		--************End************
 
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(created_at) FROM edw_temp.tclaim_transaction_snapsheet_temp4),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(created_at) FROM edw_temp.tclaim_transaction_snapsheet_temp5),@last_source_extract_ts);
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
@@ -579,6 +753,7 @@ and a.financial_transaction_id=b.id and creator_user_id is null and b.remote_ide
 		DROP TABLE IF EXISTS edw_temp.tclaim_transaction_snapsheet_temp2;
 		DROP TABLE IF EXISTS edw_temp.tclaim_transaction_snapsheet_temp3;
 		DROP TABLE IF EXISTS edw_temp.tclaim_transaction_snapsheet_temp4;
+		DROP TABLE IF EXISTS edw_temp.tclaim_transaction_snapsheet_temp5;
 
 	END TRY
 	BEGIN CATCH
