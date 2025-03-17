@@ -195,7 +195,7 @@ BEGIN
 				,temp1.InsuranceScoreCode4Description
 				,temp.producer_sk
 				,temp1.InsuranceScoreLastRunDate
-				,temp1.premium_rater_version
+				,temp.premium_rater_version
 			FROM edw_temp.tquote_history_temp1 temp
 			LEFT JOIN edw_temp.tquote_history_temp3 tfs on temp.id = tfs.id
 			LEFT JOIN edw_temp.tquote_history_temp2 temp1 on temp.id = temp1.AccountId 
