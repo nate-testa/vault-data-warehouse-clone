@@ -7,6 +7,7 @@
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- 05/14/24		Architha Gudimalla				2. Corrected errors
 -- 05/20/24		Architha Gudimalla				3. Added update for latest_transaction_in
+-- 03/14/25		Yunus Mohammed			     4.  Ad-8848 Added premium_rater_version
 -- ===================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history_wip]
@@ -70,7 +71,8 @@ BEGIN
 				nullif(trim(pr.ProductCode),'') product_cd,
 				usr.name uw_nm,'' note,
                 acc.state, acc.isrenewal, null BindDate, null ReferredByUserId,
-				pd.producer_sk 
+				pd.producer_sk ,
+				arr.[Version] as premium_rater_version
 		INTO edw_temp.tquote_history_temp1 --select acct.* 
 		FROM edw_stage.Account acc   
         left join edw_stage.Accountpremium ap on ap.AccountId=acc.id  
@@ -80,6 +82,7 @@ BEGIN
 		left join edw_stage.Insured ins on acc.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acc.ProductId = pr.id
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acc.BrokerId
+		LEFT JOIN (SELECT * FROM edw_stage.AccountRaterReference WHERE ReferenceType = 'Premium') arr on arr.AccountId = acc.ID	
 		WHERE --acct.Stage in ('QUOTE','POLICY')  and
 			acc.PolicyNumber is not null 
 		and pr.ProductLine = 'PersonalLines'  
@@ -94,6 +97,7 @@ BEGIN
         left join edw_stage.Accountpremium ap on ap.AccountId=acc.id 
 		INNER JOIN edw_stage.[AccountPremiumTaxAndFee] accptf on accptf.AccountPremiumId = ap.Id 
 		left join edw_stage.Product pr on acc.ProductId = pr.id
+		and pr.[InternalName] = arr.ProductInternalName  
 		WHERE --acct.Stage in ('QUOTE','POLICY') and
 			acc.PolicyNumber is not null 
 		and pr.ProductLine = 'PersonalLines'  
@@ -191,6 +195,7 @@ BEGIN
 				,temp1.InsuranceScoreCode4Description
 				,temp.producer_sk
 				,temp1.InsuranceScoreLastRunDate
+				,temp1.premium_rater_version
 			FROM edw_temp.tquote_history_temp1 temp
 			LEFT JOIN edw_temp.tquote_history_temp3 tfs on temp.id = tfs.id
 			LEFT JOIN edw_temp.tquote_history_temp2 temp1 on temp.id = temp1.AccountId 
@@ -254,6 +259,7 @@ BEGIN
 		   ,insurance_score_desc4
 		   ,producer_sk
 		   ,insurance_score_last_run_dt
+		   ,premium_rater_version
 		   ) 
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -299,6 +305,7 @@ BEGIN
 				,Source.InsuranceScoreCode4Description
 				,Source.producer_sk
 				,Source.InsuranceScoreLastRunDate
+				,Source.premium_rater_version
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -357,6 +364,7 @@ BEGIN
         Target.insurance_score_desc4 				= Source.InsuranceScoreCode3Description , 
         Target.producer_sk 							= Source.producer_sk , 
         Target.insurance_score_last_run_dt 			= Source.InsuranceScoreLastRunDate , 
+		Target.premium_rater_version = Source.premium_rater_version,
         Target.update_ts 							= getdate()
 		; 
 
