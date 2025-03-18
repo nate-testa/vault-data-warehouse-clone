@@ -8,7 +8,7 @@ from airflow.operators.python_operator import PythonOperator
 from vault_edw_HTML_format import get_sp_error_data_HTML, get_HTML_on_vault_format
 from LC360_file_processing import process_all_files
 
-to_email = "stefanie.vachereau@vault.insurance; architha.gudimalla@vault.insurance; hernando.gonzalez.garcia@vault.insurance; alberto.valbuena@vault.insurance"
+to_email = "stefanie.vachereau@vault.insurance; itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
 cc_email = ""
 
