@@ -162,6 +162,12 @@ class AzureSQLConnector:
             connection = pyodbc.connect(connection_string)
             cursor = connection.cursor()
 
+            # Preprocess risk_state and state columns: trim + uppercase
+            if 'risk_state' in data_frame.columns:
+                data_frame['risk_state'] = data_frame['risk_state'].astype(str).str.strip().str.upper()
+            if 'state' in data_frame.columns:
+                data_frame['state'] = data_frame['state'].astype(str).str.strip().str.upper()
+
             # Rename columns that require special handling
             data_frame = data_frame.rename(columns={
                 'non_profit_d&o_liability_coverage': '[non_profit_d&o_liability_coverage]',
