@@ -8,7 +8,7 @@ from airflow.operators.python_operator import PythonOperator
 from vault_edw_HTML_format import get_sp_error_data_HTML, get_HTML_on_vault_format
 from LC360_file_processing import process_all_files
 
-to_email = "itdatateam@vault.insurance"
+to_email = "stefanie.vachereau@vault.insurance; architha.gudimalla@vault.insurance; hernando.gonzalez.garcia@vault.insurance; alberto.valbuena@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
 cc_email = ""
 
@@ -70,8 +70,15 @@ with DAG(
         dag=dag,
     )
 
+    send_lc360_email = EmailOperator(
+            task_id='send_lc360_email',
+            to=to_email,
+            subject='Airflow - LC360 file processed successfully',
+            html_content=get_HTML_on_vault_format('The LC360 file has been processed successfully',''),
+        )
+
     end = DummyOperator(
         task_id='end',
     )
 
-start >> process_lc360_files >> end
+start >> process_lc360_files >> send_lc360_email >> end
