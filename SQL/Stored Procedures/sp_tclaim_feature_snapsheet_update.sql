@@ -1,9 +1,11 @@
 -- ========================================================================================================
--- Description: This procedures updates tclaim_feature snapsheet data
+-- Description: This procedures updates tclaim_feature snapsheet data (item_sk, vehicle_coverage_sk and claim_feature_status)
 -----------------------------------------------------------------------------------------------------------
--- Change date				|Author						|Change Description
+-- Change date				|Author						                |Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 03/18/2025				Yunus Mohammd				1. Created this procedure
+--                                                                                              item_sk and vehicle_coverage_sk from another exposure
+--                                                                                              claim_feature_status also updated
 
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet_update]
