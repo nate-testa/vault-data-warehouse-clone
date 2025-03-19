@@ -81,7 +81,7 @@ BEGIN
 
 		-- Insert and Update treconciliation table
 		MERGE [edw_core].[treconciliation] AS Target
-		USING edw_temp.treconciliation_snapheeet_temp1 AS Source
+		USING edw_temp.treconciliation_snapsheet_temp1 AS Source
 		ON Target.transaction_start_dt = Source.transaction_start_dt
 	    AND Target.transaction_end_dt = Source.transaction_end_dt
 		AND Target.datamart_nm = Source.datamart_nm
