@@ -16,6 +16,7 @@ GO
 -- 09/18/24		Architha Gudimalla		        6. Updated term_no
 -- 11/01/24		Architha Gudimalla		        7. AD7593 - Added update to fix null EffectiveDate/ExpirationDate in Metal
 -- 03/03/25		Hernando Gonzalez		        8. AD8316 - Added competitor_carrier_nm, close_reason_other_desc
+-- 03/20/25		Hernando Gonzalez				9. Included Target_Account
 -- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -214,6 +215,7 @@ BEGIN
 							end term_no
 				,tmp1.SubmissionCloseReasonCarrier as competitor_carrier_nm
 				,tmp1.SubmissionCloseReasonDetailOther as close_reason_other_desc
+				,tmp1.TargetAccount as target_account
 				--select *
 			FROM 
 				edw_temp.tquote_temp1 tmp1
@@ -271,6 +273,7 @@ BEGIN
 		   ,term_no
 		   ,competitor_carrier_nm
 		   ,close_reason_other_desc
+		   ,target_account
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -307,6 +310,7 @@ BEGIN
 				,source.term_no
 				,source.competitor_carrier_nm
 				,source.close_reason_other_desc
+				,source.target_account
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -341,7 +345,8 @@ BEGIN
 		Target.close_reason_desc						= source.close_reason_desc,
 		Target.competitor_carrier_nm					= source.competitor_carrier_nm,
 		Target.close_reason_other_desc 			= source.close_reason_other_desc,
-        Target.update_ts 					= getdate()
+        Target.update_ts 					= getdate(),
+		Target.target_account				= source.target_account
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
