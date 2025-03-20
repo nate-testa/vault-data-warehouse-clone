@@ -38,6 +38,21 @@ def check_treconciliation_and_send_email(**kwargs):
             dag=kwargs['dag'],
         ).execute(context=kwargs)
 
+def check_snapsheet_edw_claim_loss_reconciliation_and_send_email(**kwargs):
+    sql_qry = """
+                SELECT * FROM edw_temp.snapsheet_edw_claim_loss_reconciliation
+              """
+    mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
+    result = mssql_hook.get_first(sql_qry)
+    if result is not None:
+        EmailOperator(
+            task_id='send_email_snapsheet_edw_claim_loss_reconciliation',
+            to=to_email,
+            subject='Airflow - Report - snapsheet_edw_claim_loss_reconciliation Errors',
+            html_content=get_vault_data_HTML(sql_qry,'There are reconciliation errors on table edw_temp.snapsheet_edw_claim_loss_reconciliation. Please review the details below.'),
+            dag=kwargs['dag'],
+        ).execute(context=kwargs)
+
 def check_tvalidation_and_send_email(**kwargs):
     sql_qry = """
                 SELECT tr.validation_result_sk ,ts.validation_sql_sk ,process_run_start_ts,process_run_end_ts ,ts.validation_sql_desc , tr.source_value, tr.target_value 
@@ -384,6 +399,7 @@ with DAG(
             'sp_tclaim_snapsheet',
             'sp_ebao_tclaim_onetime_datafix',
             'sp_tclaim_feature_snapsheet',
+            'sp_tclaim_feature_itemsk_status_update',
             'sp_tclaim_payment_snapsheet',
             'sp_tclaim_payment_ebao_payment_status_update',
             'sp_tclaim_transaction_snapsheet',
@@ -392,7 +408,9 @@ with DAG(
             'sp_tclaim_task_snapsheet',
             'sp_update_tclaim_snapsheet',
             'sp_update_tclaim_feature_snapsheet',
-            'sp_tpolicy_update_lifetime_claims'
+            'sp_tpolicy_update_lifetime_claims',
+            'sp_reconciliation_claim_snapsheet',
+            'sp_reconciliation_snapsheet'
             ]
 
         operators = []
@@ -413,6 +431,13 @@ with DAG(
             dag=dag,
         )
 
+        snapsheet_edw_claim_loss_reconciliation_email = PythonOperator(
+            task_id='snapsheet_edw_claim_loss_reconciliation_email',
+            python_callable=check_snapsheet_edw_claim_loss_reconciliation_and_send_email,
+            provide_context=True,
+            dag=dag,
+        )
+
         send_claim_email = EmailOperator(
             task_id='send_claim_email',
             to=to_email,
@@ -423,7 +448,7 @@ with DAG(
         for i in range(len(operators) - 1):
             operators[i] >> operators[i + 1]
 
-        operators[-1] >> treconciliation_email >> send_claim_email
+        operators[-1] >> treconciliation_email >> snapsheet_edw_claim_loss_reconciliation_email >> send_claim_email
 
 
     with TaskGroup("datamart_group") as datamart_group:
@@ -469,6 +494,7 @@ with DAG(
 
         reference_group_items = [
             'sp_tcustomer',
+            'sp_tcustomer_onetime_litigation',
             'sp_tuser',
             'sp_tinternal_coverage',
             'sp_ttax_fee_surcharge',
@@ -500,7 +526,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(reference_group_items, 'All stored procedures executed successfully for all the Reference tables'),
         )
 
-        operators[0] >> operators[1] >> operators[2] >> new_internal_coverage_cd_email >> operators[3] >> operators[4] >> send_reference_email
+        operators[0] >> operators[1] >> operators[2] >> operators[3] >> new_internal_coverage_cd_email >> operators[4] >> operators[5] >> send_reference_email
 
 
     with TaskGroup("broker_group") as broker_group:
@@ -542,6 +568,7 @@ with DAG(
 
         policy_group_items = [
             'sp_tpolicy',
+            'sp_tpolicy_onetime_litigation',
             'sp_tpolicy_update_non_renwal_billing',
             'sp_tpolicy_history', 
             'sp_tpolicy_insured', 
