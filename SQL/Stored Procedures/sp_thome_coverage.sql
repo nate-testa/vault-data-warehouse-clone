@@ -24,6 +24,7 @@
 -- 12/02/24		Yunus Mohammed					19 AD-7834 Added new fields
 -- 01/17/25		Yunus Mohammed					20.  AD-8225 Roundoff ReinsuranceTotalTIV value
 -- 01/22/25		Alberto Almario					21. Added new column fenced_pool_in
+-- 03/19/25		Hernando Gonzalez				22. Added new columns wildfire_risk_score, wildfire_risk_class
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -154,7 +155,7 @@ BEGIN
 				[contents_limit_100_pc_value_amt], [loss_of_use_100_pc_value_amt], facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt,
 				facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, 
 				current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
-				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,
+				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 				
 			)
@@ -312,6 +313,8 @@ BEGIN
 				tthc.NumberOfBathrooms as no_of_bathrooms,tthc.NumberOfFireplaces as no_of_fireplaces,
 				tthc.FoundationType as foundation_type,tthc.WaivedInflationFactor as waived_inflation_factor_in,
 				tthc.FencedPool as fenced_pool_in,
+				tthc.WildfireRiskScore as wildfire_risk_score,
+				tthc.WildfireRiskClass as wildfire_risk_class,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_coverage_temp1 AS tthc
