@@ -27,9 +27,13 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200));
 
+		declare @max_transaction_ts datetime2(6)
+
+        select @max_transaction_ts = max(transaction_ts) from edw_core.tclaim_transaction
+
 		IF (CAST(@last_source_extract_ts AS DATE) = CAST('1900-01-01' AS DATE))
 		BEGIN
-			SELECT @last_source_extract_ts=CAST(MIN(post_date) AS DATE) FROM edw_stage.t_clm_reserve_his
+			SELECT @last_source_extract_ts='2025-02-10'
 		END
 		-- Create temp table
 		DROP TABLE IF EXISTS edw_temp.treconciliation_snapsheet_temp1
@@ -47,8 +51,8 @@ BEGIN
         cast(fta.created_at as date) as transaction_ts,
         sum(
         case  
-                when ft.financial_transaction_type='indemnity' and ft.stage in ('submitted','cleared','issued') then pay.amount 
-                when ft.financial_transaction_type='recovery' and ft.stage in ('submitted','cleared','issued') then pay.amount * -1
+                when ft.financial_transaction_type='indemnity' and fta.code='submitted' then pay.amount 
+                when ft.financial_transaction_type='indemnity' and ft.stage in ('stop','cancel','failed') then pay.amount * -1
             else 0
         end	
         ) as loss	
@@ -58,7 +62,7 @@ BEGIN
         INNER JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = pay.financial_transaction_id
         where
         fta.code in ('submitted','cancel','stop','failed')
-            AND cast(fta.created_at as date)  BETWEEN CAST(@last_source_extract_ts AS DATE) AND CAST(GETDATE() AS DATE)
+            AND cast(fta.created_at as date)  BETWEEN @last_source_extract_ts AND @max_transaction_ts
         group by cast(fta.created_at as date)
 
         ) as [source]
@@ -67,15 +71,15 @@ BEGIN
         SELECT
         CAST(transaction_ts AS DATE) AS transaction_ts,
         SUM(
-            loss_paid_amt + expense_paid_amt + defense_paid_amt +	
+            loss_paid_amt + expense_paid_amt + defense_paid_amt /*+	
             subrogation_recovery_amt+salvage_recovery_amt+ salvage_expense_recovery_amt+ subrogation_expense_recovery_amt+deductible_recovery_amt+
             reinsurance_recovery_amt+overpayment_recovery_amt+deductible_expense_recovery_amt+
             reinsurance_expense_recovery_amt+overpayment_expense_recovery_amt+subrogation_defense_recovery_amt+
             salvage_defense_recovery_amt+deductible_defense_recovery_amt+
-            reinsurance_defense_recovery_amt+overpayment_defense_recovery_amt
+            reinsurance_defense_recovery_amt+overpayment_defense_recovery_amt*/
         ) AS loss
         FROM edw_core.tclaim_transaction
-        WHERE CAST(transaction_ts AS DATE) BETWEEN CAST(@last_source_extract_ts AS DATE) AND CAST(GETDATE() AS DATE) AND source_system_sk=5
+        WHERE CAST(transaction_ts AS DATE) > @last_source_extract_ts AND source_system_sk=5
         GROUP BY CAST(transaction_ts AS DATE)
         ) AS target ON [source].transaction_ts=[target].transaction_ts
 
@@ -110,7 +114,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=CAST(DATEADD(DAY, -90, GETDATE()) AS DATE);
+		SET @new_last_source_extract_ts=CAST(DATEADD(DAY, -15, GETDATE()) AS DATE);
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts
 		
 		-- Update audit table
