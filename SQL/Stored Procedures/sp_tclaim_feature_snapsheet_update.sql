@@ -31,14 +31,19 @@ BEGIN
         drop table if exists edw_temp.tclaim_feature_snapsheet_update_temp1;
 		drop table if exists edw_temp.tclaim_feature_snapsheet_update_temp2;		
 
-        select *
+        select [source].rn,
+        [target].claim_no,[target].claim_feature_sk,[source].item_sk,[source].vehicle_coverage_sk,
+        greatest([source].create_ts,[source].update_ts) AS greatest_created_updated
         into edw_temp.tclaim_feature_snapsheet_update_temp1
         from
         (
-        select ROW_NUMBER()over(partition by a.claim_no order by a.claim_no) as rn,
-        b.claim_no,b.claim_feature_sk,a.item_sk,a.vehicle_coverage_sk,greatest(a.create_ts,a.update_ts) AS greatest_created_updated
-        from
-        edw_core.tclaim_feature  a
+            SELECT ROW_NUMBER()over(partition by claim_no order by claim_no) as rn, *
+            FROM
+            edw_core.tclaim_feature
+            where
+            (item_sk is not null or vehicle_coverage_sk is not null)
+            
+        ) as [source]
         inner join 
         (
             select claim_sk,claim_feature_sk,claim_no,item_sk,vehicle_coverage_sk
@@ -47,15 +52,10 @@ BEGIN
             source_system_sk!=1
             and product_sk = 3
             and (item_sk is null or vehicle_coverage_sk is null)
-        ) as b
-        on a.claim_sk = b.claim_sk and a.claim_feature_sk != b.claim_feature_sk
-        where
-            greatest(a.create_ts,a.update_ts) > @last_source_extract_ts and
-            (a.item_sk is not null or a.vehicle_coverage_sk is not null)
-
-        ) as a
-        where
-            rn = 1
+        ) as [target]
+        on [source].claim_sk = [target].claim_sk and [source].claim_feature_sk != [target].claim_feature_sk
+        where  
+            [source].rn = 1
 
         update [target]
         set
