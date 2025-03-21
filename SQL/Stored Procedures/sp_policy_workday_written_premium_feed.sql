@@ -15,9 +15,11 @@
 -- 10/04/24		Yunus Mohammed				7. Added condo in subcategory for commission
 -- 10/24/24		Yunus Mohammed				8. Added Marine Boat & Yacht in Commission
 -- 11/26/24		Yunus Mohammed				9. Updated Marine Boat & Yacht to Marine_Boat&Yacht
+-- 03/11/25		Yunus Mohammed				10.  Corrected proc running for past months
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
+@run_date DATETIME = null
 AS
 BEGIN
 	DECLARE @ProcedureName NVARCHAR(120)
@@ -37,11 +39,16 @@ BEGIN
 		DECLARE @year_month INT
 		DECLARE @acounting_date_sk int,@last_day_month date
 
+		IF @run_date IS NOT NULL
+		BEGIN
+			SET @current_date = @run_date
+		END
+
 		DECLARE cur_main CURSOR FOR
 		SELECT yearmonth
 		FROM edw_core.tdate
 		WHERE
-			actual_dt >= CAST(@last_source_extract_ts AS DATE)
+			actual_dt > CAST(@last_source_extract_ts AS DATE)
 			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
 		GROUP BY yearmonth
 		ORDER BY yearmonth
@@ -163,7 +170,7 @@ BEGIN
 				tp.insured_nm AS [insured_name],
 				tp.mailing_address_line1 AS [address],
 				tp.mailing_address_county_nm AS [county],
-				tp.mailing_address_city_nm AS [city],
+				 tp.mailing_address_city_nm AS [city],
 				tp.risk_state_cd AS [RISK_STATE],
 				tp.mailing_address_zip_cd AS [zip],
 				NULL AS fire_protection,
@@ -188,7 +195,7 @@ BEGIN
 				INNER JOIN edw_core.tdate tdpro on tdpro.date_sk=tpt.transaction_dt_sk
 				INNER JOIN edw_core.tpolicy_transaction_type tptt on tptt.policy_transaction_type_sk=tpt.policy_transaction_type_sk
 				INNER JOIN edw_core.tbroker tb on tb.broker_sk=tpt.broker_sk
-				INNER JOIN edw_core.tproduct tprd on tprd.product_sk = tpt.product_sk
+				INNER JOIN edw_core.tproduct tprd on tprd.product_sk = tpt.product_sk				
 				WHERE
 				tpt.accouting_month_sk=@acounting_date_sk
 				and tpt.commission_amt!=0

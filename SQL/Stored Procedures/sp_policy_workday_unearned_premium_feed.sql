@@ -11,9 +11,12 @@
 -- 02/14/24		Yunus Mohammed				4. Removed distinct and added check from tpolicy_history table
 -- 09/18/24		Yunus Mohammed				5. Added Throw in catch block
 -- 11/26/24		Yunus Mohammed				6. Updated Marine Boat & Yacht to Marine_Boat&Yacht
+-- 03/11/25		Yunus Mohammed				7. Corrected proc running for past months
+--																				Added run_date as param for pre-run
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
+@run_date DATETIME = null
 AS
 BEGIN
 	DECLARE @ProcedureName NVARCHAR(120)
@@ -33,11 +36,16 @@ BEGIN
 		DECLARE @year_month INT
 		DECLARE @acounting_date_sk int,@last_day_month date
 
+		IF @run_date IS NOT NULL
+		BEGIN
+			SET @current_date = @run_date
+		END
+
 		DECLARE cur_main CURSOR FOR
 		SELECT yearmonth
 		FROM edw_core.tdate
 		WHERE
-			actual_dt >= CAST(@last_source_extract_ts AS DATE)
+			actual_dt > CAST(@last_source_extract_ts AS DATE)
 			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
 		GROUP BY yearmonth
 		ORDER BY yearmonth
@@ -91,9 +99,9 @@ BEGIN
 				tb.broker_nm AS agency_name,
 				NULL AS number_of_installments,
 				tp.insured_nm AS insured_name,
-				tp.mailing_address_line1 AS [address],
-				tp.mailing_address_county_nm AS county,
-				tp.mailing_address_city_nm  AS city,
+				tp.mailing_address_line1 AS [address],	
+				tp.mailing_address_county_nm  AS county,
+				tp.mailing_address_city_nm AS city,
 				tp.risk_state_cd AS risk_state,
 				tp.mailing_address_zip_cd AS zip,
 				NULL AS fire_protection,
