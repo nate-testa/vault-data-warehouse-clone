@@ -12,6 +12,7 @@ GO
 -- ---------------------------------------------------------------------------------------------------
 -- 01-03-2025				Alberto Almario				1. Add snasheet mapping to causeOfLoss column.
 -- 01-21-2025               Rushin Shah                 2. Updated the claim amount field logic
+-- 03-21-2025               Sandeep Gundreddy           3. Updated source_system_sk filter to include snapsheet claims
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_property_feed]
 AS
@@ -141,7 +142,7 @@ BEGIN
                     FROM edw_core.tclaim_transaction
                     GROUP BY claim_sk
                 ) AS ct ON c.claim_sk = ct.claim_sk
-            WHERE c.source_system_sk = 3
+            WHERE c.source_system_sk in (3,5)
             AND cast(ct.transaction_ts as datetime2(7)) > @last_source_extract_ts
         )
 
