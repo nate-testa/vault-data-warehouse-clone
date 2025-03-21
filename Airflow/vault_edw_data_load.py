@@ -410,7 +410,7 @@ with DAG(
             'sp_update_tclaim_feature_snapsheet',
             'sp_tpolicy_update_lifetime_claims',
             'sp_reconciliation_claim_snapsheet',
-            'sp_reconciliation_snapsheet'
+            'sp_treconciliation_snapsheet'
             ]
 
         operators = []
