@@ -28,6 +28,7 @@ GO
 -- 03/21/24		Architha Gudimalla		        17. Added rewritten policy as prior policy no and rewritten_in
 -- 09/05/24		Architha Gudimalla		        18. Added term_no
 -- 09/18/24		Architha Gudimalla		        19. Updated term_no
+-- 03/20/25		Hernando Gonzalez				20. Included Target_Account
 -- ======================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tpolicy]
@@ -187,6 +188,7 @@ BEGIN
 							 	else 1
 							end term_no
 				--select *
+				,acc.TargetAccount as target_account
 			FROM 
 				edw_temp.tpolicy_temp1 tmp1
 				INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = tmp1.Id
@@ -240,6 +242,7 @@ BEGIN
            ,etl_audit_sk
 		   ,rewritten_in
 		   ,term_no
+		   ,target_account
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, Source.ExpirationDate, Source.BrokerId, Source.customer_id, 
@@ -270,6 +273,7 @@ BEGIN
 				getdate(), getdate(), @etl_audit_sk
 				,source.rewritten_in
 				,term_no
+				,source.target_account
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -297,7 +301,8 @@ BEGIN
 		Target.billingaccount_sk			= source.billingaccount_sk, 
 		Target.source_system_sk				= source.source_system_sk, 
         Target.update_ts 					= getdate(),
-        Target.rewritten_in 				= source.rewritten_in
+        Target.rewritten_in 				= source.rewritten_in,
+		Target.target_account				= source.target_account
 		;
 
 		SET @rows_affected=@@ROWCOUNT;

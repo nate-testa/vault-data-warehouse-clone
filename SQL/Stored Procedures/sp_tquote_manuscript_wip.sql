@@ -1,13 +1,14 @@
 ﻿-- ========================================================================================================================================
 -- Description: This procedures insert and update info related to Quote Manuscript
 ---------------------------------------------------------------------------------------------------------------------------------------
--- Change date 				|Author							|	Change Description
+-- Change date 				|Author												|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 10/05/2024				Hernando Gonzalez Garcia		1. Created this procedure 
--- 05/16/2024				Architha Gudimalla 				2. Updated after errors 
--- 09/07/24					Yunus Mohammed					3. Use ValueBlob if Value field is null for manuscript_title an desc
--- 08/22/24					Yunus Mohammed					4. Used IncludeManuscript indicator
--- 03/03/25					Alberto Almario					5. Change JOIN with tquote_history table
+-- 05/16/2024				Architha Gudimalla 						2. Updated after errors 
+-- 09/07/24					Yunus Mohammed							3. Use ValueBlob if Value field is null for manuscript_title an desc
+-- 08/22/24					Yunus Mohammed							4. Used IncludeManuscript indicator
+-- 03/03/25					Alberto Almario								5. Change JOIN with tquote_history table
+-- 03/10/25					Yunus Mohammed							6. Merge join updated
 -- ======================================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_manuscript_wip]
 AS
@@ -102,14 +103,12 @@ BEGIN
 		        [edw_temp].[tquote_manuscript_wip_temp1]
 		) AS SOURCE
 		ON
-		    TARGET.quote_no = SOURCE.quote_no AND		    
-		    TARGET.expiration_dt = SOURCE.expiration_dt AND
-		    TARGET.quote_history_sk = SOURCE.quote_history_sk
-
+		    TARGET.quote_no = SOURCE.quote_no AND
+			TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
+			TARGET.manuscript_seq_no = Source.manuscript_seq_no
 		WHEN MATCHED THEN
 		    UPDATE SET
-				TARGET.effective_dt = SOURCE.effective_dt,
-		        TARGET.transaction_seq_no = SOURCE.transaction_seq_no,
+				TARGET.effective_dt = SOURCE.effective_dt,        
 		        TARGET.manuscript_no = SOURCE.manuscript_no,
 		        TARGET.manuscript_title = SOURCE.manuscript_title,
 		        TARGET.manuscript_desc = SOURCE.manuscript_desc,
