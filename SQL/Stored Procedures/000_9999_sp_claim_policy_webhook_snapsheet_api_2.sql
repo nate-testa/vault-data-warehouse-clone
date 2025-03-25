@@ -1,0 +1,2 @@
+select *, LEN([limits.amount]) from edw_temp.policy_webhook_auto_coverages;
+select *, LEN([limits.amount]) from edw_temp.policy_webhook_auto_coverages where [limits.amount] is not null and LEN([limits.amount]) != 0 ;
