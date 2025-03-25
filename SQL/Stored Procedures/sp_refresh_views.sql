@@ -2,6 +2,10 @@
 -- Author:      Hernando Gonzalez
 -- Create Date: 10/07/2024
 -- Description: This procedure refreshes a list of views
+-----------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+-----------------------------------------------------------------------------------------------------------------------------
+-- 03/25/25		Hernando Gonzalez				1. AD8972 | Included vhome_coverage_ext, vissterritory, vnfppolicy, vquote_home_coverage_ext, vredzone, vticoplacecode
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_refresh_views]
 AS
