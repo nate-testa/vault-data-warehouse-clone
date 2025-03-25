@@ -32,6 +32,7 @@ BEGIN
 	EXECUTE sp_refreshview '[edw_core].[vquote_home_coverage_ext]';
 	EXECUTE sp_refreshview '[edw_core].[vredzone]';
 	EXECUTE sp_refreshview '[edw_core].[vticoplacecode]';
+    EXECUTE sp_refreshview '[edw_core].[vissterritory]';
 
     SET NOCOUNT OFF;
 END
