@@ -24,7 +24,7 @@ BEGIN
     EXECUTE sp_refreshview '[edw_core].[vlc360]'; 
 	EXECUTE sp_refreshview '[edw_core].[vhome_coverage_ext]';
 	EXECUTE sp_refreshview '[edw_core].[vissterritory]';
-	EXECUTE sp_refreshview '[edw_core].[vnfppolicy] ';
+	EXECUTE sp_refreshview '[edw_core].[vnfppolicy]';
 	EXECUTE sp_refreshview '[edw_core].[vquote_home_coverage_ext]';
 	EXECUTE sp_refreshview '[edw_core].[vredzone]';
 	EXECUTE sp_refreshview '[edw_core].[vticoplacecode]';
