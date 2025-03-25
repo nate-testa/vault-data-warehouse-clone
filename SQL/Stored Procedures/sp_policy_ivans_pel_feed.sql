@@ -224,6 +224,7 @@ BEGIN
                     WHERE pv.policy_no = phf.policy_no
                     AND pv.effective_dt = phf.effective_dt
                     AND pv.transaction_seq_no = phf.transaction_seq_no
+                    AND pv.vehicle_deleted_in = 'No'
                     FOR JSON PATH, INCLUDE_NULL_VALUES
                 ) AS PEL_Vehicles,
                 (
