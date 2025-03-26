@@ -18,6 +18,6 @@ update_ts                       datetime NOT NULL,
 etl_audit_sk              		int NOT NULL,
 source_system_sk                int NOT NULL,
 CONSTRAINT pk_tcommercial_quote_quota_share PRIMARY KEY (commercial_quote_quota_share_sk),
-CONSTRAINT uidx_tcommercial_quote_quota_share_quote_no_effective_dt_transaction_seq_no_quota_share_unique_id UNIQUE (quote_no,effective_dt,transaction_seq_no, quota_share_unique_id),
+CONSTRAINT uidx_tcommercial_quote_quota_share_quote_no_effective_dt_transaction_seq_no_commercial_quote_tower_sk_quota_share_unique_id UNIQUE (quote_no,effective_dt,transaction_seq_no, quota_share_unique_id,commercial_quote_tower_sk),
 CONSTRAINT fk_tcommercial_quote_quota_share_commercial_quote_history_sk FOREIGN KEY (commercial_quote_history_sk) REFERENCES  edw_commercial.tcommercial_quote_history(commercial_quote_history_sk)
 );

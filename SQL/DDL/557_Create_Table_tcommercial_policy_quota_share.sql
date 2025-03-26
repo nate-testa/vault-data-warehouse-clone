@@ -20,6 +20,6 @@ update_ts                       datetime NOT NULL,
 etl_audit_sk              		int NOT NULL,
 source_system_sk                int NOT NULL
 CONSTRAINT pk_tcommercial_policy_quota_share PRIMARY KEY (commercial_policy_quota_share_sk),
-CONSTRAINT uidx_tcommercial_policy_quota_share_policy_no_effective_dt_transaction_seq_no_quota_share_unique_id UNIQUE (policy_no,effective_dt,transaction_seq_no, quota_share_unique_id),
+CONSTRAINT uidx_tcommercial_policy_quota_share_policy_no_effective_dt_transaction_seq_no_commercial_policy_tower_sk_quota_share_unique_id UNIQUE (policy_no,effective_dt,transaction_seq_no, commercial_policy_tower_sk,quota_share_unique_id),
 CONSTRAINT fk_tcommercial_policy_quota_share_commercial_policy_history_sk FOREIGN KEY (commercial_policy_history_sk) REFERENCES  edw_commercial.tcommercial_policy_history(commercial_policy_history_sk)
 );
