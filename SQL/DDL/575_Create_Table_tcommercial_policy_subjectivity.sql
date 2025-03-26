@@ -1,4 +1,4 @@
-CREATE TABLE edw_commercial.commercial_policy_subjectivity
+CREATE TABLE edw_commercial.tcommercial_policy_subjectivity
 (
 commercial_policy_subjectivity_sk       int IDENTITY(1,1) NOT NULL,
 policy_no                     varchar(255) NOT NULL,
