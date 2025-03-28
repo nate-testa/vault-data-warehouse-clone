@@ -33,11 +33,10 @@ BEGIN
         select PolicyNumber as policy_no,EffectiveDate as effective_dt,
         ExpirationDate as expiration_dt,TransactionEffectiveDate as transaction_effective_dt,
         transactiondate as transaction_dt,transaction_seq_no,source_system_sk,
-		IssuedDate,commercial_policy_history_sk,product_name	,
+		IssuedDate,commercial_policy_history_sk,product_name,
         CoverageType as coverage_type,CoverageTypeB as coverage_type_b,Revenue as revenue_amt,
         MemorandumOfInsurance as memorandum_of_insurance_in,NumberOfFTEAttorneys as employee_ct,
-        coalesce(ClaimsActivity,ClaimsHistory) as claim_history,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk,
-        IssuedDate
+        coalesce(ClaimsActivity,ClaimsHistory) as claim_history,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk
 		into edw_temp.tcommercial_policy_coverage_temp1
 			from
 			(
@@ -58,8 +57,7 @@ BEGIN
 				left join edw_stage.Product pr on act.ProductId = pr.id
 			where
 				act.PolicyNumber is not null and
-				act.[State] ='ISSUED'
-				--and atvo.ObjectType in ('Homeowner','Condo','Inspection')
+				act.[State] ='ISSUED'				
 				and pr.ProductLine = 'CommercialLines'
                 and atvof.Field in ('CoverageType','CoverageTypeB','Revenue','MemorandumOfInsurance','NumberOfFTEAttorneys',
                 'ClaimsActivity','ClaimsHistory'
