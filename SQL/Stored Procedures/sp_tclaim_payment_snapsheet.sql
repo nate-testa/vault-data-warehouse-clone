@@ -1,17 +1,18 @@
 ﻿-- =================================================================================================
 -- Description: This procedures inserts and updates claim payment data
 -----------------------------------------------------------------------------------------------------------
--- Change date |	Author					|	Change Description
+-- Change date		 	|	Author								|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 11/15/24		Architha Gudimalla			1. Created this procedure 
--- 11/20/24		Alberto Almario				2. Changes on some columns and tables
--- 12/20/24		Alberto Almario				3. Add cost_category column, remove columns from update statement on merge and change columns used to get deltas.
--- 01/17/25		Hernando Gonzalez			4. add case statement for source_system_sk column
--- 01/27/25     Sandeep Gundreddy			5. Exclude migrated payments 
--- 01/28/25     Sandeep Gundreddy			6. Updated payment_sequence_no mapping
--- 01/29/25 	Sandeep Gundreddy			7.Modified join conditions to exposures
--- 02/12/25 	Alberto Almario					8. Use claim_parties table to extract payee_address columns
--- 02/25/25		Yunus Mohammed				9. AD-8665 - Use coaleasce for payee_nm
+-- 11/15/24				Architha Gudimalla			1. Created this procedure 
+-- 11/20/24				Alberto Almario					2. Changes on some columns and tables
+-- 12/20/24				Alberto Almario					3. Add cost_category column, remove columns from update statement on merge and change columns used to get deltas.
+-- 01/17/25				Hernando Gonzalez			4. add case statement for source_system_sk column
+-- 01/27/25     		Sandeep Gundreddy			5. Exclude migrated payments 
+-- 01/28/25     		Sandeep Gundreddy			6. Updated payment_sequence_no mapping
+-- 01/29/25 			Sandeep Gundreddy			7.Modified join conditions to exposures
+-- 02/12/25 			Alberto Almario					8. Use claim_parties table to extract payee_address columns
+-- 02/25/25				Yunus Mohammed				9. AD-8665 - Use coaleasce for payee_nm
+-- 03/27/25				Yunus Mohammed				10 AD-9009 payee_nm null issue resolved for payee role VendorManagement::Vendor
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment_snapsheet]
 
@@ -46,20 +47,9 @@ BEGIN
 				fpi.financial_transaction_id AS payment_no,
 				fpi.cost_type AS claim_type_cd,
 				fpi.cost_category,
-				CASE WHEN TRIM
-												( ISNULL
-													(
-														CASE WHEN cp.party_type='ORGANIZATION' THEN cp.company
-														ELSE
-														CONCAT(cp.first_name,' ',cp.last_name) 
-														End
-														,''
-													)
-												) != '' THEN 
-        						CASE WHEN cp.party_type='ORGANIZATION' THEN cp.company ELSE concat(cp.first_name,' ',cp.last_name) END
-    			ELSE
-        		fpd.payee_line1
-     			END AS payee_nm,
+				case when py.original_sub_type = 'PERSON' then CONCAT_WS(' ',py.first_name,py.last_name)
+				else py.organization_name
+				end AS payee_nm,
 				fpd.party_type AS party_role_nm, 
 				ISNULL(fpi.amount,0) AS paid_amt,
 				concat( cp.address_address1,', ',
@@ -86,7 +76,8 @@ BEGIN
 
 		INTO 	edw_temp.tclaim_payment_snapsheet_temp1 
 
-		FROM 		edw_stage_snapsheet.claims c
+		FROM 
+		edw_stage_snapsheet.claims c
 		INNER JOIN 	edw_core.tclaim tc ON tc.claim_no=c.claim_number
 		INNER JOIN 	edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no
 		INNER JOIN  edw_stage_snapsheet.exposures e on c.id = e.claim_id and tf.claim_coverage_cd=e.id
@@ -97,7 +88,9 @@ BEGIN
         LEFT JOIN   edw_stage_snapsheet.financial_transaction_actions fta on ft.id = fta.financial_transaction_id and code='approve'
 		LEFT JOIN 	edw_stage_snapsheet.users u on ft.creator_user_id = u.id 
         LEFT JOIN   edw_stage_snapsheet.users apprvu on fta.actor_user_id=apprvu.id
-		WHERE		greatest(ft.created_at,ft.updated_at) > @last_source_extract_ts and ft.is_historical='false';   
+		left join edw_stage_snapsheet.payees py on py.financial_payment_detail_id = fpd.id and py.is_primary = 'true'
+		WHERE
+			greatest(ft.created_at,ft.updated_at) > @last_source_extract_ts and ft.is_historical='false';   
 
 		MERGE edw_core.tclaim_payment  AS Target
 		USING edw_temp.tclaim_payment_snapsheet_temp1 AS Source
