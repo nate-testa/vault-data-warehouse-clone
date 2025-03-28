@@ -1,12 +1,12 @@
 -- =============================================
 -- Author:		    Yunus Mohammed
--- Description: This procedures insert commerical quote coverage data
+-- Description: This procedures insert commerical quote coverage wip data
 -----------------------------------------------------------------------------------------------------------
 -- Change date          |Author						        |	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 03/28/25		          Yunus Mohammed		1.Procedure created
 -- =============================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_coverage]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_coverage_wip]
 
 AS
 BEGIN	
@@ -26,41 +26,39 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
-
-		declare @sql nvarchar(max)
-		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_coverage_temp1;
+		
+		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_coverage_wip_temp1;
         
         select PolicyNumber as quote_no,EffectiveDate as effective_dt,
         ExpirationDate as expiration_dt, transaction_seq_no,source_system_sk,
-		CreatedDate,commercial_quote_history_sk,product_name	,
+		CreatedDate,UpdatedDate,commercial_quote_history_sk,product_name	,
         CoverageType as coverage_type,CoverageTypeB as coverage_type_b,Revenue as revenue_amt,
         MemorandumOfInsurance as memorandum_of_insurance_in,NumberOfFTEAttorneys as employee_ct,
         coalesce(ClaimsActivity,ClaimsHistory) as claim_history,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk
-		into edw_temp.tcommercial_quote_coverage_temp1
+		into edw_temp.tcommercial_quote_coverage_wip_temp1
 			from
 			(
 			select
-			act.PolicyNumber ,act.EffectiveDate ,act.ExpirationDate ,act.[Number] as transaction_seq_no,
-			cph.commercial_quote_history_sk,act.CreatedDate, pr.name product_name,
-			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value]			
+			acc.PolicyNumber ,acc.EffectiveDate ,acc.ExpirationDate ,0 as transaction_seq_no,
+			cph.commercial_quote_history_sk,acc.CreatedDate, acc.UpdatedDate,pr.name product_name,
+			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,accof.Field,accof.[Value]			
 			from
-				edw_stage.AccountTransaction act
-				inner join edw_stage.Product p on p.Id=act.ProductId
-				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
-				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
-				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId 
-				left join edw_commercial.tcommercial_quote_history cph on cph.quote_no=act.PolicyNumber
-						and cph.effective_dt=act.EffectiveDate
-						and cph.transaction_seq_no = act.[Number]
-				left join edw_stage.Product pr on act.ProductId = pr.id
+				edw_stage.Account acc
+				inner join edw_stage.Product p on p.Id=acc.ProductId
+				inner join edw_stage.[AccountObject] AS accvo ON accvo.AccountId = acc.Id
+                inner join edw_stage.[AccountObjectField] AS accof ON accof.ObjectId = accvo.Id
+				left join edw_commercial.tcommercial_quote_history cph on cph.quote_no=acc.PolicyNumber
+						and cph.effective_dt=acc.EffectiveDate
+						and cph.transaction_seq_no = 0
+				left join edw_stage.Product pr on acc.ProductId = pr.id
 			where
-				act.PolicyNumber is not null 				
-				and act.[Stage]  IN ('QUOTE','POLICY')
+				acc.PolicyNumber is not null				
+                and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
 				and pr.ProductLine = 'CommercialLines'
-                and atvof.Field in ('CoverageType','CoverageTypeB','Revenue','MemorandumOfInsurance','NumberOfFTEAttorneys',
+                and accof.Field in ('CoverageType','CoverageTypeB','Revenue','MemorandumOfInsurance','NumberOfFTEAttorneys',
                 'ClaimsActivity','ClaimsHistory'
                 )
-				and act.CreatedDate > @last_source_extract_ts
+				and greatest(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
 			) as t
 			pivot 
 			(
@@ -69,24 +67,42 @@ BEGIN
                     CoverageType,CoverageTypeB,Revenue,MemorandumOfInsurance,NumberOfFTEAttorneys, ClaimsActivity,ClaimsHistory
                 )
 			) as pivottable
-    
-        insert into edw_commercial.tcommercial_quote_coverage
-        (
+
+            MERGE edw_commercial.tcommercial_quote_coverage AS [Target]
+            USING edw_temp.tcommercial_quote_coverage_wip_temp1	 AS [Source]
+            ON Source.quote_no = [Target].[quote_no] 
+            and [Source].effective_dt = [Target].effective_dt
+            and Source.transaction_seq_no = Target.transaction_seq_no
+            WHEN NOT MATCHED BY Target THEN			
+            INSERT
+            (
             quote_no,effective_dt,expiration_dt,transaction_seq_no,
             commercial_quote_history_sk,coverage_type,coverage_type_b,revenue_amt,memorandum_of_insurance_in,
-        employee_ct,claim_history,source_system_sk,create_ts,update_ts,etl_audit_sk
-        )
-        select
-         quote_no,effective_dt,expiration_dt,transaction_seq_no,
-        commercial_quote_history_sk,coverage_type,coverage_type_b,revenue_amt,memorandum_of_insurance_in,
-        employee_ct,claim_history,source_system_sk,create_ts,update_ts,etl_audit_sk
-        from
-            edw_temp.tcommercial_quote_coverage_temp1
+            employee_ct,claim_history,source_system_sk,create_ts,update_ts,etl_audit_sk
+            )
+            VALUES
+            (
+            quote_no,effective_dt,expiration_dt,transaction_seq_no,
+            commercial_quote_history_sk,coverage_type,coverage_type_b,revenue_amt,memorandum_of_insurance_in,
+            employee_ct,claim_history,source_system_sk,create_ts,update_ts,etl_audit_sk
+            )
+            WHEN MATCHED THEN UPDATE
+            SET
+            [target].effective_dt = [source].effective_dt,
+            [target].expiration_dt = [source].expiration_dt,
+            [target].commercial_quote_history_sk = [source].commercial_quote_history_sk,
+            [target].coverage_type = [source].coverage_type,
+            [target].coverage_type_b = [source].coverage_type_b,
+            [target].revenue_amt = [source].revenue_amt,
+            [target].memorandum_of_insurance_in = [source].memorandum_of_insurance_in,
+            [target].employee_ct = [source].employee_ct,
+            [target].claim_history = [source].claim_history,
+            [target].update_ts = GETDATE();
 
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(CreatedDate) FROM edw_temp.tcommercial_quote_coverage_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(CreatedDate,UpdatedDate)) FROM edw_temp.tcommercial_quote_coverage_wip_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts
 		
 		-- Update audit table
@@ -94,7 +110,7 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
 		-- Drop temp table
-		DROP TABLE IF EXISTS  edw_temp.tcommercial_quote_coverage_temp1
+		DROP TABLE IF EXISTS  edw_temp.tcommercial_quote_coverage_wip_temp1
 
 	END TRY
 	BEGIN CATCH
