@@ -12,4 +12,6 @@ FROM INFORMATION_SCHEMA.COLUMNS
 WHERE TABLE_SCHEMA='edw_integration'					
 AND TABLE_NAME = 'quote_hubspot_feed'					
 AND COLUMN_NAME = 'close_reason_desc'					
-) BEGIN ALTER TABLE edw_integration.quote_hubspot_feed ADD close_reason_desc varchar(255) END
+) BEGIN ALTER TABLE edw_integration.quote_hubspot_feed ADD close_reason_desc varchar(3000) END
+ 
+
