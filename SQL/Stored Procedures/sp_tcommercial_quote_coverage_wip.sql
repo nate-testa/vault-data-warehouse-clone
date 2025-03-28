@@ -28,37 +28,44 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 		
 		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_coverage_wip_temp1;
+		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_coverage_wip_temp2;
         
+		select acc.*,p.[Name] as product_name
+		into edw_temp.tcommercial_quote_coverage_wip_temp1
+		from
+			edw_stage.Account acc
+			inner join edw_stage.Product p on p.Id=acc.ProductId
+		where
+			acc.PolicyNumber is not null
+            and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
+			and p.ProductLine = 'CommercialLines'
+			and greatest(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
+
         select PolicyNumber as quote_no,EffectiveDate as effective_dt,
         ExpirationDate as expiration_dt, transaction_seq_no,source_system_sk,
-		CreatedDate,UpdatedDate,commercial_quote_history_sk,product_name	,
+		CreatedDate,UpdatedDate,commercial_quote_history_sk,product_name,
         CoverageType as coverage_type,CoverageTypeB as coverage_type_b,Revenue as revenue_amt,
         MemorandumOfInsurance as memorandum_of_insurance_in,NumberOfFTEAttorneys as employee_ct,
         coalesce(ClaimsActivity,ClaimsHistory) as claim_history,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk
-		into edw_temp.tcommercial_quote_coverage_wip_temp1
+		into edw_temp.tcommercial_quote_coverage_wip_temp2
 			from
 			(
 			select
 			acc.PolicyNumber ,acc.EffectiveDate ,acc.ExpirationDate ,0 as transaction_seq_no,
-			cph.commercial_quote_history_sk,acc.CreatedDate, acc.UpdatedDate,pr.name product_name,
+			cph.commercial_quote_history_sk,acc.CreatedDate, acc.UpdatedDate,acc.product_name,
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,accof.Field,accof.[Value]			
 			from
-				edw_stage.Account acc
-				inner join edw_stage.Product p on p.Id=acc.ProductId
+				edw_temp.tcommercial_quote_coverage_wip_temp1 acc
 				inner join edw_stage.[AccountObject] AS accvo ON accvo.AccountId = acc.Id
                 inner join edw_stage.[AccountObjectField] AS accof ON accof.ObjectId = accvo.Id
 				left join edw_commercial.tcommercial_quote_history cph on cph.quote_no=acc.PolicyNumber
 						and cph.effective_dt=acc.EffectiveDate
-						and cph.transaction_seq_no = 0
-				left join edw_stage.Product pr on acc.ProductId = pr.id
-			where
-				acc.PolicyNumber is not null				
-                and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
-				and pr.ProductLine = 'CommercialLines'
-                and accof.Field in ('CoverageType','CoverageTypeB','Revenue','MemorandumOfInsurance','NumberOfFTEAttorneys',
+						and cph.transaction_seq_no = 0				
+			where				
+                accof.Field in ('CoverageType','CoverageTypeB','Revenue','MemorandumOfInsurance','NumberOfFTEAttorneys',
                 'ClaimsActivity','ClaimsHistory'
                 )
-				and greatest(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
+				
 			) as t
 			pivot 
 			(
@@ -69,7 +76,7 @@ BEGIN
 			) as pivottable
 
             MERGE edw_commercial.tcommercial_quote_coverage AS [Target]
-            USING edw_temp.tcommercial_quote_coverage_wip_temp1	 AS [Source]
+            USING edw_temp.tcommercial_quote_coverage_wip_temp2	 AS [Source]
             ON Source.quote_no = [Target].[quote_no] 
             and [Source].effective_dt = [Target].effective_dt
             and Source.transaction_seq_no = Target.transaction_seq_no
@@ -111,6 +118,7 @@ BEGIN
 
 		-- Drop temp table
 		DROP TABLE IF EXISTS  edw_temp.tcommercial_quote_coverage_wip_temp1
+		DROP TABLE IF EXISTS  edw_temp.tcommercial_quote_coverage_wip_temp2
 
 	END TRY
 	BEGIN CATCH
