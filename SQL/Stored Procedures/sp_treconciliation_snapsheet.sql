@@ -6,6 +6,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 03/19/25         Yunus Mohammed				1. Created this procedure
 -- 03/27/25         Sandeep Gundreddy			2. Fixed logic
+-- 03/28/25         Sandeep Gundreddy			3. Fixed date filter in EDW query
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_treconciliation_snapsheet]
@@ -100,7 +101,7 @@ BEGIN
             reinsurance_defense_recovery_amt+overpayment_defense_recovery_amt*/
         ) AS loss
         FROM edw_core.tclaim_transaction
-        WHERE CAST(transaction_ts AS DATE) > @last_source_extract_ts AND source_system_sk=5
+        WHERE CAST(transaction_ts AS DATE) >= @last_source_extract_ts AND source_system_sk=5
         GROUP BY CAST(transaction_ts AS DATE)
         ) AS target ON [source].transaction_ts=[target].transaction_ts
 
