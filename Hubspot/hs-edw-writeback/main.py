@@ -10,6 +10,7 @@ import time
 def run():
 
     query_start_time = timetracking.load_previous_timestamp()
+    query_start_time = query_start_time.strip()
     query_end_time = timetracking.get_current_timestamp()
 
     QuoteNote.sync_to_edw(query_start_time)
