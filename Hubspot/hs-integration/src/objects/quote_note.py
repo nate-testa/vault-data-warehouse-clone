@@ -72,8 +72,18 @@ class QuoteNote:
         
 
     def build_payload(record, update):
-        formatted_unix_timestamp = pd.Timestamp(record['note_created_ts']) 
+        # Convert the timestamp into milliseconds since epoch
+        formatted_unix_timestamp = pd.Timestamp(record['note_created_ts'])
         record['hs_timestamp'] = formatted_unix_timestamp.value // 10**6
+
+        # Get the note description (HTML)
+        note_html = record['note_desc']
+        # Append the note user name at the end, if provided.
+        # user_footer = f"<p>by <strong>{record['note_user_nm']}</strong></p>" if record.get('note_user_nm') else ""
+        user_header = f"<p>by <strong>{record['note_user_nm']}</strong></p>" if record.get('note_user_nm') else ""
+        # Combine the note description with the appended user name.
+        # combined_html = note_html + user_footer
+        combined_html = user_header + note_html
 
         payload = {
             'associations': [
@@ -89,19 +99,18 @@ class QuoteNote:
                     }
                 }
             ],
-
             'properties': {
-                'hs_note_body': record['note_desc'],
+                'hs_note_body': combined_html,
                 'hs_timestamp': record['hs_timestamp'],
                 'quote_no': record['quote_no'],
-                'from_metal': True           
+                # 'note_user_nm': record['note_user_nm'],
+                'from_metal': True
             }
         }
         if update:
             payload['id'] = record['hs_object_id']
-        
-        return payload
-        
+
+        return payload        
 
 
         
