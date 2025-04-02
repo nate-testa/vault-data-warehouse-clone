@@ -78,7 +78,8 @@ BEGIN
 		left join edw_stage.Brokerage brk on acctv.BrokerageId = brk.id
 		left join edw_stage.[Broker] br on acctv.BrokerId = br.id
 		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
-		left join edw_stage.Product pr on acctv.ProductId = pr.id and pr.[InternalName] = acctvprr.ProductInternalName
+		left join edw_stage.Product pr on acctv.ProductId = pr.id 
+		--and pr.[InternalName] = acctvprr.ProductInternalName
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acctv.BrokerId
 		WHERE acct.Stage in ('QUOTE','POLICY')
 		and	acct.PolicyNumber is not null 
