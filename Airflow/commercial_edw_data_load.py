@@ -72,10 +72,10 @@ with DAG(
             'sp_tcommercial_policy',
             'sp_tcommercial_policy_history',
             'sp_tcommercial_policy_coverage',
-            'sp_tcommercial_policy_transaction',
             'sp_tcommercial_policy_tower',
             'sp_tcommercial_policy_quota_share',
-            'sp_tcommercial_policy_subjectivity'
+            'sp_tcommercial_policy_subjectivity',
+            'sp_tcommercial_policy_transaction'
         ]
 
         operators = []
@@ -106,14 +106,14 @@ with DAG(
 
         commercial_quote_group_items = [
             'sp_tcommercial_quote',
-            'sp_tcommercial_quote_history',
-            'sp_tcommercial_quote_coverage',
             'sp_tcommercial_quote_update',
+            'sp_tcommercial_quote_history',
             'sp_tcommercial_quote_history_update',
-            'sp_tcommercial_quote_transaction',
+            'sp_tcommercial_quote_coverage',
             'sp_tcommercial_quote_tower',
             'sp_tcommercial_quote_quota_share',
-            'sp_tcommercial_quote_subjectivity'
+            'sp_tcommercial_quote_subjectivity',
+            'sp_tcommercial_quote_transaction'
         ]
 
         operators = []
