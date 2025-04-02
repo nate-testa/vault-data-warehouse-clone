@@ -23,8 +23,9 @@
 -- 10/31/24		Hernando Gonzalez				18. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
 -- 12/02/24		Yunus Mohammed					19 AD-7834 Added new fields
 -- 01/17/25		Yunus Mohammed					20.  AD-8225 Roundoff ReinsuranceTotalTIV value
--- 01/22/25		Alberto Almario					21. Added new column fenced_pool_in
+-- 01/22/25		Alberto Almario						21. Added new column fenced_pool_in
 -- 03/19/25		Hernando Gonzalez				22. Added new columns wildfire_risk_score, wildfire_risk_class
+-- 04/02/25		Yunus Mohammed					23 AD-8973 roof_deck_attachment value logic updated
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -85,7 +86,8 @@ BEGIN
 			act.PolicyNumber ,act.EffectiveDate ,act.ExpirationDate ,act.TransactionEffectiveDate ,
 			tph.policy_history_sk,thl.home_location_sk,
 			act.policychangenumber as transaction_seq_no, act.IssuedDate as transactiondate,act.IssuedDate, pr.name product_name,
-			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value],
+			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,
+			case when atvof.Field =  ''RoofDeckAttachment'' then pofv.ValueDisplay else atvof.[Value] end as [Value],
 			atvpf.FactorMethod, atvpf.Factor, atvpf.Retention, atvpf.Reason
 			from
 				edw_stage.AccountTransaction act
@@ -101,6 +103,20 @@ BEGIN
 				left join edw_core.thome_location thl on thl.policy_no=act.PolicyNumber
 						and thl.effective_dt=act.EffectiveDate
 				left join edw_stage.Product pr on act.ProductId = pr.id
+				LEFT Join  
+				(
+					SELECT * FROM
+					(
+						SELECT *, 
+						ROW_NUMBER() OVER (PARTITION BY ProductId,Field,[Value],ObjectType ORDER BY EffectiveDate DESC) AS rnk
+						FROM edw_stage.ProductObjectFieldValueDisplay
+						WHERE
+							Field = ''RoofDeckAttachment''
+					) as a
+						--  WHERE a.rnk = 1
+				) AS pofv ON atvof.Field=pofv.Field and act.ProductId = pofv.ProductId and atvo.ObjectType = pofv.ObjectType
+					and atvof.[Value] = pofv.[Value]
+					and act.EffectiveDate between pofv.EffectiveDate and pofv.ExpirationDate
 			where
 				act.PolicyNumber is not null and
 				act.[State] =''ISSUED''
