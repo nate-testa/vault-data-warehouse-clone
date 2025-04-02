@@ -107,16 +107,17 @@ BEGIN
 				(
 					SELECT * FROM
 					(
-						SELECT *, 
-						ROW_NUMBER() OVER (PARTITION BY ProductId,Field,[Value],ObjectType ORDER BY EffectiveDate DESC) AS rnk
+						SELECT *
+						--, ROW_NUMBER() OVER (PARTITION BY ProductId,Field,[Value],ObjectType ORDER BY EffectiveDate DESC) AS rnk
 						FROM edw_stage.ProductObjectFieldValueDisplay
 						WHERE
 							Field = ''RoofDeckAttachment''
 					) as a
 						--  WHERE a.rnk = 1
 				) AS pofv ON atvof.Field=pofv.Field and act.ProductId = pofv.ProductId and atvo.ObjectType = pofv.ObjectType
-					and atvof.[Value] = pofv.[Value]
-					and act.EffectiveDate between pofv.EffectiveDate and pofv.ExpirationDate
+					 and  atv.RiskStateCode=pofv.statecode and atvof.[Value] = pofv.[Value]
+					and act.EffectiveDate between pofv.EffectiveDate and isnull(pofv.ExpirationDate,''2099-01-01'')
+					and pofv.IsRenewal = case when acc.RenewalIndex = 0 then 0  else 1 end
 			where
 				act.PolicyNumber is not null and
 				act.[State] =''ISSUED''
