@@ -8,6 +8,7 @@ GO
 -- Change date |Author						|	Change Description
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 08/15/24		Architha Gudimalla			1. Created this procedure   
+-- 04/01/25		Architha Gudimalla			2. Updated to check for isnull   
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_history_underwriter_update]
@@ -48,7 +49,8 @@ BEGIN
 		set a.underwriter_nm = b.underwriter_nm
 		from edw_core.tquote_history a
 		inner join edw_temp.tquote_history_update_temp1 b on a.quote_no = b.policynumber
-		where a.underwriter_nm <> b.underwriter_nm;
+		where isnull(a.underwriter_nm, '') <>  isnull(b.underwriter_nm, '')
+		;
 
 		SET @rows_affected=@@ROWCOUNT;   
 	
