@@ -1,0 +1,19 @@
+{
+	"name": "Delete_AccountSubjectivity_dle_ControlDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_UAT",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Delete_AccountSubjectivity_dle_20250402"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edw_stage",
+			"table": "ControlLoadTable"
+		}
+	}
+}
