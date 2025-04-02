@@ -57,7 +57,7 @@ args = {
 }
 
 with DAG(
-    dag_id='ivans_feed_edw_data_load',
+    dag_id='Ivans_Daily_Feed',
     catchup=False,
     max_active_runs=1,
     default_args=args,
