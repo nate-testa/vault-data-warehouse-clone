@@ -1,7 +1,9 @@
+import pytz
 import pendulum
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.utils.task_group import TaskGroup
+from airflow.exceptions import AirflowSkipException
 from airflow.operators.mssql_operator import MsSqlOperator
 from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
@@ -13,6 +15,11 @@ to_email = "itdatateam@vault.insurance"
 # to_email = "hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
 cc_email = ""
 
+def check_day_and_time():
+    # check for maintenance window on Ivans
+    now = datetime.now(pytz.timezone("America/New_York"))
+    if now.weekday() == 6 and now.hour < 8:
+        raise AirflowSkipException("Execution skipped: Sunday between 12 AM and 8 AM EST.")
 
 def on_failure_callback(context):
 
@@ -65,6 +72,11 @@ with DAG(
         task_id='start',
     )
 
+    check_maintenance_window = PythonOperator(
+        task_id = 'check_maintenance_window',
+        python_callable = check_day_and_time,
+    )   
+
     with TaskGroup("ivans_group") as ivans_group:
 
         ivans_group_items = [
@@ -108,4 +120,4 @@ with DAG(
     )
 
 
-start >> ivans_group >> end
+start >> check_maintenance_window >> ivans_group >> end
