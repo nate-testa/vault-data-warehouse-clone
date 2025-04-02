@@ -206,7 +206,7 @@ BEGIN
 			,NULL as deny_note
 			,source.policychangenotes as policy_change_summary
 			,source.wp as premium_amt
-			,source.wp-isnull(tfs.tfs,0) as net_premium_amt
+			,source.wp - isnull(source.comm,0) as net_premium_amt
 			,source.comm as commission_amt
 			,source.ap as annual_premium_amt
 			,source.CommissionPercent as commission_pc

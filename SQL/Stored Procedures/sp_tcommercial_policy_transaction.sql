@@ -131,7 +131,7 @@ BEGIN
 			,br.broker_sk
 			,cust.customer_sk
 			,source.wp as premium_amt
-			,source.wp - source.tfs as net_premium_amt
+			,source.wp - isnull(source.comm,0) as net_premium_amt
 			,Source.comm as commission_amt
 			,source.ap as annual_premium_amt
 			,cpc.commercial_policy_coverage_sk as coverage_sk

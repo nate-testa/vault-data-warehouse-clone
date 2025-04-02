@@ -203,9 +203,9 @@ BEGIN
 			,source.CancellationReason as cancellation_reason_desc
 			,source.policychangenotes as policy_change_summary
 			,source.wp as premium_amt
-			,wp-isnull(tfs.tfs,0) as net_premium_amt
-			,comm as commission_amt
-			,ap as annual_premium_amt
+			,source.wp - isnull(source.comm,0) as net_premium_amt
+			,source.comm as commission_amt
+			,source.ap as annual_premium_amt
 			,source.CommissionPercent as commission_pc
 			,source.CommissionPercentOverride as override_commission_pc
 			,rid.Name as transaction_initiated_by
