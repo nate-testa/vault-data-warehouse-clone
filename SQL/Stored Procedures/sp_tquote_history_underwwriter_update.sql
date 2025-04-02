@@ -8,7 +8,8 @@ GO
 -- Change date |Author						|	Change Description
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 08/15/24		Architha Gudimalla			1. Created this procedure   
--- 04/01/25		Architha Gudimalla			2. Updated to check for isnull   
+-- 04/01/25		Architha Gudimalla			2. VI36936/VI33044 - Updated to check for isnull  
+-- 04/01/25		Architha Gudimalla			3. AD9054 - Added update for producer_nm and producer_sk 
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_history_underwriter_update]
@@ -35,11 +36,14 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))  
 
 		DROP TABLE IF EXISTS edw_temp.tquote_history_update_temp1;
-		SELECT acc.policynumber, usr.name underwriter_nm
+		SELECT    acc.policynumber, usr.name underwriter_nm
+				, nullif(trim(isnull(pd.first_nm,'') + ' ' + isnull(pd.Last_nm,'')),'') as producer_nm
+				, pd.producer_sk
 		into edw_temp.tquote_history_update_temp1
 		FROM edw_stage.Account acc 
 		inner join edw_stage.Product pr on acc.ProductId = pr.id
 		inner join edw_stage.[user] usr on usr.id = acc.UnderwriterUserId 
+		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acc.BrokerId
 		WHERE 	acc.PolicyNumber is not null 
 		and  	pr.ProductLine = 'PersonalLines' 
 		AND 	acc.stage='Submission'
@@ -50,6 +54,14 @@ BEGIN
 		from edw_core.tquote_history a
 		inner join edw_temp.tquote_history_update_temp1 b on a.quote_no = b.policynumber
 		where isnull(a.underwriter_nm, '') <>  isnull(b.underwriter_nm, '')
+		;
+
+		update a
+		set a.producer_sk = b.producer_sk,
+			a.producer_nm = b.producer_nm
+		from edw_core.tquote_history a
+		inner join edw_temp.tquote_history_update_temp1 b on a.quote_no = b.policynumber
+		where isnull(a.producer_sk, 0) <>  isnull(b.producer_sk, 0)
 		;
 
 		SET @rows_affected=@@ROWCOUNT;   
