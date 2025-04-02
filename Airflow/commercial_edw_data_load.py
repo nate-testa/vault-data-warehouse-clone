@@ -107,6 +107,7 @@ with DAG(
         commercial_quote_group_items = [
             'sp_tcommercial_quote',
             'sp_tcommercial_quote_history',
+            'sp_tcommercial_quote_coverage',
             'sp_tcommercial_quote_update',
             'sp_tcommercial_quote_history_update',
             'sp_tcommercial_quote_transaction',
