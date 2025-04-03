@@ -1,0 +1,19 @@
+{
+	"name": "DELETE_ProductObjectFieldValueDisplay_5d2_ControlDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_UAT",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "DELETE_ProductObjectFieldValueDisplay_5d2_20250403"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edw_stage",
+			"table": "ControlLoadTable"
+		}
+	}
+}
