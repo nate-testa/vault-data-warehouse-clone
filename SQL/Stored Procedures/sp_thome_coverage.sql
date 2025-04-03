@@ -11,10 +11,10 @@
 -- 11/16/23		Architha Gudimalla				6. Added wildfire columns
 -- 11/16/23		Architha Gudimalla				7. updated the join for AccountTransactionVersionPremiumfactor
 -- 11/30/23		Yunus Mohammed					8. Added new fields
--- 12/06/23		Alberto Almario					9. Added new field WindstormOrHailDeductibleManual
+-- 12/06/23		Alberto Almario						9. Added new field WindstormOrHailDeductibleManual
 -- 22/02/24		Hernando Gonzalez				10. Added new fields aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt
 -- 04/02/24		Yunus Mohammed					11. Updated wind_derived_deductible logic
--- 12/06/24		Alberto Almario					12. Added new filed nc_bureau_rate
+-- 12/06/24		Alberto Almario						12. Added new filed nc_bureau_rate
 -- 07/09/24		Yunus Mohammed					13. Added new fields stated_limits_policy_in and risk_sharing_policy_in
 -- 08/13/24		Yunus Mohammed					14. Updated wind_derived_deductible logic
 -- 08/20/24		Yunus Mohammed					15. Updated wind_derived_deductible logic
@@ -25,7 +25,7 @@
 -- 01/17/25		Yunus Mohammed					20.  AD-8225 Roundoff ReinsuranceTotalTIV value
 -- 01/22/25		Alberto Almario						21. Added new column fenced_pool_in
 -- 03/19/25		Hernando Gonzalez				22. Added new columns wildfire_risk_score, wildfire_risk_class
--- 04/02/25		Yunus Mohammed					23 AD-8973 roof_deck_attachment value logic updated
+-- 04/02/25		Yunus Mohammed					23. AD-8973 roof_deck_attachment value logic updated
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -76,7 +76,8 @@ BEGIN
 
 		declare @sql nvarchar(max)
 		drop table if exists edw_temp.thome_coverage_temp1
-		SET @sql ='select PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transactiondate,transaction_seq_no,source_system_sk,
+		SET @sql ='select ROW_NUMBER()over(partition by act.PolicyNumber ,act.EffectiveDate ,act.PolicyChangeNumber  order by pofv.[version] desc ) as rn,,
+		 PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transactiondate,transaction_seq_no,source_system_sk,
 		IssuedDate,policy_history_sk,home_location_sk,product_name,
 		FactorMethod, Factor, Retention, Reason,
 		'+ @ColumnsToPivot +' into edw_temp.thome_coverage_temp1
@@ -88,7 +89,7 @@ BEGIN
 			act.policychangenumber as transaction_seq_no, act.IssuedDate as transactiondate,act.IssuedDate, pr.name product_name,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,
 			case when atvof.Field =  ''RoofDeckAttachment'' then pofv.ValueDisplay else atvof.[Value] end as [Value],
-			atvpf.FactorMethod, atvpf.Factor, atvpf.Retention, atvpf.Reason
+			atvpf.FactorMethod, atvpf.Factor, atvpf.Retention, atvpf.Reason,pofv.[Version]
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
@@ -105,19 +106,14 @@ BEGIN
 				left join edw_stage.Product pr on act.ProductId = pr.id
 				LEFT Join  
 				(
-					SELECT * FROM
-					(
 						SELECT *
-						--, ROW_NUMBER() OVER (PARTITION BY ProductId,Field,[Value],ObjectType ORDER BY EffectiveDate DESC) AS rnk
 						FROM edw_stage.ProductObjectFieldValueDisplay
 						WHERE
 							Field = ''RoofDeckAttachment''
-					) as a
-						--  WHERE a.rnk = 1
 				) AS pofv ON atvof.Field=pofv.Field and act.ProductId = pofv.ProductId and atvo.ObjectType = pofv.ObjectType
 					 and  atv.RiskStateCode=pofv.statecode and atvof.[Value] = pofv.[Value]
 					and act.EffectiveDate between pofv.EffectiveDate and isnull(pofv.ExpirationDate,''2099-01-01'')
-					and pofv.IsRenewal = case when acc.RenewalIndex = 0 then 0  else 1 end
+					and pofv.IsRenewal = case when atv.RenewalIndex = 0 then 0  else 1 end
 			where
 				act.PolicyNumber is not null and
 				act.[State] =''ISSUED''
@@ -335,6 +331,8 @@ BEGIN
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_coverage_temp1 AS tthc
+			WHERE
+				rn = 1
 
 			SET @rows_affected=@@ROWCOUNT;  
 

@@ -17,8 +17,9 @@
 -- 10/31/24		        Hernando Gonzalez			11. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
 -- 12/02/24				Yunus Mohammed				12. AD-7834 Added new fields.
 -- 01/17/25				Yunus Mohammed				13.  AD-8225 Roundoff ReinsuranceTotalTIV value
--- 01/23/25				Alberto Almario				14. Added new column fenced_pool_in
+-- 01/23/25				Alberto Almario					14. Added new column fenced_pool_in
 -- 03/19/25				Hernando Gonzalez			15. Added new columns wildfire_risk_score, wildfire_risk_class
+-- 04/02/25				Yunus Mohammed						16. AD-8973 roof_deck_attachment value logic updated
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
 
@@ -78,7 +79,8 @@ BEGIN
 			acc.PolicyNumber as quote_no,acc.EffectiveDate ,acc.ExpirationDate ,acc.TransactionEffectiveDate ,
 			tqh.quote_history_sk,thql.quote_home_location_sk,
 			0 as transaction_seq_no,acc.CreatedDate,acc.UpdatedDate, pr.name product_name,
-			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,accvof.Field,accvof.[Value],
+			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,accvof.Field,
+			case when accvof.Field =  ''RoofDeckAttachment'' then pofv.ValueDisplay else accvof.[Value] end as [Value],
 			accpf.FactorMethod, accpf.Factor, accpf.Retention, accpf.Reason
 			from
 				edw_stage.Account acc
@@ -99,6 +101,19 @@ BEGIN
 						and tqh.transaction_seq_no = 0
 				left join edw_core.tquote_home_location thql on thql.quote_no=acc.PolicyNumber
 				left join edw_stage.Product pr on acc.ProductId = pr.id
+				left join
+				(
+					SELECT * FROM
+					(
+						SELECT *
+						FROM edw_stage.ProductObjectFieldValueDisplay
+						WHERE
+							Field = ''RoofDeckAttachment''
+					) as a
+				) AS pofv ON accvof.Field=pofv.Field and acc.ProductId = pofv.ProductId and accvo.ObjectType = pofv.ObjectType
+					 and  acc.RiskStateCode=pofv.statecode and accvof.[Value] = pofv.[Value]
+					and acc.EffectiveDate between pofv.EffectiveDate and isnull(pofv.ExpirationDate,''2099-01-01'')
+					and pofv.IsRenewal = case when acc.RenewalIndex = 0 then 0  else 1 end
 			where
 				acc.PolicyNumber is not null
 				and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
