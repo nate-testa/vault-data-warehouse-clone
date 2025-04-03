@@ -13,6 +13,7 @@
 -- 01/17/2025		Hernando Gonzalez			8. Add case statement for source_system_sk column
 -- 02/24/2025		Yunus Mohammed				9. Updated made for product_sk for NFP policies.
 -- 03/04/2025		Yunus Mohammed				10. Ad-8729 Updates made for effective_dt of NFP policies
+-- 04/03/2025		Yunus Mohammed				11. AD-8747 Mapping updated for loss_desc columns for snapsheet claims
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -75,7 +76,10 @@ BEGIN
 			c.policy_number as policy_no, 
 			tph.policy_sk,
 			cl.cause_of_loss_sk,
-			c.incident_location_description AS loss_desc,		
+			case
+				when c.claim_source = 'api' then c.incident_location_description
+				else cid.facts_of_loss
+			end AS loss_desc,		
 			UPPER(c.status) AS source_claim_status,
 			UPPER(CASE 
 				WHEN c.status IN('DRAFT','OPEN') 
@@ -120,7 +124,7 @@ BEGIN
 				WHEN cpr.company IS NULL THEN NULLIF(TRIM(CONCAT(ISNULL(cpr.first_name, ''), ' ', ISNULL(cpr.last_name, ''))),'') 
 				ELSE cpr.company 
 			END as responsible_party
-			,ld.fault_percentage AS at_fault_pct
+			,ld.fault_percentage AS at_fault_pct			
 			,case
 				when c.claim_source = 'api' then 'Yes'
 				else 'No'
@@ -155,6 +159,7 @@ BEGIN
 		LEFT JOIN edw_temp.tclaim_snapsheet_temp2 cc ON cc.claim_id = c.id
 		LEFT JOIN edw_core.tcatastrophe cat ON cc.catastrophe_cd = cat.catastrophe_cd
 		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_desc = c.loss_type
+		LEFT JOIN edw_stage_snapsheet.common_incident_details cid on cid.claim_id = c.id
 		LEFT JOIN
 		(
 			select ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date desc, reporting_month desc) as transaction_seq_no,
