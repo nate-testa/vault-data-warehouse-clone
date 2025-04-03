@@ -1,0 +1,33 @@
+{
+	"name": "DELETE_ProductObjectFieldValueDisplay_5d2_DestinationDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_UAT",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"cw_schema": {
+				"type": "String"
+			},
+			"cw_table": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "DELETE_ProductObjectFieldValueDisplay_5d2_20250403"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().cw_schema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().cw_table",
+				"type": "Expression"
+			}
+		}
+	}
+}
