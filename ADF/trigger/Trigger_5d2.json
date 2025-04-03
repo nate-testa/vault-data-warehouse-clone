@@ -1,0 +1,24 @@
+{
+	"name": "Trigger_5d2",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "DELETE_ProductObjectFieldValueDisplay_5d2_TopLevel",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 24,
+				"startTime": "2025-04-03T15:24:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}
