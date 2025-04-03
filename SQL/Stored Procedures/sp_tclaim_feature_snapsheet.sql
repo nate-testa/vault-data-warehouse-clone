@@ -11,6 +11,7 @@
 -- 02/07/2025				Yunus Mohammed				6. Added logic to insert aslob_sk
 -- 02/21/2025				Yunus Mohammed				7. Code updated fornull aslob_sk	
 -- 03/03/2025               Sandeep Gundreddy			8. updated logic to use created_at/updated_at from claims table
+-- 04/02/2025				Yunus Mohammed				9. AD-9039 Updated aslob_sk and claim_coverage_desc logic for condo policies
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet]
 AS
@@ -47,24 +48,13 @@ BEGIN
 							(
 								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
 								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
-								and mcm.product_cd = prd.product_cd
+								and mcm.product_cd = case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
 							) then		
 							(
 								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
 								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
-								and mcm.product_cd = prd.product_cd
+								and mcm.product_cd = case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
 							) 
-					/*else
-						(			
-								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
-								where mcm.coverage_nm = RIGHT(exps.external_reference_number, CHARINDEX('-', REVERSE(exps.external_reference_number)) - 1)								
-								and mcm.sub_claimtype_nm = SUBSTRING(exps.external_reference_number, 
-												CHARINDEX('-', exps.external_reference_number) + 1, 
-											CHARINDEX('-', exps.external_reference_number, CHARINDEX('-', exps.external_reference_number) + 1) 
-											- CHARINDEX('-', exps.external_reference_number) - 1)
-								and mcm.product_cd = prd.product_cd
-						)
-						*/
 				end as claim_coverage_desc,
 			exps.claimant_name as claimant_nm,		
 			case
@@ -121,24 +111,13 @@ BEGIN
 							(
 								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
 								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
-								and mcm.product_cd = prd.product_cd
+								and mcm.product_cd = case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
 							) then		
 							(
 								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
 								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
-								and mcm.product_cd = prd.product_cd
+								and mcm.product_cd = case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
 							) 
-					/*else
-						(			
-								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
-								where mcm.coverage_nm = RIGHT(exps.external_reference_number, CHARINDEX('-', REVERSE(exps.external_reference_number)) - 1)								
-								and mcm.sub_claimtype_nm = SUBSTRING(exps.external_reference_number, 
-												CHARINDEX('-', exps.external_reference_number) + 1, 
-											CHARINDEX('-', exps.external_reference_number, CHARINDEX('-', exps.external_reference_number) + 1) 
-											- CHARINDEX('-', exps.external_reference_number) - 1)
-								and mcm.product_cd = prd.product_cd
-						)
-						*/
 				end
 		and 
 		CASE asl.product_cd
@@ -148,7 +127,7 @@ BEGIN
 					WHEN 'Collections' THEN 'LUX'
 					WHEN 'Marine Boat & Yacht' THEN 'BY'
 					ELSE asl.product_cd
-		END= prd.product_cd
+		END= case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
 		-- Home Coverage
 		LEFT JOIN edw_core.thome_coverage thcov ON
 		thcov.home_coverage_sk = (
