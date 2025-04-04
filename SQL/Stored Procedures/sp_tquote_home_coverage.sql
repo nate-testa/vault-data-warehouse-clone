@@ -70,11 +70,25 @@ BEGIN
 		SET @ColumnsToPivot = LEFT(@ColumnsToPivot, LEN(@ColumnsToPivot) - 1);
 
 		declare @sql nvarchar(max)
+
 		drop table if exists edw_temp.tquote_home_coverage_temp1
+		drop table if exists edw_temp.tquote_home_coverage_temp3
+		drop table if exists edw_temp.tquote_home_coverage_temp4
+		select act.*
+		into edw_temp.tquote_home_coverage_temp1
+		from
+			edw_stage.AccountTransaction act
+			inner join edw_stage.Product p on p.Id=act.ProductId
+		where
+			act.PolicyNumber is not null and
+				act.[Stage] IN ('QUOTE','POLICY')				
+				and p.ProductLine = 'PersonalLines'
+				and act.CreatedDate > @last_source_extract_ts
+
 		SET @sql ='select quote_no,EffectiveDate,ExpirationDate,transaction_seq_no,source_system_sk,
 		quote_history_sk,quote_home_location_sk,product_name,CreatedDate,
 		FactorMethod, Factor, Retention, Reason,
-		'+ @ColumnsToPivot +' into edw_temp.tquote_home_coverage_temp1
+		'+ @ColumnsToPivot +' into edw_temp.tquote_home_coverage_temp3
 			from
 			(
 			select
@@ -82,10 +96,10 @@ BEGIN
 			tqh.quote_history_sk,thql.quote_home_location_sk,
 			act.[Number] as transaction_seq_no,act.CreatedDate, pr.name product_name,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,
-			case when atvof.Field =  ''RoofDeckAttachment'' then pofv.ValueDisplay else atvof.[Value] end as [Value],
+			atvof.[Value] as [Value],
 			atvpf.FactorMethod, atvpf.Factor, atvpf.Retention, atvpf.Reason
 			from
-				edw_stage.AccountTransaction act
+				edw_temp.tquote_home_coverage_temp1 act
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
@@ -95,27 +109,9 @@ BEGIN
 				left join edw_core.tquote_history tqh on tqh.quote_no=act.PolicyNumber
 						and tqh.effective_dt=act.EffectiveDate
 						and tqh.transaction_seq_no = act.[Number]
-				left join edw_core.tquote_home_location thql on thql.quote_no=act.PolicyNumber						
-				left join edw_stage.Product pr on act.ProductId = pr.id
-				LEFT Join  
-				(
-					SELECT * FROM
-					(
-						SELECT *						
-						FROM edw_stage.ProductObjectFieldValueDisplay
-						WHERE
-							Field = ''RoofDeckAttachment''
-					) as a
-				) AS pofv ON atvof.Field=pofv.Field and act.ProductId = pofv.ProductId and atvo.ObjectType = pofv.ObjectType
-					 and  atv.RiskStateCode=pofv.statecode and atvof.[Value] = pofv.[Value]
-					and act.EffectiveDate between pofv.EffectiveDate and isnull(pofv.ExpirationDate,''2099-01-01'')
-					and pofv.IsRenewal = case when atv.RenewalIndex = 0 then 0  else 1 end
+				left join edw_core.tquote_home_location thql on thql.quote_no=act.PolicyNumber
 			where
-				act.PolicyNumber is not null and
-				act.[Stage] IN (''QUOTE'',''POLICY'')
-				and atvo.ObjectType in (''Homeowner'',''Condo'',''Inspection'')
-				and pr.ProductLine = ''PersonalLines''
-				and act.CreatedDate > @last_source_extract_ts
+			atvo.ObjectType in (''Homeowner'',''Condo'',''Inspection'')				
 			) as t
 			pivot 
 			(
@@ -124,6 +120,36 @@ BEGIN
 			'
 			EXECUTE sp_executesql @sql, N'@last_source_extract_ts datetime2(7)', @last_source_extract_ts = @last_source_extract_ts
 			
+			select * into edw_temp.tquote_home_coverage_temp4
+			from
+			(
+			select ROW_NUMBER()over(partition by act.PolicyNumber ,act.EffectiveDate ,act.PolicyChangeNumber  order by pofv.[version] desc ) as rn,
+			act.PolicyNumber ,act.EffectiveDate ,act.[Number] as transaction_seq_no,
+			pofv.ValueDisplay as [Value]
+			from
+				edw_temp.tquote_home_coverage_temp1 act
+				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId    
+				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
+				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId 
+			LEFT Join  
+				(
+						SELECT *
+						FROM edw_stage.ProductObjectFieldValueDisplay
+						WHERE
+						Field = 'RoofDeckAttachment'
+					
+				) AS pofv ON atvof.Field=pofv.Field and act.ProductId = pofv.ProductId and atvo.ObjectType = pofv.ObjectType
+						and  atv.RiskStateCode=pofv.statecode and atvof.[Value] = pofv.[Value]
+					and act.EffectiveDate between pofv.EffectiveDate and isnull(pofv.ExpirationDate,'2099-01-01')
+					and pofv.IsRenewal = atv.IsRenewal		
+			where   
+				atvo.ObjectType in ('Homeowner','Condo','Inspection')
+				and atvof.Field= 'RoofDeckAttachment'
+				and isnull(atvof.[Value],'')  != ''
+			) as a
+			where
+				rn = 1
+
 			drop table if exists edw_temp.tquote_home_coverage_temp2
 			
 			CREATE TABLE edw_temp.tquote_home_coverage_temp2
@@ -273,7 +299,7 @@ BEGIN
 				tthc.OpeningProtection AS opening_protection,
 				tthc.RoofCoverDeck AS roof_cover_deck,
 				tthc.RoofCovering AS roof_covering,
-				tthc.RoofDeckAttachment AS roof_deck_attachment,
+				t.[Value] AS roof_deck_attachment,
 				tthc.RoofGeometry AS roof_geometry,
 				tthc.RoofSystem AS roof_system_in,
 				tthc.RoofWallAttachment AS roof_wall_attachment,
@@ -329,7 +355,9 @@ BEGIN
 				tthc.WildfireRiskClass as wildfire_risk_class,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
-				edw_temp.tquote_home_coverage_temp1 AS tthc
+				edw_temp.tquote_home_coverage_temp3 AS tthc
+				left join edw_temp.tquote_home_coverage_temp4 as t on tthc.PolicyNumber = t.PolicyNumber and 
+				tthc.EffectiveDate= t.EffectiveDate and tthc.transaction_seq_no = t.transaction_seq_no
 
 				/*
 			
@@ -357,6 +385,9 @@ BEGIN
 			-- Drop temp table
 			DROP TABLE IF EXISTS edw_temp.tquote_home_coverage_temp1
 			DROP TABLE IF EXISTS edw_temp.tquote_home_coverage_temp2
+			DROP TABLE IF EXISTS edw_temp.tquote_home_coverage_temp3
+			DROP TABLE IF EXISTS edw_temp.tquote_home_coverage_temp4
+			
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
