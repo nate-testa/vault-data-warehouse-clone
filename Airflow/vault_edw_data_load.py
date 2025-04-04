@@ -13,7 +13,6 @@ from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from airflow.providers.microsoft.azure.operators.data_factory import AzureDataFactoryRunPipelineOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
 from livevox_csv_generation import SFTPUploadLiveVoxOperator, generate_livevox_csv_file
-from ivans_api import call_ivans_api
 
 to_email = "itdatateam@vault.insurance"
 # to_email = "hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
@@ -389,7 +388,6 @@ with DAG(
 
         operators[-1] >> send_policy_transaction_email
 
-
     with TaskGroup("claim_group") as claim_group:
 
         claim_group_items = [
@@ -653,20 +651,11 @@ with DAG(
             'sp_tclaim_symbility_api', 
             'sp_billing_account_customer_portal_api', 
             'sp_policy_customer_portal_api',
-            'sp_policy_ivans_auto_feed',
-            'sp_policy_ivans_home',
-            'sp_policy_ivans_pel_feed',
             'sp_customer_broker_livevox_feed',
             'sp_claim_renewal_rating_home_collection_api',
             'sp_claim_renewal_rating_auto_pel_api',
             'sp_claim_product_search_api'
         ]
-
-        exec_Snapsheet_Daily_Feed = TriggerDagRunOperator(
-            task_id="exec_Snapsheet_Daily_Feed",
-            trigger_dag_id="Snapsheet_Daily_Feed",
-            dag=dag,
-        )
 
         operators = []
         for item in integration_group_items:
@@ -679,13 +668,18 @@ with DAG(
             )
             operators.append(operator)
 
-        ivans_api_call = PythonOperator(
-            task_id='ivans_api_call',
-            python_callable=call_ivans_api,
-            provide_context=True,
+        exec_Snapsheet_Daily_Feed = TriggerDagRunOperator(
+            task_id="exec_Snapsheet_Daily_Feed",
+            trigger_dag_id="Snapsheet_Daily_Feed",
             dag=dag,
         )
 
+        exec_Ivans_Daily_Feed = TriggerDagRunOperator(
+            task_id="exec_Ivans_Daily_Feed",
+            trigger_dag_id="Ivans_Daily_Feed",
+            dag=dag,
+        )
+        
         generate_livevox_file = PythonOperator(
             task_id='generate_livevox_file',
             python_callable=generate_livevox_csv_file,
@@ -723,7 +717,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
         )
 
-        exec_Snapsheet_Daily_Feed >> operators[0] >> operators[1] >> operators[2] >> operators[3] >> operators[4] >> operators[5] >> operators[6] >> operators[7] >> ivans_api_call >> operators[8] >> generate_livevox_file >> upload_livevox_file_to_sftp >> operators[9] >> operators[10] >> operators[11] >> exec_vault_redzone_feed >> exec_vault_CLUE_property_daily_feed >> exec_Snapsheet_Financial_Transaction_Action_Daily_Feed >> send_integration_email
+        exec_Snapsheet_Daily_Feed >> operators[0] >> operators[1] >> operators[2] >> operators[3] >> operators[4] >> exec_Ivans_Daily_Feed >> operators[5] >> generate_livevox_file >> upload_livevox_file_to_sftp >> operators[6] >> operators[7] >> operators[8] >> exec_vault_redzone_feed >> exec_vault_CLUE_property_daily_feed >> exec_Snapsheet_Financial_Transaction_Action_Daily_Feed >> send_integration_email
 
     exec_vault_edw_data_load_quotes = TriggerDagRunOperator(
         task_id="exec_vault_edw_data_load_quotes",
