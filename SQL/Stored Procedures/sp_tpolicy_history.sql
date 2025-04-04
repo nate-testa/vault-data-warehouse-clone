@@ -2,22 +2,23 @@
 -- Author:		Hernando Gonzalez Garcia  
 -- Description: This procedures inserts into TPolicy_history
 ---------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author											|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 06/02/23		Hernando Gonzalez Garcia		1. Created this procedure
--- 06/28/23		Architha Gudimalla				2. Made changes to fix the errors on first run 
--- 09/08/23		Architha Gudimalla				3. Made changes for updated model 
--- 10/06/23		Architha Gudimalla				4. Added commission override columns
--- 10/10/23		Architha Gudimalla				5. Updated logic for transaction_type - renewals
--- 10/17/23		Architha Gudimalla				6. Updated logic for transaction_desc
--- 10/17/23		Architha Gudimalla				7. Updated logic for producer_nm
--- 10/26/23		Yunus Mohammed					8. Made changes to fix error on customer_id and broker_id
--- 02/08/24		Alberto Almario					9. Added new column producer_sk
--- 04/29/24		Hernando Gonzalez				10. Added new column insurance_score_last_run_dt
--- 06/14/24		Alberto Almario					11. Added new column prorate_factor
--- 03/03/25		Alberto Almario					12. Added new column transaction_status
--- 03/13/25		Yunus Mohammed			  13. Ad-8848 Added premium_rater_version
--- 03/14/25		Yunus Mohammed			  14. Used product InternalName instead of Name 
+-- 06/28/23		Architha Gudimalla						2. Made changes to fix the errors on first run 
+-- 09/08/23		Architha Gudimalla						3. Made changes for updated model 
+-- 10/06/23		Architha Gudimalla						4. Added commission override columns
+-- 10/10/23		Architha Gudimalla						5. Updated logic for transaction_type - renewals
+-- 10/17/23		Architha Gudimalla						6. Updated logic for transaction_desc
+-- 10/17/23		Architha Gudimalla						7. Updated logic for producer_nm
+-- 10/26/23		Yunus Mohammed						8. Made changes to fix error on customer_id and broker_id
+-- 02/08/24		Alberto Almario								9. Added new column producer_sk
+-- 04/29/24		Hernando Gonzalez					10. Added new column insurance_score_last_run_dt
+-- 06/14/24		Alberto Almario							11. Added new column prorate_factor
+-- 03/03/25		Alberto Almario							12. Added new column transaction_status
+-- 03/13/25		Yunus Mohammed			  			13. Ad-8848 Added premium_rater_version
+-- 03/14/25		Yunus Mohammed			  			14. Used product InternalName instead of Name 
+-- 04/03/25		Yunus Mohammed			  			15. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -118,7 +119,7 @@ BEGIN
 
 		-- Pivot Table
 		DROP TABLE IF EXISTS edw_temp.tpolicy_history_temp2;
-		SELECT	AccountTransactionId,  CompanionCreditHomeowner, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
+		SELECT	AccountTransactionId,  CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
 				nullif(trim(PriorResidenceAddressLine1),'') PriorResidenceAddressLine1, 
 				nullif(trim(PriorResidenceAddressLine2),'') PriorResidenceAddressLine2, 
 				nullif(trim(PriorResidenceAddressLineUnit),'') PriorResidenceAddressLineUnit,  
@@ -155,7 +156,7 @@ BEGIN
 			) t
 		PIVOT 
 			(
-				MAX(Value) FOR Field IN (CompanionCreditHomeowner, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
+				MAX(Value) FOR Field IN (CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
 										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
 										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
@@ -224,7 +225,7 @@ BEGIN
 				ap, 
 				rid.Name, cid.Name, 
 				source1.CompanionCreditCollections, source1.CompanionCreditPersonalExcessLiability, 
-				source1.CompanionCreditAuto, source1.CompanionCreditHomeowner,
+				source1.CompanionCreditAuto, source1.CompanionCreditPrimaryHome,
 				ResidenceHasPrior, PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 				PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, 
 				source.ssk, getdate(), getdate(), @etl_audit_sk
@@ -301,8 +302,7 @@ BEGIN
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
-
+		
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
