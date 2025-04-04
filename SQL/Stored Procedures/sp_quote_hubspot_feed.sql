@@ -20,6 +20,8 @@
 -- 01/13/25		        Alberto Almario				15. AD8013 - Included yacht data
 -- 01/15/25		        Archtha Gudimalla			16. VI35258/AD8009 - Added new cols
 -- 03/06/25		        Archtha Gudimalla			17. AD8781 - Send latest broker info
+-- 03/28/25		        Archtha Gudimalla			18. VI36790/AD8898 - Added Target account
+-- 03/28/25		        Archtha Gudimalla			18. VI36066/AD8907 - Added close_reason_desc
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -153,6 +155,8 @@ BEGIN
             ,tqhc.occupancy_type
             ,tqhc.new_client_for_agency_in
             ,tqhc.current_underlying_company_nm
+            ,q.target_account
+            ,q.close_reason_desc
 
         into edw_temp.quote_hubspot_feed_temp1
 
@@ -276,6 +280,8 @@ BEGIN
             ,tqhc.occupancy_type
             ,tqhc.new_client_for_agency_in
             ,tqhc.current_underlying_company_nm
+            ,q.target_account
+            ,null as close_reason_desc
 
         into edw_temp.quote_hubspot_feed_temp2
         
@@ -353,6 +359,8 @@ BEGIN
             ,occupancy_type
             ,new_client_for_agency_in
             ,current_underlying_company_nm
+            ,target_account
+            ,close_reason_desc
         )
         VALUES
         (
@@ -374,6 +382,8 @@ BEGIN
             ,occupancy_type
             ,new_client_for_agency_in
             ,current_underlying_company_nm
+            ,target_account
+            ,close_reason_desc
         )
         WHEN MATCHED THEN UPDATE
         SET        
@@ -429,7 +439,9 @@ BEGIN
             [target].primary_home_coverage_a_threshold	=	[source].primary_home_coverage_a_threshold,
             [target].occupancy_type	                    =	[source].occupancy_type,
             [target].new_client_for_agency_in	        =	[source].new_client_for_agency_in,
-            [target].current_underlying_company_nm	    =	[source].current_underlying_company_nm  
+            [target].current_underlying_company_nm	    =	[source].current_underlying_company_nm,  
+            [target].target_account	                    =	[source].target_account  ,  
+            [target].close_reason_desc	                =	[source].close_reason_desc  
             ;
         
         SET @rows_affected=@@ROWCOUNT;

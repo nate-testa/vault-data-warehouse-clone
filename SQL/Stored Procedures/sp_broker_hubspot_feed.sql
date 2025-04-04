@@ -28,6 +28,7 @@
 -- 01/10/25		        Archtha Gudimalla			19. VI35984/AZ8173 - Excluded marine brokers
 -- 01/13/25		        Alberto Almario 			20. AD8013 - Included yacht data
 -- 01/10/25		        Archtha Gudimalla			21. VI35254/AZ8015 - Added ytd_new_business_yacht_premium_amt
+-- 03/29/25		        Archtha Gudimalla			22. VI36791/AZ9023 - Concat broker_id to broker_nm
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -221,7 +222,7 @@ BEGIN
             ,ytd_renewal_retention_pc
         )
         SELECT        
-            broker_id,broker_nm,mailing_address_line_1,mailing_address_line_2,mailing_address_city_nm,mailing_address_state_cd,
+            broker_id,broker_nm + ' - ' + broker_id,mailing_address_line_1,mailing_address_line_2,mailing_address_city_nm,mailing_address_state_cd,
             mailing_address_zip_cd,broker_tier,broker_tier_nm,national_agency_in,broker_type,broker_status,contract_dt,primary_contact_nm,
             broker_email,broker_phone_no,bdm_nm,bdm_email,new_business_uw_nm,renewal_uw_nm,open_submissions_ct,one_year_actual_non_cat_loss_ratio,
             two_year_ultimate_non_cat_loss_ratio,five_year_non_cat_loss_ratio,ytd_bind_ct,ytd_submission_ct,last30_days_submission_ct,hit_ratio,

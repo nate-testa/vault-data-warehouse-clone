@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote ALTER COLUMN close_reason_desc VARCHAR(3000);

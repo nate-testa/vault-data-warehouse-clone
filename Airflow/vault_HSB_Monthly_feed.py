@@ -59,7 +59,7 @@ with DAG(
     catchup=False,
     max_active_runs=1,
     default_args=args,
-    start_date=pendulum.datetime(2025, 3, 6, tz="America/New_York"),
+    start_date=pendulum.datetime(2025, 1, 1, tz="America/New_York"),
     schedule_interval='0 5 1 * *', # At 05:00 on the first day of each month.
     # schedule_interval=None,
     tags=["HSB dag", "vault"],
