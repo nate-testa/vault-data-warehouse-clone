@@ -1,9 +1,9 @@
 import pytz
 import pendulum
+import time
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.utils.task_group import TaskGroup
-from airflow.exceptions import AirflowSkipException
 from airflow.operators.mssql_operator import MsSqlOperator
 from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
@@ -18,8 +18,12 @@ cc_email = ""
 def check_day_and_time():
     # check for maintenance window on Ivans
     now = datetime.now(pytz.timezone("America/New_York"))
+    # if sunday (6) and before 8 AM
     if now.weekday() == 6 and now.hour < 8:
-        raise AirflowSkipException("Execution skipped: Sunday between 12 AM and 8 AM EST.")
+        target_time = now.replace(hour=8, minute=1, second=0, microsecond=0)
+        wait_seconds = (target_time - now).total_seconds()
+        print(f"*** Waiting {wait_seconds} seconds until 8:01 AM EST...")
+        time.sleep(wait_seconds)
 
 def on_failure_callback(context):
 
