@@ -111,9 +111,9 @@ BEGIN
 			,tmp2.MailingAddressState as mailing_address_state_cd
 			,case when len(tmp2.MailingAddressZipCode) < 250 then tmp2.MailingAddressZipCode else null end as mailing_address_zip_cd
 			,tmp1.createddate as quote_create_ts
-			,NULL as policy_sk --Pending
+			,NULL as policy_sk
 			,prior_pol.commercial_policy_sk as prior_term_policy_sk
-			,cast(NULL as date) as bind_dt --Pending
+			,cast(NULL as date) as bind_dt
 			,case when tmp1.SubmissionCloseReasonCategory is not null then tmp1.SubmissionCloseReasonDetails else tmp1.CloseReasonType end as close_reason_desc
 			,GETDATE() as create_ts
 			,GETDATE() as update_ts
