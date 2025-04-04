@@ -76,7 +76,7 @@ BEGIN
 
 		declare @sql nvarchar(max)
 		drop table if exists edw_temp.thome_coverage_temp1
-		SET @sql ='select ROW_NUMBER()over(partition by act.PolicyNumber ,act.EffectiveDate ,act.PolicyChangeNumber  order by pofv.[version] desc ) as rn,,
+		SET @sql ='select ROW_NUMBER()over(partition by PolicyNumber ,EffectiveDate ,transaction_seq_no order by [Version] desc ) as rn,
 		 PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transactiondate,transaction_seq_no,source_system_sk,
 		IssuedDate,policy_history_sk,home_location_sk,product_name,
 		FactorMethod, Factor, Retention, Reason,
