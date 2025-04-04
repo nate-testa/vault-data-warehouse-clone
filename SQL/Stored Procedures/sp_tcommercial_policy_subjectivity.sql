@@ -37,6 +37,7 @@ BEGIN
         
 		DROP TABLE IF EXISTS edw_temp.tcommercial_policy_subjectivity_temp1;
 		DROP TABLE IF EXISTS edw_temp.tcommercial_policy_subjectivity_temp2;
+		DROP TABLE IF EXISTS edw_temp.tcommercial_policy_subjectivity_temp3;
 
 		-- Step1 limit amount of rows.
 		SELECT 
@@ -47,6 +48,9 @@ BEGIN
 			,acct.ExpirationDate
 			,acct.TransactionEffectiveDate
 			,acct.PolicyChangeNumber
+			,accs.Required
+			,accs.Description
+			,CASE WHEN accs.IsCompleted = 1 THEN 'Yes' ELSE 'No' END as completed_in
 			,CASE 
 				WHEN acct.ExternalSourceId IS NOT NULL THEN 2 --(AV2) 
 				ELSE 4 --(Metal)
@@ -56,6 +60,7 @@ BEGIN
 		INTO edw_temp.tcommercial_policy_subjectivity_temp1 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id
+		INNER JOIN edw_stage.AccountSubjectivity accs ON accs.AccountId = acc.Id
 		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id 
 		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id
 		LEFT JOIN edw_stage.Product pr on acctv.ProductId = pr.id
@@ -90,6 +95,26 @@ BEGIN
 					)
 			) pivottable 
 
+		--Create last temp table
+		SELECT 
+			 tmp1.PolicyNumber as policy_no
+			,tmp1.EffectiveDate as effective_dt
+			,tmp1.ExpirationDate as expiration_dt
+			,tmp1.TransactionEffectiveDate as transaction_effective_dt
+			,tmp1.PolicyChangeNumber as transaction_seq_no
+			,cp.commercial_policy_history_sk
+			,tmp1.Required as required_for
+			,tmp1.Description as [description]
+			,tmp1.completed_in
+			,GETDATE() as create_ts
+			,GETDATE() as update_ts
+			,@etl_audit_sk as etl_audit_sk
+			,tmp1.source_system_sk
+		INTO edw_temp.tcommercial_policy_subjectivity_temp3
+		FROM edw_temp.tcommercial_policy_subjectivity_temp1 tmp1
+		LEFT JOIN edw_temp.tcommercial_policy_subjectivity_temp2 tmp2 on tmp2.AccountTransactionId = tmp1.Id
+		LEFT JOIN edw_commercial.tcommercial_policy_history cp on tmp1.PolicyNumber = cp.policy_no and cast(tmp1.EffectiveDate as date) = cast(cp.effective_dt as date) and tmp1.PolicyChangeNumber = cp.transaction_seq_no
+
 		-- Insert process
 		INSERT INTO edw_commercial.tcommercial_policy_subjectivity
 		(
@@ -108,22 +133,20 @@ BEGIN
 			,source_system_sk
 			)
 		SELECT 
-			 tmp1.PolicyNumber as policy_no
-			,tmp1.EffectiveDate as effective_dt
-			,tmp1.ExpirationDate as expiration_dt
-			,tmp1.TransactionEffectiveDate as transaction_effective_dt
-			,tmp1.PolicyChangeNumber as transaction_seq_no
-			,cp.commercial_policy_history_sk
-			,'pending' as required_for
-			,'pending' as [description]
-			,'pending' as completed_in
-			,GETDATE() as create_ts
-			,GETDATE() as update_ts
-			,@etl_audit_sk as etl_audit_sk
-			,tmp1.source_system_sk
-		FROM edw_temp.tcommercial_policy_subjectivity_temp1 tmp1
-		LEFT JOIN edw_temp.tcommercial_policy_subjectivity_temp2 tmp2 on tmp2.AccountTransactionId = tmp1.Id
-		LEFT JOIN edw_commercial.tcommercial_policy_history cp on tmp1.PolicyNumber = cp.policy_no and cast(tmp1.EffectiveDate as date) = cast(cp.effective_dt as date) and tmp1.PolicyChangeNumber = cp.transaction_seq_no
+			 policy_no
+			,effective_dt
+			,expiration_dt
+			,transaction_effective_dt
+			,transaction_seq_no
+			,commercial_policy_history_sk
+			,required_for
+			,[description]
+			,completed_in
+			,create_ts
+			,update_ts
+			,etl_audit_sk
+			,source_system_sk 
+		FROM edw_temp.tcommercial_policy_subjectivity_temp3
 		;
 
         --************End************
@@ -141,6 +164,7 @@ BEGIN
         -- Drop temp table
         DROP TABLE IF EXISTS edw_temp.tcommercial_policy_subjectivity_temp1;
 		DROP TABLE IF EXISTS edw_temp.tcommercial_policy_subjectivity_temp2;
+		DROP TABLE IF EXISTS edw_temp.tcommercial_policy_subjectivity_temp3;
 
 	END TRY
 	BEGIN CATCH
