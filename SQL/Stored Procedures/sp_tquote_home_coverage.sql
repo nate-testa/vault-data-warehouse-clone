@@ -2,26 +2,26 @@
 -- Author:		Yunus Mohammed 
 -- Description: This procedures loads home quote coverage data
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date			|Author						|	Change Description
+-- Change date			|Author									|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
 -- 10/23/23 			Yunus Mohammed				1. Created this procedure 
 -- 11/11/23				Sandeep Gundreddy		    2. modified  logic
 -- 11/13/23				Sandeep Gundreddy		    3. modified quote_home_location_sk logic
--- 11/30/23				Yunus Mohammed		        3. added new columns
--- 12/06/23				Alberto Almario					4. Added new field WindstormOrHailDeductibleManual
--- 22/02/24		        Hernando Gonzalez			5. Added new fields aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt
--- 12/06/24			    Alberto Almario					6. Added new filed nc_bureau_rate
--- 07/12/24				Yunus Mohammed				7. Added new fields stated_limits_policy_in and risk_sharing_policy_in
--- 08/13/24				Yunus Mohammed				8. Updated wind_derived_deductible logic
--- 08/20/24				Yunus Mohammed				9. Updated wind_derived_deductible logic
--- 09/03/24				Yunus Mohammed				10. Added new column no_of_family_units_in_structures
--- 10/02/24				Yunus Mohammed				11. Added new column fortified_roof_credit
--- 10/31/24		        Hernando Gonzalez			12. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
--- 12/02/24				Yunus Mohammed				13. AD-7834 Added new fields.
--- 01/17/25				Yunus Mohammed				14.  AD-8225 Roundoff ReinsuranceTotalTIV value
--- 01/22/25				Alberto Almario					15. Added new column fenced_pool_in
--- 03/19/25		Hernando Gonzalez					16. Added new columns wildfire_risk_score, wildfire_risk_class
--- 04/02/25		Yunus Mohammed						17. AD-8973 roof_deck_attachment value logic updated
+-- 11/30/23				Yunus Mohammed		        4. added new columns
+-- 12/06/23				Alberto Almario					5. Added new field WindstormOrHailDeductibleManual
+-- 22/02/24		        Hernando Gonzalez			6. Added new fields aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt
+-- 12/06/24			    Alberto Almario					7. Added new filed nc_bureau_rate
+-- 07/12/24				Yunus Mohammed				8. Added new fields stated_limits_policy_in and risk_sharing_policy_in
+-- 08/13/24				Yunus Mohammed				9. Updated wind_derived_deductible logic
+-- 08/20/24				Yunus Mohammed				10. Updated wind_derived_deductible logic
+-- 09/03/24				Yunus Mohammed				11. Added new column no_of_family_units_in_structures
+-- 10/02/24				Yunus Mohammed				12. Added new column fortified_roof_credit
+-- 10/31/24		        Hernando Gonzalez			13. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
+-- 12/02/24				Yunus Mohammed				14. AD-7834 Added new fields.
+-- 01/17/25				Yunus Mohammed				15.  AD-8225 Roundoff ReinsuranceTotalTIV value
+-- 01/22/25				Alberto Almario					16. Added new column fenced_pool_in
+-- 03/19/25				Hernando Gonzalez			17. Added new columns wildfire_risk_score, wildfire_risk_class
+-- 04/02/25				Yunus Mohammed				18. AD-8973 roof_deck_attachment value logic updated
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage]
 
@@ -72,8 +72,9 @@ BEGIN
 		declare @sql nvarchar(max)
 
 		drop table if exists edw_temp.tquote_home_coverage_temp1
+		drop table if exists edw_temp.tquote_home_coverage_temp2
 		drop table if exists edw_temp.tquote_home_coverage_temp3
-		drop table if exists edw_temp.tquote_home_coverage_temp4
+
 		select act.*
 		into edw_temp.tquote_home_coverage_temp1
 		from
@@ -88,13 +89,13 @@ BEGIN
 		SET @sql ='select quote_no,EffectiveDate,ExpirationDate,transaction_seq_no,source_system_sk,
 		quote_history_sk,quote_home_location_sk,product_name,CreatedDate,
 		FactorMethod, Factor, Retention, Reason,
-		'+ @ColumnsToPivot +' into edw_temp.tquote_home_coverage_temp3
+		'+ @ColumnsToPivot +' into edw_temp.tquote_home_coverage_temp2
 			from
 			(
 			select
 			act.PolicyNumber as quote_no,act.EffectiveDate ,act.ExpirationDate ,act.TransactionEffectiveDate ,
 			tqh.quote_history_sk,thql.quote_home_location_sk,
-			act.[Number] as transaction_seq_no,act.CreatedDate, pr.name product_name,
+			act.[Number] as transaction_seq_no,act.CreatedDate, p.name product_name,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,
 			atvof.[Value] as [Value],
 			atvpf.FactorMethod, atvpf.Factor, atvpf.Retention, atvpf.Reason
@@ -120,11 +121,11 @@ BEGIN
 			'
 			EXECUTE sp_executesql @sql, N'@last_source_extract_ts datetime2(7)', @last_source_extract_ts = @last_source_extract_ts
 			
-			select * into edw_temp.tquote_home_coverage_temp4
+			select * into edw_temp.tquote_home_coverage_temp3
 			from
 			(
-			select ROW_NUMBER()over(partition by act.PolicyNumber ,act.EffectiveDate ,act.PolicyChangeNumber  order by pofv.[version] desc ) as rn,
-			act.PolicyNumber ,act.EffectiveDate ,act.[Number] as transaction_seq_no,
+			select ROW_NUMBER()over(partition by act.PolicyNumber ,act.EffectiveDate ,act.[Number]  order by pofv.[version] desc ) as rn,
+			act.PolicyNumber as quote_no ,act.EffectiveDate ,act.[Number] as transaction_seq_no,
 			pofv.ValueDisplay as [Value]
 			from
 				edw_temp.tquote_home_coverage_temp1 act
@@ -150,12 +151,6 @@ BEGIN
 			where
 				rn = 1
 
-			drop table if exists edw_temp.tquote_home_coverage_temp2
-			
-			CREATE TABLE edw_temp.tquote_home_coverage_temp2
-			(
-				quote_home_coverage_sk INT
-			)
 			INSERT INTO [edw_core].[tquote_home_coverage]
 			(
 				quote_no,effective_dt,expiration_dt,transaction_seq_no,
@@ -199,8 +194,7 @@ BEGIN
 				newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
 				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
-			)
-			OUTPUT inserted.quote_home_coverage_sk INTO edw_temp.tquote_home_coverage_temp2
+			)			
 			SELECT
 				tthc.quote_no AS quote_no,tthc.EffectiveDate AS effective_dt,tthc.ExpirationDate AS expiration_dt,
 				tthc.transaction_seq_no AS transaction_seq_no,tthc.quote_home_location_sk,quote_history_sk,
@@ -322,7 +316,7 @@ BEGIN
 				tthc.TornadoorHailstormDeductible AS tornado_or_hailstorm_deductible,
 				tthc.WindStormOrHailDeductible AS wind_or_hailstorm_deductible, 
 				tthc.FactorMethod, tthc.Factor, tthc.Retention, tthc.Reason,
-				tthc.ReinsuranceDesignation, tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit,ROUND( tthc.ReinsuranceTotalTIV,0), 
+				tthc.ReinsuranceDesignation, tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit,ROUND( tthc.ReinsuranceTotalTIV,0) as ReinsuranceTotalTIV, 
 				tthc.WildfireThreat, tthc.WildfireHazardSeverity,
 				tthc.AOPDeductiblemanual, tthc.Waterdeductiblemanual,tthc.wildfiredeductiblemanual,tthc.WindstormOrHailDeductibleManual,
 				tthc.CATModeling_CATScore, tthc.CATModeling_ReinsuranceMargin, tthc.CATModeling_CededLoss, tthc.CATModeling_ReinsurancePremium, tthc.CATModeling_CapitalCost, tthc.CATModeling_CATScoreToPremiumRatio_Hurricane, tthc.CATModeling_AALToPremium, tthc.AAL, 
@@ -355,23 +349,9 @@ BEGIN
 				tthc.WildfireRiskClass as wildfire_risk_class,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
-				edw_temp.tquote_home_coverage_temp3 AS tthc
-				left join edw_temp.tquote_home_coverage_temp4 as t on tthc.PolicyNumber = t.PolicyNumber and 
-				tthc.EffectiveDate= t.EffectiveDate and tthc.transaction_seq_no = t.transaction_seq_no
-
-				/*
-			
-			UPDATE [edw_core].[tquote_home_coverage]
-			SET total_insured_value_amt = 	ISNULL(dwelling_limit_amt,0) + ISNULL(other_structures_limit_amt,0) + ISNULL(contents_limit_amt,0) +
-											CASE WHEN ISNUMERIC(TRIM(loss_of_use_limit_amt)) = 1 and cast(loss_of_use_limit_amt as float) > 0.0 
-											    then loss_of_use_limit_amt
-											when ISNUMERIC(TRIM(loss_of_use_pc)) = 1 
-											    then round(cast(loss_of_use_pc as float) * cast(iif(residence_type = 'Homeowners', dwelling_limit_amt, contents_limit_amt) as int),0)
-											else 0
-											end
-			WHERE
-				quote_home_coverage_sk IN(SELECT quote_home_coverage_sk FROM edw_temp.tquote_home_coverage_temp2)
-				*/
+				edw_temp.tquote_home_coverage_temp2 AS tthc
+				left join edw_temp.tquote_home_coverage_temp3 as t on tthc.quote_no = t.quote_no and 
+				tthc.EffectiveDate= t.EffectiveDate and tthc.transaction_seq_no = t.transaction_seq_no		
 		
 			SET @rows_affected=@@ROWCOUNT;  
 
@@ -386,8 +366,6 @@ BEGIN
 			DROP TABLE IF EXISTS edw_temp.tquote_home_coverage_temp1
 			DROP TABLE IF EXISTS edw_temp.tquote_home_coverage_temp2
 			DROP TABLE IF EXISTS edw_temp.tquote_home_coverage_temp3
-			DROP TABLE IF EXISTS edw_temp.tquote_home_coverage_temp4
-			
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
