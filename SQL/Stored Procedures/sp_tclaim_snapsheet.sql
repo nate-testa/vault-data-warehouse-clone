@@ -101,6 +101,7 @@ BEGIN
 			CASE
 					WHEN c.account_code='vault_reciprocal_exchange' THEN 'VRE'
 					WHEN c.account_code='vault_es_insurance_company' THEN 'VES'
+					WHEN tp.uw_company_nm like '%litigation%' then tp.uw_company_nm
 			ELSE '' END AS underwriting_company_nm,
 			CONCAT(	'',
 					TRIM(cp.first_name), 
