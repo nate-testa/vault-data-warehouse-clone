@@ -14,6 +14,7 @@
 -- 02/24/2025		Yunus Mohammed				9. Updated made for product_sk for NFP policies.
 -- 03/04/2025		Yunus Mohammed				10. Ad-8729 Updates made for effective_dt of NFP policies
 -- 04/03/2025		Yunus Mohammed				11. AD-8747 Mapping updated for loss_desc columns for snapsheet claims
+-- 04/09/2025		Yunus Mohammed				12. AD-9109 Used tpolicy table for broker_id, customer_id and product_sk instead of tpolicy_history
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -67,14 +68,14 @@ BEGIN
 		(
 		SELECT
 			ROW_NUMBER() OVER(PARTITION BY c.claim_number ORDER BY c.claim_number) as rn,
-			CASE WHEN c.policy_number LIKE 'NFP%'  then nfp.effective_dt else tph.effective_dt end as effective_dt,
-			tbrk.broker_id,
-			cr.customer_id,
+			CASE WHEN c.policy_number LIKE 'NFP%'  then nfp.effective_dt else tp.effective_dt end as effective_dt,
+			tp.broker_id,
+			tp.customer_id,
 			c.claim_number, 
 			c.datetime_of_loss AS loss_dt, 
 			c.datetime_of_notification AS report_dt, 
 			c.policy_number as policy_no, 
-			tph.policy_sk,
+			tp.policy_sk,
 			cl.cause_of_loss_sk,
 			case
 				when c.claim_source = 'api' then c.incident_location_description
@@ -87,7 +88,7 @@ BEGIN
 				else 'Closed' 
 			END) AS claim_status,
 			cat.catastrophe_sk, 
-			CASE WHEN c.policy_number LIKE 'NFP%' THEN 4 ELSE tph.product_sk END as product_sk,
+			CASE WHEN c.policy_number LIKE 'NFP%' THEN 4 ELSE pr.product_sk END as product_sk,
 			CONCAT(	'',
 					TRIM(c.address_address1), 
 					CASE WHEN TRIM(ISNULL(c.address_address1,''))='' THEN '' ELSE '' END,
@@ -144,6 +145,16 @@ BEGIN
 		LEFT JOIN edw_stage_snapsheet.liability_assignments la on la.claim_id = c.id
 		LEFT JOIN edw_stage_snapsheet.liability_determinations ld on ld.claim_id = c.id
 		LEFT JOIN edw_stage_snapsheet.claim_parties cpr on ld.responsible_party_claim_party_id = cpr.id
+		LEFT JOIN edw_core.tpolicy tp on TRIM(c.policy_number) = tp.policy_no
+												AND tp.policy_sk = (
+																	SELECT TOP 1 policy_sk
+																	FROM
+																		edw_core.tpolicy tp1
+																	WHERE
+																		tp1.policy_no = c.policy_number
+																		AND CAST(tp1.effective_dt AS DATE) <= CAST(c.datetime_of_loss AS DATE)
+																	ORDER BY effective_dt DESC
+																)
 		LEFT JOIN edw_core.tpolicy_history tph ON TRIM(c.policy_number) = tph.policy_no
 												AND tph.policy_history_sk = (
 																	SELECT TOP 1 policy_history_sk
@@ -154,8 +165,7 @@ BEGIN
 																		AND CAST(tph1.transaction_effective_dt AS DATE) <= CAST(c.datetime_of_loss AS DATE)
 																	ORDER BY transaction_seq_no DESC
 																)
-		LEFT JOIN edw_core.tbroker tbrk ON tbrk.broker_sk = tph.broker_sk	
-		LEFT JOIN edw_core.tcustomer cr ON cr.customer_sk=tph.customer_sk
+		LEFT JOIN edw_core.tproduct pr on pr.product_cd = tp.product_cd
 		LEFT JOIN edw_temp.tclaim_snapsheet_temp2 cc ON cc.claim_id = c.id
 		LEFT JOIN edw_core.tcatastrophe cat ON cc.catastrophe_cd = cat.catastrophe_cd
 		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_desc = c.loss_type
