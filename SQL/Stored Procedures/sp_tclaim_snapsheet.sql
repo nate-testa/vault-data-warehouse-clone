@@ -146,16 +146,7 @@ BEGIN
 		LEFT JOIN edw_stage_snapsheet.liability_assignments la on la.claim_id = c.id
 		LEFT JOIN edw_stage_snapsheet.liability_determinations ld on ld.claim_id = c.id
 		LEFT JOIN edw_stage_snapsheet.claim_parties cpr on ld.responsible_party_claim_party_id = cpr.id
-		LEFT JOIN edw_core.tpolicy tp on TRIM(c.policy_number) = tp.policy_no
-												AND tp.policy_sk = (
-																	SELECT TOP 1 policy_sk
-																	FROM
-																		edw_core.tpolicy tp1
-																	WHERE
-																		tp1.policy_no = c.policy_number
-																		AND CAST(tp1.effective_dt AS DATE) <= CAST(c.datetime_of_loss AS DATE)
-																	ORDER BY effective_dt DESC
-																)
+		LEFT JOIN edw_core.tpolicy tp on TRIM(c.policy_number) = tp.policy_no												
 		LEFT JOIN edw_core.tpolicy_history tph ON TRIM(c.policy_number) = tph.policy_no
 												AND tph.policy_history_sk = (
 																	SELECT TOP 1 policy_history_sk
