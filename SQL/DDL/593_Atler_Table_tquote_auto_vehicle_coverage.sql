@@ -317,8 +317,8 @@ SELECT 1
 FROM INFORMATION_SCHEMA.COLUMNS					
 WHERE TABLE_SCHEMA='edw_core'					
 AND TABLE_NAME = 'tquote_auto_vehicle_coverage'					
-AND COLUMN_NAME = 'uninsured_motorist_premium_adjustment_amount'					
-) BEGIN ALTER TABLE edw_core.tquote_auto_vehicle_coverage ADD uninsured_motorist_premium_adjustment_amount Varchar(255) END
+AND COLUMN_NAME = 'underinsured_motorist_premium_adjustment_amount'					
+) BEGIN ALTER TABLE edw_core.tquote_auto_vehicle_coverage ADD underinsured_motorist_premium_adjustment_amount Varchar(255) END
 ;
 
 IF NOT EXISTS (					
@@ -326,8 +326,8 @@ SELECT 1
 FROM INFORMATION_SCHEMA.COLUMNS					
 WHERE TABLE_SCHEMA='edw_core'					
 AND TABLE_NAME = 'tquote_auto_vehicle_coverage'					
-AND COLUMN_NAME = 'uninsured_motorist_premium_adjustment_method'					
-) BEGIN ALTER TABLE edw_core.tquote_auto_vehicle_coverage ADD uninsured_motorist_premium_adjustment_method Varchar(255) END
+AND COLUMN_NAME = 'underinsured_motorist_premium_adjustment_method'					
+) BEGIN ALTER TABLE edw_core.tquote_auto_vehicle_coverage ADD underinsured_motorist_premium_adjustment_method Varchar(255) END
 ;
 
 IF NOT EXISTS (					
@@ -335,8 +335,8 @@ SELECT 1
 FROM INFORMATION_SCHEMA.COLUMNS					
 WHERE TABLE_SCHEMA='edw_core'					
 AND TABLE_NAME = 'tquote_auto_vehicle_coverage'					
-AND COLUMN_NAME = 'uninsured_motorist_premium_adjustment_reason'					
-) BEGIN ALTER TABLE edw_core.tquote_auto_vehicle_coverage ADD uninsured_motorist_premium_adjustment_reason Varchar(255) END
+AND COLUMN_NAME = 'underinsured_motorist_premium_adjustment_reason'					
+) BEGIN ALTER TABLE edw_core.tquote_auto_vehicle_coverage ADD underinsured_motorist_premium_adjustment_reason Varchar(255) END
 ;
 
 IF NOT EXISTS (					
@@ -344,8 +344,8 @@ SELECT 1
 FROM INFORMATION_SCHEMA.COLUMNS					
 WHERE TABLE_SCHEMA='edw_core'					
 AND TABLE_NAME = 'tquote_auto_vehicle_coverage'					
-AND COLUMN_NAME = 'uninsured_motorist_premium_adjustment_retention'					
-) BEGIN ALTER TABLE edw_core.tquote_auto_vehicle_coverage ADD uninsured_motorist_premium_adjustment_retention Varchar(255) END
+AND COLUMN_NAME = 'underinsured_motorist_premium_adjustment_retention'					
+) BEGIN ALTER TABLE edw_core.tquote_auto_vehicle_coverage ADD underinsured_motorist_premium_adjustment_retention Varchar(255) END
 ;
 
 IF NOT EXISTS (					
