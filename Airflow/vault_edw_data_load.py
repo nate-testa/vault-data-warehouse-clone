@@ -475,6 +475,12 @@ with DAG(
             )
             operators.append(operator)
 
+        exec_commercial_edw_data_load = TriggerDagRunOperator(
+            task_id="exec_commercial_edw_data_load",
+            trigger_dag_id="commercial_edw_data_load",
+            dag=dag,
+        )
+
         send_datamart_email = EmailOperator(
             task_id='send_datamart_email',
             to=to_email,
@@ -485,7 +491,7 @@ with DAG(
         for i in range(len(operators) - 1):
             operators[i] >> operators[i + 1]
 
-        operators[-1] >> send_datamart_email
+        operators[-1] >> exec_commercial_edw_data_load >> send_datamart_email
 
 
     with TaskGroup("reference_group") as reference_group:
