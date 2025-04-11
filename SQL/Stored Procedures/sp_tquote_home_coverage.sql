@@ -129,6 +129,7 @@ BEGIN
 			pofv.ValueDisplay as [Value]
 			from
 				edw_temp.tquote_home_coverage_temp1 act
+				inner join edw_stage.Account acc on acc.PolicyNumber = act.PolicyNumber and acc.EffectiveDate = act.EffectiveDate
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId    
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
 				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId 
@@ -142,7 +143,7 @@ BEGIN
 				) AS pofv ON atvof.Field=pofv.Field and act.ProductId = pofv.ProductId and atvo.ObjectType = pofv.ObjectType
 						and  atv.RiskStateCode=pofv.statecode and atvof.[Value] = pofv.[Value]
 					and act.EffectiveDate between pofv.EffectiveDate and isnull(pofv.ExpirationDate,'2099-01-01')
-					and pofv.IsRenewal = atv.IsRenewal		
+					and pofv.IsRenewal = acc.IsRenewal		
 			where   
 				atvo.ObjectType in ('Homeowner','Condo','Inspection')
 				and atvof.Field= 'RoofDeckAttachment'
