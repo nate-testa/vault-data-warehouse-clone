@@ -1,10 +1,11 @@
 -- =================================================================================================
 -- Description: This procedures feature_status_sk in tclaim_transaction table
 -----------------------------------------------------------------------------------------------------------
--- Change date          |Author						            |	Change Description
+-- Change date          	|Author						          |	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 02/07/25		           Yunus Mohammed			1. Created this procedure
+-- 02/07/25					Yunus Mohammed			1. Created this procedure
 -- 03/04/25					Yunus Mohammed			2. Updated logic include partition by to correct close feature status
+-- 04/14/25					Yunus Mohammed			3. Modified case statement to correct update
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction_update_snapsheet]
 AS
@@ -32,7 +33,7 @@ BEGIN
         edw_core.tclaim_transaction ct
         inner join
         (
-            select claim_transaction_sk,claim_feature_sk, case when reserve_running_total<>0 THEN 1 ELSE 2 END as feature_status_sk
+            select claim_transaction_sk,claim_feature_sk, case when reserve_running_total<>0 THEN 2 ELSE 1 END as feature_status_sk
             from
             (
             select claim_transaction_sk,claim_feature_sk,
