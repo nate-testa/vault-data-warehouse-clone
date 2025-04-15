@@ -11,10 +11,10 @@
 -- 11/16/23		Architha Gudimalla				6. Added wildfire columns
 -- 11/16/23		Architha Gudimalla				7. updated the join for AccountTransactionVersionPremiumfactor
 -- 11/30/23		Yunus Mohammed					8. Added new fields
--- 12/06/23		Alberto Almario					9. Added new field WindstormOrHailDeductibleManual
+-- 12/06/23		Alberto Almario						9. Added new field WindstormOrHailDeductibleManual
 -- 22/02/24		Hernando Gonzalez				10. Added new fields aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt
 -- 04/02/24		Yunus Mohammed					11. Updated wind_derived_deductible logic
--- 12/06/24		Alberto Almario					12. Added new filed nc_bureau_rate
+-- 12/06/24		Alberto Almario						12. Added new filed nc_bureau_rate
 -- 07/09/24		Yunus Mohammed					13. Added new fields stated_limits_policy_in and risk_sharing_policy_in
 -- 08/13/24		Yunus Mohammed					14. Updated wind_derived_deductible logic
 -- 08/20/24		Yunus Mohammed					15. Updated wind_derived_deductible logic
@@ -23,8 +23,9 @@
 -- 10/31/24		Hernando Gonzalez				18. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
 -- 12/02/24		Yunus Mohammed					19 AD-7834 Added new fields
 -- 01/17/25		Yunus Mohammed					20.  AD-8225 Roundoff ReinsuranceTotalTIV value
--- 01/22/25		Alberto Almario					21. Added new column fenced_pool_in
+-- 01/22/25		Alberto Almario						21. Added new column fenced_pool_in
 -- 03/19/25		Hernando Gonzalez				22. Added new columns wildfire_risk_score, wildfire_risk_class
+-- 04/02/25		Yunus Mohammed					23. AD-8973 roof_deck_attachment value logic updated
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -75,20 +76,34 @@ BEGIN
 
 		declare @sql nvarchar(max)
 		drop table if exists edw_temp.thome_coverage_temp1
+		drop table if exists edw_temp.thome_coverage_temp2
+		drop table if exists edw_temp.thome_coverage_temp3
+
+		select act.*
+		into edw_temp.thome_coverage_temp1
+		from
+			edw_stage.AccountTransaction act
+			inner join edw_stage.Product p on p.Id=act.ProductId
+		where
+			act.PolicyNumber is not null and
+			act.[State] ='ISSUED'	
+			and p.ProductLine = 'PersonalLines'
+			and act.IssuedDate > @last_source_extract_ts
+
 		SET @sql ='select PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transactiondate,transaction_seq_no,source_system_sk,
 		IssuedDate,policy_history_sk,home_location_sk,product_name,
 		FactorMethod, Factor, Retention, Reason,
-		'+ @ColumnsToPivot +' into edw_temp.thome_coverage_temp1
+		'+ @ColumnsToPivot +' into edw_temp.thome_coverage_temp2
 			from
 			(
 			select
 			act.PolicyNumber ,act.EffectiveDate ,act.ExpirationDate ,act.TransactionEffectiveDate ,
 			tph.policy_history_sk,thl.home_location_sk,
-			act.policychangenumber as transaction_seq_no, act.IssuedDate as transactiondate,act.IssuedDate, pr.name product_name,
-			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value],
-			atvpf.FactorMethod, atvpf.Factor, atvpf.Retention, atvpf.Reason
+			act.policychangenumber as transaction_seq_no, act.IssuedDate as transactiondate,act.IssuedDate, p.name product_name,
+			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,
+			atvof.[Value],atvpf.FactorMethod, atvpf.Factor, atvpf.Retention, atvpf.Reason
 			from
-				edw_stage.AccountTransaction act
+				edw_temp.thome_coverage_temp1 act
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
 				inner join edw_stage.AccountTransactionVersionPremium atvp on atv.Id=atvp.AccountTransactionVersionId
@@ -100,13 +115,8 @@ BEGIN
 						and tph.transaction_seq_no = act.policychangenumber
 				left join edw_core.thome_location thl on thl.policy_no=act.PolicyNumber
 						and thl.effective_dt=act.EffectiveDate
-				left join edw_stage.Product pr on act.ProductId = pr.id
 			where
-				act.PolicyNumber is not null and
-				act.[State] =''ISSUED''
-				and atvo.ObjectType in (''Homeowner'',''Condo'',''Inspection'')
-				and pr.ProductLine = ''PersonalLines''
-				and act.IssuedDate > @last_source_extract_ts
+				 atvo.ObjectType in (''Homeowner'',''Condo'',''Inspection'')
 			) as t
 			pivot 
 			(
@@ -114,7 +124,38 @@ BEGIN
 			) as pivottable
 			'
 			EXECUTE sp_executesql @sql, N'@last_source_extract_ts datetime2(7)', @last_source_extract_ts = @last_source_extract_ts
-		
+
+			select * into edw_temp.thome_coverage_temp3
+			from
+			(
+			select ROW_NUMBER()over(partition by act.PolicyNumber ,act.EffectiveDate ,act.PolicyChangeNumber  order by pofv.[version] desc ) as rn,
+			act.PolicyNumber ,act.EffectiveDate ,act.PolicyChangeNumber as transaction_seq_no,
+			pofv.ValueDisplay as [Value]
+			from
+				edw_temp.thome_coverage_temp1 act
+				inner join edw_stage.Account acc on acc.PolicyNumber = act.PolicyNumber and acc.EffectiveDate = act.EffectiveDate
+				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId    
+				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
+				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId 
+				left join
+				(
+						SELECT *
+						FROM edw_stage.ProductObjectFieldValueDisplay
+						WHERE
+						Field = 'RoofDeckAttachment'
+					
+				) AS pofv ON atvof.Field=pofv.Field and act.ProductId = pofv.ProductId and atvo.ObjectType = pofv.ObjectType
+					and  atv.RiskStateCode=pofv.statecode and atvof.[Value] = pofv.[Value]
+					and act.EffectiveDate between pofv.EffectiveDate and isnull(pofv.ExpirationDate,'2099-01-01')
+					and pofv.IsRenewal = acc.IsRenewal
+			where   
+				atvo.ObjectType in ('Homeowner','Condo','Inspection')
+				and atvof.Field= 'RoofDeckAttachment'
+				and isnull(atvof.[Value],'')  != ''
+			) as a
+			where
+				rn = 1
+
 			INSERT INTO [edw_core].[thome_coverage]
 			(
 				policy_no,effective_dt,expiration_dt,transaction_effective_dt,transaction_dt,transaction_seq_no,
@@ -258,7 +299,7 @@ BEGIN
 				tthc.OpeningProtection AS opening_protection,
 				tthc.RoofCoverDeck AS roof_cover_deck,
 				tthc.RoofCovering AS roof_covering,
-				tthc.RoofDeckAttachment AS roof_deck_attachment,
+				t.[Value] AS roof_deck_attachment,
 				tthc.RoofGeometry AS roof_geometry,
 				tthc.RoofSystem AS roof_system_in,
 				tthc.RoofWallAttachment AS roof_wall_attachment,
@@ -317,10 +358,12 @@ BEGIN
 				tthc.WildfireRiskClass as wildfire_risk_class,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
-				edw_temp.thome_coverage_temp1 AS tthc
-
+				edw_temp.thome_coverage_temp2 AS tthc
+				left join edw_temp.thome_coverage_temp3 as t on tthc.PolicyNumber = t.PolicyNumber and 
+				tthc.EffectiveDate= t.EffectiveDate and tthc.transaction_seq_no = t.transaction_seq_no
+			
 			SET @rows_affected=@@ROWCOUNT;  
-
+   
 			-- Update control table
 			SET @new_last_source_extract_ts=COALESCE((SELECT MAX(IssuedDate) FROM edw_temp.thome_coverage_temp1),@last_source_extract_ts);	
 			EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
@@ -330,6 +373,8 @@ BEGIN
 
 			-- Drop temp table
 			DROP TABLE IF EXISTS edw_temp.thome_coverage_temp1
+			DROP TABLE IF EXISTS edw_temp.thome_coverage_temp2
+			DROP TABLE IF EXISTS edw_temp.thome_coverage_temp3
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
