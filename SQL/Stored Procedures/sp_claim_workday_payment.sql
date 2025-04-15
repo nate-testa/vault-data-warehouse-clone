@@ -15,6 +15,7 @@
 -- 02/19/25		Yunus Mohammed				7. Updated to use new columns after Snapsheet implementation
 -- 03/04/25     Sandeep Gundreddy			8. Removed defense_cost_in filter
 -- 03/13/25		Yunus Mohammed				9 Ad-8876 USed payment_no as transaction_id
+-- 04/15/25		Yunus Mohammed				10. Removed litigation claims
 -- ================================================================================================= 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_claim_workday_payment]
@@ -191,6 +192,7 @@ BEGIN
 			LEFT JOIN edw_core.tpolicy tp on tp.policy_no=tc.policy_no
 			LEFT JOIN edw_core.tstate st on st.state_cd=tp.risk_state_cd
 			WHERE tcr.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
+			and tc.policy_no not like '%VRE' and policy_no not like '%VES'
 			AND ttr.amt!=0
 			)
 
