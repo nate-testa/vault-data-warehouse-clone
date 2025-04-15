@@ -64,7 +64,7 @@ BEGIN
 				u.name AS payment_submitter_nm,
 				case when ftas.Id is null then u.name else apprvu.name end as payment_approver_nm, 
 				ft.created_at AS payment_submitted_dt,
-				ft.approved_at AS payment_approver_dt,
+				case when ftas.Id is null then ft.approved_at else fta.created_at end AS payment_approver_dt,				
 				ft.financial_transaction_type as payment_category_nm,--(CASE WHEN settle.claim_type = 'LOS' THEN 'Payment' ELSE 'Recovery' END) AS payment_category_nm,
 				fpi.payment_type as partial_final_payment_desc,--(CASE WHEN fpi.pay_final = 4 THEN 'Final' ELSE 'Partial' END) AS partial_final_payment_desc,
 				null as expert_subtype_role, --party.expert_subtype_role, --pending
