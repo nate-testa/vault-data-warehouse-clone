@@ -64,11 +64,10 @@ class MajescoBillingProcessor:
 
     def read_and_prepare_data(self):
         try:
-            # -------------------------------------------------------
-            # helper to normalise a column name with the new rules
-            # -------------------------------------------------------
+            
             def _clean(col: str) -> str:
-                col = col.replace('_', ' ')                # _ -> space
+                # clean column names
+                col = col.replace('_', ' ')
                 col = re.sub(r'[^A-Za-z0-9()\-\s]', '', col)  # drop other chars
                 return col.lower().strip()
 
@@ -293,7 +292,7 @@ def process_all_files():
             # Extract the table name from the file name
             table_name = table_for_csv(csv_filename)
             if not table_name:
-                logging.info(f"Skipping file {csv_filename} due to unrecognized type.")
+                logging.warning(f"Skipping file {csv_filename} due to unrecognized type.")
                 continue
 
             logging.info(f" **** Processing file: {csv_filename} **** ")
