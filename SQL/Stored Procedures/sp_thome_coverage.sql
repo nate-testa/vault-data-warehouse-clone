@@ -26,6 +26,7 @@
 -- 01/22/25		Alberto Almario						21. Added new column fenced_pool_in
 -- 03/19/25		Hernando Gonzalez				22. Added new columns wildfire_risk_score, wildfire_risk_class
 -- 04/02/25		Yunus Mohammed					23. AD-8973 roof_deck_attachment value logic updated
+-- 04/16/25		Yunus Mohammed					24. AD-9121 Corrected null values for premium mods
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -106,8 +107,9 @@ BEGIN
 				edw_temp.thome_coverage_temp1 act
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
-				inner join edw_stage.AccountTransactionVersionPremium atvp on atv.Id=atvp.AccountTransactionVersionId
-				left join edw_stage.AccountTransactionVersionPremiumfactor atvpf on atvp.Id=atvpf.AccountTransactionVersionPremiumId and atvpf.coverage = ''Homeowners''
+				inner join edw_stage.AccountTransactionVersionPremium atvp on atv.Id=atvp.AccountTransactionVersionId				
+				 left join edw_stage.AccountTransactionVersionPremiumfactor atvpf on atvp.Id=atvpf.AccountTransactionVersionPremiumId 
+				and (atvpf.coverage in (''Homeowners'',''Condo'') or atvpf.coverage is null)
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
 				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId 
 				left join edw_core.tpolicy_history tph on tph.policy_no=act.PolicyNumber
