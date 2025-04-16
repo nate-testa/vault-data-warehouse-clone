@@ -19,7 +19,9 @@
 -- 01/17/25				Yunus Mohammed				13.  AD-8225 Roundoff ReinsuranceTotalTIV value
 -- 01/23/25				Alberto Almario					14. Added new column fenced_pool_in
 -- 03/19/25				Hernando Gonzalez			15. Added new columns wildfire_risk_score, wildfire_risk_class
--- 04/02/25				Yunus Mohammed						16. AD-8973 roof_deck_attachment value logic updated
+-- 04/02/25				Yunus Mohammed				16. AD-8973 roof_deck_attachment value logic updated
+-- 04/16/25				Yunus Mohammed				17. AD-9121 Corrected null values for premium mods
+
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
 
@@ -106,7 +108,8 @@ BEGIN
                 select AccountPremiumId,FactorMethod, Factor, Retention, Reason, createddate,
                 ROW_NUMBER() over (partition by AccountPremiumId order by CreatedDate desc) as rnk
                 from edw_stage.AccountPremiumFactor
-                where coverage = ''Homeowners''
+                where
+					(coverage in (''Homeowners'',''Condo'') or coverage is null)
                 )a where a.rnk=1
                 ) accpf on accpf.AccountPremiumId=ap.id 
                 left join edw_core.tquote_history tqh on tqh.quote_no=acc.PolicyNumber
