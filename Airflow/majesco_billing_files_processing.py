@@ -3,11 +3,9 @@ import logging
 import pandas as pd
 import time
 import majesco_billing_mapping
-import io
 import re
-from typing import Union
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone 
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.providers.microsoft.azure.hooks.wasb import WasbHook
 from airflow.models import Variable
@@ -15,6 +13,7 @@ from airflow.models import Variable
 
 ENVIRONMENT = Variable.get("environment")
 HOME_PATH = os.path.expanduser('~')
+MSSQL_CONN_ID = 'Vault_EDW'
 
 
 # Set up logging
@@ -34,7 +33,7 @@ class MajescoBillingProcessor:
 
         # Airflow connection IDs
         self.wasb_conn_id = 'azure_blob_storage'
-        self.mssql_conn_id = 'Vault_EDW'
+        self.mssql_conn_id = MSSQL_CONN_ID
 
         # Initialize connections
         self.create_blob_service_client()
@@ -244,7 +243,7 @@ class MajescoBillingProcessor:
 
 def table_for_csv(file_name):
     """
-    Deduce the target table for a given CSV file name.
+        Deduce the target table for a given CSV file name.
     """
     # Strip directory & extension, upper‑case for case‑insensitive match
     stem = Path(file_name).stem.upper()
@@ -261,12 +260,60 @@ def table_for_csv(file_name):
     logging.info(f"Unrecognised file type for '{file_name}'")
     return None
 
+def get_last_source_extract_ts():
+    try:
+        mssql_hook = MsSqlHook(mssql_conn_id=MSSQL_CONN_ID)
+
+        with mssql_hook.get_conn() as connection:
+            with connection.cursor() as cursor:
+                query = """
+                    SELECT last_source_extract_ts 
+                    FROM edw_core.tetl_control 
+                    WHERE process_nm = 'py_majesco_billing'
+                """
+                cursor.execute(query)
+                result = cursor.fetchone()
+
+                if result and result[0]:
+                    last_source_extract_ts = result[0]
+                    # Convert to UTC if not already in UTC
+                    if last_source_extract_ts.tzinfo is None:
+                        last_source_extract_ts = last_source_extract_ts.replace(tzinfo=timezone.utc)
+                    else:
+                        last_source_extract_ts = last_source_extract_ts.astimezone(timezone.utc)
+                    # Log the last source extract timestamp
+                    logging.info(f"Last source extract timestamp: {last_source_extract_ts}")
+                    return last_source_extract_ts
+                else: # return default date 2025-01-01
+                    default_date = datetime(2025, 1, 1, tzinfo=timezone.utc)
+                    logging.warning("No extract timestamp found. Returning default date: 2025-01-01")
+                    return default_date
+
+    except Exception as e:
+        logging.error(f"Error retrieving extract timestamp: {e}")
+        raise
+
+def update_tetl_control_table(process_nm, last_source_extract_ts):
+        try:
+            mssql_hook = MsSqlHook(mssql_conn_id=MSSQL_CONN_ID)
+
+            with mssql_hook.get_conn() as connection:
+                with connection.cursor() as cursor:
+                    update_qry = f"EXEC edw_core.sp_upd_tetl_control '{process_nm}','{last_source_extract_ts}'"
+                    cursor.execute(update_qry)
+                    connection.commit()
+                    logging.info(f"Table tetl_control updated successfully. last_source_extract_ts: {last_source_extract_ts}")
+        except Exception as e:
+            logging.error(f"Error updating tetl_control table: {e}")
+            raise
+
 def process_all_files():
     try:
         # Azure Blob Storage configuration
         wasb_conn_id = 'azure_blob_storage'
         container_name = 'inbound-majesco-billing'
         files_folder = 'Formatted'
+        start_proccessing_date = get_last_source_extract_ts()
 
         # Create Azure Blob Service Client
         wasb_hook = WasbHook(wasb_conn_id=wasb_conn_id)
@@ -277,30 +324,43 @@ def process_all_files():
         blob_list = container_client.list_blobs(name_starts_with=f'{files_folder}/')
 
         # Filter for .csv files
-        csv_files = [blob.name for blob in blob_list if blob.name.endswith('.csv')]
-        # csv_files = [blob.name for blob in blob_list if "01242025" in blob.name.lower()]
+        csv_files = [(blob.name, blob.last_modified) for blob in blob_list if blob.name.endswith('.csv')]
 
         if not csv_files:
             logging.info("No .csv files found in the container.")
             return
+        
+        # Sort asc the files by last modified date
+        sorted_csv_files = sorted(csv_files, key=lambda x: x[1])
+        
+        # Filter by start_proccessing_date
+        sorted_csv_files = [f for f in sorted_csv_files if f[1] > start_proccessing_date]
+
+        if not sorted_csv_files:
+            logging.info("No new .csv files found to process.")
+            return
 
         # Process each .csv file
-        for blob_name in csv_files:
+        for blob_name, blob_last_modified in sorted_csv_files:
             # Extract the filename from the blob name
             csv_filename = os.path.basename(blob_name)
             
             # Extract the table name from the file name
             table_name = table_for_csv(csv_filename)
             if not table_name:
-                logging.warning(f"Skipping file {csv_filename} due to unrecognized type.")
+                logging.warning(f"Skipping file {csv_filename} due to unrecognized file.")
                 continue
 
-            logging.info(f" **** Processing file: {csv_filename} **** ")
+            logging.info(f" **** Processing file: {csv_filename} **** -> file last modified: {blob_last_modified}")
 
             try:
                 # Instantiate the processor and process the file
                 processor = MajescoBillingProcessor(csv_filename,table_name)
                 processor.process()
+                update_tetl_control_table(
+                    process_nm='py_majesco_billing',
+                    last_source_extract_ts=blob_last_modified.strftime('%Y-%m-%d %H:%M:%S')
+                )
             except Exception as e:
                 logging.error(f"Error processing file {csv_filename}: {e}")
                 raise  # Raise the exception to stop processing further files
