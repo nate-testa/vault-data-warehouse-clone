@@ -73,12 +73,29 @@ class MajescoBillingProcessor:
             # Define data types for each column as object (string)
             dtype_mappings = {col: object for col in expected_columns.keys()}
 
+            # Detect the correct header line by scanning for best match
+            with open(self.local_file_path, 'r', encoding='utf-8-sig') as f:
+                lines = f.readlines()
+
+            # Prepare normalized expected column set
+            expected_set = set(k.lower().replace('_', '').replace(' ', '') for k in expected_columns.keys())
+
+            header_line_index = 0
+            max_matches = 0
+            for i, line in enumerate(lines):
+                columns_in_line = [col.strip().lower().replace('_', '').replace(' ', '') for col in line.split(',')]
+                matches = len(expected_set.intersection(columns_in_line))
+                if matches > max_matches:
+                    max_matches = matches
+                    header_line_index = i
+
             # Read the .csv file
             df = pd.read_csv(
                 self.local_file_path,
                 dtype=dtype_mappings,
                 na_values=[''],
-                keep_default_na=False  # Disable default NaN handling
+                keep_default_na=False,
+                skiprows=header_line_index
             )
 
             # Normalize DataFrame column names to lowercase and remove underscores
