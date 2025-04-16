@@ -67,10 +67,13 @@ class MajescoBillingProcessor:
             # Expected columns mapping
             expected_columns = majesco_billing_mapping.get_mapping(self.table_name)
 
+            # Normalize expected keys to lowercase for matching
+            expected_columns_lower = {k.lower(): v for k, v in expected_columns.items()}
+
             # Define data types for each column as object (string)
             dtype_mappings = {col: object for col in expected_columns.keys()}
 
-            # Read the .csv file with parameters to control missing values
+            # Read the .csv file
             df = pd.read_csv(
                 self.local_file_path,
                 dtype=dtype_mappings,
@@ -78,13 +81,16 @@ class MajescoBillingProcessor:
                 keep_default_na=False  # Disable default NaN handling
             )
 
+            # Normalize DataFrame column names to lowercase for comparison
+            df.columns = [col.lower() for col in df.columns]
+
             # Verify columns
-            missing_columns = [col for col in expected_columns.keys() if col not in df.columns]
+            missing_columns = [col for col in expected_columns_lower.keys() if col not in df.columns]
             if missing_columns:
                 raise Exception(f"Missing columns in the CSV file: {missing_columns}")
 
-            # Rename columns
-            df = df.rename(columns=expected_columns)
+            # Rename columns based on normalized keys
+            df = df.rename(columns=expected_columns_lower)
 
             # Add 'create_ts' with current date
             df['create_ts'] = datetime.now().strftime('%Y-%m-%d')
@@ -108,9 +114,7 @@ class MajescoBillingProcessor:
                 df[col] = df[col].astype(float)
 
             # Handle datetime columns
-            datetime_columns = [
-                'create_ts'
-            ]
+            datetime_columns = ['create_ts']
             for col in datetime_columns:
                 df[col] = df[col].replace('', None)
                 df[col] = pd.to_datetime(df[col], errors='coerce')
