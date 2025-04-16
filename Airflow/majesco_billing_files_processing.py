@@ -64,11 +64,19 @@ class MajescoBillingProcessor:
 
     def read_and_prepare_data(self):
         try:
+            # -------------------------------------------------------
+            # helper to normalise a column name with the new rules
+            # -------------------------------------------------------
+            def _clean(col: str) -> str:
+                col = col.replace('_', ' ')                # _ -> space
+                col = re.sub(r'[^A-Za-z0-9()\-\s]', '', col)  # drop other chars
+                return col.lower().strip()
+
             # Expected columns mapping
             expected_columns = majesco_billing_mapping.get_mapping(self.table_name)
 
-            # Normalize expected keys to lowercase and remove underscores for matching
-            expected_columns_lower = {k.lower().replace('_', ' '): v for k, v in expected_columns.items()}
+            # use _clean() to normalise column names
+            expected_columns_lower = {_clean(k): v for k, v in expected_columns.items()}
 
             # Define data types for each column as object (string)
             dtype_mappings = {col: object for col in expected_columns.keys()}
@@ -77,13 +85,14 @@ class MajescoBillingProcessor:
             with open(self.local_file_path, 'r', encoding='utf-8-sig') as f:
                 lines = f.readlines()
 
-            # Prepare normalized expected column set
-            expected_set = set(k.lower().replace('_', '').replace(' ', '') for k in expected_columns.keys())
+            # prepare normalised expected set with _clean()
+            expected_set = {_clean(k).replace(' ', '') for k in expected_columns.keys()}
 
             header_line_index = 0
             max_matches = 0
             for i, line in enumerate(lines):
-                columns_in_line = [col.strip().lower().replace('_', '').replace(' ', '') for col in line.split(',')]
+                # normalise columns in the line with _clean()
+                columns_in_line = [_clean(col).replace(' ', '') for col in line.split(',')]
                 matches = len(expected_set.intersection(columns_in_line))
                 if matches > max_matches:
                     max_matches = matches
@@ -98,8 +107,8 @@ class MajescoBillingProcessor:
                 skiprows=header_line_index
             )
 
-            # Normalize DataFrame column names to lowercase and remove underscores
-            df.columns = [col.lower().replace('_', ' ') for col in df.columns]
+            # clean DataFrame column names with _clean()
+            df.columns = [_clean(col) for col in df.columns]
 
             # Verify columns
             missing_columns = [col for col in expected_columns_lower.keys() if col not in df.columns]
@@ -138,7 +147,7 @@ class MajescoBillingProcessor:
                 df[col] = df[col].dt.strftime('%Y-%m-%d %H:%M:%S')
                 df[col] = df[col].replace('NaT', None)
 
-            logging.info("Data read and prepared successfully.") 
+            logging.info("Data read and prepared successfully.")
             return df
 
         except Exception as e:
@@ -250,7 +259,8 @@ def table_for_csv(file_name):
             return table
 
     # No match found
-    raise ValueError(f"Unrecognised file type for '{file_name}'")
+    logging.info(f"Unrecognised file type for '{file_name}'")
+    return None
 
 def process_all_files():
     try:
@@ -268,8 +278,8 @@ def process_all_files():
         blob_list = container_client.list_blobs(name_starts_with=f'{files_folder}/')
 
         # Filter for .csv files
-        # csv_files = [blob.name for blob in blob_list if blob.name.endswith('.csv')]
-        csv_files = [blob.name for blob in blob_list if "01242025" in blob.name.lower()]
+        csv_files = [blob.name for blob in blob_list if blob.name.endswith('.csv')]
+        # csv_files = [blob.name for blob in blob_list if "01242025" in blob.name.lower()]
 
         if not csv_files:
             logging.info("No .csv files found in the container.")
@@ -282,6 +292,9 @@ def process_all_files():
             
             # Extract the table name from the file name
             table_name = table_for_csv(csv_filename)
+            if not table_name:
+                logging.info(f"Skipping file {csv_filename} due to unrecognized type.")
+                continue
 
             logging.info(f" **** Processing file: {csv_filename} **** ")
 
