@@ -67,8 +67,8 @@ class MajescoBillingProcessor:
             # Expected columns mapping
             expected_columns = majesco_billing_mapping.get_mapping(self.table_name)
 
-            # Normalize expected keys to lowercase for matching
-            expected_columns_lower = {k.lower(): v for k, v in expected_columns.items()}
+            # Normalize expected keys to lowercase and remove underscores for matching
+            expected_columns_lower = {k.lower().replace('_', ' '): v for k, v in expected_columns.items()}
 
             # Define data types for each column as object (string)
             dtype_mappings = {col: object for col in expected_columns.keys()}
@@ -81,8 +81,8 @@ class MajescoBillingProcessor:
                 keep_default_na=False  # Disable default NaN handling
             )
 
-            # Normalize DataFrame column names to lowercase for comparison
-            df.columns = [col.lower() for col in df.columns]
+            # Normalize DataFrame column names to lowercase and remove underscores
+            df.columns = [col.lower().replace('_', ' ') for col in df.columns]
 
             # Verify columns
             missing_columns = [col for col in expected_columns_lower.keys() if col not in df.columns]
