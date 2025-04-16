@@ -130,7 +130,7 @@ BEGIN
 
 				) AS np ON tc.policy_no = np.policy_no and np.transaction_seq_no=1
 				WHERE
-						tc.policy_no not like '%VRE' and policy_no not like '%VES'
+						tc.policy_no not like '%VRE' and tc.policy_no not like '%VES'
 		)
 
 		INSERT INTO edw_integration.claim_workday_itd_reserve_feed

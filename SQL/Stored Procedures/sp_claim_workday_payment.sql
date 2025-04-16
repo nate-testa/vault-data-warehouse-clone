@@ -192,7 +192,7 @@ BEGIN
 			LEFT JOIN edw_core.tpolicy tp on tp.policy_no=tc.policy_no
 			LEFT JOIN edw_core.tstate st on st.state_cd=tp.risk_state_cd
 			WHERE tcr.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
-			and tc.policy_no not like '%VRE' and policy_no not like '%VES'
+			and tc.policy_no not like '%VRE' and tc.policy_no not like '%VES'
 			AND ttr.amt!=0
 			)
 

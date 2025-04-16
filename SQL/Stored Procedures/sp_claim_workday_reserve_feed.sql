@@ -144,7 +144,7 @@ BEGIN
 					) AS np ON tc.policy_no = np.policy_no and np.transaction_seq_no=1
 				WHERE
 					tcr.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
-					and tc.policy_no not like '%VRE' and policy_no not like '%VES'
+					and tc.policy_no not like '%VRE' and tc.policy_no not like '%VES'
 			)
 			INSERT INTO edw_integration.claim_workday_reserve_feed
 			(
