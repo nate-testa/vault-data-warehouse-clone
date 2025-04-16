@@ -13,6 +13,7 @@
 -- 09/18/24		Yunus Mohammed				5. Added Throw in catch block
 -- 11/26/24		Yunus Mohammed				6. Updated "Marine Boat & Yacht" to "Marine_Boat&Yacht"
 -- 02/19/25		Yunus Mohammed				7. Updated to use new columns after Snapsheet implementation
+-- 04/15/25		Yunus Mohammed				8. Removed litigation claims
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_reserve_feed_itd]
@@ -128,6 +129,8 @@ BEGIN
 						edw_stage.nfp_policy
 
 				) AS np ON tc.policy_no = np.policy_no and np.transaction_seq_no=1
+				WHERE
+						tc.policy_no not like '%VRE' and tc.policy_no not like '%VES'
 		)
 
 		INSERT INTO edw_integration.claim_workday_itd_reserve_feed

@@ -10,7 +10,8 @@
 -- 11/30/23		Yunus Mohammed				3. Updated insured name for NFP
 -- 09/18/24		Yunus Mohammed				4. Added Throw in catch block
 -- 11/26/24		Yunus Mohammed				5. Updated "Marine Boat & Yacht" to "Marine_Boat&Yacht"
--- 02/19/25		Yunus Mohammed				7. Updated to use new columns after Snapsheet implementation
+-- 02/19/25		Yunus Mohammed				6. Updated to use new columns after Snapsheet implementation
+-- 04/15/25		Yunus Mohammed				7. Removed litigation claims
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_reserve_feed]
 
@@ -143,7 +144,7 @@ BEGIN
 					) AS np ON tc.policy_no = np.policy_no and np.transaction_seq_no=1
 				WHERE
 					tcr.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
-					-- and tc.claim_no= 'C20AUA00061'
+					and tc.policy_no not like '%VRE' and tc.policy_no not like '%VES'
 			)
 			INSERT INTO edw_integration.claim_workday_reserve_feed
 			(
