@@ -65,7 +65,7 @@ class MajescoBillingProcessor:
         try:
             
             def _clean(col: str) -> str:
-                # clean column names
+                # clean column names removing special characters and spaces
                 col = col.replace('_', ' ')
                 col = re.sub(r'[^A-Za-z0-9()\-\s]', '', col)  # drop other chars
                 return col.lower().strip()
@@ -105,6 +105,16 @@ class MajescoBillingProcessor:
                 skiprows=header_line_index
             )
 
+            # Remove leading single quotes from string columns
+            str_cols = df.select_dtypes(include="object").columns
+            df[str_cols] = df[str_cols].apply(lambda s: s.str.replace(r"^'+", '', regex=True))
+
+            # Remove empty rows and footer lines
+            df = (
+                df.dropna(how='all') # remove empty rows
+                [~df.iloc[:, 0].astype(str).str.strip().str.startswith('-----------')] # remove footer lines
+            )
+
             # clean DataFrame column names with _clean()
             df.columns = [_clean(col) for col in df.columns]
 
@@ -117,7 +127,7 @@ class MajescoBillingProcessor:
             df = df.rename(columns=expected_columns_lower)
 
             # Add 'create_ts' with current date
-            df['create_ts'] = datetime.now().strftime('%Y-%m-%d')
+            df['create_ts'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
             # Reorder columns to match the SQL table
             sql_columns = list(expected_columns.values()) + ['create_ts']
