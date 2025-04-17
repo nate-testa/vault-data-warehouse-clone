@@ -22,7 +22,8 @@
 -- 03/06/25		        Archtha Gudimalla			17. AD8781 - Send latest broker info
 -- 03/28/25		        Archtha Gudimalla			18. VI36790/AD8898 - Added Target account
 -- 03/28/25		        Archtha Gudimalla			19. VI36066/AD8907 - Added close_reason_desc
--- 04/05/25             Sandeep Gundreddy           20. Replaced Null with '' close_reason_desc in temp2 tp fix batch issue   
+-- 04/05/25             Sandeep Gundreddy           20. Replaced Null with '' close_reason_desc in temp2 tp fix batch issue
+-- 04/17/25		        Archtha Gudimalla			21. VI37310/AD9213 - Added monoline   
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -158,7 +159,7 @@ BEGIN
             ,tqhc.current_underlying_company_nm
             ,q.target_account
             ,q.close_reason_desc
-
+            ,case when tcct.quote_history_sk is null then 'Yes' else 'No' end as mononline_in
         into edw_temp.quote_hubspot_feed_temp1
 
         from edw_core.tquote q
@@ -282,8 +283,8 @@ BEGIN
             ,tqhc.new_client_for_agency_in
             ,tqhc.current_underlying_company_nm
             ,q.target_account
-            ,'' as close_reason_desc
-
+            ,'' as close_reason_desc 
+            ,case when tcct.policy_history_sk is null then 'Yes' else 'No' end as mononline_in
         into edw_temp.quote_hubspot_feed_temp2
         
         from edw_core.tpolicy q 
@@ -362,6 +363,7 @@ BEGIN
             ,current_underlying_company_nm
             ,target_account
             ,close_reason_desc
+            ,monoline_in
         )
         VALUES
         (
@@ -385,6 +387,7 @@ BEGIN
             ,current_underlying_company_nm
             ,target_account
             ,close_reason_desc
+            ,monoline_in
         )
         WHEN MATCHED THEN UPDATE
         SET        
@@ -442,7 +445,8 @@ BEGIN
             [target].new_client_for_agency_in	        =	[source].new_client_for_agency_in,
             [target].current_underlying_company_nm	    =	[source].current_underlying_company_nm,  
             [target].target_account	                    =	[source].target_account  ,  
-            [target].close_reason_desc	                =	[source].close_reason_desc  
+            [target].close_reason_desc	                =	[source].close_reason_desc ,  
+            [target].monoline_in	                    =	[source].monoline_in   
             ;
         
         SET @rows_affected=@@ROWCOUNT;
