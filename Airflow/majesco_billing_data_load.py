@@ -54,8 +54,8 @@ with DAG(
     max_active_runs=1,
     default_args=args,
     start_date=pendulum.datetime(2025, 1, 1, tz="America/New_York"),
-    # schedule_interval='0 4 * * *', # At 04:00 every day
-    schedule_interval=None,
+    schedule_interval='0 8 * * *', # At 08:00 every day
+    # schedule_interval=None,
     tags=["Majesco Billing", "vault"],
 ) as dag:
     
