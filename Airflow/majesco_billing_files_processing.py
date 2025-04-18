@@ -1,3 +1,4 @@
+import io
 import os
 import logging
 import pandas as pd
@@ -65,55 +66,40 @@ class MajescoBillingProcessor:
         try:
             
             def _clean(col: str) -> str:
-                # clean column names removing special characters and spaces
+                """
+                    clean column names removing special characters and spaces
+                """
                 col = col.replace('_', ' ')
                 col = re.sub(r'[^A-Za-z0-9()\-\s]', '', col)  # drop other chars
                 return col.lower().strip()
 
             # Expected columns mapping
             expected_columns = majesco_billing_mapping.get_mapping(self.table_name)
-
-            # use _clean() to normalise column names
+            # use _clean() to normalise expected column names
             expected_columns_lower = {_clean(k): v for k, v in expected_columns.items()}
-
             # Define data types for each column as object (string)
             dtype_mappings = {col: object for col in expected_columns.keys()}
 
-            # Detect the correct header line by scanning for best match
-            with open(self.local_file_path, 'r', encoding='utf-8-sig') as f:
-                lines = f.readlines()
-
-            # prepare normalised expected set with _clean()
-            expected_set = {_clean(k).replace(' ', '') for k in expected_columns.keys()}
-
-            header_line_index = 0
-            max_matches = 0
-            for i, line in enumerate(lines):
-                # normalise columns in the line with _clean()
-                columns_in_line = [_clean(col).replace(' ', '') for col in line.split(',')]
-                matches = len(expected_set.intersection(columns_in_line))
-                if matches > max_matches:
-                    max_matches = matches
-                    header_line_index = i
+            # Extract the CSV block (column names and data) from the file, to avoid pre-header and footer lines
+            with open(self.local_file_path, "r", encoding="utf-8-sig") as f:
+                csv_lines = [ln for ln in f if ln.count(",") >= 3] # only keep lines with 3 commas
+            csv_block = io.StringIO("".join(csv_lines))
 
             # Read the .csv file
             df = pd.read_csv(
-                self.local_file_path,
+                csv_block,
                 dtype=dtype_mappings,
                 na_values=[''],
                 keep_default_na=False,
-                skiprows=header_line_index
+                quotechar='"',
+                encoding="utf-8-sig"
             )
 
             # Remove leading single quotes from string columns
             str_cols = df.select_dtypes(include="object").columns
-            df[str_cols] = df[str_cols].apply(lambda s: s.str.replace(r"^'+", '', regex=True))
+            for col in str_cols:
+                df[col] = df[col].str.lstrip("'")
 
-            # Remove empty rows and footer lines
-            df = (
-                df.dropna(how='all') # remove empty rows
-                [~df.iloc[:, 0].astype(str).str.strip().str.startswith('-----------')] # remove footer lines
-            )
 
             # clean DataFrame column names with _clean()
             df.columns = [_clean(col) for col in df.columns]
@@ -127,33 +113,11 @@ class MajescoBillingProcessor:
             df = df.rename(columns=expected_columns_lower)
 
             # Add 'create_ts' with current date
-            df['create_ts'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            df['create_ts'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
 
             # Reorder columns to match the SQL table
             sql_columns = list(expected_columns.values()) + ['create_ts']
             df = df[sql_columns]
-
-            # List of numeric columns that need to be converted
-            numeric_columns = []
-
-            # Handle numeric columns
-            for col in numeric_columns:
-                df[col] = df[col].replace('', None)
-                df[col] = df[col].astype(float).astype(pd.Int64Dtype())
-
-            # Handle float columns
-            float_columns = []
-            for col in float_columns:
-                df[col] = df[col].replace('', None)
-                df[col] = df[col].astype(float)
-
-            # Handle datetime columns
-            datetime_columns = ['create_ts']
-            for col in datetime_columns:
-                df[col] = df[col].replace('', None)
-                df[col] = pd.to_datetime(df[col], errors='coerce')
-                df[col] = df[col].dt.strftime('%Y-%m-%d %H:%M:%S')
-                df[col] = df[col].replace('NaT', None)
 
             logging.info("Data read and prepared successfully.")
             return df
@@ -381,8 +345,8 @@ def process_all_files():
 
 
 if __name__ == "__main__":
-    process_all_files()
+    # process_all_files()
     
     #**Manual Execution**
-    # processor = MajescoBillingProcessor('01242025_ADJUST WRITEOFF.csv','stage_majesco_adjust_writeoff')
-    # processor.process()
+    processor = MajescoBillingProcessor('01022025_POLICY LEVEL MONTHLY COMMISSION BALANCE.csv','stage_majesco_policy_level_monthly_commission_balance')
+    processor.process()
