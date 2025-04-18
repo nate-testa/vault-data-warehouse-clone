@@ -22,6 +22,7 @@ GO
 -- 08/07/24     Yunus Mohammed                  9. Updated logic to get garaging location
 -- 08/20/24     Yunus Mohammed                 10. Used garage_unique_id while assigning defualt garage location
 -- 12/10/24     Alberto Almario                11. Add column rater_pip_discount
+-- 04/11/25     Alberto Almario                12. Add 40 new columns
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
@@ -76,7 +77,9 @@ BEGIN
             INNER JOIN [edw_stage].[AccountTransactionVersionPremiumFactor] AS acctvpf ON acctvp.id = acctvpf.AccountTransactionVersionPremiumId
             WHERE acct.[State] = 'ISSUED'
             AND acct.IssuedDate > @last_source_extract_ts
-            AND acctvpf.Coverage IN ('Bodily Injury', 'Property Damage', 'Medical Payments', 'Underinsured Motorist', 'Other Than Collision', 'Collision', 'Personal Injury Protection', 'Extended Towing and Labor')
+            AND acctvpf.Coverage IN ('Bodily Injury', 'Property Damage', 'Medical Payments', 'Underinsured Motorist', 'Other Than Collision', 'Collision', 'Personal Injury Protection', 'Extended Towing and Labor'
+            ,'Added First Party','Added Personal Injury Protection','Basic First Party','Customized','Fire','Property Protection Insurance','Theft','Uninsured Bodily Injury','Uninsured Property Damage','Uninsured Motorist'
+            )
             AND p.[Name] = 'Automobile'
             AND p.ProductLine = 'PersonalLines'
         )
@@ -126,6 +129,46 @@ BEGIN
             ,extended_towing_labor_premium_adjustment_amount
             ,extended_towing_labor_premium_adjustment_retention
             ,extended_towing_labor_premium_adjustment_reason
+            ,added_first_party_premium_adjustment_amount
+            ,added_first_party_premium_adjustment_method
+            ,added_first_party_premium_adjustment_reason
+            ,added_first_party_premium_adjustment_retention
+            ,added_personal_injury_protection_premium_adjustment_amount
+            ,added_personal_injury_protection_premium_adjustment_method
+            ,added_personal_injury_protection_premium_adjustment_reason
+            ,added_personal_injury_protection_premium_adjustment_retention
+            ,basic_first_party_premium_adjustment_amount
+            ,basic_first_party_premium_adjustment_method
+            ,basic_first_party_premium_adjustment_reason
+            ,basic_first_party_premium_adjustment_retention
+            ,customized_premium_adjustment_amount
+            ,customized_premium_adjustment_method
+            ,customized_premium_adjustment_reason
+            ,customized_premium_adjustment_retention
+            ,fire_premium_adjustment_amount
+            ,fire_premium_adjustment_method
+            ,fire_premium_adjustment_reason
+            ,fire_premium_adjustment_retention
+            ,property_protection_insurance_premium_adjustment_amount
+            ,property_protection_insurance_premium_adjustment_method
+            ,property_protection_insurance_premium_adjustment_reason
+            ,property_protection_insurance_premium_adjustment_retention
+            ,theft_premium_adjustment_amount
+            ,theft_premium_adjustment_method
+            ,theft_premium_adjustment_reason
+            ,theft_premium_adjustment_retention
+            ,uninsured_bodily_injury_premium_adjustment_amount
+            ,uninsured_bodily_injury_premium_adjustment_method
+            ,uninsured_bodily_injury_premium_adjustment_reason
+            ,uninsured_bodily_injury_premium_adjustment_retention
+            ,underinsured_motorist_premium_adjustment_amount
+            ,underinsured_motorist_premium_adjustment_method
+            ,underinsured_motorist_premium_adjustment_reason
+            ,underinsured_motorist_premium_adjustment_retention
+            ,uninsured_property_damage_premium_adjustment_amount
+            ,uninsured_property_damage_premium_adjustment_method
+            ,uninsured_property_damage_premium_adjustment_reason
+            ,uninsured_property_damage_premium_adjustment_retention
         INTO [edw_temp].[tauto_vehicle_coverage_temp2]
         FROM acctvpf_unpivot
         PIVOT 
@@ -163,6 +206,46 @@ BEGIN
                 ,extended_towing_labor_premium_adjustment_amount
                 ,extended_towing_labor_premium_adjustment_retention
                 ,extended_towing_labor_premium_adjustment_reason
+                ,added_first_party_premium_adjustment_amount
+                ,added_first_party_premium_adjustment_method
+                ,added_first_party_premium_adjustment_reason
+                ,added_first_party_premium_adjustment_retention
+                ,added_personal_injury_protection_premium_adjustment_amount
+                ,added_personal_injury_protection_premium_adjustment_method
+                ,added_personal_injury_protection_premium_adjustment_reason
+                ,added_personal_injury_protection_premium_adjustment_retention
+                ,basic_first_party_premium_adjustment_amount
+                ,basic_first_party_premium_adjustment_method
+                ,basic_first_party_premium_adjustment_reason
+                ,basic_first_party_premium_adjustment_retention
+                ,customized_premium_adjustment_amount
+                ,customized_premium_adjustment_method
+                ,customized_premium_adjustment_reason
+                ,customized_premium_adjustment_retention
+                ,fire_premium_adjustment_amount
+                ,fire_premium_adjustment_method
+                ,fire_premium_adjustment_reason
+                ,fire_premium_adjustment_retention
+                ,property_protection_insurance_premium_adjustment_amount
+                ,property_protection_insurance_premium_adjustment_method
+                ,property_protection_insurance_premium_adjustment_reason
+                ,property_protection_insurance_premium_adjustment_retention
+                ,theft_premium_adjustment_amount
+                ,theft_premium_adjustment_method
+                ,theft_premium_adjustment_reason
+                ,theft_premium_adjustment_retention
+                ,uninsured_bodily_injury_premium_adjustment_amount
+                ,uninsured_bodily_injury_premium_adjustment_method
+                ,uninsured_bodily_injury_premium_adjustment_reason
+                ,uninsured_bodily_injury_premium_adjustment_retention
+                ,underinsured_motorist_premium_adjustment_amount
+                ,underinsured_motorist_premium_adjustment_method
+                ,underinsured_motorist_premium_adjustment_reason
+                ,underinsured_motorist_premium_adjustment_retention
+                ,uninsured_property_damage_premium_adjustment_amount
+                ,uninsured_property_damage_premium_adjustment_method
+                ,uninsured_property_damage_premium_adjustment_reason
+                ,uninsured_property_damage_premium_adjustment_retention
             )
         ) AS pvt
 
@@ -273,6 +356,46 @@ BEGIN
             ,b.extended_towing_labor_premium_adjustment_amount
             ,b.extended_towing_labor_premium_adjustment_retention
             ,b.extended_towing_labor_premium_adjustment_reason
+            ,b.added_first_party_premium_adjustment_amount
+            ,b.added_first_party_premium_adjustment_method
+            ,b.added_first_party_premium_adjustment_reason
+            ,b.added_first_party_premium_adjustment_retention
+            ,b.added_personal_injury_protection_premium_adjustment_amount
+            ,b.added_personal_injury_protection_premium_adjustment_method
+            ,b.added_personal_injury_protection_premium_adjustment_reason
+            ,b.added_personal_injury_protection_premium_adjustment_retention
+            ,b.basic_first_party_premium_adjustment_amount
+            ,b.basic_first_party_premium_adjustment_method
+            ,b.basic_first_party_premium_adjustment_reason
+            ,b.basic_first_party_premium_adjustment_retention
+            ,b.customized_premium_adjustment_amount
+            ,b.customized_premium_adjustment_method
+            ,b.customized_premium_adjustment_reason
+            ,b.customized_premium_adjustment_retention
+            ,b.fire_premium_adjustment_amount
+            ,b.fire_premium_adjustment_method
+            ,b.fire_premium_adjustment_reason
+            ,b.fire_premium_adjustment_retention
+            ,b.property_protection_insurance_premium_adjustment_amount
+            ,b.property_protection_insurance_premium_adjustment_method
+            ,b.property_protection_insurance_premium_adjustment_reason
+            ,b.property_protection_insurance_premium_adjustment_retention
+            ,b.theft_premium_adjustment_amount
+            ,b.theft_premium_adjustment_method
+            ,b.theft_premium_adjustment_reason
+            ,b.theft_premium_adjustment_retention
+            ,b.uninsured_bodily_injury_premium_adjustment_amount
+            ,b.uninsured_bodily_injury_premium_adjustment_method
+            ,b.uninsured_bodily_injury_premium_adjustment_reason
+            ,b.uninsured_bodily_injury_premium_adjustment_retention
+            ,b.underinsured_motorist_premium_adjustment_amount
+            ,b.underinsured_motorist_premium_adjustment_method
+            ,b.underinsured_motorist_premium_adjustment_reason
+            ,b.underinsured_motorist_premium_adjustment_retention
+            ,b.uninsured_property_damage_premium_adjustment_amount
+            ,b.uninsured_property_damage_premium_adjustment_method
+            ,b.uninsured_property_damage_premium_adjustment_reason
+            ,b.uninsured_property_damage_premium_adjustment_retention
         INTO [edw_temp].[tauto_vehicle_coverage_temp1]
         FROM [edw_temp].[tauto_vehicle_coverage_temp3] AS a 
         LEFT JOIN [edw_temp].[tauto_vehicle_coverage_temp2] AS b
@@ -441,6 +564,46 @@ BEGIN
             ,newly_purchased_vehicle_dt
             ,newly_purchased_vehicle_final_in
             ,rater_pip_discount
+            ,added_first_party_premium_adjustment_amount
+            ,added_first_party_premium_adjustment_method
+            ,added_first_party_premium_adjustment_reason
+            ,added_first_party_premium_adjustment_retention
+            ,added_personal_injury_protection_premium_adjustment_amount
+            ,added_personal_injury_protection_premium_adjustment_method
+            ,added_personal_injury_protection_premium_adjustment_reason
+            ,added_personal_injury_protection_premium_adjustment_retention
+            ,basic_first_party_premium_adjustment_amount
+            ,basic_first_party_premium_adjustment_method
+            ,basic_first_party_premium_adjustment_reason
+            ,basic_first_party_premium_adjustment_retention
+            ,customized_premium_adjustment_amount
+            ,customized_premium_adjustment_method
+            ,customized_premium_adjustment_reason
+            ,customized_premium_adjustment_retention
+            ,fire_premium_adjustment_amount
+            ,fire_premium_adjustment_method
+            ,fire_premium_adjustment_reason
+            ,fire_premium_adjustment_retention
+            ,property_protection_insurance_premium_adjustment_amount
+            ,property_protection_insurance_premium_adjustment_method
+            ,property_protection_insurance_premium_adjustment_reason
+            ,property_protection_insurance_premium_adjustment_retention
+            ,theft_premium_adjustment_amount
+            ,theft_premium_adjustment_method
+            ,theft_premium_adjustment_reason
+            ,theft_premium_adjustment_retention
+            ,uninsured_bodily_injury_premium_adjustment_amount
+            ,uninsured_bodily_injury_premium_adjustment_method
+            ,uninsured_bodily_injury_premium_adjustment_reason
+            ,uninsured_bodily_injury_premium_adjustment_retention
+            ,underinsured_motorist_premium_adjustment_amount
+            ,underinsured_motorist_premium_adjustment_method
+            ,underinsured_motorist_premium_adjustment_reason
+            ,underinsured_motorist_premium_adjustment_retention
+            ,uninsured_property_damage_premium_adjustment_amount
+            ,uninsured_property_damage_premium_adjustment_method
+            ,uninsured_property_damage_premium_adjustment_reason
+            ,uninsured_property_damage_premium_adjustment_retention
 		)
         SELECT 
             t1.policy_no,
@@ -609,6 +772,46 @@ BEGIN
             ,t1.[NewlyPurchasedVehicleDate] as newly_purchased_vehicle_dt
             ,t1.[NewlyPurchasedVehicleFinal] as newly_purchased_vehicle_final_in
             ,t1.[RaterPIPDiscount] as rater_pip_discount
+            ,t1.added_first_party_premium_adjustment_amount
+            ,t1.added_first_party_premium_adjustment_method
+            ,t1.added_first_party_premium_adjustment_reason
+            ,t1.added_first_party_premium_adjustment_retention
+            ,t1.added_personal_injury_protection_premium_adjustment_amount
+            ,t1.added_personal_injury_protection_premium_adjustment_method
+            ,t1.added_personal_injury_protection_premium_adjustment_reason
+            ,t1.added_personal_injury_protection_premium_adjustment_retention
+            ,t1.basic_first_party_premium_adjustment_amount
+            ,t1.basic_first_party_premium_adjustment_method
+            ,t1.basic_first_party_premium_adjustment_reason
+            ,t1.basic_first_party_premium_adjustment_retention
+            ,t1.customized_premium_adjustment_amount
+            ,t1.customized_premium_adjustment_method
+            ,t1.customized_premium_adjustment_reason
+            ,t1.customized_premium_adjustment_retention
+            ,t1.fire_premium_adjustment_amount
+            ,t1.fire_premium_adjustment_method
+            ,t1.fire_premium_adjustment_reason
+            ,t1.fire_premium_adjustment_retention
+            ,t1.property_protection_insurance_premium_adjustment_amount
+            ,t1.property_protection_insurance_premium_adjustment_method
+            ,t1.property_protection_insurance_premium_adjustment_reason
+            ,t1.property_protection_insurance_premium_adjustment_retention
+            ,t1.theft_premium_adjustment_amount
+            ,t1.theft_premium_adjustment_method
+            ,t1.theft_premium_adjustment_reason
+            ,t1.theft_premium_adjustment_retention
+            ,t1.uninsured_bodily_injury_premium_adjustment_amount
+            ,t1.uninsured_bodily_injury_premium_adjustment_method
+            ,t1.uninsured_bodily_injury_premium_adjustment_reason
+            ,t1.uninsured_bodily_injury_premium_adjustment_retention
+            ,t1.underinsured_motorist_premium_adjustment_amount
+            ,t1.underinsured_motorist_premium_adjustment_method
+            ,t1.underinsured_motorist_premium_adjustment_reason
+            ,t1.underinsured_motorist_premium_adjustment_retention
+            ,t1.uninsured_property_damage_premium_adjustment_amount
+            ,t1.uninsured_property_damage_premium_adjustment_method
+            ,t1.uninsured_property_damage_premium_adjustment_reason
+            ,t1.uninsured_property_damage_premium_adjustment_retention
         FROM
             [edw_temp].[tauto_vehicle_coverage_temp1] AS t1
         left join [edw_stage].[AccountTransactionVersionObject] AS atvo ON atvo.id = t1.GaragingLocationId

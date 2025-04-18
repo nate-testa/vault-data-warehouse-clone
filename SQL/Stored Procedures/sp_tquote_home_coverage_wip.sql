@@ -2,7 +2,7 @@
 -- Author:		Yunus Mohammed 
 -- Description: This procedures loads home quote coverage data wip
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date			|Author						|	Change Description
+-- Change date			|Author										|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
 -- 05/07/2024 			Yunus Mohammed				1. Created this procedure 
 -- 05/23/2024 			Yunus Mohammed				2. Updated join with AccountPremiumFactor
@@ -17,8 +17,11 @@
 -- 10/31/24		        Hernando Gonzalez			11. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
 -- 12/02/24				Yunus Mohammed				12. AD-7834 Added new fields.
 -- 01/17/25				Yunus Mohammed				13.  AD-8225 Roundoff ReinsuranceTotalTIV value
--- 01/23/25				Alberto Almario				14. Added new column fenced_pool_in
+-- 01/23/25				Alberto Almario					14. Added new column fenced_pool_in
 -- 03/19/25				Hernando Gonzalez			15. Added new columns wildfire_risk_score, wildfire_risk_class
+-- 04/02/25				Yunus Mohammed				16. AD-8973 roof_deck_attachment value logic updated
+-- 04/16/25				Yunus Mohammed				17. AD-9121 Corrected null values for premium mods
+
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
 
@@ -68,20 +71,34 @@ BEGIN
 
 		declare @sql nvarchar(max)
 		drop table if exists edw_temp.tquote_home_coverage_wip_temp1
+		drop table if exists edw_temp.tquote_home_coverage_wip_temp2
+		drop table if exists edw_temp.tquote_home_coverage_wip_temp3
+
+		select acc.*
+		into edw_temp.tquote_home_coverage_wip_temp1
+		from
+			edw_stage.Account acc
+			inner join edw_stage.Product p on p.Id=acc.ProductId
+		where
+				acc.PolicyNumber is not null
+				and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)				
+				and p.ProductLine = 'PersonalLines'
+				and greatest(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
+
 		SET @sql ='select quote_no,EffectiveDate,ExpirationDate,0 as transaction_seq_no,source_system_sk,
 		quote_history_sk,quote_home_location_sk,product_name,CreatedDate,UpdatedDate,
 		FactorMethod, Factor, Retention, Reason,
-		'+ @ColumnsToPivot +' into edw_temp.tquote_home_coverage_wip_temp1
+		'+ @ColumnsToPivot +' into edw_temp.tquote_home_coverage_wip_temp2
 			from
 			(
 			select
 			acc.PolicyNumber as quote_no,acc.EffectiveDate ,acc.ExpirationDate ,acc.TransactionEffectiveDate ,
 			tqh.quote_history_sk,thql.quote_home_location_sk,
-			0 as transaction_seq_no,acc.CreatedDate,acc.UpdatedDate, pr.name product_name,
-			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,accvof.Field,accvof.[Value],
+			0 as transaction_seq_no,acc.CreatedDate,acc.UpdatedDate, p.name product_name,
+			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,accvof.Field,	accvof.[Value] ,
 			accpf.FactorMethod, accpf.Factor, accpf.Retention, accpf.Reason
 			from
-				edw_stage.Account acc
+				edw_temp.tquote_home_coverage_wip_temp1 acc
 				inner join edw_stage.Product p on p.Id=acc.ProductId
 				INNER JOIN edw_stage.[AccountObject] AS accvo ON accvo.AccountId = acc.Id
                 INNER JOIN edw_stage.[AccountObjectField] AS accvof ON accvof.ObjectId = accvo.id
@@ -91,20 +108,16 @@ BEGIN
                 select AccountPremiumId,FactorMethod, Factor, Retention, Reason, createddate,
                 ROW_NUMBER() over (partition by AccountPremiumId order by CreatedDate desc) as rnk
                 from edw_stage.AccountPremiumFactor
-                where coverage = ''Homeowners''
+                where
+					(coverage in (''Homeowners'',''Condo'') or coverage is null)
                 )a where a.rnk=1
                 ) accpf on accpf.AccountPremiumId=ap.id 
                 left join edw_core.tquote_history tqh on tqh.quote_no=acc.PolicyNumber
 						and tqh.effective_dt=acc.EffectiveDate
 						and tqh.transaction_seq_no = 0
 				left join edw_core.tquote_home_location thql on thql.quote_no=acc.PolicyNumber
-				left join edw_stage.Product pr on acc.ProductId = pr.id
-			where
-				acc.PolicyNumber is not null
-				and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
-				and accvo.ObjectType in (''Homeowner'',''Condo'',''Inspection'')
-				and pr.ProductLine = ''PersonalLines''
-				and greatest(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
+			where			
+				accvo.ObjectType in (''Homeowner'',''Condo'',''Inspection'')
 			) as t
 			pivot 
 			(
@@ -113,6 +126,35 @@ BEGIN
 			'
 			EXECUTE sp_executesql @sql, N'@last_source_extract_ts datetime2(7)', @last_source_extract_ts = @last_source_extract_ts
 			
+			select * into edw_temp.tquote_home_coverage_wip_temp3
+			from
+			(
+			select ROW_NUMBER()over(partition by acc.PolicyNumber ,acc.EffectiveDate  order by pofv.[version] desc ) as rn,
+			acc.PolicyNumber as quote_no,acc.EffectiveDate ,0 as transaction_seq_no,
+			pofv.ValueDisplay as [Value]
+			from
+				edw_temp.tquote_home_coverage_wip_temp1 acc
+				INNER JOIN edw_stage.[AccountObject] AS accvo ON accvo.AccountId = acc.Id
+                INNER JOIN edw_stage.[AccountObjectField] AS accvof ON accvof.ObjectId = accvo.id
+			LEFT Join  
+				(
+						SELECT *
+						FROM edw_stage.ProductObjectFieldValueDisplay
+						WHERE
+						Field = 'RoofDeckAttachment'
+					
+				) AS pofv ON accvof.Field=pofv.Field and acc.ProductId = pofv.ProductId and accvo.ObjectType = pofv.ObjectType
+						and  acc.RiskStateCode=pofv.statecode and accvof.[Value] = pofv.[Value]
+					and acc.EffectiveDate between pofv.EffectiveDate and isnull(pofv.ExpirationDate,'2099-01-01')
+					and pofv.IsRenewal = acc.IsRenewal		
+			where   
+				accvo.ObjectType in ('Homeowner','Condo','Inspection')
+				and accvof.Field= 'RoofDeckAttachment'
+				and isnull(accvof.[Value],'')  != ''
+			) as a
+			where
+				rn = 1
+
 			MERGE [edw_core].[tquote_home_coverage] AS Target
 			USING 
 			(
@@ -202,7 +244,7 @@ BEGIN
 				tthc.OpeningProtection AS opening_protection,
 				tthc.RoofCoverDeck AS roof_cover_deck,
 				tthc.RoofCovering AS roof_covering,
-				tthc.RoofDeckAttachment AS roof_deck_attachment,
+				t.[Value] AS roof_deck_attachment,
 				tthc.RoofGeometry AS roof_geometry,
 				tthc.RoofSystem AS roof_system_in,
 				tthc.RoofWallAttachment AS roof_wall_attachment,
@@ -260,7 +302,9 @@ BEGIN
 				tthc.WildfireRiskClass as wildfire_risk_class,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk				
 			FROM
-				edw_temp.tquote_home_coverage_wip_temp1 AS tthc
+				edw_temp.tquote_home_coverage_wip_temp2 AS tthc
+				left join edw_temp.tquote_home_coverage_wip_temp3 as t on tthc.quote_no = t.quote_no and 
+				tthc.EffectiveDate= t.EffectiveDate
 			) AS Source
 			ON Source.quote_no = Target.[quote_no] and Source.transaction_seq_no = Target.transaction_seq_no
 			WHEN NOT MATCHED BY Target THEN			
@@ -520,6 +564,8 @@ BEGIN
 
 			-- Drop temp table
 			DROP TABLE IF EXISTS edw_temp.tquote_home_coverage_wip_temp1
+			DROP TABLE IF EXISTS edw_temp.tquote_home_coverage_wip_temp2
+			DROP TABLE IF EXISTS edw_temp.tquote_home_coverage_wip_temp3
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)

@@ -13,6 +13,7 @@
 -- 02/12/25 			Alberto Almario					8. Use claim_parties table to extract payee_address columns
 -- 02/25/25				Yunus Mohammed				9. AD-8665 - Use coaleasce for payee_nm
 -- 03/27/25				Yunus Mohammed				10 AD-9009 payee_nm null issue resolved for payee role VendorManagement::Vendor
+-- 04/11/25				Yunus Mohammed				11 AD-9044 Update payment_approver_nm logic.
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment_snapsheet]
 
@@ -61,9 +62,9 @@ BEGIN
 				) AS payee_address,
 				fpi.note_body AS remark, 
 				u.name AS payment_submitter_nm,
-				apprvu.name as payment_approver_nm, 
+				case when ftas.Id is null then u.name else apprvu.name end as payment_approver_nm, 
 				ft.created_at AS payment_submitted_dt,
-				ft.approved_at AS payment_approver_dt,
+				case when ftas.Id is null then ft.approved_at else fta.created_at end AS payment_approver_dt,				
 				ft.financial_transaction_type as payment_category_nm,--(CASE WHEN settle.claim_type = 'LOS' THEN 'Payment' ELSE 'Recovery' END) AS payment_category_nm,
 				fpi.payment_type as partial_final_payment_desc,--(CASE WHEN fpi.pay_final = 4 THEN 'Final' ELSE 'Partial' END) AS partial_final_payment_desc,
 				null as expert_subtype_role, --party.expert_subtype_role, --pending
@@ -76,7 +77,7 @@ BEGIN
 
 		INTO 	edw_temp.tclaim_payment_snapsheet_temp1 
 
-		FROM 
+		FROM
 		edw_stage_snapsheet.claims c
 		INNER JOIN 	edw_core.tclaim tc ON tc.claim_no=c.claim_number
 		INNER JOIN 	edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no
@@ -85,7 +86,8 @@ BEGIN
 		LEFT JOIN 	edw_stage_snapsheet.financial_payment_details fpd on fpd.claim_id = c.id and fpd.financial_transaction_id = fpi.financial_transaction_id
 		LEFT JOIN 	edw_stage_snapsheet.claim_parties cp on fpd.party_id = cp.id
 		INNER JOIN 	edw_stage_snapsheet.financial_transactions ft on ft.id = fpi.financial_transaction_id
-        LEFT JOIN   edw_stage_snapsheet.financial_transaction_actions fta on ft.id = fta.financial_transaction_id and code='approve'
+        LEFT JOIN   edw_stage_snapsheet.financial_transaction_actions fta on ft.id = fta.financial_transaction_id and fta.code='approve'
+		LEFT JOIN   edw_stage_snapsheet.financial_transaction_actions ftas on ft.id = ftas.financial_transaction_id and ftas.code='pending_approval'
 		LEFT JOIN 	edw_stage_snapsheet.users u on ft.creator_user_id = u.id 
         LEFT JOIN   edw_stage_snapsheet.users apprvu on fta.actor_user_id=apprvu.id
 		left join edw_stage_snapsheet.payees py on py.financial_payment_detail_id = fpd.id and py.is_primary = 'true'

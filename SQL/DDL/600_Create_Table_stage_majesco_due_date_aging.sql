@@ -1,0 +1,50 @@
+if not exists (
+select 1 from information_schema.tables 
+where table_schema = 'edw_stage'
+and table_name = 'stage_majesco_due_date_aging')
+begin
+create table edw_stage.stage_majesco_due_date_aging(
+bill_type	varchar(255) null, 
+operating_company	varchar(255) null, 
+underwriting_company	varchar(255) null, 
+agency_code	varchar(255) null, 
+agency_name	varchar(255) null, 
+agency_city	varchar(255) null, 
+agency_state	varchar(255) null, 
+agency_zip_code	varchar(255) null, 
+agency_email_address	varchar(255) null, 
+account_no	varchar(255) null, 
+account_zip_code	varchar(255) null, 
+account_email_address	varchar(255) null, 
+account_name	varchar(255) null, 
+policy_number	varchar(255) null, 
+insured_name	varchar(255) null, 
+policy_effective_date	varchar(255) null, 
+policy_status	varchar(255) null, 
+collection_flag	varchar(255) null, 
+crt_name	varchar(255) null, 
+current_balance	varchar(255) null, 
+aged_1_30	varchar(255) null, 
+aged_31_60	varchar(255) null, 
+aged_61_90	varchar(255) null, 
+aged_over_90	varchar(255) null, 
+unbilled_balance	varchar(255) null, 
+unassigned_cash	varchar(255) null, 
+adjustments	varchar(255) null, 
+total_balance	varchar(255) null, 
+serial_no	varchar(255) null, 
+sequence_no	varchar(255) null, 
+date_generate	varchar(255) null, 
+state_code	varchar(255) null, 
+state_name	varchar(255) null, 
+product_code	varchar(255) null, 
+product_name	varchar(255) null, 
+payment_plan	varchar(255) null, 
+last_invoice_send_date	varchar(255) null, 
+due_date_on_the_invoice	varchar(255) null, 
+no_of_days_the_oldest_balance_is_past_due	varchar(255) null, 
+source_system	varchar(255) null, 
+month	varchar(255) null, 
+create_ts	datetime null
+)
+end ;

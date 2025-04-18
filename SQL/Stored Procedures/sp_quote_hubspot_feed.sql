@@ -21,7 +21,8 @@
 -- 01/15/25		        Archtha Gudimalla			16. VI35258/AD8009 - Added new cols
 -- 03/06/25		        Archtha Gudimalla			17. AD8781 - Send latest broker info
 -- 03/28/25		        Archtha Gudimalla			18. VI36790/AD8898 - Added Target account
--- 03/28/25		        Archtha Gudimalla			18. VI36066/AD8907 - Added close_reason_desc
+-- 03/28/25		        Archtha Gudimalla			19. VI36066/AD8907 - Added close_reason_desc
+-- 04/05/25             Sandeep Gundreddy           20. Replaced Null with '' close_reason_desc in temp2 tp fix batch issue   
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -281,7 +282,7 @@ BEGIN
             ,tqhc.new_client_for_agency_in
             ,tqhc.current_underlying_company_nm
             ,q.target_account
-            ,null as close_reason_desc
+            ,'' as close_reason_desc
 
         into edw_temp.quote_hubspot_feed_temp2
         

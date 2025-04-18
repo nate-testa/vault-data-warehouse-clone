@@ -42,7 +42,7 @@ class QuoteNote:
     def process_row(row):
         associated_deal_id = Quote.return_quote_hs_id_for_update(row['quote_no'])
         row['associated_deal_id'] = associated_deal_id
-        row['note_desc'] = json.dumps(DatabaseFunctions.strip_html_tags(row['note_desc']))
+        row['note_desc'] = DatabaseFunctions.strip_html_tags(row['note_desc'])
 
         hs_object_id = QuoteNote.return_quote_note_hs_id_for_update(row['quote_no'])
 
@@ -111,10 +111,3 @@ class QuoteNote:
             payload['id'] = record['hs_object_id']
 
         return payload        
-
-
-        
-
-
-          
-
