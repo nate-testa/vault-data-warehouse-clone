@@ -8,6 +8,7 @@
 -- 03/26/24		Architha Gudimalla		    3. Added to  loss_of_use_derived_pc - Reasonable and Necessary Expenses- 12 months
 -- 04/19/24		Architha Gudimalla		    4. Updated the @new_last_source_extract_ts and also added the update to check for nulls
 -- 06/14/24		Yunus Mohammed 				5. Removed error for rate_on_line 
+-- 04/18/25		Architha Gudimalla		    6. Updated conversion error on loss_of_use_limit_amt error
 -- ================================================================================================================================== 
 
 
@@ -63,11 +64,11 @@ BEGIN
 												and case when loss_of_use_pc = '' then '0' else loss_of_use_pc end = '0'
 													then 0
 												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 1 
-												and loss_of_use_limit_amt > 100 
+												and cast(loss_of_use_limit_amt as float) > 100 
 												and dwelling_limit_amt > 0 
 													then cast(loss_of_use_limit_amt as float)/dwelling_limit_amt
 												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 1 
-												and loss_of_use_limit_amt > 100 
+												and cast(loss_of_use_limit_amt as float) > 100 
 												and contents_limit_amt > 0 
 													then cast(loss_of_use_limit_amt as float)/contents_limit_amt 
 												WHEN loss_of_use_pc like '%.%' 
