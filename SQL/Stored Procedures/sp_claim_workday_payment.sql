@@ -41,13 +41,12 @@ BEGIN
 		DECLARE @year_month INT,@begin_dt DATE,@end_dt DATE,@begin_sk INT,@end_sk INT
 		
 		DECLARE cur_main CURSOR FOR
-		SELECT yearmonth
-		FROM edw_core.tdate
-		WHERE
-			actual_dt >= CAST(@last_source_extract_ts AS DATE)
-			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
-		GROUP BY yearmonth
-		ORDER BY yearmonth
+		select	yearmonth
+		from edw_core.tdate
+		where	actual_dt > @last_source_extract_ts
+		and   actual_dt < cast(@current_date as date)
+		group by yearmonth
+		order by 1; 
 
 		OPEN cur_main
 		FETCH NEXT FROM cur_main INTO @year_month

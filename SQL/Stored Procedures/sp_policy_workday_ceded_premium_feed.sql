@@ -48,13 +48,12 @@ BEGIN
 		END
 
 		DECLARE cur_main CURSOR FOR
-		SELECT yearmonth
-		FROM edw_core.tdate
-		WHERE
-			actual_dt > CAST(@last_source_extract_ts AS DATE)
-			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
-		GROUP BY yearmonth
-		ORDER BY yearmonth
+		select	yearmonth
+		from edw_core.tdate
+		where	actual_dt > @last_source_extract_ts
+		and   actual_dt < cast(@current_date as date)
+		group by yearmonth
+		order by 1;
 
 		OPEN cur_main
 		FETCH NEXT FROM cur_main INTO @year_month
@@ -104,11 +103,46 @@ BEGIN
 					tb.broker_id AS [producer_code],
 					tb.broker_nm AS [agency_name],
 					tp.insured_nm AS [insured_name],
-					tp.mailing_address_line1 AS [address],
-					tp.mailing_address_county_nm AS [county],
-					tp.mailing_address_city_nm AS [city],
-					tp.risk_state_cd AS [RISK_STATE],
-					tp.mailing_address_zip_cd  AS [zip],
+					CASE
+						WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.address_line_1
+						WHEN tprd.product_nm =  'Collections' THEN cl.address_line_1
+						WHEN tprd.product_nm =  'Excess Liability' THEN pl.address_line_1
+						WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.address_line_1
+						WHEN tprd.product_nm = 'Auto' THEN agl.garage_address_line1
+					ELSE tp.mailing_address_line1
+					END AS [address],
+					CASE
+						WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.county_nm
+						WHEN tprd.product_nm =  'Collections' THEN cl.county_nm
+						WHEN tprd.product_nm =  'Excess Liability' THEN pl.county_nm
+						WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.county_nm
+						WHEN tprd.product_nm = 'Auto' THEN agl.garage_address_county_nm
+					ELSE tp.mailing_address_county_nm
+					END AS [county],
+					CASE
+						WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.city_nm
+						WHEN tprd.product_nm =  'Collections' THEN cl.city_nm
+						WHEN tprd.product_nm =  'Excess Liability' THEN pl.city_nm
+						WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.city_nm
+						WHEN tprd.product_nm = 'Auto' THEN agl.garage_address_city_nm
+					ELSE tp.mailing_address_city_nm
+					END AS [city],
+					CASE
+						WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.state_cd
+						WHEN tprd.product_nm =  'Collections' THEN cl.state_cd
+						WHEN tprd.product_nm =  'Excess Liability' THEN pl.state_cd
+						WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.state_cd
+						WHEN tprd.product_nm = 'Auto' THEN agl.garage_address_state_cd
+					ELSE tp.risk_state_cd
+					END AS [RISK_STATE],
+					CASE
+						WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.zip_cd
+						WHEN tprd.product_nm =  'Collections' THEN cl.zip_cd
+						WHEN tprd.product_nm =  'Excess Liability' THEN pl.zip_cd
+						WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.zip_cd
+						WHEN tprd.product_nm = 'Auto' THEN agl.garage_address_zip_code
+					ELSE tp.mailing_address_zip_cd
+					END AS [zip],
 					NULL AS fire_protection,
 					tic.internal_coverage_sk AS financial_category_id,
 					tic.internal_coverage_desc AS [coveragename],
@@ -123,6 +157,23 @@ BEGIN
 					INNER JOIN edw_core.tdate tdpro on tdpro.date_sk=tpt.transaction_dt_sk
 					INNER JOIN edw_core.tpolicy_transaction_type tptt on tptt.policy_transaction_type_sk=tpt.policy_transaction_type_sk
 					INNER JOIN edw_core.tbroker tb on tb.broker_sk=tpt.broker_sk
+					LEFT JOIN edw_core.thome_location hl on hl.policy_no = tp.policy_no and hl.effective_dt = tp.effective_dt
+					LEFT JOIN edw_core.tcollection_location cl on cl.policy_no = tp.policy_no and cl.effective_dt = tp.effective_dt
+					LEFT JOIN edw_core.tpel_location pl on pl.policy_no = tp.policy_no and pl.effective_dt = tp.effective_dt
+						and pl.transaction_seq_no = tpt.transaction_seq_no and pl.primary_location_in = 'Yes'
+					LEFT JOIN edw_core.tmarine_boat_yacht_location mbyl on mbyl.policy_no = pl.policy_no and mbyl.effective_dt = tp.effective_dt
+						and mbyl.transaction_seq_no = tpt.transaction_seq_no
+					LEFT JOIN edw_core.tauto_garage_location agl on agl.policy_history_sk = tpt.policy_history_sk 
+					and agl.auto_garage_location_sk =
+										(
+											SELECT top 1 -- policy_no,effective_dt,transaction_seq_no,
+											auto_garage_location_sk--,COUNT(auto_vehicle_sk) vehicle_count
+											FROM edw_core.tauto_vehicle_coverage agl1 
+											where
+													agl1.policy_history_sk = agl.policy_history_sk
+											GROUP BY policy_no,effective_dt,transaction_seq_no,auto_garage_location_sk
+											ORDER BY policy_no,effective_dt,transaction_seq_no,COUNT(auto_vehicle_sk) DESC
+										)
 				WHERE
 					tpt.accouting_month_sk BETWEEN @accounting_date_begin_sk AND @accounting_date_end_sk
 					AND tp.product_cd IN('HO','CO')

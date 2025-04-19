@@ -37,8 +37,14 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.claim_workday_reserve_feed_itd_temp1
 
 		DECLARE @last_day_month DATE, @year_month INT;
+		select	@year_month = yearmonth
+		from edw_core.tdate
+		where	actual_dt > @last_source_extract_ts
+		and   actual_dt < cast(@current_date as date)
+		group by yearmonth
+		order by 1; 
 
-		SELECT @year_month = yearmonth FROM edw_core.tdate WHERE actual_dt = CAST(DATEADD(MONTH,-1,GETDATE()) AS DATE);
+		--SELECT @year_month = yearmonth FROM edw_core.tdate WHERE actual_dt = CAST(DATEADD(MONTH,-1,GETDATE()) AS DATE);
 
 		SELECT @last_day_month = actual_dt FROM edw_core.tdate WHERE yearmonth = @year_month and month_end_in = 'Y';
 
