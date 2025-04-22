@@ -12,6 +12,7 @@
 -- 03/02/25     Sandeep Gundreddy			7. Added logic to ignore system generated migrated transactions
 -- 03/03/25     Sandeep Gundreddy			8. Update salvage and subo expense recovery logic after discussion with Dawn. will be loaded as +ve amounts
 -- 03/13/25     Sandeep Gundreddy			9. Added logic to load migrated payments stopped in Snapsheet
+-- 04/22/25     Sandeep Gundreddy			10. Exclude cancel transactions from reserve query to avoid duplicate transactions  
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction_snapsheet]
 AS
@@ -91,11 +92,9 @@ BEGIN
 			,res.cost_category
 			,res.reserve_method
 			,res.amount
-			,CASE 
-				WHEN fta.code='cancel' THEN -1*res.amount
-				ELSE res.amount -LAG(res.amount,1,0) over (partition by res.claim_id,res.exposure_id,res.cost_type,res.cost_category,res.reserve_method --,ft.id
+			,res.amount -LAG(res.amount,1,0) over (partition by res.claim_id,res.exposure_id,res.cost_type,res.cost_category,res.reserve_method --,ft.id
 														order by res.claim_id,res.exposure_id,res.cost_type,res.cost_category,res.reserve_method,fta.created_at,ft.created_at) 
-			END as reserve_amount
+			 as reserve_amount
 			,CASE
 				WHEN ft.remote_identifier is not null and len(ft.remote_identifier)=8 THEN 3
 				ELSE 5
@@ -123,7 +122,7 @@ BEGIN
 								ELSE c.claim_type 
 							END)*/
 		WHERE 1=1
-			and fta.code in ('submitted','cancel') 
+			and fta.code in ('submitted') 
 			and ft.approved_at is not null --> Added this filter to exclude pending approvals reserves and subsequent cancel records 
         ORDER BY res.claim_id,res.exposure_id,res.cost_type,res.cost_category,res.reserve_method,fta.created_at
 		;
