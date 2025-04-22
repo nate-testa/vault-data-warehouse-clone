@@ -6,6 +6,7 @@
 --	09-30-2024				Yunus Mohammed				1- Created procedure
 -- 01-28-2025               Yunus Mohammed              2 - Updated row_number. Included risk_group
 -- 02-07-2025              Yunus Mohammed               3 - Used trim for city, state and zip
+-- 04-22-2025              Sandeep Gundreddy            4 - Modified update_ts to use cast function 
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_nfp_claim_policy_search_snapsheet_api]
 AS 
@@ -57,7 +58,7 @@ BEGIN
             insured_cert_no is not null
         ) as temp
         WHERE
-            update_ts > @last_source_extract_ts
+            cast(update_ts as datetime2(7))> @last_source_extract_ts
 
 
 		-- Start Insert process
