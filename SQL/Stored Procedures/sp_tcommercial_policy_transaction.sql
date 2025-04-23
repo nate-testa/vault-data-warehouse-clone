@@ -11,6 +11,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 26/03/2025           Alberto Almario				1. Created this procedure 
+-- 22/04/2025           Alberto Almario				2. Use BindDate instead of IssuedDate
 -- ===================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tcommercial_policy_transaction]
 
@@ -46,9 +47,9 @@ BEGIN
 		FROM edw_stage.AccountTransaction acctr
 		left join edw_stage.Product pr on acctr.ProductId = pr.id
 		WHERE PolicyNumber is not null 
-		  and acctr.State ='ISSUED' --- Review BOUND transactions
+		  and acctr.State IN ('ISSUED','BOUND')
 		  and pr.ProductLine='CommercialLines'
-		  AND acctr.IssuedDate>@last_source_extract_ts
+		  AND acctr.BindDate>@last_source_extract_ts
 
         -- Create temp table with name as sp_tcustomer_temp1 and use it in 
         DROP TABLE IF EXISTS edw_temp.tcommercial_policy_transaction_temp2
@@ -63,10 +64,10 @@ BEGIN
 			tmp1.PolicyChangeNumber,
 			tmp1.Commission,
 			tmp1.TransactionEffectiveDate,
-			tmp1.IssuedDate,
+			tmp1.BindDate,
 			tmp1.CancellationReason,
 			tmp1.CreatedDate,
-			iif(tmp1.TransactionEffectiveDate > tmp1.IssuedDate, tmp1.TransactionEffectiveDate, tmp1.IssuedDate) cal_mn,
+			iif(tmp1.TransactionEffectiveDate > tmp1.BindDate, tmp1.TransactionEffectiveDate, tmp1.BindDate) cal_mn,
 			tmp1.UpdatedDate,
 			iif(acct.RenewalIndex<>0,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage, 
 			acctrcp.Coverage ,acctrcp.label,
@@ -97,10 +98,10 @@ BEGIN
 			tmp1.PolicyChangeNumber,
 			tmp1.Commission,
 			tmp1.TransactionEffectiveDate,
-			tmp1.IssuedDate,
+			tmp1.BindDate,
 			tmp1.CancellationReason,
 			tmp1.CreatedDate,
-			iif(tmp1.TransactionEffectiveDate > tmp1.IssuedDate, tmp1.TransactionEffectiveDate, tmp1.IssuedDate) cal_mn,
+			iif(tmp1.TransactionEffectiveDate > tmp1.BindDate, tmp1.TransactionEffectiveDate, tmp1.BindDate) cal_mn,
 			tmp1.UpdatedDate,
 			iif(acct.RenewalIndex<>0,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage,  
 			--ROW_NUMBER() OVER (PARTITION BY tmp1.PolicyNumber, tmp1.EffectiveDate, tmp1.PolicyChangeNumber ORDER BY tmp1.CreatedDate DESC) AS PolicyNumber_Rank,
@@ -153,7 +154,7 @@ BEGIN
 		LEFT JOIN edw_core.tdate dt1 on dt1.actual_dt = cast(source.EffectiveDate as date)
 		LEFT JOIN edw_core.tdate dt2 on dt2.actual_dt = cast(source.ExpirationDate as date)
 		LEFT JOIN edw_core.tdate dt3 on dt3.actual_dt = cast(source.TransactionEffectiveDate as date)
-		LEFT JOIN edw_core.tdate dt4 on dt4.actual_dt = cast(source.IssuedDate as date)
+		LEFT JOIN edw_core.tdate dt4 on dt4.actual_dt = cast(source.BindDate as date)
 		LEFT JOIN edw_core.tdate dt5 on dt5.actual_dt = cast(source.cal_mn as date)
 		LEFT JOIN edw_commercial.tcommercial_policy pol on source.PolicyNumber = pol.policy_no and cast(source.EffectiveDate as date) = cast(pol.effective_dt as date)
 		LEFT JOIN edw_commercial.tcommercial_policy_history polh on polh.commercial_policy_sk = pol.commercial_policy_sk and polh.transaction_seq_no = source.PolicyChangeNumber
@@ -238,7 +239,7 @@ BEGIN
 		
 		SET @rows_affected=@@ROWCOUNT;  
 		
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.IssuedDate) FROM edw_temp.tcommercial_policy_transaction_temp1 t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.BindDate) FROM edw_temp.tcommercial_policy_transaction_temp1 t1),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS edw_temp.tcommercial_policy_transaction_temp1
 		DROP TABLE IF EXISTS edw_temp.tcommercial_policy_transaction_temp2

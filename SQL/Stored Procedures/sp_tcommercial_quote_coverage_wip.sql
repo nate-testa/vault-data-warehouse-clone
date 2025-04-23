@@ -1,11 +1,12 @@
--- =============================================
+-- ===================================================================================================================== 
 -- Author:		    Yunus Mohammed
 -- Description: This procedures insert commerical quote coverage wip data
------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 -- Change date          |Author						        |	Change Description
------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 -- 03/28/25		          Yunus Mohammed		1.Procedure created
--- =============================================
+-- 22/04/2025             Alberto Almario		2.Change PolicyNumber to Number from Account table
+-- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_coverage_wip]
 
 AS
@@ -30,18 +31,18 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_coverage_wip_temp1;
 		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_coverage_wip_temp2;
         
-		select acc.*,p.[Name] as product_name
+		select 
+			acc.*
+			,p.[Name] as product_name
 		into edw_temp.tcommercial_quote_coverage_wip_temp1
 		from
 			edw_stage.Account acc
 			inner join edw_stage.Product p on p.Id=acc.ProductId
-		where
-			acc.PolicyNumber is not null
-            and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
+		where not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
 			and p.ProductLine = 'CommercialLines'
 			and greatest(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
 
-        select PolicyNumber as quote_no,EffectiveDate as effective_dt,
+        select quote_no,EffectiveDate as effective_dt,
         ExpirationDate as expiration_dt, transaction_seq_no,source_system_sk,
 		CreatedDate,UpdatedDate,commercial_quote_history_sk,product_name,
         CoverageType as coverage_type,CoverageTypeB as coverage_type_b,Revenue as revenue_amt,
@@ -51,14 +52,14 @@ BEGIN
 			from
 			(
 			select
-			acc.PolicyNumber ,acc.EffectiveDate ,acc.ExpirationDate ,0 as transaction_seq_no,
+			CAST(acc.Number AS VARCHAR(255)) as quote_no ,acc.EffectiveDate ,acc.ExpirationDate ,0 as transaction_seq_no,
 			cph.commercial_quote_history_sk,acc.CreatedDate, acc.UpdatedDate,acc.product_name,
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,accof.Field,accof.[Value]			
 			from
 				edw_temp.tcommercial_quote_coverage_wip_temp1 acc
 				inner join edw_stage.[AccountObject] AS accvo ON accvo.AccountId = acc.Id
                 inner join edw_stage.[AccountObjectField] AS accof ON accof.ObjectId = accvo.Id
-				left join edw_commercial.tcommercial_quote_history cph on cph.quote_no=acc.PolicyNumber
+				left join edw_commercial.tcommercial_quote_history cph on cph.quote_no=CAST(acc.Number AS VARCHAR(255))
 						and cph.effective_dt=acc.EffectiveDate
 						and cph.transaction_seq_no = 0				
 			where				

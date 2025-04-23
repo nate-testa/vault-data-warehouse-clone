@@ -1,11 +1,12 @@
--- =============================================
+-- =====================================================================================================================
 -- Author:		    Yunus Mohammed
 -- Description: This procedures insert commerical policy coverage data
------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 -- Change date          |Author						        |	Change Description
------------------------------------------------------------------------------------------------------------
--- 03/26/25		          Yunus Mohammed		1.Procedure created
--- =============================================
+-----------------------------------------------------------------------------------------------------------------------
+-- 03/26/25		        Yunus Mohammed						1.Procedure created
+-- 22/04/2025           Alberto Almario						2.Use BindDate instead of IssuedDate
+-- =====================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_policy_coverage]
 
 AS
@@ -33,7 +34,7 @@ BEGIN
         select PolicyNumber as policy_no,EffectiveDate as effective_dt,
         ExpirationDate as expiration_dt,TransactionEffectiveDate as transaction_effective_dt,
         transactiondate as transaction_dt,transaction_seq_no,source_system_sk,
-		IssuedDate,commercial_policy_history_sk,product_name,
+		BindDate,commercial_policy_history_sk,product_name,
         CoverageType as coverage_type,CoverageTypeB as coverage_type_b,Revenue as revenue_amt,
         MemorandumOfInsurance as memorandum_of_insurance_in,NumberOfFTEAttorneys as employee_ct,
         coalesce(ClaimsActivity,ClaimsHistory) as claim_history,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk
@@ -43,7 +44,7 @@ BEGIN
 			select
 			act.PolicyNumber ,act.EffectiveDate ,act.ExpirationDate ,act.TransactionEffectiveDate ,
 			cph.commercial_policy_history_sk,
-			act.policychangenumber as transaction_seq_no, act.IssuedDate as transactiondate,act.IssuedDate, pr.name product_name,
+			act.policychangenumber as transaction_seq_no, act.BindDate as transactiondate,act.BindDate, pr.name product_name,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value]			
 			from
 				edw_stage.AccountTransaction act
@@ -57,12 +58,12 @@ BEGIN
 				left join edw_stage.Product pr on act.ProductId = pr.id
 			where
 				act.PolicyNumber is not null and
-				act.[State] ='ISSUED'				
+				act.[State] IN ('ISSUED','BOUND')
 				and pr.ProductLine = 'CommercialLines'
                 and atvof.Field in ('CoverageType','CoverageTypeB','Revenue','MemorandumOfInsurance','NumberOfFTEAttorneys',
                 'ClaimsActivity','ClaimsHistory'
                 )
-				and act.IssuedDate > @last_source_extract_ts
+				and act.BindDate > @last_source_extract_ts
 			) as t
 			pivot 
 			(
@@ -88,7 +89,7 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(IssuedDate) FROM edw_temp.tcommercial_policy_coverage_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(BindDate) FROM edw_temp.tcommercial_policy_coverage_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts
 		
 		-- Update audit table
@@ -96,9 +97,7 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
 		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tpel_coverage_temp1;
-		DROP TABLE IF EXISTS edw_temp.tpel_coverage_temp2;
-		DROP TABLE IF EXISTS edw_temp.tpel_coverage_temp3;
+		DROP TABLE IF EXISTS edw_temp.tcommercial_policy_coverage_temp1;
 
 	END TRY
 	BEGIN CATCH

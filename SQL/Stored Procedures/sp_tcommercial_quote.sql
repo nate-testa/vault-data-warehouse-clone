@@ -11,6 +11,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 28/03/2025           Alberto Almario				1. Created this procedure 
+-- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
 -- ===================================================================================================================== 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tcommercial_quote]
 
@@ -50,8 +51,7 @@ BEGIN
 		into edw_temp.tcommercial_quote_temp1
 		FROM edw_stage.Account acc 
 		left join edw_stage.Product pr on acc.ProductId = pr.id
-		WHERE acc.PolicyNumber is not null 
-		and  pr.ProductLine = 'CommercialLines' 
+		WHERE pr.ProductLine = 'CommercialLines' 
 		AND greatest(acc.CreatedDate,acc.UpdatedDate)>@last_source_extract_ts
 
 		-- Pivot Table
@@ -93,7 +93,7 @@ BEGIN
 		-- Create last temp table
 		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_temp3;
 		SELECT 
-			 tmp1.PolicyNumber as quote_no
+			 CAST(tmp1.Number AS VARCHAR(255)) as quote_no
 			,tmp1.EffectiveDate as effective_dt
 			,tmp1.ExpirationDate as expiration_dt
 			,case when br.producerid is null then '0' else br.producerid end as broker_id

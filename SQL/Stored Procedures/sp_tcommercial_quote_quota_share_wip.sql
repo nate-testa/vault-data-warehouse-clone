@@ -11,6 +11,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 19/03/2025           Alberto Almario				1. Created this procedure 
+-- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_quota_share_wip]
 AS
@@ -44,10 +45,10 @@ BEGIN
 
 		SELECT 
 			 acc.Id
-			,acc.PolicyNumber
+			,CAST(acc.Number AS VARCHAR(255)) as quote_no
 			,acc.EffectiveDate
 			,acc.ExpirationDate
-			,acc.Number
+			,0 as transaction_seq_no
 			,CASE 
 				WHEN acc.ExternalSourceId IS NOT NULL THEN 2 --(AV2) 
 				ELSE 4 --(Metal)
@@ -58,8 +59,7 @@ BEGIN
 		FROM edw_stage.Account acc
 		INNER JOIN edw_stage.AccountPremium acctvp ON acctvp.AccountId = acc.Id 
 		LEFT JOIN edw_stage.Product pr on acc.ProductId = pr.id
-		WHERE acc.PolicyNumber IS NOT NULL 
-		AND pr.ProductLine = 'CommercialLines'
+		WHERE pr.ProductLine = 'CommercialLines'
 		AND not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
 		AND GREATEST(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
 
@@ -118,10 +118,10 @@ BEGIN
 
 		-- Create final table
 		SELECT 
-			 tmp1.PolicyNumber as quote_no
+			 tmp1.quote_no
 			,tmp1.EffectiveDate as effective_dt
 			,tmp1.ExpirationDate as expiration_dt			
-			,tmp1.Number as transaction_seq_no
+			,tmp1.transaction_seq_no
 			,cq.commercial_quote_history_sk
 			,cqt.commercial_quote_tower_sk
 			,tmp2.quota_share_unique_id
@@ -138,8 +138,8 @@ BEGIN
 		FROM edw_temp.tcommercial_quote_quota_share_wip_temp1 tmp1
 		INNER JOIN edw_temp.tcommercial_quote_quota_share_wip_temp2 tmp2 on tmp2.Id = tmp1.Id
 		LEFT JOIN edw_temp.tcommercial_quote_quota_share_wip_temp3 tmp3 on tmp3.Id = tmp1.Id and tmp3.ObjectId = tmp2.ParentObjectId
-		LEFT JOIN edw_commercial.tcommercial_quote_history cq on tmp1.PolicyNumber = cq.quote_no and cast(tmp1.EffectiveDate as date) = cast(cq.effective_dt as date) and tmp1.Number = cq.transaction_seq_no
-		LEFT JOIN edw_commercial.tcommercial_quote_tower cqt on tmp1.PolicyNumber = cqt.quote_no and cast(tmp1.EffectiveDate as date) = cast(cqt.effective_dt as date) and tmp1.Number = cqt.transaction_seq_no and tmp3.tower_unique_id = cqt.tower_unique_id
+		LEFT JOIN edw_commercial.tcommercial_quote_history cq on tmp1.quote_no = cq.quote_no and cast(tmp1.EffectiveDate as date) = cast(cq.effective_dt as date) and tmp1.transaction_seq_no = cq.transaction_seq_no
+		LEFT JOIN edw_commercial.tcommercial_quote_tower cqt on tmp1.quote_no = cqt.quote_no and cast(tmp1.EffectiveDate as date) = cast(cqt.effective_dt as date) and tmp1.transaction_seq_no = cqt.transaction_seq_no and tmp3.tower_unique_id = cqt.tower_unique_id
 
 		-- Start Merge process
 		MERGE edw_commercial.tcommercial_quote_quota_share AS Target
