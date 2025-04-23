@@ -72,7 +72,8 @@ BEGIN
 			acct.ProRateFactor,
 			acct.IsReversed,
 			acct.IsReversal,
-			acctvprr.[Version] as premium_rater_version
+			acctvprr.[Version] as premium_rater_version,
+			acct.IssuedDate as transaction_issue_ts
 		INTO edw_temp.tcommercial_policy_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
@@ -218,6 +219,7 @@ BEGIN
 			,GETDATE() as create_ts
 			,GETDATE() as update_ts
 			,@etl_audit_sk as etl_audit_sk
+			,transaction_issue_ts
 		INTO edw_temp.tcommercial_policy_history_temp5
 		FROM edw_temp.tcommercial_policy_history_temp1 source
 		LEFT JOIN edw_temp.tcommercial_policy_history_temp3 tfs on source.id = tfs.id
@@ -268,6 +270,7 @@ BEGIN
 			,create_ts
 			,update_ts
 			,etl_audit_sk
+			,transaction_issue_ts
 		)
 		SELECT 
 			 policy_no
@@ -304,6 +307,7 @@ BEGIN
 			,create_ts
 			,update_ts
 			,etl_audit_sk
+			,transaction_issue_ts
 		FROM edw_temp.tcommercial_policy_history_temp5
 		;
 
