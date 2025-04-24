@@ -62,7 +62,8 @@ BEGIN
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
 		claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
 		source_system_sk,update_time,first_party_driver_nm,source_of_fire,source_of_water
-		,fault_decision,responsible_party,at_fault_pct,migrated_in
+		,fault_decision,responsible_party,at_fault_pct,migrated_in,
+		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in
 		INTO edw_temp.tclaim_snapsheet_temp1
 		FROM
 		(
@@ -126,7 +127,13 @@ BEGIN
 				WHEN cpr.company IS NULL THEN NULLIF(TRIM(CONCAT(ISNULL(cpr.first_name, ''), ' ', ISNULL(cpr.last_name, ''))),'') 
 				ELSE cpr.company 
 			END as responsible_party
-			,ld.fault_percentage AS at_fault_pct			
+			,ld.fault_percentage AS at_fault_pct
+			,covc.updated_at as coverage_confirmed_ts
+			,covc.name as coverage_confirmed_by_nm
+			,case
+				when covc.status = 'true' then 'Y' 
+				when covc.[status] = 'false' then 'N'
+			end as  coverage_confirmed_in
 			,case
 				when c.claim_source = 'api' then 'Yes'
 				else 'No'
@@ -162,6 +169,8 @@ BEGIN
 		LEFT JOIN edw_core.tcatastrophe cat ON cc.catastrophe_cd = cat.catastrophe_cd
 		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_desc = c.loss_type
 		LEFT JOIN edw_stage_snapsheet.common_incident_details cid on cid.claim_id = c.id
+		LEFT JOIN edw_stage_snapsheet.coverage_checks covc on c.id = covc.claim_id
+		LEFT JOIN   edw_stage_snapsheet.users u on covc.determined_by_user_id = u.id
 		LEFT JOIN
 		(
 			select ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date desc, reporting_month desc) as transaction_seq_no,
@@ -187,7 +196,8 @@ BEGIN
 			,claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc
 			,source_system_sk,create_ts,update_ts,etl_audit_sk
 			,first_party_driver_nm,source_of_fire,source_of_water
-			,fault_decision,responsible_party,at_fault_pct,migrated_in
+			,fault_decision,responsible_party,at_fault_pct,migrated_in,
+			coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in
 		)
 	VALUES
 		(
@@ -199,7 +209,8 @@ BEGIN
 		,policy_history_sk,claim_reject_reason_desc
 		,source_system_sk,@current_date,@current_date,@etl_audit_sk
 		,first_party_driver_nm,source_of_fire,source_of_water
-		,fault_decision,responsible_party,at_fault_pct,migrated_in
+		,fault_decision,responsible_party,at_fault_pct,migrated_in,
+		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in
 		)
 	-- For Updates
 	WHEN MATCHED THEN UPDATE 
@@ -241,6 +252,9 @@ BEGIN
 		,Target.responsible_party=Source.responsible_party
 		,Target.at_fault_pct=Source.at_fault_pct
 		,Target.migrated_in=Source.migrated_in
+		,Target.coverage_confirmed_ts=Source.coverage_confirmed_ts
+		,Target.coverage_confirmed_by_nm=Source.coverage_confirmed_by_nm
+		,Target.coverage_confirmed_in= Source.coverage_confirmed_in
 		;
 		
 		--************End************
