@@ -19,6 +19,7 @@
 -- 03/13/25		Yunus Mohammed			  			13. Ad-8848 Added premium_rater_version
 -- 03/14/25		Yunus Mohammed			  			14. Used product InternalName instead of Name 
 -- 04/03/25		Yunus Mohammed			  			15. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
+-- 04/22/25		Yunus Mohammed						16. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -85,14 +86,14 @@ BEGIN
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
 		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id 
-		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id 
-		LEFT JOIN (SELECT * FROM edw_stage.AccountTransactionVersionPremiumRaterReference WHERE ReferenceType = 'Premium') acctvprr on acctvprr.AccountTransactionVersionPremiumId = acctvp.Id
+		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id 	
 		left join edw_stage.[user] usr on usr.id = acctv.UnderwriterUserId 
 		left join edw_stage.Brokerage brk on acctv.BrokerageId = brk.id
 		left join edw_stage.[Broker] br on acctv.BrokerId = br.id
 		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acctv.ProductId = pr.id
-		and pr.[InternalName] = acctvprr.ProductInternalName
+		LEFT JOIN (SELECT * FROM edw_stage.AccountTransactionVersionPremiumRaterReference WHERE ReferenceType = 'Premium') acctvprr 
+		on acctvprr.AccountTransactionVersionPremiumId = acctvp.Id and pr.[InternalName] = acctvprr.ProductInternalName
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acctv.BrokerId
 		WHERE acct.State ='ISSUED' --- Review BOUND transactions
 		and	acct.PolicyNumber is not null 

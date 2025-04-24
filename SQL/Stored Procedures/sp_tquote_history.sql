@@ -3,15 +3,16 @@
 ---------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author										|	Change Description 
 ---------------------------------------------------------------------------------------------------------------------------------
--- 10/23/23		Architha Gudimalla				1. Created this procedure 
--- 12/11/23		Architha Gudimalla				2. Commented out stage in forst temp table
--- 02/08/24		Alberto Almario						3. Added new column producer_sk
--- 04/29/24		Hernando Gonzalez				4. Added new column insurance_score_last_run_dt
--- 05/15/24		Architha Gudimalla				5. Removed effecivedate from partiion in rnk used for latest_transaction_ind
--- 07/31/24		Architha Gudimalla				6. Added number desc to the rank in main query
--- 03/13/25		Yunus Mohammed				7. Ad-8848 Added premium_rater_version
--- 03/14/25		Yunus Mohammed			  	8. Used product internalName instead of Name
--- 04/03/25		Yunus Mohammed			  	9. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
+-- 10/23/23		Architha Gudimalla					1. Created this procedure 
+-- 12/11/23		Architha Gudimalla					2. Commented out stage in forst temp table
+-- 02/08/24		Alberto Almario							3. Added new column producer_sk
+-- 04/29/24		Hernando Gonzalez					4. Added new column insurance_score_last_run_dt
+-- 05/15/24		Architha Gudimalla					5. Removed effecivedate from partiion in rnk used for latest_transaction_ind
+-- 07/31/24		Architha Gudimalla					6. Added number desc to the rank in main query
+-- 03/13/25		Yunus Mohammed					7. Ad-8848 Added premium_rater_version
+-- 03/14/25		Yunus Mohammed					8. Used product internalName instead of Name
+-- 04/03/25		Yunus Mohammed					9. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
+-- 04/22/25		Yunus Mohammed					10. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
 -- ============================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history]
@@ -82,13 +83,14 @@ BEGIN
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
 		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id 
 		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id 
-		LEFT JOIN (SELECT * FROM edw_stage.AccountTransactionVersionPremiumRaterReference WHERE ReferenceType = 'Premium') acctvprr on acctvprr.AccountTransactionVersionPremiumId = acctvp.Id
+		
 		left join edw_stage.[user] usr on usr.id = acctv.UnderwriterUserId 
 		left join edw_stage.Brokerage brk on acctv.BrokerageId = brk.id
 		left join edw_stage.[Broker] br on acctv.BrokerId = br.id
 		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acctv.ProductId = pr.id
-		and pr.[InternalName] = acctvprr.ProductInternalName
+		LEFT JOIN (SELECT * FROM edw_stage.AccountTransactionVersionPremiumRaterReference WHERE ReferenceType = 'Premium') acctvprr 
+		on acctvprr.AccountTransactionVersionPremiumId = acctvp.Id 	and pr.[InternalName] = acctvprr.ProductInternalName
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acctv.BrokerId
 		WHERE acct.Stage in ('QUOTE','POLICY') --- Review BOUND transactions
 		and	acct.PolicyNumber is not null 
