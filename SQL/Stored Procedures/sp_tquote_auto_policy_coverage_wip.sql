@@ -159,7 +159,7 @@ BEGIN
 
 					 set @sql =	'
                             update		avc 
-                            set			avc.' + @edw_field_nm + ' = p.Value 
+                            set			avc.' + @edw_field_nm + ' = replace( p.Value,''$'','''') 
                             from		[edw_temp].[tquote_auto_policy_coverage_wip_temp1] avc
                             inner join	[edw_temp].[tquote_auto_policy_coverage_wip_temp2] p on  avc.quote_no = p.quote_no and avc.effective_dt = p.effective_dt and avc.transaction_seq_no = p.transaction_seq_no
                             where		avc.' + @edw_field_nm + ' is not null 
