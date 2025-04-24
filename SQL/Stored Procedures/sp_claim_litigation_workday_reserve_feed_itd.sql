@@ -1,11 +1,10 @@
 -- =================================================================================================
 -- Author:		Yunus Mohammed
--- Create Date: 04/23/2025
 -- Description: This procedures inserts workday litigation claims reserve ITD data
 ---------------------------------------------------------------------------------------------------
 -- Change date                  |Author						            |	Change Description
 ---------------------------------------------------------------------------------------------------
--- 07/28/23		                Yunus Mohammed				1. Created this procedure
+-- 04/23/25		                Yunus Mohammed				1. Created this procedure
 -- =================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_litigation_workday_reserve_feed_itd]
@@ -34,7 +33,7 @@ BEGIN
 
 		SELECT @last_day_month = actual_dt FROM edw_core.tdate WHERE yearmonth = @year_month and month_end_in = 'Y';
 
-		WITH claim_reserve_itd_feed_temp AS
+		WITH claim_litigation_reserve_itd_feed_temp AS
 		(
 		SELECT
 			DISTINCT
@@ -111,7 +110,7 @@ BEGIN
 						tc.policy_no like '%VRE' or tc.policy_no like '%VES'
 		)
 
-		INSERT INTO edw_integration.claim_workday_itd_reserve_feed
+		INSERT INTO edw_integration.claim_litigation_workday_itd_reserve_feed
 		(
 		company,claim_no,policy_no,transaction_date,policyeffectivedate,claimlossdate,claimreporteddate,[address],city,[state],
 		zip,causeofloss,catastrophecode,catastrophename,product,policycoveragetype,reserve_type,reserve_amount,accident_year,
@@ -124,7 +123,7 @@ BEGIN
 			risk_state,aslob,transaction_id,monthend,insured_nm,claim_status,
 			loss_status,GETDATE() AS create_ts,GETDATE() AS update_ts, @etl_audit_sk AS etl_audit_sk
 		FROM
-			claim_reserve_itd_feed_temp
+			claim_litigation_reserve_itd_feed_temp
 		WHERE
 			reserve_amount != 0
 		SET @rows_affected=@@ROWCOUNT;

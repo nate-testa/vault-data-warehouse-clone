@@ -1,11 +1,10 @@
 -- =================================================================================================
 -- Author:		Yunus Mohammed
--- Create Date: 04/23/2025
 -- Description: This procedures inserts workday litigation claims payment data
 ---------------------------------------------------------------------------------------------------
 -- Change date                  |Author						            |	Change Description
 ---------------------------------------------------------------------------------------------------
--- 07/28/23		                Yunus Mohammed				1. Created this procedure
+-- 04/23/25		                Yunus Mohammed				1. Created this procedure
 -- ================================================================================================= 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_claim_litigation_workday_payment]
