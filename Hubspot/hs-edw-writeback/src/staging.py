@@ -1,16 +1,14 @@
-from src.logger import get_logger
 import src.timetracking as timetracking
 import constants
-
-from collections import defaultdict
 import sqlite3
 import json
 import requests
 import time
 
+from src.logger import get_logger
+from collections import defaultdict
 
 logger = get_logger(__name__)
-
 
 class Staging:
 
@@ -41,10 +39,6 @@ class Staging:
             for obj_id, properties in merged_data.items():
                 payload = Staging.build_staging_table_payload(properties)
                 created = Staging.create_staging_table_record(payload)
-
-
-
-
 
     def create_staging_table_record(payload):
         try:

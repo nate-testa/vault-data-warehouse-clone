@@ -1,11 +1,9 @@
+import src.timetracking as timetracking
+import time
+
 from src.company_goal import CompanyGoal
 from src.quote_note import QuoteNote
 from src.staging import Staging
-import src.timetracking as timetracking
-
-import time
-
-
 
 def run():
 

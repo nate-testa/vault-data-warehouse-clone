@@ -1,13 +1,11 @@
-from src.logger import get_logger
 import src.timetracking as timetracking
 import constants
-
 import pyodbc
 import sqlite3
 
+from src.logger import get_logger
 
 logger = get_logger(__name__)
-
 
 class CompanyGoal:
 

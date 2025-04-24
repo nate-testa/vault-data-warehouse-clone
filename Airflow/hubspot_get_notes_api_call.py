@@ -6,18 +6,24 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.email_operator import EmailOperator
 from vault_edw_HTML_format import get_sp_error_data_HTML, get_HTML_on_vault_format
 
-
 to_email = "itdatateam@vault.insurance"
-# to_email = "alberto.valbuena@vault.insurance"
+ENVIRONMENT = Variable.get("environment", default_var="DEV")
 
+Hubspot_VM_USERNAME = Variable.get("Hubspot-VM-USERNAME")
+Hubspot_HOST = Variable.get("Hubspot-HOST")
+Hubspot_PASS = Variable.get("Hubspot-PASS")
+Hubspot_USERNAME = Variable.get("Hubspot-USERNAME")
+Hubspot_DB = Variable.get("Hubspot-DB")
 
-ENVIRONMENT = Variable.get("environment")
-if ENVIRONMENT == 'PRODUCTION':
-    bash_command = 'bash /home/vphubspotadmin/hs-edw-writeback/run_writeback.sh ' # It is important put and empty space at the end of the command
+if ENVIRONMENT == "PRODUCTION":
+    Hubspot_HSTOKEN = Variable.get("Hubspot-HSTOKEN")
+    SSH_HOME = f'/home/{Hubspot_VM_USERNAME}/hs-edw-writeback'
 else:
-    bash_command = ''
-    print(f"**** Environment: [{ENVIRONMENT}] is not authorized to execute hubspot file (run_writeback.sh).")
+    Hubspot_HSTOKEN = Variable.get("Hubspot-HSSANDBOXKEY")
+    SSH_HOME = f'/home/{Hubspot_VM_USERNAME}/hs-edw-writeback'
 
+REMOTE_ENV_PATH = f'{SSH_HOME}/.env'
+REMOTE_RUN_CMD  = f'bash {SSH_HOME}/run_writeback.sh '
 
 def on_failure_callback(context):
 
@@ -68,15 +74,39 @@ with DAG(
         task_id='start',
     )
 
+    write_remote_env = SSHOperator(
+        task_id="write_remote_env",
+        ssh_conn_id="ssh_vm_hubspot",
+        command="""
+cat > {{ params.env_path }} <<EOF
+{% if var.value.environment == "PRODUCTION" %}
+HSTOKEN={{ params.Hubspot_HSTOKEN }}
+{% else %}
+HSSANDBOXKEY={{ params.Hubspot_HSTOKEN }}
+{% endif %}
+HOST={{ params.Hubspot_HOST }}
+USERNAME={{ params.Hubspot_USERNAME }}
+PASS={{ params.Hubspot_PASS }}
+DB={{ params.Hubspot_DB }}
+EOF
+""",
+        params={
+            "env_path": REMOTE_ENV_PATH,
+            "Hubspot_HOST": Hubspot_HOST,
+            "Hubspot_PASS": Hubspot_PASS,
+            "Hubspot_USERNAME": Hubspot_USERNAME,
+            "Hubspot_HSTOKEN": Hubspot_HSTOKEN,
+            "Hubspot_DB": Hubspot_DB
+            },
+    )
+
     run_hs_edw_writeback_script = SSHOperator(
         task_id='run_hs_edw_writeback_script',
         ssh_conn_id='ssh_vm_hubspot',
-        command=bash_command,
+        command=REMOTE_RUN_CMD,
         cmd_timeout=18000, # 5 hours
     )
 
-    end = DummyOperator(
-        task_id='end',
-    )
+    end = DummyOperator(task_id="end")
 
-start >> run_hs_edw_writeback_script >> end
+    start >> write_remote_env >> run_hs_edw_writeback_script >> end
