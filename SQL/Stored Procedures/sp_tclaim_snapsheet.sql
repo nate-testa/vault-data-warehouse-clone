@@ -15,6 +15,7 @@
 -- 03/04/2025		Yunus Mohammed				10. Ad-8729 Updates made for effective_dt of NFP policies
 -- 04/03/2025		Yunus Mohammed				11. AD-8747 Mapping updated for loss_desc columns for snapsheet claims
 -- 04/09/2025		Yunus Mohammed				12. AD-9109 Used tpolicy table for broker_id, customer_id and product_sk instead of tpolicy_history
+-- 04/24/2025		Yunus Mohammed				13. AD-9297 Added coverage check fields
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -131,8 +132,8 @@ BEGIN
 			,covc.updated_at as coverage_confirmed_ts
 			,covc.name as coverage_confirmed_by_nm
 			,case
-				when covc.status = 'true' then 'Y' 
-				when covc.[status] = 'false' then 'N'
+				when covc.status = 'true' then 'Yes' 
+				when covc.[status] = 'false' then 'No'
 			end as  coverage_confirmed_in
 			,case
 				when c.claim_source = 'api' then 'Yes'
