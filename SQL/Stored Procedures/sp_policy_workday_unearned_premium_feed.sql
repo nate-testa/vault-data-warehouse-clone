@@ -13,6 +13,7 @@
 -- 11/26/24		Yunus Mohammed				6. Updated Marine Boat & Yacht to Marine_Boat&Yacht
 -- 03/11/25		Yunus Mohammed				7. Corrected proc running for past months
 --																				Added run_date as param for pre-run
+-- 04/25/25		Yunus Mohammed				8. AD8820 Updated logic to get risk address
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -36,10 +37,11 @@ BEGIN
 		DECLARE @acounting_date_sk int,@last_day_month date	
 
 		DECLARE cur_main CURSOR FOR
-		select	yearmonth
+		select yearmonth
 		from edw_core.tdate
-		where	actual_dt > @last_source_extract_ts
-		and   actual_dt < cast(@current_date as date)
+		where
+		actual_dt > case when day(@current_date) > 1 then @last_source_extract_ts else dateadd(MM,-1,@current_date) end
+		and actual_dt < cast(@current_date as date)
 		group by yearmonth
 		order by 1; 
 

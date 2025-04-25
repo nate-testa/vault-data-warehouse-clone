@@ -16,6 +16,7 @@
 -- 03/04/25     Sandeep Gundreddy			8. Removed defense_cost_in filter
 -- 03/13/25		Yunus Mohammed				9 Ad-8876 USed payment_no as transaction_id
 -- 04/15/25		Yunus Mohammed				10. Removed litigation claims
+-- 04/25/25		Yunus Mohammed				11. Updated logic to get the month for which we are running the proc
 -- ================================================================================================= 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_claim_workday_payment]
@@ -41,10 +42,11 @@ BEGIN
 		DECLARE @year_month INT,@begin_dt DATE,@end_dt DATE,@begin_sk INT,@end_sk INT
 		
 		DECLARE cur_main CURSOR FOR
-		select	yearmonth
+		select yearmonth
 		from edw_core.tdate
-		where	actual_dt > @last_source_extract_ts
-		and   actual_dt < cast(@current_date as date)
+		where
+		actual_dt > case when day(@current_date) > 1 then @last_source_extract_ts else dateadd(MM,-1,@current_date) end
+		and actual_dt < cast(@current_date as date)
 		group by yearmonth
 		order by 1; 
 
