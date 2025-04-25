@@ -1,3 +1,6 @@
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'edw_integration'
+and TABLE_name = 'claim_litigation_workday_reserve_feed')
+BEGIN
 CREATE TABLE edw_integration.claim_litigation_workday_reserve_feed 
  (
   company varchar(255),
@@ -31,14 +34,22 @@ CREATE TABLE edw_integration.claim_litigation_workday_reserve_feed
   create_ts datetime ,
   update_ts datetime ,
   etl_audit_sk int
-);
+)
+END;
 
+If not exists (
+select * from edw_integration.tintegration_table_detail
+where table_nm='claim_litigation_workday_reserve_feed'
+)
+begin
 INSERT INTO edw_integration.tintegration_table_detail(table_nm,table_type,table_desc,load_method,load_type,load_frequency,create_ts,update_ts) 
-    VALUES ('claim_litigation_workday_reserve_feed','Feed','This table provides MTD litigation claims reserves file to Workday','Stored Procedure','Insert','Monthly',getdate(),getdate());
-
+    VALUES ('claim_litigation_workday_reserve_feed','Feed','This table provides MTD litigation claims reserves file to Workday','Stored Procedure','Insert','Monthly',getdate(),getdate())
+end;
    
    -- Workday PRISM Claims Reserves ITD
-
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'edw_integration'
+and TABLE_name = 'claim_litigation_workday_itd_reserve_feed')
+BEGIN
  CREATE TABLE edw_integration.claim_litigation_workday_itd_reserve_feed 
  (
   company varchar(255),
@@ -72,14 +83,22 @@ INSERT INTO edw_integration.tintegration_table_detail(table_nm,table_type,table_
   create_ts datetime ,
   update_ts datetime ,
   etl_audit_sk int
-);
+)
+END;
 
+If not exists (
+select * from edw_integration.tintegration_table_detail
+where table_nm='claim_litigation_workday_itd_reserve_feed'
+)
+begin
 INSERT INTO edw_integration.tintegration_table_detail(table_nm,table_type,table_desc,load_method,load_type,load_frequency,create_ts,update_ts) 
-    VALUES ('claim_litigation_workday_itd_reserve_feed','Feed','This table provides ITD litigation claims reserves file to Workday','Stored Procedure','Insert','Monthly',getdate(),getdate());
-    
+    VALUES ('claim_litigation_workday_itd_reserve_feed','Feed','This table provides ITD litigation claims reserves file to Workday','Stored Procedure','Insert','Monthly',getdate(),getdate())
+ end;   
 
 -- Workday PRISM Claims Payments
-
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'edw_integration'
+and TABLE_name = 'claim_litigation_workday_payment_feed')
+BEGIN
  CREATE TABLE edw_integration.claim_litigation_workday_payment_feed 
  (
   company varchar(255),
@@ -115,7 +134,14 @@ INSERT INTO edw_integration.tintegration_table_detail(table_nm,table_type,table_
   update_ts datetime ,
   etl_audit_sk int,
   party_subtype_role_nm varchar(255)
-);
+)
+END;
 
+If not exists (
+select * from edw_integration.tintegration_table_detail
+where table_nm='claim_litigation_workday_payment_feed'
+)
+begin
 INSERT INTO edw_integration.tintegration_table_detail(table_nm,table_type,table_desc,load_method,load_type,load_frequency,create_ts,update_ts) 
-    VALUES ('claim_litigation_workday_payment_feed','Feed','This table provides MTD litigation claims payments file to Workday','Stored Procedure','Insert','Monthly',getdate(),getdate());
+    VALUES ('claim_litigation_workday_payment_feed','Feed','This table provides MTD litigation claims payments file to Workday','Stored Procedure','Insert','Monthly',getdate(),getdate())
+end;
