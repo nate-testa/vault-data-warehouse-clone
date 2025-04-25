@@ -73,26 +73,26 @@ with DAG(
     write_remote_env = SSHOperator(
         task_id="write_remote_env",
         ssh_conn_id="ssh_vm_hubspot",
-        command="""
+        command="""\
 cat > {{ params.env_path }} <<EOF
-{% if var.value.environment == "PRODUCTION" %}
-HSTOKEN={{ params.Hubspot_HSTOKEN }}
-{% else %}
-HSSANDBOXKEY={{ params.Hubspot_HSTOKEN }}
-{% endif %}
-HOST={{ params.Hubspot_HOST }}
-USERNAME={{ params.Hubspot_USERNAME }}
-PASS={{ params.Hubspot_PASS }}
-DB={{ params.Hubspot_DB }}
+{%- if var.value.environment == "PRODUCTION" %}
+HSTOKEN={{ params.token }}
+{%- else %}
+HSSANDBOXKEY={{ params.token }}
+{%- endif %}
+HOST={{ params.host }}
+USERNAME={{ params.username }}
+PASS={{ params.password }}
+DB={{ params.db }}
 EOF
 """,
         params={
             "env_path": REMOTE_ENV_PATH,
-            "Hubspot_HOST": Hubspot_HOST,
-            "Hubspot_PASS": Hubspot_PASS,
-            "Hubspot_USERNAME": Hubspot_USERNAME,
-            "Hubspot_HSTOKEN": Hubspot_HSTOKEN,
-            "Hubspot_DB": Hubspot_DB
+            "host": Hubspot_HOST,
+            "password": Hubspot_PASS,
+            "username": Hubspot_USERNAME,
+            "token": Hubspot_HSTOKEN,
+            "db": Hubspot_DB
             },
     )
 

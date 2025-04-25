@@ -4,143 +4,186 @@ import sqlite3
 import json
 import requests
 import time
-
-from src.logger import get_logger
+import logging
 from collections import defaultdict
 
-logger = get_logger(__name__)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s %(levelname)-8s %(name)-20s %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+def count_rows_in_sqlite_table(db_path, table_name):
+    """Utility: return number of rows in given SQLite table."""
+    conn = sqlite3.connect(db_path)
+    try:
+        cur = conn.execute(f"SELECT COUNT(*) FROM {table_name}")
+        return cur.fetchone()[0]
+    finally:
+        conn.close()
+
 
 class Staging:
 
+    # @staticmethod
     def sync_to_staging_table(timestamp):
-        logger.info(f'company goal staging started')
-        fields_to_query = constants.company_goal_fields_to_query
-        results = {'results': []}
-        merged_data = defaultdict(dict)
+        """Main entry point: fetch all modified company goals and insert into SQLite."""
+        logger.info("🚀 company goal staging started")
+        fields = constants.company_goal_fields_to_query
+        merged = defaultdict(dict)
+        total_fetched = 0
 
-        #### iterate over fields to query and populate the results list inside the results dictionary
-        for field in fields_to_query: 
-            unix_timestamp = timetracking.format_unix_timestamp_for_hs_company_goals_query(timestamp)
-            query = Staging.build_company_goals_query(unix_timestamp, field)
-            company_goals_response = Staging.get_all_company_goals_modified_after_timestamp(unix_timestamp, query)
-            time.sleep(0.5)
-            results['results'].append(company_goals_response)
+        for field in fields:
+            unix_ts = timetracking.format_unix_timestamp_for_hs_company_goals_query(timestamp)
+            logger.debug(f"→ raw timestamp for HS query: {unix_ts!r}")
 
-        if results:
-            #### iterate over results list inside results dict to create unified json object for each id
-            for result_set in results['results']:
-                for result in result_set:
-                    obj_id = result['id']
-                    properties = result['properties']
-                    for key, value in properties.items():
-                        merged_data[obj_id][key] = value
+            query = Staging.build_company_goals_query(unix_ts, field)
+            payload = json.dumps(query)
+            logger.debug(f"→ POST payload for field '{field}': {payload}")
 
-            #### build staging table payload and create record in staging table
-            for obj_id, properties in merged_data.items():
-                payload = Staging.build_staging_table_payload(properties)
-                created = Staging.create_staging_table_record(payload)
+            batch = Staging.get_all_company_goals_modified_after_timestamp(query)
+            logger.info(f"↪️  HS returned {len(batch)} records for '{field}'")
+            total_fetched += len(batch)
 
-    def create_staging_table_record(payload):
-        try:
-            sql = f'''
-                INSERT INTO company_goal (
-                    agency_code, 
-                    last_activity_date,
-                    target_2024_gross_nb_premium_ytd,
-                    target_2024_policy_inforce_renewal_retention__,
-                    target_monthly_nb_quote_commitment__,
-                    target_monthly_nb_policy_counts,
-                    target_growth_2024_inforce_premium_over_last_year,
-                    target_growth_2024_nb_premium_over_last_year
-                )
-                VALUES (
-                '{payload['agency_code']}', 
-                '{payload['last_activity_date']}',
-                '{payload['target_2024_gross_nb_premium_ytd']}',
-                '{payload['target_2024_policy_inforce_renewal_retention__']}',
-                '{payload['target_monthly_nb_quote_commitment__']}',
-                '{payload['target_monthly_nb_policy_counts']}',
-                '{payload['target_growth_2024_inforce_premium_over_last_year']}',
-                '{payload['target_growth_2024_nb_premium_over_last_year']}'
-                )
-            '''
-            Staging.insert_record_into_staging_table(sql)
-            logger.info(f'company goals payload successfully created in staging table: {payload}')
-            return True
+            # merge into unified dict by object id
+            for rec in batch:
+                obj_id = rec.get("id")
+                props = rec.get("properties", {})
+                for k, v in props.items():
+                    merged[obj_id][k] = v
 
-        except Exception as e:
-            logger.error(f'error while inserting company goal record into staging table: {e}')
-            return False
+            time.sleep(0.5)  # avoid rate limits
 
+        logger.info(f"Total unique objects fetched: {len(merged)} (total raw fetched: {total_fetched})")
 
-    def insert_record_into_staging_table(sql_query):
-        try:
-            conn = sqlite3.connect(constants.company_goal_staging_table_path)
-            cursor = conn.cursor()
-            cursor.execute(sql_query)
-            conn.commit()
-            conn.close()
+        inserted = 0
+        for obj_id, props in merged.items():
+            payload = Staging.build_staging_table_payload(props)
+            if payload is None:
+                continue
+            if Staging.create_staging_table_record(payload):
+                inserted += 1
 
-        except Exception as e:
-            logger.error(f'error while inserting record into staging table: {e}')
+        final_count = count_rows_in_sqlite_table(constants.company_goal_staging_table_path, "company_goal")
+        logger.info(f"✅ staging complete: {inserted} new rows inserted, staging table now has {final_count} rows")
 
-
-    def build_staging_table_payload(properties):
-        try:
-            payload = {
-                'agency_code': properties['broker_id'],
-                'last_activity_date': properties['hs_lastmodifieddate'],
-                'target_2024_gross_nb_premium_ytd': properties['target_2024_gross_nb_premium_ytd'],
-                'target_2024_policy_inforce_renewal_retention__': properties['target_2024_policy_inforce_renewal_retention__'],
-                'target_monthly_nb_quote_commitment__': properties['target_monthly_nb_quote_commitment__'],
-                'target_monthly_nb_policy_counts': properties['target_monthly_nb_policy_counts'],
-                'target_growth_2024_inforce_premium_over_last_year': properties['target_growth_2024_inforce_premium_over_last_year'],
-                'target_growth_2024_nb_premium_over_last_year': properties['target_growth_2024_nb_premium_over_last_year']
-            }
-            logger.info(f"company goal staging table payload built successfully for {properties['broker_id']}: {payload}")   
-            return payload
-        
-        except Exception as e:
-            logger.error(f"error while building company goal staging table payload for {properties['broker_id']}: {e}")
-
-
-    def get_all_company_goals_modified_after_timestamp(timestamp, query):
-        try: 
-            endpoint = f'crm/v3/objects/companies/search'
-            url = f"{constants.hubapi}/{endpoint}"
-            data = json.dumps(query)
-            response = requests.post(url=url, headers=constants.hs_headers, data=data)
-            results = []
-            if response.ok: 
-                json_response = response.json()
-                results = json_response['results'] if 'results' in json_response else []
-                logger.info(json_response)   
-            return results
-        
-        except Exception as e:
-            logger.error(f'error while requesting company goals modified since last run: {e}')
-
-
+    @staticmethod
     def build_company_goals_query(unix_timestamp, field):
+        """Construct the JSON body for a HubSpot search API call."""
         try:
             json_data = {
-                'limit': 200,
-                'properties': [
-                    'id',
-                    'broker_id',
-                    'hs_lastmodifieddate',
-                    f'{field}'
-                ],
-                'filterGroups': [
+                "limit": 200,
+                "properties": ["id", "broker_id", "hs_lastmodifieddate", field],
+                "filterGroups": [
+                    {
+                        "filters": [
+                            {
+                                "propertyName": "write_back_company_goal",
+                                "value": unix_timestamp,
+                                "operator": "GT",
+                            }
+                        ]
+                    }
                 ],
             }
-            query_data = {'filters': [
-                {'propertyName': 'write_back_company_goal', 'value': f'{unix_timestamp}', 'operator': 'GT'}
-                ]}
-            json_data['filterGroups'].append(query_data)
-            logger.info(f'company goal query successfully built for {field}: {json_data}')
+            logger.debug(f"Built HS query for '{field}': {json_data}")
             return json_data
-        
         except Exception as e:
-            logger.error(f'error while building company goals query for {field}: {e}')
-    
+            logger.exception(f"Error building query for field '{field}': {e}")
+            return {}
+
+    @staticmethod
+    def get_all_company_goals_modified_after_timestamp(query):
+        """
+        Calls HubSpot Search, handles pagination via `paging.next.after`,
+        returns a flat list of result dicts.
+        """
+        url = f"{constants.hubapi}/crm/v3/objects/companies/search"
+        all_results = []
+        payload = query.copy()
+
+        while True:
+            data = json.dumps(payload)
+            resp = requests.post(url, headers=constants.hs_headers, data=data)
+            if not resp.ok:
+                logger.error(f"HubSpot API error {resp.status_code}: {resp.text}")
+                break
+
+            body = resp.json()
+            batch = body.get("results", [])
+            all_results.extend(batch)
+
+            # pagination token
+            next_after = body.get("paging", {}).get("next", {}).get("after")
+            if not next_after:
+                break
+
+            logger.debug(f"→ paging after={next_after}, fetching next batch")
+            payload["after"] = next_after
+
+        return all_results
+
+    @staticmethod
+    def build_staging_table_payload(props):
+        """Map HubSpot fields into your staging‐table columns."""
+        try:
+            return {
+                "agency_code": props["broker_id"],
+                "last_activity_date": props["hs_lastmodifieddate"],
+                "target_2024_gross_nb_premium_ytd": props.get("target_2024_gross_nb_premium_ytd"),
+                "target_2024_policy_inforce_renewal_retention__": props.get("target_2024_policy_inforce_renewal_retention__"),
+                "target_monthly_nb_quote_commitment__": props.get("target_monthly_nb_quote_commitment__"),
+                "target_monthly_nb_policy_counts": props.get("target_monthly_nb_policy_counts"),
+                "target_growth_2024_inforce_premium_over_last_year": props.get("target_growth_2024_inforce_premium_over_last_year"),
+                "target_growth_2024_nb_premium_over_last_year": props.get("target_growth_2024_nb_premium_over_last_year"),
+            }
+        except Exception as e:
+            logger.exception(f"Error building payload for broker_id={props.get('broker_id')}: {e}")
+            return None
+
+    @staticmethod
+    def create_staging_table_record(payload):
+        """Generate and execute the INSERT, logging success or failure."""
+        sql = """
+            INSERT INTO company_goal (
+                agency_code, last_activity_date,
+                target_2024_gross_nb_premium_ytd,
+                target_2024_policy_inforce_renewal_retention__,
+                target_monthly_nb_quote_commitment__,
+                target_monthly_nb_policy_counts,
+                target_growth_2024_inforce_premium_over_last_year,
+                target_growth_2024_nb_premium_over_last_year
+            ) VALUES (
+                :agency_code, :last_activity_date,
+                :target_2024_gross_nb_premium_ytd,
+                :target_2024_policy_inforce_renewal_retention__,
+                :target_monthly_nb_quote_commitment__,
+                :target_monthly_nb_policy_counts,
+                :target_growth_2024_inforce_premium_over_last_year,
+                :target_growth_2024_nb_premium_over_last_year
+            );
+        """
+        try:
+            Staging.insert_record_into_staging_table(sql, payload)
+            logger.debug(f"Inserted staging record: {payload}")
+            return True
+        except Exception:
+            # insert_record_into_staging_table already logs exceptions
+            return False
+
+    @staticmethod
+    def insert_record_into_staging_table(sql_query, params):
+        """
+        Executes a parametrized INSERT into SQLite, logs SQL and raises on failure.
+        """
+        logger.debug(f"Executing on staging DB: {sql_query}  params={params}")
+        conn = sqlite3.connect(constants.company_goal_staging_table_path)
+        try:
+            conn.execute(sql_query, params)
+            conn.commit()
+        except Exception:
+            logger.exception("Failed to insert into staging table")
+            raise
+        finally:
+            conn.close()
