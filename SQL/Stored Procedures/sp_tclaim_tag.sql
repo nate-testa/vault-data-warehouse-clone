@@ -24,7 +24,7 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-		DROP TABLE IF exists edw_temp.tclaim_tag_temp1;
+		drop table if exists edw_temp.tclaim_tag_temp1;
 
         select
         tc.claim_sk,
