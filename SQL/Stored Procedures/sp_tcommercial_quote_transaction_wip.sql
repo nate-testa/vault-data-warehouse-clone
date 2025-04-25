@@ -11,6 +11,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 03/04/2025           Alberto Almario				1. Created this procedure 
+-- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_transaction_wip]
 
@@ -45,16 +46,14 @@ CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_transaction_wip]
 			INTO edw_temp.tcommercial_quote_transaction_wip_temp1
 			FROM edw_stage.Account acc
 			left join edw_stage.Product pr on acc.ProductId = pr.id
-			WHERE PolicyNumber is not null 
-			--and acc.Stage in ('QUOTE','POLICY') 
-			and pr.ProductLine='CommercialLines'
+			WHERE pr.ProductLine='CommercialLines'
 			AND acc.CreatedDate>@last_source_extract_ts
 			and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
 
 			-- Create temp table with name as sp_tcustomer_temp1 and use it in 
 			DROP TABLE IF EXISTS edw_temp.tcommercial_quote_transaction_wip_temp2
 			SELECT 
-				tmp1.PolicyNumber,
+				CAST(tmp1.Number AS VARCHAR(255)) as quote_no,
 				case when tmp1.productcode = 'AU' then atvo.[index] else null end as vehicle_no,
 				tmp1.ProductId,
 				tmp1.EffectiveDate,
@@ -87,7 +86,7 @@ CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_transaction_wip]
 			--where premium!=0  
 			union all
 			SELECT 
-				tmp1.PolicyNumber,
+				CAST(tmp1.Number AS VARCHAR(255)) as quote_no,
 				null vehicle_no,
 				tmp1.ProductId,
 				tmp1.EffectiveDate,
@@ -103,7 +102,6 @@ CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_transaction_wip]
 				iif(tmp1.TransactionEffectiveDate > tmp1.CreatedDate, tmp1.TransactionEffectiveDate, tmp1.CreatedDate) cal_mn,
 				tmp1.UpdatedDate,
 				iif(tmp1.RenewalIndex<>0,iif(tmp1.stage = 'POLICY','RENEWAL',tmp1.stage),tmp1.stage) as stage, 
-				--ROW_NUMBER() OVER (PARTITION BY tmp1.PolicyNumber, tmp1.EffectiveDate, tmp1.PolicyChangeNumber ORDER BY tmp1.CreatedDate DESC) AS PolicyNumber_Rank,
 				accptf.Name, '',
 				accptf.Amount as wp, 
 				accptf.Amount as ap, 
@@ -120,7 +118,7 @@ CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_transaction_wip]
 			delete from   a 
 			from edw_commercial.tcommercial_quote_transaction a 
 			where exists (select * from edw_temp.tcommercial_quote_transaction_wip_temp2 b, edw_commercial.tcommercial_quote q 
-						where q.quote_no = b.policynumber and a.commercial_quote_sk = q.commercial_quote_sk and b.number = a.transaction_seq_no 
+						where q.quote_no = b.quote_no and a.commercial_quote_sk = q.commercial_quote_sk and b.number = a.transaction_seq_no 
 						) 
 			
 			-- Create last temp table
@@ -152,9 +150,9 @@ CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_transaction_wip]
 			LEFT JOIN edw_core.tdate dt2 on dt2.actual_dt = cast(source.ExpirationDate as date)
 			LEFT JOIN edw_core.tdate dt3 on dt3.actual_dt = cast(source.EffectiveDate as date)
 			LEFT JOIN edw_core.tdate dt4 on dt4.actual_dt = cast(source.CreatedDate as date) 
-			LEFT JOIN edw_commercial.tcommercial_quote q on source.PolicyNumber = q.quote_no and cast(source.EffectiveDate as date) = q.effective_dt
-			LEFT JOIN edw_commercial.tcommercial_quote_history qh on source.PolicyNumber = qh.quote_no and cast(source.EffectiveDate as date) = qh.effective_dt and source.number = qh.transaction_seq_no
-			LEFT JOIN edw_commercial.tcommercial_quote_coverage cpc on source.PolicyNumber = cpc.quote_no and cast(source.EffectiveDate as date) = cast(cpc.effective_dt as date) and source.Number = cpc.transaction_seq_no
+			LEFT JOIN edw_commercial.tcommercial_quote q on source.quote_no = q.quote_no and cast(source.EffectiveDate as date) = q.effective_dt
+			LEFT JOIN edw_commercial.tcommercial_quote_history qh on source.quote_no = qh.quote_no and cast(source.EffectiveDate as date) = qh.effective_dt and source.number = qh.transaction_seq_no
+			LEFT JOIN edw_commercial.tcommercial_quote_coverage cpc on source.quote_no = cpc.quote_no and cast(source.EffectiveDate as date) = cast(cpc.effective_dt as date) and source.Number = cpc.transaction_seq_no
 			INNER JOIN edw_core.tproduct pr on pr.product_cd = q.product_cd
 			LEFT JOIN edw_core.tbroker br on q.broker_id = br.broker_id
 			LEFT JOIN edw_core.tcustomer cust on q.customer_id = cust.customer_id

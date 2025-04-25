@@ -11,6 +11,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 03/04/2025           Alberto Almario				1. Created this procedure
+-- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
 -- ===================================================================================================================== 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tcommercial_quote_history_wip]
 
@@ -37,7 +38,7 @@ BEGIN
         -- Create temp table with name as sp_tcustomer_temp1 and use it in 
         DROP TABLE IF EXISTS edw_temp.tcommercial_quote_history_wip_temp1
         SELECT  acc.id,
-			acc.PolicyNumber,
+			CAST(acc.Number AS VARCHAR(255)) as quote_no,
 			acc.EffectiveDate,
 			acc.ExpirationDate,
 			--acct.AccountId,
@@ -45,8 +46,8 @@ BEGIN
 			nullif(trim(isnull(br.firstname,'') + ' ' + isnull(br.LastName,'')),'') as producer_nm,
 			CAST(ins.ReferenceCode AS VARCHAR(255)) as customer_id,
 			ins.id as MasterInsuredId,
-			0 as Number,
-			DENSE_RANK()OVER(PARTITION BY acc.PolicyNumber,CAST(acc.EffectiveDate AS DATE) ORDER BY acc.UpdatedDate DESC) AS rnk, 
+			0 as transaction_seq_no,
+			DENSE_RANK()OVER(PARTITION BY acc.Number,CAST(acc.EffectiveDate AS DATE) ORDER BY acc.UpdatedDate DESC) AS rnk, 
 			case when acc.TransactionEffectiveDate is null then acc.EffectiveDate else acc.TransactionEffectiveDate end TransactionEffectiveDate,
 			null CancellationReason, 
 			acc.CreatedDate,
@@ -72,7 +73,7 @@ BEGIN
 				end ssk,
 				nullif(trim(pr.ProductCode),'') product_cd,
 				usr.name uw_nm,'' note,
-                acc.state, acc.isrenewal, null BindDate, null ReferredByUserId,
+                acc.state, acc.isrenewal, CAST(null AS DATE) BindDate, null ReferredByUserId,
 				pd.producer_sk ,
 				arr.[Version] as premium_rater_version
 		INTO edw_temp.tcommercial_quote_history_wip_temp1 --select acct.* 
@@ -86,8 +87,7 @@ BEGIN
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acc.BrokerId
 		LEFT JOIN (SELECT * FROM edw_stage.AccountRaterReference WHERE ReferenceType = 'Premium') arr on arr.AccountId = acc.ID	
 		and pr.[InternalName] = arr.ProductInternalName  
-		WHERE acc.PolicyNumber is not null 
-		and pr.ProductLine = 'CommercialLines'
+		WHERE pr.ProductLine = 'CommercialLines'
 		and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
         and greatest(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts 
 
@@ -107,9 +107,7 @@ BEGIN
         left join edw_stage.Accountpremium ap on ap.AccountId=acc.id 
 		INNER JOIN edw_stage.[AccountPremiumTaxAndFee] accptf on accptf.AccountPremiumId = ap.Id 
 		left join edw_stage.Product pr on acc.ProductId = pr.id		
-		WHERE --acct.Stage in ('QUOTE','POLICY') and
-			acc.PolicyNumber is not null 
-		and pr.ProductLine = 'CommercialLines'  
+		WHERE pr.ProductLine = 'CommercialLines'  
 		and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
         and greatest(acc.CreatedDate,acc.UpdatedDate)>@last_source_extract_ts 
 		group by acc.id  
@@ -188,11 +186,11 @@ BEGIN
 		-- Create last temp table
 		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_history_wip_temp5;
 		SELECT	
-			 source.PolicyNumber as quote_no
+			 source.quote_no
 			,source.EffectiveDate as effective_dt
 			,source.ExpirationDate as expiration_dt
 			,source.TransactionEffectiveDate as transaction_effective_dt
-			,source.Number as transaction_seq_no
+			,source.transaction_seq_no
 			,NULL as latest_transaction_in
 			,q.commercial_quote_sk
 			,br.broker_sk
@@ -227,19 +225,19 @@ BEGIN
 			,source.ssk as source_system_sk
 			,GETDATE() as create_ts
 			,GETDATE() as update_ts
-			,null as etl_audit_sk
+			,@etl_audit_sk as etl_audit_sk
 		INTO edw_temp.tcommercial_quote_history_wip_temp5
 		FROM edw_temp.tcommercial_quote_history_wip_temp1 source
 		LEFT JOIN edw_temp.tcommercial_quote_history_wip_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tcommercial_quote_history_wip_temp2 source1 on source.id = source1.AccountId 
 		LEFT JOIN edw_temp.tcommercial_quote_history_wip_temp4 tmp4 on tmp4.AccountId = source.id
-		LEFT JOIN edw_commercial.tcommercial_quote q on source.PolicyNumber = q.quote_no and cast(source.EffectiveDate as date) = q.effective_dt
-		LEFT JOIN edw_core.tbroker br on cast(source.BrokerId as varchar)  = br.broker_id
+		LEFT JOIN edw_commercial.tcommercial_quote q on source.quote_no = q.quote_no and cast(source.EffectiveDate as date) = q.effective_dt
+		LEFT JOIN edw_core.tbroker br on cast(source.BrokerId as varchar(255))  = br.broker_id
 		LEFT JOIN edw_core.tproduct pr on pr.product_cd = source.product_cd 
-		left join edw_core.tcustomer cust on cast(source.customer_id as varchar) = cust.customer_id
-		left join edw_stage.[user] cu on cast(cu.id as varchar) = cast(source.CreatedById as varchar)
-		left join edw_stage.[user] rvu on cast(rvu.id as varchar) = cast(source.ReviewedById as varchar) 
-		left join edw_stage.[user] rfu on cast(rfu.id as varchar) = cast(source.ReferredByUserId as varchar)
+		left join edw_core.tcustomer cust on cast(source.customer_id as varchar(255)) = cust.customer_id
+		left join edw_stage.[user] cu on cast(cu.id as varchar(255)) = cast(source.CreatedById as varchar(255))
+		left join edw_stage.[user] rvu on cast(rvu.id as varchar(255)) = cast(source.ReviewedById as varchar(255)) 
+		left join edw_stage.[user] rfu on cast(rfu.id as varchar(255)) = cast(source.ReferredByUserId as varchar(255))
 
 		-- Start Merge process
 		MERGE edw_commercial.tcommercial_quote_history AS Target

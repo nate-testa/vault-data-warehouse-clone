@@ -11,6 +11,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 27/03/2025           Alberto Almario				1. Created this procedure 
+-- 22/04/2025           Alberto Almario				2. Use BindDate instead of IssuedDate
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_policy_history]
 
@@ -49,7 +50,7 @@ BEGIN
 			DENSE_RANK()OVER(PARTITION BY acct.PolicyNumber,CAST(acct.EffectiveDate AS DATE) ORDER BY acct.policychangenumber DESC) AS rnk, 
 			acct.TransactionEffectiveDate,
 			acct.CancellationReason,
-			acct.IssuedDate,
+			acct.BindDate,
 			acct.UpdatedDate,  
 			coalesce(acct.totalpremiumdeltaprorated,acct.totalpremium, 0) wp,
 			coalesce(acct.commissiondelta,acct.commission,0) comm,
@@ -71,7 +72,8 @@ BEGIN
 			acct.ProRateFactor,
 			acct.IsReversed,
 			acct.IsReversal,
-			acctvprr.[Version] as premium_rater_version
+			acctvprr.[Version] as premium_rater_version,
+			acct.IssuedDate as transaction_issue_ts
 		INTO edw_temp.tcommercial_policy_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
@@ -85,10 +87,10 @@ BEGIN
 		left join edw_stage.Product pr on acctv.ProductId = pr.id
 		-- and pr.[InternalName] = acctvprr.ProductInternalName
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acctv.BrokerId
-		WHERE acct.State ='ISSUED' --- Review BOUND transactions
+		WHERE acct.State IN ('ISSUED','BOUND')
 		and	acct.PolicyNumber is not null 
 		and pr.ProductLine = 'CommercialLines' 		
-		AND acct.IssuedDate>@last_source_extract_ts
+		AND acct.BindDate>@last_source_extract_ts
 
 
 		DROP TABLE IF EXISTS edw_temp.tcommercial_policy_history_temp3
@@ -102,10 +104,10 @@ BEGIN
 		left join edw_stage.Brokerage brk on acctv.BrokerageId = brk.id
 		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acctv.ProductId = pr.id
-		WHERE acct.State ='ISSUED' --- Review BOUND transactions
+		WHERE acct.State IN ('ISSUED','BOUND')
 		and	acct.PolicyNumber is not null 
 		and pr.ProductLine = 'CommercialLines'  
-		AND acct.IssuedDate>@last_source_extract_ts
+		AND acct.BindDate>@last_source_extract_ts
 		group by acct.id 
 
 		-- Pivot Table
@@ -198,7 +200,7 @@ BEGIN
 			,source.uw_nm as underwriter_nm
 			,source.producer_nm
 			,tt.policy_transaction_type_nm as transaction_type
-			,source.IssuedDate as transaction_ts
+			,source.BindDate as transaction_ts
 			,source.note as transaction_desc
 			,source.CancellationReason as cancellation_reason_desc
 			,source.policychangenotes as policy_change_summary
@@ -217,6 +219,7 @@ BEGIN
 			,GETDATE() as create_ts
 			,GETDATE() as update_ts
 			,@etl_audit_sk as etl_audit_sk
+			,transaction_issue_ts
 		INTO edw_temp.tcommercial_policy_history_temp5
 		FROM edw_temp.tcommercial_policy_history_temp1 source
 		LEFT JOIN edw_temp.tcommercial_policy_history_temp3 tfs on source.id = tfs.id
@@ -267,6 +270,7 @@ BEGIN
 			,create_ts
 			,update_ts
 			,etl_audit_sk
+			,transaction_issue_ts
 		)
 		SELECT 
 			 policy_no
@@ -303,6 +307,7 @@ BEGIN
 			,create_ts
 			,update_ts
 			,etl_audit_sk
+			,transaction_issue_ts
 		FROM edw_temp.tcommercial_policy_history_temp5
 		;
 
@@ -336,7 +341,7 @@ BEGIN
 		and   h.transaction_seq_no = max_tr.transaction_seq_no;*/
 
 		
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.IssuedDate) FROM edw_temp.tcommercial_policy_history_temp1 t1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.BindDate) FROM edw_temp.tcommercial_policy_history_temp1 t1),@last_source_extract_ts);
 		
         DROP TABLE IF EXISTS edw_temp.tcommercial_policy_history_temp1
         DROP TABLE IF EXISTS edw_temp.tcommercial_policy_history_temp2

@@ -11,6 +11,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 31/03/2025           Alberto Almario				1. Created this procedure
+-- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
 -- ===================================================================================================================== 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tcommercial_quote_history]
 
@@ -37,15 +38,15 @@ BEGIN
         -- Create temp table with name as sp_tcustomer_temp1 and use it in 
         DROP TABLE IF EXISTS edw_temp.tcommercial_quote_history_temp1
         SELECT acct.id,
-			acct.PolicyNumber,
+			CAST(acc.Number AS VARCHAR(255)) as quote_no,
 			acct.EffectiveDate,
 			acct.ExpirationDate, 
 			CAST(brk.producerid AS VARCHAR(255)) as BrokerId,
 			nullif(trim(isnull(br.firstname,'') + ' ' + isnull(br.LastName,'')),'') as producer_nm,
 			CAST(ins.ReferenceCode AS VARCHAR(255)) as customer_id,
 			ins.id as MasterInsuredId,
-			acct.Number,
-			DENSE_RANK()OVER(PARTITION BY acct.PolicyNumber ORDER BY acct.UpdatedDate DESC, acct.Number DESC) AS rnk, 
+			acct.Number as transaction_seq_no,
+			DENSE_RANK()OVER(PARTITION BY acc.Number ORDER BY acct.UpdatedDate DESC, acct.Number DESC) AS rnk, 
 			case when acct.TransactionEffectiveDate is null then acct.EffectiveDate else acct.TransactionEffectiveDate end TransactionEffectiveDate,
 			acct.CancellationReason, 
 			acct.CreatedDate,
@@ -82,7 +83,6 @@ BEGIN
 		--and pr.[InternalName] = acctvprr.ProductInternalName
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acctv.BrokerId
 		WHERE acct.Stage in ('QUOTE','POLICY')
-		and	acct.PolicyNumber is not null 
 		and pr.ProductLine = 'CommercialLines' 		
 		AND acct.CreatedDate > @last_source_extract_ts
 
@@ -99,7 +99,6 @@ BEGIN
 		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acctv.ProductId = pr.id
 		WHERE acct.Stage in ('QUOTE','POLICY')
-		and	acct.PolicyNumber is not null 
 		and pr.ProductLine = 'CommercialLines'  
 		AND acct.CreatedDate > @last_source_extract_ts
 		group by acct.id 
@@ -178,11 +177,11 @@ BEGIN
 		-- Create last temp table
 		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_history_temp5;
 		SELECT	
-			 source.PolicyNumber as quote_no
+			 source.quote_no
 			,source.EffectiveDate as effective_dt
 			,source.ExpirationDate as expiration_dt
 			,source.TransactionEffectiveDate as transaction_effective_dt
-			,source.Number as transaction_seq_no
+			,source.transaction_seq_no
 			,NULL as latest_transaction_in
 			,q.commercial_quote_sk
 			,br.broker_sk
@@ -223,7 +222,7 @@ BEGIN
 		LEFT JOIN edw_temp.tcommercial_quote_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tcommercial_quote_history_temp2 source1 on source.id = source1.AccountTransactionId 
 		LEFT JOIN edw_temp.tcommercial_quote_history_temp4 tmp4 on tmp4.AccountTransactionId = source.id
-		LEFT JOIN edw_commercial.tcommercial_quote q on source.PolicyNumber = q.quote_no and cast(source.EffectiveDate as date) = q.effective_dt
+		LEFT JOIN edw_commercial.tcommercial_quote q on source.quote_no = q.quote_no and cast(source.EffectiveDate as date) = q.effective_dt
 		LEFT JOIN edw_core.tbroker br on cast(source.BrokerId as varchar)  = br.broker_id
 		LEFT JOIN edw_core.tproduct pr on pr.product_cd = source.product_cd 
 		left join edw_core.tcustomer cust on cast(source.customer_id as varchar) = cust.customer_id
@@ -324,15 +323,15 @@ BEGIN
 		update h
 		set latest_transaction_in = 'N'
 		from edw_commercial.tcommercial_quote_history h
-		where exists (select 'x' from edw_temp.tcommercial_quote_history_temp1 h1 where h.quote_no = h1.policynumber);
+		where exists (select 'x' from edw_temp.tcommercial_quote_history_temp1 h1 where h.quote_no = h1.quote_no);
 
 		update h
 		set latest_transaction_in = 'Y'
 		from edw_commercial.tcommercial_quote_history h
 		where exists (select 'x' from edw_temp.tcommercial_quote_history_temp1 h1 
-					  where h.quote_no = h1.policynumber 
+					  where h.quote_no = h1.quote_no 
 					  and h.effective_dt = cast(h1.EffectiveDate as date) 
-					  and h.transaction_seq_no = h1.Number and h1.rnk = 1);
+					  and h.transaction_seq_no = h1.transaction_seq_no and h1.rnk = 1);
 
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.CreatedDate) FROM edw_temp.tcommercial_quote_history_temp1 t1),@last_source_extract_ts);

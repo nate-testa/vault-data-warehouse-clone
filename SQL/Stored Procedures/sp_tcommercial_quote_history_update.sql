@@ -10,6 +10,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 31/03/2025           Alberto Almario				1. Created this procedure 
+-- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_history_update]
 
@@ -45,17 +46,18 @@ BEGIN
 			transaction_updated_ts	= b.UpdatedDate,
 			transaction_status      = upper(substring(b.state,1,1)) + lower(substring(b.state, 2, len(b.state)-1))
 		from edw_commercial.tcommercial_quote_history a
-		inner join ( select acc.policynumber, acc.effectivedate, acc.[number], acc.ApproveNote, acc.DenyNote, 
-							acc.ReferredByUserId, rfu.name as refname, 
+		inner join ( select CAST(acc.Number AS VARCHAR(255)) as quote_no, acct.effectivedate, acct.[number] as transaction_seq_no, acct.ApproveNote, acct.DenyNote, 
+							acct.ReferredByUserId, rfu.name as refname, 
 							--SubmitById, su.name subname, 
-							acc.CreatedById, cu.name crename, 
-							acc.ReviewedById, rvu.name revname, binddate, nottakenreason, acc.UpdatedDate,acc.[State]
-					from edw_stage.accounttransaction acc
-					left join edw_stage.[user] cu on cu.id = acc.CreatedById
-					left join edw_stage.[user] rvu on rvu.id = acc.ReviewedById 
-					left join edw_stage.[user] rfu on rfu.id = acc.ReferredByUserId 
-					where	acc.UpdatedDate  > @last_source_extract_ts
-					) b on	 a.quote_no = b.policynumber and a.effective_dt = b.effectivedate and a.transaction_seq_no = b.[number];  
+							acct.CreatedById, cu.name crename, 
+							acct.ReviewedById, rvu.name revname, binddate, nottakenreason, acct.UpdatedDate,acct.[State]
+					from edw_stage.accounttransaction acct
+					inner join edw_stage.Account acc on acct.AccountId = acc.Id 
+					left join edw_stage.[user] cu on cu.id = acct.CreatedById
+					left join edw_stage.[user] rvu on rvu.id = acct.ReviewedById 
+					left join edw_stage.[user] rfu on rfu.id = acct.ReferredByUserId 
+					where	acct.UpdatedDate  > @last_source_extract_ts
+					) b on	 a.quote_no = b.quote_no and a.effective_dt = b.effectivedate and a.transaction_seq_no = b.transaction_seq_no;  
 
 		SET @rows_affected=@@ROWCOUNT;   
 	
