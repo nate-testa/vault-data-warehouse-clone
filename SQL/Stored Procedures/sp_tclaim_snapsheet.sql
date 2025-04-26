@@ -130,7 +130,7 @@ BEGIN
 			END as responsible_party
 			,ld.fault_percentage AS at_fault_pct
 			,covc.updated_at as coverage_confirmed_ts
-			,covc.name as coverage_confirmed_by_nm
+			,u.name as coverage_confirmed_by_nm
 			,case
 				when covc.status = 'true' then 'Yes' 
 				when covc.[status] = 'false' then 'No'
