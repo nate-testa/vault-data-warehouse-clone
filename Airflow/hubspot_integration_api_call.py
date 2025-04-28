@@ -100,7 +100,7 @@ EOF
         task_id="run_hs_integration_script",
         ssh_conn_id="ssh_vm_hubspot",
         command=REMOTE_RUN_CMD,
-        cmd_timeout=18_000,
+        cmd_timeout=18000,
     )
 
     end = DummyOperator(task_id="end")
