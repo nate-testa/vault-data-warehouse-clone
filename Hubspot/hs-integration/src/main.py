@@ -8,8 +8,6 @@ from objects.quote import Quote
 from objects.parent_child_note import ParentChildNotes
 from objects.quote_note import QuoteNote
 
-
-
 def run():
 
     Producer.sync_to_hubspot()         # contacts
@@ -32,4 +30,3 @@ def run():
 
 if __name__ == '__main__' :
     run()
-    
