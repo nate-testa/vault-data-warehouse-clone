@@ -48,20 +48,20 @@ BEGIN
 													ELSE 0
 													END
 												,4)
-		from [edw_core].[thome_coverage] a,
-				(
-				SELECT  
-						s.home_coverage_sk,
-						s.loss_of_use_option AS loss_of_use_option_raw,
-						s.loss_of_use_pc AS loss_of_use_pc_raw,
-						s.loss_of_use_limit_amt AS loss_of_use_limit_amt_raw,
-						TRY_CAST(REPLACE(REPLACE(s.loss_of_use_option,'%',''),',','')AS float) AS loss_of_use_option_float,
-						TRY_CAST(REPLACE(REPLACE(s.loss_of_use_pc,'%',''),',','')AS float) AS loss_of_use_pc_float,
-						TRY_CAST(REPLACE(REPLACE(REPLACE(s.loss_of_use_limit_amt,',',''),'$',''),'%','') AS float) AS loss_of_use_limit_amt_float,
-						s.dwelling_limit_amt,
-						s.contents_limit_amt
-				FROM    edw_core.thome_coverage AS s 
-			) clean ON c.home_coverage_sk = tc.home_coverage_sk 
+		from [edw_core].[thome_coverage] a
+		inner join 	(
+						SELECT  
+								s.home_coverage_sk,
+								s.loss_of_use_option AS loss_of_use_option_raw,
+								s.loss_of_use_pc AS loss_of_use_pc_raw,
+								s.loss_of_use_limit_amt AS loss_of_use_limit_amt_raw,
+								TRY_CAST(REPLACE(REPLACE(s.loss_of_use_option,'%',''),',','')AS float) AS loss_of_use_option_float,
+								TRY_CAST(REPLACE(REPLACE(s.loss_of_use_pc,'%',''),',','')AS float) AS loss_of_use_pc_float,
+								TRY_CAST(REPLACE(REPLACE(REPLACE(s.loss_of_use_limit_amt,',',''),'$',''),'%','') AS float) AS loss_of_use_limit_amt_float,
+								s.dwelling_limit_amt,
+								s.contents_limit_amt
+						FROM    edw_core.thome_coverage AS s 
+					) c ON c.home_coverage_sk = a.home_coverage_sk 
 		where transaction_dt > @last_source_extract_ts
 		or loss_of_use_derived_pc is null;
 		
