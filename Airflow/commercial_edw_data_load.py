@@ -70,7 +70,9 @@ with DAG(
 
         commercial_policy_group_items = [
             'sp_tcommercial_policy',
+            'sp_tcommercial_policy_update_cancels',
             'sp_tcommercial_policy_history',
+            'sp_tcommercial_policy_history_update',
             'sp_tcommercial_policy_coverage',
             'sp_tcommercial_policy_tower',
             'sp_tcommercial_policy_quota_share',
