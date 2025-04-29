@@ -54,6 +54,8 @@
     "Vault Program Fronting Fee 5.5%": "vault_fronting_fees",
     "Add Fee Income Due": "add_fee_income_due",
     "Vault Premium + Profit Share Fund + Front Fees": "vault_prem_w_profitshare_frontfees",
+    "Fronting Fee Total": "fronting_fee_total",
+    "Underwriting Year Percentage": "underwriting_year_percentage",
     "product_type": "product_type",
     "product_nm": "product_nm",
     "create_ts": "create_ts",
