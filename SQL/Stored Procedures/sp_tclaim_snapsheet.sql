@@ -16,6 +16,7 @@
 -- 04/03/2025		Yunus Mohammed				11. AD-8747 Mapping updated for loss_desc columns for snapsheet claims
 -- 04/09/2025		Yunus Mohammed				12. AD-9109 Used tpolicy table for broker_id, customer_id and product_sk instead of tpolicy_history
 -- 04/24/2025		Yunus Mohammed				13. AD-9297 Added coverage check fields
+-- 04/29/2025		Yunus Mohammed				14. AD-8748 Updated claim_first_reopen_dt logic
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -115,7 +116,7 @@ BEGIN
 			CASE WHEN TRIM(cpcme.value)='' THEN NULL ELSE cpcme.value END AS contact_person_email,
 			c.updated_at AS update_time,
 			c.first_closed_at as claim_first_closed_dt,
-			CAST(NULL AS DATE) as claim_first_reopen_dt, 
+			CASE WHEN c.first_opened_at!=c.opened_at THEN c.opened_at ELSE NULL END AS claim_first_reopen_dt,			
 			c.created_at AS claim_created_ts,
 			c.creator_user_name AS claim_created_by_nm,
 			tph.policy_history_sk,
@@ -241,7 +242,7 @@ BEGIN
 		Target.contact_person_email=Source.contact_person_email,
 		Target.policy_history_sk=Source.policy_history_sk,
 		Target.claim_first_closed_dt=Source.claim_first_closed_dt,
-		Target.claim_first_reopen_dt=Source.claim_first_reopen_dt,
+		Target.claim_first_reopen_dt= case when Target.claim_first_reopen_dt is null then  Source.claim_first_reopen_dt else Target.claim_first_reopen_dt end,
 		Target.claim_created_ts=Source.claim_created_ts,
 		Target.claim_created_by_nm=Source.claim_created_by_nm,
 		Target.update_ts=@current_date,
