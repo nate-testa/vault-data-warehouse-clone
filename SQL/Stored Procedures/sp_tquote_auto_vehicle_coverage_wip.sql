@@ -22,6 +22,7 @@ GO
 -- 08/30/24	    Architha Gudimalla			   13. Excluded string in veh purchse dt
 -- 12/10/24     Alberto Almario                14. Add column rater_pip_discount
 -- 04/11/25     Alberto Almario                15. Add 40 new columns
+-- 04/29/25     Alberto Almario                16. Add agreed_value_coverage_in and flood_deductible
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip] 
@@ -264,7 +265,7 @@ BEGIN
                 [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
                 [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
                 [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, vehicle_unique_id, NewlyPurchasedVehicle, NewlyPurchasedVehicleDate, [NewlyPurchasedVehicleFinal],
-                [RaterPIPDiscount]
+                [RaterPIPDiscount],[AgreedValueCoverage],[FloodDeductible]
             
             FROM
                 (
@@ -316,7 +317,7 @@ BEGIN
                         [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
                         [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
                         [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-                        [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal], [RaterPIPDiscount]
+                        [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal], [RaterPIPDiscount], [AgreedValueCoverage], [FloodDeductible]
                     )
                 ) pivottable
         )
@@ -617,6 +618,8 @@ BEGIN
                 ,t1.uninsured_property_damage_premium_adjustment_method
                 ,t1.uninsured_property_damage_premium_adjustment_reason
                 ,t1.uninsured_property_damage_premium_adjustment_retention
+                ,t1.[AgreedValueCoverage] as agreed_value_coverage_in
+                ,t1.[FloodDeductible] as flood_deductible
             FROM 
                 [edw_temp].[tquote_auto_vehicle_coverage_wip_temp1] AS t1
             LEFT JOIN 
@@ -828,6 +831,8 @@ BEGIN
                 ,target.uninsured_property_damage_premium_adjustment_method = source.uninsured_property_damage_premium_adjustment_method
                 ,target.uninsured_property_damage_premium_adjustment_reason = source.uninsured_property_damage_premium_adjustment_reason
                 ,target.uninsured_property_damage_premium_adjustment_retention = source.uninsured_property_damage_premium_adjustment_retention
+                ,target.agreed_value_coverage_in = source.agreed_value_coverage_in
+                ,target.flood_deductible = source.flood_deductible
         WHEN NOT MATCHED THEN
             INSERT (
                 quote_no,
@@ -1024,6 +1029,8 @@ BEGIN
                 ,uninsured_property_damage_premium_adjustment_method
                 ,uninsured_property_damage_premium_adjustment_reason
                 ,uninsured_property_damage_premium_adjustment_retention
+                ,agreed_value_coverage_in
+                ,flood_deductible
             )
             VALUES (
                 source.quote_no,
@@ -1220,6 +1227,8 @@ BEGIN
                 ,source.uninsured_property_damage_premium_adjustment_method
                 ,source.uninsured_property_damage_premium_adjustment_reason
                 ,source.uninsured_property_damage_premium_adjustment_retention
+                ,source.agreed_value_coverage_in
+                ,source.flood_deductible
             );
 
 

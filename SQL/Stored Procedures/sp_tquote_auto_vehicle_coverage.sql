@@ -26,6 +26,7 @@ GO
 -- 11/16/24	    Architha Gudimalla				16. Added temp for last insert
 -- 12/10/24     Alberto Almario                 17. Add column rater_pip_discount
 -- 04/11/25     Alberto Almario                 18. Add 40 new columns
+-- 04/29/25     Alberto Almario                 19. Add agreed_value_coverage_in and flood_deductible
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage]
@@ -269,7 +270,7 @@ BEGIN
                 [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
                 [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
                 [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, vehicle_unique_id, [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal],
-                [RaterPIPDiscount]
+                [RaterPIPDiscount],[AgreedValueCoverage],[FloodDeductible]
             
             FROM
                 (
@@ -322,7 +323,7 @@ BEGIN
                         [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
                         [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
                         [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-                        [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal], [RaterPIPDiscount]
+                        [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal], [RaterPIPDiscount], [AgreedValueCoverage], [FloodDeductible]
                     )
                 ) pivottable
         )
@@ -620,6 +621,8 @@ BEGIN
             ,t1.uninsured_property_damage_premium_adjustment_method
             ,t1.uninsured_property_damage_premium_adjustment_reason
             ,t1.uninsured_property_damage_premium_adjustment_retention
+            ,t1.[AgreedValueCoverage] as agreed_value_coverage_in
+            ,t1.[FloodDeductible] as flood_deductible
         into edw_temp.[tquote_auto_vehicle_coverage_temp3]
         FROM 
             [edw_temp].[tquote_auto_vehicle_coverage_temp1] AS t1
@@ -827,6 +830,8 @@ BEGIN
             ,uninsured_property_damage_premium_adjustment_method
             ,uninsured_property_damage_premium_adjustment_reason
             ,uninsured_property_damage_premium_adjustment_retention
+            ,agreed_value_coverage_in
+            ,flood_deductible
 		)
         SELECT 
             t1.quote_no,
@@ -1023,6 +1028,8 @@ BEGIN
             ,t1.uninsured_property_damage_premium_adjustment_method
             ,t1.uninsured_property_damage_premium_adjustment_reason
             ,t1.uninsured_property_damage_premium_adjustment_retention
+            ,t1.agreed_value_coverage_in
+            ,t1.flood_deductible
         FROM 
             [edw_temp].[tquote_auto_vehicle_coverage_temp3] AS t1;
 
