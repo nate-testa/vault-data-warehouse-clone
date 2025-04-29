@@ -155,9 +155,16 @@ BEGIN
 					INNER JOIN edw_core.tbroker tb on tb.broker_sk=tpt.broker_sk
 					LEFT JOIN edw_core.thome_location hl on hl.policy_no = tp.policy_no and hl.effective_dt = tp.effective_dt
 					LEFT JOIN edw_core.tcollection_location cl on cl.policy_no = tp.policy_no and cl.effective_dt = tp.effective_dt
-					LEFT JOIN edw_core.tpel_location pl on pl.policy_no = tp.policy_no and pl.effective_dt = tp.effective_dt
-						and pl.transaction_seq_no = tpt.transaction_seq_no and pl.primary_location_in = 'Yes'
-					LEFT JOIN edw_core.tmarine_boat_yacht_location mbyl on mbyl.policy_no = pl.policy_no and mbyl.effective_dt = tp.effective_dt
+					LEFT JOIN
+					(
+						SELECT
+								ROW_NUMBER()over(partition by policy_history_sk order by primary_location_in desc,location_no) as rn,
+								policy_no,effective_dt,transaction_seq_no,address_line_1,address_line_2,
+								unit_no,city_nm,state_cd,zip_cd,county_nm,country_nm,primary_location_in,location_no
+						FROM
+							edw_core.tpel_location
+					) as pl on pl.policy_no = tp.policy_no and pl.effective_dt = tp.effective_dt and pl.transaction_seq_no = tpt.transaction_seq_no and pl.rn = 1
+					LEFT JOIN edw_core.tmarine_boat_yacht_location mbyl on mbyl.policy_no = tp.policy_no and mbyl.effective_dt = tp.effective_dt
 						and mbyl.transaction_seq_no = tpt.transaction_seq_no
 					LEFT JOIN edw_core.tauto_garage_location agl on agl.policy_history_sk = tpt.policy_history_sk 
 					and agl.auto_garage_location_sk =
