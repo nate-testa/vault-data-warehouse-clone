@@ -140,9 +140,10 @@ def process_files(use_local_files, config):
                     preprocessor.save_to_csv()
                     preprocessor.move_original_file()
 
-                    # Move processed file in Azure
+                    # Copy into the archive folder, then delete the original
                     archive_blob_name = f"{archive_folder}/{xls_filename}"
-                    blob_client.start_copy_from_url(blob_client.url)
+                    archive_blob_client = container_client.get_blob_client(archive_blob_name)
+                    archive_blob_client.start_copy_from_url(blob_client.url)
                     container_client.delete_blob(blob_name)
                     logging.info(f"Moved '{blob_name}' to archive in Azure: '{archive_blob_name}'.")
 
