@@ -50,7 +50,7 @@ BEGIN
 		-- Update policy_status
 		UPDATE pol
 		SET 
-			 pol.policy_status = 'CANCELLED'
+			 pol.policy_status = 'Cancelled'
 			,pol.cancellation_effective_dt = cancels.transaction_effective_dt
 			,pol.update_ts = GETDATE()
 		FROM edw_commercial.tcommercial_policy pol
