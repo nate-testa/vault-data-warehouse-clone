@@ -40,7 +40,7 @@ class Preprocessor:
     def process_data(self):
         try:
             # Drop unwanted columns
-            self.df.drop(columns=['Fronting Fee Total', 'Underwriting Year Percentage'], inplace=True)
+            # self.df.drop(columns=['Fronting Fee Total', 'Underwriting Year Percentage'], inplace=True)
 
             # Convert 'Reporting Month' to the required date format
             self.df['Reporting Month'] = pd.to_datetime(self.df['Reporting Month'].str.strip(), format='%b %Y', errors='coerce')
@@ -141,7 +141,7 @@ def process_files(use_local_files, config):
                     preprocessor.move_original_file()
 
                     # Copy into the archive folder, then delete the original
-                    archive_blob_name = f"{archive_folder}/{xls_filename}"
+                    archive_blob_name = f"archive/{xls_filename}"
                     archive_blob_client = container_client.get_blob_client(archive_blob_name)
                     archive_blob_client.start_copy_from_url(blob_client.url)
                     container_client.delete_blob(blob_name)
