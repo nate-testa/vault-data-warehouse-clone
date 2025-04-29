@@ -65,6 +65,7 @@ BEGIN
 		where transaction_dt > @last_source_extract_ts
 		or loss_of_use_derived_pc is null;
 		
+		
 		update [edw_core].[thome_coverage]
 			set total_insured_value_amt = 	isnull(dwelling_limit_amt,0) + isnull(other_structures_limit_amt,0) + isnull(contents_limit_amt,0) +
 											round(cast(loss_of_use_derived_pc as float) * cast(iif(residence_type = 'Homeowners', dwelling_limit_amt, contents_limit_amt) as int),0)
