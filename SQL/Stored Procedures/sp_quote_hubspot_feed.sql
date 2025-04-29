@@ -183,7 +183,7 @@ BEGIN
             ,case when pinf.customer_id is not null and pinf.inforce_ct = cinf.inforce_ct
 							   then 'Yes' 
 							   else 'No' 
-						  end as mononline_in
+						  end as monoline_in
         into edw_temp.quote_hubspot_feed_temp1
 
         from edw_core.tquote q
@@ -313,7 +313,7 @@ BEGIN
             ,case when pinf.customer_id is not null and pinf.inforce_ct = cinf.inforce_ct
 							   then 'Yes' 
 							   else 'No' 
-						  end as mononline_in
+						  end as monoline_in
         into edw_temp.quote_hubspot_feed_temp2
         
         from edw_core.tpolicy q 
@@ -491,7 +491,8 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 		
 		-- Drop temp table 
-		DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp0;		
+		DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp0;
+		DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp01;		
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp1;		
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp2;		
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp3;

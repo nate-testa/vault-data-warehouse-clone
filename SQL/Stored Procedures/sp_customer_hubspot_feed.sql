@@ -343,6 +343,7 @@ BEGIN
 
         -- Drop temp table
         DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp0;
+        DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp01;
         DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp1; 
 
 	END TRY
