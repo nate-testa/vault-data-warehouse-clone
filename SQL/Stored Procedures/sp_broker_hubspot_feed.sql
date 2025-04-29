@@ -29,6 +29,7 @@
 -- 01/13/25		        Alberto Almario 			20. AD8013 - Included yacht data
 -- 01/10/25		        Archtha Gudimalla			21. VI35254/AZ8015 - Added ytd_new_business_yacht_premium_amt
 -- 03/29/25		        Archtha Gudimalla			22. VI36791/AZ9023 - Concat broker_id to broker_nm
+-- 04/29/25		        Archtha Gudimalla			23. VI37383/AZ9290 - Added broker_state
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -196,6 +197,7 @@ BEGIN
             ,bs.ytd_new_business_net_premium_amt as ytd_nb_premium_amt
             ,bs.ytd_new_business_yacht_premium_amt 
             ,case when rolling_12_policy_renewal_ct > 0 then round(100*cast(rolling_12_policy_renewal_accepted_ct as float)/rolling_12_policy_renewal_ct,2) else null end ytd_renewal_retention_pc
+            ,tb.primary_address_state_cd
         into    edw_temp.broker_hubspot_feed_temp1
         FROM    edw_core.tbroker tb
         left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
@@ -220,6 +222,7 @@ BEGIN
             ,ytd_nb_premium_amt
             ,ytd_new_business_yacht_premium_amt
             ,ytd_renewal_retention_pc
+            ,primary_address_state_cd
         )
         SELECT        
             broker_id,broker_nm + ' - ' + broker_id,mailing_address_line_1,mailing_address_line_2,mailing_address_city_nm,mailing_address_state_cd,
@@ -233,6 +236,7 @@ BEGIN
             ,ytd_nb_premium_amt
             ,ytd_new_business_yacht_premium_amt
             ,ytd_renewal_retention_pc
+            ,primary_address_state_cd
         FROM edw_temp.broker_hubspot_feed_temp1
         
         
