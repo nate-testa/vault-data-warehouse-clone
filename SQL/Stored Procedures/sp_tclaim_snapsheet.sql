@@ -116,7 +116,7 @@ BEGIN
 			CASE WHEN TRIM(cpcme.value)='' THEN NULL ELSE cpcme.value END AS contact_person_email,
 			c.updated_at AS update_time,
 			c.first_closed_at as claim_first_closed_dt,
-			CASE WHEN c.first_opened_at!=c.opened_at THEN c.opened_at ELSE NULL END AS claim_first_reopen_dt,			
+			CASE WHEN c.first_opened_at!=c.opened_at THEN c.opened_at END AS claim_first_reopen_dt,			
 			c.created_at AS claim_created_ts,
 			c.creator_user_name AS claim_created_by_nm,
 			tph.policy_history_sk,
