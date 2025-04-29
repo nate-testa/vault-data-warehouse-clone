@@ -37,36 +37,30 @@ BEGIN
 		-- Create temp table
 		DROP TABLE IF EXISTS edw_temp.tcommercial_policy_update_cancels_temp1;
 		SELECT
-			tr.commercial_policy_sk, 
-			MAX(tr.transaction_effective_dt_sk) transaction_effective_dt_sk,
-			MAX(tr.update_ts) update_ts
+			 commercial_policy_sk
+			,transaction_effective_dt
+			,transaction_ts 
 		INTO edw_temp.tcommercial_policy_update_cancels_temp1
-		FROM edw_commercial.tcommercial_policy_transaction tr
-		INNER JOIN edw_core.tpolicy_transaction_type tt 
-		ON tr.policy_transaction_type_sk = tt.policy_transaction_type_sk
-		WHERE 1=1
-		AND tr.update_ts > @last_source_extract_ts
-		AND tr.transaction_seq_no = (select max(transaction_seq_no) from edw_commercial.tcommercial_policy_transaction tr1 where tr1.commercial_policy_sk = tr.commercial_policy_sk)
-		AND tt.policy_transaction_type_nm = 'Cancellation'
-		GROUP BY commercial_policy_sk
+		FROM edw_commercial.tcommercial_policy_history
+		WHERE transaction_type = 'Cancellation' 
+		AND latest_transaction_in = 'Y' 
+		AND cast(transaction_ts as datetime2(7)) > @last_source_extract_ts
 		;
 
 		-- Update policy_status
 		UPDATE pol
 		SET 
 			 pol.policy_status = 'CANCELLED'
-			,pol.cancellation_effective_dt = tdate.actual_dt
+			,pol.cancellation_effective_dt = cancels.transaction_effective_dt
 			,pol.update_ts = GETDATE()
 		FROM edw_commercial.tcommercial_policy pol
 		INNER JOIN edw_temp.tcommercial_policy_update_cancels_temp1 cancels 
 			ON pol.commercial_policy_sk = cancels.commercial_policy_sk
-		INNER JOIN edw_core.tdate tdate
-			ON tdate.date_sk = cancels.transaction_effective_dt_sk
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
 	
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(tmp.update_ts) FROM edw_temp.tcommercial_policy_update_cancels_temp1 tmp),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(tmp.transaction_ts) FROM edw_temp.tcommercial_policy_update_cancels_temp1 tmp),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS edw_temp.tcommercial_policy_update_cancels_temp1;
 		

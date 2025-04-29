@@ -47,7 +47,7 @@ BEGIN
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id 
 		INNER JOIN edw_stage.Product pr on acctv.ProductId = pr.id
-		WHERE acct.State IN ('ISSUED','BOUND')
+		WHERE acct.State IN ('ISSUED')
 		and	acct.PolicyNumber is not null 
 		and pr.ProductLine = 'CommercialLines' 		
 		AND acct.IssuedDate > @last_source_extract_ts
