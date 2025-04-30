@@ -22,7 +22,8 @@
 -- 03/06/25		        Archtha Gudimalla			17. AD8781 - Send latest broker info
 -- 03/28/25		        Archtha Gudimalla			18. VI36790/AD8898 - Added Target account
 -- 03/28/25		        Archtha Gudimalla			19. VI36066/AD8907 - Added close_reason_desc
--- 04/05/25             Sandeep Gundreddy           20. Replaced Null with '' close_reason_desc in temp2 tp fix batch issue   
+-- 04/05/25             Sandeep Gundreddy           20. Replaced Null with '' close_reason_desc in temp2 tp fix batch issue
+-- 04/17/25		        Archtha Gudimalla			21. VI37310/AD9213 - Added monoline   
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -64,6 +65,27 @@ BEGIN
 		or isnull(a.broker_tier,'') <> isnull(br.broker_tier,'')
 		or isnull(a.national_agency_in,'') <> isnull(br.national_agency_in,'')
 		or isnull(a.broker_nm,'') <> isnull(br.broker_nm,'');
+
+ 		DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp01;
+
+		--get customer inforce counts
+		SELECT customer_id = CASE 
+								WHEN customer_id IS NULL THEN 
+									'[Grand Total]' 
+								ELSE customer_id 
+							END
+				, product_cd = CASE 
+								WHEN pr.product_cd IS NULL THEN 
+									'[Total' + case when customer_id is null then '- Overall' else '' end + ']' COLLATE SQL_Latin1_General_CP1_CI_AS 
+								ELSE pr.product_cd 
+								END
+				, inforce_ct = COUNT(*)   
+		into  edw_temp.quote_hubspot_feed_temp01
+		FROM edw_core.tdaily_inforce_policy summ, edw_core.tproduct pr , edw_core.tcustomer cust 
+		where inforce_dt_sk = (select date_sk from edw_core.tdate where actual_dt = dateadd(dd,-1,cast(getdate() as date)))
+		and pr.product_sk = summ.product_sk 
+		and summ.customer_sk = cust.customer_sk 
+		GROUP BY ROLLUP (customer_id, pr.product_cd);
 		
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp1;
 		
@@ -158,7 +180,10 @@ BEGIN
             ,tqhc.current_underlying_company_nm
             ,q.target_account
             ,q.close_reason_desc
-
+            ,case when pinf.customer_id is not null and pinf.inforce_ct = cinf.inforce_ct
+							   then 'Yes' 
+							   else 'No' 
+						  end as monoline_in
         into edw_temp.quote_hubspot_feed_temp1
 
         from edw_core.tquote q
@@ -179,6 +204,8 @@ BEGIN
         left join edw_core.tquote_auto_policy_coverage tqapc on tqapc.quote_history_sk=h.quote_history_sk
         left join edw_core.tquote_pel_coverage tqpc on tqpc.quote_history_sk=h.quote_history_sk
         left join quote_collection_class_type as tcct on tcct.quote_history_sk = h.quote_history_sk 
+		left join edw_temp.quote_hubspot_feed_temp01 pinf on cust.customer_id = pinf.customer_id and pr.product_cd = pinf.product_cd 
+		left join edw_temp.quote_hubspot_feed_temp01 cinf on cust.customer_id = cinf.customer_id and '[Total]' = cinf.product_cd 
 
         where  h.latest_transaction_in = 'Y'
 		and (greatest(q.create_ts,q.update_ts) > @last_source_extract_ts 
@@ -282,8 +309,11 @@ BEGIN
             ,tqhc.new_client_for_agency_in
             ,tqhc.current_underlying_company_nm
             ,q.target_account
-            ,'' as close_reason_desc
-
+            ,'' as close_reason_desc 
+            ,case when pinf.customer_id is not null and pinf.inforce_ct = cinf.inforce_ct
+							   then 'Yes' 
+							   else 'No' 
+						  end as monoline_in
         into edw_temp.quote_hubspot_feed_temp2
         
         from edw_core.tpolicy q 
@@ -304,6 +334,8 @@ BEGIN
         left join edw_core.tauto_policy_coverage tqapc on tqapc.policy_history_sk=h.policy_history_sk
         left join edw_core.tpel_coverage tqpc on tqpc.policy_history_sk=h.policy_history_sk
         left join policy_collection_class_type as tcct on tcct.policy_history_sk = h.policy_history_sk
+		left join edw_temp.quote_hubspot_feed_temp01 pinf on cust.customer_id = pinf.customer_id and pr.product_cd = pinf.product_cd 
+		left join edw_temp.quote_hubspot_feed_temp01 cinf on cust.customer_id = cinf.customer_id and '[Total]' = cinf.product_cd 
 
         where   q.broker_id <> '0'  
 		and isnull(q.insured_nm,'') not like '%test%' 
@@ -362,6 +394,7 @@ BEGIN
             ,current_underlying_company_nm
             ,target_account
             ,close_reason_desc
+            ,monoline_in
         )
         VALUES
         (
@@ -385,6 +418,7 @@ BEGIN
             ,current_underlying_company_nm
             ,target_account
             ,close_reason_desc
+            ,monoline_in
         )
         WHEN MATCHED THEN UPDATE
         SET        
@@ -442,7 +476,8 @@ BEGIN
             [target].new_client_for_agency_in	        =	[source].new_client_for_agency_in,
             [target].current_underlying_company_nm	    =	[source].current_underlying_company_nm,  
             [target].target_account	                    =	[source].target_account  ,  
-            [target].close_reason_desc	                =	[source].close_reason_desc  
+            [target].close_reason_desc	                =	[source].close_reason_desc ,  
+            [target].monoline_in	                    =	[source].monoline_in   
             ;
         
         SET @rows_affected=@@ROWCOUNT;
@@ -456,7 +491,8 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 		
 		-- Drop temp table 
-		DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp0;		
+		DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp0;
+		DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp01;		
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp1;		
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp2;		
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp3;
