@@ -60,9 +60,10 @@ BEGIN
 		;
 
 		-- Update policy_status as Expired
-		update edw_core.tpolicy
-        set policy_status = 'Expired'
-        where expiration_dt <= cast(getdate() as date); 
+		UPDATE edw_commercial.tcommercial_policy
+        SET policy_status = 'Expired'
+        WHERE expiration_dt <= cast(getdate() as date)
+		;
 
 		SET @rows_affected=@@ROWCOUNT;
 	
