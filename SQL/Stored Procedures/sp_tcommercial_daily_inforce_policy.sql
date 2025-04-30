@@ -54,40 +54,39 @@ BEGIN
 			
 				sET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 		
-				delete from edw_core.tcommercial_tdaily_inforce_policy
+				delete from edw_commercial.tcommercial_tdaily_inforce_policy
 				where inforce_dt_sk = @var_date_sk; 
 				
 				with max_tr as
 				(
-				 SELECT policy_sk,
-						policy_transaction_sk,
-						row_number() over (partition by policy_sk order by transaction_seq_no desc, policy_transaction_sk desc) rnk,
-				 		sum(premium_amt) over (partition by policy_sk) prm,
-				 		sum(annual_premium_amt) over (partition by policy_sk) ann_prm,
-				 		sum(case when tax_fee_surcharge_sk = 0 then annual_premium_amt else 0 end) over (partition by policy_sk) annual_net_premium_amt,
-				 		sum(tax_fee_surcharge_amt) over (partition by policy_sk) tfs,
-				 		sum(commission_amt) over (partition by policy_sk) commission_amt
-				 FROM edw_core.tcommercial_policy_transaction 
+				 SELECT commercial_policy_sk,
+						commercial_policy_transaction_sk,
+						row_number() over (partition by commercial_policy_sk order by transaction_seq_no desc, commercial_policy_transaction_sk desc) rnk,
+				 		sum(premium_amt) 						over (partition by commercial_policy_sk) prm,
+				 		sum(annual_premium_amt) 				over (partition by commercial_policy_sk) ann_prm,
+				 		sum(annual_premium_amt-commission_amt) 	over (partition by commercial_policy_sk) annual_net_premium_amt,
+				 		sum(commission_amt) 					over (partition by commercial_policy_sk) commission_amt
+				 FROM edw_commercial.tcommercial_policy_transaction 
 				 where effective_dt_sk <= @var_date_sk
 				 and   transaction_effective_dt_sk <= @var_date_sk
 				 and   transaction_dt_sk <= @var_date_sk 
 				)
-				INSERT INTO edw_core.tcommercial_tdaily_inforce_policy
+				INSERT INTO edw_commercial.tcommercial_tdaily_inforce_policy
 					( 
-						policy_sk, policy_history_sk, customer_sk, broker_sk, product_sk, source_system_sk, inforce_dt_sk, 
+						commercial_policy_sk, commercial_policy_history_sk, customer_sk, broker_sk, product_sk, source_system_sk, inforce_dt_sk, 
 						premium_amt, annual_premium_amt, net_premium_amt , update_ts, etl_audit_sk
 						,annual_net_premium_amt
 						,commission_amt
 			        )
-			    select 	tr.policy_sk, tr.policy_history_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.sourcE_system_sk, 
+			    select 	tr.commercial_policy_sk, tr.commercial_policy_history_sk, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.sourcE_system_sk, 
 						@var_date_sk, 
-						max_tr.prm, max_tr.ann_prm, max_tr.prm-max_tr.tfs, getdate(), @etl_audit_sk
+						max_tr.prm, max_tr.ann_prm, max_tr.prm-max_tr.commission_amt, getdate(), @etl_audit_sk
 						,max_tr.annual_net_premium_amt
 						,max_tr.commission_amt
-				from  edw_core.tcommercial_policy_transaction tr, edw_core.tcommercial_policy_transaction_type tt, max_tr
+				from  edw_commercial.tcommercial_policy_transaction tr, edw_core.tpolicy_transaction_type tt, max_tr
 				where tr.policy_transaction_type_sk = tt.policy_transaction_type_sk
-				  and tr.policy_sk = max_tr.policy_sk
-				  and tr.policy_transaction_sk = max_tr.policy_transaction_sk
+				  and tr.commercial_policy_sk = max_tr.commercial_policy_sk
+				  and tr.commercial_policy_transaction_sk = max_tr.commercial_policy_transaction_sk
 				  and tt.policy_transaction_type_nm <> 'Cancellation'
 				  and expiration_dt_sk > @var_date_sk
 				  and max_tr.rnk = 1;
