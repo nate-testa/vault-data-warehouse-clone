@@ -20,6 +20,7 @@
 -- 03/14/25		Yunus Mohammed			  			14. Used product InternalName instead of Name 
 -- 04/03/25		Yunus Mohammed			  			15. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
 -- 04/22/25		Yunus Mohammed						16. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
+-- 04/30/25		Yunus Mohammed						17. Ad-9338 Added cancellation_sub_reason_desc
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -59,6 +60,7 @@ BEGIN
 			DENSE_RANK()OVER(PARTITION BY acct.PolicyNumber,CAST(acct.EffectiveDate AS DATE) ORDER BY acct.policychangenumber DESC) AS rnk, 
 			acct.TransactionEffectiveDate,
 			acct.CancellationReason,
+			acct.CancellationSubReason,
 			acct.IssuedDate,
 			acct.UpdatedDate,  
 			coalesce(acct.totalpremiumdeltaprorated,acct.totalpremium, 0) wp,
@@ -180,6 +182,7 @@ BEGIN
            ,transaction_ts
            ,transaction_desc
            ,cancellation_reason_desc
+		   ,cancellation_sub_reason_desc
            ,premium_amt
            ,net_premium_amt
            ,[tax_fee_surcharge_amt]
@@ -219,7 +222,7 @@ BEGIN
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.PolicyChangeNumber, 
 				pol.policy_sk, br.broker_sk, cust.customer_sk, br.Broker_Id, Source.customer_id, 
-				tt.policy_transaction_type_nm, Source.IssuedDate, source.note, Source.CancellationReason, 
+				tt.policy_transaction_type_nm, Source.IssuedDate, source.note, Source.CancellationReason, Source.CancellationSubReason,
 				wp, 
 				wp-isnull(tfs.tfs,0),isnull(tfs.tfs,0),
 				comm,
