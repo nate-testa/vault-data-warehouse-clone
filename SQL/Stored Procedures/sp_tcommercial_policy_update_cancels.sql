@@ -11,6 +11,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 28/04/2025            Alberto Almario			1. Created this procedure 
+-- 30/04/2025            Alberto Almario			2. Add logic to update policy_status as Expired
 -- ===================================================================================================================== 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tcommercial_policy_update_cancels]
 
@@ -47,7 +48,7 @@ BEGIN
 		AND cast(transaction_ts as datetime2(7)) > @last_source_extract_ts
 		;
 
-		-- Update policy_status
+		-- Update policy_status as Cancelled
 		UPDATE pol
 		SET 
 			 pol.policy_status = 'Cancelled'
@@ -56,6 +57,12 @@ BEGIN
 		FROM edw_commercial.tcommercial_policy pol
 		INNER JOIN edw_temp.tcommercial_policy_update_cancels_temp1 cancels 
 			ON pol.commercial_policy_sk = cancels.commercial_policy_sk
+		;
+
+		-- Update policy_status as Expired
+		UPDATE edw_commercial.tcommercial_policy
+        SET policy_status = 'Expired'
+        WHERE expiration_dt <= cast(getdate() as date)
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
