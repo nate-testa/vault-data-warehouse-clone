@@ -12,6 +12,7 @@ GO
 -- ---------------------------------------------------------------------------------------------------
 -- 01-03-2025				Alberto Almario				1. Add snasheet mapping to ClaimType column.
 -- 01-21-2025               Rushin Shah                 2. Updated the claim amount field logic
+-- 04-30-2025               Alberto Almario             3. Include snapsheet claims and change logic for item_sk
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
@@ -89,7 +90,6 @@ BEGIN
         ,claim_feature AS (
             SELECT 
                 a.claim_sk,
-                a.item_sk,
                 b.transaction_ts,
                 SUM(a.subrogation_expense_recovery_amt + a.subrogation_recovery_amt) AS sum_subro_exp_rec_amt,
                 MAX(
@@ -114,9 +114,12 @@ BEGIN
                 SUM(
                     COALESCE(
                             (
-                                a.loss_paid_amt             + 
-                                a.expense_paid_amt          + 
-                                a.defense_paid_amt  
+                                a.loss_paid_amt                     +
+                                a.expense_paid_amt                  +
+                                a.defense_paid_amt                  +
+                                a.overpayment_recovery_amt          +
+                                a.overpayment_expense_recovery_amt  +
+                                a.overpayment_defense_recovery_amt
                             ), 0)
                     ) AS [claimAmount]
             FROM edw_core.tclaim_feature AS a
@@ -126,12 +129,11 @@ BEGIN
                     FROM edw_core.tclaim_transaction
                     GROUP BY claim_sk
                 ) AS b ON a.claim_sk = b.claim_sk
-            WHERE a.source_system_sk = 3
+            WHERE a.source_system_sk in (3,5)
             AND a.product_sk = 3
             AND cast(b.transaction_ts as datetime2(7)) > @last_source_extract_ts
             GROUP BY
                 a.claim_sk,
-                a.item_sk,
                 b.transaction_ts,
                 CASE
                     WHEN claim_coverage_desc = 'Combined Single Limits' THEN 'BI'
@@ -145,6 +147,24 @@ BEGIN
                     WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UN'
                     ELSE 'OT'
                 END
+        )
+        ,claim_feature_item AS (
+            SELECT 
+                claim_sk, item_sk, rc
+            FROM (
+                SELECT 
+                    claim_sk,
+                    item_sk,
+                    rc,
+                    ROW_NUMBER() OVER (PARTITION BY claim_sk ORDER BY rc DESC, item_sk DESC) AS rn
+                FROM (
+                    SELECT a.claim_sk, a.item_sk, COUNT(*) AS rc
+                    FROM edw_core.tclaim_feature a
+                    INNER JOIN claim_feature b ON a.claim_sk = b.claim_sk
+                    GROUP BY a.claim_sk, a.item_sk
+                ) AS counts
+            ) AS ranked
+            WHERE rn = 1
         )
 
         SELECT  
@@ -255,7 +275,8 @@ BEGIN
         FROM claim_feature AS cf
         INNER JOIN claims AS c ON cf.claim_sk = c.claim_sk
         INNER JOIN edw_core.tpolicy AS p ON p.policy_sk = c.policy_sk
-        LEFT JOIN edw_core.tauto_vehicle AS av ON cf.item_sk = av.auto_vehicle_sk
+        LEFT JOIN claim_feature_item AS cfi ON cf.claim_sk = cfi.claim_sk
+        LEFT JOIN edw_core.tauto_vehicle AS av ON cfi.item_sk = av.auto_vehicle_sk
         LEFT JOIN customer AS cu ON p.customer_id = cu.customer_id
         LEFT JOIN policy_insured_2 AS pi2 ON c.policy_no = pi2.policy_no
         WHERE p.product_cd IN ('AU')
