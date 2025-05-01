@@ -281,8 +281,28 @@ def update_tetl_control_table(process_nm, last_source_extract_ts):
             logging.error(f"Error updating tetl_control table: {e}")
             raise
 
+def delete_old_files(folder_path, retention_days=5):
+    now = time.time()
+    days = retention_days * 24 * 60 * 60
+
+    files_removed = 0
+    # List all files in the directory
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+        # Check if it's a file and not a directory
+        if os.path.isfile(file_path):
+            # Check the file's last modified time
+            if now - os.path.getmtime(file_path) > days:
+                # If it's greater than retention_days parameter, remove it
+                os.remove(file_path)
+                files_removed += 1
+
 def process_all_files():
     try:
+        # Delete old files in the local directory
+        delete_old_files(HOME_PATH + '/airflow/tmp_files/majesco_billing/to_process', retention_days=2)
+        delete_old_files(HOME_PATH + '/airflow/tmp_files/majesco_billing/processed_files', retention_days=2)
+
         # Azure Blob Storage configuration
         wasb_conn_id = 'azure_blob_storage'
         container_name = 'inbound-majesco-billing'

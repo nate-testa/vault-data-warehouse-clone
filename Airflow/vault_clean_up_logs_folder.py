@@ -40,7 +40,7 @@ def delete_old_folders(folder_path, retention_days=30):
 def remove_old_folders_for_schedule_log():
     
     print("**** Start clean up folders process")
-    folders_removed = delete_old_folders(SCHEDULE_LOG_FOLDER, 7)
+    folders_removed = delete_old_folders(SCHEDULE_LOG_FOLDER, 3)
     print(f"folders removed in {SCHEDULE_LOG_FOLDER} : {folders_removed}")
     print("**** End clean up folders process")
 
