@@ -5,6 +5,7 @@
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 04/29/25		Architha Gudimalla				1. Created this procedure  
+-- 05/02/25		Architha Gudimalla				2. Updated after initial testing for errors 
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_daily_inforce_policy]
@@ -54,7 +55,7 @@ BEGIN
 			
 				sET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 		
-				delete from edw_commercial.tcommercial_tdaily_inforce_policy
+				delete from edw_commercial.tcommercial_daily_inforce_policy
 				where inforce_dt_sk = @var_date_sk; 
 				
 				with max_tr as
@@ -71,7 +72,7 @@ BEGIN
 				 and   transaction_effective_dt_sk <= @var_date_sk
 				 and   transaction_dt_sk <= @var_date_sk 
 				)
-				INSERT INTO edw_commercial.tcommercial_tdaily_inforce_policy
+				INSERT INTO edw_commercial.tcommercial_daily_inforce_policy
 					( 
 						commercial_policy_sk, commercial_policy_history_sk, customer_sk, broker_sk, product_sk, source_system_sk, inforce_dt_sk, 
 						premium_amt, annual_premium_amt, net_premium_amt , update_ts, etl_audit_sk

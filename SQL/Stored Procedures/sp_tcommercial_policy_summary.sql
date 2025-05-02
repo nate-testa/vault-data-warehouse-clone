@@ -10,6 +10,7 @@ GO
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------------------------
 -- 04/29/25		Architha Gudimalla				1. Created this procedure  
+-- 05/02/25		Architha Gudimalla				2. Updated after initial testing for errors 
 -- ======================================================================================================================================== 
 
 CREATE or ALTER    PROCEDURE [edw_core].[sp_tcommercial_policy_summary]
@@ -437,7 +438,7 @@ BEGIN
 				)
 				INSERT INTO  edw_commercial.tcommercial_policy_summary
 					( 
-						month_sk, commercial_policy_sk,  customer_sk, broker_sk, product_sk, source_system_sk, 
+						month_sk, commercial_policy_sk, commercial_policy_history_sk,  customer_sk, broker_sk, product_sk, source_system_sk, 
 						inforce_ct, inforce_premium_amt, inforce_net_premium_amt,
 						mtd_premium_amt, mtd_commission_amt, mtd_net_premium_amt, 
 						ytd_premium_amt, ytd_commission_amt, ytd_net_premium_amt, 
@@ -447,7 +448,7 @@ BEGIN
 						earned_net_premium_amt, unearned_net_premium_amt, 
 						written_exposure, earned_exposure, update_ts, etl_audit_sk
 					)
-				select 	@month_end_dt_sk, prm.commercial_policy_sk, max_tr.customer_sk, max_tr.broker_sk, max_tr.product_sk, max_tr.sourcE_system_sk, 
+				select 	@month_end_dt_sk, prm.commercial_policy_sk, max_tr.commercial_policy_history_sk, max_tr.customer_sk, max_tr.broker_sk, max_tr.product_sk, max_tr.sourcE_system_sk, 
 						iif(inf.commercial_policy_sk is null,0,1) inforce_ct, 
 						iif(inf.commercial_policy_sk is null,0,inf.inforce_premium_amt) inforce_premium_amt, 
 						iif(inf.commercial_policy_sk is null,0,inf.inforce_premium_amt-itd_commission_amt) inforce_net_premium_amt, 
