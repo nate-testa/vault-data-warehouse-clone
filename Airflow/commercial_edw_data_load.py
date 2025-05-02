@@ -147,9 +147,40 @@ with DAG(
 
         operators[-1] >> send_commercial_quote_email
 
+
+    with TaskGroup("commercial_datamart_group") as commercial_datamart_group:
+
+        commercial_datamart_group_items = [
+            'sp_tcommercial_daily_inforce_policy',
+            'sp_tcommercial_policy_summary'
+        ]
+
+        operators = []
+        for item in commercial_datamart_group_items:
+            operator = MsSqlOperator(
+                task_id=item,
+                mssql_conn_id='Vault_EDW',
+                sql=f"EXEC edw_core.{item}",
+                database="vault_edw",
+                autocommit=True,
+            )
+            operators.append(operator)
+
+        send_commercial_datamart_group_email = EmailOperator(
+            task_id='send_commercial_datamart_group_email',
+            to=to_email,
+            subject='Airflow - Commercial datamart tables loaded successfully',
+            html_content=get_sp_success_data_HTML(commercial_datamart_group_items, 'All stored procedures executed successfully for all the Commercial datamart tables'),
+        )
+
+        for i in range(len(operators) - 1):
+            operators[i] >> operators[i + 1]
+
+        operators[-1] >> send_commercial_datamart_group_email
+
     end = DummyOperator(
         task_id='end',
     )
 
 
-start >> commercial_policy_group >> commercial_quote_group >> end
+start >> commercial_policy_group >> commercial_quote_group >> commercial_datamart_group >> end
