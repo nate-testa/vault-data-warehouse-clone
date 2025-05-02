@@ -54,7 +54,7 @@ def check_majesco_data_and_send_email(**kwargs):
     else:
         print("No rows loaded. No email will be sent.")
 
-def check_majesco_no_loaded_data_and_send_email(**kwargs):
+def check_majesco_not_loaded_data_and_send_email(**kwargs):
     sql_qry = """
                 SELECT 'stage_majesco_adjust_writeoff' AS Table_Name, COUNT(*) AS Rows_Loaded FROM edw_stage.stage_majesco_adjust_writeoff WHERE CAST(create_ts AS DATE) = CAST(GETDATE() AS DATE) HAVING COUNT(1) = 0
                 UNION ALL
@@ -82,7 +82,7 @@ def check_majesco_no_loaded_data_and_send_email(**kwargs):
             task_id='send_majesco_billing_warning_email',
             to=to_email,
             subject='Airflow - Majesco Billing - Warning - Data not loaded report',
-            html_content=get_vault_data_HTML(sql_qry,'The Majesco Billing files have been processed but some tables were no loaded.'),
+            html_content=get_vault_data_HTML(sql_qry,'The Majesco Billing files have been processed but some tables were not loaded.'),
             dag=kwargs['dag'],
         ).execute(context=kwargs)
         
@@ -151,9 +151,9 @@ with DAG(
             dag=dag,
         )
     
-    check_no_loaded_data_and_send_email = PythonOperator(
-            task_id='check_no_loaded_data_and_send_email',
-            python_callable=check_majesco_no_loaded_data_and_send_email,
+    check_not_loaded_data_and_send_email = PythonOperator(
+            task_id='check_not_loaded_data_and_send_email',
+            python_callable=check_majesco_not_loaded_data_and_send_email,
             provide_context=True,
             dag=dag,
         )
@@ -162,4 +162,4 @@ with DAG(
         task_id='end',
     )
 
-start >> process_majesco_billing_files >> check_data_and_send_email >> check_no_loaded_data_and_send_email >> end
+start >> process_majesco_billing_files >> check_data_and_send_email >> check_not_loaded_data_and_send_email >> end
