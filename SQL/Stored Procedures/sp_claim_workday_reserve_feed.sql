@@ -13,6 +13,7 @@
 -- 02/19/25		Yunus Mohammed				6. Updated to use new columns after Snapsheet implementation
 -- 04/15/25		Yunus Mohammed				7. Removed litigation claims
 -- 04/25/25		Yunus Mohammed				8. Updated logic to get the month for which we are running the proc
+--																					Update run date logic
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_reserve_feed]
 
@@ -38,7 +39,7 @@ BEGIN
 		select yearmonth
 		from edw_core.tdate
 		where
-		actual_dt > case when day(@current_date) > 1 then @last_source_extract_ts else dateadd(MM,-1,@current_date) end
+		actual_dt > @last_source_extract_ts
 		and actual_dt < cast(@current_date as date)
 		group by yearmonth
 		order by 1; 
@@ -167,7 +168,7 @@ BEGIN
 			SET @rows_affected=@@ROWCOUNT;
 
 			-- Update control table
-			SET @new_last_source_extract_ts=COALESCE(@end_dt,@last_source_extract_ts);
+			SET @new_last_source_extract_ts= dateadd(day,-1,cast(@current_date as date))
 			EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 			-- Update audit table

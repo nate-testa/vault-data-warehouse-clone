@@ -15,6 +15,7 @@
 -- 02/19/25		Yunus Mohammed				7. Updated to use new columns after Snapsheet implementation
 -- 04/15/25		Yunus Mohammed				8. Removed litigation claims
 -- 04/25/25		Yunus Mohammed				9. Updated logic to get the month for which we are running the proc
+--																					Update run date logic
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_reserve_feed_itd]
@@ -34,19 +35,15 @@ BEGIN
 		-- Get last source extract date
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
-		
-		DROP TABLE IF EXISTS edw_temp.claim_workday_reserve_feed_itd_temp1
 
 		DECLARE @last_day_month DATE, @year_month INT;
 		select @year_month = yearmonth
 		from edw_core.tdate
 		where
-		actual_dt > case when day(@current_date) > 1 then @last_source_extract_ts else dateadd(MM,-1,@current_date) end
+		actual_dt > @last_source_extract_ts
 		and actual_dt < cast(@current_date as date)
 		group by yearmonth
-		order by 1; 
-
-		--SELECT @year_month = yearmonth FROM edw_core.tdate WHERE actual_dt = CAST(DATEADD(MONTH,-1,GETDATE()) AS DATE);
+		order by 1;		
 
 		SELECT @last_day_month = actual_dt FROM edw_core.tdate WHERE yearmonth = @year_month and month_end_in = 'Y';
 
@@ -161,16 +158,13 @@ BEGIN
 
 		-- Update control table
 		-- SET @new_last_source_extract_ts=COALESCE((SELECT MAX(update_time) FROM edw_temp.claim_workday_reserve_feed),@last_source_extract_ts)
-		SET @new_last_source_extract_ts = '1900-01-01 00:00:00.0000000'
+		SET @new_last_source_extract_ts =dateadd(day,-1,cast(@current_date as date))
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
-		
-		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.claim_workday_reserve_feed_itd_temp1
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)

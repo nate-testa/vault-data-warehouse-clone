@@ -17,6 +17,7 @@
 -- 11/26/24		Yunus Mohammed				9. Updated Marine Boat & Yacht to Marine_Boat&Yacht
 -- 03/11/25		Yunus Mohammed				10.  Corrected proc running for past months
 -- 04/25/25		Yunus Mohammed				11. AD8820 Updated logic to get risk address
+--																					Update run date logic
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
@@ -43,7 +44,7 @@ BEGIN
 		select yearmonth
 		from edw_core.tdate
 		where
-		actual_dt > case when day(@current_date) > 1 then @last_source_extract_ts else dateadd(MM,-1,@current_date) end
+		actual_dt >  @last_source_extract_ts
 		and actual_dt < cast(@current_date as date)
 		group by yearmonth
 		order by 1; 
@@ -365,7 +366,7 @@ BEGIN
 			SET @rows_affected=@@ROWCOUNT;
 
 			-- Update control table
-			SET @new_last_source_extract_ts=COALESCE(@last_day_month,@last_source_extract_ts); 	
+			SET @new_last_source_extract_ts=dateadd(day,-1,cast(@current_date as date));
 			EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 			-- Update audit table
