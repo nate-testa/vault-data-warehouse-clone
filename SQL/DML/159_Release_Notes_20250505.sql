@@ -71,7 +71,7 @@ VALUES (
     <li>VI-35404 : Updated missing loss date in Metal using loss date from prior policy / CLUE data</li>
     <li>VI-37419 : Updated missing policy number and issued date for old commercial policies in AccountTransaction table within the staging schema</li>
     <li>INC-37541 : Updated distance to coast field to null for ~200 policies from inland states</li>
-    <li>AD8971: Updated ceded premium amounts for HO100145793-02 and HO200041071</b></li>
+    <li>AD8971 : Updated ceded premium amounts for HO100145793-02 and HO200041071</b></li>
 </ul>
 </body>
 '
