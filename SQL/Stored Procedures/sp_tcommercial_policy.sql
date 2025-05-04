@@ -10,7 +10,9 @@ GO
 -----------------------------------------------------------------------------------------------------------------------
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
--- 26/03/2025           Alberto Almario				1. Created this procedure 
+-- 26/03/2025            Alberto Almario			1. Created this procedure 
+-- 22/04/2025            Alberto Almario			2. Use BindDate instead of IssuedDate
+-- 30/04/2025            Alberto Almario			3. Add fix value Active for policy_status
 -- ===================================================================================================================== 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tcommercial_policy]
 
@@ -49,10 +51,9 @@ BEGIN
 				,ROW_NUMBER() OVER (PARTITION BY acct.PolicyNumber, cast(acct.EffectiveDate as date) ORDER BY acct.policychangenumber DESC) AS AccountTransaction_Rank
 			FROM edw_stage.AccountTransaction acct 
 		    LEFT JOIN edw_stage.Product pr on acct.ProductId = pr.id
-			WHERE acct.State ='ISSUED'
-			AND	acct.PolicyNumber IS NOT NULL 
+			WHERE acct.State IN ('ISSUED','BOUND')
 			AND pr.ProductLine = 'CommercialLines'  
-			AND acct.IssuedDate > @last_source_extract_ts
+			AND acct.BindDate > @last_source_extract_ts
 		)
 		SELECT cte_Acc.*
 		INTO edw_temp.tcommercial_policy_temp1
@@ -106,7 +107,7 @@ BEGIN
 			,nullif(trim(pr.ProductCode),'') as product_cd
 			,nullif(trim(COALESCE(acctv.RiskStateCode, 'DNA')),'') as risk_state_cd
 			,case when acc.RenewalIndex = 0 then 'New' else 'Renewal' end as policy_term
-			,tmp1.State as policy_status
+			,'Active' as policy_status
 			,CASE
 				WHEN nullif(trim(isnull(tmp2.Prefix + ' ','') + isnull(tmp2.FirstName + ' ','') + isnull(tmp2.MiddleName + ' ','') + isnull(tmp2.LastName + ' ','') + isnull(tmp2.Suffix,'')),'') IS NOT NULL
 					THEN nullif(trim(isnull(tmp2.Prefix + ' ','') + isnull(tmp2.FirstName + ' ','') + isnull(tmp2.MiddleName + ' ','') + isnull(tmp2.LastName + ' ','') + isnull(tmp2.Suffix,'')),'')
@@ -208,7 +209,7 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 	
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(tmp.IssuedDate) FROM edw_temp.tcommercial_policy_temp1 tmp),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(tmp.BindDate) FROM edw_temp.tcommercial_policy_temp1 tmp),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS edw_temp.tcommercial_policy_temp1;
 		DROP TABLE IF EXISTS edw_temp.tcommercial_policy_temp2;

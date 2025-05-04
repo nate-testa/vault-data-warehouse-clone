@@ -10,6 +10,8 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 31/03/2025           Alberto Almario				1. Created this procedure 
+-- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 02/05/2025           Architha Gudimalla			3. Updated quote_status, commercial_policy_sk update
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_update]
 
@@ -39,13 +41,13 @@ BEGIN
         update a 
         set a.quote_status='Issued'
         from edw_commercial.tcommercial_quote a
-		where exists (select * from edw_commercial.tcommercial_quote_history  b where upper(transaction_status) = 'ISSUED' and a.quote_no=b.quote_no) and ISNULL(a.quote_status,'xx')!='Issued';
+		where exists (select * from edw_commercial.tcommercial_quote_history  b 
+					  where upper(transaction_status) = 'ISSUED' and a.quote_no=b.quote_no
+					 ) 
+		and ISNULL(a.quote_status,'xx')!='Issued';
 
 		update a
 		set a.quote_status = case 				
-								when b.state = 'WIP' and b.tr_status = 'No Trans' then 'In Progress'					
-								when b.state = 'WIP' and b.tr_status_offered >= 1 then 'Offered'					
-								when b.state = 'WIP' and b.tr_status_referred >= 1 and tr_status_offered = 0 then 'Referred'
 								when b.state = 'Closed' and b.SubmissionCloseReasonCategory is not null then b.SubmissionCloseReasonCategory				
 								when b.state = 'Closed' and b.SubmissionCloseReasonCategory is null 
 									and a.close_reason_desc 					
@@ -69,36 +71,28 @@ BEGIN
 									and a.close_reason_desc 					
 										in ('IncompleteSubmission','NotTaken'					
 									) then 'Not Taken by Insured'				
-								when b.state = 'Closed' and b.tr_status_offered = 0 then 'Declined by Vault'					
-								when b.state = 'Closed' and b.tr_status_offered >= 1 then 'Not Taken by Insured'					
 								when b.state = 'Issued' then 'Issued'					
 								else 'In Progress'					
 								end	 
 		from edw_commercial.tcommercial_quote a
 		inner join (
-						select policynumber, effectivedate , state, tr_status, SubmissionCloseReasonCategory,
-								sum(tr_status_offered) tr_status_offered, 
-								sum(tr_status_referred) tr_status_referred
+						select quote_no, effectivedate , state, SubmissionCloseReasonCategory
 						FROM
 						(
-							select 	policynumber, effectivedate , acc.state, acc.SubmissionCloseReasonCategory,
-									case when qtsh.quote_no is null then 'No Trans' else '' end tr_status, 
-									case when upper(qtsh.transaction_status) = 'OFFERED' then 1 else 0 end tr_status_offered, 
-									case when qtsh.transaction_status = 'REFERRED' then 1 else 0 end tr_status_referred 
-							from 	edw_stage.account acc
-							left join edw_core.tquote_transaction_status_history  qtsh on acc.policynumber = qtsh.quote_no 
-							where	acc.UpdatedDate 
-									> @last_source_extract_ts
-						) aa
-						group by policynumber, effectivedate , state, tr_status, SubmissionCloseReasonCategory
-					) b on	 a.quote_no = b.policynumber and ISNULL(a.quote_status,'xx')!='Issued'; 
+							select 	CAST(acc.Number AS VARCHAR(255)) as quote_no, effectivedate , acc.state, acc.SubmissionCloseReasonCategory
+							from 	edw_commercial.tcommercial_quote  q
+							inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(50)) = q.quote_no 
+							where	acc.UpdatedDate > @last_source_extract_ts
+						) aa 
+					) b on	 a.quote_no = b.quote_no and ISNULL(a.quote_status,'xx')!='Issued'; 
 
   
 		update a
-		set policy_sk = b.commercial_policy_sk
+		set a.commercial_policy_sk = b.commercial_policy_sk
 		from edw_commercial.tcommercial_quote a
-		inner join edw_commercial.tcommercial_policy b 
-        on a.quote_no = b.policy_no and a.effective_dt = b.effective_dt where a.policy_sk is null; 
+		inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(50)) = a.quote_no 
+		inner join edw_commercial.tcommercial_policy b on CAST(acc.policyNumber AS VARCHAR(50)) = b.policy_no
+		where a.commercial_policy_sk is null; 
 
 		update a
 		set a.bind_dt = b.max_bind_dt
@@ -111,7 +105,7 @@ BEGIN
 		select 	qh.commercial_quote_sk, max(qh.commercial_quote_history_sk) commercial_quote_history_sk
 		into 	edw_temp.tcommercial_quote_update_temp1
 		from 	edw_commercial.tcommercial_quote_history qh
-		inner join edw_stage.account acc on acc.PolicyNumber = qh.quote_no
+		inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(255)) = qh.quote_no
 		where  	qh.transaction_status = 'Issued'
 		and 	acc.UpdatedDate	> @last_source_extract_ts
 		group by qh.commercial_quote_sk; 

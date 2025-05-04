@@ -6,6 +6,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 11/08/23			Mohammed Yunus					1. Created this procedure
 -- 02/14/24			Mohammed Yunus					2. Updated transaction_seq_no logic
+-- 04-22-2025              Sandeep Gundreddy            3 - Modified update_ts to use cast function 
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_nfp_claim_policy_search_api]
 
@@ -52,7 +53,7 @@ BEGIN
 			
 		) as temp
 		WHERE
-			update_ts > @last_source_extract_ts
+			cast(update_ts as datetime2(7)) > @last_source_extract_ts
 
 		INSERT INTO edw_integration.claim_policy_search_api
 		(

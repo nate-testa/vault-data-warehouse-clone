@@ -11,6 +11,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 19/03/2025           Alberto Almario				1. Created this procedure 
+-- 22/04/2025           Alberto Almario				2. Use BindDate instead of IssuedDate
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_policy_subjectivity]
 AS
@@ -56,7 +57,7 @@ BEGIN
 				ELSE 4 --(Metal)
 			 END source_system_sk
 			,DENSE_RANK()OVER(PARTITION BY acct.PolicyNumber,CAST(acct.EffectiveDate AS DATE) ORDER BY acct.policychangenumber DESC) AS rnk
-			,IssuedDate
+			,acct.BindDate
 		INTO edw_temp.tcommercial_policy_subjectivity_temp1 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id
@@ -64,10 +65,10 @@ BEGIN
 		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id 
 		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id
 		LEFT JOIN edw_stage.Product pr on acctv.ProductId = pr.id
-		WHERE acct.State ='ISSUED'
+		WHERE acct.State IN ('ISSUED','BOUND')
 		AND	acct.PolicyNumber IS NOT NULL 
 		AND pr.ProductLine = 'CommercialLines'
-		AND acct.IssuedDate > @last_source_extract_ts
+		AND acct.BindDate > @last_source_extract_ts
 
 		-- Pivot Table
 		SELECT	
@@ -155,7 +156,7 @@ BEGIN
 
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(IssuedDate) FROM edw_temp.[tcommercial_policy_subjectivity_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(BindDate) FROM edw_temp.[tcommercial_policy_subjectivity_temp1]),@last_source_extract_ts);
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

@@ -19,6 +19,8 @@
 -- 03/13/25		Yunus Mohammed			  			13. Ad-8848 Added premium_rater_version
 -- 03/14/25		Yunus Mohammed			  			14. Used product InternalName instead of Name 
 -- 04/03/25		Yunus Mohammed			  			15. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
+-- 04/22/25		Yunus Mohammed						16. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
+-- 04/30/25		Yunus Mohammed						17. Ad-9338 Added cancellation_sub_reason_desc
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -58,6 +60,7 @@ BEGIN
 			DENSE_RANK()OVER(PARTITION BY acct.PolicyNumber,CAST(acct.EffectiveDate AS DATE) ORDER BY acct.policychangenumber DESC) AS rnk, 
 			acct.TransactionEffectiveDate,
 			acct.CancellationReason,
+			acct.CancellationSubReason,
 			acct.IssuedDate,
 			acct.UpdatedDate,  
 			coalesce(acct.totalpremiumdeltaprorated,acct.totalpremium, 0) wp,
@@ -85,14 +88,14 @@ BEGIN
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
 		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id 
-		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id 
-		LEFT JOIN (SELECT * FROM edw_stage.AccountTransactionVersionPremiumRaterReference WHERE ReferenceType = 'Premium') acctvprr on acctvprr.AccountTransactionVersionPremiumId = acctvp.Id
+		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id 	
 		left join edw_stage.[user] usr on usr.id = acctv.UnderwriterUserId 
 		left join edw_stage.Brokerage brk on acctv.BrokerageId = brk.id
 		left join edw_stage.[Broker] br on acctv.BrokerId = br.id
 		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acctv.ProductId = pr.id
-		and pr.[InternalName] = acctvprr.ProductInternalName
+		LEFT JOIN (SELECT * FROM edw_stage.AccountTransactionVersionPremiumRaterReference WHERE ReferenceType = 'Premium') acctvprr 
+		on acctvprr.AccountTransactionVersionPremiumId = acctvp.Id and pr.[InternalName] = acctvprr.ProductInternalName
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acctv.BrokerId
 		WHERE acct.State ='ISSUED' --- Review BOUND transactions
 		and	acct.PolicyNumber is not null 
@@ -179,6 +182,7 @@ BEGIN
            ,transaction_ts
            ,transaction_desc
            ,cancellation_reason_desc
+		   ,cancellation_sub_reason_desc
            ,premium_amt
            ,net_premium_amt
            ,[tax_fee_surcharge_amt]
@@ -218,7 +222,7 @@ BEGIN
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.PolicyChangeNumber, 
 				pol.policy_sk, br.broker_sk, cust.customer_sk, br.Broker_Id, Source.customer_id, 
-				tt.policy_transaction_type_nm, Source.IssuedDate, source.note, Source.CancellationReason, 
+				tt.policy_transaction_type_nm, Source.IssuedDate, source.note, Source.CancellationReason, Source.CancellationSubReason,
 				wp, 
 				wp-isnull(tfs.tfs,0),isnull(tfs.tfs,0),
 				comm,

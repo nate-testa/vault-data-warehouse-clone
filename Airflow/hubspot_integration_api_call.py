@@ -6,21 +6,25 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.email_operator import EmailOperator
 from vault_edw_HTML_format import get_sp_error_data_HTML, get_HTML_on_vault_format
 
-
 to_email = "itdatateam@vault.insurance"
-# to_email = "alberto.valbuena@vault.insurance"
+ENVIRONMENT = Variable.get("environment", default_var="DEV")
 
+Hubspot_VM_USERNAME = Variable.get("Hubspot-VM-USERNAME")
+Hubspot_HOST = Variable.get("Hubspot-HOST")
+Hubspot_PASS = Variable.get("Hubspot-PASS")
+Hubspot_USERNAME = Variable.get("Hubspot-USERNAME")
+Hubspot_DB = Variable.get("Hubspot-DB")
 
-ENVIRONMENT = Variable.get("environment")
-if ENVIRONMENT == 'PRODUCTION':
-    bash_command = 'bash /home/vphubspotadmin/hs-integration/run_script.sh ' # It is important put and empty space at the end of the command
+if ENVIRONMENT == "PRODUCTION":
+    Hubspot_HSTOKEN = Variable.get("Hubspot-HSTOKEN")
 else:
-    bash_command = ''
-    print(f"**** Environment: [{ENVIRONMENT}] is not authorized to execute hubspot file (run_script.sh).")
+    Hubspot_HSTOKEN = Variable.get("Hubspot-HSSANDBOXKEY")
 
+SSH_HOME = f'/home/{Hubspot_VM_USERNAME}/hs-integration'
+REMOTE_ENV_PATH = f'{SSH_HOME}/.env'
+REMOTE_RUN_CMD  = f'bash {SSH_HOME}/run_script.sh '
 
 def on_failure_callback(context):
-
     task_instance = context['task_instance']
     error_info = str(context.get('exception'))
     task_type = task_instance.task.__class__.__name__
@@ -64,19 +68,41 @@ with DAG(
     tags=["hubspot_dag"],
 ) as dag:
 
-    start = DummyOperator(
-        task_id='start',
+    start = DummyOperator(task_id="start")
+
+    write_remote_env = SSHOperator(
+        task_id="write_remote_env",
+        ssh_conn_id="ssh_vm_hubspot",
+        command="""\
+cat > {{ params.env_path }} <<EOF
+{%- if var.value.environment == "PRODUCTION" %}
+HSTOKEN={{ params.token }}
+{%- else %}
+HSSANDBOXKEY={{ params.token }}
+{%- endif %}
+HOST={{ params.host }}
+USERNAME={{ params.username }}
+PASS={{ params.password }}
+DB={{ params.db }}
+EOF
+""",
+        params={
+            "env_path": REMOTE_ENV_PATH,
+            "host": Hubspot_HOST,
+            "password": Hubspot_PASS,
+            "username": Hubspot_USERNAME,
+            "token": Hubspot_HSTOKEN,
+            "db": Hubspot_DB
+            },
     )
 
-    run_hs_integration_script = SSHOperator(
-        task_id='run_hs_integration_script',
-        ssh_conn_id='ssh_vm_hubspot',
-        command=bash_command,
-        cmd_timeout=18000, # 5 hours
+    run_hs = SSHOperator(
+        task_id="run_hs_integration_script",
+        ssh_conn_id="ssh_vm_hubspot",
+        command=REMOTE_RUN_CMD,
+        cmd_timeout=18000,
     )
 
-    end = DummyOperator(
-        task_id='end',
-    )
+    end = DummyOperator(task_id="end")
 
-start >> run_hs_integration_script >> end
+    start >> write_remote_env >> run_hs >> end

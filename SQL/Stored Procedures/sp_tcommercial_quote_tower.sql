@@ -11,6 +11,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 19/03/2025           Alberto Almario				1. Created this procedure 
+-- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_tower]
 AS
@@ -42,15 +43,15 @@ BEGIN
 		SELECT 
 			 acct.Id
 			,acct.AccountId
-			,acct.PolicyNumber
+			,CAST(acc.Number AS VARCHAR(255)) as quote_no
 			,acct.EffectiveDate
 			,acct.ExpirationDate
-			,acct.Number
+			,acct.Number as transaction_seq_no
 			,CASE 
 				WHEN acct.ExternalSourceId IS NOT NULL THEN 2 --(AV2) 
 				ELSE 4 --(Metal)
 			 END source_system_sk
-			,DENSE_RANK()OVER(PARTITION BY acct.PolicyNumber,CAST(acct.EffectiveDate AS DATE) ORDER BY acct.Number DESC) AS rnk
+			,DENSE_RANK()OVER(PARTITION BY acc.Number,CAST(acct.EffectiveDate AS DATE) ORDER BY acct.Number DESC) AS rnk
 			,acct.CreatedDate
 		INTO edw_temp.tcommercial_quote_tower_temp1 
 		FROM edw_stage.AccountTransaction acct 
@@ -59,7 +60,6 @@ BEGIN
 		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id
 		LEFT JOIN edw_stage.Product pr on acctv.ProductId = pr.id
 		WHERE acct.Stage in ('QUOTE','POLICY')
-		AND	acct.PolicyNumber IS NOT NULL 
 		AND pr.ProductLine = 'CommercialLines'
 		AND acct.CreatedDate > @last_source_extract_ts
 
@@ -107,10 +107,10 @@ BEGIN
 		--Create last temp table
 		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_tower_temp3;
 		SELECT 
-			 tmp1.PolicyNumber as quote_no
+			 tmp1.quote_no
 			,tmp1.EffectiveDate as effective_dt
 			,tmp1.ExpirationDate as expiration_dt
-			,tmp1.Number as transaction_seq_no
+			,tmp1.transaction_seq_no
 			,cp.commercial_quote_history_sk
 			,tmp2.tower_type
 			,tmp2.tower_unique_id
@@ -134,7 +134,7 @@ BEGIN
 		INTO edw_temp.tcommercial_quote_tower_temp3
 		FROM edw_temp.tcommercial_quote_tower_temp1 tmp1
 		LEFT JOIN edw_temp.tcommercial_quote_tower_temp2 tmp2 on tmp2.AccountTransactionId = tmp1.Id
-		LEFT JOIN edw_commercial.tcommercial_quote_history cp on tmp1.PolicyNumber = cp.quote_no and cast(tmp1.EffectiveDate as date) = cast(cp.effective_dt as date) and tmp1.Number = cp.transaction_seq_no
+		LEFT JOIN edw_commercial.tcommercial_quote_history cp on tmp1.quote_no = cp.quote_no and cast(tmp1.EffectiveDate as date) = cast(cp.effective_dt as date) and tmp1.transaction_seq_no = cp.transaction_seq_no
 
 		-- Insert process
 		INSERT INTO edw_commercial.tcommercial_quote_tower

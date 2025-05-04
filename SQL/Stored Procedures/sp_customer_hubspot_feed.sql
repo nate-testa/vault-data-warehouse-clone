@@ -24,6 +24,7 @@
 -- 12/30/24		Alberto Almario				16. VI35256 - Insured name update for entity/trust LLC
 -- 01/13/25		Alberto Almario				17. AD8013 - Included yacht data
 -- 03/06/25		Archtha Gudimalla			18. AD8781 - Send latest broker info
+-- 04/29/25		Archtha Gudimalla			19. VI37310/AD9292 - Add monoline_in
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -46,9 +47,7 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-		--************Start************
-
-		
+		--************Start************		
 
 		DROP TABLE IF exists edw_temp.customer_hubspot_feed_temp0;
 
@@ -66,6 +65,27 @@ BEGIN
 		or isnull(a.broker_nm,'') <> isnull(br.broker_nm,'')
 		or isnull(a.broker_phone_no,'') <> isnull(br.broker_phone_no,'') 
 		or isnull(a.bdm_nm,'') <> isnull(bvt.team_member_nm,''); 
+
+ 		DROP TABLE IF exists edw_temp.customer_hubspot_feed_temp01;
+
+		--get customer inforce counts
+		SELECT customer_id = CASE 
+								WHEN customer_id IS NULL THEN 
+									'[Grand Total]' 
+								ELSE customer_id 
+							END
+				, product_cd = CASE 
+								WHEN pr.product_cd IS NULL THEN 
+									'[Total' + case when customer_id is null then '- Overall' else '' end + ']' COLLATE SQL_Latin1_General_CP1_CI_AS 
+								ELSE pr.product_cd 
+								END
+				, inforce_ct = COUNT(*)   
+		into  edw_temp.customer_hubspot_feed_temp01
+		FROM edw_core.tdaily_inforce_policy summ, edw_core.tproduct pr , edw_core.tcustomer cust 
+		where inforce_dt_sk = (select date_sk from edw_core.tdate where actual_dt = dateadd(dd,-1,cast(getdate() as date)))
+		and pr.product_sk = summ.product_sk 
+		and summ.customer_sk = cust.customer_sk 
+		GROUP BY ROLLUP (customer_id, pr.product_cd);
 
  		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp1; 
@@ -94,6 +114,10 @@ BEGIN
 			pol.customer_id,
 			ph.producer_nm,
 			p.producer_id
+			, case when pinf.customer_id is not null and pinf.inforce_ct = cinf.inforce_ct
+							   then 'Yes' 
+							   else 'No' 
+						  end monoline_in
 		INTO edw_temp.customer_hubspot_feed_temp1
 		FROM edw_core.tpolicy pol		
 		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
@@ -107,6 +131,8 @@ BEGIN
 		INNER join edw_core.tpolicy_history ph on ph.policy_sk = pol.policy_sk and ph.latest_transaction_in = 'Y'
 		INNER join edw_core.tpolicy_insured pi on pi.policy_history_sk = ph.policy_history_sk and pi.primary_insured_in = 'Yes'
 		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk 
+		left join edw_temp.customer_hubspot_feed_temp01 pinf on cust.customer_id = pinf.customer_id and pr.product_cd = pinf.product_cd 
+		left join edw_temp.customer_hubspot_feed_temp01 cinf on cust.customer_id = cinf.customer_id and '[Total]' = cinf.product_cd 
 		WHERE (greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
 		or exists (select 'x' from edw_temp.customer_hubspot_feed_temp0 a where a.policy_no = pol.policy_no)
 		)
@@ -193,6 +219,7 @@ BEGIN
 				,customer_id
 			    ,producer_nm
 				,producer_id
+				,monoline_in
 				FROM edw_temp.customer_hubspot_feed_temp1/*
 				union ALL 
 			SELECT 
@@ -219,6 +246,7 @@ BEGIN
 				,customer_id
 			    ,producer_nm
 				,producer_id
+				,monoline_in
 				FROM edw_temp.customer_hubspot_feed_temp2*/
 		) as SOURCE
 		ON Source.policy_no = Target.policy_no
@@ -249,6 +277,7 @@ BEGIN
 			,customer_id
 			,producer_nm
 			,producer_id
+			,monoline_in
 			)
 		VALUES (source.policy_no,
 				source.first_nm,
@@ -273,7 +302,8 @@ BEGIN
 				,source.mailing_address_country_nm
 				,source.customer_id
 				,source.producer_nm
-				,source.producer_id)
+				,source.producer_id
+				,source.monoline_in)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
@@ -299,6 +329,7 @@ BEGIN
             ,target.customer_id 			= source.customer_id
             ,target.producer_nm 			= source.producer_nm
             ,target.producer_id 			= source.producer_id
+            ,target.monoline_in 			= source.monoline_in
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
@@ -312,6 +343,7 @@ BEGIN
 
         -- Drop temp table
         DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp0;
+        DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp01;
         DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp1; 
 
 	END TRY

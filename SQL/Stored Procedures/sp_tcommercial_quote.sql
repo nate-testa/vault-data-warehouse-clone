@@ -11,6 +11,8 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 28/03/2025           Alberto Almario				1. Created this procedure 
+-- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 02/05/2025           Architha Gudimalla			3. Removed quote_status
 -- ===================================================================================================================== 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tcommercial_quote]
 
@@ -50,8 +52,7 @@ BEGIN
 		into edw_temp.tcommercial_quote_temp1
 		FROM edw_stage.Account acc 
 		left join edw_stage.Product pr on acc.ProductId = pr.id
-		WHERE acc.PolicyNumber is not null 
-		and  pr.ProductLine = 'CommercialLines' 
+		WHERE pr.ProductLine = 'CommercialLines' 
 		AND greatest(acc.CreatedDate,acc.UpdatedDate)>@last_source_extract_ts
 
 		-- Pivot Table
@@ -93,7 +94,7 @@ BEGIN
 		-- Create last temp table
 		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_temp3;
 		SELECT 
-			 tmp1.PolicyNumber as quote_no
+			 CAST(tmp1.Number AS VARCHAR(255)) as quote_no
 			,tmp1.EffectiveDate as effective_dt
 			,tmp1.ExpirationDate as expiration_dt
 			,case when br.producerid is null then '0' else br.producerid end as broker_id
@@ -147,7 +148,7 @@ BEGIN
 			,product_cd
 			,risk_state_cd
 			,quote_term
-			,quote_status
+			--,quote_status
 			,quote_source_status
 			,insured_nm
 			,mailing_address_line1
@@ -157,8 +158,8 @@ BEGIN
 			,mailing_address_state_cd
 			,mailing_address_zip_cd
 			,quote_create_ts
-			,policy_sk
-			,prior_term_policy_sk
+			,commercial_policy_sk
+			,prior_term_commercial_policy_sk
 			,bind_dt
 			,close_reason_desc
 			,create_ts
@@ -175,7 +176,7 @@ BEGIN
 			,product_cd
 			,risk_state_cd
 			,quote_term
-			,quote_status
+			--,quote_status
 			,quote_source_status
 			,insured_nm
 			,mailing_address_line1
@@ -204,7 +205,7 @@ BEGIN
 			,Target.product_cd = Source.product_cd
 			,Target.risk_state_cd = Source.risk_state_cd
 			,Target.quote_term = Source.quote_term
-			,Target.quote_status = Source.quote_status
+			--,Target.quote_status = Source.quote_status
 			,Target.quote_source_status = Source.quote_source_status
 			,Target.insured_nm = Source.insured_nm
 			,Target.mailing_address_line1 = Source.mailing_address_line1
@@ -214,8 +215,8 @@ BEGIN
 			,Target.mailing_address_state_cd = Source.mailing_address_state_cd
 			,Target.mailing_address_zip_cd = Source.mailing_address_zip_cd
 			,Target.quote_create_ts = Source.quote_create_ts
-			,Target.policy_sk = Source.policy_sk
-			,Target.prior_term_policy_sk = Source.prior_term_policy_sk
+			,Target.commercial_policy_sk = Source.policy_sk
+			,Target.prior_term_commercial_policy_sk = Source.prior_term_policy_sk
 			,Target.bind_dt = Source.bind_dt
 			,Target.close_reason_desc = Source.close_reason_desc
 			,Target.update_ts = getdate()

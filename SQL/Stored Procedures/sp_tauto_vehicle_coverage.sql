@@ -23,6 +23,7 @@ GO
 -- 08/20/24     Yunus Mohammed                 10. Used garage_unique_id while assigning defualt garage location
 -- 12/10/24     Alberto Almario                11. Add column rater_pip_discount
 -- 04/11/25     Alberto Almario                12. Add 40 new columns
+-- 04/29/25     Alberto Almario                13. Add agreed_value_coverage_in and flood_deductible
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
@@ -264,7 +265,8 @@ BEGIN
             [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
             [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
             [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-            [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal], [RaterPIPDiscount]
+            [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal], [RaterPIPDiscount],
+            [AgreedValueCoverage],[FloodDeductible]
         INTO [edw_temp].[tauto_vehicle_coverage_temp3]
         FROM
             (
@@ -317,7 +319,8 @@ BEGIN
                     [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
                     [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
                     [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-                    [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal], [RaterPIPDiscount]
+                    [MotorHomeClass],[PassengerHazardExclusion], [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal], [RaterPIPDiscount],
+                    [AgreedValueCoverage],[FloodDeductible]
                 )
             ) pivottable
 
@@ -604,6 +607,8 @@ BEGIN
             ,uninsured_property_damage_premium_adjustment_method
             ,uninsured_property_damage_premium_adjustment_reason
             ,uninsured_property_damage_premium_adjustment_retention
+            ,agreed_value_coverage_in
+            ,flood_deductible
 		)
         SELECT 
             t1.policy_no,
@@ -812,6 +817,8 @@ BEGIN
             ,t1.uninsured_property_damage_premium_adjustment_method
             ,t1.uninsured_property_damage_premium_adjustment_reason
             ,t1.uninsured_property_damage_premium_adjustment_retention
+            ,t1.[AgreedValueCoverage] as agreed_value_coverage_in
+            ,t1.[FloodDeductible] as flood_deductible
         FROM
             [edw_temp].[tauto_vehicle_coverage_temp1] AS t1
         left join [edw_stage].[AccountTransactionVersionObject] AS atvo ON atvo.id = t1.GaragingLocationId

@@ -11,6 +11,7 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 04/04/2025           Alberto Almario				1. Created this procedure 
+-- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_subjectivity_wip]
 AS
@@ -42,10 +43,10 @@ BEGIN
 		-- Step1 limit amount of rows.
 		SELECT 
 			 acc.Id
-			,acc.PolicyNumber
+			,CAST(acc.Number AS VARCHAR(255)) as quote_no
 			,acc.EffectiveDate
 			,acc.ExpirationDate
-			,acc.Number
+			,0 as transaction_seq_no
 			,accs.Required
 			,accs.Description
 			,CASE WHEN accs.IsCompleted = 1 THEN 'Yes' ELSE 'No' END as completed_in
@@ -60,8 +61,7 @@ BEGIN
 		INNER JOIN edw_stage.AccountSubjectivity accs ON accs.AccountId = acc.Id
 		INNER JOIN edw_stage.AccountPremium acctvp ON acctvp.AccountId = acc.Id
 		LEFT JOIN edw_stage.Product pr on acc.ProductId = pr.id
-		WHERE acc.PolicyNumber IS NOT NULL 
-		AND pr.ProductLine = 'CommercialLines'
+		WHERE pr.ProductLine = 'CommercialLines'
 		AND not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
 		AND GREATEST(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
 
@@ -101,10 +101,10 @@ BEGIN
 		--Create last temp table
 		SELECT 
 			 cp.commercial_quote_history_sk
-			,tmp1.PolicyNumber as quote_no
+			,tmp1.quote_no
 			,tmp1.EffectiveDate as effective_dt
 			,tmp1.ExpirationDate as expiration_dt
-			,tmp1.Number as transaction_seq_no
+			,tmp1.transaction_seq_no
 			,tmp1.Required as required_for
 			,tmp1.Description as [description]
 			,tmp1.completed_in
@@ -115,7 +115,7 @@ BEGIN
 		INTO edw_temp.tcommercial_quote_subjectivity_wip_temp3
 		FROM edw_temp.tcommercial_quote_subjectivity_wip_temp1 tmp1
 		LEFT JOIN edw_temp.tcommercial_quote_subjectivity_wip_temp2 tmp2 on tmp2.Id = tmp1.Id
-		LEFT JOIN edw_commercial.tcommercial_quote_history cp on tmp1.PolicyNumber = cp.quote_no and cast(tmp1.EffectiveDate as date) = cast(cp.effective_dt as date) and tmp1.Number = cp.transaction_seq_no
+		LEFT JOIN edw_commercial.tcommercial_quote_history cp on tmp1.quote_no = cp.quote_no and cast(tmp1.EffectiveDate as date) = cast(cp.effective_dt as date) and tmp1.transaction_seq_no = cp.transaction_seq_no
 
 
 		-- Start Merge process
