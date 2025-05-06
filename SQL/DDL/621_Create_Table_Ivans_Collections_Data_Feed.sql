@@ -60,7 +60,7 @@ CREATE TABLE edw_integration.policy_ivans_collections_feed (
 	MethodPaymentCd_059  varchar(255) ,
 	PaymentPlanCd_060  varchar(255) ,
 	PaidInFullInd_061  varchar(255) ,
-	NIPRid varchar(255),
+	NIPRid_062 varchar(255),
     Collection_Coverages nvarchar(max),
     Additional_Interests nvarchar(max),
     Scheduled_Items nvarchar(max),
