@@ -2,7 +2,7 @@
 -- Author:		Yunus Mohammed
 -- Description: This procedures insert info related to IVANS Collection policy feed
 ---------------------------------------------------------------------------------------------------
--- Change date			|Author						|	Change Description
+-- Change date			|Author										|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 05/06/25				Yunus Mohammed				1. Created this procedure
 -- ================================================================================================= 
@@ -64,7 +64,7 @@ BEGIN
         FROM edw_core.tpolicy_transaction as pt	
 		INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no
 		WHERE
-			pt.product_sk in (2) -- Collection
+			pt.product_sk = 2			
             AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
         GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, 
 		pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk,pt.coverage_sk
@@ -458,7 +458,7 @@ BEGIN
 		AND b.ivans_y_account IS NOT NULL
 
 		-- Start Insert process
-		INSERT INTO edw_integration.policy_ivans_collection_feed
+		INSERT INTO edw_integration.policy_ivans_collections_feed
         (
             MsgTypeCd_001,BusinessPurposeTypeCd_002,TransactionRequestDt_003,TransactionEffectiveDt_004
             ,CurCd_005,BroadLOBCd_006,SourceSystem_008,ContractNumber_009,ProducerSubCode_010
@@ -475,8 +475,8 @@ BEGIN
             ,transaction_seq_no,create_ts,update_ts,etl_audit_sk
     )
     SELECT
-    001_MsgTypeCd,002_BusinessPurposeTypeCd,003_TransactionRequestDt,004_TransactionEffectiveDt
-    ,005_CurCd,006_BroadLOBCd,008_SourceSystem,009_ContractNumber,010_ProducerSubCode,011_InsurerId,012_Surname,
+    [001_MsgTypeCd],[002_BusinessPurposeTypeCd],[003_TransactionRequestDt],[004_TransactionEffectiveDt]
+    ,[005_CurCd],[006_BroadLOBCd],[008_SourceSystem],[009_ContractNumber],[010_ProducerSubCode],[011_InsurerId],[012_Surname],
     CASE WHEN
     ([015_Prefix] IS NULL OR [015_Prefix] = '') AND
     ([013_GivenName] IS NULL OR [013_GivenName] = '') AND
@@ -486,8 +486,8 @@ BEGIN
     THEN [056_InsurerName]
     ELSE
     [013_GivenName] END as [013_GivenName]
-    ,014_OtherGivenName,015_Prefix,016_AddrTypeCd,017_Addr1,018_City,019_StateProvCd,020_PostalCode
-    ,021_Country,022_Latitude,023_Longitude,024_County
+    ,[014_OtherGivenName],[015_Prefix],[016_AddrTypeCd],[017_Addr1],[018_City],[019_StateProvCd],[020_PostalCode]
+    ,[021_Country],[022_Latitude],[023_Longitude],[024_County]
     ,CASE
     WHEN [026_HomePhoneNumber] IS NOT NULL
         AND LEN([026_HomePhoneNumber]) = 10
@@ -510,13 +510,13 @@ BEGIN
         THEN [026_MobilePhoneNumber]
     ELSE ''
     END AS PhoneNumber_026
-    ,027_EmailAddr,028_InsuredOrPrincipalRoleCd,029_InsuredOrPrincipalRoleDesc,030_PolicyNumber,031_BroadLOBCd
-    ,032_LOBCd,033_NAICCd,034_EffectiveDt,035_ExpirationDt,036_BillingAccountNumber,037_ControllingStateProvCd
-    ,038_BillingMethodCd,039_Amt,040_Amt,041_LanguageCd,042_OriginalPolicyInceptionDt,043_PayorCd
-    ,044_RenewalBillingMethodCd,045_RenewalPayorCd,046_FormNumber,047_FormName,048_EditionDt
-    ,049_IterationNumber,050_TotalPaidLossAmt,051_NumLosses,052_PolicyCd,053_PolicyNumber,054_LOBCd
-    ,055_NAICCd,056_InsurerName,057_EffectiveDt,058_ExpirationDt,059_MethodPaymentCd,060_PaymentPlanCd
-    ,061_PaidInFullInd,062_NIPRid,Collection_Coverages,Additional_Interests,Scheduled_Items,transaction_seq_no
+    ,[027_EmailAddr],[028_InsuredOrPrincipalRoleCd],[029_InsuredOrPrincipalRoleDesc],[030_PolicyNumber],[031_BroadLOBCd]
+    ,[032_LOBCd],[033_NAICCd],[034_EffectiveDt],[035_ExpirationDt],[036_BillingAccountNumber],[037_ControllingStateProvCd]
+    ,[038_BillingMethodCd],[039_Amt],[040_Amt],[041_LanguageCd],[042_OriginalPolicyInceptionDt],[043_PayorCd]
+    ,[044_RenewalBillingMethodCd],[045_RenewalPayorCd],[046_FormNumber],[047_FormName],[048_EditionDt]
+    ,[049_IterationNumber],[050_TotalPaidLossAmt],[051_NumLosses],[052_PolicyCd],[053_PolicyNumber],[054_LOBCd]
+    ,[055_NAICCd],[056_InsurerName],[057_EffectiveDt],[058_ExpirationDt],[059_MethodPaymentCd],[060_PaymentPlanCd]
+    ,[061_PaidInFullInd],[062_NIPRid],Collection_Coverages,Additional_Interests,Scheduled_Items,transaction_seq_no
     ,getdate(),getdate(),@etl_audit_sk
     FROM edw_temp.policy_ivans_collection_temp2
     WHERE [053_PolicyNumber] IS NOT NULL;
