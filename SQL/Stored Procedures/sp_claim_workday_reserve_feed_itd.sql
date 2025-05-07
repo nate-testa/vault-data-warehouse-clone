@@ -43,10 +43,12 @@ BEGIN
 		actual_dt > @last_source_extract_ts
 		and actual_dt < cast(@current_date as date)
 		group by yearmonth
-		order by 1;		
+		order by 1;	
 
 		SELECT @last_day_month = actual_dt FROM edw_core.tdate WHERE yearmonth = @year_month and month_end_in = 'Y';
-
+		
+		DELETE FROM edw_integration.claim_workday_itd_reserve_feed WHERE monthend = @last_day_month;
+		
 		WITH claim_reserve_itd_feed_temp AS
 		(
 		SELECT
@@ -77,7 +79,7 @@ BEGIN
 			ELSE tprd.product_nm END AS product,
 			tcf.claim_coverage_desc AS policycoveragetype,
 			CASE
-				WHEN					
+				WHEN
 						(tcr.loss_reserve_amt + tcr.deductible_recovery_reserve_amt+ tcr.overpayment_recovery_reserve_amt) != 0
 					THEN 'Loss (Indemnity)'
 					

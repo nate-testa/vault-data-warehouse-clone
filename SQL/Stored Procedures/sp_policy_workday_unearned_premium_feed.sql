@@ -15,6 +15,8 @@
 --																				Added run_date as param for pre-run
 -- 04/25/25		Yunus Mohammed				8. AD8820 Updated logic to get risk address
 --																					Update run date logic
+-- 05/07/25		Yunus Mohammed				9. AD9047 Used tdaily_inforce table to check inforce policies.
+--																					Removed cancellation logic
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -35,7 +37,7 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 
 		DECLARE @year_month INT
-		DECLARE @acounting_date_sk int,@last_day_month date	
+		DECLARE @acounting_date_sk int,@last_day_month date	,@end_dt_sk int
 
 		DECLARE cur_main CURSOR FOR
 		select yearmonth
@@ -55,9 +57,18 @@ BEGIN
 	
 			SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-			SELECT @acounting_date_sk=date_sk, @last_day_month=actual_dt FROM edw_core.tdate WHERE yearmonth=@year_month and month_end_in='Y';
+			SELECT @acounting_date_sk=date_sk, @last_day_month=actual_dt ,@end_dt_sk = date_sk
+			FROM edw_core.tdate WHERE yearmonth=@year_month and month_end_in='Y';
 		
 			DELETE FROM edw_integration.policy_workday_unearned_premium_feed WHERE accounting_date=@last_day_month;
+
+			IF @year_month = concat(datepart(yyyy,@current_date),iif(datepart(mm,@current_date) < 10,'0','') ,datepart(mm,@current_date) )
+			BEGIN  
+					SELECT 
+						@end_dt_sk = max(date_sk)
+					FROM edw_core.tdate
+					WHERE yearmonth = @year_month AND actual_dt < cast(@current_date AS DATE)
+			END;
 
 			WITH policy_workday_unearned_premium_feed_temp AS
 			(
@@ -156,6 +167,7 @@ BEGIN
 			INNER JOIN edw_core.tdate tdpro on tdpro.date_sk=tpts.transaction_dt_sk
 			INNER JOIN edw_core.tpolicy_transaction_type tptt on tptt.policy_transaction_type_sk=tpts.policy_transaction_type_sk
 			INNER JOIN edw_core.tbroker tb on tb.broker_sk=tpts.broker_sk
+			INNER JOIN edw_core.tdaily_inforce_policy  dip on dip.policy_sk = tp.policy_sk	and dip.inforce_dt_sk = @end_dt_sk
 			LEFT JOIN edw_core.thome_location hl on hl.policy_no = tp.policy_no and hl.effective_dt = tp.effective_dt
 			LEFT JOIN edw_core.tcollection_location cl on cl.policy_no = tp.policy_no and cl.effective_dt = tp.effective_dt
 			LEFT JOIN 
@@ -187,18 +199,6 @@ BEGIN
 				AND (tic.internal_coverage_category_nm = 'Premium' OR tic.internal_coverage_desc like 'Subscriber Contribution%')
 				AND tpts.transaction_effective_dt_sk < = @acounting_date_sk
 				AND tpts.expiration_dt_sk > @acounting_date_sk
-				AND 
-				(
-				SELECT top 1 transaction_type
-				from
-					edw_core.tpolicy_history tph1
-				where
-					tph1.policy_sk = tp.policy_sk
-					and GREATEST(tph1.transaction_effective_dt,cast(transaction_ts as date))  < = @last_day_month
-					and cast(tph1.expiration_dt as date) > @last_day_month
-				order by GREATEST(tph1.transaction_effective_dt,transaction_ts) desc,transaction_ts desc
-				) != 'Cancellation'
-				
 			) AS t
 			GROUP BY
 				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,

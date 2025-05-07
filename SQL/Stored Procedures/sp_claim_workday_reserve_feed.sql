@@ -57,6 +57,7 @@ BEGIN
 			edw_core.tdate
 			where
 			yearmonth=@year_month;
+
 			DELETE FROM edw_integration.claim_workday_reserve_feed WHERE transaction_date BETWEEN @begin_dt AND @end_dt;
 
 			WITH claim_reserve_feed_temp AS
