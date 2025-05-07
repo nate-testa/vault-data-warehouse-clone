@@ -8,6 +8,7 @@
 -- 01-28-2025	           Sandeep Gundreddy			3- Removed source_system_sk<>1  filter to include OS data
 -- 02-07-2025              Yunus Mohammed               4 - Used trim for city, state, zip and country
 -- 03-13-2025				Yunus Mohammed				5 - AD-8568 Added vault litigation policies
+-- 05-07-2025				Yunus Mohammed				6 - AD-9410 Added new vault litigation policy
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_search_snapsheet_api]
 AS
@@ -197,6 +198,13 @@ BEGIN
 			'AU9999VRE' AS policyNumber,'auto' AS policyType,'Active' AS [status],'Auto' AS productCode, 
 			'[{"name":null,"firstName":"Vault","lastName":"Insurance","entityType":"PERSON","addresses":[{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg", "region":"FL","postalCode":"33701", "country":"US" } ],"contactMethods":[]}]' AS policyEntities,
 			'2020-01-01' AS inceptionDate,'2026-12-31' AS expiration_dt,'2020-01-01' AS transaction_effective_dt,
+			0 AS transaction_seq_no,'New' AS transaction_type,'Metal' AS source_system_nm,'pending' AS api_status,null AS api_error_description,
+			GETDATE() AS create_ts,null AS update_ts,0 etl_audit_sk
+			UNION
+			SELECT
+			'FPP9998VRE' AS policyNumber,'property' AS policyType,'Active' AS [status],'Homeowners' AS productCode, 
+			'[{"name":null,"firstName":"Vault","lastName":"Insurance","entityType":"PERSON","addresses":[{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg", "region":"FL","postalCode":"33701", "country":"US" } ],"contactMethods":[]}]' AS policyEntities,
+			'2015-01-01' AS inceptionDate,'2019-12-31' AS expiration_dt,'2015-01-01' AS transaction_effective_dt,
 			0 AS transaction_seq_no,'New' AS transaction_type,'Metal' AS source_system_nm,'pending' AS api_status,null AS api_error_description,
 			GETDATE() AS create_ts,null AS update_ts,0 etl_audit_sk
 		) as temp
