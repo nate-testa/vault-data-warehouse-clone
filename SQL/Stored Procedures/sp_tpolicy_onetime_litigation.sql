@@ -3,6 +3,7 @@
 -- Change date |Author						    |	Change Description
 ------------------------------------------------------------------------------------------------------------
 -- 06/03/25		Yunus Mohammed		1. Created this procedure 
+-- 05/07/25     Yunus Mohammed      2. AD9410 Added new vault litigation policy
 -- ============================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_onetime_litigation]
@@ -72,6 +73,13 @@ BEGIN
             union
             select 'AU9999VRE' as policy_no, '2020-01-01' as effective_dt, '2026-12-31' as expiration_dt,  '56536' as broker_id, 'LIT9999' as customer_id,
             'AU' as product_cd,'FL' as risk_state_cd, 'Vault Insurance' as insured_nm, 'Individual' as insured_type, 'vault_reciprocal_exchange_litigation' as uw_company_nm,
+            'Admitted' as program_type,'Active' as policy_status,
+            '300 First Ave S' as mailing_address_line1,'Suite 401' as mailing_address_line2,'St. Petersburg' as mailing_address_city_nm, 
+            'FL' as mailing_address_state_cd,'33701' as mailing_address_zip_cd, 'US' as mailing_address_county_nm,
+            4 as source_system_sk
+            union
+             select 'FPP9998VRE' as policy_no, '2015-01-01' as effective_dt, '2019-12-31' as expiration_dt,  '56536' as broker_id, 'LIT9999' as customer_id,
+            'HO' as product_cd,'FL' as risk_state_cd, 'Vault Insurance' as insured_nm, 'Individual' as insured_type, 'vault_reciprocal_exchange_litigation' as uw_company_nm,
             'Admitted' as program_type,'Active' as policy_status,
             '300 First Ave S' as mailing_address_line1,'Suite 401' as mailing_address_line2,'St. Petersburg' as mailing_address_city_nm, 
             'FL' as mailing_address_state_cd,'33701' as mailing_address_zip_cd, 'US' as mailing_address_county_nm,
