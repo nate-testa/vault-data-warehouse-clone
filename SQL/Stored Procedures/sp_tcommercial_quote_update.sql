@@ -109,6 +109,33 @@ BEGIN
 		where  	qh.transaction_status = 'Issued'
 		and 	acc.UpdatedDate	> @last_source_extract_ts
 		group by qh.commercial_quote_sk; 
+
+		update a
+		set a.first_offered_commercial_quote_ts 	  = transaction_ts,
+            first_offered_commercial_quote_history_sk = commercial_quote_history_sk 
+  		from [edw_commercial].tcommercial_quote a,
+			 (
+				select * from 
+				(
+					SELECT DISTINCT
+							acct.PolicyNumber as quote_no, acct.EffectiveDate as effective_dt, acct.Number as transaction_seq_no,
+							qh.commercial_quote_history_sk, qh.commercial_quote_sk,  acctsh.Stage as transaction_type, acctsh.State as transaction_status, 
+							acctsh.CreatedDate as transaction_ts 
+							, dense_rank() OVER (PARTITION BY acct.PolicyNumber ORDER BY acctsh.CreatedDate ASC) AS policy_txn_order
+					FROM [edw_stage].[AccountTransactionStatusHistory] acctsh 
+					INNER JOIN [edw_stage].[AccountTransaction] acct  ON acctsh.AccountTransactionId = acct.Id 
+					INNER JOIN [edw_stage].[Account] acc  ON acct.AccountId = acc.Id 
+					INNER JOIN [edw_commercial].[tcommercial_quote] q  ON q.quote_no = cast(acc.Number as varchar(255))
+					LEFT JOIN [edw_commercial].[tcommercial_quote_history] AS qh   ON qh.quote_no = cast(acc.Number as varchar(255)) AND qh.effective_dt = acc.EffectiveDate AND qh.transaction_seq_no = acct.number
+					left join edw_stage.Product pr on acc.ProductId = pr.id
+					where  acctsh.Stage in ('QUOTE','POLICY')
+					and pr.ProductLine = 'CommercialLines'
+					and upper(acctsh.State) = 'OFFERED'
+					and q.first_offered_commercial_quote_ts IS NULL 
+				)tqtsh
+				where policy_txn_order=1
+			 )b
+       where a.quote_no=b.quote_no ;
 		
 
 		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_update_temp1;
