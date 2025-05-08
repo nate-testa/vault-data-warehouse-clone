@@ -13,6 +13,7 @@ GO
 -- 01-03-2025				Alberto Almario				1. Add snasheet mapping to ClaimType column.
 -- 01-21-2025               Rushin Shah                 2. Updated the claim amount field logic
 -- 04-30-2025               Alberto Almario             3. Include snapsheet claims and change logic for item_sk
+-- 05-08-2025               Alberto Almario             4. Add logic to retrieve the address for OneShield policies.
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
@@ -173,12 +174,30 @@ BEGIN
             CASE WHEN cu.insured_type = 'Individual' THEN cu.first_nm ELSE cu.customer_nm END AS [PolicyHolderNameFirst],
             CASE WHEN cu.insured_type = 'Individual' THEN cu.middle_nm ELSE cu.customer_nm END AS [PolicyHolderNameMiddle],
             '' AS [PolicyHolderNameSuffix],
-            SUBSTRING(p.mailing_address_line1, 1, PATINDEX('%[^0-9]%', p.mailing_address_line1 + 'x') - 1) AS [PolicyHolderMailAddrHseNum],
-            LEFT(TRIM(SUBSTRING(p.mailing_address_line1, PATINDEX('%[^0-9]%', p.mailing_address_line1), 30)),20) AS [PolicyHolderMailAddressStreetName],
-            LEFT(p.mailing_address_unit_no, 5) AS [PolicyHolderMailAddressAptNum],
-            LEFT(p.mailing_address_city_nm, 20) AS [PolicyHolderMailAddressCity],
-            LEFT(p.mailing_address_state_cd, 2) AS [PolicyHolderMailAddressState],
-            LEFT(p.mailing_address_zip_cd,5) AS [PolicyHolderMailAddressZip],
+            CASE 
+                WHEN p.mailing_address_line1 IS NULL THEN osp.home_no 
+                ELSE SUBSTRING(p.mailing_address_line1, 1, PATINDEX('%[^0-9]%', p.mailing_address_line1 + 'x') - 1) 
+            END AS [PolicyHolderMailAddrHseNum],
+            CASE 
+                WHEN p.mailing_address_line1 IS NULL THEN LEFT(osp.address_nm, 20) 
+                ELSE LEFT(TRIM(SUBSTRING(p.mailing_address_line1, PATINDEX('%[^0-9]%', p.mailing_address_line1), 30)), 20) 
+            END AS [PolicyHolderMailAddressStreetName],
+            CASE 
+                WHEN p.mailing_address_line1 IS NULL THEN LEFT(osp.unit_no, 5) 
+                ELSE LEFT(p.mailing_address_unit_no, 5) 
+            END AS [PolicyHolderMailAddressAptNum],
+            CASE 
+                WHEN p.mailing_address_line1 IS NULL THEN LEFT(osp.city_nm, 20) 
+                ELSE LEFT(p.mailing_address_city_nm, 20) 
+            END AS [PolicyHolderMailAddressCity],
+            CASE 
+                WHEN p.mailing_address_line1 IS NULL THEN LEFT(osp.state_cd, 2) 
+                ELSE LEFT(p.mailing_address_state_cd, 2) 
+            END AS [PolicyHolderMailAddressState],
+            CASE 
+                WHEN p.mailing_address_line1 IS NULL THEN LEFT(osp.zip_cd, 5) 
+                ELSE LEFT(p.mailing_address_zip_cd,5) 
+            END AS [PolicyHolderMailAddressZip],
             '' AS [PolicyHolderMailAddressZipPlus4],
             '' AS [Filler_reservedForFutureUse1],
             '' AS [PolicyHolderSSN],
@@ -275,6 +294,7 @@ BEGIN
         FROM claim_feature AS cf
         INNER JOIN claims AS c ON cf.claim_sk = c.claim_sk
         INNER JOIN edw_core.tpolicy AS p ON p.policy_sk = c.policy_sk
+        LEFT JOIN edw_stage.OneShieldPolicy_clue AS osp ON c.policy_no = osp.policy_no
         LEFT JOIN claim_feature_item AS cfi ON cf.claim_sk = cfi.claim_sk
         LEFT JOIN edw_core.tauto_vehicle AS av ON cfi.item_sk = av.auto_vehicle_sk
         LEFT JOIN customer AS cu ON p.customer_id = cu.customer_id
