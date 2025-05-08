@@ -9,11 +9,13 @@
 -- 12/07/23		Architha Gudimalla				3. Updated var_actual_dt
 -- 07/29/24		Architha Gudimalla				4. Updated the code to work when target sql is not select 0 but a defualt count
 -- 08/13/24		Architha Gudimalla				5. Updated var_actual_dt to use getdate-1 instead of getdate
+-- 05/08/25		Yunus Mohammed				 6.AD937 Updated to use frequency column and made changes for monthly frequency
 -- ========================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tvalidation_result]
-@in_process_dt DATE = null
-AS 
+@in_process_dt DATE = null,
+@in_frequency VARCHAR(255)='Daily'
+AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
     -- interfering with SELECT statements. 
@@ -31,13 +33,19 @@ BEGIN
 		-- Get last source extract date
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm); 
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;  
-		sET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
-	
+		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+
+		IF(@in_process_dt IS NULL) 
+		BEGIN
+			SET @in_process_dt = GETDATE()
+		END
+
 		DECLARE c1_rec CURSOR
 		FOR  
-		select	validation_sql_sk,source_sql,target_sql,frequency_desc --select *
+		select	validation_sql_sk,source_sql,target_sql,frequency_desc
 		from	edw_core.tvalidation_sql 
 		WHERE	active_in='Y'
+		and frequency_desc = @in_frequency
 		order by 1;  
 
 		DECLARE @validation_sql_sk int 
@@ -64,19 +72,19 @@ BEGIN
 				set @source_sql = replace(@source_sql , 'select count(','SELECT @source_ct=count(') 
 				set @target_sql = replace(@target_sql , 'select count(','SELECT @target_ct=count(')
 
-				if @target_sql not like 'SELECT @target_ct=count(%' 
+				if @target_sql not like 'SELECT @target_ct=count(%'   and @target_sql not like '%sum(%'
 				begin 
 				 set @target_sql= replace(@target_sql,'select ','select @target_ct=')
 				end;  
 
-				set @source_sql = replace(@source_sql , 'var_actual_dt',dateadd("d",-1,cast(getdate() as date))) 
-				set @target_sql = replace(@target_sql , 'var_actual_dt',dateadd("d",-1,cast(getdate() as date))) 
+				set @source_sql = replace(@source_sql , 'var_actual_dt',dateadd("d",-1,@in_process_dt)) 
+				set @target_sql = replace(@target_sql , 'var_actual_dt',dateadd("d",-1,@in_process_dt)) 
 
 				--set @source_sql = replace(@source_sql , 'var_actual_dt',@last_source_extract_ts) 
 				--set @target_sql = replace(@target_sql , 'var_actual_dt',@last_source_extract_ts)  
 
-				EXECUTE sp_executesql @source_sql, N'@source_ct NVARCHAR(10) OUTPUT', @source_ct=@out1 OUTPUT
-				EXECUTE sp_executesql @target_sql, N'@target_ct NVARCHAR(10) OUTPUT', @target_ct=@out2 OUTPUT 
+				EXECUTE sp_executesql @source_sql, N'@source_ct DECIMAL(15,2) OUTPUT', @source_ct=@out1 OUTPUT
+				EXECUTE sp_executesql @target_sql, N'@target_ct DECIMAL(15,2) OUTPUT', @target_ct=@out2 OUTPUT 
 
 				--set @out2 = case when @target_sql = 'select 0' then 0 else @out2 end 
 
