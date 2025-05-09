@@ -4,14 +4,15 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =================================================================================================
+-- ===========================================================================================================
 -- Description: This procedures inserts data into tbroker_servicing_team
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------
 -- 05/08/05		Architha Gudimalla				1. Created the proc 
 -- 05/08/05		Architha Gudimalla				2. Updated after initital run
--- ================================================================================================= 
+-- 05/08/05		Architha Gudimalla				3. Added setting broker_servicing_team_sk to null in tbroker
+-- =========================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker_servicing_team]
 
@@ -45,6 +46,9 @@ BEGIN
 		FROM edw_stage.[BrokerageServicingTeam] bst
 		WHERE
 			GREATEST(bst.CreatedDate,bst.UpdatedDate) > @last_source_extract_ts
+
+		update edw_core.tbroker 
+		set broker_servicing_team_sk = null;
 
 		-- Delete from tbroker_license table
 		DELETE FROM edw_core.tbroker_servicing_team_member;
