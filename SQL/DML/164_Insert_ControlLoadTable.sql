@@ -162,3 +162,9 @@ DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
 				[CustomScript] [nvarchar](max) AS JSON,
                 [TaskId] [int],
                 [CopyEnabled] [bit])
+			WHERE NOT EXISTS
+			(
+  				SELECT 1
+  				FROM [edw_stage].[ControlLoadTable]
+  				WHERE JSON_value(SourceObjectSettings,'$.table') = 'BrokerageServicingTeamMember'
+			)
