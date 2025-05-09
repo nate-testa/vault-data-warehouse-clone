@@ -808,18 +808,6 @@ set CopyActivitySettings = '{
 			},
 			{
 				"source": {
-					"name": "PartnerDomain",
-					"type": "String",
-					"physicalType": "nvarchar"
-				},
-				"sink": {
-					"name": "PartnerDomain",
-					"type": "String",
-					"physicalType": "nvarchar"
-				}
-			},
-			{
-				"source": {
 					"name": "ServicingTeamId",
 					"type": "Guid",
 					"physicalType": "uniqueidentifier"
