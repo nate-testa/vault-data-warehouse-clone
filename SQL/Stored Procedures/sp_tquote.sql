@@ -17,7 +17,7 @@ GO
 -- 11/01/24		Architha Gudimalla		        7. AD7593 - Added update to fix null EffectiveDate/ExpirationDate in Metal
 -- 03/03/25		Hernando Gonzalez		        8. AD8316 - Added competitor_carrier_nm, close_reason_other_desc
 -- 03/20/25		Hernando Gonzalez				9. Included Target_Account
--- 05/08/25		Architha Gudimalla				10. Added forecast_quote_in
+-- 05/08/25		Architha Gudimalla				10. Added forecast_quote_in 
 -- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]

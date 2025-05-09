@@ -47,10 +47,10 @@ BEGIN
 		INTO edw_temp.tbroker_servicing_team_member_temp
 		FROM edw_stage.BrokerageServicingTeamMember as bstm
 		inner join edw_stage.BrokerageServicingTeam as bst on bstm.BrokerageServicingTeamId=bst.id 
-		inner join edw_core.tbroker_servicing_team as a on bst.name=a.name 
-		left join edw_stage.User u on bstm.UserId=u.id 
+		inner join edw_core.tbroker_servicing_team as a on bst.name=a.broker_servicing_team_nm 
+		left join edw_stage.[User] u on bstm.UserId=u.id 
 		WHERE
-			GREATEST(ctm.CreatedDate,ctm.UpdatedDate) > @last_source_extract_ts 
+			GREATEST(bstm.CreatedDate,bstm.UpdatedDate) > @last_source_extract_ts 
 
 		-- Delete from tbroker_license table
 		DELETE FROM edw_core.tbroker_servicing_team_member;
@@ -67,7 +67,7 @@ BEGIN
 		SELECT
 			broker_servicing_team_sk,
 			full_nm, first_nm , last_nm, email, last_nm,
-			@current_date AS create_ts,@current_date AS update_ts,@etl_audit_sk,product_sk
+			@current_date AS create_ts,@current_date AS update_ts,@etl_audit_sk
 		FROM
 			edw_temp.tbroker_servicing_team_member_temp
 
