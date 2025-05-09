@@ -1,0 +1,19 @@
+{
+	"name": "Dilydrup_wba_ControlDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_UAT",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Dilydrup_wba_20250508"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edw_stage",
+			"table": "ControlLoadTable"
+		}
+	}
+}
