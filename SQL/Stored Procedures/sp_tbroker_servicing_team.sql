@@ -47,6 +47,7 @@ BEGIN
 			GREATEST(bst.CreatedDate,bst.UpdatedDate) > @last_source_extract_ts
 
 		-- Delete from tbroker_license table
+		DELETE FROM edw_core.tbroker_servicing_team_member;
 		DELETE FROM edw_core.tbroker_servicing_team;
 		
 		-- Reset identity column
