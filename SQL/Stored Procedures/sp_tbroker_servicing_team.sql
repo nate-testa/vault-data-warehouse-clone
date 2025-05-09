@@ -10,6 +10,7 @@ GO
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 05/08/05		Architha Gudimalla				1. Created the proc 
+-- 05/08/05		Architha Gudimalla				2. Updated after initital run
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker_servicing_team]
@@ -39,11 +40,11 @@ BEGIN
 
 		SELECT
 			bst.name broker_servicing_team_nm,
-			ctm.CreatedDate,ctm.UpdatedDate
+			bst.CreatedDate,bst.UpdatedDate
 		INTO edw_temp.tbroker_servicing_team_temp
-		FROM [BrokerageServicingTeam] bst
+		FROM edw_stage.[BrokerageServicingTeam] bst
 		WHERE
-			GREATEST(ctm.CreatedDate,ctm.UpdatedDate) > @last_source_extract_ts
+			GREATEST(bst.CreatedDate,bst.UpdatedDate) > @last_source_extract_ts
 
 		-- Delete from tbroker_license table
 		DELETE FROM edw_core.tbroker_servicing_team;

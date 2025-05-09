@@ -10,6 +10,7 @@ GO
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 05/08/05		Architha Gudimalla				1. Created the proc
+-- 05/08/05		Architha Gudimalla				2. Updated after initital run
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_tbroker_servicing_team_member
@@ -43,7 +44,7 @@ BEGIN
 				NULLIF(TRIM(u.FirstName),'') first_nm,  
 				NULLIF(TRIM(u.LastName),'') last_nm  ,
 				NULLIF(TRIM(u.Email),'') Email,  
-				NULLIF(TRIM(u.MobilePhone),'') last_nm
+				NULLIF(TRIM(u.MobilePhone),'') phone_no
 		INTO edw_temp.tbroker_servicing_team_member_temp
 		FROM edw_stage.BrokerageServicingTeamMember as bstm
 		inner join edw_stage.BrokerageServicingTeam as bst on bstm.BrokerageServicingTeamId=bst.id 
@@ -61,12 +62,12 @@ BEGIN
 		INSERT INTO edw_core.tbroker_servicing_team_member
 		(			
 			broker_servicing_team_sk, 
-			full_nm, first_nm , last_nm, email, last_nm, 
+			full_nm, first_nm , last_nm, email, phone_no, 
 			create_ts, update_ts, etl_audit_sk 
 		)
 		SELECT
 			broker_servicing_team_sk,
-			full_nm, first_nm , last_nm, email, last_nm,
+			full_nm, first_nm , last_nm, email, phone_no,
 			@current_date AS create_ts,@current_date AS update_ts,@etl_audit_sk
 		FROM
 			edw_temp.tbroker_servicing_team_member_temp
