@@ -17,6 +17,7 @@ GO
 -- 11/01/24		Architha Gudimalla		        7. AD7593 - Added update to fix null EffectiveDate/ExpirationDate in Metal
 -- 03/03/25		Hernando Gonzalez		        8. AD8316 - Added competitor_carrier_nm, close_reason_other_desc
 -- 03/20/25		Hernando Gonzalez				9. Included Target_Account
+-- 05/08/25		Architha Gudimalla				10. Added forecast_quote_in
 -- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -216,6 +217,7 @@ BEGIN
 				,tmp1.SubmissionCloseReasonCarrier as competitor_carrier_nm
 				,tmp1.SubmissionCloseReasonDetailOther as close_reason_other_desc
 				,tmp1.TargetAccount as target_account
+				,case when tmp1.isForecast = 1 then 'Yes' else 'No' end as forecast_quote_in
 				--select *
 			FROM 
 				edw_temp.tquote_temp1 tmp1
@@ -274,6 +276,7 @@ BEGIN
 		   ,competitor_carrier_nm
 		   ,close_reason_other_desc
 		   ,target_account
+		   ,forecast_quote_in
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -311,6 +314,7 @@ BEGIN
 				,source.competitor_carrier_nm
 				,source.close_reason_other_desc
 				,source.target_account
+				,source.forecast_quote_in
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -344,9 +348,10 @@ BEGIN
 		Target.prior_term_policy_sk						= source.prior_pol_policy_sk, 
 		Target.close_reason_desc						= source.close_reason_desc,
 		Target.competitor_carrier_nm					= source.competitor_carrier_nm,
-		Target.close_reason_other_desc 			= source.close_reason_other_desc,
-        Target.update_ts 					= getdate(),
-		Target.target_account				= source.target_account
+		Target.close_reason_other_desc 					= source.close_reason_other_desc,
+        Target.update_ts 								= getdate(),
+		Target.target_account							= source.target_account,
+		Target.forecast_quote_in						= source.forecast_quote_in
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
