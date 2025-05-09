@@ -19,7 +19,11 @@ DECLARE @MainControlMetadata NVARCHAR(max)  = N'[
         },
         "CopySinkSettings": {
             "preCopyScript": "TRUNCATE TABLE edw_stage.BrokerageServicingTeamMember",
-            "tableOption": "autoCreate"
+            "tableOption": "autoCreate",
+			"writeBehavior": "insert",
+			"sqlWriterUseTableLock": true,
+			"disableMetricsCollection": false,
+			"upsertSettings": null
         },
         "CopyActivitySettings": {
             "translator": {
