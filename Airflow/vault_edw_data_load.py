@@ -536,6 +536,8 @@ with DAG(
     with TaskGroup("broker_group") as broker_group:
 
         broker_group_items = [
+            'sp_tbroker_servicing_team',
+            'sp_tbroker_servicing_team_member',
             'sp_tbroker',
             'sp_tbroker_relation',
             'sp_tbroker_commission',
