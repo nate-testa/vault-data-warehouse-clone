@@ -1517,6 +1517,18 @@ set CopyActivitySettings = '{
 			},
 			{
 				"source": {
+					"name": "TargetAccount",
+					"type": "String",
+					"physicalType": "nvarchar"
+				},
+				"sink": {
+					"name": "TargetAccount",
+					"type": "String",
+					"physicalType": "nvarchar"
+				}
+			},
+			{
+				"source": {
 					"name": "IsForecast",
 					"type": "Boolean",
 					"physicalType": "bit"
