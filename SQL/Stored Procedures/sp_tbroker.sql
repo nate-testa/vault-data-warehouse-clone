@@ -11,7 +11,7 @@
 -- 08/02/24		Hernando Gonzalez				7. Added broker_terminated_dt
 -- 05/02/24		Yunus Mohammed					8. Added broker_tier
 -- 06/04/24		Yunus Mohammed					9. Added contract_dt and national_agency_in
--- 05/08/25		Architha Gudimalla				10. Added broker_servicing_team_sk
+-- 05/08/25		Architha Gudimalla				10. Added broker_servicing_team_sk 
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker]
