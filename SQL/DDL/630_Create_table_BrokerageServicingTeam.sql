@@ -7,7 +7,7 @@ CREATE TABLE edw_stage.BrokerageServicingTeam (
 	Id uniqueidentifier NULL,
 	Name nvarchar(200) NULL,
 	ExternalSourceId nvarchar(2000) NULL,
-	CreatedDate datetime2 NULL,
-	UpdatedDate datetime2 NULL
+	CreatedDate datetime2(7) NULL,
+	UpdatedDate datetime2(7) NULL
 ) 
 END ; 
