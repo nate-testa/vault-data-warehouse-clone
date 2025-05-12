@@ -6,9 +6,10 @@ GO
 -- Author:		Mohammed Yunus
 -- Description: This proceudre return claim renewal rating data for home and collection
 ---------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date 			|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 10/06/23		Mohammed Yunus				1. Created this procedure 
+-- 10/06/23				Yunus Mohammed				1. Created this procedure 
+-- 12/18/24				Yunus Mohammed				2. AD7660 Added SourceOfFire and SourceOfWater
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_claim_renewal_rating_home_collection_api]
 (
@@ -24,8 +25,9 @@ BEGIN
 		crrh.PropertyOrLiability,crrh.PolicyNumber,crrh.FileNumber,crrh.ClaimStatus,crrh.Claimant,crrh.LossDate,crrh.LossIdentifier,crrh.LossType,
 		crrh.SubCauseOfLoss,crrh.LossDescription,crrh.PolicyType,crrh.CatIndicator,crrh.CatCode,crrh.AddressLine1,crrh.AddressLine2,
 		crrh.AddressLineUnit,crrh.AddressCity,crrh.AddressZipCode,
-		crrh.AddressState,crrh.AddressCounty,crrh.AddressCountry,crrh.Coverage,crrh.ReserveExpense,crrh.ReserveIndemnity,
-		crrh.PaidExpense,crrh.PaidIndemnity
+		crrh.AddressState,crrh.AddressCounty,crrh.AddressCountry,crrh.Coverage,
+		crrh.SourceOfFire,crrh.SourceOfWater,
+		crrh.ReserveExpense,crrh.ReserveIndemnity,crrh.PaidExpense,crrh.PaidIndemnity
 	FROM
 		edw_integration.claim_renewal_rating_home_collection_api AS crrh
 		INNER JOIN

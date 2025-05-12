@@ -2,13 +2,18 @@ SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
-GO
-
--- =============================================
+GO 
+-- ==========================================================================================================================
 -- Author:		Hernando Gonzalez
 -- Create Date: 2024-04-01
 -- Description: This stored procedure insert and update info related to tpel_vehicle_rapa.
--- =============================================
+------------------------------------------------------------------------------------------------------------------------------
+-- Change date			|Author							|	Change Description
+------------------------------------------------------------------------------------------------------------------------------
+-- 10/24/2023 			Hernando Gonzalez					1. Created this procedure 
+-- 08/03/2024 			Architha Gudimalla					2. Updated tpel_vehicle join to use vehicle_unique_id
+-- 09/05/2024 			Alberto Almario						3. add new column vehicle_unique_id
+-- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_vehicle_rapa]
 
 AS
@@ -38,6 +43,7 @@ BEGIN
 			,quote_pel_vehicle_sk, quote_pel_coverage_sk
 			,RAPABodilyInjuryIndicatedSymbolRelativityChar1, RAPAPropertyDamageIndicatedSymbolRelativityChar1, RAPAMedicalPaymentsIndicatedSymbolRelativityChar1, RAPAPersonalInjuryProtectionIndicatedSymbolRelativityChar1, RAPACollisionIndicatedSymbolRelativityChar1, RAPAComprehensiveIndicatedSymbolRelativityChar1, RAPASingleLimitIndicatedSymbolRelativityChar1, RAPABodilyInjuryIndicatedSymbolRelativityChar2, RAPAPropertyDamageIndicatedSymbolRelativityChar2, RAPAMedicalPaymentsIndicatedSymbolRelativityChar2, RAPAPersonalInjuryProtectionIndicatedSymbolRelativityChar2, RAPACollisionIndicatedSymbolRelativityChar2, RAPAComprehensiveIndicatedSymbolRelativityChar2, RAPASingleLimitIndicatedSymbolRelativityChar2, RAPABodilyInjuryIndicatedSymbol, RAPAPropertyDamageIndicatedSymbol, RAPAMedicalPaymentsIndicatedSymbol, RAPAPersonalInjuryProtectionIndicatedSymbol, RAPACollisionIndicatedSymbol, RAPAComprehensiveIndicatedSymbol, RAPASingleLimitIndicatedSymbol, RAPABodilyInjuryIndicatedSymbolRelativity, RAPAPropertyDamageIndicatedSymbolRelativity, RAPAMedicalPaymentsIndicatedSymbolRelativity, RAPAPersonalInjuryProtectionIndicatedSymbolRelativity, RAPACollisionIndicatedSymbolRelativity, RAPAComprehensiveIndicatedSymbolRelativity, RAPASingleLimitIndicatedSymbolRelativity, RAPAComprehensiveNonGlassIndicatedSymbolRelativityChar1, RAPAComprehensiveNonGlassIndicatedSymbolRelativityChar2, RAPAComprehensiveNonGlassIndicatedSymbol, RAPAComprehensiveNonGlassIndicatedSymbolRelativity, RAPABodilyInjuryRatingSymbolRelativity, RAPASymbolBI, RAPAPropertyDamageRatingSymbolRelativity, RAPASymbolPD, RAPAMedicalPaymentsRatingSymbolRelativity, RAPASymbolMP, RAPAPersonalInjuryProtectionRatingSymbolRelativity, RAPASymbolNF, RAPACollisionRatingSymbolRelativity, RAPASymbolCL, RAPAComprehensiveRatingSymbolRelativity, RAPASymbolCP, RAPASingleLimitRatingSymbolRelativity, RAPASymbolSL, RAPAComprehensiveNonGlassRatingSymbolRelativity, RAPASymbolCN, RAPASymbolCappingIndicatorBI, RAPASymbolCappingIndicatorPD, RAPASymbolCappingIndicatorMP, RAPASymbolCappingIndicatorNF, RAPASymbolCappingIndicatorCL, RAPASymbolCappingIndicatorCP, RAPASymbolCappingIndicatorSL, RAPASymbolCappingIndicatorCN
 			,source_system_sk
+			,vehicle_unique_id
 			into edw_temp.tquote_pel_vehicle_rapa_temp1
 		from
 		(
@@ -52,6 +58,7 @@ BEGIN
 				,tqc.quote_pel_coverage_sk
 				,atvof.Field, atvof.[Value]
 				,CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk
+				,atvo.[UniqueId] as vehicle_unique_id
 				from edw_stage.AccountTransaction act
 				inner join edw_stage.Product p
 					on p.Id = act.ProductId
@@ -69,7 +76,8 @@ BEGIN
 					on tqv.quote_no = act.PolicyNumber
 					and tqv.effective_dt = act.EffectiveDate
 					and tqv.transaction_seq_no = act.[Number]
-					and tqv.vehicle_no = atvo.[Index]
+					--and tqv.vehicle_no = atvo.[Index]
+					and tqv.vehicle_unique_id = atvo.[UniqueId]
 				left join [edw_core].[tquote_pel_coverage] tqc
 					on tqc.quote_no = act.PolicyNumber
 					and tqc.effective_dt = CAST(act.EffectiveDate AS DATE)
@@ -100,7 +108,7 @@ BEGIN
 			quote_no, effective_dt, vehicle_no, expiration_dt, transaction_seq_no, quote_history_sk
 			,quote_pel_vehicle_sk, quote_pel_coverage_sk
 			,bodily_injury_char1_relativity, property_damage_char1_relativity, medical_payments_char1_relativity, personal_injury_protection_char1_relativity, collision_char1_relativity, comprehensive_char1_relativity, single_limit_char1_relativity, bodily_injury_char2_relativity, property_damage_char2_relativity, medical_payments_char2_relativity, personal_injury_protection_char2_relativity, collision_char2_relativity, comprehensive_char2_relativity, single_limit_char2_relativity, bodily_injury_indicated_symbol, property_damage_indicated_symbol, medical_payments_indicated_symbol, personal_injury_protection_indicated_symbol, collision_indicated_symbol, comprehensive_indicated_symbol, single_limit_indicated_symbol, bodily_injury_relativity, property_damage_relativity, medical_payments_relativity, personal_injury_protection_relativity, collision_relativity, comprehensive_relativity, single_limit_relativity, comprehensive_non_glass_relativity_char1, comprehensive_non_glass_relativity_char2, comprehensive_non_glass_indicated_symbol, comprehensive_non_glass_symbol_relativity, bodily_injury_rating_symbol_relativity, bodily_injury_symbol, property_damage_rating_symbol_relativity, property_damage_symbol, medical_payments_rating_symbol_relativity, medical_payments_symbol, personal_injury_protection_rating_symbol_relativity, personal_injury_protection_symbol, collision_rating_symbol_relativity, collision_symbol, comprehensive_rating_symbol_relativity, comprehensive_symbol, single_limit_rating_symbol_relativity, single_limit_symbol, comprehensive_non_glass_rating_symbol_relativity, comprehensive_non_glass_symbol, bodily_injury_symbol_capping_in, property_damage_symbol_capping_in, medical_payments_symbol_capping_in, personal_injury_protection_symbol_capping_in, collision_symbol_capping_in, comprehensive_symbol_capping_in, single_limit_symbol_capping_in, comprehensive_non_glass_symbol_capping_in
-			,[source_system_sk], [create_ts], [update_ts], [etl_audit_sk]
+			,[source_system_sk], [create_ts], [update_ts], [etl_audit_sk], vehicle_unique_id
 		)
 		SELECT
 			quote_no, EffectiveDate AS effective_dt, vehicle_no
@@ -108,7 +116,7 @@ BEGIN
 			,quote_history_sk
 			,quote_pel_vehicle_sk, quote_pel_coverage_sk
 			,RAPABodilyInjuryIndicatedSymbolRelativityChar1, RAPAPropertyDamageIndicatedSymbolRelativityChar1, RAPAMedicalPaymentsIndicatedSymbolRelativityChar1, RAPAPersonalInjuryProtectionIndicatedSymbolRelativityChar1, RAPACollisionIndicatedSymbolRelativityChar1, RAPAComprehensiveIndicatedSymbolRelativityChar1, RAPASingleLimitIndicatedSymbolRelativityChar1, RAPABodilyInjuryIndicatedSymbolRelativityChar2, RAPAPropertyDamageIndicatedSymbolRelativityChar2, RAPAMedicalPaymentsIndicatedSymbolRelativityChar2, RAPAPersonalInjuryProtectionIndicatedSymbolRelativityChar2, RAPACollisionIndicatedSymbolRelativityChar2, RAPAComprehensiveIndicatedSymbolRelativityChar2, RAPASingleLimitIndicatedSymbolRelativityChar2, RAPABodilyInjuryIndicatedSymbol, RAPAPropertyDamageIndicatedSymbol, RAPAMedicalPaymentsIndicatedSymbol, RAPAPersonalInjuryProtectionIndicatedSymbol, RAPACollisionIndicatedSymbol, RAPAComprehensiveIndicatedSymbol, RAPASingleLimitIndicatedSymbol, RAPABodilyInjuryIndicatedSymbolRelativity, RAPAPropertyDamageIndicatedSymbolRelativity, RAPAMedicalPaymentsIndicatedSymbolRelativity, RAPAPersonalInjuryProtectionIndicatedSymbolRelativity, RAPACollisionIndicatedSymbolRelativity, RAPAComprehensiveIndicatedSymbolRelativity, RAPASingleLimitIndicatedSymbolRelativity, RAPAComprehensiveNonGlassIndicatedSymbolRelativityChar1, RAPAComprehensiveNonGlassIndicatedSymbolRelativityChar2, RAPAComprehensiveNonGlassIndicatedSymbol, RAPAComprehensiveNonGlassIndicatedSymbolRelativity, RAPABodilyInjuryRatingSymbolRelativity, RAPASymbolBI, RAPAPropertyDamageRatingSymbolRelativity, RAPASymbolPD, RAPAMedicalPaymentsRatingSymbolRelativity, RAPASymbolMP, RAPAPersonalInjuryProtectionRatingSymbolRelativity, RAPASymbolNF, RAPACollisionRatingSymbolRelativity, RAPASymbolCL, RAPAComprehensiveRatingSymbolRelativity, RAPASymbolCP, RAPASingleLimitRatingSymbolRelativity, RAPASymbolSL, RAPAComprehensiveNonGlassRatingSymbolRelativity, RAPASymbolCN, RAPASymbolCappingIndicatorBI, RAPASymbolCappingIndicatorPD, RAPASymbolCappingIndicatorMP, RAPASymbolCappingIndicatorNF, RAPASymbolCappingIndicatorCL, RAPASymbolCappingIndicatorCP, RAPASymbolCappingIndicatorSL, RAPASymbolCappingIndicatorCN
-			,source_system_sk, getdate() AS create_ts, getdate() AS update_ts, @etl_audit_sk AS etl_audit_sk
+			,source_system_sk, getdate() AS create_ts, getdate() AS update_ts, @etl_audit_sk AS etl_audit_sk, vehicle_unique_id
 		FROM
 			edw_temp.tquote_pel_vehicle_rapa_temp1
 			where RAPASymbolBI is not null

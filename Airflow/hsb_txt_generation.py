@@ -44,6 +44,7 @@ QRY_HCP = f"""
         CAST([home_business] AS NVARCHAR) AS 'Home Business',
         CAST([previous_policy_number] AS NVARCHAR) AS 'Previous Policy Number'
     FROM [edw_integration].[policy_hsb_cyber_feed]
+    WHERE reporting_date = (select max(reporting_date) AS max_reporting_date from [edw_integration].[policy_hsb_cyber_feed])
 """
 QRY_HSP = f"""
     SELECT 
@@ -92,6 +93,7 @@ QRY_HSP = f"""
         CAST([agent_code] AS NVARCHAR) AS 'Agent_Code',
         CAST([branch_code] AS NVARCHAR) AS 'Branch_Code'
     FROM [edw_integration].[policy_hsb_hsp_feed]
+    WHERE reporting_date = (select max(reporting_date) AS max_reporting_date from [edw_integration].[policy_hsb_hsp_feed])
 """
 QRY_SLC = f"""
     SELECT 
@@ -140,6 +142,7 @@ QRY_SLC = f"""
         CAST([agent_code] AS NVARCHAR) AS 'Agent_Code',
         CAST([branch_code] AS NVARCHAR) AS 'Branch_Code'
     FROM [edw_integration].[policy_hsb_slc_feed]
+    WHERE reporting_date = (select max(reporting_date) AS max_reporting_date from [edw_integration].[policy_hsb_slc_feed])
 """
 
 
@@ -179,7 +182,7 @@ def generate_txt_files(COMPANY_PRODUCTS, DATA_TYPE, QRY):
         else:
             TXT_FILE_NAME = f'{DATA_TYPE}{COMPANY_PRODUCT_CD}INF_test.txt'
 
-        FINAL_QRY = QRY + f" WHERE [company_product_cd] = '{COMPANY_PRODUCT_CD}'"
+        FINAL_QRY = QRY + f" AND [company_product_cd] = '{COMPANY_PRODUCT_CD}'"
         df = CONN_STR.get_pandas_df(FINAL_QRY)
         create_directory_if_not_exists(TXT_FOLDER_PATH)
         txt_path = os.path.join(TXT_FOLDER_PATH, TXT_FILE_NAME)
@@ -222,7 +225,7 @@ class SFTPUploadAllHsbFilesOperator(BaseOperator):
 
     def execute(self, context):
         if ENVIRONMENT == 'PRODUCTION':
-            REMOTE_PATH = '/prod'
+            REMOTE_PATH = '/'
             FILES_TO_LOAD = [
                 'HSP4271INF.txt',
                 'HSP4850INF.txt',

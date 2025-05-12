@@ -6,6 +6,8 @@
 -- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
 -- 05/14/2024 			Architha Gudimalla					3. Corrected errors
+-- 07/31/2024 			Alberto Almario						4. Add new column vehicle_unique_id
+-- 08/22/2024			Architha Gudimalla					54. Removed eff_dt from merge
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_vehicle_wip]
 
@@ -37,6 +39,7 @@ BEGIN
 			VINChangeIndicator, DistributionDate, Restraint, AntiLockBrakes, EngineCylinders, FieldChangeIndicator, FourWheelDriveIndicator, ElectronicStabilityControl, TonnageIndicator, PayloadCapacity, DaytimeRunningLightIndicator, Wheelbase, ClassCode, AntiTheftIndicator, GrossVehicleWeight, Height, StateException, VMPerformanceIndicator, NCICCode, Chassis, [Length], Width, BaseMSRP, SpecialHandlingIndicator, RAPAInterimIndicator, SpecialInfoSelector, ModelSeriesInfo, BodyInfo, EngineInfo, RestraintInfo, TransmissionInfo, OtherInfo, ReleaseDate,
 			CollectorCarType, MotorHomeClass,
 			GaragingAddressLine1, GaragingAddressLine2, GaragingAddressLineUnit, GaragingAddressCity, GaragingAddressZipCode, GaragingAddressState, GaragingAddressCounty, GaragingAddressCountry
+			,vehicle_unique_id
 			into edw_temp.tquote_pel_vehicle_wip_temp1
 		from
 		(
@@ -50,6 +53,7 @@ BEGIN
 			acc.CreatedDate,acc.UpdatedDate,
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			accof.Field,accof.[Value]
+			,acco.[UniqueId] as vehicle_unique_id
 			from
 				(
 				    SELECT *
@@ -87,7 +91,7 @@ BEGIN
 										)
 		) as pivottable
 
-		MERGE INTO [edw_core].[tquote_pel_vehicle] AS TARGET
+		MERGE INTO  [edw_core].[tquote_pel_vehicle] AS TARGET
 		USING (
 		    SELECT
 		        PolicyNumber AS quote_no,
@@ -155,17 +159,19 @@ BEGIN
 		        GaragingAddressState AS garage_address_state_cd,
 		        GaragingAddressCounty AS garage_address_county_nm,
 		        GaragingAddressCountry AS garage_address_country_nm
+				,vehicle_unique_id
 		    FROM
 		        edw_temp.tquote_pel_vehicle_wip_temp1 AS ttpv
 		) AS SOURCE
 		ON
 		    TARGET.quote_no = SOURCE.quote_no AND
-		    TARGET.effective_dt = SOURCE.effective_dt AND
+		    --TARGET.effective_dt = SOURCE.effective_dt AND
 		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
-		    TARGET.vehicle_no = SOURCE.vehicle_no
+		    TARGET.vehicle_unique_id = SOURCE.vehicle_unique_id
 
 		WHEN MATCHED THEN
 		    UPDATE SET
+		        TARGET.effective_dt = SOURCE.effective_dt,
 		        TARGET.expiration_dt = SOURCE.expiration_dt,
 		        TARGET.quote_history_sk = SOURCE.quote_history_sk,
 		        TARGET.vehicle_type = SOURCE.vehicle_type,
@@ -235,6 +241,7 @@ BEGIN
 		        vehicle_vin_change_in, vehicle_distribution_dt, vehicle_restraint, vehicle_antilock_brakes, vehicle_engine_cylinders, vehicle_field_change_in, vehicle_four_wheel_drive_in, vehicle_electronic_stability_control, vehicle_tonnage_in, vehicle_payload_capacity, vehicle_daytime_running_light_in, vehicle_wheel_base, vehicle_class_cd, vehicle_antitheft_in, vehicle_gross_weight, vehicle_height, vehicle_state_exception, vm_performance_in, vehicle_ncic_cd, vehicle_chassis, vehicle_length, vehicle_width, vehicle_base_msrp, special_handling_in, rapa_interim_in, special_info_selector, vehicle_model_series_info, vehicle_body_info, vehicle_engine_info, vehicle_restraint_info, vehicle_transmission_info, vehicle_other_info, vehicle_release_dt,
 		        source_system_sk, create_ts, update_ts, etl_audit_sk, collector_car_type, motor_home_class,
 		        garage_address_line1, garage_address_line2, garage_address_unit_no, garage_address_city_nm, garage_address_zip_cd, garage_address_state_cd, garage_address_county_nm, garage_address_country_nm
+				,vehicle_unique_id
 		    )
 		    VALUES (
 		        SOURCE.quote_no, SOURCE.effective_dt, SOURCE.expiration_dt, SOURCE.transaction_seq_no, SOURCE.quote_history_sk,
@@ -243,6 +250,7 @@ BEGIN
 		        SOURCE.vehicle_vin_change_in, SOURCE.vehicle_distribution_dt, SOURCE.vehicle_restraint, SOURCE.vehicle_antilock_brakes, SOURCE.vehicle_engine_cylinders, SOURCE.vehicle_field_change_in, SOURCE.vehicle_four_wheel_drive_in, SOURCE.vehicle_electronic_stability_control, SOURCE.vehicle_tonnage_in, SOURCE.vehicle_payload_capacity, SOURCE.vehicle_daytime_running_light_in, SOURCE.vehicle_wheel_base, SOURCE.vehicle_class_cd, SOURCE.vehicle_antitheft_in, SOURCE.vehicle_gross_weight, SOURCE.vehicle_height, SOURCE.vehicle_state_exception, SOURCE.vm_performance_in, SOURCE.vehicle_ncic_cd, SOURCE.vehicle_chassis, SOURCE.vehicle_length, SOURCE.vehicle_width, SOURCE.vehicle_base_msrp, SOURCE.special_handling_in, SOURCE.rapa_interim_in, SOURCE.special_info_selector, SOURCE.vehicle_model_series_info, SOURCE.vehicle_body_info, SOURCE.vehicle_engine_info, SOURCE.vehicle_restraint_info, SOURCE.vehicle_transmission_info, SOURCE.vehicle_other_info, SOURCE.vehicle_release_dt,
 		        SOURCE.source_system_sk, SOURCE.create_ts, SOURCE.update_ts, SOURCE.etl_audit_sk, SOURCE.collector_car_type, SOURCE.motor_home_class,
 		        SOURCE.garage_address_line1, SOURCE.garage_address_line2, SOURCE.garage_address_unit_no, SOURCE.garage_address_city_nm, SOURCE.garage_address_zip_cd, SOURCE.garage_address_state_cd, SOURCE.garage_address_county_nm, SOURCE.garage_address_country_nm
+				,SOURCE.vehicle_unique_id
 		);
 
 		SET @rows_affected=@@ROWCOUNT;

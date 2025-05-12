@@ -1,0 +1,13 @@
+ALTER TABLE edw_core.thome_additional_coverage ADD full_extended_replacement_cost_in VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD risk_score_water_non_weather VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD risk_score_water_weather VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD risk_score_water_backup VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD risk_score_wind_hail VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD risk_score_other VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD risk_score_lightning VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD risk_score_theft VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD risk_score_liability VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD risk_score_hurricane VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD risk_score_wildfire VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD risk_score_sinkhole_mine VARCHAR(255);
+ALTER TABLE edw_core.thome_additional_coverage ADD risk_score_all_perils VARCHAR(255);  

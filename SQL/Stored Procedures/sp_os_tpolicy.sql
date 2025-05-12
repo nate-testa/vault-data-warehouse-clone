@@ -8,6 +8,7 @@
 -- 12/15/23			Yunus Mohammed					2. Updated program_type logic
 -- 04/15/24			Yunus Mohammed					3. Updated logic for original policy no and effective date
 -- 06/28/24			Yunus Mohammed					4. Updated logic for policy_term
+-- 11/14/24			Architha Gudimalla				5. AD7713 - Added term_no
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_os_tpolicy]
@@ -137,6 +138,7 @@ BEGIN
 		mailing_address_zip_cd,mailing_address_county_nm,mailing_address_country_nm,non_renewal_in,prior_policy_no,
 		billingaccount_sk,source_system_sk,create_ts,update_ts,etl_audit_sk
 		-- ,latest_term_in
+		,term_no
 		)
 		SELECT
 			policy_no,effective_dt,expiration_dt,broker_id,customer_id,product_cd,risk_state_cd,insured_nm,insured_type,
@@ -144,6 +146,13 @@ BEGIN
 			mailing_address_line1,mailing_address_line2,mailing_address_unit_no,mailing_address_city_nm,mailing_address_state_cd,
 			mailing_address_zip_cd,mailing_address_county_nm,mailing_address_country_nm,non_renewal_in,prior_policy_no,NULL billingaccount_id,
 			source_system_sk,GETDATE() AS create_ts,GETDATE() update_ts,@etl_audit_sk AS etl_audit_sk
+			,'Term ' || case 
+								when charindex('-',policy_no) <> 0 then cast(substring(policy_no,charindex('-',policy_no)+1,len(policy_no)) as int) + 1
+								when policy_no like '%A'		   then 1
+								when policy_no like '%B'		   then 2
+								when policy_no like '%C'		   then 3
+							 	else 1
+							end term_no
 		FROM
 			edw_temp.os_tpolicy_temp1
 			

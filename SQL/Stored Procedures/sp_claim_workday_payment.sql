@@ -8,9 +8,17 @@
 -- 07/28/23		Yunus Mohammed				1. Created this procedure 
 -- 11/29/23		Yunus Mohammed				2. Update logic to get begin and end date
 -- 03/21/24		Yunus Mohammed				3. Added party_subtype_role_nm in output
+-- 07/31/24		Yunus Mohammed				4. Updated Loss (Expense A&O) to Loss (Expense - A&O)
+-- 09/19/24		Yunus Mohammed				5. Used sub_cause_of_loss_cd AS sub_cause_of_loss_code instead of sub_cause_of_loss_desc
+--												added throw in catch block
+-- 11/26/24		Yunus Mohammed				6. Updated "Marine Boat & Yacht" to "Marine_Boat&Yacht"
+-- 02/19/25		Yunus Mohammed				7. Updated to use new columns after Snapsheet implementation
+-- 03/04/25     Sandeep Gundreddy			8. Removed defense_cost_in filter
+-- 03/13/25		Yunus Mohammed				9 Ad-8876 USed payment_no as transaction_id
+-- 04/15/25		Yunus Mohammed				10. Removed litigation claims
 -- ================================================================================================= 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_payment]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_claim_workday_payment]
 AS
 BEGIN
 	DECLARE @ProcedureName NVARCHAR(120)
@@ -83,6 +91,7 @@ BEGIN
 				WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
 				WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
 				WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
+				WHEN tprd.product_cd = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
 			ELSE tprd.product_nm END AS product,
 			tcf.claim_coverage_desc AS policycoveragetype,
 			ttr.cat_name AS paymenttype,
@@ -92,18 +101,15 @@ BEGIN
 			YEAR(tc.loss_dt) AS accident_year,
 			CASE WHEN tc.policy_no LIKE 'NFP%' THEN np.risk_state ELSE COALESCE(st.state_cd,tp.risk_state_cd) END AS risk_state,
 			CAST(tasl.aslob_cd AS INT) AS aslob,
-			tpay.payment_sequence_no AS transaction_id,
-			@end_dt AS monthend,
-			tscl.sub_cause_of_loss_desc AS sub_cause_of_loss_code,
-			tscl.sub_cause_of_loss_desc AS sub_cause_of_loss_name,
+			tpay.payment_no AS transaction_id,
+			@end_dt AS monthend,			
 			tc.claim_status AS claim_status,
 			tcf.claim_feature_status AS loss_status,
 			tpay.party_subtype_role_nm
 			FROM
 			edw_core.tclaim tc
 			LEFT JOIN edw_core.tcause_of_loss tcl ON tcl.cause_of_loss_sk=tc.cause_of_loss_sk
-			LEFT JOIN edw_core.tcatastrophe tcat ON tcat.catastrophe_sk=tc.catastrophe_sk
-			LEFT JOIN edw_core.tsub_cause_of_loss tscl ON tscl.sub_cause_of_loss_sk=tc.sub_cause_of_loss_sk
+			LEFT JOIN edw_core.tcatastrophe tcat ON tcat.catastrophe_sk=tc.catastrophe_sk			
 			INNER JOIN edw_core.tclaim_feature tcf ON tc.claim_sk=tcf.claim_sk
 			LEFT JOIN edw_core.taslob tasl ON tasl.aslob_sk=tcf.aslob_sk
 			INNER JOIN edw_core.tproduct tprd ON tprd.product_sk=tc.product_sk
@@ -126,7 +132,7 @@ BEGIN
 				FROM
 					(
 						SELECT
-							claim_feature_sk,claim_payment_sk,SUM(loss_paid_amt+refund_indemnity_paid_amt) AS amt, 'Loss (Indemnity)' AS cat_name
+							claim_feature_sk,claim_payment_sk,SUM(loss_paid_amt+overpayment_recovery_amt+deductible_recovery_amt) AS amt, 'Loss (Indemnity)' AS cat_name
 						FROM edw_core.tclaim_transaction t
 						WHERE t.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
 						GROUP BY claim_feature_sk,claim_payment_sk
@@ -134,25 +140,33 @@ BEGIN
 						UNION
 							
 						SELECT
-							claim_feature_sk,claim_payment_sk,SUM(expense_paid_amt+adjusting_other_paid_amt+refund_expense_paid_amt) AS amt, 'Loss (Expense A&O)' AS cat_name
+							claim_feature_sk,claim_payment_sk,SUM(deductible_expense_recovery_amt+expense_paid_amt+overpayment_expense_recovery_amt) AS amt, 'Loss (Expense - A&O)' AS cat_name
 						FROM edw_core.tclaim_transaction t
 						WHERE t.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
-						AND t.defense_cost_in = 'N'
+					--	AND t.defense_cost_in = 'N'
 						GROUP BY claim_feature_sk,claim_payment_sk
 
 						UNION
 							
 						SELECT
-							claim_feature_sk,claim_payment_sk,SUM(expense_paid_amt+adjusting_other_paid_amt+refund_expense_paid_amt) AS amt, 'Loss (Expense - DCC)' AS cat_name
+							claim_feature_sk,claim_payment_sk,SUM(deductible_defense_recovery_amt+defense_paid_amt+overpayment_defense_recovery_amt) AS amt, 'Loss (Expense - DCC)' AS cat_name
 						FROM edw_core.tclaim_transaction t
 						WHERE t.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
-						AND t.defense_cost_in = 'Y'
+					--	AND t.defense_cost_in = 'Y'
 						GROUP BY claim_feature_sk,claim_payment_sk
 							
 						UNION
 							
 						SELECT
-							claim_feature_sk,claim_payment_sk,SUM(subro_recovery_amt+subro_expense_paid_amt) AS amt, 'Subrogation' AS cat_name
+							claim_feature_sk,claim_payment_sk,SUM(subrogation_recovery_amt+subrogation_defense_recovery_amt) AS amt, 'Subrogation' AS cat_name
+						FROM edw_core.tclaim_transaction t
+						WHERE t.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
+						GROUP BY claim_feature_sk,claim_payment_sk
+
+						UNION
+							
+						SELECT
+							claim_feature_sk,claim_payment_sk,SUM(subrogation_expense_recovery_amt) AS amt, 'Subrogation Expense' AS cat_name
 						FROM edw_core.tclaim_transaction t
 						WHERE t.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
 						GROUP BY claim_feature_sk,claim_payment_sk
@@ -160,7 +174,15 @@ BEGIN
 						UNION
 
 						SELECT
-							claim_feature_sk,claim_payment_sk,SUM(salvage_recovery_amt + salvage_expense_paid_amt) AS amt, 'Salvage' AS cat_name
+							claim_feature_sk,claim_payment_sk,SUM(salvage_defense_recovery_amt + salvage_recovery_amt) AS amt, 'Salvage' AS cat_name
+						FROM edw_core.tclaim_transaction t
+						WHERE t.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
+						GROUP BY claim_feature_sk,claim_payment_sk
+
+						UNION
+
+						SELECT
+							claim_feature_sk,claim_payment_sk,SUM(salvage_expense_recovery_amt) AS amt, 'Salvage Expense' AS cat_name
 						FROM edw_core.tclaim_transaction t
 						WHERE t.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
 						GROUP BY claim_feature_sk,claim_payment_sk
@@ -170,6 +192,7 @@ BEGIN
 			LEFT JOIN edw_core.tpolicy tp on tp.policy_no=tc.policy_no
 			LEFT JOIN edw_core.tstate st on st.state_cd=tp.risk_state_cd
 			WHERE tcr.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
+			and tc.policy_no not like '%VRE' and tc.policy_no not like '%VES'
 			AND ttr.amt!=0
 			)
 
@@ -177,13 +200,13 @@ BEGIN
 			(
 			company,claim_no,policy_no,transaction_date,policyeffectivedate,claimlossdate,claimreporteddate,[address],city,[state],
 			zip,causeofloss,catastrophecode,catastrophename,product,policycoveragetype,paymenttype,payeename,paymentamount,settlementtype,
-			accident_year,risk_state,aslob,transaction_id,monthend,sub_cause_of_loss_code,sub_cause_of_loss_name,claim_status,loss_status,party_subtype_role_nm,
+			accident_year,risk_state,aslob,transaction_id,monthend,claim_status,loss_status,party_subtype_role_nm,
 			create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
 				company,claim_no,policy_no,transaction_date,policyeffectivedate,claimlossdate,claimreporteddate,[address],city,[state],
 				zip,causeofloss,catastrophecode,catastrophename,product,policycoveragetype,paymenttype,payeename,paymentamount,settlementtype,
-				accident_year,risk_state,aslob,transaction_id,monthend,sub_cause_of_loss_code,sub_cause_of_loss_name,claim_status,loss_status,party_subtype_role_nm,
+				accident_year,risk_state,aslob,transaction_id,monthend,claim_status,loss_status,party_subtype_role_nm,
 				GETDATE() AS create_ts,GETDATE() AS update_ts, @etl_audit_sk AS etl_audit_sk
 			FROM
 				claim_workday_payment_feed_temp
@@ -212,6 +235,7 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END

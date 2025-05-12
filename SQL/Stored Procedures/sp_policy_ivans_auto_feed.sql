@@ -273,6 +273,8 @@ BEGIN
 								END AS natureInterestCd
 							FROM edw_core.tadditional_interest as ai 
 							WHERE avc.policy_no = ai.policy_no AND avc.effective_dt = ai.effective_dt AND avc.transaction_seq_no = ai.transaction_seq_no
+                            AND avc.auto_vehicle_sk = ai.auto_vehicle_sk
+                            AND ai.additional_interest_deleted_in = 'No'
 							FOR JSON PATH, INCLUDE_NULL_VALUES 
 						) AS additionalInterests,
 						'' as numDaysDrivenPerWeek,
@@ -343,6 +345,7 @@ BEGIN
                     WHERE ad.policy_no = adf.policy_no
                         AND ad.effective_dt = adf.effective_dt
                         AND ad.transaction_seq_no = adf.transaction_seq_no
+                        AND ad.driver_deleted_in = 'No'
                     FOR JSON PATH
                 ) AS AU_Drivers
             FROM edw_core.tauto_driver AS adf
@@ -353,7 +356,7 @@ BEGIN
                 aglf.policy_no, aglf.effective_dt, aglf.transaction_seq_no,
                 (
                     SELECT 
-                        CONCAT('L',agl.garage_location_no) as locationNo,
+                        CONCAT('L',ROW_NUMBER() OVER(PARTITION BY agl.policy_no, agl.effective_dt, agl.transaction_seq_no ORDER BY agl.garage_unique_id)) AS locationNo,
                         agl.garage_address_line1 as addr1,
                         agl.garage_address_city_nm as city,
                         agl.garage_address_state_cd as [state],

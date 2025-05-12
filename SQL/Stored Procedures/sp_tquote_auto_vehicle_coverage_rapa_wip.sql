@@ -13,6 +13,8 @@ GO
 -- 05/08/24		Architha Gudimalla				2. Updated @last_source_extract_ts
 -- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- 07/10/24     Alberto Almario             	4. added vehicle_unique_id
+-- 08/21/24		Alberto Almario					5. Remove effective_dt from merge join and add into update section
+-- 08/30/24	    Architha Gudimalla			    6. Added eff dt in merge-update
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_rapa_wip]
@@ -81,7 +83,7 @@ BEGIN
                 INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
                 INNER JOIN [edw_core].[tquote_auto_vehicle] AS qav
                     ON qav.quote_no = acc.PolicyNumber
-					AND qav.effective_dt = acc.EffectiveDate
+					--AND qav.effective_dt = acc.EffectiveDate
                     -- AND qav.vehicle_no = acco.[Index]
 					AND qav.vehicle_unique_id = acco.[UniqueId]
 				INNER JOIN [edw_core].[tquote_auto_vehicle_coverage] AS qavc
@@ -123,12 +125,12 @@ BEGIN
 		MERGE INTO [edw_core].[tquote_auto_vehicle_coverage_rapa] AS target
 		USING [edw_temp].[tquote_auto_vehicle_coverage_rapa_wip_temp1] AS source
 			ON target.quote_no = source.quote_no
-			AND target.effective_dt = source.effective_dt
 			AND target.vehicle_unique_id = source.vehicle_unique_id
 			-- AND target.vehicle_no = source.vehicle_no
 			AND target.transaction_seq_no = source.transaction_seq_no
 		WHEN MATCHED THEN
 			UPDATE SET 
+				target.effective_dt = source.effective_dt,
 				target.expiration_dt = source.expiration_dt,
 				target.quote_history_sk = source.quote_history_sk,
 				target.quote_auto_vehicle_sk = source.quote_auto_vehicle_sk,

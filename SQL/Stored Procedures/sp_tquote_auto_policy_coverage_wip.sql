@@ -11,6 +11,9 @@ GO
 -- 05/08/24		    Architha Gudimalla				2. Updated @last_source_extract_ts
 -- 05/14/24		    Architha Gudimalla				3. Corrected errors
 -- 07/10/24         Yunus Mohammed                  4. Removed rater_pip_discount
+-- 07/25/24         Tuba Mohsin                     5. Added New coverage EnhancedUIM
+-- 08/21/24		    Alberto Almario					6. Remove effective_dt from merge join and add into update section
+-- 04/17/24         Architha Gudimalla              7. AD9089 - Updated the query that gets data from ProductObjectFieldValueDisplay
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage_wip]
@@ -53,7 +56,7 @@ BEGIN
             [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
             [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied],
 			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay], 
-                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice]
+                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM]
 		
         INTO [edw_temp].[tquote_auto_policy_coverage_wip_temp1]
 		
@@ -105,7 +108,7 @@ BEGIN
                     [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
                     [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], 
                     [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay], 
-                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice]
+                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM]
                 )
 			) pivottable
 
@@ -127,19 +130,41 @@ BEGIN
         open c1_rec; 
             FETCH NEXT FROM c1_rec INTO @edw_field_nm, @metal_field_nm; 
             WHILE @@FETCH_STATUS = 0
-                BEGIN 
+                BEGIN  
+
+					drop table if exists [edw_temp].[tquote_auto_policy_coverage_wip_temp2];
 
                     set @sql =	'
+								select quote_no ,Effective_dt ,transaction_seq_no, ' + @edw_field_nm + '  , [Value]
+								into [edw_temp].[tquote_auto_policy_coverage_wip_temp2]
+								from 
+								(
+									select  ROW_NUMBER()over(partition by pol.quote_no ,pol.Effective_dt ,avc.transaction_seq_no  order by pofv.[version] desc ) as rn,
+											pol.quote_no ,pol.Effective_dt ,avc.transaction_seq_no ,
+											avc.' + @edw_field_nm + ',pofv.ValueDisplay as [Value]
+									from [edw_temp].[tquote_auto_policy_coverage_wip_temp1] avc
+									inner join edw_core.tquote pol on avc.quote_no = pol.quote_no
+									inner join edw_stage.Account acc on acc.PolicyNumber = pol.quote_no
+									left join edw_stage.ProductObjectFieldValueDisplay pofv 
+										ON acc.ProductId = pofv.ProductId and pofv.Field = ''' + @metal_field_nm + '''and pofv.ObjectType = ''Automobile''
+											and  pol.risk_state_cd=pofv.statecode and avc.' + @edw_field_nm + ' = pofv.[Value]
+											and pol.Effective_dt between pofv.EffectiveDate and isnull(pofv.ExpirationDate,''2099-01-01'')
+											and pofv.IsRenewal = acc.IsRenewal
+									where avc.' + @edw_field_nm + ' is not null 
+								) a where rn = 1 and value is not null
+							' 
+
+                    --print @sql
+                    EXECUTE sp_executesql @sql 
+
+					 set @sql =	'
                             update		avc 
-                            set			avc.' + @edw_field_nm + ' = replace( pfvd.ValueDisplay,''$'','''') 
+                            set			avc.' + @edw_field_nm + ' = replace( p.Value,''$'','''') 
                             from		[edw_temp].[tquote_auto_policy_coverage_wip_temp1] avc
-                            inner join	edw_core.tquote pol on  avc.quote_no = pol.quote_no and avc.effective_dt = pol.effective_dt
-                            inner join	[edw_stage].[ProductObjectFieldValueDisplay] pfvd 
-                                                    on pfvd.StateCode = pol.risk_state_cd and pfvd.ObjectType = ''Automobile'' and pfvd.field = ''' + @metal_field_nm + ''' and avc.' + @edw_field_nm + ' = pfvd.Value
-                            where		avc.' + @edw_field_nm + ' is not null and replace( pfvd.ValueDisplay,''$'','''') is not null
+                            inner join	[edw_temp].[tquote_auto_policy_coverage_wip_temp2] p on  avc.quote_no = p.quote_no and avc.effective_dt = p.effective_dt and avc.transaction_seq_no = p.transaction_seq_no
+                            where		avc.' + @edw_field_nm + ' is not null 
                             '
                     --print @sql
-
                     EXECUTE sp_executesql @sql
                     
                     FETCH NEXT FROM c1_rec INTO @edw_field_nm, @metal_field_nm;
@@ -151,10 +176,10 @@ BEGIN
 		MERGE INTO [edw_core].[tquote_auto_policy_coverage] AS target
         USING [edw_temp].[tquote_auto_policy_coverage_wip_temp1] AS source
             ON target.quote_no = source.quote_no
-            AND target.effective_dt = source.effective_dt
             AND target.transaction_seq_no = source.transaction_seq_no
         WHEN MATCHED THEN
             UPDATE SET
+                target.effective_dt = source.effective_dt,
                 target.expiration_dt = source.expiration_dt,
                 target.quote_history_sk = source.quote_history_sk,
                 target.limit_type = source.[LimitType],
@@ -260,7 +285,8 @@ BEGIN
                 target.permissive_driver_unique_combined_single_limit_amt = source.PermissiveDriverUniqueCombinedSingleLimit,
                 target.permissive_driver_unique_bi_limit_amt = source.PermissiveDriverUniqueBILimit,
                 target.permissive_driver_unique_pd_limit_amt = source.PermissiveDriverUniquePDLimit,
-                target.emergency_extension_notice_in = source.EmergencyExtensionNotice
+                target.emergency_extension_notice_in = source.EmergencyExtensionNotice,
+                target.enhanced_underinsured_motorist_coverage_in = source.EnhancedUIM
         WHEN NOT MATCHED THEN
             INSERT (
                 quote_no,
@@ -372,7 +398,8 @@ BEGIN
                 permissive_driver_unique_combined_single_limit_amt,
                 permissive_driver_unique_bi_limit_amt,
                 permissive_driver_unique_pd_limit_amt,
-                emergency_extension_notice_in
+                emergency_extension_notice_in,
+                enhanced_underinsured_motorist_coverage_in
             )
             VALUES (
                 source.quote_no,
@@ -484,7 +511,8 @@ BEGIN
                 source.PermissiveDriverUniqueCombinedSingleLimit,
                 source.PermissiveDriverUniqueBILimit,
                 source.PermissiveDriverUniquePDLimit,
-                source.EmergencyExtensionNotice
+                source.EmergencyExtensionNotice,
+                source.EnhancedUIM
             );
 
 

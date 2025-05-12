@@ -2,12 +2,15 @@
 -- Author:		Hernando Gonzalez Garcia
 -- Description: This procedures insert and update info related to Collection Coverage
 -----------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author												|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 09/05/24		Hernando Gonzalez Garcia		1. Created this procedure 
--- 05/14/24		Architha Gudimalla				2. Corrected errors
--- 05/28/24		Yunus Mohammed					3. Added AccountObject.Id instead of Account.Id
--- 05/29/24		Alberto Almario					4. Integrate Premium Adjustments data into EDW - Collection
+-- 05/14/24		Architha Gudimalla						2. Corrected errors
+-- 05/28/24		Yunus Mohammed							3. Added AccountObject.Id instead of Account.Id
+-- 05/29/24		Alberto Almario							4. Integrate Premium Adjustments data into EDW - Collection
+-- 22/08/24		Hernando Gonzalez					5. Remove effective date from the merge join
+-- 11/09/24		Alberto Almario							6. Include Condo data
+-- 04/16/25		Yunus Mohammed					7. AD-9140 Corrected null values for premium mods
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_class_type_wip]
@@ -60,9 +63,9 @@ BEGIN
             INNER JOIN [edw_stage].[AccountPremiumFactor] AS acctvpf ON acctvpf.AccountPremiumId = acctvp.id
             WHERE NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where b.AccountId=acct.id)
 			AND GREATEST(acct.CreatedDate,acct.UpdatedDate) > @last_source_extract_ts
-			AND acct.PolicyNumber IS NOT NULL
-			AND acctvpf.Coverage = 'Collections'
-            AND p.[Name] = 'Collections'
+			AND acct.PolicyNumber IS NOT NULL			
+			AND acctvpf.Coverage in ('Collections','Lux')
+            AND p.[Name] in ('Collections','Homeowners','Condo')
             AND p.ProductLine = 'PersonalLines'
         )
         ,acctvpf_unpivot AS (
@@ -140,7 +143,7 @@ BEGIN
 			WHERE NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where b.AccountId=acc.id)
 				AND GREATEST(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
 				AND acc.PolicyNumber IS NOT NULL
-				AND p.[Name] in ('Collections','Homeowners')
+				AND p.[Name] in ('Collections','Homeowners','Condo')
 				AND acco.ObjectType = 'CollectionClass'
 				AND p.ProductLine='PersonalLines' --20230717 added
 			) t
@@ -206,12 +209,11 @@ BEGIN
 		) AS SOURCE
 		ON
 		    TARGET.quote_no = SOURCE.quote_no AND
-		    TARGET.effective_dt = SOURCE.effective_dt AND
 		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
 		    TARGET.class_type = SOURCE.class_type
-
 		WHEN MATCHED THEN
 		    UPDATE SET
+				TARGET.effective_dt = SOURCE.effective_dt,
 		        TARGET.expiration_dt = SOURCE.expiration_dt,
 		        TARGET.quote_collection_location_sk = SOURCE.quote_collection_location_sk,
 		        TARGET.quote_history_sk = SOURCE.quote_history_sk,

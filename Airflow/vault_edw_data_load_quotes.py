@@ -40,7 +40,7 @@ def check_tvalidation_and_send_email(**kwargs):
                 ON tr.validation_sql_sk = ts.validation_sql_sk
                 WHERE cast(process_run_start_ts as date) = cast(getdate() as date)
                 AND status_desc ='failure'
-                ORDER BY 1 DESC
+                ORDER BY ts.validation_sql_desc
               """
     mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
     result = mssql_hook.get_first(sql_qry)
@@ -113,7 +113,9 @@ with DAG(
             'sp_tquote_home_coverage_wip',
             'sp_tquote_home_coverage',
             'sp_tquote_home_additional_coverage_wip',
-            'sp_tquote_home_additional_coverage'
+            'sp_tquote_home_additional_coverage',
+            'sp_tquote_home_coverage_ext_wip',
+            'sp_tquote_home_coverage_ext'
         ]
 
         operators = []
@@ -138,6 +140,11 @@ with DAG(
             operators[i] >> operators[i + 1]
 
         operators[-1] >> send_quote_home_email
+
+
+    quote_collection_marine = DummyOperator(
+            task_id='quote_collection_marine',
+        )
 
 
     with TaskGroup("quote_collection_group") as quote_collection_group:
@@ -175,6 +182,45 @@ with DAG(
             operators[i] >> operators[i + 1]
 
         operators[-1] >> send_quote_collection_email
+
+
+    with TaskGroup("quote_marine_group") as quote_marine_group:
+
+        quote_marine_group_items = [
+            'sp_tquote_marine_boat_yacht_wip',
+            'sp_tquote_marine_boat_yacht',
+            'sp_tquote_marine_boat_yacht_location_wip',
+            'sp_tquote_marine_boat_yacht_location',
+            'sp_tquote_marine_boat_yacht_coverage_wip',
+            'sp_tquote_marine_boat_yacht_coverage',
+            'sp_tquote_marine_boat_yacht_operator_wip',
+            'sp_tquote_marine_boat_yacht_operator',
+            'sp_tquote_marine_boat_yacht_watercraft_wip',
+            'sp_tquote_marine_boat_yacht_watercraft'
+        ]
+
+        operators = []
+        for item in quote_marine_group_items:
+            operator = MsSqlOperator(
+                task_id=item,
+                mssql_conn_id='Vault_EDW',
+                sql=f"EXEC edw_core.{item}",
+                database="vault_edw",
+                autocommit=True,
+            )
+            operators.append(operator)
+
+        send_quote_marine_email = EmailOperator(
+            task_id='send_quote_marine_email',
+            to=to_email,
+            subject='Airflow - Quote Marine tables loaded successfully',
+            html_content=get_sp_success_data_HTML(quote_marine_group_items, 'All stored procedures executed successfully for all the Quote Marine tables'),
+        )
+
+        for i in range(len(operators) - 1):
+            operators[i] >> operators[i + 1]
+
+        operators[-1] >> send_quote_marine_email
 
 
     with TaskGroup("quote_PEL_group") as quote_PEL_group:
@@ -281,9 +327,13 @@ with DAG(
             'sp_tquote_transaction_status_history',
             'sp_tquote_insured_wip',
             'sp_tquote_insured',
+            'sp_tquote_insured_update',
             'sp_tquote_history_update',
+            'sp_tquote_history_underwriter_update',
             'sp_tquote_update',
-            'sp_tquote_referral_message'
+            'sp_tquote_update_lifetime_claims',
+            'sp_tquote_referral_message',
+            'sp_tquote_form'
         ]
 
         operators = []
@@ -360,6 +410,12 @@ with DAG(
             )
             operators.append(operator)
 
+        exec_vault_edw_data_load_hubspot = TriggerDagRunOperator(
+            task_id="exec_vault_edw_data_load_hubspot",
+            trigger_dag_id="vault_edw_data_load_hubspot",
+            dag=dag,
+        )
+
         send_quote_broker_email = EmailOperator(
             task_id='send_quote_broker_email',
             to=to_email,
@@ -370,7 +426,7 @@ with DAG(
         for i in range(len(operators) - 1):
             operators[i] >> operators[i + 1]
 
-        operators[-1] >> send_quote_broker_email
+        operators[-1] >> exec_vault_edw_data_load_hubspot >> send_quote_broker_email
 
 
     exec_vault_edw_data_load_vendor_reports = TriggerDagRunOperator(
@@ -384,4 +440,4 @@ with DAG(
     )
 
 
-start >> quote_group >> [quote_home_group , quote_PEL_group, quote_auto_group] >> quote_collection_group >> quote_transaction_group >> quote_broker_group >> exec_vault_edw_data_load_vendor_reports >> end
+start >> quote_group >> [quote_home_group , quote_PEL_group, quote_auto_group] >> quote_collection_marine >> [quote_collection_group, quote_marine_group] >> quote_transaction_group >> quote_broker_group >> exec_vault_edw_data_load_vendor_reports >> end

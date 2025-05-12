@@ -1,20 +1,16 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-
 -- ========================================================================================================
 -- Author:		Hernando Gonzalez Garcia
 -- Description: This procedures insert and update info related to Collection Coverage
 -----------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author												|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 23/10/23		Hernando Gonzalez Garcia		1. Created this procedure 
--- 11/13/23		Architha Gudimalla				2. added tran seq no in the joins
--- 11/14/23		Sandeep Gundreddy				3. modified quote_collection_location_sk join
--- 11/15/23		Sandeep Gundreddy				4. modified LEFT joins to INNER joins
--- 05/28/24		Alberto Almario					5. Integrate Premium Adjustments data into EDW - Collection
+-- 11/13/23		Architha Gudimalla						2. added tran seq no in the joins
+-- 11/14/23		Sandeep Gundreddy					3. modified quote_collection_location_sk join
+-- 11/15/23		Sandeep Gundreddy					4. modified LEFT joins to INNER joins
+-- 05/28/24		Alberto Almario								5. Integrate Premium Adjustments data into EDW - Collection
+-- 11/09/24		Alberto Almario							6. Include Condo data
+-- 04/16/25		Yunus Mohammed						7.AD-9140 Corrected null values for premium mods
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_class_type]
@@ -69,9 +65,9 @@ BEGIN
             INNER JOIN [edw_stage].[AccountTransactionVersionPremiumFactor] AS acctvpf ON acctvp.id = acctvpf.AccountTransactionVersionPremiumId
             WHERE acct.[Stage] IN ('QUOTE','POLICY')
 			AND acct.CreatedDate > @last_source_extract_ts
-			AND acct.PolicyNumber IS NOT NULL
-			AND acctvpf.Coverage = 'Collections'
-            AND p.[Name] = 'Collections'
+			AND acct.PolicyNumber IS NOT NULL			
+			AND acctvpf.Coverage in ('Collections','Lux')
+            AND p.[Name] in ('Collections','Homeowners','Condo')
             AND p.ProductLine = 'PersonalLines'
         )
         ,acctvpf_unpivot AS (
@@ -149,7 +145,7 @@ BEGIN
 			WHERE acc.[Stage] IN ('QUOTE','POLICY')
 				AND acc.CreatedDate > @last_source_extract_ts
 				AND acc.PolicyNumber IS NOT NULL
-				AND p.[Name] in ('Collections','Homeowners')
+				AND p.[Name] in ('Collections','Homeowners','Condo')
 				AND acct.ObjectType = 'CollectionClass'
 				AND p.ProductLine='PersonalLines' --20230717 added
 			) t

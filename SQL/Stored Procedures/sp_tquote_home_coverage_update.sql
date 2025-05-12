@@ -9,7 +9,9 @@ GO
 -----------------------------------------------------------------------------------------------------------------
 -- 11/13/23		Architha Gudimalla		    1. Created this procedure to update TIV and loss_of_use_derived_pc
 -- 05/17/23		Architha Gudimalla		    2. Updated logic for loss_of_use_derived_pc
--- 06/14/24		Yunus Mohammed 				5. Removed error for rate_on_line
+-- 06/14/24		Yunus Mohammed 				3. Removed error for rate_on_line
+-- 08/04/24		Architha Gudimalla		    4. Updated loss_of_use_amt to float
+-- 09/23/24		Architha Gudimalla		    5. Updated logic for rate_on_line
 -- =============================================================================================================== 
 
 
@@ -82,21 +84,21 @@ BEGIN
 												and case when loss_of_use_pc = '' then '0' else loss_of_use_pc end = '0'
 													then 0
 												WHEN ((isnumeric(trim(loss_of_use_limit_amt)) = 1 
-												and loss_of_use_limit_amt > 100 )  
+												and cast(loss_of_use_limit_amt as float) > 100 )  
 												)
 												and dwelling_limit_amt > 0 
 													then cast(loss_of_use_limit_amt as float)/dwelling_limit_amt
 												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 1 
-												and loss_of_use_limit_amt > 100 
+												and cast(loss_of_use_limit_amt as float) > 100 
 												and contents_limit_amt > 0 
 													then cast(loss_of_use_limit_amt as float)/contents_limit_amt 
 												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 1 
-												and loss_of_use_limit_amt > 100 
+												and cast(loss_of_use_limit_amt as float) > 100 
 												and contents_limit_amt = 0 and dwelling_limit_amt = 0
 													then 0 
 												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 1 
-												and loss_of_use_limit_amt < 100 
-													then loss_of_use_limit_amt
+												and cast(loss_of_use_limit_amt as float) < 100 
+													then cast(loss_of_use_limit_amt as float)
 												WHEN loss_of_use_pc like '%.%' 
 													THEN  cast(loss_of_use_pc as float) 
 													else 0
@@ -135,7 +137,8 @@ BEGIN
 		), tr_run_total as
 		(
 			select quote_no, effective_Dt, transaction_seq_no, quote_sk, annual_premium_amt
-				, SUM(annual_premium_amt ) OVER (partition by tr.quote_sk ORDER BY tr.transaction_seq_no ASC) prm_run_total
+				--, SUM(annual_premium_amt ) OVER (partition by tr.quote_sk ORDER BY tr.transaction_seq_no ASC) prm_run_total
+				,   SUM(annual_premium_amt ) OVER (partition by tr.quote_sk,tr.transaction_seq_no) prm_run_total
 			from  tr
 		)
 		select hc.*,  annual_premium_amt, prm_run_total, round(prm_run_total*100/total_insured_value_amt,2) rate_on_line
@@ -150,7 +153,7 @@ BEGIN
 		where update_ts > @last_source_extract_ts
 		or hc.rate_on_line is null; 
 		
-		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line; 
+		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line;   
 
 		SET @rows_affected=@@ROWCOUNT;
 	

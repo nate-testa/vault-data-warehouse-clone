@@ -10,6 +10,10 @@
 -- 11/29/23		Yunus Mohammed				2. Update aslob_cd
 -- 11/30/23		Yunus Mohammed				3. Updated insured name for NFP
 -- 03/20/24		Yunus Mohammed				4. month_end updated to last_day_month of prior month
+-- 09/18/24		Yunus Mohammed				5. Added Throw in catch block
+-- 11/26/24		Yunus Mohammed				6. Updated "Marine Boat & Yacht" to "Marine_Boat&Yacht"
+-- 02/19/25		Yunus Mohammed				7. Updated to use new columns after Snapsheet implementation
+-- 04/15/25		Yunus Mohammed				8. Removed litigation claims
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_reserve_feed_itd]
@@ -64,36 +68,48 @@ BEGIN
 				WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
 				WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
 				WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
+				WHEN tprd.product_cd = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
 			ELSE tprd.product_nm END AS product,
 			tcf.claim_coverage_desc AS policycoveragetype,
 			CASE
-				WHEN tcr.loss_reserve_amt!=0 THEN 'Loss (Indemnity)'
-				WHEN tcr.expense_reserve_amt!=0 THEN 'Loss (Expense - A&O)'
-				WHEN tcr.adjusting_other_reserve_amt!=0 THEN 'ALAE'
-				WHEN tcr.subro_reserve_amt!=0 THEN 'Subrogation'
-				WHEN tcr.salvage_reserve_amt!=0 THEN 'Salvage'
-				WHEN tcr.salvage_expense_reserve_amt!=0 THEN 'Salvage Expenses' 
-				WHEN tcr.subro_expense_reserve_amt!=0 THEN 'Subrogation Expense'
+				WHEN					
+						(tcr.loss_reserve_amt + tcr.deductible_recovery_reserve_amt+ tcr.overpayment_recovery_reserve_amt) != 0
+					THEN 'Loss (Indemnity)'
+					
+					WHEN (tcr.deductible_recovery_expense_reserve_amt + tcr.expense_reserve_amt + tcr.overpayment_recovery_expense_reserve_amt) !=0
+					THEN 'Loss (Expense - A&O)'
+
+					WHEN (tcr.deductible_recovery_defense_reserve_amt + tcr.defense_reserve_amt + tcr.overpayment_recovery_defense_reserve_amt) !=0
+					THEN 'Loss (Expense - DCC)'
+
+					WHEN (tcr.salvage_recovery_reserve_amt + tcr.salvage_recovery_defense_reserve_amt) !=0 THEN 'Salvage'
+
+					WHEN tcr.salvage_recovery_expense_reserve_amt !=0 THEN 'Salvage Expenses'
+
+					WHEN (tcr.subrogation_recovery_reserve_amt + tcr.subrogation_recovery_defense_reserve_amt) != 0 THEN 'Subrogation'
+
+					WHEN tcr.subrogation_recovery_expense_reserve_amt !=0 THEN 'Subrogation Expense'
 			END AS reserve_type,
 			(
-				tcr.loss_reserve_amt+tcr.expense_reserve_amt+tcr.adjusting_other_reserve_amt+
-				tcr.subro_reserve_amt+tcr.salvage_reserve_amt+tcr.salvage_expense_reserve_amt+tcr.subro_expense_reserve_amt
+					tcr.deductible_recovery_expense_reserve_amt + tcr.expense_reserve_amt +
+					tcr.overpayment_recovery_expense_reserve_amt + tcr.deductible_recovery_defense_reserve_amt +
+					tcr.defense_reserve_amt + tcr.overpayment_recovery_defense_reserve_amt +
+					tcr.loss_reserve_amt + tcr.deductible_recovery_reserve_amt + tcr.overpayment_recovery_reserve_amt +
+					tcr.salvage_recovery_reserve_amt + tcr.salvage_recovery_defense_reserve_amt + tcr.salvage_recovery_expense_reserve_amt +
+					tcr.subrogation_recovery_expense_reserve_amt + tcr.subrogation_recovery_reserve_amt +tcr.subrogation_recovery_defense_reserve_amt
 			) AS reserve_amount,
 			YEAR(tc.loss_dt) AS accident_year,
-			CASE WHEN tc.policy_no LIKE 'NFP%' THEN np.risk_state ELSE COALESCE(st.state_cd,tp.risk_state_cd) END AS risk_state,
+			CASE WHEN tc.policy_no LIKE 'NFP%' THEN np.risk_state ELSE COALESCE(st.state_cd,tp.risk_state_cd) END AS risk_state,			
 			CAST(tasl.aslob_cd AS INT) AS aslob,
 			tcr.claim_transaction_sk AS transaction_id,
 			@last_day_month AS monthend,
-			CASE WHEN tc.policy_no like 'NFP%' THEN np.insured_nm ELSE tp.insured_nm END AS insured_nm,
-			tscl.sub_cause_of_loss_desc AS sub_cause_of_loss_code,
-			tscl.sub_cause_of_loss_desc AS sub_cause_of_loss_name,
+			CASE WHEN tc.policy_no like 'NFP%' THEN np.insured_nm ELSE tp.insured_nm END AS insured_nm,			
 			tc.claim_status AS claim_status,
 			tcf.claim_feature_status AS loss_status
 			FROM
 				edw_core.tclaim tc
 				LEFT JOIN edw_core.tcause_of_loss tcl ON tcl.cause_of_loss_sk=tc.cause_of_loss_sk
 				LEFT JOIN edw_core.tcatastrophe tcat ON tcat.catastrophe_sk=tc.catastrophe_sk
-				LEFT JOIN edw_core.tsub_cause_of_loss tscl ON tscl.sub_cause_of_loss_sk=tc.sub_cause_of_loss_sk
 				INNER JOIN edw_core.tclaim_feature tcf ON tc.claim_sk=tcf.claim_sk
 				LEFT JOIN edw_core.taslob tasl ON tasl.aslob_sk=tcf.aslob_sk
 				INNER JOIN edw_core.tproduct tprd ON tprd.product_sk=tc.product_sk
@@ -113,19 +129,21 @@ BEGIN
 						edw_stage.nfp_policy
 
 				) AS np ON tc.policy_no = np.policy_no and np.transaction_seq_no=1
+				WHERE
+						tc.policy_no not like '%VRE' and tc.policy_no not like '%VES'
 		)
 
 		INSERT INTO edw_integration.claim_workday_itd_reserve_feed
 		(
 		company,claim_no,policy_no,transaction_date,policyeffectivedate,claimlossdate,claimreporteddate,[address],city,[state],
 		zip,causeofloss,catastrophecode,catastrophename,product,policycoveragetype,reserve_type,reserve_amount,accident_year,
-		risk_state,aslob,transaction_id,monthend,insuredname,sub_cause_of_loss_code,sub_cause_of_loss_name,claim_status,
+		risk_state,aslob,transaction_id,monthend,insuredname,claim_status,
 		loss_status,create_ts,update_ts,etl_audit_sk
 		)
 		SELECT
 			company,claim_no,policy_no,transaction_date,policyeffectivedate,claimlossdate,claimreporteddate,[address],city,[state],
 			zip,causeofloss,catastrophecode,catastrophename,product,policycoveragetype,reserve_type,reserve_amount,accident_year,
-			risk_state,aslob,transaction_id,monthend,insured_nm,sub_cause_of_loss_code,sub_cause_of_loss_name,claim_status,
+			risk_state,aslob,transaction_id,monthend,insured_nm,claim_status,
 			loss_status,GETDATE() AS create_ts,GETDATE() AS update_ts, @etl_audit_sk AS etl_audit_sk
 		FROM
 			claim_reserve_itd_feed_temp
@@ -152,7 +170,7 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
-
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END

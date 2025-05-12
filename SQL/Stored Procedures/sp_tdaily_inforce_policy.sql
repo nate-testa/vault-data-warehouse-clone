@@ -8,6 +8,7 @@
 -- 02/07/24		Architha Gudimalla				2. Added annual net prm  
 -- 03/20/24		Architha Gudimalla				3. Added commission_amt
 -- 07/03/24		Yunus Mohammed					4. Added policy_history_sk
+-- 07/17/24		Architha Gudimalla				5. Updated logic for @last_source_extract_ts
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tdaily_inforce_policy]
@@ -37,8 +38,8 @@ BEGIN
 		union 
 		select	date_sk, actual_dt
 		from	edw_core.tdate
-		where	actual_dt >  case when @in_inforce_dt is not null then @in_inforce_dt else @last_source_extract_ts end
-		  and   actual_dt <= case when @in_inforce_dt is not null then @in_inforce_dt else getdate() end 
+		where	actual_dt >= case when @in_inforce_dt is not null then @in_inforce_dt else @last_source_extract_ts end
+		  and   actual_dt <  case when @in_inforce_dt is not null then @in_inforce_dt else cast(getdate() as date) end  
 		order by 1; 
 		
 		DECLARE @inforce_dt DATETIME
@@ -58,7 +59,7 @@ BEGIN
 				sET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 		
 				delete from edw_core.tdaily_inforce_policy
-				where inforce_dt_sk = @var_date_sk;
+				where inforce_dt_sk = @var_date_sk; 
 				
 				with max_tr as
 				(
@@ -103,7 +104,7 @@ BEGIN
 				begin
 					set @new_last_source_extract_ts= @last_source_extract_ts
 				end 
-				EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
+				EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts; 
 		
 				-- Update audit table
 				SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

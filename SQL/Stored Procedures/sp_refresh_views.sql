@@ -2,6 +2,10 @@
 -- Author:      Hernando Gonzalez
 -- Create Date: 10/07/2024
 -- Description: This procedure refreshes a list of views
+-----------------------------------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+-----------------------------------------------------------------------------------------------------------------------------
+-- 03/25/25		Hernando Gonzalez				1. AD8972 | Included vhome_coverage_ext, vissterritory, vnfppolicy, vquote_home_coverage_ext, vredzone, vticoplacecode
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_refresh_views]
 AS
@@ -21,6 +25,14 @@ BEGIN
     EXECUTE sp_refreshview '[edw_core].[vmvr]';  
     EXECUTE sp_refreshview '[edw_core].[vnhtsa]';  
     EXECUTE sp_refreshview '[edw_core].[vtransunion]'; 
+    EXECUTE sp_refreshview '[edw_core].[vlc360]'; 
+	EXECUTE sp_refreshview '[edw_core].[vhome_coverage_ext]';
+	EXECUTE sp_refreshview '[edw_core].[vissterritory]';
+	EXECUTE sp_refreshview '[edw_core].[vnfppolicy]';
+	EXECUTE sp_refreshview '[edw_core].[vquote_home_coverage_ext]';
+	EXECUTE sp_refreshview '[edw_core].[vredzone]';
+	EXECUTE sp_refreshview '[edw_core].[vticoplacecode]';
+    EXECUTE sp_refreshview '[edw_core].[vissterritory]';
 
     SET NOCOUNT OFF;
 END

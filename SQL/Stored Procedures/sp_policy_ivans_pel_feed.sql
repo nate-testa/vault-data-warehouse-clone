@@ -224,6 +224,7 @@ BEGIN
                     WHERE pv.policy_no = phf.policy_no
                     AND pv.effective_dt = phf.effective_dt
                     AND pv.transaction_seq_no = phf.transaction_seq_no
+                    AND pv.vehicle_deleted_in = 'No'
                     FOR JSON PATH, INCLUDE_NULL_VALUES
                 ) AS PEL_Vehicles,
                 (
@@ -233,13 +234,14 @@ BEGIN
                         pw.watercraft_year as yearbuilt,
                         pw.watercraft_make as manufacturer,
                         pw.watercraft_model as model,
-                        pw.watercraft_length as [length],
-                        pw.watercraft_horsepower as horsepower
+                        REPLACE(REPLACE(pw.watercraft_length,'<','less than'),'>','greater than') as [length],
+                        REPLACE(REPLACE(pw.watercraft_horsepower,'<','less than'),'>','greater than') as horsepower
                     FROM edw_core.tpel_watercraft as pw
                     INNER JOIN edw_core.tpolicy_history as ph ON pw.policy_history_sk = ph.policy_history_sk
                     WHERE pw.policy_no = phf.policy_no
                     AND pw.effective_dt = phf.effective_dt
                     AND pw.transaction_seq_no = phf.transaction_seq_no
+                    AND pw.watercraft_deleted_in = 'No'
                     FOR JSON PATH, INCLUDE_NULL_VALUES
                 ) AS PEL_Watercrafts
             FROM edw_core.tpolicy_history AS phf

@@ -26,6 +26,8 @@
 -- 07/12/24		Architha Gudimalla				18. Added these to timternal_coverage table join along with subscriber contributoin
 --										   			Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S
 -- 										   			Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S
+--11/25/2024	Sandeep Gundreddy				19. Added logic to load item_sk and coverage_sk for Marine Boat & Yacht
+-- 06/04/2025	Alberto Almario					20. Added new column user_sk
 -- ====================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -93,6 +95,8 @@ BEGIN
 			COALESCE(acctrcp.CededPremiumDelta,acctrcp.CededPremium) as ceded_annual_premium_amt,
 			COALESCE(acctrcp.CededPremiumDeltaProRated,acctrcp.CededPremium) as ceded_premium_amt,
 			null covID
+			,tmp1.ReviewedById
+			,tmp1.CreatedById
 		INTO edw_temp.tpolicy_transaction_temp2  
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
@@ -126,11 +130,13 @@ BEGIN
 			0 as ceded_annual_premium_amt,
 			0 as ceded_premium_amt,
 			cov.Name covID
+			,tmp1.ReviewedById
+			,tmp1.CreatedById
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
 		inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = tmp1.Id 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
 		left join edw_stage.coverage cov on cov.id = acctrtf.coverageid
-
+		
 		-- Start Inserting records
 		INSERT INTO edw_core.tpolicy_transaction 
 			(policy_sk
@@ -160,7 +166,7 @@ BEGIN
            ,tax_fee_surcharge_sk
 			,ceded_annual_premium_amt
 			,ceded_premium_amt
-		   ,user_sk -- not sure
+		   ,user_sk
            ,create_ts
            ,update_ts
            ,etl_audit_sk 
@@ -172,12 +178,14 @@ BEGIN
 				 when coll.policy_no is not null then coll.collection_location_sk 
 			     --when pel_loc.policy_no is not null then pel_loc.pel_location_sk  
 			     when au_veh.policy_no is not null then au_veh.auto_vehicle_sk 
+				 when mby.policy_no is not null then mby.marine_boat_yacht_sk
 			     else 0 
 			end item_sk, 
 			case when ho.policy_no is not null then ho.home_coverage_sk 
 				 when coll.policy_no is not null then coll.collection_coverage_sk 
 			     when pel_cov.policy_no is not null then pel_cov.pel_coverage_sk 
-			     when au_pol_cov.policy_no is not null then au_pol_cov.auto_policy_coverage_sk 
+			     when au_pol_cov.policy_no is not null then au_pol_cov.auto_policy_coverage_sk
+				 when mby.policy_no is not null then mby.marine_boat_yacht_coverage_sk 
 			     else 0 
 			end cov_sk, 
 			case when au_veh_cov.policy_no is not null then au_veh_cov.auto_vehicle_coverage_sk 
@@ -196,7 +204,7 @@ BEGIN
 			isnull(tfs.internal_coverage_sk,0) , 
 			ceded_annual_premium_amt,
 		    ceded_premium_amt,
-			0 user_sk, 
+			u.user_sk, 
 			getdate(),getdate(), @etl_audit_sk 
 			,case when pr.product_sk not in (1,2,5) then 0
 			      when ic.internal_coverage_category_nm <> 'Premium' then 0
@@ -219,6 +227,7 @@ BEGIN
 		LEFT JOIN edw_core.tauto_vehicle au_veh on source.PolicyNumber = au_veh.policy_no and cast(source.EffectiveDate as date) = au_veh.effective_dt and source.vehicle_unique_id = au_veh.vehicle_unique_id
 		LEFT JOIN edw_core.tauto_policy_coverage au_pol_cov on source.PolicyNumber = au_pol_cov.policy_no and cast(source.EffectiveDate as date) = au_pol_cov.effective_dt and source.PolicyChangeNumber = au_pol_cov.transaction_seq_no
 		LEFT JOIN edw_core.tauto_vehicle_coverage au_veh_cov on source.PolicyNumber = au_veh_cov.policy_no and cast(source.EffectiveDate as date) = au_veh_cov.effective_dt and source.PolicyChangeNumber = au_veh_cov.transaction_seq_no and source.vehicle_unique_id = au_veh_cov.vehicle_unique_id
+		LEFT JOIN edw_core.tmarine_boat_yacht_coverage mby on source.PolicyNumber = mby.policy_no and cast(source.EffectiveDate as date) = mby.effective_dt and source.PolicyChangeNumber = mby.transaction_seq_no
 		LEFT JOIN edw_core.tproduct pr on pr.product_cd = pol.product_cd
 		LEFT JOIN edw_core.tbroker br on pol.broker_id = br.broker_id
 		LEFT JOIN edw_core.tcustomer cust on pol.customer_id = cust.customer_id
@@ -239,6 +248,7 @@ BEGIN
 																	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Fine Arts' then 'Fine Art' 
 																	else replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')
 																end = cc.class_type  
+		left join edw_core.tuser u on u.user_id = CASE WHEN source.ReviewedById IS NOT NULL and source.ReviewedById <> '00000000-0000-0000-0000-000000000000' THEN source.ReviewedById ELSE source.CreatedById END
 
 		SET @rows_affected=@@ROWCOUNT;  
 		

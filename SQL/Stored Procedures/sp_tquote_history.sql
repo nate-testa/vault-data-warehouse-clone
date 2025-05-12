@@ -1,13 +1,18 @@
 ﻿-- ==============================================================================================================================
 -- Description: This procedures inserts into tquote_history
 ---------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description 
+-- Change date |Author										|	Change Description 
 ---------------------------------------------------------------------------------------------------------------------------------
--- 10/23/23		Architha Gudimalla				1. Created this procedure 
--- 12/11/23		Architha Gudimalla				2. Commented out stage in forst temp table
--- 02/08/24		Alberto Almario					3. Added new column producer_sk
--- 04/29/24		Hernando Gonzalez				4. Added new column insurance_score_last_run_dt
--- 05/15/24		Architha Gudimalla				5. Removed effecivedate from partiion in rnk used for latest_transaction_ind
+-- 10/23/23		Architha Gudimalla					1. Created this procedure 
+-- 12/11/23		Architha Gudimalla					2. Commented out stage in forst temp table
+-- 02/08/24		Alberto Almario							3. Added new column producer_sk
+-- 04/29/24		Hernando Gonzalez					4. Added new column insurance_score_last_run_dt
+-- 05/15/24		Architha Gudimalla					5. Removed effecivedate from partiion in rnk used for latest_transaction_ind
+-- 07/31/24		Architha Gudimalla					6. Added number desc to the rank in main query
+-- 03/13/25		Yunus Mohammed					7. Ad-8848 Added premium_rater_version
+-- 03/14/25		Yunus Mohammed					8. Used product internalName instead of Name
+-- 04/03/25		Yunus Mohammed					9. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
+-- 04/22/25		Yunus Mohammed					10. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
 -- ============================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history]
@@ -44,7 +49,7 @@ BEGIN
 			CAST(ins.ReferenceCode AS VARCHAR(255)) as customer_id,
 			ins.id as MasterInsuredId,
 			acct.Number,
-			DENSE_RANK()OVER(PARTITION BY acct.PolicyNumber                                  ORDER BY acct.UpdatedDate DESC) AS rnk, 
+			DENSE_RANK()OVER(PARTITION BY acct.PolicyNumber                                  ORDER BY acct.UpdatedDate DESC, acct.Number DESC) AS rnk, 
 			case when acct.TransactionEffectiveDate is null then acct.EffectiveDate else acct.TransactionEffectiveDate end TransactionEffectiveDate,
 			acct.CancellationReason, 
 			acct.CreatedDate,
@@ -71,21 +76,25 @@ BEGIN
 				nullif(trim(pr.ProductCode),'') product_cd,
 				usr.name uw_nm, nullif(trim(acct.note),'') note,
                 acct.state, acc.isrenewal, acct.BindDate, acct.ReferredByUserId,
-				pd.producer_sk 
+				pd.producer_sk,
+				acctvprr.[Version] as premium_rater_version
 		INTO edw_temp.tquote_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
 		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id 
 		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id 
+		
 		left join edw_stage.[user] usr on usr.id = acctv.UnderwriterUserId 
 		left join edw_stage.Brokerage brk on acctv.BrokerageId = brk.id
 		left join edw_stage.[Broker] br on acctv.BrokerId = br.id
 		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acctv.ProductId = pr.id
+		LEFT JOIN (SELECT * FROM edw_stage.AccountTransactionVersionPremiumRaterReference WHERE ReferenceType = 'Premium') acctvprr 
+		on acctvprr.AccountTransactionVersionPremiumId = acctvp.Id 	and pr.[InternalName] = acctvprr.ProductInternalName
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acctv.BrokerId
 		WHERE acct.Stage in ('QUOTE','POLICY') --- Review BOUND transactions
 		and	acct.PolicyNumber is not null 
-		and pr.ProductLine = 'PersonalLines'  
+		and pr.ProductLine = 'PersonalLines' 		
 		AND acct.CreatedDate>@last_source_extract_ts
 
 
@@ -108,7 +117,7 @@ BEGIN
 
 		-- Pivot Table
 		DROP TABLE IF EXISTS edw_temp.tquote_history_temp2;
-		SELECT	AccountTransactionId,  CompanionCreditHomeowner, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
+		SELECT	AccountTransactionId,  CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
 				nullif(trim(PriorResidenceAddressLine1),'') PriorResidenceAddressLine1, 
 				nullif(trim(PriorResidenceAddressLine2),'') PriorResidenceAddressLine2, 
 				nullif(trim(PriorResidenceAddressLineUnit),'') PriorResidenceAddressLineUnit,  
@@ -145,7 +154,7 @@ BEGIN
 			) t
 		PIVOT 
 			(
-				MAX(Value) FOR Field IN (CompanionCreditHomeowner, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
+				MAX(Value) FOR Field IN (CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
 										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
 										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
@@ -204,6 +213,7 @@ BEGIN
 		   ,insurance_score_desc4
 		   ,producer_sk
 		   ,insurance_score_last_run_dt
+		   ,premium_rater_version
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, 
 				Source.TransactionEffectiveDate, Source.Number, 
@@ -220,7 +230,7 @@ BEGIN
 				comm,
 				ap,  
 				source1.CompanionCreditCollections, source1.CompanionCreditPersonalExcessLiability, 
-				source1.CompanionCreditAuto, source1.CompanionCreditHomeowner,
+				source1.CompanionCreditAuto, source1.CompanionCreditPrimaryHome,
 				ResidenceHasPrior, PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 				PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, 
 				source.ssk, 
@@ -245,6 +255,7 @@ BEGIN
 				,source1.InsuranceScoreCode4Description
 				,source.producer_sk
 				,source1.InsuranceScoreLastRunDate
+				,source. premium_rater_version
 		FROM edw_temp.tquote_history_temp1 source
 		LEFT JOIN edw_temp.tquote_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tquote_history_temp2 source1 on source.id = source1.AccountTransactionId 
@@ -293,8 +304,7 @@ BEGIN
         DROP TABLE IF EXISTS edw_temp.tquote_history_temp2
 		
 		-- Update control table
-		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
+		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;		
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

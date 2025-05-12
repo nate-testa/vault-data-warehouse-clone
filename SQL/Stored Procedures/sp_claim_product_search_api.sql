@@ -4,6 +4,7 @@
 -- Change date			|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 01/31/24				Yunus Mohammed				1. Created this procedure 
+-- 03/27/25             Sandeep Gundreddy			2. Added filter to include Personal lines only
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_product_search_api]
 AS
@@ -38,7 +39,7 @@ BEGIN
 		INTO [edw_temp].[claim_product_search_api]
 		FROM edw_core.tproduct
 		WHERE
-			update_ts > @last_source_extract_ts
+			update_ts > @last_source_extract_ts and product_category_nm='Personallines'
 
 		-- Start Insert process
 		INSERT INTO edw_integration.claim_product_search_api

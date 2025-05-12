@@ -1,6 +1,7 @@
 import pendulum
 from datetime import datetime, timedelta
 from airflow import DAG
+from airflow.models import Variable
 from airflow.models import BaseOperator
 from airflow.utils.dates import days_ago
 from airflow.utils.task_group import TaskGroup
@@ -12,9 +13,11 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.providers.microsoft.azure.operators.data_factory import AzureDataFactoryRunPipelineOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
 
-to_email = "sandeep.gundreddy@vault.insurance, architha.gudimalla@vault.insurance, yunus.mohammed@vault.insurance, tuba.mohsin@vault.insurance, rushin.shah@vault.insurance, hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
+to_email = "itdatateam@vault.insurance"
 # to_email = "hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
 cc_email = ""
+
+ENVIRONMENT = Variable.get("environment")
 
 
 
@@ -75,7 +78,10 @@ with DAG(
     with TaskGroup("nfp_monthly_load_group") as nfp_monthly_load_group:
 
         nfp_monthly_load_group_items = [
-            'sp_nfp_claim_policy_search_api'
+            'sp_nfp_claim_policy_search_api',
+            'sp_nfp_claim_policy_search_snapsheet_api',
+            'sp_nfp_claim_policy_webhook_snapsheet_api',
+            'sp_claim_policy_webhook_snapsheet_api_update_contactinfo'
          ]
         
         sp_nfp_claim_policy_search_api = MsSqlOperator(
@@ -86,6 +92,32 @@ with DAG(
             autocommit=True,
         )
 
+        sp_nfp_claim_policy_search_snapsheet_api = MsSqlOperator(
+            task_id='sp_nfp_claim_policy_search_snapsheet_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_nfp_claim_policy_search_snapsheet_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_nfp_claim_policy_webhook_snapsheet_api = MsSqlOperator(
+            task_id='sp_nfp_claim_policy_webhook_snapsheet_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_nfp_claim_policy_webhook_snapsheet_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        if ENVIRONMENT != 'PRODUCTION':
+
+            sp_claim_policy_webhook_snapsheet_api_update_contactinfo = MsSqlOperator(
+                task_id='sp_claim_policy_webhook_snapsheet_api_update_contactinfo',
+                mssql_conn_id='Vault_EDW',
+                sql="EXEC edw_core.sp_claim_policy_webhook_snapsheet_api_update_contactinfo",
+                database="vault_edw",
+                autocommit=True,
+            )       
+
         send_nfp_email = EmailOperator(
             task_id='send_nfp_email',
             to=to_email,
@@ -93,8 +125,10 @@ with DAG(
             html_content=get_sp_success_data_HTML(nfp_monthly_load_group_items, 'The stored procedures executed successfully for nfp claim policy search api table'),
         )
 
-        sp_nfp_claim_policy_search_api >> send_nfp_email
-
+        if ENVIRONMENT != 'PRODUCTION':
+            sp_nfp_claim_policy_search_api >> sp_nfp_claim_policy_search_snapsheet_api >> sp_nfp_claim_policy_webhook_snapsheet_api >> sp_claim_policy_webhook_snapsheet_api_update_contactinfo >> send_nfp_email
+        else:
+            sp_nfp_claim_policy_search_api >> sp_nfp_claim_policy_search_snapsheet_api >> sp_nfp_claim_policy_webhook_snapsheet_api >> send_nfp_email
 
 
     end = DummyOperator(

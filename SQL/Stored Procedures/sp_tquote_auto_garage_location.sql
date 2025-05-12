@@ -7,7 +7,12 @@ GO
 -- Author:		Alberto Almario
 -- Create Date: 2023-10-23
 -- Description: This stored procedure insert and update info related to tquote_auto_garage_location.
--- =============================================
+-----------------------------------------------------------------------------------------------------------------------
+-- Change date          |Author						|	Change Description
+-----------------------------------------------------------------------------------------------------------------------
+-- 10/23/23		        Alberto Almario				1. Created this procedure 
+-- 08/07/24             Yunus Mohammed              2. Added garage_unique_id
+-- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_garage_location]
 AS
 BEGIN
@@ -34,7 +39,7 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[tquote_auto_garage_location_temp1];
 
 		SELECT 
-			CreatedDate, quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_history_sk, garage_location_no,
+			CreatedDate, quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_history_sk, garage_location_no,garage_unique_id,
             [AddressLine1],[AddressLine2],/*['**Pending garage_address_unit_no'],*/[AddressCity],[AddressZipCode],[AddressState],[AddressCounty],[AddressCountry],
             [CensusTract],[FloodZone],[WildfireThreat],[ProtectionClass],[DistanceToCoast],[CentralReportingFireAlarm],[CentralReportingBurglarAlarm],
 			source_system_sk
@@ -47,6 +52,7 @@ BEGIN
                     acct.CreatedDate, acct.PolicyNumber as quote_no, acct.EffectiveDate as effective_dt, 
                     acct.ExpirationDate as expiration_dt, acct.Number as transaction_seq_no, qh.quote_history_sk,
                     acctvo.[Index] as garage_location_no,
+                    acctvo.UniqueId as garage_unique_id,
                     acctvof.[Field], acctvof.[Value],
                     CASE 
                         WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
@@ -91,6 +97,7 @@ BEGIN
             transaction_seq_no,
             quote_history_sk,
             garage_location_no,
+            garage_unique_id,
             garage_address_line1,
             garage_address_line2,
             garage_address_unit_no,
@@ -118,6 +125,7 @@ BEGIN
             t1.transaction_seq_no,
             t1.quote_history_sk,
             t1.garage_location_no,
+            t1.garage_unique_id,
             t1.[AddressLine1] as garage_address_line1,
             t1.[AddressLine2] as garage_address_line2,
             NULL as garage_address_unit_no,

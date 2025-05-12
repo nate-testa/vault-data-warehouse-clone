@@ -9,8 +9,8 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 from vault_edw_HTML_format import get_sp_error_data_HTML, get_HTML_on_vault_format
 
-# to_email = "itdatateam@vault.insurance"
-to_email = "alberto.valbuena@vault.insurance"
+to_email = "itdatateam@vault.insurance"
+# to_email = "alberto.valbuena@vault.insurance"
 cc_email = ""
 
 HOME_PATH = os.path.expanduser('~')
@@ -40,7 +40,7 @@ def delete_old_folders(folder_path, retention_days=30):
 def remove_old_folders_for_schedule_log():
     
     print("**** Start clean up folders process")
-    folders_removed = delete_old_folders(SCHEDULE_LOG_FOLDER, 30)
+    folders_removed = delete_old_folders(SCHEDULE_LOG_FOLDER, 3)
     print(f"folders removed in {SCHEDULE_LOG_FOLDER} : {folders_removed}")
     print("**** End clean up folders process")
 

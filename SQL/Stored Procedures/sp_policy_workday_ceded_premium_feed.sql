@@ -8,9 +8,16 @@
 -- 09/13/23		Yunus Mohammed				1. Created the procedure
 -- 11/15/23		Yunus Mohammed				2. Updated logic for cancelled and expired policies  
 -- 03/20/24		Yunus Mohammed				3. Included condo policies
+-- 09/18/24		Yunus Mohammed				4. Added gross premium and added Throw in catch block
+-- 10/24/24		Yunus Mohammed				5. Added gross premium in insert
+-- 03/11/25		Yunus Mohammed				6. Corrected proc running for past months
+--																				Corrected accounting begin date logic and delete stmt where clause.
+--																				contribcutoffdate updated
+--																				Added run_date as param for pre-run
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_ceded_premium_feed]
+@run_date DATETIME = null
 AS
 BEGIN
 	DECLARE @ProcedureName NVARCHAR(120)
@@ -35,11 +42,16 @@ BEGIN
 		DECLARE @accounting_date_end_sk int,@last_end_day_month date
 		DECLARE @accounting_date_begin_sk int,@last_begin_day_month date
 
+		IF @run_date IS NOT NULL
+		BEGIN
+			SET @current_date = @run_date
+		END
+
 		DECLARE cur_main CURSOR FOR
 		SELECT yearmonth
 		FROM edw_core.tdate
 		WHERE
-			actual_dt >= CAST(@last_source_extract_ts AS DATE)
+			actual_dt > CAST(@last_source_extract_ts AS DATE)
 			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
 		GROUP BY yearmonth
 		ORDER BY yearmonth
@@ -53,18 +65,22 @@ BEGIN
 	
 			SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-			SELECT @accounting_date_end_sk=date_sk, @last_end_day_month=actual_dt FROM edw_core.tdate WHERE yearmonth=@year_month AND month_end_in='Y'
+			SELECT @accounting_date_end_sk=date_sk, @last_end_day_month=actual_dt FROM edw_core.tdate 
+			WHERE yearmonth=@year_month AND month_end_in='Y'
+
 			SELECT @accounting_date_begin_sk=date_sk,@last_begin_day_month=actual_dt FROM edw_core.tdate 
-			WHERE actual_dt = dateadd(year,-1,@last_end_day_month) and month_end_in='Y'
+			WHERE actual_dt =EOMONTH( dateadd(year,-1,@last_end_day_month)) and month_end_in='Y'
 			
-			DELETE FROM edw_integration.policy_workday_ceded_premium_feed WHERE accounting_date BETWEEN @last_begin_day_month AND @last_end_day_month;
+			DELETE FROM edw_integration.policy_workday_ceded_premium_feed WHERE accounting_date = @last_end_day_month;
 			
 			WITH policy_workday_ceded_premium_feed_temp AS
 			(
 				SELECT
 					accounting_date,policy_image_id,NULL AS policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
 					effective_date,expiration_date,transaction_type,producer_code,agency_name,NULL AS number_of_installments,insured_name,
-					[address],county,city,risk_state,zip,fire_protection,financial_category_id,coveragename,SUM(premium_amt) AS amount,NULL AS deleteddate,NULL AS contribcutoffdate,
+					[address],county,city,risk_state,zip,fire_protection,financial_category_id,coveragename,SUM(premium_amt) AS amount,
+					SUM(gross_premium_amt) as gross_premium_amt,
+					NULL AS deleteddate,NULL AS contribcutoffdate,
 					GETDATE() AS extraction_time,GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk as etl_audit_sk
 				FROM
 				(
@@ -92,11 +108,12 @@ BEGIN
 					tp.mailing_address_county_nm AS [county],
 					tp.mailing_address_city_nm AS [city],
 					tp.risk_state_cd AS [RISK_STATE],
-					tp.mailing_address_zip_cd AS [zip],
+					tp.mailing_address_zip_cd  AS [zip],
 					NULL AS fire_protection,
 					tic.internal_coverage_sk AS financial_category_id,
 					tic.internal_coverage_desc AS [coveragename],
-					tpt.ceded_premium_amt AS premium_amt
+					tpt.ceded_premium_amt AS premium_amt,
+					tpt.premium_amt as gross_premium_amt
 				FROM
 					edw_core.tpolicy_transaction tpt
 					INNER JOIN edw_core.tpolicy tp on tp.policy_sk=tpt.policy_sk
@@ -123,15 +140,25 @@ BEGIN
 			accounting_date,policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
 			effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 			[address],county,city,risk_state,zip,fire_protection,financial_category_id,coverageName,
-			amount,deleteddate,contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
+			amount,gross_premium_amt,deleteddate,contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
 				accounting_date,policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,financial_category_id,coveragename,
-				amount,null as deleteddate,null contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
+				amount,gross_premium_amt,null as deleteddate,d.subscriber_contribution_end_dt as contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
 			FROM
-				policy_workday_ceded_premium_feed_temp
+				policy_workday_ceded_premium_feed_temp cp
+				left join
+				(
+				select
+				policy_no,effective_dt,transaction_seq_no,max(subscriber_contribution_end_dt) as subscriber_contribution_end_dt
+				from
+				edw_core.tpolicy_insured where subscriber_contribution_end_dt is not null
+				group by policy_no,effective_dt,transaction_seq_no
+				) as d on cp.policy_number = d.policy_no and cp.effective_date = d.effective_dt
+				and cp.transaction_sequence = d.transaction_seq_no
+
 
 			SET @rows_affected=@@ROWCOUNT;
 
@@ -158,6 +185,7 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END

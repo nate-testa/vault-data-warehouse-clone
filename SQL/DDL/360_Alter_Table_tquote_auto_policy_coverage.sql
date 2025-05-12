@@ -1,0 +1,3 @@
+ALTER TABLE 
+edw_core.tquote_auto_policy_coverage 
+ADD enhanced_underinsured_motorist_coverage_in varchar(255);

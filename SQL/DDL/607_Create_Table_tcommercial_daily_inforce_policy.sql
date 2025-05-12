@@ -1,0 +1,25 @@
+CREATE TABLE edw_commercial.tcommercial_daily_inforce_policy
+(
+inforce_dt_sk       int NOT NULL,
+commercial_policy_sk           int NOT NULL,
+commercial_policy_history_sk int NOT NULL,
+customer_sk         int NOT NULL,
+broker_sk           int NOT NULL,
+product_sk          int NOT NULL,
+premium_amt 		decimal(15,2),
+net_premium_amt     decimal(15,2),
+annual_premium_amt	decimal(15,2),
+annual_net_premium_amt decimal(15,2),
+commission_amt      decimal(15,2),
+source_system_sk    int NOT NULL,
+update_ts           datetime2(7) NOT NULL,
+etl_audit_sk        int NOT NULL,
+CONSTRAINT pk_tcommercial_daily_inforce_policy PRIMARY KEY (inforce_dt_sk,commercial_policy_sk),
+CONSTRAINT fk_tcdip_tcommercial_policy_commercial_policy_sk FOREIGN KEY (commercial_policy_sk) REFERENCES  edw_commercial.tcommercial_policy(commercial_policy_sk),
+CONSTRAINT fk_tcdip_tbroker_broker_sk FOREIGN KEY (broker_sk) REFERENCES  edw_core.tbroker(broker_sk),
+CONSTRAINT fk_tcdip_tcustomer_customer_sk FOREIGN KEY (customer_sk) REFERENCES  edw_core.tcustomer(customer_sk),
+CONSTRAINT fk_tcdip_tproduct_product_sk FOREIGN KEY (product_sk) REFERENCES  edw_core.tproduct(product_sk),
+CONSTRAINT fk_tcdip_tsource_system_source_system_sk FOREIGN KEY (source_system_sk) REFERENCES  edw_core.tsource_system(source_system_sk),
+CONSTRAINT fk_tcdip_commercial_policy_history_sk FOREIGN KEY (commercial_policy_history_sk) REFERENCES  edw_commercial.tcommercial_policy_history(commercial_policy_history_sk),
+);
+

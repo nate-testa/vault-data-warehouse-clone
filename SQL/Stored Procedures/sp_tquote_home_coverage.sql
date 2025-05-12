@@ -2,16 +2,27 @@
 -- Author:		Yunus Mohammed 
 -- Description: This procedures loads home quote coverage data
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date			|Author						|	Change Description
+-- Change date			|Author									|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
 -- 10/23/23 			Yunus Mohammed				1. Created this procedure 
 -- 11/11/23				Sandeep Gundreddy		    2. modified  logic
 -- 11/13/23				Sandeep Gundreddy		    3. modified quote_home_location_sk logic
--- 11/30/23				Yunus Mohammed		        3. added new columns
--- 12/06/23				Alberto Almario				4. Added new field WindstormOrHailDeductibleManual
--- 22/02/24		        Hernando Gonzalez			5. Added new fields aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt
--- 12/06/24			    Alberto Almario				6. Added new filed nc_bureau_rate
--- 07/12/24				Yunus Mohammed				7. Added new fields stated_limits_policy_in and risk_sharing_policy_in
+-- 11/30/23				Yunus Mohammed		        4. added new columns
+-- 12/06/23				Alberto Almario					5. Added new field WindstormOrHailDeductibleManual
+-- 22/02/24		        Hernando Gonzalez			6. Added new fields aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt
+-- 12/06/24			    Alberto Almario					7. Added new filed nc_bureau_rate
+-- 07/12/24				Yunus Mohammed				8. Added new fields stated_limits_policy_in and risk_sharing_policy_in
+-- 08/13/24				Yunus Mohammed				9. Updated wind_derived_deductible logic
+-- 08/20/24				Yunus Mohammed				10. Updated wind_derived_deductible logic
+-- 09/03/24				Yunus Mohammed				11. Added new column no_of_family_units_in_structures
+-- 10/02/24				Yunus Mohammed				12. Added new column fortified_roof_credit
+-- 10/31/24		        Hernando Gonzalez			13. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
+-- 12/02/24				Yunus Mohammed				14. AD-7834 Added new fields.
+-- 01/17/25				Yunus Mohammed				15.  AD-8225 Roundoff ReinsuranceTotalTIV value
+-- 01/22/25				Alberto Almario					16. Added new column fenced_pool_in
+-- 03/19/25				Hernando Gonzalez			17. Added new columns wildfire_risk_score, wildfire_risk_class
+-- 04/02/25				Yunus Mohammed				18. AD-8973 roof_deck_attachment value logic updated
+-- 04/16/25		Yunus Mohammed						19. AD-9121 Corrected null values for premium mods
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage]
 
@@ -60,38 +71,50 @@ BEGIN
 		SET @ColumnsToPivot = LEFT(@ColumnsToPivot, LEN(@ColumnsToPivot) - 1);
 
 		declare @sql nvarchar(max)
+
 		drop table if exists edw_temp.tquote_home_coverage_temp1
+		drop table if exists edw_temp.tquote_home_coverage_temp2
+		drop table if exists edw_temp.tquote_home_coverage_temp3
+
+		select act.*
+		into edw_temp.tquote_home_coverage_temp1
+		from
+			edw_stage.AccountTransaction act
+			inner join edw_stage.Product p on p.Id=act.ProductId
+		where
+			act.PolicyNumber is not null and
+				act.[Stage] IN ('QUOTE','POLICY')				
+				and p.ProductLine = 'PersonalLines'
+				and act.CreatedDate > @last_source_extract_ts
+
 		SET @sql ='select quote_no,EffectiveDate,ExpirationDate,transaction_seq_no,source_system_sk,
 		quote_history_sk,quote_home_location_sk,product_name,CreatedDate,
 		FactorMethod, Factor, Retention, Reason,
-		'+ @ColumnsToPivot +' into edw_temp.tquote_home_coverage_temp1
+		'+ @ColumnsToPivot +' into edw_temp.tquote_home_coverage_temp2
 			from
 			(
 			select
 			act.PolicyNumber as quote_no,act.EffectiveDate ,act.ExpirationDate ,act.TransactionEffectiveDate ,
 			tqh.quote_history_sk,thql.quote_home_location_sk,
-			act.[Number] as transaction_seq_no,act.CreatedDate, pr.name product_name,
-			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value],
+			act.[Number] as transaction_seq_no,act.CreatedDate, p.name product_name,
+			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,
+			atvof.[Value] as [Value],
 			atvpf.FactorMethod, atvpf.Factor, atvpf.Retention, atvpf.Reason
 			from
-				edw_stage.AccountTransaction act
+				edw_temp.tquote_home_coverage_temp1 act
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
 				inner join edw_stage.AccountTransactionVersionPremium atvp on atv.Id=atvp.AccountTransactionVersionId
-				left join edw_stage.AccountTransactionVersionPremiumfactor atvpf on atvp.Id=atvpf.AccountTransactionVersionPremiumId and atvpf.coverage = ''Homeowners''
+				left join edw_stage.AccountTransactionVersionPremiumfactor atvpf on atvp.Id=atvpf.AccountTransactionVersionPremiumId and 
+				(atvpf.coverage in (''Homeowners'',''Condo'') or atvpf.coverage is null)
 				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
 				left join edw_core.tquote_history tqh on tqh.quote_no=act.PolicyNumber
 						and tqh.effective_dt=act.EffectiveDate
 						and tqh.transaction_seq_no = act.[Number]
-				left join edw_core.tquote_home_location thql on thql.quote_no=act.PolicyNumber						
-				left join edw_stage.Product pr on act.ProductId = pr.id
+				left join edw_core.tquote_home_location thql on thql.quote_no=act.PolicyNumber
 			where
-				act.PolicyNumber is not null and
-				act.[Stage] IN (''QUOTE'',''POLICY'')
-				and atvo.ObjectType in (''Homeowner'',''Condo'',''Inspection'')
-				and pr.ProductLine = ''PersonalLines''
-				and act.CreatedDate > @last_source_extract_ts
+			atvo.ObjectType in (''Homeowner'',''Condo'',''Inspection'')				
 			) as t
 			pivot 
 			(
@@ -100,12 +123,37 @@ BEGIN
 			'
 			EXECUTE sp_executesql @sql, N'@last_source_extract_ts datetime2(7)', @last_source_extract_ts = @last_source_extract_ts
 			
-			drop table if exists edw_temp.tquote_home_coverage_temp2
-			
-			CREATE TABLE edw_temp.tquote_home_coverage_temp2
+			select * into edw_temp.tquote_home_coverage_temp3
+			from
 			(
-				quote_home_coverage_sk INT
-			)
+			select ROW_NUMBER()over(partition by act.PolicyNumber ,act.EffectiveDate ,act.[Number]  order by pofv.[version] desc ) as rn,
+			act.PolicyNumber as quote_no ,act.EffectiveDate ,act.[Number] as transaction_seq_no,
+			pofv.ValueDisplay as [Value]
+			from
+				edw_temp.tquote_home_coverage_temp1 act
+				inner join edw_stage.Account acc on acc.PolicyNumber = act.PolicyNumber and acc.EffectiveDate = act.EffectiveDate
+				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId    
+				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
+				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId 
+			LEFT Join  
+				(
+						SELECT *
+						FROM edw_stage.ProductObjectFieldValueDisplay
+						WHERE
+						Field = 'RoofDeckAttachment'
+					
+				) AS pofv ON atvof.Field=pofv.Field and act.ProductId = pofv.ProductId and atvo.ObjectType = pofv.ObjectType
+						and  atv.RiskStateCode=pofv.statecode and atvof.[Value] = pofv.[Value]
+					and act.EffectiveDate between pofv.EffectiveDate and isnull(pofv.ExpirationDate,'2099-01-01')
+					and pofv.IsRenewal = acc.IsRenewal		
+			where   
+				atvo.ObjectType in ('Homeowner','Condo','Inspection')
+				and atvof.Field= 'RoofDeckAttachment'
+				and isnull(atvof.[Value],'')  != ''
+			) as a
+			where
+				rn = 1
+
 			INSERT INTO [edw_core].[tquote_home_coverage]
 			(
 				quote_no,effective_dt,expiration_dt,transaction_seq_no,
@@ -139,12 +187,17 @@ BEGIN
 				reinsurance_designation, reinsurance_layered_program_in, reinsurance_attachment_limit_amt, reinsurance_total_tiv_amt,
 				wildfire_threat, wildfire_hazard_severity,
 				aop_deductible_manual,water_deductible_manual,wildfire_deductible_manual,wind_or_hailstorm_deductible_manual,
-				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt, 
+				aon_hurricane_cat_score_amt, aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, 
+				aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt, 
 				waive_inspection_in, waive_inspection_reason, inspection_note, rms_reviewed_in,
-				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,
+				nc_bureau_rate,stated_limits_policy_in,risk_sharing_policy_in,no_of_family_units_in_structures,fortified_roof_credit,
+				facultative_reinsurance_in, layered_limits_in, [dwelling_limit_100_pc_value_amt], [other_structures_limit_100_pc_value_amt], 
+				[contents_limit_100_pc_value_amt], [loss_of_use_100_pc_value_amt], facultative_attachment_point, facultative_limit_amt, 
+				facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, 
+				newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
+				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
-			)
-			OUTPUT inserted.quote_home_coverage_sk INTO edw_temp.tquote_home_coverage_temp2
+			)			
 			SELECT
 				tthc.quote_no AS quote_no,tthc.EffectiveDate AS effective_dt,tthc.ExpirationDate AS expiration_dt,
 				tthc.transaction_seq_no AS transaction_seq_no,tthc.quote_home_location_sk,quote_history_sk,
@@ -166,13 +219,32 @@ BEGIN
 				tthc.ExcludeInflationFactor AS exclude_inflation_factor_in,tthc.AopDeductible AS aop_deductible,
 				tthc.HurricaneDeductible AS hurricane_deductible,
 				tthc.WaterDeductible AS water_deductible,
-				tthc.WildfireDeductible AS wildfire_deductible,
+				tthc.WildfireDeductible AS wildfire_deductible,				
 				CASE
-					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' THEN HurricaneDeductible
-					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' THEN HurricaneOrNamedStormDeductible
-					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' THEN NamedStormDeductible
-					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' THEN TornadoorHailstormDeductible
-					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') != '' THEN WindStormOrHailDeductible
+					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' AND tthc.HurricaneDeductible like '%Exclude Wind%' THEN 'Exclude'
+					WHEN ISNULL(tthc.HurricaneDeductible,'') != '' AND (tthc.WindStormOrHailDeductible like '%aop applies%' or tthc.WindStormOrHailDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' AND tthc.HurricaneOrNamedStormDeductible like '%Exclude Wind%' THEN 'Exclude'
+					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') != '' AND (tthc.HurricaneOrNamedStormDeductible like '%aop applies%' or tthc.HurricaneOrNamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' AND tthc.NamedStormDeductible like '%Exclude Wind%' THEN 'Exclude'
+					WHEN ISNULL(tthc.NamedStormDeductible,'') != '' AND (tthc.NamedStormDeductible like '%aop applies%' or tthc.NamedStormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND tthc.TornadoorHailstormDeductible like '%Exclude Wind%' THEN 'Exclude'
+					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') != '' AND (tthc.TornadoorHailstormDeductible like '%aop applies%' or tthc.TornadoorHailstormDeductible like '%aopApplies%') THEN 'AOP Applies'
+					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') != '' AND tthc.WindStormOrHailDeductible like '%Exclude Wind%' THEN 'Exclude'
+					WHEN ISNULL(tthc.WindStormOrHailDeductible,'') != '' AND
+					(
+						tthc.WindStormOrHailDeductible like '%aop applies%' OR 
+						tthc.WindStormOrHailDeductible like '%aopApplies%' OR
+						tthc.WindStormOrHailDeductible like '%AOP Deductible%'
+
+					) THEN 'AOP Applies'				
+					WHEN ISNULL(tthc.HurricaneDeductible,'')  NOT IN ('','0') THEN HurricaneDeductible
+					WHEN ISNULL(tthc.HurricaneOrNamedStormDeductible,'') NOT IN ('','0') THEN HurricaneOrNamedStormDeductible
+					WHEN ISNULL(tthc.NamedStormDeductible,'') NOT IN ('','0') THEN NamedStormDeductible
+					WHEN ISNULL(tthc.TornadoorHailstormDeductible,'') NOT IN ('','0') THEN TornadoorHailstormDeductible
+					WHEN ISNULL(tthc.WindStormOrHailDeductible ,'') NOT IN ('','0','Other') THEN WindStormOrHailDeductible
+					
+					WHEN ISNULL(tthc.WindstormOrHailDeductibleManual ,'') NOT IN ('','0') THEN WindstormOrHailDeductibleManual
+
 				END AS wind_derived_deductible,
 				tthc.NumberOfMortgagees AS no_of_mortgagees,
 				tthc.PriorClaims AS prior_claim_last5yr_in,tthc.PriorNonWaterClaims AS prior_nonwater_claim_ct,
@@ -224,7 +296,7 @@ BEGIN
 				tthc.OpeningProtection AS opening_protection,
 				tthc.RoofCoverDeck AS roof_cover_deck,
 				tthc.RoofCovering AS roof_covering,
-				tthc.RoofDeckAttachment AS roof_deck_attachment,
+				t.[Value] AS roof_deck_attachment,
 				tthc.RoofGeometry AS roof_geometry,
 				tthc.RoofSystem AS roof_system_in,
 				tthc.RoofWallAttachment AS roof_wall_attachment,
@@ -247,29 +319,42 @@ BEGIN
 				tthc.TornadoorHailstormDeductible AS tornado_or_hailstorm_deductible,
 				tthc.WindStormOrHailDeductible AS wind_or_hailstorm_deductible, 
 				tthc.FactorMethod, tthc.Factor, tthc.Retention, tthc.Reason,
-				tthc.ReinsuranceDesignation, tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit, tthc.ReinsuranceTotalTIV, 
+				tthc.ReinsuranceDesignation, tthc.ReinsuranceLayedProgram, tthc.ReinsuranceAttachmentLimit,ROUND( tthc.ReinsuranceTotalTIV,0) as ReinsuranceTotalTIV, 
 				tthc.WildfireThreat, tthc.WildfireHazardSeverity,
 				tthc.AOPDeductiblemanual, tthc.Waterdeductiblemanual,tthc.wildfiredeductiblemanual,tthc.WindstormOrHailDeductibleManual,
 				tthc.CATModeling_CATScore, tthc.CATModeling_ReinsuranceMargin, tthc.CATModeling_CededLoss, tthc.CATModeling_ReinsurancePremium, tthc.CATModeling_CapitalCost, tthc.CATModeling_CATScoreToPremiumRatio_Hurricane, tthc.CATModeling_AALToPremium, tthc.AAL, 
 				tthc.WaiveInspection as waive_inspection_in, tthc.WaiveReason as waive_inspection_reason, tthc.InspectionNotes as inspection_note, tthc.RMSReviewed as rms_reviewed_in,
-				tthc.NCRBManualRate AS nc_bureau_rate, StatedLimitsPolicy as stated_limits_policy_in , RiskSharingPolicy as risk_sharing_policy_in,
-				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk				
+				tthc.NCRBManualRate AS nc_bureau_rate, StatedLimitsPolicy as stated_limits_policy_in , 
+				tthc.RiskSharingPolicy as risk_sharing_policy_in,tthc.NumberofFamilyUnitsinStructure as no_of_family_units_in_structures,
+				tthc.FortifiedRoofCredit as fortified_roof_credit,
+				tthc.FacultativeReinsurance as facultative_reinsurance_in,
+				tthc.LayeredLimits as layered_limits_in,
+				tthc.[100PercentCoverageAValue] as [dwelling_limit_100_pc_value_amt],
+				tthc.[100PercentCoverageBValue] as [other_structures_limit_100_pc_value_amt],
+				tthc.[100PercentCoverageCValue] as [contents_limit_100_pc_value_amt],
+				tthc.[100PercentCoverageDValue] as [loss_of_use_100_pc_value_amt],
+				tthc.FACAttachmentPoint as facultative_attachment_point,
+				tthc.FACLimit as facultative_limit_amt,
+				tthc.FACPremiumCeded as facultative_ceded_premium_amt,
+				tthc.FACReinsurer as facultative_reinsurer_nm,
+				tthc.CoverageLayer as coverage_layer,
+				TRY_CAST(REPLACE(tthc.PercentagePlaced, '%', '') AS FLOAT) / 100 AS coverage_layer_placed_pc,
+				tthc.LayerLimit as coverage_layer_limit_amt,
+				tthc.NewlyPurchasedHome as newly_purchased_home_in,
+				tthc.TargetClosingDate as target_closing_dt,
+				tthc.CurrentPolicyAnniversaryDate as current_policy_anniversary_dt,
+				CONCAT(tthc.HomeInsuranceCompany, ' ', tthc.OtherCarrierName) as current_underlying_company_nm,
+				tthc.NewClientForTheAgency as new_client_for_agency_in,
+				tthc.NumberOfBathrooms as no_of_bathrooms,tthc.NumberOfFireplaces as no_of_fireplaces,
+				tthc.FoundationType as foundation_type,tthc.WaivedInflationFactor as waived_inflation_factor_in,
+				tthc.FencedPool as fenced_pool_in,
+				tthc.WildfireRiskScore as wildfire_risk_score,
+				tthc.WildfireRiskClass as wildfire_risk_class,
+				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
-				edw_temp.tquote_home_coverage_temp1 AS tthc
-
-				/*
-			
-			UPDATE [edw_core].[tquote_home_coverage]
-			SET total_insured_value_amt = 	ISNULL(dwelling_limit_amt,0) + ISNULL(other_structures_limit_amt,0) + ISNULL(contents_limit_amt,0) +
-											CASE WHEN ISNUMERIC(TRIM(loss_of_use_limit_amt)) = 1 and cast(loss_of_use_limit_amt as float) > 0.0 
-											    then loss_of_use_limit_amt
-											when ISNUMERIC(TRIM(loss_of_use_pc)) = 1 
-											    then round(cast(loss_of_use_pc as float) * cast(iif(residence_type = 'Homeowners', dwelling_limit_amt, contents_limit_amt) as int),0)
-											else 0
-											end
-			WHERE
-				quote_home_coverage_sk IN(SELECT quote_home_coverage_sk FROM edw_temp.tquote_home_coverage_temp2)
-				*/
+				edw_temp.tquote_home_coverage_temp2 AS tthc
+				left join edw_temp.tquote_home_coverage_temp3 as t on tthc.quote_no = t.quote_no and 
+				tthc.EffectiveDate= t.EffectiveDate and tthc.transaction_seq_no = t.transaction_seq_no		
 		
 			SET @rows_affected=@@ROWCOUNT;  
 
@@ -283,6 +368,7 @@ BEGIN
 			-- Drop temp table
 			DROP TABLE IF EXISTS edw_temp.tquote_home_coverage_temp1
 			DROP TABLE IF EXISTS edw_temp.tquote_home_coverage_temp2
+			DROP TABLE IF EXISTS edw_temp.tquote_home_coverage_temp3
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)

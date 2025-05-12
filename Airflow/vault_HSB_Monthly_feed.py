@@ -12,8 +12,8 @@ from airflow.providers.microsoft.azure.operators.data_factory import AzureDataFa
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format
 from hsb_txt_generation import SFTPUploadAllHsbFilesOperator, generate_hsb_hcp_txt_files, generate_hsb_hsp_txt_files, generate_hsb_slc_txt_files
 
-# to_email = "itdatateam@vault.insurance"
-to_email = "alberto.valbuena@vault.insurance"
+to_email = "itdatateam@vault.insurance"
+# to_email = "alberto.valbuena@vault.insurance"
 cc_email = ""
 
 HOME_PATH = os.path.expanduser('~')
@@ -59,9 +59,9 @@ with DAG(
     catchup=False,
     max_active_runs=1,
     default_args=args,
-    start_date=pendulum.datetime(2024, 2, 20, tz="America/New_York"),
-    # schedule_interval='0 4 * * *', # At 04:00 every day
-    schedule_interval=None,
+    start_date=pendulum.datetime(2025, 1, 1, tz="America/New_York"),
+    schedule_interval='0 5 1 * *', # At 05:00 on the first day of each month.
+    # schedule_interval=None,
     tags=["HSB dag", "vault"],
 ) as dag:
     
@@ -74,28 +74,28 @@ with DAG(
     
     with TaskGroup("HSB_group") as HSB_group:
 
-        hsb_group_items = ['sp_tpolicy_hsb_cyber_feed','sp_tpolicy_hsb_hsp_feed','sp_tpolicy_hsb_slc_feed']
+        hsb_group_items = ['sp_policy_hsb_cyber_feed','sp_policy_hsb_hsp_feed','sp_policy_hsb_slc_feed']
 
-        sp_tpolicy_hsb_cyber_feed = MsSqlOperator(
-            task_id='sp_tpolicy_hsb_cyber_feed',
+        sp_policy_hsb_cyber_feed = MsSqlOperator(
+            task_id='sp_policy_hsb_cyber_feed',
             mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tpolicy_hsb_cyber_feed",
+            sql="EXEC edw_core.sp_policy_hsb_cyber_feed",
             database="vault_edw",
             autocommit=True,
         )
 
-        sp_tpolicy_hsb_hsp_feed = MsSqlOperator(
-            task_id='sp_tpolicy_hsb_hsp_feed',
+        sp_policy_hsb_hsp_feed = MsSqlOperator(
+            task_id='sp_policy_hsb_hsp_feed',
             mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tpolicy_hsb_hsp_feed",
+            sql="EXEC edw_core.sp_policy_hsb_hsp_feed",
             database="vault_edw",
             autocommit=True,
         )
 
-        sp_tpolicy_hsb_slc_feed = MsSqlOperator(
-            task_id='sp_tpolicy_hsb_slc_feed',
+        sp_policy_hsb_slc_feed = MsSqlOperator(
+            task_id='sp_policy_hsb_slc_feed',
             mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_tpolicy_hsb_slc_feed",
+            sql="EXEC edw_core.sp_policy_hsb_slc_feed",
             database="vault_edw",
             autocommit=True,
         )
@@ -107,7 +107,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(hsb_group_items, 'All stored procedures executed successfully for all the HSB tables'),
         )
 
-        sp_tpolicy_hsb_cyber_feed >> sp_tpolicy_hsb_hsp_feed >> sp_tpolicy_hsb_slc_feed >> send_HSB_email
+        sp_policy_hsb_cyber_feed >> sp_policy_hsb_hsp_feed >> sp_policy_hsb_slc_feed >> send_HSB_email
 
 
     with TaskGroup("HSB_files_to_SFTP_group") as HSB_files_to_SFTP_group:

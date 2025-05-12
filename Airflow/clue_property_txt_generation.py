@@ -6,6 +6,7 @@ from airflow.models import Variable
 from airflow.models import BaseOperator
 from airflow.providers.sftp.hooks.sftp import SFTPHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
+from airflow.exceptions import AirflowException
 
 
 ENVIRONMENT = Variable.get("environment")
@@ -90,7 +91,7 @@ QRY_CLUE = f"""
     FROM 
         [edw_integration].[claim_clue_property_feed]
     WHERE 
-        CAST(create_ts AS DATE) = (SELECT MAX(CAST(create_ts AS DATE)) AS create_ts FROM [edw_integration].[claim_clue_property_feed])
+        CAST(create_ts AS DATE) = CAST(GETDATE() AS DATE)
 """
 
 QRY_CLUE_START_END_DATE = """
@@ -98,7 +99,7 @@ QRY_CLUE_START_END_DATE = """
         CONVERT(VARCHAR(8), report_start_date, 112) + CONVERT(VARCHAR(8), report_end_date, 112) AS start_end_date
     FROM [edw_integration].[claim_clue_property_feed]
     WHERE 
-        CAST(create_ts AS DATE) = (SELECT MAX(CAST(create_ts AS DATE)) AS create_ts FROM [edw_integration].[claim_clue_property_feed])
+        CAST(create_ts AS DATE) = CAST(GETDATE() AS DATE)
 """
 
 def get_start_end_date():
@@ -159,6 +160,9 @@ def PGP_encrypt_file(file_to_encrypt, recipient_public_key):
             )
     print(status.ok)
     print(status.stderr)
+
+    if not status.ok:
+        raise AirflowException(f"PGP encryption failed: {status.stderr}")
 
 
 def generate_property_txt_file_and_encrypt(**kwargs):

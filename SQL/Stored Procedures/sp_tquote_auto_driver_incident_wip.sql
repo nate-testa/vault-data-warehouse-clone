@@ -12,6 +12,8 @@ GO
 -- 05/14/24		Architha Gudimalla				3. Corrected errors
 -- 06/09/2024   Yunus Mohammed                  4. Corrcted insert statement
 -- 08/07/24		Hernnando Gonzalez		        5. Added new field IncreasePremiumOnRenewal
+-- 08/21/24		Alberto Almario					6. Remove effective_dt from merge join and add into update section
+-- 08/07/24		Architha Gudimalla 		        7. AD7776 - update driver table join to use uniqueID
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_driver_incident_wip]
 AS
@@ -71,7 +73,7 @@ BEGIN
                 INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
                 INNER JOIN [edw_stage].[AccountObject] AS pid ON acco.parentobjectid = pid.Id
                 LEFT JOIN [edw_core].[tquote_history] AS qh  ON qh.quote_no = acc.PolicyNumber AND qh.effective_dt = acc.EffectiveDate AND qh.transaction_seq_no = 0
-                LEFT JOIN [edw_core].[tquote_auto_driver] AS qad ON qad.quote_no = acc.PolicyNumber AND qad.effective_dt = acc.EffectiveDate AND qad.transaction_seq_no = 0 and qad.driver_no=pid.[index]
+                LEFT JOIN [edw_core].[tquote_auto_driver] AS qad ON qad.quote_no = acc.PolicyNumber AND qad.effective_dt = acc.EffectiveDate AND qad.transaction_seq_no = 0 and qad.driver_unique_id=pid.uniqueid
                 WHERE p.[Name] = 'Automobile'
                     AND p.ProductLine = 'PersonalLines'
                     AND accof.[Group] in ('Incidents in the Past 5 Years')
@@ -90,12 +92,12 @@ BEGIN
 		MERGE INTO [edw_core].[tquote_auto_driver_incident] AS target
         USING [edw_temp].[tquote_auto_driver_incident_wip_temp1] AS source
             ON target.quote_no = source.quote_no
-            AND target.effective_dt = source.effective_dt
             AND target.driver_no = source.driver_no
             AND target.incident_no = source.incident_no
             AND target.transaction_seq_no = source.transaction_seq_no
         WHEN MATCHED THEN
             UPDATE SET
+                target.effective_dt = source.effective_dt,
                 target.expiration_dt = source.expiration_dt,
                 target.quote_history_sk = source.quote_history_sk,
                 target.quote_auto_driver_sk = source.quote_auto_driver_sk,

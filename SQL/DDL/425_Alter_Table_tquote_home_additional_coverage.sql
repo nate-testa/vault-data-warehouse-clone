@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote_home_additional_coverage ADD fortified_roof_upgrade_endorsement_in VARCHAR(255);

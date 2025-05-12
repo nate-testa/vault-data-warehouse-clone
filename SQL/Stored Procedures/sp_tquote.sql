@@ -3,15 +3,22 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
--- =====================================================================================================================
+-- ===========================================================================================================================
 -- Description: This procedures inserts and updates tquote 
------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- 11/16/23		Architha Gudimalla				2. Updated the prior policy logic
 -- 03/22/24		Rushin Shah						3. Added close_reason_desc column
--- ===================================================================================================================== 
+-- 08/29/24		Yunus Mohammed					4. Added expiration_dt in update stmt
+-- 09/04/24		Yunus Mohammed					5. Added term_no
+-- 09/18/24		Architha Gudimalla		        6. Updated term_no
+-- 11/01/24		Architha Gudimalla		        7. AD7593 - Added update to fix null EffectiveDate/ExpirationDate in Metal
+-- 03/03/25		Hernando Gonzalez		        8. AD8316 - Added competitor_carrier_nm, close_reason_other_desc
+-- 03/20/25		Hernando Gonzalez				9. Included Target_Account
+-- 05/08/25		Architha Gudimalla				10. Added forecast_quote_in 
+-- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
 
@@ -34,6 +41,11 @@ BEGIN
 	
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+
+		update 	edw_stage.Account
+		set 	EffectiveDate = cast(createddate as date), ExpirationDate  = cast(createddate as date)
+		where 	EffectiveDate is null
+		AND 	greatest(CreatedDate,UpdatedDate)>@last_source_extract_ts;
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.tquote_temp1;
@@ -191,7 +203,21 @@ BEGIN
 				end as [state],
 				case when tmp1.ExternalSourceId is not null then 'Yes' else 'No' end  migrated_in,
 				prior_pol.policy_sk prior_pol_policy_sk,
-				tmp1.CloseReasonType as close_reason_desc
+				case when tmp1.SubmissionCloseReasonCategory is not null
+					then tmp1.SubmissionCloseReasonDetails
+					else tmp1.CloseReasonType
+				end as close_reason_desc
+				,'Term ' || case 
+								when charindex('-',tmp1.PolicyNumber) <> 0 then cast(substring(tmp1.PolicyNumber,charindex('-',tmp1.PolicyNumber)+1,len(tmp1.PolicyNumber)) as int)+1
+								when tmp1.PolicyNumber like '%A'		   then 1
+								when tmp1.PolicyNumber like '%B'		   then 2
+								when tmp1.PolicyNumber like '%C'		   then 3
+							 	else 1
+							end term_no
+				,tmp1.SubmissionCloseReasonCarrier as competitor_carrier_nm
+				,tmp1.SubmissionCloseReasonDetailOther as close_reason_other_desc
+				,tmp1.TargetAccount as target_account
+				,case when tmp1.isForecast = 1 then 'Yes' else 'No' end as forecast_quote_in
 				--select *
 			FROM 
 				edw_temp.tquote_temp1 tmp1
@@ -246,6 +272,11 @@ BEGIN
 		   ,migrated_in
 		   ,prior_term_policy_sk
 		   ,close_reason_desc
+		   ,term_no
+		   ,competitor_carrier_nm
+		   ,close_reason_other_desc
+		   ,target_account
+		   ,forecast_quote_in
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -279,38 +310,48 @@ BEGIN
 				,source.migrated_in
 				,source.prior_pol_policy_sk
 				,source.close_reason_desc
+				,source.term_no
+				,source.competitor_carrier_nm
+				,source.close_reason_other_desc
+				,source.target_account
+				,source.forecast_quote_in
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-        Target.Effective_dt					= Source.EffectiveDate,
-        Target.broker_id					= Source.BrokerId,
-        Target.customer_id					= Source.customer_id,
-        Target.risk_state_cd				= Source.RiskStateCode,
-        Target.insured_nm					= Source.insured_nm,
-        Target.insured_type					= Source.insured_type, 
-        Target.uw_company_nm				= Source.uw_company_nm,
-        Target.program_type					= Source.program,
-        Target.original_policy_no			= Source.original_policy_no,
-        Target.original_policy_effective_dt	= Source.OriginalEffectiveDate,
-        Target.mailing_address_line1		= Source.MailingAddressLine1,
-        Target.mailing_address_line2		= Source.MailingAddressLine2,
-        Target.mailing_address_unit_no		= Source.UnitFloor,
-        Target.mailing_address_city_nm		= Source.MailingAddressCity,
-        Target.mailing_address_state_cd		= Source.MailingAddressState,
-		Target.mailing_address_zip_cd		= Source.MailingAddressZipCode,
-        Target.mailing_address_county_nm	= Source.MailingAddressCounty,
-		Target.mailing_address_country_nm	= Source.MailingAddressCountry, 
-		Target.prior_policy_no				= source.prior_policy_no, 
-		Target.prior_term_policy_no			= source.renewalofpolicynumber, 
-		Target.quote_term					= source.policy_term, 
-		Target.billingaccount_sk			= source.billingaccount_sk, 
-		Target.source_system_sk			    = source.source_system_sk, 
-		Target.quote_source_status			= source.state, 
-		Target.migrated_in			    	= source.migrated_in, 
-		Target.prior_term_policy_sk			= source.prior_pol_policy_sk, 
-		Target.close_reason_desc			= source.close_reason_desc,
-        Target.update_ts 					= getdate()
+        Target.Effective_dt								= Source.EffectiveDate,
+		Target.expiration_dt							= Source.ExpirationDate,
+        Target.broker_id								= Source.BrokerId,
+        Target.customer_id								= Source.customer_id,
+        Target.risk_state_cd							= Source.RiskStateCode,
+        Target.insured_nm								= Source.insured_nm,
+        Target.insured_type								= Source.insured_type, 
+        Target.uw_company_nm							= Source.uw_company_nm,
+        Target.program_type								= Source.program,
+        Target.original_policy_no						= Source.original_policy_no,
+        Target.original_policy_effective_dt				= Source.OriginalEffectiveDate,
+        Target.mailing_address_line1					= Source.MailingAddressLine1,
+        Target.mailing_address_line2					= Source.MailingAddressLine2,
+        Target.mailing_address_unit_no					= Source.UnitFloor,
+        Target.mailing_address_city_nm					= Source.MailingAddressCity,
+        Target.mailing_address_state_cd					= Source.MailingAddressState,
+		Target.mailing_address_zip_cd					= Source.MailingAddressZipCode,
+        Target.mailing_address_county_nm				= Source.MailingAddressCounty,
+		Target.mailing_address_country_nm				= Source.MailingAddressCountry, 
+		Target.prior_policy_no							= source.prior_policy_no, 
+		Target.prior_term_policy_no						= source.renewalofpolicynumber, 
+		Target.quote_term								= source.policy_term, 
+		Target.billingaccount_sk						= source.billingaccount_sk, 
+		Target.source_system_sk			    			= source.source_system_sk, 
+		Target.quote_source_status						= source.state, 
+		Target.migrated_in			    				= source.migrated_in, 
+		Target.prior_term_policy_sk						= source.prior_pol_policy_sk, 
+		Target.close_reason_desc						= source.close_reason_desc,
+		Target.competitor_carrier_nm					= source.competitor_carrier_nm,
+		Target.close_reason_other_desc 					= source.close_reason_other_desc,
+        Target.update_ts 								= getdate(),
+		Target.target_account							= source.target_account,
+		Target.forecast_quote_in						= source.forecast_quote_in
 		;
 
 		SET @rows_affected=@@ROWCOUNT;

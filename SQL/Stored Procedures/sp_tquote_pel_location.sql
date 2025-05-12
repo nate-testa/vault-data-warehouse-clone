@@ -12,6 +12,7 @@
 -- 04/29/24				Hernando Gonzalez				4. add new columns SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental
 -- 02/05/24				Hernando Gonzalez				5. Added Limits Indicator
 -- 07/03/24				Alberto Almario					6. Added primary_location_in
+-- 10/01/2024			Architha Gudimalla				7. Corrected AddressCountry
 -- =========================================================================================================================== 
 CREATE or alter  PROCEDURE [edw_core].[sp_tquote_pel_location]
 
@@ -38,7 +39,7 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,source_system_sk,quote_history_sk,
 			rownum as [index],
-			CreatedDate,AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,
+			CreatedDate,AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
 			NumberOfSwimmingPools,MultiFamilyDwelling,VacantOrUnoccupied,ForSale,
 			SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator,primary_location_in
 			into edw_temp.tquote_pel_location_temp1
@@ -78,7 +79,7 @@ BEGIN
 				and atvof.Field IN 
 				(
 					'AddressLine1','AddressLine2','AddressCity','AddressState','AddressZipCode','AddressCounty',
-					'AddressCounty','NumberOfSwimmingPools','MultiFamilyDwelling','VacantOrUnoccupied','ForSale',
+					'AddressCountry','NumberOfSwimmingPools','MultiFamilyDwelling','VacantOrUnoccupied','ForSale',
 					'SquareFootage','NumberofAthleticStructures','ShortTermRental','LongTermRental','LocationsLimitsIndicator'
 				)
 				and act.CreatedDate > @last_source_extract_ts
@@ -103,7 +104,7 @@ BEGIN
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,
 			ExpirationDate AS expiration_dt,transaction_seq_no AS transaction_seq_no,quote_history_sk,
 			[index] AS location_no,AddressLine1 AS address_line_1,AddressLine2 AS address_line_2,NULL AS unit_no,AddressCity AS city_nm,
-			AddressState AS state_cd,AddressZipCode AS zip_cd,AddressCounty AS county_nm,AddressCounty AS country_nm,NULL AS longitude,NULL AS latitude,
+			AddressState AS state_cd,AddressZipCode AS zip_cd,AddressCounty AS county_nm,AddressCountry AS country_nm,NULL AS longitude,NULL AS latitude,
 			NumberOfSwimmingPools AS swimming_pool_ct,MultiFamilyDwelling AS multi_family_dwelling_in,
 			VacantOrUnoccupied AS vacant_unoccupied_in,ForSale AS for_sale_in,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,

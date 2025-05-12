@@ -3,11 +3,17 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =============================================
+-- ================================================================================================= 
 -- Author:		Alberto Almario
 -- Create Date: 2024-03-29
 -- Description: This stored procedure insert info related to claim_clue_property_feed.
--- =============================================
+-- ---------------------------------------------------------------------------------------------------
+-- Change date 				|Author						|	Change Description
+-- ---------------------------------------------------------------------------------------------------
+-- 01-03-2025				Alberto Almario				1. Add snasheet mapping to causeOfLoss column.
+-- 01-21-2025               Rushin Shah                 2. Updated the claim amount field logic
+-- 03-21-2025               Sandeep Gundreddy           3. Updated source_system_sk filter to include snapsheet claims
+-- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_property_feed]
 AS
 BEGIN
@@ -39,19 +45,19 @@ BEGIN
         WITH 
         location_address AS (
             SELECT 
-                policy_no, 
-                LEFT(TRIM(SUBSTRING(address_line_1, PATINDEX('%[^0-9]%', address_line_1), 30)),20) as address_line_1, 
-                address_line_2, 
-                SUBSTRING(address_line_1, 1, PATINDEX('%[^0-9]%', address_line_1 + 'x') - 1) as home_no, 
-                unit_no, city_nm, state_cd, zip_cd 
-            FROM edw_core.tpel_location
+                policy_no,
+                LEFT(TRIM(address_nm),20) as address_line_1,
+                '' as address_line_2,
+                home_no, 
+                unit_no, city_nm, state_cd, LEFT(zip_cd,5) as zip_cd
+            FROM edw_stage.OneShieldPolicy_clue
                 UNION
             SELECT 
                 policy_no, 
                 LEFT(TRIM(SUBSTRING(address_line_1, PATINDEX('%[^0-9]%', address_line_1), 30)),20) as address_line_1, 
                 address_line_2, 
                 SUBSTRING(address_line_1, 1, PATINDEX('%[^0-9]%', address_line_1 + 'x') - 1) as home_no, 
-                unit_no, city_nm, state_cd, zip_cd
+                unit_no, city_nm, state_cd, LEFT(zip_cd,5) as zip_cd
             FROM edw_core.thome_location
                 UNION
             SELECT 
@@ -59,14 +65,15 @@ BEGIN
                 LEFT(TRIM(SUBSTRING(address_line_1, PATINDEX('%[^0-9]%', address_line_1), 30)),20) as address_line_1, 
                 address_line_2, 
                 SUBSTRING(address_line_1, 1, PATINDEX('%[^0-9]%', address_line_1 + 'x') - 1) as home_no, 
-                unit_no, city_nm, state_cd, zip_cd
+                unit_no, city_nm, state_cd, LEFT(zip_cd,5) as zip_cd
             FROM edw_core.tcollection_location
         )
         ,mortagee AS (
             SELECT 
                 policy_no,
                 mortgagee_nm,
-                loan_no
+                loan_no,
+                ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt ORDER BY transaction_seq_no DESC) as rn
             FROM edw_core.tmortgagee 
             WHERE mortgagee_type = 'First' 
             AND mortgagee_no = '1'
@@ -117,13 +124,14 @@ BEGIN
                     (
                         c.loss_paid_amt             + 
                         c.expense_paid_amt          + 
-                        c.adjusting_other_paid_amt  + 
-                        c.refund_indemnity_paid_amt + 
-                        c.refund_expense_paid_amt
+                        c.defense_paid_amt          +
+                        c.overpayment_recovery_amt  +
+                        c.overpayment_expense_recovery_amt +
+                        c.overpayment_defense_recovery_amt
                     ), 0
                 ) AS [claimAmount]
                 ,CASE 
-                    WHEN (c.subro_expense_paid_amt + c.subro_recovery_amt) < 0 THEN 'S'
+                    WHEN (c.subrogation_expense_recovery_amt + c.subrogation_recovery_amt) < 0 THEN 'S'
                     WHEN c.claim_status ='CLOSED' THEN 'C' 
                     ELSE 'O' 
                 END AS [claimDisposition]
@@ -134,7 +142,7 @@ BEGIN
                     FROM edw_core.tclaim_transaction
                     GROUP BY claim_sk
                 ) AS ct ON c.claim_sk = ct.claim_sk
-            WHERE c.source_system_sk = 3
+            WHERE c.source_system_sk in (3,5)
             AND cast(ct.transaction_ts as datetime2(7)) > @last_source_extract_ts
         )
 
@@ -154,38 +162,30 @@ BEGIN
             END AS [policyType],
             RIGHT('00000000' + FORMAT(c.loss_dt, 'MMddyyyy'), 8) AS [claimDate],
             CASE cof.cause_of_loss_desc
-                WHEN 'Collapse' THEN 'OTHER'
-                WHEN 'Damage by Animals' THEN 'PHYDA'
-                WHEN 'Equipment Breakdown' THEN 'APPL'
-                WHEN 'Fire' THEN 'FIRE'
-                WHEN 'Flood' THEN 'FLOOD'
-                WHEN 'Freezing' THEN 'FREEZ'
-                WHEN 'Fungi/Mold' THEN 'MOLD'
-                WHEN 'Glass Breakage' THEN 'PHYDA'
-                WHEN 'Hail' THEN 'HAIL'
-                WHEN 'Hurricane' THEN 'WIND'
-                WHEN 'Ice Dam' THEN 'OTHER'
-                WHEN 'Liability' THEN 'LIAB'
-                WHEN 'Lightning' THEN 'LIGHT'
-                WHEN 'Loss Assessment' THEN 'OTHER'
-                WHEN 'Mysterious Disappearance' THEN 'DISAP'
-                WHEN 'Named Storms Other than Hurricanes' THEN 'WIND'
-                WHEN 'Power Outage' THEN 'OTHER'
-                WHEN 'Service Line' 	 THEN 'EXTEN'
-                WHEN 'Sewer and Drain' THEN 'ACCDL'
-                WHEN 'Smoke' THEN 'SMOKE'
-                WHEN 'Theft' THEN 'THEFT'
-                WHEN 'Vandalism' THEN 'VMM'
-                WHEN 'Water' THEN 'WATER'
-                WHEN 'Wind' THEN 'WIND'
-                WHEN 'Workers Compensation' THEN 'WC'
-                WHEN 'Collision' THEN 'COLL'
-                WHEN 'Other' THEN 'OTHER'
-                WHEN 'Libel, Slander, Defamation of Character' THEN 'LIAB'
-                WHEN 'Hit and Run' THEN 'COLL'
-                WHEN 'Property Damage' THEN 'DAMAG'
-                WHEN 'Fall, Slip, or Trip on Insured''s Exterior Premises' THEN 'SLIP'
-                WHEN 'Boat / Jet Ski' THEN 'CRAFT' 
+                WHEN 'property_claim_water_damage' THEN 'WATER'
+                WHEN 'property_claim_broken_window' THEN 'PHYDA'
+                WHEN 'property_claim_thirdparty_dog_bite' THEN 'PHYDA'
+                WHEN 'property_claim_fire' THEN 'FIRE'
+                WHEN 'property_claim_earthquake' THEN 'QUAKE'
+                WHEN 'property_claim_equipment_breakdown' THEN 'APPL'
+                WHEN 'property_claim_explosion' THEN 'EXTEN'
+                WHEN 'property_claim_smoke' THEN 'SMOKE'
+                WHEN 'property_claim_earth_movement' THEN 'MOVE'
+                WHEN 'property_claim_flood' THEN 'FLOOD'
+                WHEN 'property_claim_freezing_water' THEN 'FREEZ'
+                WHEN 'property_claim_hail' THEN 'HAIL'
+                WHEN 'property_claim_lightning' THEN 'LIGHT'
+                WHEN 'property_claim_theft' THEN 'THEFT'
+                WHEN 'property_claim_weather' THEN 'WIND'
+                WHEN 'property_claim_riot' THEN 'EXTEN'
+                WHEN 'property_claim_service_line' THEN 'EXTEN'
+                WHEN 'property_claim_sewer_backup' THEN 'ACCDL'
+                WHEN 'property_claim_sinkhole' THEN 'SINK'
+                WHEN 'property_claim_thirdparty_fall' THEN 'LIAB'
+                WHEN 'property_claim_wind' THEN 'WIND'
+                WHEN 'property_claim_vandalism' THEN 'VMM'
+                WHEN 'property_claim_volcano' THEN 'MOVE'
+                WHEN 'property_claim_thirdparty_injury' THEN 'WC'
                 ELSE 'OTHER'
             END AS [causeOfLoss],
             'U' AS [locationOfLoss],
@@ -270,10 +270,10 @@ BEGIN
         LEFT JOIN customer AS cu ON p.customer_id = cu.customer_id
         LEFT JOIN edw_core.tcause_of_loss AS cof ON cof.cause_of_loss_sk = c.cause_of_loss_sk
         LEFT JOIN edw_core.tcatastrophe AS cat ON cat.catastrophe_sk=c.catastrophe_sk
-        LEFT JOIN mortagee AS m ON m.policy_no = c.policy_no 
-        LEFT JOIN location_address AS la ON c.policy_no = la.policy_no
+        LEFT JOIN mortagee AS m ON m.policy_no = c.policy_no AND m.rn = 1
+        INNER JOIN location_address AS la ON c.policy_no = la.policy_no
         LEFT JOIN policy_insured_2 AS pi2 ON c.policy_no = pi2.policy_no
-        WHERE p.product_cd IN ('HO','CO','LUX','PEL')
+        WHERE p.product_cd IN ('HO','CO','LUX')
         ;
 
         --Create empty temp table to allow nulls
@@ -294,7 +294,7 @@ BEGIN
         ----------------------------------------------------
         --*** Start Insert rows with causeOfLoss changed ***
         ----------------------------------------------------    
-        --Create temp table whit causeOfLoss that has changed in tclaim table
+        -- Create a temp table with the latest 'Append' records where 'causeOfLoss' has changed in the tclaim table.
         SELECT 
             cp.*, cl.causeOfLoss AS new_causeOfLoss
         INTO [edw_temp].[claim_clue_property_feed_temp2]
@@ -307,43 +307,36 @@ BEGIN
         ) AS mcp
         ON cp.claimNumber = mcp.claimNumber
         AND cp.create_ts = mcp.max_create_ts
+        AND cp.claimReportingStatus = 'A' -- Retrieve only the rows where claimReportingStatus is Append.
         INNER JOIN edw_core.tclaim AS c
         ON cp.claimNumber = c.claim_no
         INNER JOIN (
                 SELECT *,
                     CASE cause_of_loss_desc
-                        WHEN 'Collapse' THEN 'OTHER'
-                        WHEN 'Damage by Animals' THEN 'PHYDA'
-                        WHEN 'Equipment Breakdown' THEN 'APPL'
-                        WHEN 'Fire' THEN 'FIRE'
-                        WHEN 'Flood' THEN 'FLOOD'
-                        WHEN 'Freezing' THEN 'FREEZ'
-                        WHEN 'Fungi/Mold' THEN 'MOLD'
-                        WHEN 'Glass Breakage' THEN 'PHYDA'
-                        WHEN 'Hail' THEN 'HAIL'
-                        WHEN 'Hurricane' THEN 'WIND'
-                        WHEN 'Ice Dam' THEN 'OTHER'
-                        WHEN 'Liability' THEN 'LIAB'
-                        WHEN 'Lightning' THEN 'LIGHT'
-                        WHEN 'Loss Assessment' THEN 'OTHER'
-                        WHEN 'Mysterious Disappearance' THEN 'DISAP'
-                        WHEN 'Named Storms Other than Hurricanes' THEN 'WIND'
-                        WHEN 'Power Outage' THEN 'OTHER'
-                        WHEN 'Service Line' 	 THEN 'EXTEN'
-                        WHEN 'Sewer and Drain' THEN 'ACCDL'
-                        WHEN 'Smoke' THEN 'SMOKE'
-                        WHEN 'Theft' THEN 'THEFT'
-                        WHEN 'Vandalism' THEN 'VMM'
-                        WHEN 'Water' THEN 'WATER'
-                        WHEN 'Wind' THEN 'WIND'
-                        WHEN 'Workers Compensation' THEN 'WC'
-                        WHEN 'Collision' THEN 'COLL'
-                        WHEN 'Other' THEN 'OTHER'
-                        WHEN 'Libel, Slander, Defamation of Character' THEN 'LIAB'
-                        WHEN 'Hit and Run' THEN 'COLL'
-                        WHEN 'Property Damage' THEN 'DAMAG'
-                        WHEN 'Fall, Slip, or Trip on Insured''s Exterior Premises' THEN 'SLIP'
-                        WHEN 'Boat / Jet Ski' THEN 'CRAFT' 
+                        WHEN 'property_claim_water_damage' THEN 'WATER'
+                        WHEN 'property_claim_broken_window' THEN 'PHYDA'
+                        WHEN 'property_claim_thirdparty_dog_bite' THEN 'PHYDA'
+                        WHEN 'property_claim_fire' THEN 'FIRE'
+                        WHEN 'property_claim_earthquake' THEN 'QUAKE'
+                        WHEN 'property_claim_equipment_breakdown' THEN 'APPL'
+                        WHEN 'property_claim_explosion' THEN 'EXTEN'
+                        WHEN 'property_claim_smoke' THEN 'SMOKE'
+                        WHEN 'property_claim_earth_movement' THEN 'MOVE'
+                        WHEN 'property_claim_flood' THEN 'FLOOD'
+                        WHEN 'property_claim_freezing_water' THEN 'FREEZ'
+                        WHEN 'property_claim_hail' THEN 'HAIL'
+                        WHEN 'property_claim_lightning' THEN 'LIGHT'
+                        WHEN 'property_claim_theft' THEN 'THEFT'
+                        WHEN 'property_claim_weather' THEN 'WIND'
+                        WHEN 'property_claim_riot' THEN 'EXTEN'
+                        WHEN 'property_claim_service_line' THEN 'EXTEN'
+                        WHEN 'property_claim_sewer_backup' THEN 'ACCDL'
+                        WHEN 'property_claim_sinkhole' THEN 'SINK'
+                        WHEN 'property_claim_thirdparty_fall' THEN 'LIAB'
+                        WHEN 'property_claim_wind' THEN 'WIND'
+                        WHEN 'property_claim_vandalism' THEN 'VMM'
+                        WHEN 'property_claim_volcano' THEN 'MOVE'
+                        WHEN 'property_claim_thirdparty_injury' THEN 'WC'
                         ELSE 'OTHER'
                     END AS [causeOfLoss] 
                 FROM edw_core.tcause_of_loss
@@ -351,7 +344,7 @@ BEGIN
         ON c.cause_of_loss_sk = cl.cause_of_loss_sk
         WHERE cp.causeOfLoss <> cl.causeOfLoss
         
-        --Insert R row
+        --Insert an R row to remove the old causeOfLoss and replace it with the one created in the previous query.
         INSERT INTO [edw_temp].[claim_clue_property_feed_temp1]
         SELECT 
             contribCompany,

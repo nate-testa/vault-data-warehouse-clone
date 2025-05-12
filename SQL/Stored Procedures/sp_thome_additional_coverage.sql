@@ -3,16 +3,25 @@
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert homeowners additional coverage data
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date			|Author						|	Change Description
+-- Change date 					|Author								|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
---						Yunus Mohammed				1. Created this procedure 
--- 11/17/23				Yunus Mohammed				2. Added new columns
--- 01/16/24				Alberto Almario				3. Added new column extended_liability_location_ct
--- 01/25/24				Alberto Almario				4. Added new columns roof_exclusion_with_ensuing_loss_in, 
+--											Yunus Mohammed			1. Created this procedure 
+-- 11/17/23						Yunus Mohammed			2. Added new columns
+-- 01/16/24						Alberto Almario				3. Added new column extended_liability_location_ct
+-- 01/25/24						Alberto Almario				4. Added new columns roof_exclusion_with_ensuing_loss_in, 
 --																		 roof_coverage_endorsement_wh_in, 
 --																		 roof_coverage_endorsement_ap_in,
 --																		 roof_coverage_endorsement_rv_in
--- 09/07/24				Hernando Gonzalez			5. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
+-- 09/07/24						Hernando Gonzalez			5. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
+-- 08/01/24             		Tuba Mohsin                 		6. added contents_extended_replacement_cost_limit_amt
+-- 08/30/24						Yunus Mohammed				7. Added new columns
+-- 10/02/24						Yunus Mohammed				8. Added new column fortified_roof_upgrade_endorsement_in
+-- 10/30/24						Hernando Gonzalez			9. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
+-- 12/02/24						Yunus Mohammed				10. AD-7834 Added new fields
+-- 12/18/24						Hernando Gonzalez			11. AD-7963 | Added Risk_Score_Fire
+-- 01/22/25						Alberto Almario					12. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
+-- 03/06/25						Yunus Mohammed				13 	AD-8771 Query corrected to count extended_liability_loc_ct
+-- 04/01/25		   		Yunus Mohammed						14 Ad-9035 Added automatic_seismic_shutoff_valve_in
 -- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
 
@@ -99,7 +108,7 @@ BEGIN
 
 			WITH extended_liability_loc_ct AS (	
 				select 
-					act.PolicyNumber as pol_no, act.EffectiveDate as eff_dt, act.[Number] as tran_seq_no, count(atvo.ObjectGroupIdentifier) as extended_liability_location_ct
+					act.PolicyNumber as pol_no, act.EffectiveDate as eff_dt, act.PolicyChangeNumber as tran_seq_no, count(atvo.ObjectGroupIdentifier) as extended_liability_location_ct
 				from edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
@@ -108,9 +117,10 @@ BEGIN
 					act.PolicyNumber is not null 
 					and act.[State]  = 'ISSUED'
 					and atvo.ObjectType in ('ExtendedLiabilityLocation')
+					and atvo.IsDeletedOnPolicyChange = 0
 					and p.ProductLine = 'PersonalLines'
 					and act.IssuedDate > @last_source_extract_ts
-				group by act.PolicyNumber, act.EffectiveDate, act.[Number]
+				group by act.PolicyNumber, act.EffectiveDate, act.PolicyChangeNumber
 			)
 
 			INSERT INTO edw_core.thome_additional_coverage
@@ -137,7 +147,7 @@ BEGIN
 			,home_cyber_protection_coverage_deductible,home_cyber_protection_coverage_limit_amt
 			,offpremises_other_permanent_structures_extension_in,offpremises_other_permanent_structures_extension_desc
 			,agreed_value_in
-			,backup_of_sewers_limit_in,contents_extended_replacement_cost_in
+			,backup_of_sewers_limit_in,contents_extended_replacement_cost_in,contents_extended_replacement_cost_limit_amt
 			,coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_in
 			,coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_limit_amt
 			,damage_to_property_of_others_increased_limit_amt,debris_removal_broadaned_tree_removal_in
@@ -189,8 +199,19 @@ BEGIN
 			firewise_community_credit_in,monitored_heat_sensors_in,builders_defect_exclusion_in,
 			gated_community_patrol_service, extended_liability_location_ct,
 			roof_exclusion_with_ensuing_loss_in,roof_coverage_endorsement_wh_in,roof_coverage_endorsement_ap_in,roof_coverage_endorsement_rv_in,
-			fire_station_connected_fire_alarm_in, police_station_connected_burglar_alarm_in, local_fire_alarm_system_in, local_burglar_alarm_system_in, automatic_smoke_detectors_in, automatic_sprinkler_system, emergency_extension_notice_in,
-			trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in,
+			fire_station_connected_fire_alarm_in, police_station_connected_burglar_alarm_in, local_fire_alarm_system_in, local_burglar_alarm_system_in, 
+			automatic_smoke_detectors_in, automatic_sprinkler_system, emergency_extension_notice_in,trampoline_liability_exclusion_in, 
+			fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, 
+			roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in,
+			wildfire_protection_enrollment_in ,site_scheduling_contact_nm ,site_scheduling_phone_no ,
+			site_scheduling_email ,emergency_contact_nm ,emergency_contact_phone_no ,emergency_contact_email ,gate_code ,
+			primary_home_risk_address,primary_home_policy_effective_dt,primary_home_policy_expiration_dt,
+			primary_home_carrier_nm,primary_home_coverage_a_threshold,fortified_roof_upgrade_endorsement_in,
+			fortified_roof_program_discount_amt, non_program_discount_amt,
+			full_extended_replacement_cost_in, risk_score_water_non_weather, risk_score_water_weather,
+			risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
+			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
+			theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT 
@@ -256,6 +277,7 @@ BEGIN
            ,AgreedValue AS agreed_value_in
 			,BackUpOfSewersLimit AS backup_of_sewers_limit_in
            ,ContentsExtendedReplacementCost AS contents_extended_replacement_cost_in
+		   ,ContentsExtendedReplacementCostLimit AS contents_extended_replacement_cost_limit_amt
            ,CoverageForPiersWharvesAndDocksDueToWeightOfIceOrSnow AS coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_in
            ,CoverageForPiersWharvesAndDocksDueToWeightOfIceOrSnowLimit AS coverage_for_piers_wharves_and_docks_due_to_weight_of_ice_or_snow_limit_amt
            ,NULL AS damage_to_property_of_others_increased_limit_amt
@@ -335,7 +357,7 @@ BEGIN
 		   ,HomeDayCareCoverage AS home_daycare_coverage_no_of_children
 		   ,IncreasedIncidentalBusinessProperty AS increased_incidental_business_property_in
 		   ,IncreasedIncidentalBusinessPropertyLimit AS increased_incidental_business_property_limit_amt
-		   ,LossAssessmentIncrease AS loss_assessment_increase_desc
+		   ,LossAssessmentIncreaseDescription AS loss_assessment_increase_desc
 		   ,sinkholeterritory AS sinkhole_territory
 		   ,SpecificNamedStructuresPropertyandLiabilityExclusion AS specific_named_structures_property_and_liability_exclusion_in
 		   ,SpecificNamedStructuresPropertyandLiabilityExclusionDescription AS specific_named_structures_property_and_liability_exclusion_desc
@@ -369,13 +391,41 @@ BEGIN
 		   ,MatchingUndamagedPropertyLimit as matching_undamaged_property_limit_amt
 		   ,RoofCoveringCoverageLimitationCW as roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in
 		   ,AllPerilRoofCoveringCoverageSP as all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
+		   ,WildfireProtectionEnrollment as wildfire_protection_enrollment_in
+			,WFSiteSchedulingContactName as site_scheduling_contact_nm
+			,WFSiteSchedulingPhoneNumber as site_scheduling_phone_no
+			,WFSiteSchedulingEmailAddress as site_scheduling_email
+			,WFEmergencyContactName as emergency_contact_nm
+			,WFEmergencyContactPhoneNumber as emergency_contact_phone_no
+			,WFEmergencyContactEmail as emergency_contact_email,WFGateCodes as gate_code
+			,PrimaryHomeRiskAddress as primary_home_risk_address
+			,PrimaryHomePolicyEffectiveDate  as primary_home_policy_effective_dt
+			,PrimaryHomePolicyExpirationDate  as primary_home_policy_expiration_dt
+			,PrimaryHomeCarrierName as primary_home_carrier_nm
+			,PrimaryHomeCoverageAThreshold as primary_home_coverage_a_threshold
+			,FortifiedRoofUpgradeEndorsement as fortified_roof_upgrade_endorsement_in
+			,FortifiedRoofProgramDiscount as fortified_roof_program_discount_amt
+			,NonProgramDiscount as non_program_discount_amt
+			,FullExtendedReplacementCostCoverage as full_extended_replacement_cost_in
+			,Risk_Score_Water_Non_Weather as risk_score_water_non_weather, Risk_Score_Water_Weather as risk_score_water_weather
+			,Risk_Score_Water_Backup as risk_score_water_backup, Risk_Score_Wind_Hail as risk_score_wind_hail
+			,Risk_Score_Other as risk_score_other, Risk_Score_Lightning as risk_score_lightning
+			,Risk_Score_Theft as risk_score_theft
+			,Risk_Score_Liability as risk_score_liability
+			,Risk_Score_Hurricane as risk_score_hurricane, Risk_Score_Wildfire as risk_score_wildfire
+			,Risk_Score_Sinkhole_Mine as risk_score_sinkhole_mine
+			,Risk_Score_All_Perils as risk_score_all_peril
+			,Risk_Score_Fire as risk_score_fire
+			,TheftOrLossGeneralConditionsEndorsement as theft_or_loss_general_conditions_endorsement_in
+			,AnimalRelatedLiabilityEndorsement as animal_related_liability_endorsement_in
+			,case when AutomaticSeismicShutOffValve = '' then null else AutomaticSeismicShutOffValve end as automatic_seismic_shutoff_valve_in
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts
            ,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_additional_coverage_temp1 AS a
-			LEFT JOIN extended_liability_loc_ct AS b
+				LEFT JOIN extended_liability_loc_ct AS b
 				ON a.PolicyNumber = b.pol_no
 				AND a.EffectiveDate = b.eff_dt
 				AND a.transaction_seq_no = b.tran_seq_no

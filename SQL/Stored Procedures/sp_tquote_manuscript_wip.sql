@@ -1,11 +1,14 @@
 ﻿-- ========================================================================================================================================
 -- Description: This procedures insert and update info related to Quote Manuscript
 ---------------------------------------------------------------------------------------------------------------------------------------
--- Change date 				|Author							|	Change Description
+-- Change date 				|Author												|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 10/05/2024				Hernando Gonzalez Garcia		1. Created this procedure 
--- 05/16/2024				Architha Gudimalla 				2. Updated after errors 
--- 09/07/24					Yunus Mohammed					3. Use ValueBlob if Value field is null for manuscript_title an desc
+-- 05/16/2024				Architha Gudimalla 						2. Updated after errors 
+-- 09/07/24					Yunus Mohammed							3. Use ValueBlob if Value field is null for manuscript_title an desc
+-- 08/22/24					Yunus Mohammed							4. Used IncludeManuscript indicator
+-- 03/03/25					Alberto Almario								5. Change JOIN with tquote_history table
+-- 03/10/25					Yunus Mohammed							6. Merge join updated
 -- ======================================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_manuscript_wip]
 AS
@@ -48,7 +51,7 @@ BEGIN
 				,tqh.[quote_history_sk]
 				,accof.[Field]
 				,case
-					when Field in ('ManuscriptDescription','ManuscriptTitle') and len(accof.[Value])= 0 then NULLIF(accof.[ValueBlob],'')
+					when accof.Field in ('ManuscriptDescription','ManuscriptTitle') and len(accof.[Value])= 0 then NULLIF(accof.[ValueBlob],'')
 				else NULLIF(accof.[Value], '') end as [Value]
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
@@ -64,13 +67,16 @@ BEGIN
 					AND a.PolicyNumber IS NOT NULL
 				) acc
 				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
-				inner join [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
-				inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
-				INNER JOIN [edw_core].[tquote_history] tqh on tqh.quote_no=acc.PolicyNumber
-						and tqh.effective_dt=acc.EffectiveDate
-						and tqh.transaction_seq_no = acc.number
+				INNER JOIN [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
+				INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
+				INNER JOIN [edw_core].[tquote_history] tqh on tqh.quote_no=acc.PolicyNumber and tqh.effective_dt=acc.EffectiveDate and tqh.transaction_seq_no = 0
+
+				INNER JOIN [edw_stage].[AccountObject] AS acco_in ON acco_in.AccountId = acc.Id
+				INNER JOIN [edw_stage].[AccountObjectField] accof_in ON accof_in.ObjectId = acco_in.id and accof_in.Field = 'IncludeManuscript'
 			WHERE
 				acco.ObjectType = 'Manuscript'
+				and acco_in.ObjectType in ('Homeowner','Condo','Collection','PersonalExcessLiability')
+				and accof_in.[Value] = 'Yes'
 			) t
 		PIVOT 
 			(
@@ -98,13 +104,11 @@ BEGIN
 		) AS SOURCE
 		ON
 		    TARGET.quote_no = SOURCE.quote_no AND
-		    TARGET.effective_dt = SOURCE.effective_dt AND
-		    TARGET.expiration_dt = SOURCE.expiration_dt AND
-		    TARGET.quote_history_sk = SOURCE.quote_history_sk
-
+			TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
+			TARGET.manuscript_seq_no = Source.manuscript_seq_no
 		WHEN MATCHED THEN
 		    UPDATE SET
-		        TARGET.transaction_seq_no = SOURCE.transaction_seq_no,
+				TARGET.effective_dt = SOURCE.effective_dt,        
 		        TARGET.manuscript_no = SOURCE.manuscript_no,
 		        TARGET.manuscript_title = SOURCE.manuscript_title,
 		        TARGET.manuscript_desc = SOURCE.manuscript_desc,

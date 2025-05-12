@@ -9,6 +9,7 @@
 -- 02/13/24		Architha Gudimalla				3. For AU, Added filter on vehicle_deleted_in 
 -- 03/20/24		Architha Gudimalla				4. Added commission_amt
 -- 07/03/24		Yunus Mohammed					5. Added policy_history_sk
+-- 07/18/24		Architha Gudimalla				6. Updated logic for @last_source_extract_ts
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_titem_inforce]
@@ -39,8 +40,8 @@ BEGIN
 		union 
 		select	yearmonth, max(calendar_year) year, max(date_sk) date_sk, max(actual_dt) actual_dt
 		from	edw_core.tdate
-		where	actual_dt >  case when @in_inforce_dt is not null then @in_inforce_dt else @last_source_extract_ts end
-		  and   actual_dt <= case when @in_inforce_dt is not null then @in_inforce_dt else getdate() end
+		where	actual_dt >= case when @in_inforce_dt is not null then @in_inforce_dt else @last_source_extract_ts end
+		  and   actual_dt <  case when @in_inforce_dt is not null then @in_inforce_dt else cast(getdate() as date) end
 		group by yearmonth
 		order by 1;  
 

@@ -8,6 +8,8 @@
 -- 03/22/24		Yunus Mohammed				3. Added prior policy no check in system conversion
 -- 03/25/24		Architha Gudimalla			4. Added policy term update for cancel rewrites
 -- 04/15/24		Architha Gudimalla			5. Added filter on updated below to exlucde those pols when prior pol is same as prior term pol
+-- 01/23/25		Architha Gudimalla			6. VI33968/AD7635 - Added uwco orig eff dt
+-- 01/23/25		Architha Gudimalla			6. VI33968/AD8770 - Updated logic for uwco orig eff dt
 -- ========================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_cancels]
@@ -156,10 +158,21 @@ BEGIN
 		update edw_core.tpolicy 
 		set prior_policy_no = null
 		where policy_no = 'EX100266882-03' and prior_policy_no = 'AU100266880-03'		
- 
+  
 		update edw_core.tpolicy 
 		set prior_policy_no = null
 		where policy_no = 'CO100243128-02' and prior_policy_no = 'AU100038397-01'
+
+		--added on 1/23 for uw_company_original_policy_effective_dt
+		update pol
+		set pol.uw_company_original_policy_effective_dt = pol1.uw_company_original_policy_effective_dt
+		from edw_core.tpolicy pol
+		inner join (select  policy_sk, min(effective_dt) over (partition by case when charindex('-',prior_policy_no) <> 0
+								 then substring(prior_policy_no,1,charindex('-',prior_policy_no)-1) 
+								 else original_policy_no  
+							end, uw_company_nm) uw_company_original_policy_effective_dt
+					from edw_core.tpolicy) pol1 on pol.policy_sk = pol1.policy_sk
+		; 
 
 		SET @rows_affected=@@ROWCOUNT;
 	

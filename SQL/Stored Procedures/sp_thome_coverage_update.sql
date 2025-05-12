@@ -7,7 +7,8 @@
 -- 11/09/23		Architha Gudimalla		    2. Added logic for loss_of_use_derived_pc
 -- 03/26/24		Architha Gudimalla		    3. Added to  loss_of_use_derived_pc - Reasonable and Necessary Expenses- 12 months
 -- 04/19/24		Architha Gudimalla		    4. Updated the @new_last_source_extract_ts and also added the update to check for nulls
--- 06/14/24		Yunus Mohammed 				5. Removed error for rate_on_line
+-- 06/14/24		Yunus Mohammed 				5. Removed error for rate_on_line 
+-- 04/18/25		Architha Gudimalla		    6. Updated conversion error on loss_of_use_limit_amt error
 -- ================================================================================================================================== 
 
 
@@ -34,46 +35,33 @@ BEGIN
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) 
 		
-		update [edw_core].[thome_coverage]
-			set loss_of_use_derived_pc = 	round(
-											CASE
-												WHEN (loss_of_use_pc is null or
-													loss_of_use_pc = '' or
-													loss_of_use_pc = '0' or
-													loss_of_use_pc = '0%'
-													)
-												and (loss_of_use_option is null or
-													loss_of_use_option = '' or
-													loss_of_use_option = '0'
-													)
-												and (loss_of_use_limit_amt is null or
-													loss_of_use_limit_amt = '' or
-													loss_of_use_limit_amt = '0' or
-													isnumeric(trim(loss_of_use_limit_amt)) = 0
-													)
-												and isnull(iif(trim(loss_of_use_option)='','0',trim(loss_of_use_option)),'0')   = '0' 
-												and isnull(iif(trim(loss_of_use_limit_amt)='','0',trim(loss_of_use_limit_amt)),'0')  = '0' 
-													THEN  0
-												WHEN loss_of_use_option in ('Reasonable and Necessary Expenses','reasonableAndNecessaryExpenses12months','Reasonable and Necessary Expenses- 12 months') 
-													THEN 0.2
-												WHEN loss_of_use_option like '%.%' 
-													THEN  cast(loss_of_use_option as float) 
-												--	THEN  cast(loss_of_use_pc as float)
-												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 0 
-												and case when loss_of_use_pc = '' then '0' else loss_of_use_pc end = '0'
-													then 0
-												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 1 
-												and loss_of_use_limit_amt > 100 
-												and dwelling_limit_amt > 0 
-													then cast(loss_of_use_limit_amt as float)/dwelling_limit_amt
-												WHEN isnumeric(trim(loss_of_use_limit_amt)) = 1 
-												and loss_of_use_limit_amt > 100 
-												and contents_limit_amt > 0 
-													then cast(loss_of_use_limit_amt as float)/contents_limit_amt 
-												WHEN loss_of_use_pc like '%.%' 
-													THEN  cast(loss_of_use_pc as float) 
-												else loss_of_use_pc
-											END ,4) 
+		update a
+			set loss_of_use_derived_pc = 	ROUND(
+													CASE
+														WHEN c.loss_of_use_option_raw IN ('Reasonable and Necessary Expenses','reasonableAndNecessaryExpenses12months','Reasonable and Necessary Expenses- 12 months') THEN 0.20
+														WHEN c.loss_of_use_option_float > 0 THEN c.loss_of_use_option_float
+														WHEN c.loss_of_use_pc_float > 0 THEN c.loss_of_use_pc_float
+														WHEN c.loss_of_use_pc_float IS NULL AND c.loss_of_use_option_float IS NULL AND c.loss_of_use_limit_amt_float IS NULL THEN 0
+														WHEN c.loss_of_use_limit_amt_float > 100 AND c.dwelling_limit_amt > 0 THEN c.loss_of_use_limit_amt_float / c.dwelling_limit_amt
+														WHEN c.loss_of_use_limit_amt_float > 100 AND c.contents_limit_amt > 0 THEN c.loss_of_use_limit_amt_float / c.contents_limit_amt
+														WHEN c.loss_of_use_pc_float IS NOT NULL THEN c.loss_of_use_pc_float
+													ELSE 0
+													END
+												,4)
+		from [edw_core].[thome_coverage] a
+		inner join 	(
+						SELECT  
+								s.home_coverage_sk,
+								s.loss_of_use_option AS loss_of_use_option_raw,
+								s.loss_of_use_pc AS loss_of_use_pc_raw,
+								s.loss_of_use_limit_amt AS loss_of_use_limit_amt_raw,
+								TRY_CAST(REPLACE(REPLACE(s.loss_of_use_option,'%',''),',','')AS float) AS loss_of_use_option_float,
+								TRY_CAST(REPLACE(REPLACE(s.loss_of_use_pc,'%',''),',','')AS float) AS loss_of_use_pc_float,
+								TRY_CAST(REPLACE(REPLACE(REPLACE(s.loss_of_use_limit_amt,',',''),'$',''),'%','') AS float) AS loss_of_use_limit_amt_float,
+								s.dwelling_limit_amt,
+								s.contents_limit_amt
+						FROM    edw_core.thome_coverage AS s 
+					) c ON c.home_coverage_sk = a.home_coverage_sk 
 		where transaction_dt > @last_source_extract_ts
 		or loss_of_use_derived_pc is null;
 		
@@ -124,7 +112,7 @@ BEGIN
 		where transaction_dt > @last_source_extract_ts
 		or hc.rate_on_line is null; 
 		
-		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line; 
+		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line;   
 
 		SET @rows_affected=@@ROWCOUNT;
 	

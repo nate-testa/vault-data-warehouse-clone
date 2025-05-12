@@ -6,6 +6,8 @@
 -----------------------------------------------------------------------------------------------------------
 -- 09/05/23		Hernando Gonzalez Garcia		1. Created this procedure 
 -- 03/06/24		Alberto Almario 				2. new column emergency_extension_notice_in
+-- 22/08/24		Hernando Gonzalez				3. Remove effective date from the merge join
+-- 01/23/25		Alberto Almario				    4. Added new column theft_or_loss_general_conditions_endorsement_in
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_coverage_wip]
@@ -63,6 +65,7 @@ BEGIN
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
             ,EmergencyExtensionNotice
+            ,TheftOrLossGeneralConditionsEndorsement
 			INTO [edw_temp].[tquote_collection_coverage_wip_temp1]
 			FROM
 			(
@@ -97,7 +100,7 @@ BEGIN
 			PIVOT 
 			(
 				max(Value) FOR Field IN (UnoccupiedMoreThanThreeMonths,NumberOfLossesLastThreeYears,ProtectionClass,Terrain,DistanceToCoast,RoofGeometry,RoofCovering,RoofCoverDeck,RoofDeckAttachment,RoofWallAttachment,HailResistantRating,SecondaryWaterResistance,ConstructionType,YearBuilt,FireProtection,OpeningProtection,NumberOfStories,CentralReportingFireAlarm,CentralReportingBurglarAlarm,HomeSafe,FulltimeLiveInCaretaker,BackupGenerator,ResidentialSprinklerSystem,MarketValueScheduledItems,MarketScheduledClassBankVaultedJewelry,MarketScheduledClassCoins,MarketScheduledClassCollectibles,MarketScheduledClassFineArts,MarketScheduledClassFurs,MarketScheduledClassGuns,MarketScheduledClassWorldwideJewelry,MarketScheduledClassMiscellaneous,MarketScheduledClassMusicalInstruments,MarketScheduledClassSilver,MarketScheduledClassStamps,MarketScheduledClassWearableCollectibles,MarketScheduledClassWine,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,WardrobeLossPrevention,CompanionCreditHomeowner,AgreedValue,AgreedValueSpecifiedClass,AgreedValueSpecifiedClassBankVaultedJewelry,AgreedValueSpecifiedClassCoins,AgreedValueSpecifiedClassCollectibles,AgreedValueSpecifiedClassFineArts,AgreedValueSpecifiedClassFurs,AgreedValueSpecifiedClassGuns,AgreedValueSpecifiedClassWorldwideJewelry,AgreedValueSpecifiedClassMiscellaneous,AgreedValueSpecifiedClassMusicalInstruments,AgreedValueSpecifiedClassSilver,AgreedValueSpecifiedClassStamps,AgreedValueSpecifiedClassWearableCollectibles,AgreedValueSpecifiedClassWine,AgreedValueSpecifiedItems,AlarmWarranty,BreakageExclusion,TerrorismLimitation,TerrorismLimitationAmount,TheftMysteriousDisappearanceExclusion,TransitLimit,TransitLimitAmount,HurricaneLossExclusion,HurricaneLossLimitation,HurricaneLossLimitationAmount,OutdoorFineArtHurricaneExclusion,TerrorismExclusion,DeletionofCosmeticMarringExclusion,EarthquakeExclusion,EarthquakeDeductibleLossLimitation,EarthquakeDeductibleLossLimitationLimit,HotelMotelExclusion,JewelryOffPremisesLossLimitation,SpoilageExclusion,ChangeinTermsSummary,ChangeinTermsOptions,Manuscript,CoverageDeductible,CoverageDeductibleAmount,HurricaneDeductible,HurricaneDeductibleType,HurricaneDeductibleLimit,EarthquakeDeductible,EarthquakeDeductibleAmount,WildfireDeductible,WildfireDeductibleType,WildfireDeductibleAmount,WildfireBarkMulchWithinTenFeetofAnyStructure,WildfireCombustibleDeckOrAttachedStructure,WildfireCombustibleWoodSiding,WildfireDefensibleSpace,WildfireDistanceToHighFuelFeet,WildfireDistanceToModerateFuelFeet,WildfireDistanceToVeryHighFuelFeet,WildfireEavesorEnclosedEaves,WildfireExteriorWildfireSprinklers,WildfireFireWoodOrCombustiblesStoredAgainstHome,WildfireFlammableVegetationWithinTenFeetofAnyStructure,WildfireGutterGuards,WildfireHazardSeverity,WildfireNearestDistanceToPerimeter,WildfireNumberOfOccurrencesNear,WildfireNumberOfOccurrences,WildfirePermanentlyInstalledSpraySystem,WildfirePortableFireBreakSystem,WildfireSpecialityEmberResistantVenting,WildfireThreat,WildfireWoodShakeOrShingleRoof,CoutureAndWearableCollectiblesClassCouture
-                                        ,EmergencyExtensionNotice
+                                        ,EmergencyExtensionNotice,TheftOrLossGeneralConditionsEndorsement
                                         )
 			) AS pivottable
 			'
@@ -230,16 +233,16 @@ BEGIN
                 ,getdate() AS [update_ts]
                 ,@etl_audit_sk AS [etl_audit_sk]
                 ,[EmergencyExtensionNotice] AS emergency_extension_notice_in
+                ,[TheftOrLossGeneralConditionsEndorsement] AS theft_or_loss_general_conditions_endorsement_in
             FROM
                 edw_temp.tquote_collection_coverage_wip_temp1
         ) AS SOURCE
         ON
             TARGET.quote_no = SOURCE.quote_no AND
-            TARGET.effective_dt = SOURCE.effective_dt AND
             TARGET.transaction_seq_no = SOURCE.transaction_seq_no
-
         WHEN MATCHED THEN
             UPDATE SET
+                TARGET.effective_dt = SOURCE.effective_dt,
                 TARGET.expiration_dt = SOURCE.expiration_dt,
                 TARGET.quote_collection_location_sk = SOURCE.quote_collection_location_sk,
                 TARGET.quote_history_sk = SOURCE.quote_history_sk,
@@ -356,7 +359,8 @@ BEGIN
                 TARGET.couture_wearable_collectibles_class_in = SOURCE.couture_wearable_collectibles_class_in,
                 TARGET.update_ts = SOURCE.update_ts,
                 TARGET.etl_audit_sk = SOURCE.etl_audit_sk,
-                TARGET.emergency_extension_notice_in = SOURCE.emergency_extension_notice_in
+                TARGET.emergency_extension_notice_in = SOURCE.emergency_extension_notice_in,
+                TARGET.theft_or_loss_general_conditions_endorsement_in = SOURCE.theft_or_loss_general_conditions_endorsement_in
 
         WHEN NOT MATCHED BY TARGET THEN
             INSERT (
@@ -399,7 +403,7 @@ BEGIN
                 wildfire_portable_fire_break_system_in, wildfire_speciality_ember_resistant_venting_in, wildfire_threat,
                 wildfire_wood_shake_or_shingle_roof_in, couture_wearable_collectibles_class_in,
                 source_system_sk, create_ts, update_ts, etl_audit_sk,
-                emergency_extension_notice_in
+                emergency_extension_notice_in,theft_or_loss_general_conditions_endorsement_in
             )
             VALUES (
                 SOURCE.quote_no, SOURCE.effective_dt, SOURCE.expiration_dt, SOURCE.transaction_seq_no,
@@ -443,7 +447,7 @@ BEGIN
                 SOURCE.wildfire_portable_fire_break_system_in, SOURCE.wildfire_speciality_ember_resistant_venting_in, SOURCE.wildfire_threat,
                 SOURCE.wildfire_wood_shake_or_shingle_roof_in, SOURCE.couture_wearable_collectibles_class_in,
                 SOURCE.source_system_sk, SOURCE.create_ts, SOURCE.update_ts, SOURCE.etl_audit_sk,
-                SOURCE.emergency_extension_notice_in
+                SOURCE.emergency_extension_notice_in, SOURCE.theft_or_loss_general_conditions_endorsement_in
         );
 
 		SET @rows_affected=@@ROWCOUNT;

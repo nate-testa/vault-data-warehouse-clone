@@ -7,6 +7,8 @@
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- 05/14/24		Architha Gudimalla				2. Corrected errors
 -- 05/20/24		Architha Gudimalla				3. Added update for latest_transaction_in
+-- 03/14/25		Yunus Mohammed			     4.  Ad-8848 Added premium_rater_version
+-- 04/03/25		Yunus Mohammed			  	 5. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
 -- ===================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history_wip]
@@ -70,7 +72,8 @@ BEGIN
 				nullif(trim(pr.ProductCode),'') product_cd,
 				usr.name uw_nm,'' note,
                 acc.state, acc.isrenewal, null BindDate, null ReferredByUserId,
-				pd.producer_sk 
+				pd.producer_sk ,
+				arr.[Version] as premium_rater_version
 		INTO edw_temp.tquote_history_temp1 --select acct.* 
 		FROM edw_stage.Account acc   
         left join edw_stage.Accountpremium ap on ap.AccountId=acc.id  
@@ -80,9 +83,11 @@ BEGIN
 		left join edw_stage.Insured ins on acc.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acc.ProductId = pr.id
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acc.BrokerId
+		LEFT JOIN (SELECT * FROM edw_stage.AccountRaterReference WHERE ReferenceType = 'Premium') arr on arr.AccountId = acc.ID	
+		and pr.[InternalName] = arr.ProductInternalName  
 		WHERE --acct.Stage in ('QUOTE','POLICY')  and
 			acc.PolicyNumber is not null 
-		and pr.ProductLine = 'PersonalLines'  
+		and pr.ProductLine = 'PersonalLines'
 		and not exists (select * from edw_stage.AccountTransaction actr where actr.AccountId=acc.id)
         and greatest(acc.CreatedDate,acc.UpdatedDate)>@last_source_extract_ts 
 
@@ -93,7 +98,7 @@ BEGIN
 		FROM edw_stage.Account acc 
         left join edw_stage.Accountpremium ap on ap.AccountId=acc.id 
 		INNER JOIN edw_stage.[AccountPremiumTaxAndFee] accptf on accptf.AccountPremiumId = ap.Id 
-		left join edw_stage.Product pr on acc.ProductId = pr.id
+		left join edw_stage.Product pr on acc.ProductId = pr.id		
 		WHERE --acct.Stage in ('QUOTE','POLICY') and
 			acc.PolicyNumber is not null 
 		and pr.ProductLine = 'PersonalLines'  
@@ -103,7 +108,7 @@ BEGIN
 
 		-- Pivot Table
 		DROP TABLE IF EXISTS edw_temp.tquote_history_temp2;
-		SELECT	AccountId,  CompanionCreditHomeowner, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
+		SELECT	AccountId,  CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
 				nullif(trim(PriorResidenceAddressLine1),'') PriorResidenceAddressLine1, 
 				nullif(trim(PriorResidenceAddressLine2),'') PriorResidenceAddressLine2, 
 				nullif(trim(PriorResidenceAddressLineUnit),'') PriorResidenceAddressLineUnit,  
@@ -139,7 +144,7 @@ BEGIN
 			) t
 		PIVOT 
 			(
-				MAX(Value) FOR Field IN (CompanionCreditHomeowner, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
+				MAX(Value) FOR Field IN (CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
 										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
 										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
@@ -166,7 +171,7 @@ BEGIN
 				comm,
 				ap,  
 				temp1.CompanionCreditCollections, temp1.CompanionCreditPersonalExcessLiability, 
-				temp1.CompanionCreditAuto, temp1.CompanionCreditHomeowner,
+				temp1.CompanionCreditAuto, temp1.CompanionCreditPrimaryHome,
 				ResidenceHasPrior, PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 				PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, 
 				temp.ssk, 
@@ -191,6 +196,7 @@ BEGIN
 				,temp1.InsuranceScoreCode4Description
 				,temp.producer_sk
 				,temp1.InsuranceScoreLastRunDate
+				,temp.premium_rater_version
 			FROM edw_temp.tquote_history_temp1 temp
 			LEFT JOIN edw_temp.tquote_history_temp3 tfs on temp.id = tfs.id
 			LEFT JOIN edw_temp.tquote_history_temp2 temp1 on temp.id = temp1.AccountId 
@@ -254,6 +260,7 @@ BEGIN
 		   ,insurance_score_desc4
 		   ,producer_sk
 		   ,insurance_score_last_run_dt
+		   ,premium_rater_version
 		   ) 
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -274,7 +281,7 @@ BEGIN
 				Source.comm,
 				Source.ap,  
 				Source.CompanionCreditCollections, Source.CompanionCreditPersonalExcessLiability, 
-				Source.CompanionCreditAuto, Source.CompanionCreditHomeowner,
+				Source.CompanionCreditAuto, Source.CompanionCreditPrimaryHome,
 				Source.ResidenceHasPrior, Source.PriorResidenceAddressLine1, Source.PriorResidenceAddressLine2, Source.PriorResidenceAddressLineUnit, Source.PriorResidenceAddressCity, 
 				Source.PriorResidenceAddressState, Source.PriorResidenceAddressZipCode, Source.PriorResidenceAddressCounty, Source.PriorResidenceAddressCountry, 
 				Source.ssk, 
@@ -299,6 +306,7 @@ BEGIN
 				,Source.InsuranceScoreCode4Description
 				,Source.producer_sk
 				,Source.InsuranceScoreLastRunDate
+				,Source.premium_rater_version
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -325,7 +333,7 @@ BEGIN
         Target.collection_policy_credit_in			= Source.CompanionCreditCollections, 
         Target.excess_liability_policy_credit_in	= Source.CompanionCreditPersonalExcessLiability,  
         Target.auto_policy_credit_in				= Source.CompanionCreditAuto, 
-        Target.home_policy_credit_in				= Source.CompanionCreditHomeowner, 
+        Target.home_policy_credit_in				= Source.CompanionCreditPrimaryHome, 
         Target.prior_address_in 					= Source.ResidenceHasPrior , 
         Target.prior_address_line_1 				= Source.PriorResidenceAddressLine1 , 
         Target.prior_address_line_2 				= Source.PriorResidenceAddressLine2 , 
@@ -357,6 +365,7 @@ BEGIN
         Target.insurance_score_desc4 				= Source.InsuranceScoreCode3Description , 
         Target.producer_sk 							= Source.producer_sk , 
         Target.insurance_score_last_run_dt 			= Source.InsuranceScoreLastRunDate , 
+		Target.premium_rater_version = Source.premium_rater_version,
         Target.update_ts 							= getdate()
 		; 
 
@@ -377,7 +386,6 @@ BEGIN
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

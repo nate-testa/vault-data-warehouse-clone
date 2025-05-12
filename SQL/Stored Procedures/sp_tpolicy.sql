@@ -26,6 +26,9 @@ GO
 -- 12/04/23		Architha Gudimalla		        15. updated program to use from AccountTransactionVersionObjectField table
 -- 12/11/23		Architha Gudimalla		        16. Updated policy_term
 -- 03/21/24		Architha Gudimalla		        17. Added rewritten policy as prior policy no and rewritten_in
+-- 09/05/24		Architha Gudimalla		        18. Added term_no
+-- 09/18/24		Architha Gudimalla		        19. Updated term_no
+-- 03/20/25		Hernando Gonzalez				20. Included Target_Account
 -- ======================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tpolicy]
@@ -177,7 +180,15 @@ BEGIN
 				,acc.externalsourceid
 				--,case when acc_rw.PolicyNumber is not null then 'Yes' else 'No' end rewritten_in
 				,case when acc.isrewritten = 1 then 'Yes' else 'No' end rewritten_in
+				,'Term ' || case 
+								when charindex('-',tmp1.PolicyNumber) <> 0 then cast(substring(tmp1.PolicyNumber,charindex('-',tmp1.PolicyNumber)+1,len(tmp1.PolicyNumber)) as int) + 1
+								when tmp1.PolicyNumber like '%A'		   then 1
+								when tmp1.PolicyNumber like '%B'		   then 2
+								when tmp1.PolicyNumber like '%C'		   then 3
+							 	else 1
+							end term_no
 				--select *
+				,acc.TargetAccount as target_account
 			FROM 
 				edw_temp.tpolicy_temp1 tmp1
 				INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = tmp1.Id
@@ -230,6 +241,8 @@ BEGIN
            ,update_ts
            ,etl_audit_sk
 		   ,rewritten_in
+		   ,term_no
+		   ,target_account
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, Source.ExpirationDate, Source.BrokerId, Source.customer_id, 
@@ -258,7 +271,10 @@ BEGIN
 		   		,Source.billingaccount_sk, 
 				case when Source.externalsourceid is not null then 'Yes' else 'No' end,
 				getdate(), getdate(), @etl_audit_sk
-				,source.rewritten_in)
+				,source.rewritten_in
+				,term_no
+				,source.target_account
+				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
@@ -285,7 +301,8 @@ BEGIN
 		Target.billingaccount_sk			= source.billingaccount_sk, 
 		Target.source_system_sk				= source.source_system_sk, 
         Target.update_ts 					= getdate(),
-        Target.rewritten_in 				= source.rewritten_in
+        Target.rewritten_in 				= source.rewritten_in,
+		Target.target_account				= source.target_account
 		;
 
 		SET @rows_affected=@@ROWCOUNT;

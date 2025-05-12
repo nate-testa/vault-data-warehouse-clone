@@ -2,19 +2,25 @@
 -- Author:		Hernando Gonzalez Garcia  
 -- Description: This procedures inserts into TPolicy_history
 ---------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author											|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 06/02/23		Hernando Gonzalez Garcia		1. Created this procedure
--- 06/28/23		Architha Gudimalla				2. Made changes to fix the errors on first run 
--- 09/08/23		Architha Gudimalla				3. Made changes for updated model 
--- 10/06/23		Architha Gudimalla				4. Added commission override columns
--- 10/10/23		Architha Gudimalla				5. Updated logic for transaction_type - renewals
--- 10/17/23		Architha Gudimalla				6. Updated logic for transaction_desc
--- 10/17/23		Architha Gudimalla				7. Updated logic for producer_nm
--- 10/26/23		Yunus Mohammed					8. Made changes to fix error on customer_id and broker_id
--- 02/08/24		Alberto Almario					9. Added new column producer_sk
--- 04/29/24		Hernando Gonzalez				10. Added new column insurance_score_last_run_dt
--- 06/14/24		Alberto Almario					11. Added new column prorate_factor
+-- 06/28/23		Architha Gudimalla						2. Made changes to fix the errors on first run 
+-- 09/08/23		Architha Gudimalla						3. Made changes for updated model 
+-- 10/06/23		Architha Gudimalla						4. Added commission override columns
+-- 10/10/23		Architha Gudimalla						5. Updated logic for transaction_type - renewals
+-- 10/17/23		Architha Gudimalla						6. Updated logic for transaction_desc
+-- 10/17/23		Architha Gudimalla						7. Updated logic for producer_nm
+-- 10/26/23		Yunus Mohammed						8. Made changes to fix error on customer_id and broker_id
+-- 02/08/24		Alberto Almario								9. Added new column producer_sk
+-- 04/29/24		Hernando Gonzalez					10. Added new column insurance_score_last_run_dt
+-- 06/14/24		Alberto Almario							11. Added new column prorate_factor
+-- 03/03/25		Alberto Almario							12. Added new column transaction_status
+-- 03/13/25		Yunus Mohammed			  			13. Ad-8848 Added premium_rater_version
+-- 03/14/25		Yunus Mohammed			  			14. Used product InternalName instead of Name 
+-- 04/03/25		Yunus Mohammed			  			15. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
+-- 04/22/25		Yunus Mohammed						16. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
+-- 04/30/25		Yunus Mohammed						17. Ad-9338 Added cancellation_sub_reason_desc
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -54,17 +60,13 @@ BEGIN
 			DENSE_RANK()OVER(PARTITION BY acct.PolicyNumber,CAST(acct.EffectiveDate AS DATE) ORDER BY acct.policychangenumber DESC) AS rnk, 
 			acct.TransactionEffectiveDate,
 			acct.CancellationReason,
+			acct.CancellationSubReason,
 			acct.IssuedDate,
 			acct.UpdatedDate,  
 			coalesce(acct.totalpremiumdeltaprorated,acct.totalpremium, 0) wp,
 			coalesce(acct.commissiondelta,acct.commission,0) comm,
 			coalesce(acct.totalpremiumdelta,acct.totalpremium,0) ap, 
-			0 tfs,
-			--acct.totalpremium,
-			--acct.totalpremiumdeltaprorated,
-			--acct.totalpremiumdelta,
-			--acct.commissiondelta , 
-			--acct.commission , 
+			0 tfs,			
 			coalesce(acctvp.CommissionPercent, 0) CommissionPercent, 
 			coalesce(acctvp.CommissionPercentOverride, 0) CommissionPercentOverride, 
 			CommissionPercentOverrideRetention, 
@@ -78,21 +80,26 @@ BEGIN
 				nullif(trim(pr.ProductCode),'') product_cd,
 				usr.name uw_nm, nullif(trim(acct.note),'') note,
 			pd.producer_sk,
-			acct.ProRateFactor
+			acct.ProRateFactor,
+			acct.IsReversed,
+			acct.IsReversal,
+			acctvprr.[Version] as premium_rater_version
 		INTO edw_temp.tpolicy_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
 		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id 
-		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id 
+		INNER JOIN edw_stage.AccountTransactionVersionPremium acctvp ON acctvp.AccountTransactionVersionId = acctv.Id 	
 		left join edw_stage.[user] usr on usr.id = acctv.UnderwriterUserId 
 		left join edw_stage.Brokerage brk on acctv.BrokerageId = brk.id
 		left join edw_stage.[Broker] br on acctv.BrokerId = br.id
 		left join edw_stage.Insured ins on acctv.PrimaryInsuredID = ins.Id
 		left join edw_stage.Product pr on acctv.ProductId = pr.id
+		LEFT JOIN (SELECT * FROM edw_stage.AccountTransactionVersionPremiumRaterReference WHERE ReferenceType = 'Premium') acctvprr 
+		on acctvprr.AccountTransactionVersionPremiumId = acctvp.Id and pr.[InternalName] = acctvprr.ProductInternalName
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acctv.BrokerId
 		WHERE acct.State ='ISSUED' --- Review BOUND transactions
 		and	acct.PolicyNumber is not null 
-		and pr.ProductLine = 'PersonalLines'  
+		and pr.ProductLine = 'PersonalLines' 		
 		AND acct.IssuedDate>@last_source_extract_ts
 
 
@@ -115,7 +122,7 @@ BEGIN
 
 		-- Pivot Table
 		DROP TABLE IF EXISTS edw_temp.tpolicy_history_temp2;
-		SELECT	AccountTransactionId,  CompanionCreditHomeowner, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
+		SELECT	AccountTransactionId,  CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
 				nullif(trim(PriorResidenceAddressLine1),'') PriorResidenceAddressLine1, 
 				nullif(trim(PriorResidenceAddressLine2),'') PriorResidenceAddressLine2, 
 				nullif(trim(PriorResidenceAddressLineUnit),'') PriorResidenceAddressLineUnit,  
@@ -152,7 +159,7 @@ BEGIN
 			) t
 		PIVOT 
 			(
-				MAX(Value) FOR Field IN (CompanionCreditHomeowner, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
+				MAX(Value) FOR Field IN (CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
 										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
 										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
@@ -175,6 +182,7 @@ BEGIN
            ,transaction_ts
            ,transaction_desc
            ,cancellation_reason_desc
+		   ,cancellation_sub_reason_desc
            ,premium_amt
            ,net_premium_amt
            ,[tax_fee_surcharge_amt]
@@ -209,17 +217,19 @@ BEGIN
 		   ,producer_sk
 		   ,insurance_score_last_run_dt
 		   ,prorate_factor
+		   ,transaction_status
+		   ,premium_rater_version
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.PolicyChangeNumber, 
 				pol.policy_sk, br.broker_sk, cust.customer_sk, br.Broker_Id, Source.customer_id, 
-				tt.policy_transaction_type_nm, Source.IssuedDate, source.note, Source.CancellationReason, 
+				tt.policy_transaction_type_nm, Source.IssuedDate, source.note, Source.CancellationReason, Source.CancellationSubReason,
 				wp, 
 				wp-isnull(tfs.tfs,0),isnull(tfs.tfs,0),
 				comm,
 				ap, 
 				rid.Name, cid.Name, 
 				source1.CompanionCreditCollections, source1.CompanionCreditPersonalExcessLiability, 
-				source1.CompanionCreditAuto, source1.CompanionCreditHomeowner,
+				source1.CompanionCreditAuto, source1.CompanionCreditPrimaryHome,
 				ResidenceHasPrior, PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 				PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, 
 				source.ssk, getdate(), getdate(), @etl_audit_sk
@@ -242,6 +252,12 @@ BEGIN
 				,source.producer_sk
 				,source1.InsuranceScoreLastRunDate
 				,source.ProRateFactor
+				,CASE 
+					WHEN source.IsReversed = 1 THEN 'Reversed'
+					WHEN source.IsReversal = 1 THEN 'Reversal'
+					ELSE 'Issued'
+				END AS transaction_status
+				,source.premium_rater_version
 		FROM edw_temp.tpolicy_history_temp1 source
 		LEFT JOIN edw_temp.tpolicy_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tpolicy_history_temp2 source1 on source.id = source1.AccountTransactionId
@@ -290,8 +306,7 @@ BEGIN
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
-
+		
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;

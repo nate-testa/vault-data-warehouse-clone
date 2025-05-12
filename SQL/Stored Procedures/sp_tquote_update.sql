@@ -10,6 +10,9 @@ GO
 -- 09/08/23		Architha Gudimalla			1. Created this procedure  
 -- 11/14/23		Sandeep Gundreddy			2. Modify logic  
 -- 11/22/23     Sandeep Gundreddy           3. Modified logic to fix quote_status for Issued quotes
+-- 09/08/23		Architha Gudimalla			4. VI34112|AD7632 - Added issued_quote_history_sk
+-- 01/23/25		Architha Gudimalla			5. VI33968/AD7635 - Added uwco orig eff dt..
+-- 03/03/25		Architha Gudimalla			5. AD8347 - New quote close reasons
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_update]
@@ -43,20 +46,46 @@ BEGIN
 		where exists (select * from edw_core.tquote_history  b where upper(transaction_status) = 'ISSUED' and a.quote_no=b.quote_no) and ISNULL(a.quote_status,'xx')!='Issued';
 
 		update a
-		set a.quote_status = case when b.state = 'WIP' and tr_status = 'No Trans' then 'In Progress'
-								  when b.state = 'WIP' and tr_status_offered >= 1 then 'Offered'
-								  when b.state = 'WIP' and tr_status_referred >= 1 and tr_status_offered = 0 then 'Referred'
-								  when b.state = 'Closed' and tr_status_offered = 0 then 'Declined'
-								  when b.state = 'Closed' and tr_status_offered >= 1 then 'Not taken'
-								  when b.state = 'Issued'  then 'Issued'
-								  else 'In Progress'
-							 end
+		set a.quote_status = case 				
+								when b.state = 'WIP' and b.tr_status = 'No Trans' then 'In Progress'					
+								when b.state = 'WIP' and b.tr_status_offered >= 1 then 'Offered'					
+								when b.state = 'WIP' and b.tr_status_referred >= 1 and tr_status_offered = 0 then 'Referred'
+								when b.state = 'Closed' and b.SubmissionCloseReasonCategory is not null then b.SubmissionCloseReasonCategory				
+								when b.state = 'Closed' and b.SubmissionCloseReasonCategory is null 
+									and a.close_reason_desc 					
+										in ('CAT modeling','Doesn’t meet current guidelines','Lack of updates','Loss history','Mid term COC',					
+										'Occupancy','Other','OutsideRiskAppetite','Profile concerns','Unacceptable entity','UnacceptableTerms',					
+										'UnavailableProduct','Unprotected','Wildfire concerns'					
+										) then 'Declined by Vault'					
+								when b.state = 'Closed' and b.SubmissionCloseReasonCategory is null 
+									and a.close_reason_desc 					
+										in ('Expired'					
+										) then 'Expired'				
+								when b.state = 'Closed' and b.SubmissionCloseReasonCategory is null 
+									and a.close_reason_desc 					
+										in ('BrokerNotResponsive'					
+									) then 'No Response by Broker/Producer'				
+								when b.state = 'Closed' and b.SubmissionCloseReasonCategory is null 
+									and a.close_reason_desc 					
+										in ('CreatedInError','DuplicateSubmission','RenewalOfAccountCanceled'					
+									) then 'Not Needed'			
+								when b.state = 'Closed' and b.SubmissionCloseReasonCategory is null 
+									and a.close_reason_desc 					
+										in ('IncompleteSubmission','NotTaken'					
+									) then 'Not Taken by Insured'				
+								when b.state = 'Closed' and b.tr_status_offered = 0 then 'Declined by Vault'					
+								when b.state = 'Closed' and b.tr_status_offered >= 1 then 'Not Taken by Insured'					
+								when b.state = 'Issued' then 'Issued'					
+								else 'In Progress'					
+								end	 
 		from edw_core.tquote a
 		inner join (
-						select policynumber, effectivedate , state, tr_status, sum(tr_status_offered) tr_status_offered, sum(tr_status_referred) tr_status_referred
+						select policynumber, effectivedate , state, tr_status, SubmissionCloseReasonCategory,
+								sum(tr_status_offered) tr_status_offered, 
+								sum(tr_status_referred) tr_status_referred
 						FROM
 						(
-							select 	policynumber, effectivedate , acc.state, 
+							select 	policynumber, effectivedate , acc.state, acc.SubmissionCloseReasonCategory,
 									case when qtsh.quote_no is null then 'No Trans' else '' end tr_status, 
 									case when upper(qtsh.transaction_status) = 'OFFERED' then 1 else 0 end tr_status_offered, 
 									case when qtsh.transaction_status = 'REFERRED' then 1 else 0 end tr_status_referred 
@@ -65,7 +94,7 @@ BEGIN
 							where	acc.UpdatedDate 
 									> @last_source_extract_ts
 						) aa
-						group by policynumber, effectivedate , state, tr_status
+						group by policynumber, effectivedate , state, tr_status, SubmissionCloseReasonCategory
 					) b on	 a.quote_no = b.policynumber and ISNULL(a.quote_status,'xx')!='Issued'; 
 
   update a
@@ -110,6 +139,30 @@ BEGIN
 		inner join (select quote_no,max(bind_dt) max_bind_dt from edw_core.tquote_history where bind_dt is not null group by quote_no) b 
         on a.quote_no = b.quote_no; 
 
+		DROP TABLE IF EXISTS edw_temp.tquote_update_temp1; 
+        
+		select 	qh.quote_sk, max(qh.quote_history_sk) quote_history_sk
+		into 	edw_temp.tquote_update_temp1
+		from 	edw_core.tquote_history qh
+		inner join edw_stage.account acc on acc.PolicyNumber = qh.quote_no
+		where  	qh.transaction_status = 'Issued'
+		and 	acc.UpdatedDate	> @last_source_extract_ts
+		group by qh.quote_sk; 
+
+		update 	a
+		set 	a.issued_quote_history_sk = b.quote_history_sk
+		from 	edw_core.tquote a
+		inner join edw_temp.tquote_update_temp1 b on a.quote_sk = b.quote_sk; 
+
+		--added on 1/23 for uw_company_original_policy_effective_dt
+		update q
+		set q.uw_company_original_policy_effective_dt = q1.uw_company_original_policy_effective_dt
+		from edw_core.tquote q
+		inner join (select  quote_sk, min(effective_dt) over (partition by original_policy_no) uw_company_original_policy_effective_dt
+					from edw_core.tquote) q1 on q.quote_sk = q1.quote_sk
+		;  
+
+		DROP TABLE IF EXISTS edw_temp.tquote_update_temp1;
       
 		SET @rows_affected=@@ROWCOUNT;   
 	

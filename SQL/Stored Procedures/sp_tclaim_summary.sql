@@ -9,11 +9,13 @@
 -- 12/22/2023		Yunus Mohammed					3. Added try catch block and update end_dt_sk logic for current month
 -- 05/21/2024		Yunus Mohammed					5. Updates were made to calculate start month and end month
 -- 05/23/2024		Yunus Mohammed					6. Updates were made to select the previous month and obtain the last day's transaction from that month on the 1st of the current month
+-- 02/06/2025		Yunus Mohammed					7. Procedure update for Snapsheet
+-- 02/12/2025       Yunus Mohammed                  8. Added schema name to table name in Update stmt
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_summary]
 AS
 BEGIN
-    DECLARE @ProcedureName NVARCHAR(120)
+DECLARE @ProcedureName NVARCHAR(120)
     SET @ProcedureName = OBJECT_NAME(@@PROCID)
 	
 	BEGIN TRY
@@ -58,51 +60,107 @@ BEGIN
 			INSERT INTO edw_core.tclaim_summary
 			(
 				month_sk,claim_sk,product_sk,policy_sk,broker_sk,customer_sk,
-				loss_reserve_amt,itd_loss_reserve_amt, expense_reserve_amt,itd_expense_reserve_amt, 
-				adjusting_other_reserve_amt, itd_adjusting_other_reserve_amt,
-				subro_reserve_amt,itd_subro_reserve_amt, salvage_reserve_amt, itd_salvage_reserve_amt,
-				salvage_expense_reserve_amt,itd_salvage_expense_reserve_amt,
-				subro_expense_reserve_amt,itd_subro_expense_reserve_amt,
-				loss_paid_amt,itd_loss_paid_amt,
-				expense_paid_amt,itd_expense_paid_amt,
-				adjusting_other_paid_amt,itd_adjusting_other_paid_amt,
-				subro_recovery_amt,itd_subro_recovery_amt,
-				salvage_recovery_amt,itd_salvage_recovery_amt,
-				salvage_expense_paid_amt,itd_salvage_expense_paid_amt,
-				subro_expense_paid_amt,itd_subro_expense_paid_amt,
-				refund_indemnity_paid_amt,itd_refund_indemnity_paid_amt, 
-				refund_expense_paid_amt,itd_refund_expense_paid_amt,
-				dcc_expense_paid_amt,
-				open_claim_ct,closed_claim_ct,
-				itd_refund_paid_amt,itd_total_incurred_amt,itd_total_paid_amt,itd_total_reserve_amt,
-				itd_dcc_expense_paid_amt,source_system_sk,update_ts,etl_audit_sk
+				loss_reserve_amt,itd_loss_reserve_amt,expense_reserve_amt,itd_expense_reserve_amt,subrogation_recovery_reserve_amt,
+                itd_subrogation_recovery_reserve_amt,salvage_recovery_reserve_amt,itd_salvage_recovery_reserve_amt,salvage_recovery_expense_reserve_amt,
+                itd_salvage_recovery_expense_reserve_amt,subrogation_recovery_expense_reserve_amt,itd_subrogation_recovery_expense_reserve_amt,
+                loss_paid_amt,itd_loss_paid_amt,expense_paid_amt,itd_expense_paid_amt,subrogation_recovery_amt,itd_subrogation_recovery_amt,
+                salvage_recovery_amt,itd_salvage_recovery_amt,salvage_expense_recovery_amt,itd_salvage_expense_recovery_amt,
+                subrogation_expense_recovery_amt,itd_subrogation_expense_recovery_amt,open_claim_ct,closed_claim_ct,
+                itd_total_incurred_amt,itd_total_paid_amt,itd_total_reserve_amt,defense_reserve_amt,itd_defense_reserve_amt,
+                deductible_recovery_reserve_amt,itd_deductible_recovery_reserve_amt,reinsurance_recovery_reserve_amt,
+                itd_reinsurance_recovery_reserve_amt,overpayment_recovery_reserve_amt,itd_overpayment_recovery_reserve_amt,
+                deductible_recovery_expense_reserve_amt,itd_deductible_recovery_expense_reserve_amt,reinsurance_recovery_expense_reserve_amt,
+                itd_reinsurance_recovery_expense_reserve_amt,overpayment_recovery_expense_reserve_amt,itd_overpayment_recovery_expense_reserve_amt,
+                subrogation_recovery_defense_reserve_amt,itd_subrogation_recovery_defense_reserve_amt,salvage_recovery_defense_reserve_amt,
+                itd_salvage_recovery_defense_reserve_amt,deductible_recovery_defense_reserve_amt,itd_deductible_recovery_defense_reserve_amt,
+                reinsurance_recovery_defense_reserve_amt,itd_reinsurance_recovery_defense_reserve_amt,overpayment_recovery_defense_reserve_amt,
+                itd_overpayment_recovery_defense_reserve_amt,defense_paid_amt,itd_defense_paid_amt,deductible_recovery_amt,
+                itd_deductible_recovery_amt,reinsurance_recovery_amt,itd_reinsurance_recovery_amt,overpayment_recovery_amt,
+                itd_overpayment_recovery_amt,deductible_expense_recovery_amt,itd_deductible_expense_recovery_amt,reinsurance_expense_recovery_amt,
+                itd_reinsurance_expense_recovery_amt,overpayment_expense_recovery_amt,itd_overpayment_expense_recovery_amt,
+                subrogation_defense_recovery_amt,itd_subrogation_defense_recovery_amt,salvage_defense_recovery_amt,itd_salvage_defense_recovery_amt,
+                deductible_defense_recovery_amt,itd_deductible_defense_recovery_amt,reinsurance_defense_recovery_amt,
+                itd_reinsurance_defense_recovery_amt,overpayment_defense_recovery_amt,itd_overpayment_defense_recovery_amt,
+				source_system_sk,update_ts,etl_audit_sk
 			)
 			SELECT
 			@end_dt_sk AS month_sk, claim_sk,product_sk,policy_sk,broker_sk,customer_sk,
-			SUM(loss_reserve_amt) AS loss_reserve_amt,SUM(itd_loss_reserve_amt) AS itd_loss_reserve_amt,
-			SUM(expense_reserve_amt) AS expense_reserve_amt,SUM(itd_expense_reserve_amt) AS itd_expense_reserve_amt,
-			SUM(adjusting_other_reserve_amt) AS adjusting_other_reserve_amt,SUM(itd_adjusting_other_reserve_amt) AS itd_adjusting_other_reserve_amt,
-			SUM(subro_reserve_amt) AS subro_reserve_amt,SUM(itd_subro_reserve_amt) AS itd_subro_reserve_amt,
-			SUM(salvage_reserve_amt) AS salvage_reserve_amt,SUM(itd_salvage_reserve_amt) AS itd_salvage_reserve_amt,
-			SUM(salvage_expense_reserve_amt) AS salvage_expense_reserve_amt,SUM(itd_salvage_expense_reserve_amt) AS itd_salvage_expense_reserve_amt,
-			SUM(subro_expense_reserve_amt) AS subro_expense_reserve_amt,SUM(itd_subro_expense_reserve_amt) AS itd_subro_expense_reserve_amt,
-			SUM(loss_paid_amt) AS loss_paid_amt,SUM(itd_loss_paid_amt) AS itd_loss_paid_amt,
-			SUM(expense_paid_amt) AS expense_paid_amt,SUM(itd_expense_paid_amt) AS itd_expense_paid_amt,
-			SUM(adjusting_other_paid_amt) AS adjusting_other_paid_amt,SUM(itd_adjusting_other_paid_amt) AS itd_adjusting_other_paid_amt,
-			SUM(subro_recovery_amt) AS subro_recovery_amt,SUM(itd_subro_recovery_amt) AS itd_subro_recovery_amt,
-			SUM(salvage_recovery_amt) AS salvage_recovery_amt,SUM(itd_salvage_recovery_amt) AS itd_salvage_recovery_amt,
-			SUM(salvage_expense_paid_amt) AS salvage_expense_paid_amt,SUM(itd_salvage_expense_paid_amt) AS itd_salvage_expense_paid_amt,
-			SUM(subro_expense_paid_amt) AS subro_expense_paid_amt,SUM(itd_subro_expense_paid_amt) AS itd_subro_expense_paid_amt,
-			SUM(refund_indemnity_paid_amt) AS refund_indemnity_paid_amt,SUM(itd_refund_indemnity_paid_amt) AS itd_refund_indemnity_paid_amt,
-			SUM(refund_expense_paid_amt) AS refund_expense_paid_amt,SUM(itd_refund_expense_paid_amt) AS itd_refund_expense_paid_amt,
-			SUM(dcc_expense_paid_amt) AS dcc_expense_paid_amt,
+            SUM(loss_reserve_amt) AS loss_reserve_amt,
+            SUM(itd_loss_reserve_amt) AS itd_loss_reserve_amt,SUM(expense_reserve_amt) AS expense_reserve_amt,
+            SUM(itd_expense_reserve_amt) AS itd_expense_reserve_amt,
+            SUM(subrogation_recovery_reserve_amt) AS subrogation_recovery_reserve_amt,
+                SUM(itd_subrogation_recovery_reserve_amt) AS itd_subrogation_recovery_reserve_amt,
+                SUM(salvage_recovery_reserve_amt) AS salvage_recovery_reserve_amt,
+                SUM(itd_salvage_recovery_reserve_amt) AS itd_salvage_recovery_reserve_amt,
+                SUM(salvage_recovery_expense_reserve_amt) AS salvage_recovery_expense_reserve_amt,
+                SUM(itd_salvage_recovery_expense_reserve_amt) AS itd_salvage_recovery_expense_reserve_amt,
+                SUM(subrogation_recovery_expense_reserve_amt) AS subrogation_recovery_expense_reserve_amt,
+                SUM(itd_subrogation_recovery_expense_reserve_amt) AS itd_subrogation_recovery_expense_reserve_amt,
+                SUM(loss_paid_amt) AS loss_paid_amt,
+                SUM(itd_loss_paid_amt) AS itd_loss_paid_amt,
+                SUM(expense_paid_amt) AS expense_paid_amt,
+                SUM(itd_expense_paid_amt) AS itd_expense_paid_amt,
+                SUM(subrogation_recovery_amt) AS subrogation_recovery_amt,
+                SUM(itd_subrogation_recovery_amt) AS itd_subrogation_recovery_amt,
+                SUM(salvage_recovery_amt) AS salvage_recovery_amt,
+                SUM(itd_salvage_recovery_amt) AS itd_salvage_recovery_amt,
+                SUM(salvage_expense_recovery_amt) AS salvage_expense_recovery_amt,
+                SUM(itd_salvage_expense_recovery_amt) AS itd_salvage_expense_recovery_amt,
+                SUM(subrogation_expense_recovery_amt) AS subrogation_expense_recovery_amt,
+                SUM(itd_subrogation_expense_recovery_amt) AS itd_subrogation_expense_recovery_amt,		
 			MAX(feature_open_ct) AS open_claim_ct, 
 			MIN(feature_closed_ct) AS closed_claim_ct,
-			SUM(itd_refund_paid_amt) AS itd_refund_paid_amt,
-			SUM(itd_total_incurred_amt) AS itd_total_incurred_amt,
-			SUM(itd_total_paid_amt) AS itd_total_paid_amt,
-			SUM(itd_total_reserve_amt) AS itd_total_reserve_amt,
-			SUM(itd_dcc_expense_paid_amt) AS itd_dcc_expense_paid_amt,
+            SUM(itd_total_incurred_amt) AS itd_total_incurred_amt,
+            SUM(itd_total_paid_amt) AS itd_total_paid_amt,
+            SUM(itd_total_reserve_amt) AS itd_total_reserve_amt,
+            SUM(defense_reserve_amt) AS defense_reserve_amt,
+            SUM(itd_defense_reserve_amt) AS itd_defense_reserve_amt,
+                SUM(deductible_recovery_reserve_amt) AS deductible_recovery_reserve_amt,
+                SUM(itd_deductible_recovery_reserve_amt) AS itd_deductible_recovery_reserve_amt,
+                SUM(reinsurance_recovery_reserve_amt) AS reinsurance_recovery_reserve_amt,
+                SUM(itd_reinsurance_recovery_reserve_amt) AS itd_reinsurance_recovery_reserve_amt,
+                SUM(overpayment_recovery_reserve_amt) AS overpayment_recovery_reserve_amt,
+                SUM(itd_overpayment_recovery_reserve_amt) AS itd_overpayment_recovery_reserve_amt,
+                SUM(deductible_recovery_expense_reserve_amt) AS deductible_recovery_expense_reserve_amt,
+                SUM(itd_deductible_recovery_expense_reserve_amt) AS itd_deductible_recovery_expense_reserve_amt,
+                SUM(reinsurance_recovery_expense_reserve_amt) AS reinsurance_recovery_expense_reserve_amt,
+                SUM(itd_reinsurance_recovery_expense_reserve_amt) AS itd_reinsurance_recovery_expense_reserve_amt,
+                SUM(overpayment_recovery_expense_reserve_amt) AS overpayment_recovery_expense_reserve_amt,
+                SUM(itd_overpayment_recovery_expense_reserve_amt) AS itd_overpayment_recovery_expense_reserve_amt,
+                SUM(subrogation_recovery_defense_reserve_amt) AS subrogation_recovery_defense_reserve_amt,
+                SUM(itd_subrogation_recovery_defense_reserve_amt) AS itd_subrogation_recovery_defense_reserve_amt,
+                SUM(salvage_recovery_defense_reserve_amt) AS salvage_recovery_defense_reserve_amt,
+                SUM(itd_salvage_recovery_defense_reserve_amt) AS itd_salvage_recovery_defense_reserve_amt,
+                SUM(deductible_recovery_defense_reserve_amt) AS deductible_recovery_defense_reserve_amt,
+                SUM(itd_deductible_recovery_defense_reserve_amt) AS itd_deductible_recovery_defense_reserve_amt,
+                SUM(reinsurance_recovery_defense_reserve_amt) AS reinsurance_recovery_defense_reserve_amt,
+                SUM(itd_reinsurance_recovery_defense_reserve_amt) AS itd_reinsurance_recovery_defense_reserve_amt,
+                SUM(overpayment_recovery_defense_reserve_amt) AS overpayment_recovery_defense_reserve_amt,
+                SUM(itd_overpayment_recovery_defense_reserve_amt) AS itd_overpayment_recovery_defense_reserve_amt,
+                SUM(defense_paid_amt) AS defense_paid_amt,
+                SUM(itd_defense_paid_amt) AS itd_defense_paid_amt,
+                SUM(deductible_recovery_amt) AS deductible_recovery_amt,
+                SUM(itd_deductible_recovery_amt) AS itd_deductible_recovery_amt,
+                SUM(reinsurance_recovery_amt) AS reinsurance_recovery_amt,
+                SUM(itd_reinsurance_recovery_amt) AS itd_reinsurance_recovery_amt,
+                SUM(overpayment_recovery_amt) AS overpayment_recovery_amt,
+                SUM(itd_overpayment_recovery_amt) AS itd_overpayment_recovery_amt,
+                SUM(deductible_expense_recovery_amt) AS deductible_expense_recovery_amt,
+                SUM(itd_deductible_expense_recovery_amt) AS itd_deductible_expense_recovery_amt,
+                SUM(reinsurance_expense_recovery_amt) AS reinsurance_expense_recovery_amt,
+                SUM(itd_reinsurance_expense_recovery_amt) AS itd_reinsurance_expense_recovery_amt,
+                SUM(overpayment_expense_recovery_amt) AS overpayment_expense_recovery_amt,
+                SUM(itd_overpayment_expense_recovery_amt) AS itd_overpayment_expense_recovery_amt,
+                SUM(subrogation_defense_recovery_amt) AS subrogation_defense_recovery_amt,
+                SUM(itd_subrogation_defense_recovery_amt) AS itd_subrogation_defense_recovery_amt,
+                SUM(salvage_defense_recovery_amt) AS salvage_defense_recovery_amt,
+                SUM(itd_salvage_defense_recovery_amt) AS itd_salvage_defense_recovery_amt,
+                SUM(deductible_defense_recovery_amt) AS deductible_defense_recovery_amt,
+                SUM(itd_deductible_defense_recovery_amt) AS itd_deductible_defense_recovery_amt,
+                SUM(reinsurance_defense_recovery_amt) AS reinsurance_defense_recovery_amt,
+                SUM(itd_reinsurance_defense_recovery_amt) AS itd_reinsurance_defense_recovery_amt,
+                SUM(overpayment_defense_recovery_amt) AS overpayment_defense_recovery_amt,
+                SUM(itd_overpayment_defense_recovery_amt) AS itd_overpayment_defense_recovery_amt,
 			source_system_sk,@current_date AS update_ts,@etl_audit_sk
 			FROM
 				edw_core.tclaim_feature_summary 
@@ -111,13 +169,26 @@ BEGIN
 		
 			SET @rows_affected=@@ROWCOUNT
 
-			UPDATE tclaim_summary
+			UPDATE edw_core.tclaim_summary
 			SET
 			itd_loss_incurred_gt_250k_ct=(CASE WHEN itd_total_incurred_amt>250000 THEN 1 ELSE 0 END),
 			itd_loss_incurred_gt_500k_ct=(CASE WHEN itd_total_incurred_amt>500000 THEN 1 ELSE 0 END),
-			claim_closed_with_pay_ct=(CASE WHEN closed_claim_ct=1 AND (itd_total_paid_amt-itd_dcc_expense_paid_amt-itd_subro_expense_paid_amt-itd_salvage_expense_paid_amt-itd_salvage_recovery_amt-itd_subro_recovery_amt)>0 THEN 1 ELSE 0 END),
-			claim_closed_without_pay_ct=(CASE WHEN closed_claim_ct=1 AND (itd_total_paid_amt-itd_dcc_expense_paid_amt-itd_subro_expense_paid_amt-itd_salvage_expense_paid_amt-itd_salvage_recovery_amt-itd_subro_recovery_amt)=0 THEN 1 ELSE 0 END),
-			itd_dcc_expense_paid_on_close_amt=(CASE WHEN closed_claim_ct=1 THEN itd_dcc_expense_paid_amt ELSE 0 END )
+			claim_closed_with_pay_ct=(CASE WHEN closed_claim_ct=1 AND
+             (
+                itd_total_paid_amt  - defense_paid_amt - expense_paid_amt - subrogation_recovery_amt - salvage_recovery_amt -salvage_expense_recovery_amt-subrogation_expense_recovery_amt-
+				deductible_recovery_amt-reinsurance_recovery_amt-overpayment_recovery_amt-deductible_expense_recovery_amt-
+			    reinsurance_expense_recovery_amt-overpayment_expense_recovery_amt-subrogation_defense_recovery_amt-
+		        salvage_defense_recovery_amt-deductible_defense_recovery_amt-reinsurance_defense_recovery_amt- overpayment_defense_recovery_amt
+                )>0 THEN 1 ELSE 0 END),
+			claim_closed_without_pay_ct=(CASE WHEN closed_claim_ct=1 AND 
+            (
+                itd_total_paid_amt  - defense_paid_amt - expense_paid_amt -
+                subrogation_recovery_amt - salvage_recovery_amt -salvage_expense_recovery_amt-subrogation_expense_recovery_amt-
+				deductible_recovery_amt-reinsurance_recovery_amt-overpayment_recovery_amt-deductible_expense_recovery_amt-
+			    reinsurance_expense_recovery_amt-overpayment_expense_recovery_amt-subrogation_defense_recovery_amt-
+		        salvage_defense_recovery_amt-deductible_defense_recovery_amt-reinsurance_defense_recovery_amt- overpayment_defense_recovery_amt
+            )=0 THEN 1 ELSE 0 END)
+			
 			WHERE month_sk=@end_dt_sk;
 
 			-- Update control table

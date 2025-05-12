@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote_additional_interest ADD auto_vehicle_sk int;

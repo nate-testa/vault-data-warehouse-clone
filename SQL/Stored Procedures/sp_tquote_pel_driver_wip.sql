@@ -6,6 +6,8 @@
 -- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
 -- 05/14/2024 			Architha Gudimalla					3. Corrected errors
+-- 08/22/2024			Architha Gudimalla					4. Removed eff_dt from merge
+-- 11/19/24				Yunus Mohammed					    5. AD7763 - Added driver_unique_id
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_driver_wip]
 
@@ -33,7 +35,7 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,policy_history_sk,source_system_sk,[Index],
 			CreatedDate,UpdatedDate,FirstName,LastName,Birthdate,InsuredType,LicenseStatus,LicenseNumber,
-			Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,DriverLimitsIndicator
+			Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,DriverLimitsIndicator,driver_unique_id
 			into edw_temp.tquote_pel_driver_wip_temp1
 		from
 		(
@@ -45,7 +47,8 @@ BEGIN
 			acc.PolicyNumber,CAST(acc.EffectiveDate AS DATE) AS EffectiveDate,CAST(acc.ExpirationDate AS DATE) AS ExpirationDate,
 			CAST(acc.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.quote_history_sk policy_history_sk,
 			0 AS transaction_seq_no ,acco.[Index],
-			acc.CreatedDate,acc.UpdatedDate, CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,accof.Field,accof.[Value]
+			acc.CreatedDate,acc.UpdatedDate, CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
+			accof.Field,accof.[Value],acco.[UniqueId] as driver_unique_id
 			from
 				(
 				    SELECT *
@@ -104,18 +107,20 @@ BEGIN
 		        GETDATE() AS create_ts,
 		        GETDATE() AS update_ts,
 		        @etl_audit_sk AS etl_audit_sk,
-		        ttlc.DriverLimitsIndicator AS driver_limit_type
+		        ttlc.DriverLimitsIndicator AS driver_limit_type,
+				driver_unique_id
 		    FROM
 		        edw_temp.tquote_pel_driver_wip_temp1 AS ttlc
 		) AS SOURCE
 		ON
 		    TARGET.quote_no = SOURCE.quote_no AND
-		    TARGET.effective_dt = SOURCE.effective_dt AND
+		    --TARGET.effective_dt = SOURCE.effective_dt AND
 		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
-		    TARGET.driver_no = SOURCE.driver_no
+		    TARGET.driver_unique_id = SOURCE.driver_unique_id
 
 		WHEN MATCHED THEN
 		    UPDATE SET
+		        TARGET.effective_dt = SOURCE.effective_dt,
 		        TARGET.expiration_dt = SOURCE.expiration_dt,
 		        TARGET.quote_history_sk = SOURCE.quote_history_sk,
 		        TARGET.prefix = SOURCE.prefix,
@@ -132,18 +137,20 @@ BEGIN
 		        TARGET.source_system_sk = SOURCE.source_system_sk,
 		        TARGET.update_ts = SOURCE.update_ts,
 		        TARGET.etl_audit_sk = SOURCE.etl_audit_sk,
-		        TARGET.driver_limit_type = SOURCE.driver_limit_type
+		        TARGET.driver_limit_type = SOURCE.driver_limit_type,
+				TARGET.driver_no = SOURCE.driver_no
 
 		WHEN NOT MATCHED BY TARGET THEN
 		    INSERT (
 		        quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_history_sk,
 		        driver_no, prefix, first_nm, middle_nm, last_nm, suffix, birth_dt, license_status, license_country_nm, license_state_cd, license_year,
-		        license_no, source_system_sk, create_ts, update_ts, etl_audit_sk, driver_limit_type
+		        license_no, source_system_sk, create_ts, update_ts, etl_audit_sk, driver_limit_type,driver_unique_id
 		    )
 		    VALUES (
 		        SOURCE.quote_no, SOURCE.effective_dt, SOURCE.expiration_dt, SOURCE.transaction_seq_no, SOURCE.quote_history_sk,
 		        SOURCE.driver_no, SOURCE.prefix, SOURCE.first_nm, SOURCE.middle_nm, SOURCE.last_nm, SOURCE.suffix, SOURCE.birth_dt, SOURCE.license_status, SOURCE.license_country_nm, SOURCE.license_state_cd, SOURCE.license_year,
-		        SOURCE.license_no, SOURCE.source_system_sk, SOURCE.create_ts, SOURCE.update_ts, SOURCE.etl_audit_sk, SOURCE.driver_limit_type
+		        SOURCE.license_no, SOURCE.source_system_sk, SOURCE.create_ts, SOURCE.update_ts, SOURCE.etl_audit_sk, 
+				SOURCE.driver_limit_type,SOURCE.driver_unique_id
 		);
 
 		SET @rows_affected=@@ROWCOUNT;

@@ -17,6 +17,14 @@ GO
 -- 05/28/24		Architha Gudimalla				6. Updated the label for another long label for LC360
 -- 06/11/24		Architha Gudimalla				7. Updated the label for another long label for LC360
 -- 06/12/24		Architha Gudimalla				8. Excluded null label for LC360
+-- 09/21/24		Architha Gudimalla				9. Updated the label for another long label for LC360
+-- 10/09/24		Architha Gudimalla				10. Updated to left join for insert into @tablename_main
+-- 10/09/24		Architha Gudimalla				11. Added new column - IsReportFromCache, VI33823
+-- 10/17/24		Architha Gudimalla				12. Updated logic for IsReportFromCache
+-- 10/20/24		Architha Gudimalla				13. Updated the label for another long label for LC360
+-- 12/17/24		Architha Gudimalla				14. Updated the label for another long label for LC360
+-- 03/05/25		Architha Gudimalla				15. Updated the label for another long label for LC360
+-- 04/14/25		Architha Gudimalla				16. Updated the label for another long label for LC360
 -- ======================================================================================================================= 
 
 CREATE OR ALTER       PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
@@ -75,12 +83,16 @@ BEGIN
 			from
 			(
 				select  accr.source, accr.reporttype, accri.Category, accri.[Group], 
-						replace(replace(replace(replace(replace(replace(replace(replace(label,
+						replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(label,
 						',',''),
+						'Could not get over to dock. Odd situation. Their dock is on the neighbors side due to the neighbors tram to his dock. With lake so low, could not navigate the loose rocks in my business attire. ','Could not get to dock as its on the neighbors side. '),
 						'Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)','Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)'),
 						' Toilet Supply Lines That Have Plastic B-nut Connectors and',' Toilet Lines having Plastic B-nut Conn and'),
+						'Could not climb back to this unit without crushing duct. Access is from the other scuttle I could not get into.','Cant climb back to unit without crushing duct. Access is from other scuttle I could not get into'),
 						'when construction starts on second floor','construction on 2nd fl'),
+						'180 PSI. I had client call the sprinkler service company regarding the pressure and they told her it was OK. ','One hundred eighty PSI. I had client call the sprinkler service company regarding the pressure and they told her it was OK'),
 						'Water Leak Detection Alarm Systems','Water Leak Detectn Alarm Sys'),
+						'Bar sink cabinet next to icemaker. Water in and under cab. Client called plumber while I was there.','Bar sink cab next to icemaker. Water in under cab. Client called plumber while I was there.'),
 						'[',' - '),
 						']',''),
 						'''','') Label, 
@@ -132,16 +144,17 @@ BEGIN
 		select @sql='insert into ' 
 					+  @tablename_main 
 					+ ' select	 acc.policynumber, acc.effectivedate, 
-												GREATEST(accri.UpdatedDate,accri.CreatedDate) UpdatedDate ,  accri.CreatedDate, 
+												GREATEST(accr.UpdatedDate,accri.CreatedDate) UpdatedDate ,  accr.CreatedDate, 
 												accr.dateordered, accr.dateTimeRecieved, accr.dateTimeCompleted, accr.TransactionStatus, accr.[source], accr.reporttype, 
-												case when accri.Category = accri.[Group] or accri.Label = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(replace(replace(replace(replace(accri.label,''Water Leak Detection Alarm Systems'',''Water Leak Detectn Alarm Sys''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
-													when accri.Category <> accri.[Group] then concat(accri.Category, '' - '', accri.[Group], '' - '',replace(replace(replace(replace(replace(replace(replace(accri.label,''Water Leak Detection Alarm Systems'',''Water Leak Detectn Alarm Sys''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''['','' - ''),'']'',''''),'''''''',''''))
-													else ''''
-												end field_name,accri.[Value] 
-										from	edw_stage.[Account] acc, edw_stage.[AccountReport] accr, edw_stage.AccountReportItem accri
-										where	accr.AccountId=acc.Id 
-										and		accr.Id =accri.ReportId 
-										and source <> ''HazardHub'' AND GREATEST(accr.UpdatedDate,accr.CreatedDate) > '''
+												case when accri.Category = accri.[Group] or accri.Label = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(accri.label,''Could not get over to dock. Odd situation. Their dock is on the neighbors side due to the neighbors tram to his dock. With lake so low, could not navigate the loose rocks in my business attire. '',''Could not get to dock as its on the neighbors side. ''),''Water Leak Detection Alarm Systems'',''Water Leak Detectn Alarm Sys''),''Could not climb back to this unit without crushing duct. Access is from the other scuttle I could not get into.'',''Cant climb back to unit without crushing duct. Access is from other scuttle I could not get into''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''180 PSI. I had client call the sprinkler service company regarding the pressure and they told her it was OK. '',''One hundred eighty PSI. I had client call the sprinkler service company regarding the pressure and they told her it was OK''),''Bar sink cabinet next to icemaker. Water in and under cab. Client called plumber while I was there.'',''Bar sink cab next to icemaker. Water in under cab. Client called plumber while I was there.''),''['','' - ''),'']'',''''),'''''''',''''))
+													 when accri.Category <> accri.[Group] then       concat(accri.Category, '' - '', accri.[Group], '' - '',replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(accri.label,''Could not get over to dock. Odd situation. Their dock is on the neighbors side due to the neighbors tram to his dock. With lake so low, could not navigate the loose rocks in my business attire. '',''Could not get to dock as its on the neighbors side. ''),''Water Leak Detection Alarm Systems'',''Water Leak Detectn Alarm Sys''),''Could not climb back to this unit without crushing duct. Access is from the other scuttle I could not get into.'',''Cant climb back to unit without crushing duct. Access is from other scuttle I could not get into''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''180 PSI. I had client call the sprinkler service company regarding the pressure and they told her it was OK. '',''One hundred eighty PSI. I had client call the sprinkler service company regarding the pressure and they told her it was OK''),''Bar sink cabinet next to icemaker. Water in and under cab. Client called plumber while I was there.'',''Bar sink cab next to icemaker. Water in under cab. Client called plumber while I was there.''),''['','' - ''),'']'',''''),'''''''',''''))
+													 else ''''
+												end field_name,accri.[Value], case when accr.IsReportFromCache = 1 then ''Yes'' else ''No'' end IsReportFromCache
+										from	edw_stage.[Account] acc
+										inner join edw_stage.[AccountReport] accr on accr.AccountId=acc.Id 
+										left join edw_stage.AccountReportItem accri on accr.Id =accri.ReportId 
+										where source <> ''HazardHub'' 
+										AND GREATEST(accr.UpdatedDate,accr.CreatedDate) > '''
 					+  cast(@last_source_extract_ts as varchar(255))
 					--+ ''' and source = '''
 					--+  @in_source 
