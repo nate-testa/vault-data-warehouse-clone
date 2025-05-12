@@ -9,7 +9,7 @@
 -- 12/07/23		Architha Gudimalla				3. Updated var_actual_dt
 -- 07/29/24		Architha Gudimalla				4. Updated the code to work when target sql is not select 0 but a defualt count
 -- 08/13/24		Architha Gudimalla				5. Updated var_actual_dt to use getdate-1 instead of getdate
--- 05/08/25		Yunus Mohammed				 6.AD937 Updated to use frequency column and made changes for monthly frequency
+-- 05/08/25		Yunus Mohammed				 6. AD937 Updated to use frequency column and made changes for monthly frequency
 -- ========================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tvalidation_result]
@@ -82,7 +82,7 @@ BEGIN
 
 				--set @source_sql = replace(@source_sql , 'var_actual_dt',@last_source_extract_ts) 
 				--set @target_sql = replace(@target_sql , 'var_actual_dt',@last_source_extract_ts)  
-
+				
 				EXECUTE sp_executesql @source_sql, N'@source_ct DECIMAL(15,2) OUTPUT', @source_ct=@out1 OUTPUT
 				EXECUTE sp_executesql @target_sql, N'@target_ct DECIMAL(15,2) OUTPUT', @target_ct=@out2 OUTPUT 
 
