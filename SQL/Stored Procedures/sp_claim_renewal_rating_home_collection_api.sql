@@ -98,7 +98,7 @@ BEGIN
 		group by claim_sk,claim_coverage_desc
 
 		) cf on cf.claim_sk= cl.claim_sk and cf.row_no = 1
-		inner join edw_core.tclaim_feature cfa on cfa.claim_sk = cf.claim_sk and cfa.claim_coverage_desc = cf.claim_coverage_desc		
+		LEFT JOIN edw_core.tclaim_feature cfa on cfa.claim_sk = cf.claim_sk and cfa.claim_coverage_desc = cf.claim_coverage_desc		
 		WHERE
 		cl.product_sk in(1,5,2)
 		) as a
