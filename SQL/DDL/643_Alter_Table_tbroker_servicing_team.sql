@@ -6,5 +6,5 @@ AND TABLE_NAME = 'tbroker_servicing_team'
 AND COLUMN_NAME = 'broker_servicing_team_id'					
 ) 
 BEGIN 
-ALTER TABLE edw_core.tbroker_servicing_team ADD broker_servicing_team_id uniqueidentifier NOT NULL 
+ALTER TABLE edw_core.tbroker_servicing_team ADD broker_servicing_team_id varchar(255) NOT NULL 
 END ; 
