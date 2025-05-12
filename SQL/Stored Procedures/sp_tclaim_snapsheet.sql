@@ -17,6 +17,7 @@
 -- 04/09/2025		Yunus Mohammed				12. AD-9109 Used tpolicy table for broker_id, customer_id and product_sk instead of tpolicy_history
 -- 04/24/2025		Yunus Mohammed				13. AD-9297 Added coverage check fields
 -- 04/29/2025		Yunus Mohammed				14. AD-8748 Updated claim_first_reopen_dt logic
+-- 05/08/2025		Yunus Mohammed				15 AD-9412 Added first_party_driver_relationship_to_insured
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -65,7 +66,7 @@ BEGIN
 		claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
 		source_system_sk,update_time,first_party_driver_nm,source_of_fire,source_of_water
 		,fault_decision,responsible_party,at_fault_pct,migrated_in,
-		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in
+		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured
 		INTO edw_temp.tclaim_snapsheet_temp1
 		FROM
 		(
@@ -136,6 +137,7 @@ BEGIN
 				when covc.status = 'true' then 'Yes' 
 				when covc.[status] = 'false' then 'No'
 			end as  coverage_confirmed_in
+			,cpd.relation_to_insured as first_party_driver_relationship_to_insured
 			,case
 				when c.claim_source = 'api' then 'Yes'
 				else 'No'
@@ -199,7 +201,7 @@ BEGIN
 			,source_system_sk,create_ts,update_ts,etl_audit_sk
 			,first_party_driver_nm,source_of_fire,source_of_water
 			,fault_decision,responsible_party,at_fault_pct,migrated_in,
-			coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in
+			coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured
 		)
 	VALUES
 		(
@@ -212,7 +214,7 @@ BEGIN
 		,source_system_sk,@current_date,@current_date,@etl_audit_sk
 		,first_party_driver_nm,source_of_fire,source_of_water
 		,fault_decision,responsible_party,at_fault_pct,migrated_in,
-		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in
+		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured
 		)
 	-- For Updates
 	WHEN MATCHED THEN UPDATE 
@@ -257,6 +259,7 @@ BEGIN
 		,Target.coverage_confirmed_ts=Source.coverage_confirmed_ts
 		,Target.coverage_confirmed_by_nm=Source.coverage_confirmed_by_nm
 		,Target.coverage_confirmed_in= Source.coverage_confirmed_in
+		,Target.first_party_driver_relationship_to_insured = Source.first_party_driver_relationship_to_insured
 		;
 		
 		--************End************
