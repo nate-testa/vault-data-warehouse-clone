@@ -4,14 +4,15 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =================================================================================================
+-- ===========================================================================================================
 -- Description: This procedures inserts data into tbroker_servicing_team
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
----------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------
 -- 05/08/05		Architha Gudimalla				1. Created the proc 
--- 05/08/05		Architha Gudimalla				2. Updated after initital run
--- ================================================================================================= 
+-- 05/08/05		Architha Gudimalla				2. Updated after initital run 
+-- 05/08/05		Architha Gudimalla				3. Added broker_servicing_team_id
+-- =========================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker_servicing_team]
 
@@ -38,36 +39,50 @@ BEGIN
 		-- Create temp table with name as tbroker_license_temp
 		DROP TABLE IF EXISTS edw_temp.tbroker_servicing_team_temp
 
-		SELECT
+		SELECT bst.id,
 			bst.name broker_servicing_team_nm,
 			bst.CreatedDate,bst.UpdatedDate
 		INTO edw_temp.tbroker_servicing_team_temp
 		FROM edw_stage.[BrokerageServicingTeam] bst
 		WHERE
-			GREATEST(bst.CreatedDate,bst.UpdatedDate) > @last_source_extract_ts
+			GREATEST(bst.CreatedDate,bst.UpdatedDate) > @last_source_extract_ts 
 
 		-- Delete from tbroker_license table
-		DELETE FROM edw_core.tbroker_servicing_team;
-		
-		-- Reset identity column
-		DBCC CHECKIDENT('edw_core.tbroker_servicing_team',RESEED,0); 
+		DELETE FROM edw_core.tbroker_servicing_team_member;
 
-		INSERT INTO edw_core.tbroker_servicing_team
-		(			
-			broker_servicing_team_nm, 
-			create_ts, update_ts, etl_audit_sk 
-		)
-		SELECT
-			broker_servicing_team_nm,
-			@current_date AS create_ts,@current_date AS update_ts,@etl_audit_sk
-		FROM
-			edw_temp.tbroker_servicing_team_temp
-
+		-- Insert and Update tuser table
+		MERGE [edw_core].[tbroker_servicing_team] AS Target
+		USING edw_temp.tbroker_servicing_team_temp AS Source
+		ON Source.id = Target.[broker_servicing_team_id]
+		-- For Inserts
+		WHEN NOT MATCHED BY Target THEN
+		INSERT (
+				broker_servicing_team_id, 
+				broker_servicing_team_nm, 
+				create_ts, 
+				update_ts, 
+				etl_audit_sk 
+			)
+		VALUES
+			(
+				id,
+				broker_servicing_team_nm,
+				@current_date,
+				@current_date,
+				@etl_audit_sk
+			)
+		-- For Updates
+		WHEN MATCHED THEN UPDATE 
+		SET
+			Target.broker_servicing_team_nm = Source.broker_servicing_team_nm,
+			Target.[update_ts] = getdate()
+		;
 		
 		SET @rows_affected=@@ROWCOUNT;
-		
+
 		-- Update control table
-		SET @new_last_source_extract_ts = '2017-01-01'
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(CreatedDate,UpdatedDate)) FROM edw_temp.tbroker_servicing_team_temp),@last_source_extract_ts)
+		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts
 		
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
@@ -75,6 +90,7 @@ BEGIN
 
 		-- Drop temp table
 		DROP TABLE IF EXISTS edw_temp.tbroker_servicing_team_temp
+
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
