@@ -35,6 +35,9 @@ Tasks described in `co-req.md` can include:
 - Follow existing naming conventions and architecture patterns found in `co-proc-common-patterns.md`.
 - Always prioritize readability, maintainability, and performance.
 - Avoid hardcoding unless strictly required.
+- Do not execute commands or connect to any database, just do then changes on the code.
+- Only modify other lines of code if absolutely necessary.
+- Do not create changes on DDL, DML, Functions, Reports, ADF, Hubspot, Python Scripts unless strictly requiered.
 
 ---
 
