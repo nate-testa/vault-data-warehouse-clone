@@ -159,6 +159,8 @@ class Quote:
                 'occupancy_type': record['occupancy_type'],
                 'new_client_for_agency_in': record['new_client_for_agency_in'],
                 'current_underlying_company_nm': record['current_underlying_company_nm'],
+                'target_account': record['target_account'],
+                'close_reason_desc': record['close_reason_desc'],
                 'monoline_in': record['monoline_in']
                 
                 # 'pipeline': record['pipeline'],
