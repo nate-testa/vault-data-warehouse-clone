@@ -16,6 +16,8 @@
 -- 03/04/25     Sandeep Gundreddy			8. Removed defense_cost_in filter
 -- 03/13/25		Yunus Mohammed				9 Ad-8876 USed payment_no as transaction_id
 -- 04/15/25		Yunus Mohammed				10. Removed litigation claims
+-- 04/25/25		Yunus Mohammed				11. Updated logic to get the month for which we are running the proc
+--																					Update run date logic
 -- ================================================================================================= 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_claim_workday_payment]
@@ -33,21 +35,18 @@ BEGIN
 		DECLARE @parameter_desc VARCHAR(255)
 
 		-- Get last source extract date
-		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
-		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
-
-		DROP TABLE IF EXISTS edw_temp.claim_workday_payment_feed_temp1
+		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);			
 
 		DECLARE @year_month INT,@begin_dt DATE,@end_dt DATE,@begin_sk INT,@end_sk INT
 		
 		DECLARE cur_main CURSOR FOR
-		SELECT yearmonth
-		FROM edw_core.tdate
-		WHERE
-			actual_dt >= CAST(@last_source_extract_ts AS DATE)
-			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
-		GROUP BY yearmonth
-		ORDER BY yearmonth
+		select yearmonth
+		from edw_core.tdate
+		where
+		actual_dt > @last_source_extract_ts
+		and actual_dt < cast(@current_date as date)
+		group by yearmonth
+		order by 1; 
 
 		OPEN cur_main
 		FETCH NEXT FROM cur_main INTO @year_month
@@ -214,7 +213,7 @@ BEGIN
 			SET @rows_affected=@@ROWCOUNT;
 
 			-- Update control table
-			SET @new_last_source_extract_ts=COALESCE(@end_dt,@last_source_extract_ts);
+			SET @new_last_source_extract_ts= dateadd(day,-1,cast(@current_date as date))
 			EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 			-- Update audit table

@@ -14,20 +14,21 @@ GO
 -- 11/11/23					Sandeep Gundreddy		    	2. Modified join to tquote_history
 -- 11/14/23					Sandeep Gundreddy		    	3. Modified tqupte_home_location_sk join
 -- 11/17/23					Yunus Mohammed					4. Added new columns
--- 01/18/24					Alberto Almario						5. Added new column extended_liability_location_ct
--- 01/25/24					Alberto Almario						6. Added new columns roof_exclusion_with_ensuing_loss_in, 	
---																		 roof_coverage_endorsement_wh_in, 
---																		 roof_coverage_endorsement_ap_in,
---																		 roof_coverage_endorsement_rv_in
--- 09/07/24				Hernando Gonzalez					7. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
+-- 01/18/24					Alberto Almario						  5. Added new column extended_liability_location_ct
+-- 01/25/24					Alberto Almario						  6. Added new columns roof_exclusion_with_ensuing_loss_in, 	
+--																								 roof_coverage_endorsement_wh_in, 
+--																		 						roof_coverage_endorsement_ap_in,
+--																		 						roof_coverage_endorsement_rv_in
+-- 09/07/24				Hernando Gonzalez					 7. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
 -- 08/01/24             Tuba Mohsin                 				8. added contents_extended_replacement_cost_limit_amt
 -- 08/30/24				Yunus Mohammed						9. Added new columns
 -- 10/02/24				Yunus Mohammed						10. Added new column fortified_roof_upgrade_endorsement_in
--- 10/30/24				Hernando Gonzalez					11. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
+-- 10/30/24				Hernando Gonzalez					 11. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
 -- 12/02/24				Yunus Mohammed						12. AD-7834 Added new fields
--- 12/18/24				Hernando Gonzalez					13. AD-7963 | Added Risk_Score_Fire
--- 01/22/25				Alberto Almario							14. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
+-- 12/18/24				Hernando Gonzalez					 13. AD-7963 | Added Risk_Score_Fire
+-- 01/22/25				Alberto Almario							  14. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
 -- 04/01/25		   		Yunus Mohammed						15 Ad-9035 Added automatic_seismic_shutoff_valve_in
+--05/12/25				Yunus Mohammed				        16 AD-9481 Added all_peril_roof_covering_coverage_CW_in
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage]
@@ -216,6 +217,7 @@ BEGIN
 			risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
 			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils, risk_score_fire,
 			theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
+			all_peril_roof_covering_coverage_CW_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
@@ -421,6 +423,7 @@ BEGIN
 			,TheftOrLossGeneralConditionsEndorsement as theft_or_loss_general_conditions_endorsement_in
 			,AnimalRelatedLiabilityEndorsement as animal_related_liability_endorsement_in
 			,case when AutomaticSeismicShutOffValve = '' then null else AutomaticSeismicShutOffValve end as automatic_seismic_shutoff_valve_in
+			,AllPerilRoofCoveringCoverageCW as all_peril_roof_covering_coverage_CW_in
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts

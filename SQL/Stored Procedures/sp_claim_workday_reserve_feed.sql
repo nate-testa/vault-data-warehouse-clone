@@ -12,6 +12,8 @@
 -- 11/26/24		Yunus Mohammed				5. Updated "Marine Boat & Yacht" to "Marine_Boat&Yacht"
 -- 02/19/25		Yunus Mohammed				6. Updated to use new columns after Snapsheet implementation
 -- 04/15/25		Yunus Mohammed				7. Removed litigation claims
+-- 04/25/25		Yunus Mohammed				8. Updated logic to get the month for which we are running the proc
+--																					Update run date logic
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_reserve_feed]
 
@@ -34,13 +36,13 @@ BEGIN
 		DECLARE @year_month INT,@begin_dt DATE,@end_dt DATE,@begin_sk INT,@end_sk INT
 
 		DECLARE cur_main CURSOR FOR
-		SELECT yearmonth
-		FROM edw_core.tdate
-		WHERE
-			actual_dt >= CAST(@last_source_extract_ts AS DATE)
-			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
-		GROUP BY yearmonth
-		ORDER BY yearmonth
+		select yearmonth
+		from edw_core.tdate
+		where
+		actual_dt > @last_source_extract_ts
+		and actual_dt < cast(@current_date as date)
+		group by yearmonth
+		order by 1; 
 
 		OPEN cur_main
 		FETCH NEXT FROM cur_main INTO @year_month
@@ -55,6 +57,7 @@ BEGIN
 			edw_core.tdate
 			where
 			yearmonth=@year_month;
+
 			DELETE FROM edw_integration.claim_workday_reserve_feed WHERE transaction_date BETWEEN @begin_dt AND @end_dt;
 
 			WITH claim_reserve_feed_temp AS
@@ -166,7 +169,7 @@ BEGIN
 			SET @rows_affected=@@ROWCOUNT;
 
 			-- Update control table
-			SET @new_last_source_extract_ts=COALESCE(@end_dt,@last_source_extract_ts);
+			SET @new_last_source_extract_ts= dateadd(day,-1,cast(@current_date as date))
 			EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 			-- Update audit table

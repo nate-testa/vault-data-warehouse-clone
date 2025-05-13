@@ -1,27 +1,27 @@
 ﻿-- =============================================
 -- Author:		Yunus Mohammed
--- Create Date: <Create Date, , >
 -- Description: This procedures insert homeowners additional coverage data
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date 					|Author								|	Change Description
+-- Change date 					|Author										|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
---											Yunus Mohammed			1. Created this procedure 
--- 11/17/23						Yunus Mohammed			2. Added new columns
--- 01/16/24						Alberto Almario				3. Added new column extended_liability_location_ct
--- 01/25/24						Alberto Almario				4. Added new columns roof_exclusion_with_ensuing_loss_in, 
---																		 roof_coverage_endorsement_wh_in, 
---																		 roof_coverage_endorsement_ap_in,
---																		 roof_coverage_endorsement_rv_in
--- 09/07/24						Hernando Gonzalez			5. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
--- 08/01/24             		Tuba Mohsin                 		6. added contents_extended_replacement_cost_limit_amt
--- 08/30/24						Yunus Mohammed				7. Added new columns
--- 10/02/24						Yunus Mohammed				8. Added new column fortified_roof_upgrade_endorsement_in
--- 10/30/24						Hernando Gonzalez			9. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
--- 12/02/24						Yunus Mohammed				10. AD-7834 Added new fields
--- 12/18/24						Hernando Gonzalez			11. AD-7963 | Added Risk_Score_Fire
--- 01/22/25						Alberto Almario					12. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
--- 03/06/25						Yunus Mohammed				13 	AD-8771 Query corrected to count extended_liability_loc_ct
--- 04/01/25		   		Yunus Mohammed						14 Ad-9035 Added automatic_seismic_shutoff_valve_in
+--											Yunus Mohammed				  1. Created this procedure 
+-- 11/17/23						Yunus Mohammed				  2. Added new columns
+-- 01/16/24						Alberto Almario						3. Added new column extended_liability_location_ct
+-- 01/25/24						Alberto Almario						4. Added new columns roof_exclusion_with_ensuing_loss_in, 
+--																		 							roof_coverage_endorsement_wh_in, 
+--																		 							roof_coverage_endorsement_ap_in,
+--																		 							roof_coverage_endorsement_rv_in
+-- 09/07/24						Hernando Gonzalez				5. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
+-- 08/01/24             		Tuba Mohsin                 		   6. added contents_extended_replacement_cost_limit_amt
+-- 08/30/24						Yunus Mohammed				   7. Added new columns
+-- 10/02/24						Yunus Mohammed				   8. Added new column fortified_roof_upgrade_endorsement_in
+-- 10/30/24						Hernando Gonzalez			    9. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
+-- 12/02/24						Yunus Mohammed				   10. AD-7834 Added new fields
+-- 12/18/24						Hernando Gonzalez			    11. AD-7963 | Added Risk_Score_Fire
+-- 01/22/25						Alberto Almario					     12. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
+-- 03/06/25						Yunus Mohammed				   13 AD-8771 Query corrected to count extended_liability_loc_ct
+-- 04/01/25		   				Yunus Mohammed				   14 AD-9035 Added automatic_seismic_shutoff_valve_in
+--05/12/25						Yunus Mohammed				   15 AD-9481 Added all_peril_roof_covering_coverage_CW_in
 -- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
 
@@ -212,6 +212,7 @@ BEGIN
 			risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
 			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
 			theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
+			all_peril_roof_covering_coverage_CW_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT 
@@ -419,6 +420,7 @@ BEGIN
 			,TheftOrLossGeneralConditionsEndorsement as theft_or_loss_general_conditions_endorsement_in
 			,AnimalRelatedLiabilityEndorsement as animal_related_liability_endorsement_in
 			,case when AutomaticSeismicShutOffValve = '' then null else AutomaticSeismicShutOffValve end as automatic_seismic_shutoff_valve_in
+			,AllPerilRoofCoveringCoverageCW as all_peril_roof_covering_coverage_CW_in
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts
@@ -456,4 +458,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-
