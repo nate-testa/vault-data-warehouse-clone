@@ -36,7 +36,7 @@ CREATE TABLE [edw_commercial].[tcommercial_renewal_summary](
 	[month_sk] ASC,
 	[commercial_policy_sk] ASC
 ) 
-)  
+)   
 
 ALTER TABLE [edw_commercial].[tcommercial_renewal_summary]  WITH CHECK ADD  CONSTRAINT [fk_trs_tbroker_broker_sk] FOREIGN KEY([broker_sk])
 REFERENCES [edw_core].[tbroker] ([broker_sk]) 

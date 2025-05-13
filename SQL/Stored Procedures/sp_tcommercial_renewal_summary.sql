@@ -121,7 +121,7 @@ BEGIN
 				with q as
 				(
 					select  q.commercial_quote_sk, q.quote_no, q.effective_dt, --q.original_policy_no, 
-							q.quote_Status, q.first_offered_commercial_quote_history_sk,  
+							q.quote_Status, q.first_quoted_commercial_quote_history_sk,  
 							case when q.prior_policy_no is null --and q.original_policy_no is null 
 																							  then q.quote_no
 							 	 --when q.prior_policy_no is null  							  then q.original_policy_no
