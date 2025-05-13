@@ -14,6 +14,8 @@ GO
 -- 07/25/24         Tuba Mohsin                     5. Added New coverage EnhancedUIM
 -- 08/21/24		    Alberto Almario					6. Remove effective_dt from merge join and add into update section
 -- 04/17/24         Architha Gudimalla              7. AD9089 - Updated the query that gets data from ProductObjectFieldValueDisplay
+-- 04/17/24         Architha Gudimalla              8. AD9089 - Updated the query that gets data from ProductObjectFieldValueDisplay
+-- 03/15/25         Hernando Gonzalez               9. AD99483 - added consent_to_rate_otccoll
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage_wip]
@@ -56,7 +58,7 @@ BEGIN
             [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
             [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied],
 			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay], 
-                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM]
+                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM], [ConsentToRateOTCCOLL]
 		
         INTO [edw_temp].[tquote_auto_policy_coverage_wip_temp1]
 		
@@ -108,7 +110,7 @@ BEGIN
                     [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
                     [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], 
                     [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay], 
-                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM]
+                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM],[ConsentToRateOTCCOLL]
                 )
 			) pivottable
 
@@ -286,7 +288,8 @@ BEGIN
                 target.permissive_driver_unique_bi_limit_amt = source.PermissiveDriverUniqueBILimit,
                 target.permissive_driver_unique_pd_limit_amt = source.PermissiveDriverUniquePDLimit,
                 target.emergency_extension_notice_in = source.EmergencyExtensionNotice,
-                target.enhanced_underinsured_motorist_coverage_in = source.EnhancedUIM
+                target.enhanced_underinsured_motorist_coverage_in = source.EnhancedUIM,
+                target.consent_to_rate_otccoll = source.ConsentToRateOTCCOLL
         WHEN NOT MATCHED THEN
             INSERT (
                 quote_no,
@@ -399,7 +402,8 @@ BEGIN
                 permissive_driver_unique_bi_limit_amt,
                 permissive_driver_unique_pd_limit_amt,
                 emergency_extension_notice_in,
-                enhanced_underinsured_motorist_coverage_in
+                enhanced_underinsured_motorist_coverage_in,
+                consent_to_rate_otccoll
             )
             VALUES (
                 source.quote_no,
@@ -512,7 +516,8 @@ BEGIN
                 source.PermissiveDriverUniqueBILimit,
                 source.PermissiveDriverUniquePDLimit,
                 source.EmergencyExtensionNotice,
-                source.EnhancedUIM
+                source.EnhancedUIM,
+                source.ConsentToRateOTCCOLL
             );
 
 
