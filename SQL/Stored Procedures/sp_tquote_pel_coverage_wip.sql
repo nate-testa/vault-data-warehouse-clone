@@ -9,6 +9,7 @@
 -- 05/28/2024			Alberto Almario						4. Integrate Premium Adjustments data into EDW - PEL 
 -- 07/09/2024			Alberto Almario						5. Add 7 new columns
 -- 08/22/2024			Architha Gudimalla					6. Removed eff_dt from merge
+-- 05/13/2025			Alberto Almario						7. Add new columns recreational_watercraft_exclusion_in and recreational_motorvehicle_exclusion_in
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_coverage_wip]
 
@@ -114,6 +115,7 @@ BEGIN
 			AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,
 			EmergencyExtensionNotice,CoverageLimitDeductible,AdditionalCoverageLimitDeductible,UnderinsuredMotoristDeductible,UnderinsuredDeductible,
 			EmploymentPracticesLiabilityDeductible,AutoInsuranceCompany,HomeInsuranceCompany
+			,RecreationalWatercraftExclusion,RecreationalMotorvehicleExclusion
 		INTO edw_temp.tquote_pel_coverage_wip_temp3
 		from
 		(
@@ -155,6 +157,7 @@ BEGIN
 					'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit',
 					'EmergencyExtensionNotice','CoverageLimitDeductible','AdditionalCoverageLimitDeductible','UnderinsuredMotoristDeductible','UnderinsuredDeductible',
 					'EmploymentPracticesLiabilityDeductible','AutoInsuranceCompany','HomeInsuranceCompany'
+					,'RecreationalWatercraftExclusion','RecreationalMotorvehicleExclusion'
 				)
 			) as t
 		) as t
@@ -172,6 +175,7 @@ BEGIN
 				AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,
 				EmergencyExtensionNotice,CoverageLimitDeductible,AdditionalCoverageLimitDeductible,UnderinsuredMotoristDeductible,UnderinsuredDeductible,
 				EmploymentPracticesLiabilityDeductible,AutoInsuranceCompany,HomeInsuranceCompany
+				,RecreationalWatercraftExclusion,RecreationalMotorvehicleExclusion
 				)
 		) as pivottable
 
@@ -243,6 +247,8 @@ BEGIN
 				,ttlc.EmploymentPracticesLiabilityDeductible AS employment_practices_liability_deductible_amt
 				,ttlc.AutoInsuranceCompany AS current_underlying_auto_insurance_company_nm
 				,ttlc.HomeInsuranceCompany AS current_underlying_home_insurance_company_nm
+				,ttlc.RecreationalWatercraftExclusion AS recreational_watercraft_exclusion_in
+				,ttlc.RecreationalMotorvehicleExclusion AS recreational_motorvehicle_exclusion_in
 		    FROM
 		        edw_temp.tquote_pel_coverage_wip_temp1 AS ttlc
 		) AS SOURCE
@@ -299,6 +305,8 @@ BEGIN
 				TARGET.employment_practices_liability_deductible_amt = SOURCE.employment_practices_liability_deductible_amt,
 				TARGET.current_underlying_auto_insurance_company_nm = SOURCE.current_underlying_auto_insurance_company_nm,
 				TARGET.current_underlying_home_insurance_company_nm = SOURCE.current_underlying_home_insurance_company_nm
+				,TARGET.recreational_watercraft_exclusion_in = SOURCE.recreational_watercraft_exclusion_in
+				,TARGET.recreational_motorvehicle_exclusion_in = SOURCE.recreational_motorvehicle_exclusion_in
 
 		WHEN NOT MATCHED BY TARGET THEN
 		    INSERT (
@@ -323,6 +331,8 @@ BEGIN
 				,employment_practices_liability_deductible_amt
 				,current_underlying_auto_insurance_company_nm
 				,current_underlying_home_insurance_company_nm
+				,recreational_watercraft_exclusion_in
+				,recreational_motorvehicle_exclusion_in
 		    )
 		    VALUES (
 		        SOURCE.quote_no, SOURCE.effective_dt, SOURCE.expiration_dt, SOURCE.transaction_seq_no,
@@ -346,6 +356,8 @@ BEGIN
 				,SOURCE.employment_practices_liability_deductible_amt
 				,SOURCE.current_underlying_auto_insurance_company_nm
 				,SOURCE.current_underlying_home_insurance_company_nm
+				,SOURCE.recreational_watercraft_exclusion_in
+				,SOURCE.recreational_motorvehicle_exclusion_in
 		);
 
 		SET @rows_affected=@@ROWCOUNT;
