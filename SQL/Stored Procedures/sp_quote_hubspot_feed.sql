@@ -24,6 +24,7 @@
 -- 03/28/25		        Archtha Gudimalla			19. VI36066/AD8907 - Added close_reason_desc
 -- 04/05/25             Sandeep Gundreddy           20. Replaced Null with '' close_reason_desc in temp2 tp fix batch issue
 -- 04/17/25		        Archtha Gudimalla			21. VI37310/AD9213 - Added monoline   
+-- 05/12/25		        Archtha Gudimalla			22. AD9494 - Excluded forecast quotes  
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -218,6 +219,7 @@ BEGIN
 		and isnull(cust.first_nm,'') not like '%test%' 
 		and isnull(cust.customer_nm,'') not like '%test%'      
 		-- and q.product_cd <> 'BY'
+        and q.forecast_quote_in = 'No'
         ;         
 
         --this is to pull in policies with pending non renewal = Y
