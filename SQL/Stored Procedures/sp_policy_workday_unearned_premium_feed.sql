@@ -13,10 +13,13 @@
 -- 11/26/24		Yunus Mohammed				6. Updated Marine Boat & Yacht to Marine_Boat&Yacht
 -- 03/11/25		Yunus Mohammed				7. Corrected proc running for past months
 --																				Added run_date as param for pre-run
+-- 04/25/25		Yunus Mohammed				8. AD8820 Updated logic to get risk address
+--																					Update run date logic
+-- 05/07/25		Yunus Mohammed				9. AD9047 Used tdaily_inforce table to check inforce policies.
+--																					Removed cancellation logic
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
-@run_date DATETIME = null
 AS
 BEGIN
 	DECLARE @ProcedureName NVARCHAR(120)
@@ -34,21 +37,16 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 
 		DECLARE @year_month INT
-		DECLARE @acounting_date_sk int,@last_day_month date
-
-		IF @run_date IS NOT NULL
-		BEGIN
-			SET @current_date = @run_date
-		END
+		DECLARE @acounting_date_sk int,@last_day_month date	,@end_dt_sk int
 
 		DECLARE cur_main CURSOR FOR
-		SELECT yearmonth
-		FROM edw_core.tdate
-		WHERE
-			actual_dt > CAST(@last_source_extract_ts AS DATE)
-			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
-		GROUP BY yearmonth
-		ORDER BY yearmonth
+		select yearmonth
+		from edw_core.tdate
+		where
+		actual_dt > @last_source_extract_ts
+		and actual_dt < cast(@current_date as date)
+		group by yearmonth
+		order by 1; 
 
 		OPEN cur_main
 		FETCH NEXT FROM cur_main INTO @year_month
@@ -59,9 +57,18 @@ BEGIN
 	
 			SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-			SELECT @acounting_date_sk=date_sk, @last_day_month=actual_dt FROM edw_core.tdate WHERE yearmonth=@year_month and month_end_in='Y';
+			SELECT @acounting_date_sk=date_sk, @last_day_month=actual_dt ,@end_dt_sk = date_sk
+			FROM edw_core.tdate WHERE yearmonth=@year_month and month_end_in='Y';
 		
 			DELETE FROM edw_integration.policy_workday_unearned_premium_feed WHERE accounting_date=@last_day_month;
+
+			IF @year_month = concat(datepart(yyyy,@current_date),iif(datepart(mm,@current_date) < 10,'0','') ,datepart(mm,@current_date) )
+			BEGIN  
+					SELECT 
+						@end_dt_sk = max(date_sk)
+					FROM edw_core.tdate
+					WHERE yearmonth = @year_month AND actual_dt < cast(@current_date AS DATE)
+			END;
 
 			WITH policy_workday_unearned_premium_feed_temp AS
 			(
@@ -99,11 +106,46 @@ BEGIN
 				tb.broker_nm AS agency_name,
 				NULL AS number_of_installments,
 				tp.insured_nm AS insured_name,
-				tp.mailing_address_line1 AS [address],	
-				tp.mailing_address_county_nm  AS county,
-				tp.mailing_address_city_nm AS city,
-				tp.risk_state_cd AS risk_state,
-				tp.mailing_address_zip_cd AS zip,
+				CASE
+					WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.address_line_1
+					WHEN tprd.product_nm =  'Collections' THEN cl.address_line_1
+					WHEN tprd.product_nm =  'Excess Liability' THEN pl.address_line_1
+					WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.address_line_1
+					WHEN tprd.product_nm = 'Auto' THEN agl.garage_address_line1
+					ELSE tp.mailing_address_line1
+				END AS [address],				
+				CASE
+					WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.county_nm
+					WHEN tprd.product_nm =  'Collections' THEN cl.county_nm
+					WHEN tprd.product_nm =  'Excess Liability' THEN pl.county_nm
+					WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.county_nm
+					WHEN tprd.product_nm = 'Auto' THEN agl.garage_address_county_nm
+					ELSE tp.mailing_address_county_nm
+				END AS county,
+				CASE
+					WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.city_nm
+					WHEN tprd.product_nm =  'Collections' THEN cl.city_nm
+					WHEN tprd.product_nm =  'Excess Liability' THEN pl.city_nm
+					WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.city_nm
+					WHEN tprd.product_nm = 'Auto' THEN agl.garage_address_city_nm
+					ELSE tp.mailing_address_city_nm
+				END AS city,
+				CASE
+					WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.state_cd
+					WHEN tprd.product_nm =  'Collections' THEN cl.state_cd
+					WHEN tprd.product_nm =  'Excess Liability' THEN pl.state_cd
+					WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.state_cd
+					WHEN tprd.product_nm = 'Auto' THEN agl.garage_address_state_cd
+					ELSE tp.risk_state_cd
+				END AS risk_state,
+				CASE
+					WHEN tprd.product_nm in ( 'Homeowners' ,'Condo') THEN hl.zip_cd
+					WHEN tprd.product_nm =  'Collections' THEN cl.zip_cd
+					WHEN tprd.product_nm =  'Excess Liability' THEN pl.zip_cd
+					WHEN tprd.product_nm =  'Marine Boat & Yacht' THEN mbyl.zip_cd
+					WHEN tprd.product_nm = 'Auto' THEN agl.garage_address_zip_code
+					ELSE tp.mailing_address_zip_cd
+				END AS zip,
 				NULL AS fire_protection,
 				tic.internal_coverage_category_nm  AS [category],
 				CASE
@@ -125,31 +167,45 @@ BEGIN
 			INNER JOIN edw_core.tdate tdpro on tdpro.date_sk=tpts.transaction_dt_sk
 			INNER JOIN edw_core.tpolicy_transaction_type tptt on tptt.policy_transaction_type_sk=tpts.policy_transaction_type_sk
 			INNER JOIN edw_core.tbroker tb on tb.broker_sk=tpts.broker_sk
+			INNER JOIN edw_core.tdaily_inforce_policy  dip on dip.policy_sk = tp.policy_sk	and dip.inforce_dt_sk = @end_dt_sk
+			LEFT JOIN edw_core.thome_location hl on hl.policy_no = tp.policy_no and hl.effective_dt = tp.effective_dt
+			LEFT JOIN edw_core.tcollection_location cl on cl.policy_no = tp.policy_no and cl.effective_dt = tp.effective_dt
+			LEFT JOIN 
+			(
+				SELECT
+						ROW_NUMBER()over(partition by policy_history_sk order by primary_location_in desc,location_no) as rn,
+						policy_no,effective_dt,transaction_seq_no,address_line_1,address_line_2,
+						unit_no,city_nm,state_cd,zip_cd,county_nm,country_nm,primary_location_in,location_no
+				FROM
+					edw_core.tpel_location
+    		) as pl on pl.policy_no = tp.policy_no and pl.effective_dt = tp.effective_dt and pl.transaction_seq_no = tpts.transaction_seq_no and pl.rn = 1
+			LEFT JOIN edw_core.tmarine_boat_yacht_location mbyl on mbyl.policy_no = tp.policy_no and mbyl.effective_dt = tp.effective_dt
+			and mbyl.transaction_seq_no = tpts.transaction_seq_no
+			LEFT JOIN edw_core.tauto_garage_location agl on agl.policy_history_sk = tpts.policy_history_sk 
+					and agl.auto_garage_location_sk =
+										(
+											SELECT top 1 -- policy_no,effective_dt,transaction_seq_no,
+											auto_garage_location_sk--,COUNT(auto_vehicle_sk) vehicle_count
+											FROM edw_core.tauto_vehicle_coverage agl1 
+											where
+													agl1.policy_history_sk = agl.policy_history_sk
+											GROUP BY policy_no,effective_dt,transaction_seq_no,auto_garage_location_sk
+											ORDER BY policy_no,effective_dt,transaction_seq_no,COUNT(auto_vehicle_sk) DESC
+										)
+
 			LEFT JOIN edw_core.tinternal_coverage tic ON tic.internal_coverage_sk=tpts.internal_coverage_sk
 			WHERE
 				tpts.month_sk=@acounting_date_sk
 				AND (tic.internal_coverage_category_nm = 'Premium' OR tic.internal_coverage_desc like 'Subscriber Contribution%')
 				AND tpts.transaction_effective_dt_sk < = @acounting_date_sk
 				AND tpts.expiration_dt_sk > @acounting_date_sk
-				AND 
-				(
-				SELECT top 1 transaction_type
-				from
-					edw_core.tpolicy_history tph1
-				where
-					tph1.policy_sk = tp.policy_sk
-					and GREATEST(tph1.transaction_effective_dt,cast(transaction_ts as date))  < = @last_day_month
-					and cast(tph1.expiration_dt as date) > @last_day_month
-				order by GREATEST(tph1.transaction_effective_dt,transaction_ts) desc,transaction_ts desc
-				) != 'Cancellation'
-				
 			) AS t
 			GROUP BY
 				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
 				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,contribcutoffdate
-			)		
+			)	
 		
 			INSERT INTO edw_integration.policy_workday_unearned_premium_feed
 			(
@@ -182,7 +238,7 @@ BEGIN
 			SET @rows_affected=@@ROWCOUNT;
 
 			-- Update control table
-			SET @new_last_source_extract_ts=COALESCE(@last_day_month,@last_source_extract_ts); 	
+			SET @new_last_source_extract_ts=dateadd(day,-1,cast(@current_date as date));	
 			EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 			-- Update audit table
