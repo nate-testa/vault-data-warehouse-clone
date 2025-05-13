@@ -111,8 +111,8 @@ BEGIN
 		group by qh.commercial_quote_sk; 
 
 		update a
-		set a.first_offered_commercial_quote_ts 	  = transaction_ts,
-            first_offered_commercial_quote_history_sk = commercial_quote_history_sk 
+		set a.first_quoted_commercial_quote_ts 	  = transaction_ts,
+            a.first_quoted_commercial_quote_history_sk = commercial_quote_history_sk 
   		from [edw_commercial].tcommercial_quote a,
 			 (
 				select * from 
@@ -130,8 +130,8 @@ BEGIN
 					left join edw_stage.Product pr on acc.ProductId = pr.id
 					where  acctsh.Stage in ('QUOTE','POLICY')
 					and pr.ProductLine = 'CommercialLines'
-					and upper(acctsh.State) = 'OFFERED'
-					and q.first_offered_commercial_quote_ts IS NULL 
+					and upper(acctsh.State) = 'QUOTED'
+					and q.first_quoted_commercial_quote_ts IS NULL 
 				)tqtsh
 				where policy_txn_order=1
 			 )b
