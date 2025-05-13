@@ -116,35 +116,20 @@ BEGIN
 				delete from edw_commercial.tcommercial_renewal_summary
 				where month_sk = @month_end_dt_sk;
 				
-				DROP TABLE IF EXISTS edw_temp.tren_summ_oth_cust_inf_temp;
-				
-				select customer_id, td.actual_dt inforce_dt, 
-						case when pol.prior_policy_no is null and pol.original_policy_no is null then pol.policy_no
-							 when pol.prior_policy_no is null  							  		 then pol.original_policy_no
-							 when CHARINDEX('-',pol.prior_policy_no) = 0 					  	 then pol.prior_policy_no 
-							 else left(pol.prior_policy_no, CHARINDEX('-',pol.prior_policy_no) - 1) 
-						end original_policy_no, 
-						pol.policy_no, pol.effective_dt
-				into edw_temp.tren_summ_oth_cust_inf_temp
-				from edw_commercial.tcommercial_daily_inforce_policy inf, edw_core.tdate td, edw_commercial.tcommercial_policy pol
-				where inf.inforce_dt_sk = td.date_sk	
-				and inf.commercial_policy_sk  = pol.commercial_policy_sk 
-				and td.actual_dt between @begin_dt and @end_dt
-				and customer_sk is not null; 
-				
 				DROP TABLE IF EXISTS edw_temp.tren_summ_quotes;
 				
 				with q as
 				(
-					select  q.commercial_quote_sk, q.quote_no, q.effective_dt, q.original_policy_no, q.quote_Status, q.first_offered_quote_history_sk,  
-							case when q.prior_policy_no is null and q.original_policy_no is null then q.quote_no
-							 	 when q.prior_policy_no is null  							  then q.original_policy_no
+					select  q.commercial_quote_sk, q.quote_no, q.effective_dt, --q.original_policy_no, 
+							q.quote_Status, q.first_offered_commercial_quote_history_sk,  
+							case when q.prior_policy_no is null --and q.original_policy_no is null 
+																							  then q.quote_no
+							 	 --when q.prior_policy_no is null  							  then q.original_policy_no
 								 when CHARINDEX('-',q.prior_policy_no) = 0 					  then q.prior_policy_no 
 								else left(q.prior_policy_no, CHARINDEX('-',q.prior_policy_no) - 1) 
-							end prior_policy_no 
-						    , replace(replace(q.uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd
+							end prior_policy_no  
 							, br.primary_address_state_cd
-					from edw_core.tquote q
+					from edw_commercial.tcommercial_quote q
 						 , edw_core.tbroker br 
 					where	effective_dt between @begin_dt and @end_dt 
 					and br.broker_id = q.broker_id
@@ -153,13 +138,13 @@ BEGIN
 				n as
 				(
 					select q1.quote_no, nt.note_desc, rank() over (partition by q1.quote_no order by note_created_ts desc, note_sk desc) rnk, note_created_ts
-					from edw_core.tnote nt, edw_core.tquote q1
+					from edw_core.tnote nt, edw_commercial.tcommercial_quote q1
 					where q1.quote_no = nt.policy_no
 					and object_type = 'Account' 
 					and effective_dt between @begin_dt and @end_dt  
 				)
 				select    q.*
-						, case when original_policy_no= prior_policy_no then 0 else 1 end pol_no_changed_in	
+						--, case when original_policy_no= prior_policy_no then 0 else 1 end pol_no_changed_in	
 						, n.note_desc				
 				into edw_temp.tren_summ_quotes 
 				from q
@@ -170,34 +155,25 @@ BEGIN
 				with exp_pols as
 				--pols expiration in current month
 				(
-				 SELECT commercial_policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no,
-						replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd
-						, non_renewal_in, pending_non_renewal_in
+				 SELECT commercial_policy_sk, policy_no, effective_dt, expiration_dt--, --original_policy_no,
+						--non_renewal_in, pending_non_renewal_in
 				 FROM	edw_commercial.tcommercial_policy
 				 where	expiration_dt between @begin_dt and @end_dt 
-				),
-				--customer other inf count
-				cust_oth_inf as
-				(
-					SELECT pol.commercial_policy_sk, count(*) oth_inf_ct--pol.policy_no, pol.expiration_dt, pol.original_policy_no, ci.*
-					FROM	edw_commercial.tcommercial_policy pol
-					inner join edw_temp.tren_summ_oth_cust_inf_temp ci on pol.customer_id = ci.customer_id and pol.expiration_dt = ci.inforce_dt and pol.original_policy_no <> ci.original_policy_no
-				 	where	expiration_dt between @begin_dt and @end_dt 
-					group by pol.commercial_policy_sk
-				),
+				), 
 				--pols renewing all in current month
 				ren_pols_all as
 				(
-				 SELECT commercial_policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no,
-						replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd, 
-						 case when prior_policy_no is null and original_policy_no is null then policy_no
-							  when prior_policy_no is null  							  then original_policy_no
+				 SELECT commercial_policy_sk, policy_no, effective_dt, expiration_dt, --original_policy_no,
+						 case when prior_policy_no is null --and original_policy_no is null 
+						 																  then policy_no
+							  --when prior_policy_no is null  							  then original_policy_no
 							  when CHARINDEX('-',prior_policy_no) = 0 					  then prior_policy_no 
 							  else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
 						end prior_policy_no,
-						rank() over (partition by case when prior_policy_no is null and original_policy_no is null then policy_no
-												 	   when prior_policy_no is null then original_policy_no
-												 	   when CHARINDEX('-',prior_policy_no) = 0 then prior_policy_no 
+						rank() over (partition by case when prior_policy_no is null --and original_policy_no is null 
+																													then policy_no
+												 	  -- when prior_policy_no is null 								then original_policy_no
+												 	   when CHARINDEX('-',prior_policy_no) = 0 						then prior_policy_no 
 								  					   else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
 												  end order by commercial_policy_sk) rnk
 				 FROM	edw_commercial.tcommercial_policy
@@ -216,9 +192,9 @@ BEGIN
 					select *
 					FROM
 					(
-						SELECT *, 
+						SELECT *--, 
 								--added replace x, to remove dupes
-								rank() over (partition by replace(prior_policy_no,'x','') order by pol_no_changed_in, commercial_quote_sk) rnk  
+								--rank() over (partition by replace(prior_policy_no,'x','') order by pol_no_changed_in, commercial_quote_sk) rnk  
 						from edw_temp.tren_summ_quotes
 					) A
 				 	where rnk = 1
@@ -439,8 +415,7 @@ BEGIN
 						renewal_non_flat_cancelled_ct, 
 						renewal_initial_written_premium_amt, 
 						update_ts,
-						etl_audit_sk
-						,uw_company_cd
+						etl_audit_sk 
 						,wip_renewal_quote_ct
 						,offered_or_not_taken_quote_ct
 						,renewal_commercial_quote_sk 
@@ -454,8 +429,7 @@ BEGIN
 						,renewal_quote_dwelling_limit_amt
 						,renewal_quote_other_structures_limit_amt
 						,renewal_quote_contents_limit_amt
-						,renewal_quote_loss_of_use_limit_amt
-						,product_nm 
+						,renewal_quote_loss_of_use_limit_amt 
 						,renewal_quote_note_desc
 						,renewal_quote_agency_primary_location_state_cd
 					)
@@ -486,8 +460,7 @@ BEGIN
 						a.non_flatcancel_renewal_ind,
 						a.initial_written_renewal_prem, 
 						getdate() 
-						,@etl_audit_sk 
-						,a.uw_company_cd
+						,@etl_audit_sk  
 						,a.wip_renewal_quote_ct
 						,a.offered_or_not_taken_quote_ct
 						,a.renewal_commercial_quote_sk
@@ -501,8 +474,7 @@ BEGIN
 						,qhc.dwelling_limit_amt 		renewal_quote_dwelling_limit_amt
 						,qhc.other_structures_limit_amt renewal_quote_other_structures_limit_amt
 						,qhc.contents_limit_amt 		renewal_quote_contents_limit_amt
-						,qhc.loss_of_use_limit_amt 		renewal_quote_loss_of_use_limit_amt
-						,case when pr.product_nm = 'Condo' then 'Homeowners' else pr.product_nm end product_nm 
+						,qhc.loss_of_use_limit_amt 		renewal_quote_loss_of_use_limit_amt 
 						,a.renewal_quote_note_desc
 						,a.renewal_quote_agency_primary_location_state_cd
 				from edw_temp.tren_summ a
@@ -511,8 +483,8 @@ BEGIN
 							Where transaction_type  = 'Cancellation'
 							and latest_transaction_in ='Y'
 						  ) b on a.commercial_policy_sk = b.commercial_policy_sk
-				left join edw_core.tquote_history qh on qh.commercial_quote_sk = a.renewal_commercial_quote_sk and qh.latest_transaction_in = 'Y'
-				left join edw_core.tquote_home_coverage qhc on qhc.quote_no = qh.quote_no and qhc.effective_dt = qh.effective_dt 
+				left join edw_commercial.tcommercial_quote_history qh on qh.commercial_quote_sk = a.renewal_commercial_quote_sk and qh.latest_transaction_in = 'Y'
+				left join edw_commercial.tcommercial_quote_home_coverage qhc on qhc.quote_no = qh.quote_no and qhc.effective_dt = qh.effective_dt 
 																and qhc.transaction_seq_no = qh.transaction_seq_no
 				left join edw_core.tproduct pr on a.product_sk = pr.product_sk;
 
