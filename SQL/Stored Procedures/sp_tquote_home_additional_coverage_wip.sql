@@ -1,21 +1,22 @@
 -- =============================================
--- Author:		Yunus Mohammed
+-- Author:			Yunus Mohammed
 -- Description: This procedures insert homeowners quote additional coverage data wip
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date			|Author						|	Change Description
+-- Change date			|Author									|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
 -- 05/07/2024 		Yunus Mohammed				1. Created this procedure
--- 09/07/24				Hernando Gonzalez				2. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
--- 08/01/24             Tuba Mohsin                			 3. added contents_extended_replacement_cost_limit_amt
+-- 09/07/24				Hernando Gonzalez			2. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
+-- 08/01/24             Tuba Mohsin                		   3. added contents_extended_replacement_cost_limit_amt
 -- 08/22/24				Yunus Mohammed				4. Removed effective date from merge and added in update clause
 -- 08/30/24				Yunus Mohammed				5. Added new columns
 -- 09/04/24				Yunus Mohammed				6. Removed error from update
 -- 10/02/24				Yunus Mohammed				7. Added new column fortified_roof_upgrade_endorsement_in
--- 10/30/24				Hernando Gonzalez			8. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
+-- 10/30/24				Hernando Gonzalez			 8. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
 -- 12/02/24				Yunus Mohammed				9. AD-7834 Added new fields
--- 12/18/24				Hernando Gonzalez			10. AD-7963 | Added Risk_Score_Fire
--- 01/23/25				Alberto Almario						11. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
+-- 12/18/24				Hernando Gonzalez			 10. AD-7963 | Added Risk_Score_Fire
+-- 01/23/25				Alberto Almario					  11. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
 -- 04/01/25		   		Yunus Mohammed				12 Ad-9035 Added automatic_seismic_shutoff_valve_in
+--05/12/25				Yunus Mohammed				13 AD-9481 Added all_peril_roof_covering_coverage_CW_in
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage_wip]
@@ -195,7 +196,7 @@ BEGIN
 				,PollutantsOrContiminationTankConstruction AS pollutants_or_contimination_tank_construction
 				,PollutantsOrContiminationTankLocation AS pollutants_or_contimination_tank_location
 				,PollutantsOrContiminationTankType AS pollutants_or_contimination_tank_type
-					,ResidenceHeldInTrust AS residence_held_in_trust_in
+				,ResidenceHeldInTrust AS residence_held_in_trust_in
 				,SinkholeCollapse AS sinkhole_collapse_in
 				,SinkholeCoverageExtension AS sinkhole_coverage_extension_in
 				,SupplementalLossAssessmentCoverage AS supplemental_loss_assessment_coverage_in
@@ -321,6 +322,7 @@ BEGIN
 				,AnimalRelatedLiabilityEndorsement as animal_related_liability_endorsement_in
 				,case when AutomaticSeismicShutOffValve = '' then null else AutomaticSeismicShutOffValve end as automatic_seismic_shutoff_valve_in
 				,source_system_sk
+				,AllPerilRoofCoveringCoverageCW as all_peril_roof_covering_coverage_CW_in
 				,GETDATE() AS create_ts
 				,GETDATE() AS update_ts
 				,@etl_audit_sk AS etl_audit_sk
@@ -422,6 +424,7 @@ BEGIN
 			risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
 			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
 			theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
+			all_peril_roof_covering_coverage_CW_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
@@ -513,6 +516,7 @@ BEGIN
 				risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
 				risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
 				theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
+				all_peril_roof_covering_coverage_CW_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			WHEN MATCHED THEN UPDATE
@@ -722,6 +726,7 @@ BEGIN
 			[target].theft_or_loss_general_conditions_endorsement_in = [source].theft_or_loss_general_conditions_endorsement_in, 
 			[target].animal_related_liability_endorsement_in = [source].animal_related_liability_endorsement_in,
 			[target].automatic_seismic_shutoff_valve_in = [source].automatic_seismic_shutoff_valve_in,
+			[target].all_peril_roof_covering_coverage_CW_in = [source].all_peril_roof_covering_coverage_CW_in,
 			[target].update_ts = [source].update_ts;
 			
 
