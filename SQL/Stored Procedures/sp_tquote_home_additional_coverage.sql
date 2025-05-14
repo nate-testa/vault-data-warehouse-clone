@@ -1,8 +1,3 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 -- =============================================
 -- Author:		Yunus Mohammed
 -- Create Date: <Create Date, , >
@@ -28,7 +23,8 @@ GO
 -- 12/18/24				Hernando Gonzalez					 13. AD-7963 | Added Risk_Score_Fire
 -- 01/22/25				Alberto Almario							  14. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
 -- 04/01/25		   		Yunus Mohammed						15 Ad-9035 Added automatic_seismic_shutoff_valve_in
---05/12/25				Yunus Mohammed				        16 AD-9481 Added all_peril_roof_covering_coverage_CW_in
+-- 05/12/25				Yunus Mohammed				        16 AD-9481 Added all_peril_roof_covering_coverage_cw_in
+-- 05/14/25				Yunus Mohammed				   		17. AD-9392 Added WFGateQuestion and updated logic for gate_code
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage]
@@ -73,20 +69,35 @@ BEGIN
 		SET @ColumnsToPivot = LEFT(@ColumnsToPivot, LEN(@ColumnsToPivot) - 1);
 	
 		declare @sql nvarchar(max)
-		drop table if exists edw_temp.tquote_home_additional_coverage_temp1
+		
+		DROP TABLE IF EXISTS edw_temp.tquote_home_additional_coverage_temp1
+		DROP TABLE IF EXISTS edw_temp.tquote_home_additional_coverage_temp2
+		DROP TABLE IF EXISTS edw_temp.tquote_home_additional_coverage_temp3
+
+		select act.*
+		into edw_temp.tquote_home_additional_coverage_temp1
+		from
+			edw_stage.AccountTransaction act
+			inner join edw_stage.Product p on p.Id=act.ProductId
+		where
+			act.PolicyNumber is not null and
+			act.[Stage] IN ('QUOTE','POLICY')
+			and p.ProductLine = 'PersonalLines'
+			and p.InternalName in ('Homeowners','Condo')
+			and act.CreatedDate > @last_source_extract_ts
+
 		SET @sql ='select quote_no,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,
 		CreatedDate,quote_history_sk,quote_home_location_sk,quote_home_coverage_sk,source_system_sk,
-		'+ @ColumnsToPivot +' into edw_temp.tquote_home_additional_coverage_temp1
+		'+ @ColumnsToPivot +' into edw_temp.tquote_home_additional_coverage_temp2
 			from
 			(
 			select
-			acT.PolicyNumber as quote_no ,act.EffectiveDate ,act.ExpirationDate ,act.TransactionEffectiveDate ,
+			act.PolicyNumber as quote_no ,act.EffectiveDate ,act.ExpirationDate ,act.TransactionEffectiveDate ,
 			tph.quote_history_sk,thl.quote_home_location_sk,thc.quote_home_coverage_sk,
 			act.[Number] as transaction_seq_no,act.CreatedDate,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value]
 			from
-				edw_stage.AccountTransaction act
-				inner join edw_stage.Product p on p.Id=act.ProductId
+				edw_temp.tquote_home_additional_coverage_temp1 act
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
 				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
@@ -96,15 +107,8 @@ BEGIN
 				left join edw_core.tquote_home_location thl on thl.quote_no=act.PolicyNumber
 				left join edw_core.tquote_home_coverage thc on thc.quote_no=act.PolicyNumber
 						and thc.effective_dt=act.EffectiveDate and thc.transaction_seq_no=act.[Number]
-				left join edw_stage.Product pr on act.ProductId = pr.id
-			where
-				act.PolicyNumber is not null 
-				and act.[Stage]  IN (''QUOTE'',''POLICY'')
-				and atvo.ObjectType in (''Homeowner'',''Condo'')
-				and pr.ProductLine = ''PersonalLines''
-				and act.CreatedDate > @last_source_extract_ts
-				-- )
-
+			where				
+					atvo.ObjectType in (''Homeowner'',''Condo'')
 			) as t
 			pivot 
 			(
@@ -113,19 +117,34 @@ BEGIN
 			'
 			EXECUTE sp_executesql @sql, N'@last_source_extract_ts DATETIME2(7)', @last_source_extract_ts = @last_source_extract_ts;
 
-			WITH extended_liability_loc_ct AS (	
-				select 
-					act.PolicyNumber as qte_no, act.EffectiveDate as eff_dt, act.[Number] as tran_seq_no, count(atvo.ObjectGroupIdentifier) as extended_liability_location_ct
-				from edw_stage.AccountTransaction act
+		select PolicyNumber  as quote_no,EffectiveDate,transaction_seq_no,STRING_AGG(gate_code,'-') as gate_code
+		into edw_temp.tquote_home_additional_coverage_temp3
+		from
+			(
+			select 
+					act.PolicyNumber, act.EffectiveDate, act.[Number] as transaction_seq_no, atvo.UniqueId ,
+				string_agg(atvof.[Value],',') as gate_code
+			from
+				edw_temp.tquote_home_additional_coverage_temp1 act
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
-				where
-					act.PolicyNumber is not null 
-					and act.[Stage]  IN ('QUOTE','POLICY')
-					and atvo.ObjectType in ('ExtendedLiabilityLocation')
-					and p.ProductLine = 'PersonalLines'
-					and act.CreatedDate > @last_source_extract_ts
+				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
+			where
+				atvo.ObjectType in ('WFGateQuestion')
+				and atvof.Field in ('WFLocationOfGate','WFGateCodes')
+				group by act.PolicyNumber ,act.EffectiveDate ,act.Number,atvo.UniqueId
+			) as a
+			group by PolicyNumber,EffectiveDate,transaction_seq_no;
+
+			WITH extended_liability_loc_ct AS (	
+				select 
+					act.PolicyNumber as qte_no, act.EffectiveDate as eff_dt, act.[Number] as tran_seq_no, count(atvo.ObjectGroupIdentifier) as extended_liability_location_ct
+				from edw_temp.tquote_home_additional_coverage_temp1 act
+				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
+				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
+				where					
+					atvo.ObjectType in ('ExtendedLiabilityLocation')
 				group by act.PolicyNumber, act.EffectiveDate, act.[Number]
 			)
 
@@ -217,14 +236,14 @@ BEGIN
 			risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
 			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils, risk_score_fire,
 			theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
-			all_peril_roof_covering_coverage_CW_in,
+			all_peril_roof_covering_coverage_cw_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
-			quote_no
-           ,EffectiveDate AS effective_dt
+			a.quote_no
+           ,a.EffectiveDate AS effective_dt
            ,ExpirationDate AS expiration_dt
-           ,transaction_seq_no AS transaction_seq_no
+           ,a.transaction_seq_no AS transaction_seq_no
            ,quote_home_location_sk
            ,quote_home_coverage_sk AS home_coverage_sk
            ,quote_history_sk
@@ -401,7 +420,7 @@ BEGIN
 		   ,WFSiteSchedulingEmailAddress as site_scheduling_email
 		   ,WFEmergencyContactName as emergency_contact_nm
 		   ,WFEmergencyContactPhoneNumber as emergency_contact_phone_no
-		   ,WFEmergencyContactEmail as emergency_contact_email,WFGateCodes as gate_code
+		   ,WFEmergencyContactEmail as emergency_contact_email,c.gate_code
 		   ,PrimaryHomeRiskAddress as primary_home_risk_address
 		   ,PrimaryHomePolicyEffectiveDate  as primary_home_policy_effective_dt
 		   ,PrimaryHomePolicyExpirationDate as primary_home_policy_expiration_dt
@@ -423,17 +442,17 @@ BEGIN
 			,TheftOrLossGeneralConditionsEndorsement as theft_or_loss_general_conditions_endorsement_in
 			,AnimalRelatedLiabilityEndorsement as animal_related_liability_endorsement_in
 			,case when AutomaticSeismicShutOffValve = '' then null else AutomaticSeismicShutOffValve end as automatic_seismic_shutoff_valve_in
-			,AllPerilRoofCoveringCoverageCW as all_peril_roof_covering_coverage_CW_in
+			,AllPerilRoofCoveringCoverageCW as all_peril_roof_covering_coverage_cw_in
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts
            ,@etl_audit_sk AS etl_audit_sk
 			FROM
-				edw_temp.tquote_home_additional_coverage_temp1 AS a
-			LEFT JOIN extended_liability_loc_ct AS b
-				ON a.quote_no = b.qte_no
-				AND a.EffectiveDate = b.eff_dt
-				AND a.transaction_seq_no = b.tran_seq_no
+				edw_temp.tquote_home_additional_coverage_temp2 AS a
+				LEFT JOIN extended_liability_loc_ct AS b ON a.quote_no = b.qte_no AND a.EffectiveDate = b.eff_dt
+						AND a.transaction_seq_no = b.tran_seq_no
+				LEFT JOIN edw_temp.tquote_home_additional_coverage_temp3 AS c ON a.quote_no = c.quote_no AND a.EffectiveDate = c.EffectiveDate
+						AND a.transaction_seq_no = c.transaction_seq_no
 
 			SET @rows_affected=@@ROWCOUNT;
 
@@ -441,13 +460,14 @@ BEGIN
 			SET @new_last_source_extract_ts=COALESCE((SELECT MAX(CreatedDate) FROM edw_temp.tquote_home_additional_coverage_temp1),@last_source_extract_ts);	
 			EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
-
 			-- Update audit table
 			SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 			EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
 			-- Drop temp table
 			DROP TABLE IF EXISTS edw_temp.tquote_home_additional_coverage_temp1
+			DROP TABLE IF EXISTS edw_temp.tquote_home_additional_coverage_temp2
+			DROP TABLE IF EXISTS edw_temp.tquote_home_additional_coverage_temp3
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
