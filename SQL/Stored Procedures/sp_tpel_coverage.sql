@@ -1,4 +1,4 @@
-﻿-- =============================================
+﻿-- ==========================================================================================================
 -- Author:		Yunus Mohammed
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert pel driver data
@@ -7,7 +7,8 @@
 -----------------------------------------------------------------------------------------------------------
 -- 05/28/24		Alberto Almario					1. Integrate Premium Adjustments data into EDW - PEL 
 -- 07/09/24		Alberto Almario					2. Add 7 new columns
--- =============================================
+-- 05/13/25		Alberto Almario					3. Add new columns recreational_watercraft_exclusion_in and recreational_motorvehicle_exclusion_in
+-- ==========================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_coverage]
 
 AS
@@ -103,7 +104,7 @@ BEGIN
 			CriminalTrafficViolationField,SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
 			AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,EmergencyExtensionNotice,
 			CoverageLimitDeductible,AdditionalCoverageLimitDeductible,UnderinsuredMotoristDeductible,UnderinsuredDeductible,EmploymentPracticesLiabilityDeductible,
-			AutoInsuranceCompany,HomeInsuranceCompany
+			AutoInsuranceCompany,HomeInsuranceCompany,RecreationalWatercraftExclusion,RecreationalMotorvehicleExclusion
 		INTO edw_temp.tpel_coverage_temp3
 		from
 			(
@@ -144,7 +145,7 @@ BEGIN
 						'CriminalTrafficViolationField','SecondaryInsuredCoverageAmount','UnderinsuredMotoristLiabilityForSecondaryInsured','DefenseInsideLimits','AutoLiabilityExclusion',
 						'AutoUnderlyingLimitType','AutoUnderlyingLimitAmountPerOccurrence','AutoUnderlyingLimitAmountForPropertyDamage','HomeUnderlyingLimit','EmergencyExtensionNotice',
 						'CoverageLimitDeductible','AdditionalCoverageLimitDeductible','UnderinsuredMotoristDeductible','UnderinsuredDeductible','EmploymentPracticesLiabilityDeductible',
-                    	'AutoInsuranceCompany','HomeInsuranceCompany'
+                    	'AutoInsuranceCompany','HomeInsuranceCompany','RecreationalWatercraftExclusion','RecreationalMotorvehicleExclusion'
 					)
 				) as t
 			) as t
@@ -160,7 +161,7 @@ BEGIN
 					CriminalTrafficViolationField,SecondaryInsuredCoverageAmount,UnderinsuredMotoristLiabilityForSecondaryInsured,DefenseInsideLimits,AutoLiabilityExclusion,
 					AutoUnderlyingLimitType,AutoUnderlyingLimitAmountPerOccurrence,AutoUnderlyingLimitAmountForPropertyDamage,HomeUnderlyingLimit,EmergencyExtensionNotice,
 					CoverageLimitDeductible,AdditionalCoverageLimitDeductible,UnderinsuredMotoristDeductible,UnderinsuredDeductible,EmploymentPracticesLiabilityDeductible,
-					AutoInsuranceCompany,HomeInsuranceCompany
+					AutoInsuranceCompany,HomeInsuranceCompany,RecreationalWatercraftExclusion,RecreationalMotorvehicleExclusion
 					)
 			) as pivottable
 		;
@@ -234,6 +235,8 @@ BEGIN
 			,employment_practices_liability_deductible_amt
 			,current_underlying_auto_insurance_company_nm
 			,current_underlying_home_insurance_company_nm
+			,recreational_watercraft_exclusion_in
+			,recreational_motorvehicle_exclusion_in
 		)
 		SELECT
 			PolicyNumber AS policy_no,EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
@@ -274,6 +277,8 @@ BEGIN
 			,EmploymentPracticesLiabilityDeductible AS employment_practices_liability_deductible_amt
 			,AutoInsuranceCompany AS current_underlying_auto_insurance_company_nm
 			,HomeInsuranceCompany AS current_underlying_home_insurance_company_nm
+			,RecreationalWatercraftExclusion AS recreational_watercraft_exclusion_in
+			,RecreationalMotorvehicleExclusion AS recreational_motorvehicle_exclusion_in
 		FROM edw_temp.tpel_coverage_temp1
 
 		SET @rows_affected=@@ROWCOUNT;
