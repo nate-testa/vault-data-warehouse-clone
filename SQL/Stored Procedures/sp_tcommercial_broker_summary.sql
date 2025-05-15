@@ -12,6 +12,7 @@ GO
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 -- 04/29/25		Architha Gudimalla				1. Created this procedure  
 -- 05/15/25		Architha Gudimalla				2. Updated after initial run errors
+-- 05/15/25		Architha Gudimalla				3. Added filter on tower type
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tcommercial_broker_summary] 
@@ -307,7 +308,7 @@ BEGIN
 							--
 					from edw_commercial.tcommercial_quote q  
 					left join edw_commercial.tcommercial_quote_history qh on q.commercial_quote_sk = qh.commercial_quote_sk and qh.latest_transaction_in = 'Y' -- q.first_offered_commercial_quote_history_sk = qh.commercial_quote_history_sk 
-					left join edw_commercial.tcommercial_quote_tower tow on tow.commercial_quote_history_sk = qh.commercial_quote_history_sk
+					left join edw_commercial.tcommercial_quote_tower tow on tow.commercial_quote_history_sk = qh.commercial_quote_history_sk and tow.tower_type = 'primary'
 					inner join edw_core.tbroker br on q.broker_id = br.broker_id 
 					where  q.quote_term = 'New'
 					and (		  CAST(q.quote_create_ts AS DATE) between @prior_year_begin_dt and @end_dt 
@@ -490,7 +491,7 @@ BEGIN
 				 inner join edw_core.tdate td on td.date_sk = summ.month_sk 
 				 inner join edw_commercial.tcommercial_policy_history ph_cancels on summ.commercial_policy_history_sk = ph_cancels.commercial_policy_history_sk 
 				 inner join edw_commercial.tcommercial_policy_history ph on summ.commercial_policy_sk = ph.commercial_policy_sk 
-				 inner join edw_commercial.tcommercial_policy_tower tow on summ.commercial_policy_history_sk = tow.commercial_policy_history_sk  
+				 inner join edw_commercial.tcommercial_policy_tower tow on summ.commercial_policy_history_sk = tow.commercial_policy_history_sk and tow.tower_type = 'primary' 
 				 inner join (select commercial_policy_sk, min(transaction_seq_no) transaction_seq_no
 								from edw_commercial.tcommercial_policy_history
 								group by commercial_policy_sk ) min_ph on ph.commercial_policy_sk = min_ph.commercial_policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
