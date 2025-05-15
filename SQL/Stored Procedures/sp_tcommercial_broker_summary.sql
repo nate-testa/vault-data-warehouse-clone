@@ -491,7 +491,7 @@ BEGIN
 				 inner join edw_core.tdate td on td.date_sk = summ.month_sk 
 				 inner join edw_commercial.tcommercial_policy_history ph_cancels on summ.commercial_policy_history_sk = ph_cancels.commercial_policy_history_sk 
 				 inner join edw_commercial.tcommercial_policy_history ph on summ.commercial_policy_sk = ph.commercial_policy_sk 
-				 inner join edw_commercial.tcommercial_policy_tower tow on summ.commercial_policy_history_sk = tow.commercial_policy_history_sk  
+				 inner join edw_commercial.tcommercial_policy_tower tow on summ.commercial_policy_history_sk = tow.commercial_policy_history_sk and tow.tower_type = 'primary' 
 				 inner join (select commercial_policy_sk, min(transaction_seq_no) transaction_seq_no
 								from edw_commercial.tcommercial_policy_history
 								group by commercial_policy_sk ) min_ph on ph.commercial_policy_sk = min_ph.commercial_policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
