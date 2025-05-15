@@ -403,7 +403,7 @@ BEGIN
 						,expiring_mid_term_endorsement_premium_amt  
 						,renewal_quote_written_premium_amt
 						,renewal_quote_limit_amt  
-						,renewal_quote_attachement_amt 
+						,renewal_quote_attachment_amt 
 					)
 				select @month_end_dt_sk, 
 						a.commercial_policy_sk,   
@@ -436,7 +436,7 @@ BEGIN
 						,(a.effective_date_60_day_prem - a.initial_written_prem - a.mid_term_cancel_amount) AS expiring_mid_term_endorsement_premium_amt  
 						,(qh.premium_amt-qh.commission_amt)as renewal_quote_written_premium_amt
 						,qpt.aggregate_policy_limit_amt 	renewal_quote_limit_amt 
-						,qpt.aggregate_attachment_amt 		renewal_quote_attachement_amt  
+						,qpt.aggregate_attachment_amt 		renewal_quote_attachment_amt  
 				from edw_temp.tren_summ a
 				left join ( select distinct cancellation_reason_desc, commercial_policy_sk, effective_dt 
 							FROM edw_commercial.tcommercial_policy_history ph
