@@ -243,6 +243,7 @@ BEGIN
             , emergency_contact_nm
             , emergency_contact_phone_no
             , emergency_contact_email 
+            ,gate_entry_code_required_in
         )
         SELECT 
             unique_id, 
@@ -282,6 +283,7 @@ BEGIN
             , emergency_contact_nm
             , emergency_contact_phone_no
             , emergency_contact_email 
+            ,gate_entry_code_required_in
         FROM [edw_temp].[policy_redzone_feed_temp1];
 
         --************End************
