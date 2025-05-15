@@ -15,7 +15,7 @@ GO
 -- 05/15/23		Architha Gudimalla				3. Added filter on tower type
 -- ======================================================================================================================================================================= 
 
-CREATE or ALTER     PROCEDURE [edw_core].[sp_tcommercial_renewal_summary]
+CREATE or ALTER     PROCEDURE [edw_core].[sp_tcommercial_renewal_summary] 
 @in_yearmonth int = null
 AS 
 BEGIN
