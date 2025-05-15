@@ -12,6 +12,7 @@ GO
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 -- 04/29/25		Architha Gudimalla				1. Created this procedure  
 -- 05/15/25		Architha Gudimalla				2. Updated after initial run errors
+-- 05/15/25		Architha Gudimalla				3. Added filter on tower type
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tcommercial_broker_summary] 
@@ -307,7 +308,7 @@ BEGIN
 							--
 					from edw_commercial.tcommercial_quote q  
 					left join edw_commercial.tcommercial_quote_history qh on q.commercial_quote_sk = qh.commercial_quote_sk and qh.latest_transaction_in = 'Y' -- q.first_offered_commercial_quote_history_sk = qh.commercial_quote_history_sk 
-					left join edw_commercial.tcommercial_quote_tower tow on tow.commercial_quote_history_sk = qh.commercial_quote_history_sk
+					left join edw_commercial.tcommercial_quote_tower tow on tow.commercial_quote_history_sk = qh.commercial_quote_history_sk and tow.tower_type = 'primary'
 					inner join edw_core.tbroker br on q.broker_id = br.broker_id 
 					where  q.quote_term = 'New'
 					and (		  CAST(q.quote_create_ts AS DATE) between @prior_year_begin_dt and @end_dt 
