@@ -25,6 +25,7 @@
 -- 04/05/25             Sandeep Gundreddy           20. Replaced Null with '' close_reason_desc in temp2 tp fix batch issue
 -- 04/17/25		        Archtha Gudimalla			21. VI37310/AD9213 - Added monoline   
 -- 05/12/25		        Archtha Gudimalla			22. AD9494 - Excluded forecast quotes  
+-- 05/16/25		        Archtha Gudimalla			22. VI37383/AD9512 - Added broker state 
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
@@ -185,6 +186,7 @@ BEGIN
 							   then 'Yes' 
 							   else 'No' 
 						  end as monoline_in
+            ,br.primary_address_state_cd as broker_state
         into edw_temp.quote_hubspot_feed_temp1
 
         from edw_core.tquote q
@@ -316,6 +318,7 @@ BEGIN
 							   then 'Yes' 
 							   else 'No' 
 						  end as monoline_in
+            ,br.primary_address_state_cd as broker_state
         into edw_temp.quote_hubspot_feed_temp2
         
         from edw_core.tpolicy q 
@@ -397,6 +400,7 @@ BEGIN
             ,target_account
             ,close_reason_desc
             ,monoline_in
+            ,broker_state
         )
         VALUES
         (
@@ -421,6 +425,7 @@ BEGIN
             ,target_account
             ,close_reason_desc
             ,monoline_in
+            ,broker_state
         )
         WHEN MATCHED THEN UPDATE
         SET        
@@ -479,7 +484,8 @@ BEGIN
             [target].current_underlying_company_nm	    =	[source].current_underlying_company_nm,  
             [target].target_account	                    =	[source].target_account  ,  
             [target].close_reason_desc	                =	[source].close_reason_desc ,  
-            [target].monoline_in	                    =	[source].monoline_in   
+            [target].monoline_in	                    =	[source].monoline_in   ,  
+            [target].broker_state	                    =	[source].broker_state   
             ;
         
         SET @rows_affected=@@ROWCOUNT;
