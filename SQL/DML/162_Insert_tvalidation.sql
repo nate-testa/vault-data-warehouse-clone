@@ -7,7 +7,7 @@ select sum(premium_amt) from
 edw_core.tpolicy_transaction pt
 inner join edw_core.tdate d on pt.accouting_month_sk=d.date_sk
 where
-actual_dt = ''var_actual_dt''
+actual_dt = EOMONTH(''var_actual_dt'')
 AND premium_amt!=0
 and pt.accouting_month_sk = d.date_sk
 AND GREATEST(pt.transaction_dt_sk,pt.transaction_effective_dt_sk)< = d.date_sk
@@ -18,12 +18,12 @@ select sum(commission_amt) from
 edw_core.tpolicy_transaction pt
 inner join edw_core.tdate d on pt.accouting_month_sk=d.date_sk
 where
-actual_dt = ''var_actual_dt''
+actual_dt = EOMONTH(''var_actual_dt'')
 and commission_amt!=0
 and pt.accouting_month_sk = d.date_sk
 )
 ' AS source_sql ,
-'select @target_ct=sum(amount) from edw_integration.policy_workday_written_premium_feed where accounting_date= ''var_actual_dt'''  AS target_sql ,
+'select @target_ct=sum(amount) from edw_integration.policy_workday_written_premium_feed where accounting_date= EOMONTH(''var_actual_dt'')'  AS target_sql ,
        'Y' AS active_in ,
        'Monthly' AS frequency_desc ,
        getdate() AS create_ts ,
@@ -44,7 +44,7 @@ WHERE
 	AND (tic.internal_coverage_category_nm = ''Premium'' OR tic.internal_coverage_desc like ''Subscriber Contribution%'')
 	AND tpts.transaction_effective_dt_sk < = d.date_sk
 	AND tpts.expiration_dt_sk > d.date_sk
-	and d.actual_dt = ''var_actual_dt'''
+	and d.actual_dt = EOMONTH(''var_actual_dt'')'
 	AS source_sql ,
 'select @target_ct=sum(amount) from edw_integration.policy_workday_unearned_premium_feed where accounting_date = ''var_actual_dt''' AS target_sql ,
        'Y' AS active_in ,
@@ -60,8 +60,8 @@ from
 edw_core.tdate d
 INNER JOIN 
 edw_core.tdaily_inforce_policy dip on dip.inforce_dt_sk =d.date_sk
-WHERE d.actual_dt = ''var_actual_dt''' AS source_sql ,
-'select @target_ct=count(distinct policy_number) from edw_integration.policy_workday_unearned_premium_feed where accounting_date = ''var_actual_dt''
+WHERE d.actual_dt = EOMONTH(''var_actual_dt'')' AS source_sql ,
+'select @target_ct=count(distinct policy_number) from edw_integration.policy_workday_unearned_premium_feed where accounting_date = EOMONTH(''var_actual_dt'')
 and category = ''Premium''
 ' AS target_sql ,
        'Y' AS active_in ,
