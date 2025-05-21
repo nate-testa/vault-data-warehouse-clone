@@ -7,8 +7,9 @@
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
 -- 05/14/24		Architha Gudimalla				2. Corrected errors
 -- 05/20/24		Architha Gudimalla				3. Added update for latest_transaction_in
--- 03/14/25		Yunus Mohammed			     4.  Ad-8848 Added premium_rater_version
--- 04/03/25		Yunus Mohammed			  	 5. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
+-- 03/14/25		Yunus Mohammed			     	4.  Ad-8848 Added premium_rater_version
+-- 04/03/25		Yunus Mohammed			  	 	5. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
+-- 05/20/25		Alberto Almario					6. Ad-9559 Added insurance_score_source
 -- ===================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history_wip]
@@ -128,6 +129,7 @@ BEGIN
 				InsuranceScoreCode4,
 				InsuranceScoreCode4Description,
 				InsuranceScoreLastRunDate
+				,InsuranceScoreSource
 		INTO edw_temp.tquote_history_temp2
 		FROM
 			(				
@@ -148,7 +150,8 @@ BEGIN
 										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
 										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
-										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate)
+										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate
+										 ,InsuranceScoreSource)
 			) pivottable 
 
 		-- Start Merge process
@@ -197,6 +200,7 @@ BEGIN
 				,temp.producer_sk
 				,temp1.InsuranceScoreLastRunDate
 				,temp.premium_rater_version
+				,temp1.InsuranceScoreSource
 			FROM edw_temp.tquote_history_temp1 temp
 			LEFT JOIN edw_temp.tquote_history_temp3 tfs on temp.id = tfs.id
 			LEFT JOIN edw_temp.tquote_history_temp2 temp1 on temp.id = temp1.AccountId 
@@ -261,6 +265,7 @@ BEGIN
 		   ,producer_sk
 		   ,insurance_score_last_run_dt
 		   ,premium_rater_version
+		   ,insurance_score_source
 		   ) 
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -307,6 +312,7 @@ BEGIN
 				,Source.producer_sk
 				,Source.InsuranceScoreLastRunDate
 				,Source.premium_rater_version
+				,Source.InsuranceScoreSource
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -367,6 +373,7 @@ BEGIN
         Target.insurance_score_last_run_dt 			= Source.InsuranceScoreLastRunDate , 
 		Target.premium_rater_version = Source.premium_rater_version,
         Target.update_ts 							= getdate()
+		,Target.insurance_score_source				= Source.InsuranceScoreSource
 		; 
 
 		SET @rows_affected=@@ROWCOUNT;  

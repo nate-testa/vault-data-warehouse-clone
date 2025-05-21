@@ -3,16 +3,17 @@
 ---------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author										|	Change Description 
 ---------------------------------------------------------------------------------------------------------------------------------
--- 10/23/23		Architha Gudimalla					1. Created this procedure 
--- 12/11/23		Architha Gudimalla					2. Commented out stage in forst temp table
--- 02/08/24		Alberto Almario							3. Added new column producer_sk
--- 04/29/24		Hernando Gonzalez					4. Added new column insurance_score_last_run_dt
--- 05/15/24		Architha Gudimalla					5. Removed effecivedate from partiion in rnk used for latest_transaction_ind
--- 07/31/24		Architha Gudimalla					6. Added number desc to the rank in main query
--- 03/13/25		Yunus Mohammed					7. Ad-8848 Added premium_rater_version
--- 03/14/25		Yunus Mohammed					8. Used product internalName instead of Name
--- 04/03/25		Yunus Mohammed					9. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
--- 04/22/25		Yunus Mohammed					10. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
+-- 10/23/23		Architha Gudimalla							1. Created this procedure 
+-- 12/11/23		Architha Gudimalla							2. Commented out stage in forst temp table
+-- 02/08/24		Alberto Almario								3. Added new column producer_sk
+-- 04/29/24		Hernando Gonzalez							4. Added new column insurance_score_last_run_dt
+-- 05/15/24		Architha Gudimalla							5. Removed effecivedate from partiion in rnk used for latest_transaction_ind
+-- 07/31/24		Architha Gudimalla							6. Added number desc to the rank in main query
+-- 03/13/25		Yunus Mohammed								7. Ad-8848 Added premium_rater_version
+-- 03/14/25		Yunus Mohammed								8. Used product internalName instead of Name
+-- 04/03/25		Yunus Mohammed								9. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
+-- 04/22/25		Yunus Mohammed								10. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
+-- 05/20/25		Alberto Almario								11. Ad-9559 Added insurance_score_source
 -- ============================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history]
@@ -137,6 +138,7 @@ BEGIN
 				InsuranceScoreCode4,
 				InsuranceScoreCode4Description,
 				InsuranceScoreLastRunDate
+				,InsuranceScoreSource
 		INTO edw_temp.tquote_history_temp2
 		FROM
 			(
@@ -158,7 +160,8 @@ BEGIN
 										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
 										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
-										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate)
+										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate
+										 ,InsuranceScoreSource)
 			) pivottable 
 
 		-- Start Inserting records
@@ -214,6 +217,7 @@ BEGIN
 		   ,producer_sk
 		   ,insurance_score_last_run_dt
 		   ,premium_rater_version
+		   ,insurance_score_source
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, 
 				Source.TransactionEffectiveDate, Source.Number, 
@@ -256,6 +260,7 @@ BEGIN
 				,source.producer_sk
 				,source1.InsuranceScoreLastRunDate
 				,source. premium_rater_version
+				,source1.InsuranceScoreSource
 		FROM edw_temp.tquote_history_temp1 source
 		LEFT JOIN edw_temp.tquote_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tquote_history_temp2 source1 on source.id = source1.AccountTransactionId 
