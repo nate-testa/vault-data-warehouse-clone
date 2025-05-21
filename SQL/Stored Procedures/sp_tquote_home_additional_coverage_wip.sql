@@ -18,6 +18,7 @@
 -- 04/01/25		   		Yunus Mohammed				12 Ad-9035 Added automatic_seismic_shutoff_valve_in
 --05/12/25				Yunus Mohammed				13 AD-9481 Added all_peril_roof_covering_coverage_cw_in
 -- 05/14/25				Yunus Mohammed				14. AD-9392 Added WFGateQuestion and updated logic for gate_code
+-- 05/21/25				Alberto Almario				15. AD-9575 Added caddy_grade
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage_wip]
@@ -351,6 +352,7 @@ BEGIN
 						,GETDATE() AS create_ts
 						,GETDATE() AS update_ts
 						,@etl_audit_sk AS etl_audit_sk
+						,Caddy_Grade as caddy_grade
 							FROM
 								edw_temp.tquote_home_additional_coverage_wip_temp2 AS a
 								LEFT JOIN extended_liability_loc_ct AS b ON a.quote_no = b.qte_no AND a.EffectiveDate = b.eff_dt 
@@ -450,7 +452,7 @@ BEGIN
 			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
 			theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
 			all_peril_roof_covering_coverage_cw_in,
-			source_system_sk,create_ts,update_ts,etl_audit_sk
+			source_system_sk,create_ts,update_ts,etl_audit_sk,caddy_grade
 			)
 			VALUES
 			(
@@ -542,7 +544,7 @@ BEGIN
 				risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
 				theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
 				all_peril_roof_covering_coverage_cw_in,
-				source_system_sk,create_ts,update_ts,etl_audit_sk
+				source_system_sk,create_ts,update_ts,etl_audit_sk,caddy_grade
 			)
 			WHEN MATCHED THEN UPDATE
 			SET
@@ -752,7 +754,9 @@ BEGIN
 			[target].animal_related_liability_endorsement_in = [source].animal_related_liability_endorsement_in,
 			[target].automatic_seismic_shutoff_valve_in = [source].automatic_seismic_shutoff_valve_in,
 			[target].all_peril_roof_covering_coverage_cw_in = [source].all_peril_roof_covering_coverage_cw_in,
-			[target].update_ts = [source].update_ts;
+			[target].update_ts = [source].update_ts,
+			[target].caddy_grade = [source].caddy_grade
+			;
 			
 
 			SET @rows_affected=@@ROWCOUNT;

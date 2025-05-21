@@ -23,6 +23,7 @@
 -- 04/01/25		   				Yunus Mohammed				   14 AD-9035 Added automatic_seismic_shutoff_valve_in
 -- 05/12/25						Yunus Mohammed				   15 AD-9481 Added all_peril_roof_covering_coverage_cw_in
 -- 05/14/25						Yunus Mohammed				   16. AD-9392 Added WFGateQuestion and updated logic for gate_code
+-- 05/21/25						Alberto Almario				   17. AD-9575 Added caddy_grade
 -- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
 
@@ -237,7 +238,7 @@ BEGIN
 			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
 			theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
 			all_peril_roof_covering_coverage_cw_in,gate_entry_code_required_in,
-			source_system_sk,create_ts,update_ts,etl_audit_sk
+			source_system_sk,create_ts,update_ts,etl_audit_sk,caddy_grade
 			)
 			SELECT 
 			a.PolicyNumber AS policy_no
@@ -450,6 +451,7 @@ BEGIN
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts
            ,@etl_audit_sk AS etl_audit_sk
+		   ,Caddy_Grade as caddy_grade
 			FROM
 				edw_temp.thome_additional_coverage_temp2 AS a
 				LEFT JOIN extended_liability_loc_ct AS b ON a.PolicyNumber = b.pol_no AND a.EffectiveDate = b.eff_dt
