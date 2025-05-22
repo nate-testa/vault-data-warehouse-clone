@@ -29,6 +29,7 @@ GO
 -- 09/05/24		Architha Gudimalla		        18. Added term_no
 -- 09/18/24		Architha Gudimalla		        19. Updated term_no
 -- 03/20/25		Hernando Gonzalez				20. Included Target_Account
+-- 05/19/25		Architha Gudimalla				21. AD9528 - Added cancel eff dt
 -- ======================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tpolicy]
@@ -189,6 +190,7 @@ BEGIN
 							end term_no
 				--select *
 				,acc.TargetAccount as target_account
+				,cast(case when tmp1.Stage = 'CANCELLATION' then tmp1.TransactionEffectiveDate else null end as date) cancellation_effective_dt
 			FROM 
 				edw_temp.tpolicy_temp1 tmp1
 				INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = tmp1.Id
@@ -243,6 +245,7 @@ BEGIN
 		   ,rewritten_in
 		   ,term_no
 		   ,target_account
+		   ,cancellation_effective_dt
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, Source.ExpirationDate, Source.BrokerId, Source.customer_id, 
@@ -274,6 +277,7 @@ BEGIN
 				,source.rewritten_in
 				,term_no
 				,source.target_account
+				,source.cancellation_effective_dt
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -302,7 +306,8 @@ BEGIN
 		Target.source_system_sk				= source.source_system_sk, 
         Target.update_ts 					= getdate(),
         Target.rewritten_in 				= source.rewritten_in,
-		Target.target_account				= source.target_account
+		Target.target_account				= source.target_account,
+		Target.cancellation_effective_dt	= source.cancellation_effective_dt
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
