@@ -26,7 +26,6 @@
 -- 04/17/25		        Archtha Gudimalla			21. VI37310/AD9213 - Added monoline   
 -- 05/12/25		        Archtha Gudimalla			22. AD9494 - Excluded forecast quotes  
 -- 05/22/25		        Archtha Gudimalla			23. VI37383/AD9512 - Added broker state 
---asdasd
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]  
