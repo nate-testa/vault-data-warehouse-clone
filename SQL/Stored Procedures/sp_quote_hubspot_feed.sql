@@ -28,7 +28,7 @@
 -- 05/22/25		        Archtha Gudimalla			23. VI37383/AD9512 - Added broker state 
 -- ============================================================================================================================= 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed] 
 
 AS
 BEGIN
