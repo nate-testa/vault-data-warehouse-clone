@@ -1,29 +1,29 @@
 ﻿-- =============================================
 -- Author:		Yunus Mohammed
+-- Create Date: <Create Date, , >
 -- Description: This procedures insert homeowners additional coverage data
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date 					|Author										|	Change Description
+-- Change date 					|Author								|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
---											Yunus Mohammed				  1. Created this procedure 
--- 11/17/23						Yunus Mohammed				  2. Added new columns
--- 01/16/24						Alberto Almario						3. Added new column extended_liability_location_ct
--- 01/25/24						Alberto Almario						4. Added new columns roof_exclusion_with_ensuing_loss_in, 
---																		 							roof_coverage_endorsement_wh_in, 
---																		 							roof_coverage_endorsement_ap_in,
---																		 							roof_coverage_endorsement_rv_in
--- 09/07/24						Hernando Gonzalez				5. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
--- 08/01/24             		Tuba Mohsin                 		   6. added contents_extended_replacement_cost_limit_amt
--- 08/30/24						Yunus Mohammed				   7. Added new columns
--- 10/02/24						Yunus Mohammed				   8. Added new column fortified_roof_upgrade_endorsement_in
--- 10/30/24						Hernando Gonzalez			    9. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
--- 12/02/24						Yunus Mohammed				   10. AD-7834 Added new fields
--- 12/18/24						Hernando Gonzalez			    11. AD-7963 | Added Risk_Score_Fire
--- 01/22/25						Alberto Almario					     12. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
--- 03/06/25						Yunus Mohammed				   13 AD-8771 Query corrected to count extended_liability_loc_ct
--- 04/01/25		   				Yunus Mohammed				   14 AD-9035 Added automatic_seismic_shutoff_valve_in
--- 05/12/25						Yunus Mohammed				   15 AD-9481 Added all_peril_roof_covering_coverage_cw_in
--- 05/14/25						Yunus Mohammed				   16. AD-9392 Added WFGateQuestion and updated logic for gate_code
--- 05/21/25						Alberto Almario				   17. AD-9575 Added caddy_grade
+--											Yunus Mohammed			1. Created this procedure 
+-- 11/17/23						Yunus Mohammed			2. Added new columns
+-- 01/16/24						Alberto Almario				3. Added new column extended_liability_location_ct
+-- 01/25/24						Alberto Almario				4. Added new columns roof_exclusion_with_ensuing_loss_in, 
+--																		 roof_coverage_endorsement_wh_in, 
+--																		 roof_coverage_endorsement_ap_in,
+--																		 roof_coverage_endorsement_rv_in
+-- 09/07/24						Hernando Gonzalez			5. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
+-- 08/01/24             		Tuba Mohsin                 		6. added contents_extended_replacement_cost_limit_amt
+-- 08/30/24						Yunus Mohammed				7. Added new columns
+-- 10/02/24						Yunus Mohammed				8. Added new column fortified_roof_upgrade_endorsement_in
+-- 10/30/24						Hernando Gonzalez			9. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
+-- 12/02/24						Yunus Mohammed				10. AD-7834 Added new fields
+-- 12/18/24						Hernando Gonzalez			11. AD-7963 | Added Risk_Score_Fire
+-- 01/22/25						Alberto Almario					12. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
+-- 03/06/25						Yunus Mohammed				13 	AD-8771 Query corrected to count extended_liability_loc_ct
+-- 04/01/25		   				Yunus Mohammed				14 Ad-9035 Added automatic_seismic_shutoff_valve_in
+-- 05/12/25						Yunus Mohammed				 15 AD-9481 Added all_peril_roof_covering_coverage_cw_in
+-- 05/21/25						Alberto Almario				   	  16. AD-9575 Added caddy_grade
 -- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
 
@@ -68,33 +68,19 @@ BEGIN
 	
 		declare @sql nvarchar(max)
 		drop table if exists edw_temp.thome_additional_coverage_temp1
-		drop table if exists edw_temp.thome_additional_coverage_temp2
-		drop table if exists edw_temp.thome_additional_coverage_temp3
-
-		select act.*
-		into edw_temp.thome_additional_coverage_temp1
-		from
-			edw_stage.AccountTransaction act
-			inner join edw_stage.Product p on p.Id=act.ProductId
-		where
-			act.PolicyNumber is not null and
-			act.[State] ='ISSUED'	
-			and p.ProductLine = 'PersonalLines'
-			and p.InternalName in ('Homeowners','Condo')
-			and act.IssuedDate > @last_source_extract_ts
-
 		SET @sql ='select PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transactiondate,transaction_seq_no,
 		IssuedDate,policy_history_sk,home_location_sk,home_coverage_sk,source_system_sk,
-		'+ @ColumnsToPivot +' into edw_temp.thome_additional_coverage_temp2
+		'+ @ColumnsToPivot +' into edw_temp.thome_additional_coverage_temp1
 			from
 			(
 			select
 			acT.PolicyNumber ,act.EffectiveDate ,act.ExpirationDate ,act.TransactionEffectiveDate ,
 			tph.policy_history_sk,thl.home_location_sk,thc.home_coverage_sk,
-			act.PolicyChangeNumber as transaction_seq_no, act.IssuedDate as transactiondate,act.IssuedDate,
+			act.policychangenumber as transaction_seq_no, act.IssuedDate as transactiondate,act.IssuedDate,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value]
 			from
-				edw_temp.thome_additional_coverage_temp1 act				
+				edw_stage.AccountTransaction act
+				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
 				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
@@ -104,9 +90,16 @@ BEGIN
 				left join edw_core.thome_location thl on thl.policy_no=act.PolicyNumber
 						and thl.effective_dt=act.EffectiveDate
 				left join edw_core.thome_coverage thc on thc.policy_no=act.PolicyNumber
-						and thc.effective_dt=act.EffectiveDate and thc.transaction_seq_no=act.policychangenumber				
-			where				
-				atvo.ObjectType in (''Homeowner'',''Condo'')
+						and thc.effective_dt=act.EffectiveDate and thc.transaction_seq_no=act.policychangenumber
+				left join edw_stage.Product pr on act.ProductId = pr.id
+			where
+				act.PolicyNumber is not null 
+				and act.[State] =''ISSUED''
+				and atvo.ObjectType in (''Homeowner'',''Condo'')
+				and pr.ProductLine = ''PersonalLines''
+				and act.IssuedDate > @last_source_extract_ts
+				-- )
+
 			) as t
 			pivot 
 			(
@@ -115,37 +108,20 @@ BEGIN
 			'
 			EXECUTE sp_executesql @sql, N'@last_source_extract_ts DATETIME2(7)', @last_source_extract_ts = @last_source_extract_ts;
 
-		select PolicyNumber,EffectiveDate,transaction_seq_no,STRING_AGG(gate_code,'-') as gate_code
-		into edw_temp.thome_additional_coverage_temp3
-		from
-			(
-			select 
-					act.PolicyNumber, act.EffectiveDate, act.PolicyChangeNumber as transaction_seq_no, atvo.UniqueId ,
-				string_agg(atvof.[Value],',') as gate_code
-			from
-				edw_temp.thome_additional_coverage_temp1 act
+			WITH extended_liability_loc_ct AS (	
+				select 
+					act.PolicyNumber as pol_no, act.EffectiveDate as eff_dt, act.PolicyChangeNumber as tran_seq_no, count(atvo.ObjectGroupIdentifier) as extended_liability_location_ct
+				from edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
-				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
-			where
-				atvo.ObjectType in ('WFGateQuestion')
-				and atvof.Field in ('WFLocationOfGate','WFGateCodes')
-				group by act.PolicyNumber ,act.EffectiveDate ,act.PolicyChangeNumber,atvo.UniqueId
-			) as a
-			group by PolicyNumber,EffectiveDate,transaction_seq_no;
-
-			WITH extended_liability_loc_ct AS 
-			(	
-				select 
-					act.PolicyNumber as pol_no, act.EffectiveDate as eff_dt, act.PolicyChangeNumber as tran_seq_no, count(atvo.ObjectGroupIdentifier) as extended_liability_location_ct
-				from
-				edw_temp.thome_additional_coverage_temp1 act
-				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
-				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
 				where
-					atvo.ObjectType in ('ExtendedLiabilityLocation')
+					act.PolicyNumber is not null 
+					and act.[State]  = 'ISSUED'
+					and atvo.ObjectType in ('ExtendedLiabilityLocation')
 					and atvo.IsDeletedOnPolicyChange = 0
+					and p.ProductLine = 'PersonalLines'
+					and act.IssuedDate > @last_source_extract_ts
 				group by act.PolicyNumber, act.EffectiveDate, act.PolicyChangeNumber
 			)
 
@@ -181,7 +157,8 @@ BEGIN
 			,escaped_liquid_fuel_liability_limit_amt
 			,escaped_liquid_fuel_remediation_coverage_in,escaped_liquid_fuel_remediation_liability_limit_amt
 			,escaped_liquid_fuel_remediation_risk_class_no,
-			fortified_roof_upgrade_in,home_daycare_coverage_in,identity_theft_in
+			fortified_roof_upgrade_in,home_daycare_coverage_in
+			,identity_theft_in
 			,pollutants_or_contimination_extension_in,
 			 pollutants_or_contimination_tankage,pollutants_or_contimination_tank_construction
 			,pollutants_or_contimination_tank_location,pollutants_or_contimination_tank_type
@@ -237,16 +214,16 @@ BEGIN
 			risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
 			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
 			theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
-			all_peril_roof_covering_coverage_cw_in,gate_entry_code_required_in,
-			source_system_sk,create_ts,update_ts,etl_audit_sk,caddy_grade
+			all_peril_roof_covering_coverage_cw_in,caddy_grade,
+			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT 
-			a.PolicyNumber AS policy_no
-           ,a.EffectiveDate AS effective_dt
+			PolicyNumber AS policy_no
+           ,EffectiveDate AS effective_dt
            ,TransactionEffectiveDate AS transaction_effective_dt
            ,ExpirationDate AS expiration_dt
            ,transactiondate AS transaction_dt
-           ,a.transaction_seq_no AS transaction_seq_no
+           ,transaction_seq_no AS transaction_seq_no
            ,home_location_sk
            ,home_coverage_sk AS home_coverage_sk
            ,policy_history_sk
@@ -423,7 +400,7 @@ BEGIN
 			,WFSiteSchedulingEmailAddress as site_scheduling_email
 			,WFEmergencyContactName as emergency_contact_nm
 			,WFEmergencyContactPhoneNumber as emergency_contact_phone_no
-			,WFEmergencyContactEmail as emergency_contact_email, c.gate_code
+			,WFEmergencyContactEmail as emergency_contact_email,WFGateCodes as gate_code
 			,PrimaryHomeRiskAddress as primary_home_risk_address
 			,PrimaryHomePolicyEffectiveDate  as primary_home_policy_effective_dt
 			,PrimaryHomePolicyExpirationDate  as primary_home_policy_expiration_dt
@@ -446,18 +423,18 @@ BEGIN
 			,AnimalRelatedLiabilityEndorsement as animal_related_liability_endorsement_in
 			,case when AutomaticSeismicShutOffValve = '' then null else AutomaticSeismicShutOffValve end as automatic_seismic_shutoff_valve_in
 			,AllPerilRoofCoveringCoverageCW as all_peril_roof_covering_coverage_cw_in
-			,WFGateQuestion as gate_entry_code_required_in
+			,Caddy_Grade as caddy_grade
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts
            ,@etl_audit_sk AS etl_audit_sk
-		   ,Caddy_Grade as caddy_grade
 			FROM
-				edw_temp.thome_additional_coverage_temp2 AS a
-				LEFT JOIN extended_liability_loc_ct AS b ON a.PolicyNumber = b.pol_no AND a.EffectiveDate = b.eff_dt
-						AND a.transaction_seq_no = b.tran_seq_no
-				LEFT JOIN edw_temp.thome_additional_coverage_temp3 c on c.PolicyNumber = a.PolicyNumber AND c.EffectiveDate = a.EffectiveDate
-						AND a.transaction_seq_no = c.transaction_seq_no
+				edw_temp.thome_additional_coverage_temp1 AS a
+				LEFT JOIN extended_liability_loc_ct AS b
+				ON a.PolicyNumber = b.pol_no
+				AND a.EffectiveDate = b.eff_dt
+				AND a.transaction_seq_no = b.tran_seq_no
+
 			SET @rows_affected=@@ROWCOUNT;
 
 			-- Update control table
@@ -471,8 +448,6 @@ BEGIN
 
 			-- Drop temp table
 			DROP TABLE IF EXISTS edw_temp.thome_additional_coverage_temp1
-			DROP TABLE IF EXISTS edw_temp.thome_additional_coverage_temp2
-			DROP TABLE IF EXISTS edw_temp.thome_additional_coverage_temp3
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
@@ -486,3 +461,4 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
+
