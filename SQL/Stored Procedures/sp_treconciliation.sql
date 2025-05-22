@@ -11,6 +11,7 @@
 -- 12/04/23		Architha Gudimalla				5. Updated the proc to run for 7 days
 -- 01/23/24		Architha Gudimalla				6. Rounded the premiums
 -- 03/27/24		Architha Gudimalla				7. Replaced AccountTransaction with AccountTransactionCoveragePremium,AccountTransactionTaxAndFee
+-- 05/22/25		Yunus Mohammed				 8. Used external table
 -- ===============================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_treconciliation]
@@ -33,14 +34,20 @@ BEGIN
 
 		SELECT @last_source_extract_ts = cast(edw_core.fn_get_last_source_extract_ts(@process_nm) as date);
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;  
-	
+
 		if @last_source_extract_ts = '01-jan-1999'
 		begin
 			SELECT @last_source_extract_ts = min(cast(IssuedDate as date)) from dbo.[AccountTransaction];
 		end
 	
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200));
-		
+		declare @max_transaction_ts datetime2(6)
+
+        select @max_transaction_ts = max(dt.actual_dt)
+		from
+			edw_core.tpolicy_transaction pt
+			LEFT JOIN edw_core.tdate dt on dt.actual_dt = cast(pt.transaction_dt_sk as date);
+
 		with src_metal as
 		(
 			/*select cast(acct.IssuedDate as date) iss_dt, count(*) cnt, 
@@ -66,34 +73,32 @@ BEGIN
 					round(sum(prm),2) prm , ssk 
 			from 
 			(
-				select acct.PolicyNumber policy_no, acctr.policychangenumber transaction_seq_no,
+				select acctr.PolicyNumber policy_no, acctr.policychangenumber transaction_seq_no,
 							cast(acctr.IssuedDate as date) iss_dt,  
 							round(COALESCE (acctrcp.PremiumDeltaProRated ,premium),2) prm ,
 							iif(acctr.ExternalSourceId is null,4,2) ssk 
-				FROM edw_stage.AccountTransaction acctr 
-				inner join edw_stage.Account acct on acct.id = acctr.AccountId
-				left join edw_stage.Product pr on acct.ProductId = pr.id 
-				inner join edw_stage.AccountTransactionCoveragePremium acctrcp on acctrcp.AccountTransactionId = acctr.Id
+				FROM dbo.AccountTransaction acctr 
+				left join edw_stage.Product pr on acctr.ProductId = pr.id 
+				inner join dbo.AccountTransactionCoveragePremium acctrcp on acctrcp.AccountTransactionId = acctr.Id
 				where acctr.PolicyNumber  is not null 
 				  and acctr.State ='ISSUED' 
 				  and pr.ProductLine='PersonalLines' 
-				  AND cast(acctr.IssuedDate as date) >= @last_source_extract_ts
+				  AND cast(acctr.IssuedDate as date) between @last_source_extract_ts and @max_transaction_ts
 
 				union all
 
-				select acct.PolicyNumber policy_no, acctr.policychangenumber transaction_seq_no,
+				select acctr.PolicyNumber policy_no, acctr.policychangenumber transaction_seq_no,
 							cast(acctr.IssuedDate as date) iss_dt, 
 							round(COALESCE (acctrtf.AmountDeltaProRated ,acctrtf.Amount),2) prm ,
 							iif(acctr.ExternalSourceId is null,4,2) ssk 
-				FROM edw_stage.AccountTransaction acctr 
-				inner join edw_stage.Account acct on acct.id = acctr.AccountId
-				left join edw_stage.Product pr on acct.ProductId = pr.id 
+				FROM dbo.AccountTransaction acctr 
+				left join edw_stage.Product pr on acctr.ProductId = pr.id 
 				inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = acctr.Id 
 				left join edw_stage.coverage cov on cov.id = acctrtf.coverageid 
 				where acctr.PolicyNumber  is not null 
 				  and acctr.State ='ISSUED' 
 				  and pr.ProductLine='PersonalLines' 
-				  AND cast(acctr.IssuedDate as date) >= @last_source_extract_ts
+				  AND cast(acctr.IssuedDate as date) between @last_source_extract_ts and @max_transaction_ts
 			) a 
 			group by  iss_dt,  ssk --, policy_no, transaction_seq_no
 		),
