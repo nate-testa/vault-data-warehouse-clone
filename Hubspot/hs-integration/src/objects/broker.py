@@ -116,8 +116,7 @@ class Broker:
                 'ytd_nb_premium_amt': record['ytd_nb_premium_amt'],
                 'ytd_renewal_retention_pc': record['ytd_renewal_retention_pc'],
                 'ytd_new_business_yacht_premium_amt': record['ytd_new_business_yacht_premium_amt'],
-                'primary_address_state_cd': record['primary_address_state_cd'],
-                'broker_state': record['broker_state']
+                'primary_address_state_cd': record['primary_address_state_cd']
 
                 # 'bdm_email': record['bdm_email'],
                 # 'create_ts': record['create_ts'],
