@@ -46,7 +46,7 @@ BEGIN
         select @max_transaction_ts = max(dt.actual_dt)
 		from
 			edw_core.tpolicy_transaction pt
-			LEFT JOIN edw_core.tdate dt on dt.date_sk = cast(pt.transaction_dt_sk as date);
+			LEFT JOIN edw_core.tdate dt on dt.date_sk = pt.transaction_dt_sk;
 
 		with src_metal as
 		(
