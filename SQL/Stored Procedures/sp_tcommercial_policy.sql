@@ -13,6 +13,7 @@ GO
 -- 26/03/2025            Alberto Almario			1. Created this procedure 
 -- 22/04/2025            Alberto Almario			2. Use BindDate instead of IssuedDate
 -- 30/04/2025            Alberto Almario			3. Add fix value Active for policy_status
+-- 14/05/2025            Alberto Almario			4. Add new columns prior_policy_no and prior_term_policy_no
 -- ===================================================================================================================== 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tcommercial_policy]
 
@@ -125,10 +126,14 @@ BEGIN
 			,GETDATE() as update_ts
 			,@etl_audit_sk as etl_audit_sk
 			,tmp1.source_system_sk
+			,case when acc_prior.PolicyNumber is not null then acc_prior.PolicyNumber else acc_rw.PolicyNumber end as prior_policy_no
+			,acc.renewalofpolicynumber as prior_term_policy_no
 		INTO edw_temp.tcommercial_policy_temp3
 		FROM edw_temp.tcommercial_policy_temp1 tmp1
 		INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = tmp1.Id
 		INNER JOIN edw_stage.Account acc on tmp1.AccountId = acc.Id 
+		LEFT JOIN edw_stage.Account acc_prior on acc.copyofAccountId = acc_prior.Id 
+		LEFT JOIN edw_stage.Account acc_rw on acc.rewrittenfromaccountid = acc_rw.Id
 		LEFT JOIN edw_stage.Brokerage br on acctv.BrokerageId = br.id
 		LEFT JOIN edw_stage.Insured ins on acctv.PrimaryInsuredId = ins.Id
 		LEFT JOIN edw_stage.Product pr on tmp1.ProductId = pr.id
@@ -164,6 +169,8 @@ BEGIN
 			,update_ts
 			,etl_audit_sk
 			,source_system_sk
+			,prior_policy_no
+			,prior_term_policy_no
 			)
 		VALUES (
 			 Source.policy_no
@@ -186,6 +193,8 @@ BEGIN
 			,Source.update_ts
 			,Source.etl_audit_sk
 			,Source.source_system_sk
+			,Source.prior_policy_no
+			,Source.prior_term_policy_no
 			)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -205,6 +214,8 @@ BEGIN
 			,Target.mailing_address_state_cd = Source.mailing_address_state_cd
 			,Target.mailing_address_zip_cd = Source.mailing_address_zip_cd
 			,Target.update_ts = getdate()
+			,Target.prior_policy_no = Source.prior_policy_no
+			,Target.prior_term_policy_no = Source.prior_term_policy_no
 		;
 
 		SET @rows_affected=@@ROWCOUNT;

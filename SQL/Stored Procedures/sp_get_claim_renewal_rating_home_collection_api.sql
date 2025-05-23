@@ -1,7 +1,3 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 -- =================================================================================================
 -- Author:		Mohammed Yunus
 -- Description: This proceudre return claim renewal rating data for home and collection
@@ -10,6 +6,7 @@ GO
 ---------------------------------------------------------------------------------------------------
 -- 10/06/23				Yunus Mohammed				1. Created this procedure 
 -- 12/18/24				Yunus Mohammed				2. AD7660 Added SourceOfFire and SourceOfWater
+-- 05/08/25				Yunus Mohammed				4. AD9412 Added new columns
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_claim_renewal_rating_home_collection_api]
 (
@@ -27,7 +24,7 @@ BEGIN
 		crrh.AddressLineUnit,crrh.AddressCity,crrh.AddressZipCode,
 		crrh.AddressState,crrh.AddressCounty,crrh.AddressCountry,crrh.Coverage,
 		crrh.SourceOfFire,crrh.SourceOfWater,
-		crrh.ReserveExpense,crrh.ReserveIndemnity,crrh.PaidExpense,crrh.PaidIndemnity
+		crrh.ReserveExpense,crrh.ReserveIndemnity,crrh.PaidExpense,crrh.PaidIndemnity,crrh.AdjusterName
 	FROM
 		edw_integration.claim_renewal_rating_home_collection_api AS crrh
 		INNER JOIN

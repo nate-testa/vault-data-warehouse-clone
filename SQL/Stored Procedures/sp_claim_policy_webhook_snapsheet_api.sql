@@ -7,8 +7,9 @@
 -- 01-06-2025               Yunus Mohammed             2 Enabled actual phone no and email (sending actual email and phone no). 
 -- 02-08-2025               Yunus Mohammed             3 Captured all policy transactions and replced claim_policy_seach_snapsheet_api table
 --                                                                                              with tpolicy_transaction
--- 02-12-2025              Yunus Mohammed               4 Removed deleted vehicles form Risks object
+-- 02-12-2025               Yunus Mohammed              4 Removed deleted vehicles form Risks object
 -- 03-13-2025				Yunus Mohammed				5 - Added vault litigation policies
+-- 05-07-2025               Yunus Mohammed              6 - AD9410 Added new vault litigation policy
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
@@ -1159,6 +1160,19 @@ isnull(
         '[{"id":"AU9999VRE","externalLocationIdentifier":"1","externalRiskIdentifier":"1","code":"Auto","type":"motor","vehicle":{"make":"ABC","model":"ABC","vinNumber":"ABC","year":2020,"code":"Private Passenger Auto","codeDescription":"Private Passenger Auto"},"address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"drivers":[{"prefix":null,"firstName":"Vault","middleName":null,"lastName":"insurance","suffix":"","dateOfBirth":null,"gender":"","licenseIssuingCountry":"US","licenseNumber":""}],"coverages":[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Liability","coverageCode":"LIB","limits":{"amount":null,"deductible":null}}]}]' as risks,
         '[{"effectiveAt":"2020-01-01","expirationAt":"2026-12-31","providerTypeDescription":"New"}]' as versions, 
         null as deductibles,
+        'Metal' as source_system_nm, null as [data],GETDATE() as create_ts,@etl_audit_sk as etl_audit_sk
+         union
+       select
+        null as cancelledAt,null as cancelledReason,'2015-01-01T00:00:00Z' as effectiveAt,'2019-12-31T00:00:00Z' as expirationAt, '2015-01-01T00:00:00Z' as inceptionAt, 'FPP9998VRE' as policyNumber, 
+        'property' as policyType,'Active' as [status], '2015-01-01' as [version], '0' as transaction_seq_no, 
+        '{"agencyCode":"56536","agencyName":"Vault Custom Risk Solutions, LLC","agencyType":"broker","agencyAddress":{"address1":"24 West","address2":"40th Street","city":"New York","postalCode":"10018","region":"NY","country":"US"},"agencyContactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}' as agentInformation,
+        '{"code":"Homeowners","name":"Homeowners"}' as [product], null as reservation,'{"account":"vault_reciprocal_exchange_litigation"}' as underwriting, 
+        '[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Dwelling","coverageCode":"COV-A","limits":{"amount":null,"deductible":null}}]' as coverages, 
+        '[]' as endorsements,'[]' as notes,null as businesses,
+        '[{"firstName":"Vault","middleName":null,"lastName":"Insurance","role":"policyholder","address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"contactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}]' as people, 
+        '[{"id":"FPP9998VRE","code":"Homeowners","externalLocationIdentifier":"1","externalRiskIdentifier":"1","type":"home","address":{"address1":"300 First Ave S","address2":"Suite 401","city":"St. Petersburg","postalCode":"33701","region":"FL","country":"US"},"property":{"propertyType":"building_and_personal_property","propertyLocation":"policy_address"},"coverages":[{"name":"Extra Contractual","coverageCode":"EC","limits":{"amount":null,"deductible":null}},{"name":"Dwelling","coverageCode":"COV-A","limits":{"amount":null,"deductible":null}}]}]' as risks,
+        '[{"effectiveAt":"2015-01-01","expirationAt":"2019-12-31","providerTypeDescription":"New"}]' as versions, 
+        '[{"deductibleType":"base","amount":null,"percent":null}]' as deductibles, 
         'Metal' as source_system_nm, null as [data],GETDATE() as create_ts,@etl_audit_sk as etl_audit_sk
     ) as a
     where

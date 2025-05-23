@@ -1,16 +1,11 @@
 import pendulum
-from datetime import datetime, timedelta
+from datetime import timedelta
 from airflow import DAG
-from airflow.models import BaseOperator
-from airflow.utils.dates import days_ago
 from airflow.utils.task_group import TaskGroup
-from airflow.hooks.mssql_hook import MsSqlHook
-from airflow.operators.mssql_operator import MsSqlOperator
-from airflow.operators.email_operator import EmailOperator
-from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.python_operator import PythonOperator
-from airflow.providers.microsoft.azure.operators.data_factory import AzureDataFactoryRunPipelineOperator
-from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
+from airflow.providers.microsoft.mssql.operators.mssql import MsSqlOperator
+from airflow.operators.email import EmailOperator
+from airflow.operators.dummy import DummyOperator
+from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format
 
 to_email = "itdatateam@vault.insurance"
 # to_email = "hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
@@ -79,7 +74,8 @@ with DAG(
             'sp_policy_workday_ceded_premium_feed',
             'sp_claim_workday_payment',
             'sp_claim_workday_reserve_feed',
-            'sp_claim_workday_reserve_feed_itd'
+            'sp_claim_workday_reserve_feed_itd',
+            'sp_tvalidation_result'
          ]
         
         sp_policy_workday_unearned_premium_feed = MsSqlOperator(
@@ -130,6 +126,18 @@ with DAG(
             autocommit=True,
         )
 
+        sp_tvalidation_result = MsSqlOperator(
+            task_id='sp_tvalidation_result',
+            mssql_conn_id='Vault_EDW',
+            sql="""
+                EXEC edw_core.sp_tvalidation_result 
+                @in_process_dt = '{{ ds }}', 
+                @in_frequency = 'Monthly'
+            """,
+            database="vault_edw",
+            autocommit=True,
+        )
+
         send_workday_email = EmailOperator(
             task_id='send_workday_email',
             to=to_email,
@@ -137,7 +145,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(vault_workday_monthly_load_group_items, 'All stored procedures executed successfully for all the Workday tables'),
         )
 
-        sp_policy_workday_unearned_premium_feed >> sp_policy_workday_written_premium_feed >> sp_policy_workday_ceded_premium_feed >> sp_claim_workday_payment >> sp_claim_workday_reserve_feed >> sp_claim_workday_reserve_feed_itd >> send_workday_email
+        sp_policy_workday_unearned_premium_feed >> sp_policy_workday_written_premium_feed >> sp_policy_workday_ceded_premium_feed >> sp_claim_workday_payment >> sp_claim_workday_reserve_feed >> sp_claim_workday_reserve_feed_itd >> sp_tvalidation_result >> send_workday_email
 
 
 

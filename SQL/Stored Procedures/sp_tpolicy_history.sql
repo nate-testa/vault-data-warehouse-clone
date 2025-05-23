@@ -21,6 +21,7 @@
 -- 04/03/25		Yunus Mohammed			  			15. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
 -- 04/22/25		Yunus Mohammed						16. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
 -- 04/30/25		Yunus Mohammed						17. Ad-9338 Added cancellation_sub_reason_desc
+-- 05/20/25		Alberto Almario						18. Ad-9559 Added insurance_score_source
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -142,6 +143,7 @@ BEGIN
 				InsuranceScoreCode4,
 				InsuranceScoreCode4Description,
 				InsuranceScoreLastRunDate
+				,InsuranceScoreSource
 		INTO edw_temp.tpolicy_history_temp2
 		FROM
 			(
@@ -163,7 +165,8 @@ BEGIN
 										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
 										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
-										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate)
+										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate
+										 ,InsuranceScoreSource)
 			) pivottable 
 
 		-- Start Inserting records
@@ -219,6 +222,7 @@ BEGIN
 		   ,prorate_factor
 		   ,transaction_status
 		   ,premium_rater_version
+		   ,insurance_score_source
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.PolicyChangeNumber, 
 				pol.policy_sk, br.broker_sk, cust.customer_sk, br.Broker_Id, Source.customer_id, 
@@ -258,6 +262,7 @@ BEGIN
 					ELSE 'Issued'
 				END AS transaction_status
 				,source.premium_rater_version
+				,source1.InsuranceScoreSource
 		FROM edw_temp.tpolicy_history_temp1 source
 		LEFT JOIN edw_temp.tpolicy_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tpolicy_history_temp2 source1 on source.id = source1.AccountTransactionId

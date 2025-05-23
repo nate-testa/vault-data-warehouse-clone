@@ -21,7 +21,9 @@
 -- 12/18/24						Hernando Gonzalez			11. AD-7963 | Added Risk_Score_Fire
 -- 01/22/25						Alberto Almario					12. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
 -- 03/06/25						Yunus Mohammed				13 	AD-8771 Query corrected to count extended_liability_loc_ct
--- 04/01/25		   		Yunus Mohammed						14 Ad-9035 Added automatic_seismic_shutoff_valve_in
+-- 04/01/25		   				Yunus Mohammed				14 Ad-9035 Added automatic_seismic_shutoff_valve_in
+-- 05/12/25						Yunus Mohammed				 15 AD-9481 Added all_peril_roof_covering_coverage_cw_in
+-- 05/21/25						Alberto Almario				   	  16. AD-9575 Added caddy_grade
 -- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
 
@@ -212,6 +214,7 @@ BEGIN
 			risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
 			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
 			theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
+			all_peril_roof_covering_coverage_cw_in,caddy_grade,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT 
@@ -419,6 +422,8 @@ BEGIN
 			,TheftOrLossGeneralConditionsEndorsement as theft_or_loss_general_conditions_endorsement_in
 			,AnimalRelatedLiabilityEndorsement as animal_related_liability_endorsement_in
 			,case when AutomaticSeismicShutOffValve = '' then null else AutomaticSeismicShutOffValve end as automatic_seismic_shutoff_valve_in
+			,AllPerilRoofCoveringCoverageCW as all_peril_roof_covering_coverage_cw_in
+			,Caddy_Grade as caddy_grade
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts

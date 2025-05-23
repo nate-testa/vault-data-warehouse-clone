@@ -9,7 +9,8 @@
 -- 03/25/24		Architha Gudimalla			4. Added policy term update for cancel rewrites
 -- 04/15/24		Architha Gudimalla			5. Added filter on updated below to exlucde those pols when prior pol is same as prior term pol
 -- 01/23/25		Architha Gudimalla			6. VI33968/AD7635 - Added uwco orig eff dt
--- 01/23/25		Architha Gudimalla			6. VI33968/AD8770 - Updated logic for uwco orig eff dt
+-- 01/23/25		Architha Gudimalla			7. VI33968/AD8770 - Updated logic for uwco orig eff dt
+-- 05/19/25		Architha Gudimalla			8. AD8770 - Updated policy status logic for cancellations
 -- ========================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_cancels]
@@ -34,28 +35,12 @@ BEGIN
 	
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))  
-
-		update edw_core.tpolicy  
-		set policy_status = 'Active',
-			cancellation_effective_dt = null
-		from edw_core.tpolicy
-		where policy_status = 'Cancelled';
-
-		with cancels as
-		(
-			select  policy_sk, max(transaction_effective_dt_sk) transaction_effective_dt_sk
-			from edw_core.tpolicy_transaction tr, edw_core.tpolicy_transaction_type tt 
-			where 	tr.transaction_seq_no = (select max(transaction_seq_no) from edw_core.tpolicy_transaction tr1 where tr1.policy_sk = tr.policy_sk)
-			and 	tr.policy_transaction_type_sk = tt.policy_transaction_type_sk
-			and  	tt.policy_transaction_type_nm = 'Cancellation'
-			group by policy_sk
-		)
-		update edw_core.tpolicy  
-		set policy_status = 'Cancelled',
-			cancellation_effective_dt = (select actual_dt from edw_core.tdate where date_sk = cancels.transaction_effective_dt_sk)
-		from edw_core.tpolicy pol, cancels 
-		where pol.policy_sk = cancels.policy_sk;
 		
+		update edw_core.tpolicy  
+		set policy_status = 'Cancelled' 
+		from edw_core.tpolicy
+		where cancellation_effective_dt <= getdate();
+
 		--added since collete raised a ticket - https://vaultinsurance.atlassian.net/browse/VI-30813
 		update edw_stage.dw2_oneshield_migrated
 		set priorpolicynumber = 'EX100012147-02'
