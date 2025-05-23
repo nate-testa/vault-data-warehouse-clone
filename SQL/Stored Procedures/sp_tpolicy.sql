@@ -307,7 +307,7 @@ BEGIN
         Target.update_ts 					= getdate(),
         Target.rewritten_in 				= source.rewritten_in,
 		Target.target_account				= source.target_account,
-		Target.cancellation_effective_dt	= source.cancellation_effective_dt
+		Target.cancellation_effective_dt	= source.cancellation_effective_dt,
 		Target.policy_status				= 'Active'
 		;
 
