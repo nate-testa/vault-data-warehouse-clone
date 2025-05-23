@@ -29,7 +29,7 @@ GO
 -- 09/05/24		Architha Gudimalla		        18. Added term_no
 -- 09/18/24		Architha Gudimalla		        19. Updated term_no
 -- 03/20/25		Hernando Gonzalez				20. Included Target_Account
--- 05/19/25		Architha Gudimalla				21. AD9528 - Added cancel eff dt
+-- 05/19/25		Architha Gudimalla				21. AD9528 - Added cancel eff dt, added policystatus to merge
 -- ======================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tpolicy]
@@ -308,6 +308,7 @@ BEGIN
         Target.rewritten_in 				= source.rewritten_in,
 		Target.target_account				= source.target_account,
 		Target.cancellation_effective_dt	= source.cancellation_effective_dt
+		Target.policy_status				= 'Active'
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
