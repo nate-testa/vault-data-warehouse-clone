@@ -13,6 +13,7 @@ GO
 -- 05/09/23		Architha Gudimalla				1. Created this procedure   
 -- 05/15/23		Architha Gudimalla				2. Updated after initial run errors
 -- 05/15/23		Architha Gudimalla				3. Added filter on tower type
+-- 05/26/25		Architha Gudimalla				4. Updated tower join
 -- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_tcommercial_renewal_summary] 
@@ -288,7 +289,7 @@ BEGIN
 								 --and	transaction_effective_dt_sk <= @end_dt_sk
 								 and 	(transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk < 61) 
 							) sixty_day_pol_tr on tr.commercial_policy_sk = sixty_day_pol_tr.commercial_policy_sk
-				 left join edw_commercial.tcommercial_policy_tower cpt on pol.policy_no = cpt.policy_no and pol.effective_dt = cpt.effective_dt and tr.transaction_seq_no = cpt.transaction_seq_no and cpt.tower_type = 'primary'
+				 left join edw_commercial.tcommercial_policy_tower cpt on pol.policy_no = cpt.policy_no and pol.effective_dt = cpt.effective_dt and tr.transaction_seq_no = cpt.transaction_seq_no and cpt.company_nm = 'Vault E&S Insurance Company' and cpt.tower_deleted_in = 0
 				 where	max_pol_tr.rnk = 1
 				 and (sixty_day_pol_tr.rnk = 1 or sixty_day_pol_tr.rnk is null)
 				 and effective_dt_sk <= @end_dt_sk
@@ -445,7 +446,7 @@ BEGIN
 							and latest_transaction_in ='Y'
 						  ) b on a.commercial_policy_sk = b.commercial_policy_sk
 				left join edw_commercial.tcommercial_quote_history qh on qh.commercial_quote_sk = a.renewal_commercial_quote_sk and qh.latest_transaction_in = 'Y'
-				left join edw_commercial.tcommercial_quote_tower qpt on qpt.quote_no = qh.quote_no and qpt.effective_dt = qh.effective_dt  and qpt.transaction_seq_no = qh.transaction_seq_no  and qpt.tower_type = 'primary'
+				left join edw_commercial.tcommercial_quote_tower qpt on qpt.quote_no = qh.quote_no and qpt.effective_dt = qh.effective_dt  and qpt.transaction_seq_no = qh.transaction_seq_no  and qpt.company_nm = 'Vault E&S Insurance Company'  
 				left join edw_core.tproduct pr on a.product_sk = pr.product_sk;
 
 				SET @rows_affected=@@ROWCOUNT;
