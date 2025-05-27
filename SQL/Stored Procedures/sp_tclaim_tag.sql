@@ -39,19 +39,7 @@ BEGIN
         inner join edw_stage_snapsheet.tags t on c.id = t.claim_id
         where
         tagged_at > @last_source_extract_ts
-		and not exists
-                (
-                    select 1
-                    from
-                        edw_stage_snapsheet.tags ctg
-                    where
-                        ctg.claim_id = c.id
-                    and ctg.[name] in 
-                    (
-                        'Commercial XS-LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
-                    )
-                )
-
+		
         insert into edw_core.tclaim_tag
         (
             claim_sk,claim_no,tag_nm,tag_created_ts,source_system_sk,etl_audit_sk,create_ts,update_ts

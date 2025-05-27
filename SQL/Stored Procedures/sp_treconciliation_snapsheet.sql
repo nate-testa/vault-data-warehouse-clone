@@ -7,6 +7,7 @@
 -- 03/19/25         Yunus Mohammed				1. Created this procedure
 -- 03/27/25         Sandeep Gundreddy			2. Fixed logic
 -- 03/28/25         Sandeep Gundreddy			3. Fixed date filter in EDW query
+-- 05/26/25		    Yunus Mohammed		  		4. AD-9616 Excluded Commercial Lines claims
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_treconciliation_snapsheet]
@@ -15,7 +16,7 @@ BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
     -- interfering with SELECT statements. 
     SET NOCOUNT ON
-	    BEGIN TRY
+    BEGIN TRY
 		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
@@ -66,6 +67,18 @@ BEGIN
         where
         fta.code in ('submitted','cancel','stop','failed') and ft.approved_at is not null and ft.is_historical='false'
             AND cast(fta.created_at as date)  BETWEEN @last_source_extract_ts AND @max_transaction_ts
+            and not exists
+			(
+				select 1
+				from
+					edw_stage_snapsheet.tags ctg
+				where
+					ctg.claim_id = pay.claim_id
+				and ctg.[name] in 
+				(
+					'Commercial XS-LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
+				)
+			)
         group by cast(fta.created_at as date)
 		union
 		 SELECT
@@ -84,6 +97,18 @@ BEGIN
         where
         fta.code in ('submitted','cancel','stop','failed') and ft.is_historical='true'
             AND cast(fta.created_at as date)  BETWEEN @last_source_extract_ts AND @max_transaction_ts
+            and not exists
+			(
+				select 1
+				from
+					edw_stage_snapsheet.tags ctg
+				where
+					ctg.claim_id = pay.claim_id
+				and ctg.[name] in 
+				(
+					'Commercial XS-LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
+				)
+			)
         group by cast(fta.created_at as date)
 		)a  
 		group by a.transaction_ts

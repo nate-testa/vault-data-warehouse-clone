@@ -134,7 +134,7 @@ BEGIN
 					ctg.claim_id = c.id
 				and ctg.[name] in 
 				(
-					'Commercial XS -LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
+					'Commercial XS-LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
 				)
 			)
         ORDER BY res.claim_id,res.exposure_id,res.cost_type,res.cost_category,res.reserve_method,fta.created_at

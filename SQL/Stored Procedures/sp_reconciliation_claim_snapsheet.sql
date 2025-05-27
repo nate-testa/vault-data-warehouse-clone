@@ -1,10 +1,10 @@
 -- =================================================================================================
 -- Description: This procedures provides total_loss_incurred differences between snapsheet and edw
 ---------------------------------------------------------------------------------------------------
--- Change date			|Author						               |	Change Description
+-- Change date			|Author						             |	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 03/19/25				Yunus Mohammed				1. Created this procedure
--- 05/26/25		Yunus Mohammed		  		        2. AD-9616 Excluded Commercial Lines claims 
+-- 05/26/25		        Yunus Mohammed		  		2. AD-9616 Excluded Commercial Lines claims 
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_reconciliation_claim_snapsheet]
 AS
@@ -61,7 +61,7 @@ BEGIN
                 (
                     select 1
                     from
-                        edw_stage_snapsheet.tags ctg
+                        edw_stage_snapsheet.tags ctg   
                     where
                         ctg.claim_id = c.id
                     and ctg.[name] in 

@@ -14,7 +14,6 @@
 -- 02/25/25				Yunus Mohammed				9. AD-8665 - Use coaleasce for payee_nm
 -- 03/27/25				Yunus Mohammed				10 AD-9009 payee_nm null issue resolved for payee role VendorManagement::Vendor
 -- 04/11/25				Yunus Mohammed				11 AD-9044 Update payment_approver_nm logic.
--- 05/26/25				Yunus Mohammed		  		12. AD-9616 Excluded Commercial Lines claims
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment_snapsheet]
 
@@ -95,18 +94,6 @@ BEGIN
 		WHERE
 			greatest(ft.created_at,ft.updated_at) > @last_source_extract_ts 
 			and ft.is_historical='false'
-			and not exists
-			(
-				select 1
-				from
-					edw_stage_snapsheet.tags ctg
-				where
-					ctg.claim_id = c.id
-				and ctg.[name] in 
-				(
-					'Commercial XS-LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
-				)
-			)
 			; 
 
 		MERGE edw_core.tclaim_payment  AS Target
