@@ -18,6 +18,7 @@
 -- 04/24/2025		Yunus Mohammed				13. AD-9297 Added coverage check fields
 -- 04/29/2025		Yunus Mohammed				14. AD-8748 Updated claim_first_reopen_dt logic
 -- 05/08/2025		Yunus Mohammed				15 AD-9412 Added first_party_driver_relationship_to_insured
+-- 05/26/2025		Yunus Mohammed		  		16. AD-9616 Excluded Commercial Lines claims
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -182,6 +183,18 @@ BEGIN
 			from edw_stage.nfp_policy	
 		) nfp on nfp.policy_no = c.policy_number and nfp.transaction_seq_no = 1
 		WHERE greatest(c.created_at,c.updated_at) > @last_source_extract_ts
+		and not exists
+			(
+				select 1
+				from
+					edw_stage_snapsheet.tags ctg
+				where
+					ctg.claim_id = c.id
+				and ctg.[name] in 
+				(
+					'Commercial XS-LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
+				)
+			)
 	) AS t
 	WHERE
 		rn=1

@@ -6,10 +6,11 @@ GO
 -- ======================================================================================================== 
 -- Description: This procedures inserts and updates claim data
 -----------------------------------------------------------------------------------------------------------
--- Change date 		|Author						|	Change Description
+-- Change date				|Author									|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 10/29/2024		Alberto Almario				1. Created this procedure - AD7391
--- 01/14/2025		Yunus Mohammed			2. Updated Merge statement join
+-- 10/29/2024			  Alberto Almario				  1. Created this procedure - AD7391
+-- 01/14/2025			  Yunus Mohammed			2. Updated Merge statement join
+-- 05/26/2025			  Yunus Mohammed		  	3. AD-9616 Excluded Commercial Lines claims
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_task_snapsheet]
@@ -65,6 +66,18 @@ BEGIN
 		LEFT JOIN edw_stage_snapsheet.users as u3 ON u3.id = t.assigned_to_user_id
 		LEFT JOIN edw_stage_snapsheet.users as u4 ON u4.id = t.assigned_by_user_id
 		WHERE GREATEST(t.created_at,t.updated_at) > @last_source_extract_ts
+		and not exists
+			(
+				select 1
+				from
+					edw_stage_snapsheet.tags ctg
+				where
+					ctg.claim_id = c.id
+				and ctg.[name] in 
+				(
+					'Commercial XS-LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
+				)
+			)
 		;
 		
 		

@@ -1,10 +1,10 @@
 ﻿-- =================================================================================================
 -- Description: This procedures inserts and updates claim notes snapsheet
 -----------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author									|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 10/30/24		Hernando Gonzalez			1. Created this procedure - AD7391
--- 11/20/24		Alberto Almario				2. Changes on some columns and tables
+-- 11/20/24		Alberto Almario					 2. Changes on some columns and tables
 -- 12/20/24     Sandeep Gundreddy           3. Update product_sk logic, reserve incremental date logic, added -ve logic to recovery reserves
 -- 01/17/25		Hernando Gonzalez			4. add case statement for source_system_sk column
 -- 01/29/25		Sandeep Gundreddy			5. Added source_system_sk=5 to reserve query to exclude ebao transactions
@@ -12,7 +12,8 @@
 -- 03/02/25     Sandeep Gundreddy			7. Added logic to ignore system generated migrated transactions
 -- 03/03/25     Sandeep Gundreddy			8. Update salvage and subo expense recovery logic after discussion with Dawn. will be loaded as +ve amounts
 -- 03/13/25     Sandeep Gundreddy			9. Added logic to load migrated payments stopped in Snapsheet
--- 04/22/25     Sandeep Gundreddy			10. Exclude cancel transactions from reserve query to avoid duplicate transactions  
+-- 04/22/25     Sandeep Gundreddy			10. Exclude cancel transactions from reserve query to avoid duplicate transactions 
+-- 05/26/25		Yunus Mohammed		  		11. AD-9616 Excluded Commercial Lines claims
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction_snapsheet]
 AS
@@ -124,6 +125,18 @@ BEGIN
 		WHERE 1=1
 			and fta.code in ('submitted') 
 			and ft.approved_at is not null --> Added this filter to exclude pending approvals reserves and subsequent cancel records 
+			and not exists
+			(
+				select 1
+				from
+					edw_stage_snapsheet.tags ctg
+				where
+					ctg.claim_id = c.id
+				and ctg.[name] in 
+				(
+					'Commercial XS -LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
+				)
+			)
         ORDER BY res.claim_id,res.exposure_id,res.cost_type,res.cost_category,res.reserve_method,fta.created_at
 		;
 
@@ -329,6 +342,18 @@ and a.source_system_sk=5-- to exclude migrated transactions
 		WHERE 1=1
 			AND fta.code in ('submitted','cancel','stop','failed')
             AND fta.created_at > @last_source_extract_ts 
+			and not exists
+			(
+				select 1
+				from
+					edw_stage_snapsheet.tags ctg
+				where
+					ctg.claim_id = c.id
+				and ctg.[name] in 
+				(
+					'Commercial XS-LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
+				)
+			)
 		;
 
 ------- *** Create temp table 4 to load stopped migrated payments***
@@ -451,6 +476,18 @@ SELECT
      	WHERE 1=1
 			AND fta.code in ('stop') and ft.is_historical='true' --> migrated payments
             AND fta.created_at > @last_source_extract_ts 
+			and not exists
+			(
+				select 1
+				from
+					edw_stage_snapsheet.tags ctg
+				where
+					ctg.claim_id = c.id
+				and ctg.[name] in 
+				(
+					'Commercial XS-LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
+				)
+			)
 		;
 
 		

@@ -12,6 +12,7 @@
 -- 02/21/2025				Yunus Mohammed				7. Code updated fornull aslob_sk	
 -- 03/03/2025               Sandeep Gundreddy			8. updated logic to use created_at/updated_at from claims table
 -- 04/02/2025				Yunus Mohammed				9. AD-9039 Updated aslob_sk and claim_coverage_desc logic for condo policies
+-- 05/26/2025				Yunus Mohammed		  		10. AD-9616 Excluded Commercial Lines claims
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet]
 AS
@@ -198,7 +199,19 @@ BEGIN
 											AND tcl.loss_dt > = tavc1.transaction_effective_dt
 										ORDER BY tavc1.transaction_seq_no DESC
 								)
-		WHERE greatest(clm.created_at,clm.updated_at) > @last_source_extract_ts;
+		WHERE greatest(clm.created_at,clm.updated_at) > @last_source_extract_ts
+		AND NOT EXISTS
+			(
+				select 1
+				from
+					edw_stage_snapsheet.tags ctg
+				where
+					ctg.claim_id = clm.id
+				and ctg.[name] in 
+				(
+					'Commercial XS-LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
+				)
+			);
 
 		MERGE edw_core.tclaim_feature AS Target
 		USING edw_temp.tclaim_feature_snapsheet_temp1 AS Source

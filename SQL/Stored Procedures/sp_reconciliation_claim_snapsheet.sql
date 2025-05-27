@@ -3,7 +3,8 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date			|Author						               |	Change Description
 ---------------------------------------------------------------------------------------------------
--- 03/19/25				Yunus Mohammed				1. Created this procedure 
+-- 03/19/25				Yunus Mohammed				1. Created this procedure
+-- 05/26/25		Yunus Mohammed		  		        2. AD-9616 Excluded Commercial Lines claims 
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_reconciliation_claim_snapsheet]
 AS
@@ -56,6 +57,18 @@ BEGIN
                 inner join edw_stage_snapsheet.financial_reserve_items fri on fri.exposure_id = exps.id
                 inner join edw_stage_snapsheet.financial_transactions ft on ft.id = fri.financial_transaction_id 
                 where ft.approved_at is not null and ft.created_at< = @max_transaction_ts
+                and not exists
+                (
+                    select 1
+                    from
+                        edw_stage_snapsheet.tags ctg
+                    where
+                        ctg.claim_id = c.id
+                    and ctg.[name] in 
+                    (
+                        'Commercial XS-LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
+                    )
+                )
             )reserves where row_no = 1
         ) as res
         left join 
@@ -69,6 +82,18 @@ BEGIN
                 inner join edw_stage_snapsheet.financial_transactions ft on ft.claim_id = c.id
                 inner join edw_stage_snapsheet.financial_payment_items fpi on fpi.exposure_id = exps.id and fpi.financial_transaction_id = ft.id
             where ft.created_at<= @max_transaction_ts
+            and not exists
+			(
+				select 1
+				from
+					edw_stage_snapsheet.tags ctg
+				where
+					ctg.claim_id = c.id
+				and ctg.[name] in 
+				(
+					'Commercial XS-LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
+				)
+			)
             group by fpi.claim_id,fpi.exposure_id,fpi.cost_type,ft.financial_transaction_type,fpi.cost_category
         ) as pay on res.claim_id = pay.claim_id and res.exposure_id = pay.exposure_id and res.cost_type=pay.cost_type and res.financial_transaction_type=pay.financial_transaction_type
         and res.cost_category=pay.cost_category

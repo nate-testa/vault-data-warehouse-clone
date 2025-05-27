@@ -10,10 +10,11 @@
 -- 01/27/25     		Sandeep Gundreddy			5. Exclude migrated payments 
 -- 01/28/25     		Sandeep Gundreddy			6. Updated payment_sequence_no mapping
 -- 01/29/25 			Sandeep Gundreddy			7.Modified join conditions to exposures
--- 02/12/25 			Alberto Almario					8. Use claim_parties table to extract payee_address columns
+-- 02/12/25 			Alberto Almario					  8. Use claim_parties table to extract payee_address columns
 -- 02/25/25				Yunus Mohammed				9. AD-8665 - Use coaleasce for payee_nm
 -- 03/27/25				Yunus Mohammed				10 AD-9009 payee_nm null issue resolved for payee role VendorManagement::Vendor
 -- 04/11/25				Yunus Mohammed				11 AD-9044 Update payment_approver_nm logic.
+-- 05/26/25				Yunus Mohammed		  		12. AD-9616 Excluded Commercial Lines claims
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment_snapsheet]
 
@@ -75,7 +76,7 @@ BEGIN
 				ft.created_at,
 				ft.updated_at
 
-		INTO 	edw_temp.tclaim_payment_snapsheet_temp1 
+		INTO edw_temp.tclaim_payment_snapsheet_temp1 
 
 		FROM
 		edw_stage_snapsheet.claims c
@@ -92,7 +93,21 @@ BEGIN
         LEFT JOIN   edw_stage_snapsheet.users apprvu on fta.actor_user_id=apprvu.id
 		left join edw_stage_snapsheet.payees py on py.financial_payment_detail_id = fpd.id and py.is_primary = 'true'
 		WHERE
-			greatest(ft.created_at,ft.updated_at) > @last_source_extract_ts and ft.is_historical='false';   
+			greatest(ft.created_at,ft.updated_at) > @last_source_extract_ts 
+			and ft.is_historical='false'
+			and not exists
+			(
+				select 1
+				from
+					edw_stage_snapsheet.tags ctg
+				where
+					ctg.claim_id = c.id
+				and ctg.[name] in 
+				(
+					'Commercial XS-LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
+				)
+			)
+			; 
 
 		MERGE edw_core.tclaim_payment  AS Target
 		USING edw_temp.tclaim_payment_snapsheet_temp1 AS Source

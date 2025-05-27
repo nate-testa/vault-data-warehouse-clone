@@ -1,10 +1,11 @@
 ﻿-- =================================================================================================
 -- Description: This procedures inserts and updates claim notes snapsheet
 -----------------------------------------------------------------------------------------------------------
--- Change date |Author									|	Change Description
+-- Change date |Author									 |	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 10/25/24		Hernando Gonzalez			1. Created this procedure - AD7391
+-- 10/25/24		Hernando Gonzalez			 1. Created this procedure - AD7391
 -- 05/20/25		Yunus Mohammed				2. AD8750 Modified delta identifier
+-- 05/26/25		Yunus Mohammed		  		3. AD-9616 Excluded Commercial Lines claims
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_note_snapsheet]
 AS
@@ -46,7 +47,20 @@ BEGIN
 		LEFT JOIN edw_stage_snapsheet.users as u ON u.id = n.logged_by_user_id
 		LEFT JOIN edw_core.tclaim as tc ON tc.claim_no = c.claim_number
 		LEFT JOIN edw_core.tclaim_feature as cf ON cf.claim_no = c.claim_number and cf.claim_coverage_cd=n.exposure_id
-		WHERE n.created_at > @last_source_extract_ts
+		WHERE n.created_at > @last_source_extract_ts	
+		AND NOT EXISTS
+			(
+				select 1
+				from
+					edw_stage_snapsheet.tags ctg
+				where
+					ctg.claim_id = n.claim_id
+				and ctg.[name] in 
+				(
+					'Commercial XS-LPL','Commercial MPL','Commercial PRF','TPA Assigned','Commercial - Primary','Commercial - First Excess'
+				)
+			)
+
 		;
 
 		-- Start Insert process
