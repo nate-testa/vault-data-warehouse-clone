@@ -252,6 +252,7 @@ BEGIN
                 WHEN av.vehicle_type = 'Recreational Trailer' THEN 'PA'
                 WHEN av.vehicle_type = 'Snowmobile / ATV' THEN 'CY'
                 WHEN av.vehicle_type = 'Golf Cart' THEN 'PA'
+                ELSE 'PA'
             END AS [PolicyType],
             '' AS [Filler_reservedForFutureUse6],
             c.claim_no AS [ClaimNumber],

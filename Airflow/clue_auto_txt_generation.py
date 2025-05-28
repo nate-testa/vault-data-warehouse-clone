@@ -6,6 +6,7 @@ from airflow.models import Variable
 from airflow.models import BaseOperator
 from airflow.providers.sftp.hooks.sftp import SFTPHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
+from airflow.exceptions import AirflowException
 
 
 ENVIRONMENT = Variable.get("environment")
@@ -162,6 +163,9 @@ def PGP_encrypt_file(file_to_encrypt, recipient_public_key):
             )
     print(status.ok)
     print(status.stderr)
+
+    if not status.ok:
+        raise AirflowException(f"PGP encryption failed: {status.stderr}")
 
 
 def generate_auto_txt_file_and_encrypt(**kwargs):
