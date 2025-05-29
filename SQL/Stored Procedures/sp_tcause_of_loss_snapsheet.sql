@@ -1,15 +1,11 @@
-﻿SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- ========================================================================================================
+﻿-- ========================================================================================================
 -- Description: This procedures inserts tcause_of_loss snapsheet data
 -----------------------------------------------------------------------------------------------------------
--- Change date 		|Author						|	Change Description
+-- Change date 		|Author								  |	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 11/15/2024		Alberto Almario				1. Created this procedure
 -- 01/10/2025		Alberto Almario				2. Change logic for cause_of_loss_cd column
+-- 05/28/2025		Yunus Mohammed		  3. AD-9616 Excluded Commercial Lines claims
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcause_of_loss_snapsheet]
 AS
@@ -35,20 +31,28 @@ BEGIN
 
 		DROP TABLE IF EXISTS edw_temp.tcause_of_loss_snapsheet_temp1;
 
-
 		WITH claim_data AS (
 			SELECT 
 				claim_type, 
 				loss_type, 
 				MAX(updated_at) AS updated_at
-			FROM edw_stage_snapsheet.claims
+			FROM edw_stage_snapsheet.claims c
 			WHERE loss_type NOT IN (
 				SELECT cause_of_loss_desc 
 				FROM edw_core.tcause_of_loss 
 			)
+			AND NOT EXISTS
+			(
+				select 1
+				from
+					edw_stage_snapsheet.tags ctg
+				where
+					ctg.claim_id = c.id
+					and ctg.[name] like 'Commercial%'				
+			)
 			AND updated_at > @last_source_extract_ts
 			GROUP BY claim_type, loss_type
-		)
+		)		
 
 		SELECT 
 			c.loss_type AS cause_of_loss_cd,
