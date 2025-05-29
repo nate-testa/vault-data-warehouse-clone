@@ -2,10 +2,11 @@
 -- Author:		    Yunus Mohammed
 -- Description: This procedures insert commerical quote coverage wip data
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						        |	Change Description
+-- Change date          	|Author						        |	Change Description
 -----------------------------------------------------------------------------------------------------------------------
--- 03/28/25		          Yunus Mohammed		1.Procedure created
--- 22/04/2025             Alberto Almario		2.Change PolicyNumber to Number from Account table
+-- 03/28/25		          	Yunus Mohammed		   1.Procedure created
+-- 22/04/2025          	Alberto Almario				  2.Change PolicyNumber to Number from Account table
+-- 05/29/2025			Yunus Mohammed		  	3. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_coverage_wip]
 
@@ -43,7 +44,7 @@ BEGIN
 			and greatest(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
 
         select quote_no,EffectiveDate as effective_dt,
-        ExpirationDate as expiration_dt, transaction_seq_no,source_system_sk,
+        ExpirationDate as expiration_dt, transaction_seq_no,IsRenewal,source_system_sk,
 		CreatedDate,UpdatedDate,commercial_quote_history_sk,product_name,
         CoverageType as coverage_type,CoverageTypeB as coverage_type_b,Revenue as revenue_amt,
         MemorandumOfInsurance as memorandum_of_insurance_in,NumberOfFTEAttorneys as employee_ct,
@@ -53,8 +54,8 @@ BEGIN
 			(
 			select
 			CAST(acc.Number AS VARCHAR(255)) as quote_no ,acc.EffectiveDate ,acc.ExpirationDate ,0 as transaction_seq_no,
-			cph.commercial_quote_history_sk,acc.CreatedDate, acc.UpdatedDate,acc.product_name,
-			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,accof.Field,accof.[Value]			
+			cph.commercial_quote_history_sk,acc.CreatedDate, acc.UpdatedDate,acc.product_name,acc.IsRenewal,
+			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,accof.Field,accof.[Value]
 			from
 				edw_temp.tcommercial_quote_coverage_wip_temp1 acc
 				inner join edw_stage.[AccountObject] AS accvo ON accvo.AccountId = acc.Id
@@ -79,6 +80,7 @@ BEGIN
             MERGE edw_commercial.tcommercial_quote_coverage AS [Target]
             USING edw_temp.tcommercial_quote_coverage_wip_temp2	 AS [Source]
             ON Source.quote_no = [Target].[quote_no] 
+			and [Target].effective_dt = CASE WHEN Source.IsRenewal = 0  THEN [Target].effective_dt ELSE [Source].effective_dt  END
             and [Source].effective_dt = [Target].effective_dt
             and Source.transaction_seq_no = Target.transaction_seq_no
             WHEN NOT MATCHED BY Target THEN			

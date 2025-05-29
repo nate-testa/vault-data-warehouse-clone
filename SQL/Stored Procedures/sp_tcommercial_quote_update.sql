@@ -7,11 +7,12 @@ GO
 -- Author:		Alberto Almario
 -- Create Date: 2025-03-31
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						|	Change Description
+-- Change date          |Author								 |	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 31/03/2025           Alberto Almario				1. Created this procedure 
 -- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
--- 02/05/2025           Architha Gudimalla			3. Updated quote_status, commercial_policy_sk update
+-- 02/05/2025           Architha Gudimalla		 3. Updated quote_status, commercial_policy_sk update
+-- 05/29/2025			Yunus Mohammed		  4. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_update]
 
@@ -43,6 +44,7 @@ BEGIN
         from edw_commercial.tcommercial_quote a
 		where exists (select * from edw_commercial.tcommercial_quote_history  b 
 					  where upper(transaction_status) = 'ISSUED' and a.quote_no=b.quote_no
+					  and b.effective_dt = a.effective_dt
 					 ) 
 		and ISNULL(a.quote_status,'xx')!='Issued';
 
@@ -81,16 +83,19 @@ BEGIN
 						(
 							select 	CAST(acc.Number AS VARCHAR(255)) as quote_no, effectivedate , acc.state, acc.SubmissionCloseReasonCategory
 							from 	edw_commercial.tcommercial_quote  q
-							inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(50)) = q.quote_no 
+							inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(50)) = q.quote_no
+							and q.effective_dt = acc.EffectiveDate 
 							where	acc.UpdatedDate > @last_source_extract_ts
 						) aa 
-					) b on	 a.quote_no = b.quote_no and ISNULL(a.quote_status,'xx')!='Issued'; 
+					) b on	 a.quote_no = b.quote_no
+					 and a.effective_dt = b.effectivedate
+					 and ISNULL(a.quote_status,'xx')!='Issued'; 
 
   
 		update a
 		set a.commercial_policy_sk = b.commercial_policy_sk
 		from edw_commercial.tcommercial_quote a
-		inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(50)) = a.quote_no 
+		inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(50)) = a.quote_no and a.effective_dt = acc.EffectiveDate
 		inner join edw_commercial.tcommercial_policy b on CAST(acc.policyNumber AS VARCHAR(50)) = b.policy_no
 		where a.commercial_policy_sk is null; 
 
@@ -105,7 +110,7 @@ BEGIN
 		select 	qh.commercial_quote_sk, max(qh.commercial_quote_history_sk) commercial_quote_history_sk
 		into 	edw_temp.tcommercial_quote_update_temp1
 		from 	edw_commercial.tcommercial_quote_history qh
-		inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(255)) = qh.quote_no
+		inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(255)) = qh.quote_no and qh.effective_dt = acc.EffectiveDate
 		where  	qh.transaction_status = 'Issued'
 		and 	acc.UpdatedDate	> @last_source_extract_ts
 		group by qh.commercial_quote_sk; 
@@ -126,6 +131,7 @@ BEGIN
 					INNER JOIN [edw_stage].[AccountTransaction] acct  ON acctsh.AccountTransactionId = acct.Id 
 					INNER JOIN [edw_stage].[Account] acc  ON acct.AccountId = acc.Id 
 					INNER JOIN [edw_commercial].[tcommercial_quote] q  ON q.quote_no = cast(acc.Number as varchar(255))
+						and q.effective_dt = acc.EffectiveDate
 					LEFT JOIN [edw_commercial].[tcommercial_quote_history] AS qh   ON qh.quote_no = cast(acc.Number as varchar(255)) AND qh.effective_dt = acc.EffectiveDate AND qh.transaction_seq_no = acct.number
 					left join edw_stage.Product pr on acc.ProductId = pr.id
 					where  acctsh.Stage in ('QUOTE','POLICY')
