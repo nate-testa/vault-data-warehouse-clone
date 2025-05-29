@@ -1,8 +1,3 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 -- =====================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2025-03-19
@@ -12,6 +7,7 @@ GO
 -----------------------------------------------------------------------------------------------------------------------
 -- 19/03/2025           Alberto Almario				1. Created this procedure 
 -- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 05/29/2025			Yunus Mohammed		  3. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_quota_share_wip]
 AS
@@ -49,6 +45,7 @@ BEGIN
 			,acc.EffectiveDate
 			,acc.ExpirationDate
 			,0 as transaction_seq_no
+			,acc.IsRenewal
 			,CASE 
 				WHEN acc.ExternalSourceId IS NOT NULL THEN 2 --(AV2) 
 				ELSE 4 --(Metal)
@@ -122,6 +119,7 @@ BEGIN
 			,tmp1.EffectiveDate as effective_dt
 			,tmp1.ExpirationDate as expiration_dt			
 			,tmp1.transaction_seq_no
+			,tmp1.IsRenewal
 			,cq.commercial_quote_history_sk
 			,cqt.commercial_quote_tower_sk
 			,tmp2.quota_share_unique_id
@@ -147,6 +145,7 @@ BEGIN
 		ON Target.quote_no = Source.quote_no 
 		AND Target.effective_dt = Source.effective_dt
 		AND Target.transaction_seq_no = Source.transaction_seq_no
+		AND [Target].effective_dt = CASE WHEN Source.IsRenewal = 0  THEN Target.effective_dt ELSE Source.effective_dt  END
 		AND Target.quota_share_unique_id = Source.quota_share_unique_id
 		AND Target.commercial_quote_tower_sk = Source.commercial_quote_tower_sk
 		-- For Inserts
