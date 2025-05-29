@@ -7,11 +7,12 @@ GO
 -- Author:		Alberto Almario
 -- Create Date: 2025-03-31
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						|	Change Description
+-- Change date          |Author								 |	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 31/03/2025           Alberto Almario				1. Created this procedure 
 -- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
--- 02/05/2025           Architha Gudimalla			3. Updated quote_status, commercial_policy_sk update
+-- 02/05/2025           Architha Gudimalla		 3. Updated quote_status, commercial_policy_sk update
+-- 05/29/2025			Yunus Mohammed		  4. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_update]
 
@@ -130,6 +131,7 @@ BEGIN
 					INNER JOIN [edw_stage].[AccountTransaction] acct  ON acctsh.AccountTransactionId = acct.Id 
 					INNER JOIN [edw_stage].[Account] acc  ON acct.AccountId = acc.Id 
 					INNER JOIN [edw_commercial].[tcommercial_quote] q  ON q.quote_no = cast(acc.Number as varchar(255))
+						and q.effective_dt = acc.EffectiveDate
 					LEFT JOIN [edw_commercial].[tcommercial_quote_history] AS qh   ON qh.quote_no = cast(acc.Number as varchar(255)) AND qh.effective_dt = acc.EffectiveDate AND qh.transaction_seq_no = acct.number
 					left join edw_stage.Product pr on acc.ProductId = pr.id
 					where  acctsh.Stage in ('QUOTE','POLICY')

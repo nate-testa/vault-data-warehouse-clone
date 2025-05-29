@@ -192,8 +192,8 @@ BEGIN
 		WHEN MATCHED THEN UPDATE 
 		SET
 			--  Target.quote_no = Source.quote_no 
-			-- ,Target.effective_dt = Source.effective_dt
-			 Target.expiration_dt = Source.expiration_dt
+			Target.effective_dt = Source.effective_dt
+			,Target.expiration_dt = Source.expiration_dt
 			-- ,Target.transaction_seq_no = Source.transaction_seq_no
 			,Target.commercial_quote_history_sk = Source.commercial_quote_history_sk
 			-- ,Target.commercial_quote_tower_sk = Source.commercial_quote_tower_sk
