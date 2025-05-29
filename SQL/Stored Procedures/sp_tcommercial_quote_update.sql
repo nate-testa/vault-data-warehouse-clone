@@ -43,6 +43,7 @@ BEGIN
         from edw_commercial.tcommercial_quote a
 		where exists (select * from edw_commercial.tcommercial_quote_history  b 
 					  where upper(transaction_status) = 'ISSUED' and a.quote_no=b.quote_no
+					  and b.effective_dt = a.effective_dt
 					 ) 
 		and ISNULL(a.quote_status,'xx')!='Issued';
 
@@ -81,16 +82,19 @@ BEGIN
 						(
 							select 	CAST(acc.Number AS VARCHAR(255)) as quote_no, effectivedate , acc.state, acc.SubmissionCloseReasonCategory
 							from 	edw_commercial.tcommercial_quote  q
-							inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(50)) = q.quote_no 
+							inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(50)) = q.quote_no
+							and q.effective_dt = acc.EffectiveDate 
 							where	acc.UpdatedDate > @last_source_extract_ts
 						) aa 
-					) b on	 a.quote_no = b.quote_no and ISNULL(a.quote_status,'xx')!='Issued'; 
+					) b on	 a.quote_no = b.quote_no
+					 and a.effective_dt = b.effectivedate
+					 and ISNULL(a.quote_status,'xx')!='Issued'; 
 
   
 		update a
 		set a.commercial_policy_sk = b.commercial_policy_sk
 		from edw_commercial.tcommercial_quote a
-		inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(50)) = a.quote_no 
+		inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(50)) = a.quote_no and a.effective_dt = acc.EffectiveDate
 		inner join edw_commercial.tcommercial_policy b on CAST(acc.policyNumber AS VARCHAR(50)) = b.policy_no
 		where a.commercial_policy_sk is null; 
 
@@ -105,7 +109,7 @@ BEGIN
 		select 	qh.commercial_quote_sk, max(qh.commercial_quote_history_sk) commercial_quote_history_sk
 		into 	edw_temp.tcommercial_quote_update_temp1
 		from 	edw_commercial.tcommercial_quote_history qh
-		inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(255)) = qh.quote_no
+		inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(255)) = qh.quote_no and qh.effective_dt = acc.EffectiveDate
 		where  	qh.transaction_status = 'Issued'
 		and 	acc.UpdatedDate	> @last_source_extract_ts
 		group by qh.commercial_quote_sk; 
