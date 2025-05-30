@@ -77,6 +77,7 @@ BEGIN
 			p.producer_id
 			,null as monoline_in
 			,pol.insured_nm
+			,'Commercial Lines' as customer_business_type
 		INTO edw_temp.customer_hubspot_feed_commercial_temp1
 		FROM edw_commercial.tcommercial_policy pol		
 		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
@@ -178,6 +179,7 @@ BEGIN
 				,producer_id
 				,monoline_in
 				,insured_nm
+				,customer_business_type
 				FROM edw_temp.customer_hubspot_feed_commercial_temp1/*
 				union ALL 
 			SELECT 
@@ -237,6 +239,7 @@ BEGIN
 			,producer_id
 			,monoline_in
 			,insured_nm
+			,customer_business_type
 			)
 		VALUES (source.policy_no,
 				source.first_nm,
@@ -264,6 +267,7 @@ BEGIN
 				,source.producer_id
 				,source.monoline_in
 				,source.insured_nm
+				,source.customer_business_type
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -292,6 +296,7 @@ BEGIN
             ,target.producer_id 			= source.producer_id
             ,target.monoline_in 			= source.monoline_in
 			,target.insured_nm				= source.insured_nm
+			,target.customer_business_type  = source.customer_business_type
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
