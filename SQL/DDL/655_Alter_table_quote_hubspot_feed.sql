@@ -126,3 +126,11 @@ AND TABLE_NAME = 'quote_hubspot_feed'
 AND COLUMN_NAME = 'total_per_claim_attachment_amt'		
 ) BEGIN ALTER TABLE edw_integration.quote_hubspot_feed ADD total_per_claim_attachment_amt int END			 
 ; 
+IF NOT EXISTS (					
+SELECT 1					
+FROM INFORMATION_SCHEMA.COLUMNS					
+WHERE TABLE_SCHEMA='edw_integration'					
+AND TABLE_NAME = 'quote_hubspot_feed'					
+AND COLUMN_NAME = 'business_type'		
+) BEGIN ALTER TABLE edw_integration.quote_hubspot_feed ADD business_type varchar(255) END			 
+; 
