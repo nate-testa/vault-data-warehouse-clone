@@ -77,7 +77,7 @@ def check_majesco_not_loaded_data_and_send_email(**kwargs):
     mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
     results = mssql_hook.get_records(sql_qry)
 
-    if results is not None:
+    if results:
         EmailOperator(
             task_id='send_majesco_billing_warning_email',
             to=to_email,

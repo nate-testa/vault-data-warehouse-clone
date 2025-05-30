@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.providers.microsoft.azure.hooks.wasb import WasbHook
 from airflow.models import Variable
+from tetl_audit_logger import start_etl_process, success_etl_process, failure_etl_process
 
 
 ENVIRONMENT = Variable.get("environment")
@@ -31,6 +32,7 @@ class MajescoBillingProcessor:
         self.local_to_process_dir = HOME_PATH + '/airflow/tmp_files/majesco_billing/to_process'
         self.local_processed_dir = HOME_PATH + '/airflow/tmp_files/majesco_billing/processed_files'
         self.local_file_path = os.path.join(self.local_to_process_dir, self.csv_filename)
+        self.processed_rows = 0
 
         # Airflow connection IDs
         self.wasb_conn_id = 'azure_blob_storage'
@@ -142,7 +144,8 @@ class MajescoBillingProcessor:
                 chunksize=500,
                 method='multi'
             )
-            logging.info(f"Data inserted into {self.table_name} successfully.")
+            self.processed_rows = len(df)
+            logging.info(f"Data inserted into {self.table_name} successfully, {self.processed_rows} rows processed.")
         except Exception as e:
             logging.error(f"Error inserting data into SQL Server: {e}")
             raise
@@ -349,13 +352,17 @@ def process_all_files():
 
             try:
                 # Instantiate the processor and process the file
+                etl_audit_sk = start_etl_process('py_majesco_billing', f'file_name: {csv_filename}')
                 processor = MajescoBillingProcessor(csv_filename,table_name)
                 processor.process()
                 update_tetl_control_table(
                     process_nm='py_majesco_billing',
                     last_source_extract_ts=blob_last_modified.strftime('%Y-%m-%d %H:%M:%S')
                 )
+                rows_inserted = processor.processed_rows
+                success_etl_process(etl_audit_sk, rows_inserted, f'file_name={csv_filename}')
             except Exception as e:
+                failure_etl_process(etl_audit_sk, str(e))
                 logging.error(f"Error processing file {csv_filename}: {e}")
                 raise  # Raise the exception to stop processing further files
 
