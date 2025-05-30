@@ -239,7 +239,7 @@ BEGIN
             ,ytd_new_business_yacht_premium_amt
             ,ytd_renewal_retention_pc
             ,primary_address_state_cd
-            'Personal Lines'
+            ,'Personal Lines'
         FROM edw_temp.broker_hubspot_feed_temp1
         
         
