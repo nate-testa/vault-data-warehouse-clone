@@ -349,6 +349,7 @@ BEGIN
 						,case when AutomaticSeismicShutOffValve = '' then null else AutomaticSeismicShutOffValve end as automatic_seismic_shutoff_valve_in
 						,source_system_sk
 						,AllPerilRoofCoveringCoverageCW as all_peril_roof_covering_coverage_cw_in
+						,WFGateQuestion as gate_entry_code_required_in
 						,GETDATE() AS create_ts
 						,GETDATE() AS update_ts
 						,@etl_audit_sk AS etl_audit_sk
@@ -451,7 +452,7 @@ BEGIN
 			risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
 			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
 			theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
-			all_peril_roof_covering_coverage_cw_in,
+			all_peril_roof_covering_coverage_cw_in,gate_entry_code_required_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk,caddy_grade
 			)
 			VALUES
@@ -543,7 +544,7 @@ BEGIN
 				risk_score_water_backup, risk_score_wind_hail, risk_score_other, risk_score_lightning,risk_score_theft,
 				risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
 				theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
-				all_peril_roof_covering_coverage_cw_in,
+				all_peril_roof_covering_coverage_cw_in,gate_entry_code_required_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk,caddy_grade
 			)
 			WHEN MATCHED THEN UPDATE
@@ -754,6 +755,7 @@ BEGIN
 			[target].animal_related_liability_endorsement_in = [source].animal_related_liability_endorsement_in,
 			[target].automatic_seismic_shutoff_valve_in = [source].automatic_seismic_shutoff_valve_in,
 			[target].all_peril_roof_covering_coverage_cw_in = [source].all_peril_roof_covering_coverage_cw_in,
+			[target].gate_entry_code_required_in = [source].gate_entry_code_required_in,
 			[target].update_ts = [source].update_ts,
 			[target].caddy_grade = [source].caddy_grade
 			;
