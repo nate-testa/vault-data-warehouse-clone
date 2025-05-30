@@ -323,7 +323,7 @@ BEGIN
 						,WFSiteSchedulingEmailAddress as site_scheduling_email
 						,WFEmergencyContactName as emergency_contact_nm
 						,WFEmergencyContactPhoneNumber as emergency_contact_phone_no
-						,WFEmergencyContactEmail as emergency_contact_email,c.gate_code
+						,WFEmergencyContactEmail as emergency_contact_email,isnull(c.gate_code,WFGateCodes) as gate_code
 						,PrimaryHomeRiskAddress as primary_home_risk_address
 						,PrimaryHomePolicyEffectiveDate  as primary_home_policy_effective_dt
 						,PrimaryHomePolicyExpirationDate as primary_home_policy_expiration_dt
