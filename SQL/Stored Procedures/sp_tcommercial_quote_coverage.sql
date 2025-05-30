@@ -50,7 +50,7 @@ BEGIN
 		CreatedDate,commercial_quote_history_sk,product_name	,
         CoverageType as coverage_type,CoverageTypeB as coverage_type_b,Revenue as revenue_amt,
         MemorandumOfInsurance as memorandum_of_insurance_in,NumberOfFTEAttorneys as employee_ct,
-        coalesce(ClaimsActivity,ClaimsHistory) as claim_history,RetroactiveDate as retroactive_date_desc,PriorOrPendingDate as prior_or_pending_date_desc,
+        coalesce(ClaimsActivity,ClaimsHistory) as claim_history,RetroactiveDate as retroactive_dt_desc,PriorOrPendingDate as prior_or_pending_dt_desc,
 		case
 				when SingleRoundTheClockReinstatement = 'true' then 'Yes' 
 				when SingleRoundTheClockReinstatement = 'false' then 'No'
@@ -89,13 +89,13 @@ BEGIN
         (
             quote_no,effective_dt,expiration_dt,transaction_seq_no,
             commercial_quote_history_sk,coverage_type,coverage_type_b,revenue_amt,memorandum_of_insurance_in,
-        employee_ct,claim_history,retroactive_date_desc,prior_or_pending_date_desc,single_round_the_clock_resinstatement_in,
+        employee_ct,claim_history,retroactive_dt_desc,prior_or_pending_dt_desc,single_round_the_clock_resinstatement_in,
 		source_system_sk,create_ts,update_ts,etl_audit_sk
         )
         select
          quote_no,effective_dt,expiration_dt,transaction_seq_no,
         commercial_quote_history_sk,coverage_type,coverage_type_b,revenue_amt,memorandum_of_insurance_in,
-        employee_ct,claim_history,retroactive_date_desc,prior_or_pending_date_desc,single_round_the_clock_resinstatement_in,
+        employee_ct,claim_history,retroactive_dt_desc,prior_or_pending_dt_desc,single_round_the_clock_resinstatement_in,
 		source_system_sk,create_ts,update_ts,etl_audit_sk
         from
             edw_temp.tcommercial_quote_coverage_temp2
