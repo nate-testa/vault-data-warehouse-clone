@@ -49,8 +49,8 @@ BEGIN
 		--for policies
 		SELECT
 			pol.policy_no,
-			pi.first_nm,
-			case when pi.insured_type = 'Entity' then pi.insured_nm  else pi.last_nm end as last_nm,
+			null as first_nm,
+			null last_nm,
 			case when cust.email like '%papermail%' or cust.email like '%@%@%' then null else cust.email end email, 
 			pol.risk_state_cd,
 			pol.product_cd AS product_nm,
@@ -80,7 +80,6 @@ BEGIN
 		INNER JOIN edw_core.tproduct pr	ON pr.product_cd = pol.product_cd
 		INNER JOIN edw_core.tbroker br	ON br.broker_id = pol.broker_id
 		INNER join edw_commercial.tcommercial_policy_history ph on ph.commercial_policy_sk = pol.commercial_policy_sk and ph.latest_transaction_in = 'Y'
-		INNER join edw_core.tpolicy_insured pi on pi.policy_history_sk = ph.commercial_policy_history_sk and pi.primary_insured_in = 'Yes'
 		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk 
 		WHERE (greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
 		or exists (select 'x' from edw_temp.customer_hubspot_feed_commercial_temp0 a where a.policy_no = pol.policy_no)
