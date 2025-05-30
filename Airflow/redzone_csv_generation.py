@@ -78,7 +78,8 @@ def generate_redzone_csv_file(**kwargs):
                 site_scheduling_email,
                 emergency_contact_nm,
                 emergency_contact_phone_no,
-                emergency_contact_email
+                emergency_contact_email,
+                gate_entry_code_required_in
             FROM [edw_integration].[policy_redzone_feed]
             """
 
