@@ -38,13 +38,9 @@ BEGIN
 		inner join edw_commercial.tcommercial_policy q on a.policy_no = q.policy_no
         inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
         left join edw_core.tbroker br on br.broker_id = q.broker_id
-        left join edw_core.tbroker_vault_team bvt on br.broker_id = bvt.broker_id and bvt.product_nm = pr.product_nm
-                                                    and bvt.team_member_type = 'BusinessDevelopmentManager' --and q.program_type = bvt.program_type
-                                                    and  isnull(bvt.state_cd,q.risk_state_cd)=q.risk_state_cd
 		where (a.broker_id <> br.broker_id
 		or isnull(a.broker_nm,'') <> isnull(br.broker_nm,'')
-		or isnull(a.broker_phone_no,'') <> isnull(br.broker_phone_no,'') 
-		or isnull(a.bdm_nm,'') <> isnull(bvt.team_member_nm,''))
+		or isnull(a.broker_phone_no,'') <> isnull(br.broker_phone_no,''))
 		and pr.product_category_nm = 'CommercialLines'; 
 
 
@@ -59,7 +55,7 @@ BEGIN
 			pol.risk_state_cd,
 			pol.product_cd AS product_nm,
 			br.broker_id,
-			bvt.team_member_nm AS bdm_nm,
+			null AS bdm_nm,
 			br.broker_nm,
 			br.broker_phone_no,
 			pol.policy_status,
@@ -83,11 +79,6 @@ BEGIN
 		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
 		INNER JOIN edw_core.tproduct pr	ON pr.product_cd = pol.product_cd
 		INNER JOIN edw_core.tbroker br	ON br.broker_id = pol.broker_id
-		LEFT JOIN edw_core.tbroker_vault_team bvt	ON br.broker_id = bvt.broker_id
-													AND bvt.product_nm = pr.product_nm
-													AND bvt.team_member_type = 'BusinessDevelopmentManager'
-													--AND pol.program_type = bvt.program_type
-													AND isnull(bvt.state_cd,pol.risk_state_cd)=pol.risk_state_cd
 		INNER join edw_commercial.tcommercial_policy_history ph on ph.commercial_policy_sk = pol.commercial_policy_sk and ph.latest_transaction_in = 'Y'
 		INNER join edw_core.tpolicy_insured pi on pi.policy_history_sk = ph.commercial_policy_history_sk and pi.primary_insured_in = 'Yes'
 		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk 
