@@ -24,7 +24,8 @@
 -- 04/01/25		   		Yunus Mohammed						15 Ad-9035 Added automatic_seismic_shutoff_valve_in
 -- 05/12/25				Yunus Mohammed				        16 AD-9481 Added all_peril_roof_covering_coverage_cw_in
 -- 05/14/25				Yunus Mohammed				   		17. AD-9392 Added WFGateQuestion and updated logic for gate_code
--- 05/21/25				Alberto Almario				   		18. AD-9575 Added caddy_grade
+-- 05/21/25				Alberto Almario				   			  18. AD-9575 Added caddy_grade
+-- 06/02/25				Yunus Mohammed				   		19. AD-9691 Modified seperator for gate_code 
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage]
@@ -117,7 +118,7 @@ BEGIN
 			'
 			EXECUTE sp_executesql @sql, N'@last_source_extract_ts DATETIME2(7)', @last_source_extract_ts = @last_source_extract_ts;
 
-		select PolicyNumber  as quote_no,EffectiveDate,transaction_seq_no,STRING_AGG(gate_code,'-') as gate_code
+		select PolicyNumber  as quote_no,EffectiveDate,transaction_seq_no,STRING_AGG(gate_code,'|') as gate_code
 		into edw_temp.tquote_home_additional_coverage_temp3
 		from
 			(
