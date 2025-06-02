@@ -38,7 +38,7 @@ BEGIN
         set @var_end_mn   = (select min(yearmonth) from edw_core.tdate where actual_dt = EOMONTH( dateadd("d",-1,getdate())));
 
 		DROP TABLE IF exists edw_temp.broker_hubspot_feed_commercial_temp1;
-        
+          
         with br_summ as
         (
             SELECT
@@ -67,8 +67,7 @@ BEGIN
             FROM edw_commercial.tcommercial_broker_summary tbs
 			inner join edw_core.tdate td on td.date_sk = tbs.month_sk
             where td.yearmonth >= @ret_start_mn
-			and td.yearmonth <= @var_end_mn
-            --and product_sk <> 6 
+			and td.yearmonth <= @var_end_mn            
             group by broker_sk
         ),
         comm_tier AS
@@ -156,11 +155,7 @@ BEGIN
         left join br_summ as bs    on bs.broker_sk = tb.broker_sk
         left join comm_tier as ct   on ct.broker_id = tb.broker_id
         where   isnull(tb.broker_nm,'') not like '%test%'
-		and     not (tb.broker_id like '1%' and len(tb.broker_id) = 5)
-		and     not (len(tb.broker_id) > 6);
-        
-        -- TBD here we have to delete commercial data?
-        -- truncate table edw_integration.broker_hubspot_feed       
+        and (tb.broker_id like '1%' and len(tb.broker_id) = 5)		
     
         INSERT edw_integration.broker_hubspot_feed
         (
