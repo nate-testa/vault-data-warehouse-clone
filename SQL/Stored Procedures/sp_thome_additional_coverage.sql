@@ -25,6 +25,7 @@
 -- 05/14/25						Yunus Mohammed				   16. AD-9392 Added WFGateQuestion and updated logic for gate_code
 -- 05/21/25						Alberto Almario				   		17. AD-9575 Added caddy_grade
 -- 06/02/25						Yunus Mohammed				   18. AD-9691 Modified seperator for gate_code 
+-- 06/02/25						Sandeep Gundreddy			   19. Modified gate location and code seperator from ',' to '-'
 -- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
 
@@ -122,7 +123,7 @@ BEGIN
 			(
 			select 
 					act.PolicyNumber, act.EffectiveDate, act.PolicyChangeNumber as transaction_seq_no, atvo.UniqueId ,
-				string_agg(atvof.[Value],',') as gate_code
+				string_agg(atvof.[Value],'-') as gate_code
 			from
 				edw_temp.thome_additional_coverage_temp1 act
 				inner join edw_stage.Product p on p.Id=act.ProductId
