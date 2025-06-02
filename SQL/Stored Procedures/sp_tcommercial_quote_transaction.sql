@@ -1,17 +1,13 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 -- =====================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2025-03-28
 -- Description: This stored procedure insert and update info related to tcommercial_quote_transaction.
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						|	Change Description
+-- Change date             |Author									|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
--- 28/03/2025           Alberto Almario				1. Created this procedure 
--- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 28/03/2025           Alberto Almario					 1. Created this procedure 
+-- 22/04/2025           Alberto Almario					 2. Change PolicyNumber to Number from Account table
+--06/02/2025			Yunus Mohammed			   3. AD-9687 Removed tinternal_coverage and  tquote_collection_class_type joins
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_transaction]
 
@@ -150,18 +146,7 @@ BEGIN
 		LEFT JOIN edw_commercial.tcommercial_quote_coverage cpc on source.quote_no = cpc.quote_no and cast(source.EffectiveDate as date) = cast(cpc.effective_dt as date) and source.Number = cpc.transaction_seq_no
 		INNER JOIN edw_core.tproduct pr on pr.product_cd = q.product_cd
 		LEFT JOIN edw_core.tbroker br on q.broker_id = br.broker_id
-		LEFT JOIN edw_core.tcustomer cust on q.customer_id = cust.customer_id
-		LEFT JOIN edw_core.tinternal_coverage ic on ic.internal_coverage_desc = (case when source.typ = 'prm' then source.label else source.coverage end) 
-												and (case when source.coverage in ('Subscriber Contribution',
-																				   'Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S',
-																				   'Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S'
-																				  ) and source.covID = 'Lux' then 'LUX' else pr.product_cd end) = ic.product_cd  
-		left join edw_core.tquote_collection_class_type cc on 	q.quote_no = cc.quote_no and q.effective_dt = cc.effective_dt and Source.number = cc.transaction_seq_no 
-														and case 	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Music' then 'Musical Instruments' 
-																	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Fine Arts' then 'Fine Art' 
-																	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Jewelry' then 'Worldwide Jewelry'  
-																	else replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')
-																end = cc.class_type   
+		LEFT JOIN edw_core.tcustomer cust on q.customer_id = cust.customer_id		
 		left join edw_core.tuser u on u.user_id = source.CreatedById
 		;		
 
