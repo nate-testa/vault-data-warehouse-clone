@@ -38,24 +38,8 @@ BEGIN
         set @var_end_mn   = (select min(yearmonth) from edw_core.tdate where actual_dt = EOMONTH( dateadd("d",-1,getdate())));
 
 		DROP TABLE IF exists edw_temp.broker_hubspot_feed_commercial_temp1;
-
-        with br_vauk_team as
-        (
-			 select broker_id, 
-					max(case when team_member_type = 'BusinessDevelopmentManager' then team_member_nm end) bdm_nm ,
-					count(distinct case when team_member_type = 'BusinessDevelopmentManager' then team_member_nm end) bdm_nm_distinct ,
-					max(case when team_member_type = 'Underwriter' then team_member_nm end) Underwriter ,
-					count(distinct case when team_member_type = 'Underwriter' then team_member_nm end) Underwriter_distinct ,
-					max(case when team_member_type = 'RenewalUnderwriter' then team_member_nm end) RenewalUnderwriter ,
-					count(distinct case when team_member_type = 'RenewalUnderwriter' then team_member_nm end) RenewalUnderwriter_distinct 
-			from
-                edw_core.tbroker_vault_team bvt 
-                inner join edw_core.tproduct p on bvt.product_nm = p.product_nm
-            where 
-                p.product_category_nm = 'CommercialLines'
-			group by broker_id --, --product_nm, state_cd, program_type
-        ),
-        br_summ as
+        
+        with br_summ as
         (
             SELECT
                 broker_sk,               
@@ -66,19 +50,21 @@ BEGIN
                 sum(case when td.yearmonth = @var_end_mn then tbs.last30_days_submission_ct else 0 end) as last30_days_submission_ct,
                 --
                 
-                sum(case when td.yearmonth = @var_end_mn then tbs.ytd_policy_renewal_offered_ct			else 0 end) as ytd_offered_renewal_ct,
-                sum(case when td.yearmonth = @var_end_mn then tbs.ytd_policy_renewal_offered_over_50k_ct else 0 end) as ytd_offered_renewal_over50k_ct,
+                sum(case when td.yearmonth = @var_end_mn then tbs.policy_renewal_offered_ct			else 0 end) as offered_renewal_ct,
+                sum(case when td.yearmonth = @var_end_mn then tbs.policy_renewal_offered_over_50k_ct else 0 end) as offered_renewal_over50k_ct,
                 --
                 sum(case when td.yearmonth = @var_end_mn then tbs.inforce_ct							else 0 end) as inforce_ct,
-                sum(case when td.yearmonth = @var_end_mn then tbs.inforce_net_premium_amt				else 0 end) as inforce_premium_amt,
+                sum(case when td.yearmonth = @var_end_mn then tbs.inforce_premium_amt				else 0 end) as inforce_premium_amt,
                 sum(case when td.yearmonth = @var_end_mn then tbs.ytd_new_business_ct					else 0 end) as ytd_new_business_ct,
                 sum(case when td.yearmonth = @var_end_mn then tbs.ytd_quote_ct							else 0 end) as ytd_quote_ct,
-                sum(case when td.yearmonth = @var_end_mn then tbs.ytd_new_business_net_premium_amt		else 0 end) as ytd_new_business_net_premium_amt,                
+                sum(case when td.yearmonth = @var_end_mn then tbs.ytd_new_business_premium_amt		else 0 end) as ytd_new_business_premium_amt,                
                 --
                 sum(case when td.yearmonth between @ret_start_mn and @ret_end_mn and tbs.policy_renewal_accepted_ct is not null then tbs.policy_renewal_accepted_ct else 0 end) rolling_12_policy_renewal_accepted_ct,
                 sum(case when td.yearmonth between @ret_start_mn and @ret_end_mn and tbs.policy_renewal_ct  is not null then tbs.policy_renewal_ct else 0 end) rolling_12_policy_renewal_ct
                 --
-            FROM edw_core.tbroker_summary tbs
+                
+                --
+            FROM edw_commercial.tcommercial_broker_summary tbs
 			inner join edw_core.tdate td on td.date_sk = tbs.month_sk
             where td.yearmonth >= @ret_start_mn
 			and td.yearmonth <= @var_end_mn
@@ -142,28 +128,31 @@ BEGIN
             tb.primary_contact_nm,
             tb.broker_email,
             tb.broker_phone_no,
-            bvtm.bdm_nm,
+            'Commercial Lines' as broker_business_type,
+            null as bdm_nm,
             null as bdm_email,
-            case when bvtm.Underwriter_distinct        = 1 then bvtm.[Underwriter]        else null end as new_business_uw_nm,
-            case when bvtm.RenewalUnderwriter_distinct = 1 then bvtm.[RenewalUnderwriter] else null end as renewal_uw_nm, 
+            null as new_business_uw_nm,
+            null as renewal_uw_nm, 
             bs.open_submissions_ct,            
             bs.ytd_bind_ct,
             bs.ytd_submission_ct,
             bs.last30_days_submission_ct,
             case when bs.ytd_quote_ct = 0 then 0 else round(100*cast(bs.ytd_new_business_ct as float)/bs.ytd_quote_ct,2) end as hit_ratio,
-            bs.ytd_offered_renewal_ct,
-            bs.ytd_offered_renewal_over50k_ct,
+            bs.offered_renewal_ct,
+            bs.offered_renewal_over50k_ct,
             bs.inforce_ct as inforce_policy_ct,
             case when ct.c_tier in ('Platinum','Gold','National','Wholesaler','A&WINS','Burns') then ct.c_tier else null end as commission_tier, 
             bs.inforce_premium_amt,            
             null as target_yoy_ytd_nb_prem_pc,            
             null as target_ytd_renewal_retention_pc
-            ,bs.ytd_new_business_net_premium_amt as ytd_nb_premium_amt            
+            ,bs.ytd_new_business_premium_amt as ytd_nb_premium_amt            
             ,case when rolling_12_policy_renewal_ct > 0 then round(100*cast(rolling_12_policy_renewal_accepted_ct as float)/rolling_12_policy_renewal_ct,2) else null end ytd_renewal_retention_pc
             ,tb.primary_address_state_cd
+            ,case when ytd_bind_ct = 0 then null else ytd_quote_ct/ytd_bind_ct end as quote_to_bind_ratio
+	        ,case when ytd_quote_ct = 0 then null else ytd_submission_ct/ytd_quote_ct end as submission_to_quote_ratio
         into    edw_temp.broker_hubspot_feed_commercial_temp1
         FROM    edw_core.tbroker tb
-        left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
+        -- left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
         left join br_summ as bs    on bs.broker_sk = tb.broker_sk
         left join comm_tier as ct   on ct.broker_id = tb.broker_id
         where   isnull(tb.broker_nm,'') not like '%test%'
@@ -176,7 +165,7 @@ BEGIN
         INSERT edw_integration.broker_hubspot_feed
         (
             broker_id,broker_nm,mailing_address_line_1,mailing_address_line_2,mailing_address_city_nm,mailing_address_state_nm,
-            mailing_address_zip_cd,mailing_address_country_nm,            
+            mailing_address_zip_cd,mailing_address_country_nm, 
             broker_tier,broker_tier_nm,national_agency_in,broker_type,broker_status,contract_dt,primary_contact_nm,
             broker_email,broker_phone_no,bdm_nm,bdm_email,new_business_uw_nm,renewal_uw_nm,open_submissions_ct,
             ytd_bind_ct,ytd_submission_ct,last30_days_submission_ct,hit_ratio,
@@ -184,7 +173,8 @@ BEGIN
             --,target_yoy_ytd_nb_prem_pc,target_ytd_renewal_retention_pc            
             ,ytd_nb_premium_amt            
             ,ytd_renewal_retention_pc
-            ,primary_address_state_cd
+            ,primary_address_state_cd,broker_business_type
+            ,quote_to_bind_ratio,submission_to_quote_ratio
             ,create_ts,update_ts,etl_audit_sk
         )
         SELECT
@@ -193,11 +183,12 @@ BEGIN
             ,broker_tier,broker_tier_nm,national_agency_in,broker_type,broker_status,contract_dt,primary_contact_nm,
             broker_email,broker_phone_no,bdm_nm,bdm_email,new_business_uw_nm,renewal_uw_nm,open_submissions_ct,
             ytd_bind_ct,ytd_submission_ct,last30_days_submission_ct,hit_ratio,
-            ytd_offered_renewal_ct,ytd_offered_renewal_over50k_ct,inforce_policy_ct,commission_tier,inforce_premium_amt
+            offered_renewal_ct,offered_renewal_over50k_ct,inforce_policy_ct,commission_tier,inforce_premium_amt
             --,target_yoy_ytd_nb_prem_pc,target_ytd_renewal_retention_pc
             ,ytd_nb_premium_amt            
             ,ytd_renewal_retention_pc
-            ,primary_address_state_cd
+            ,primary_address_state_cd,broker_business_type
+            ,quote_to_bind_ratio,submission_to_quote_ratio
             ,getdate(), getdate(), @etl_audit_sk
         FROM edw_temp.broker_hubspot_feed_commercial_temp1
         
