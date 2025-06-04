@@ -3,11 +3,11 @@
 -- Create Date: 2025-04-04
 -- Description: This stored procedure insert and update info related to tcommercial_quote_tower_wip.
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author								  |	Change Description
+-- Change date        |Author								|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
--- 04/04/2025           Alberto Almario				1. Created this procedure 
--- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
--- 05/29/2025			Yunus Mohammed		  3. AD-9649 Update Merge statement join
+-- 04/04/25           Alberto Almario				1. Created this procedure 
+-- 22/04/25           Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 06/04/25			  Yunus Mohammed		  3. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_tower_wip]
 AS
@@ -143,7 +143,11 @@ BEGIN
 		MERGE edw_commercial.tcommercial_quote_tower AS Target
 		USING edw_temp.tcommercial_quote_tower_wip_temp3 AS Source	
 		ON Source.quote_no = Target.quote_no
-		AND [Target].effective_dt = CASE WHEN Source.IsRenewal = 0  THEN Target.effective_dt ELSE Source.effective_dt  END
+		AND (
+						(Source.IsRenewal = 0 AND YEAR(Target.effective_dt) = YEAR(Source.effective_dt))
+						OR
+						(Source.IsRenewal != 0 AND Target.effective_dt = Source.effective_dt)
+    			)
 		AND Source.transaction_seq_no = Target.transaction_seq_no
 		AND Source.tower_unique_id = Target.tower_unique_id
 		-- For Inserts

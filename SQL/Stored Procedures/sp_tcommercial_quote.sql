@@ -3,13 +3,13 @@
 -- Create Date: 2025-03-28
 -- Description: This stored procedure insert and update info related to tcommercial_quote.
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author								  |	Change Description
+-- Change date        |Author							   |	Change Description
 -----------------------------------------------------------------------------------------------------------------------
--- 28/03/2025           Alberto Almario				1. Created this procedure 
--- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
--- 02/05/2025           Architha Gudimalla		3. Removed quote_status
--- 14/05/2025           Alberto Almario				4. Add new columns prior_policy_no and prior_term_policy_no
--- 05/29/2025			Yunus Mohammed		  5. AD-9649 Update Merge statement join
+-- 28/03/25           Alberto Almario				1. Created this procedure 
+-- 22/04/25           Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 02/05/25           Architha Gudimalla		 3. Removed quote_status
+-- 14/05/25           Alberto Almario				4. Add new columns prior_policy_no and prior_term_policy_no
+-- 06/04/25			 Yunus Mohammed		  	  5. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tcommercial_quote]
 
@@ -137,7 +137,11 @@ BEGIN
 		MERGE edw_commercial.tcommercial_quote AS Target
 		USING edw_temp.tcommercial_quote_temp3 AS Source
 		ON Source.quote_no = Target.quote_no
-		AND Target.effective_dt = CASE WHEN Source.quote_term = 'New'  THEN Target.effective_dt ELSE Source.effective_dt END
+			AND (
+						(Source.quote_term = 'New'  AND YEAR(Target.effective_dt) = YEAR(Source.effective_dt))
+						OR
+						(Source.quote_term != 'New'  AND Target.effective_dt = Source.effective_dt)
+    			)
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
