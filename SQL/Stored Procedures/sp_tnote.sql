@@ -6,6 +6,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 03/22/24		    Yunus Mohammed				1. Created this procedure
 -- 08/08/24         Yunus Mohammed              2. Update customer and broker joins
+-- 06/04/24         Dinesh Bobbili              3. AZ9638 - Commercial changes
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tnote]
 
