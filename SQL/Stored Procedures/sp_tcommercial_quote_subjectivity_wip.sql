@@ -7,7 +7,7 @@
 -----------------------------------------------------------------------------------------------------------------------
 -- 04/04/25           	Alberto Almario				1. Created this procedure 
 -- 22/04/25           	Alberto Almario				2. Change PolicyNumber to Number from Account table
--- 05/29/25				Yunus Mohammed		  3. AD-9649 Update Merge statement join
+-- 06/04/25				Yunus Mohammed		  3. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_subjectivity_wip]
 AS

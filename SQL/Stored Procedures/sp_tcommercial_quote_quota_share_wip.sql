@@ -7,7 +7,7 @@
 -----------------------------------------------------------------------------------------------------------------------
 -- 19/03/25           	Alberto Almario				1. Created this procedure 
 -- 22/04/25           	Alberto Almario				2. Change PolicyNumber to Number from Account table
--- 05/29/25			 	Yunus Mohammed		  3. AD-9649 Update Merge statement join
+-- 06/04/25			 	Yunus Mohammed		  3. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_quota_share_wip]
 AS
@@ -142,8 +142,7 @@ BEGIN
 		-- Start Merge process
 		MERGE edw_commercial.tcommercial_quote_quota_share AS Target
 		USING edw_temp.tcommercial_quote_quota_share_wip_temp4 AS Source	
-		ON Target.quote_no = Source.quote_no 
-		AND Target.effective_dt = Source.effective_dt
+		ON Target.quote_no = Source.quote_no 		
 		AND Target.transaction_seq_no = Source.transaction_seq_no
 		AND (
 						(Source.IsRenewal = 0 AND YEAR(Target.effective_dt) = YEAR(Source.effective_dt))

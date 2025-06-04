@@ -9,7 +9,7 @@
 -- 22/04/25           Alberto Almario				2. Change PolicyNumber to Number from Account table
 -- 02/05/25           Architha Gudimalla		 3. Removed quote_status
 -- 14/05/25           Alberto Almario				4. Add new columns prior_policy_no and prior_term_policy_no
--- 05/29/25			 Yunus Mohammed		  	  5. AD-9649 Update Merge statement join
+-- 06/04/25			 Yunus Mohammed		  	  5. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tcommercial_quote]
 
