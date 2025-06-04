@@ -3,11 +3,11 @@
 -- Create Date: 2025-03-19
 -- Description: This stored procedure insert and update info related to tcommercial_quote_quota_share.
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						|	Change Description
+-- Change date          |Author								|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
--- 19/03/2025           Alberto Almario				1. Created this procedure 
--- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
--- 05/29/2025			Yunus Mohammed		  3. AD-9649 Update Merge statement join
+-- 19/03/25           	Alberto Almario				1. Created this procedure 
+-- 22/04/25           	Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 05/29/25			 	Yunus Mohammed		  3. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_quota_share_wip]
 AS
@@ -145,7 +145,11 @@ BEGIN
 		ON Target.quote_no = Source.quote_no 
 		AND Target.effective_dt = Source.effective_dt
 		AND Target.transaction_seq_no = Source.transaction_seq_no
-		AND [Target].effective_dt = CASE WHEN Source.IsRenewal = 0  THEN Target.effective_dt ELSE Source.effective_dt  END
+		AND (
+						(Source.IsRenewal = 0 AND YEAR(Target.effective_dt) = YEAR(Source.effective_dt))
+						OR
+						(Source.IsRenewal != 0 AND Target.effective_dt = Source.effective_dt)
+    				)		
 		AND Target.quota_share_unique_id = Source.quota_share_unique_id
 		AND Target.commercial_quote_tower_sk = Source.commercial_quote_tower_sk
 		-- For Inserts

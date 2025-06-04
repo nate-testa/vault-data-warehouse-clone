@@ -7,7 +7,7 @@
 -- 03/28/25		          Yunus Mohammed		1.Procedure created
 -- 04/22/25              Alberto Almario			  2.Change PolicyNumber to Number from Account table
 -- 05/29/25				  Yunus Mohammed		3. AD-9660 Added new columns
--- 05/29/2025			Yunus Mohammed		 4. AD-9649 Update Merge statement join
+-- 05/29/25				  Yunus Mohammed		 4. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_coverage_wip]
 
@@ -86,9 +86,12 @@ BEGIN
 
             MERGE edw_commercial.tcommercial_quote_coverage AS [Target]
             USING edw_temp.tcommercial_quote_coverage_wip_temp2	 AS [Source]
-            ON Source.quote_no = [Target].[quote_no] 
-			and [Target].effective_dt = CASE WHEN Source.IsRenewal = 0  THEN [Target].effective_dt ELSE [Source].effective_dt  END
-            and [Source].effective_dt = [Target].effective_dt
+            ON Source.quote_no = [Target].[quote_no]			
+			AND (
+						(Source.IsRenewal = 0 AND YEAR(Target.effective_dt) = YEAR(Source.effective_dt))
+						OR
+						(Source.IsRenewal != 0 AND Target.effective_dt = Source.effective_dt)
+    				)            
             and Source.transaction_seq_no = Target.transaction_seq_no
             WHEN NOT MATCHED BY Target THEN			
             INSERT

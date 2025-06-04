@@ -3,11 +3,11 @@
 -- Create Date: 2025-04-04
 -- Description: This stored procedure insert and update info related to tcommercial_quote_subjectivity.
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						|	Change Description
+-- Change date          |Author								|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
--- 04/04/2025           Alberto Almario				1. Created this procedure 
--- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
--- 05/29/2025			Yunus Mohammed		  3. AD-9649 Update Merge statement join
+-- 04/04/25           	Alberto Almario				1. Created this procedure 
+-- 22/04/25           	Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 05/29/25				Yunus Mohammed		  3. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_subjectivity_wip]
 AS
@@ -119,8 +119,13 @@ BEGIN
 		-- Start Merge process
 		MERGE edw_commercial.tcommercial_quote_subjectivity AS Target
 		USING edw_temp.tcommercial_quote_subjectivity_wip_temp3 AS Source	
-		ON Target.quote_no = Source.quote_no 
-		AND [Target].effective_dt = CASE WHEN Source.IsRenewal = 0  THEN Target.effective_dt ELSE Source.effective_dt  END		
+		ON Target.quote_no = Source.quote_no				
+		AND (
+						(Source.IsRenewal = 0 AND YEAR(Target.effective_dt) = YEAR(Source.effective_dt))
+						OR
+						(Source.IsRenewal != 0 AND Target.effective_dt = Source.effective_dt)
+    				)
+		
 		AND Target.transaction_seq_no = Source.transaction_seq_no
 		AND Target.required_for = Source.required_for
 		AND Target.description = Source.description
