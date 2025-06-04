@@ -34,7 +34,7 @@ BEGIN
 
         select
             nt.Id as note_id,
-            acc.policyNumber as policy_no,
+            case when tcq.quote_no is not null then tcq.quote_no else acc.policyNumber end as policy_no,
             nt.ObjectType as object_type,
             u.first_nm as user_first_nm,
             u.last_nm as user_last_nm,
@@ -65,14 +65,16 @@ BEGIN
                 end
             left join edw_core.tuser u on u.[user_id] = nt.UserId
             left join edw_core.tquote tq on tq.quote_no = acc.PolicyNumber and tq.effective_dt = acc.EffectiveDate
+            left join edw_core.tcommercial_quote tcq on tcq.quote_no = acc.number and tcq.effective_dt = acc.EffectiveDate
             left join edw_stage.Insured ins on ins.Id = case 
                                                             when nt.ObjectType = 'Insured' then nt.ParentId
                                                             when nt.ObjectType = 'WorkTaskComment' then wt.InsuredId
                                                         end
             left join edw_core.tcustomer cust on cust.customer_id = CASE
-                                                                    when nt.ObjectType IN('Account','AccountClose','PendingNonRenewPolicy') then tq.customer_id
-                                                                    when nt.ObjectType in ('Insured','WorkTaskComment') then cast(ins.ReferenceCode as varchar(255))												
-                                                                    end
+                                                                        when nt.ObjectType IN('Account','AccountClose','PendingNonRenewPolicy') and tq.customer_id is not null then tq.customer_id
+                                                                        when nt.ObjectType IN('Account','AccountClose','PendingNonRenewPolicy') and tcq.customer_id is not null then tcq.customer_id
+                                                                        when nt.ObjectType in ('Insured','WorkTaskComment') then cast(ins.ReferenceCode as varchar(255))
+                                                                    END
             left join edw_stage.Brokerage brkg on brkg.Id = case 
                                                                 when nt.ObjectType = 'Brokerage' then nt.ParentId
                                                                 when nt.ObjectType = 'WorkTaskComment' then wt.BrokerageId
