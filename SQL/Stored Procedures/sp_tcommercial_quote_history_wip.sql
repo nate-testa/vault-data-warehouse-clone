@@ -241,9 +241,9 @@ BEGIN
 		edw_temp.tcommercial_quote_history_wip_temp5 AS Source	
 		ON Source.quote_no = Target.quote_no  and Source.transaction_seq_no = Target.transaction_seq_no
 		AND (
-						(Source.quote_term = 'New'  AND YEAR(Target.effective_dt) = YEAR(Source.effective_dt))
+						(Source.transaction_type = 'New'  AND YEAR(Target.effective_dt) = YEAR(Source.effective_dt))
 						OR
-						(Source.quote_term != 'New'  AND Target.effective_dt = Source.effective_dt)
+						(Source.transaction_type != 'New'  AND Target.effective_dt = Source.effective_dt)
     			)
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN 
