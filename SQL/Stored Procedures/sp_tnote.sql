@@ -7,6 +7,7 @@
 -- 03/22/24		    Yunus Mohammed				1. Created this procedure
 -- 08/08/24         Yunus Mohammed              2. Update customer and broker joins
 -- 06/04/24         Dinesh Bobbili              3. AZ9638 - Commercial changes
+-- 07/04/24         Dinesh Bobbili              4. AZ9638 - changed db name from edw_core to edw_commercial
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tnote]
 
@@ -66,7 +67,7 @@ BEGIN
                 end
             left join edw_core.tuser u on u.[user_id] = nt.UserId
             left join edw_core.tquote tq on tq.quote_no = acc.PolicyNumber and tq.effective_dt = acc.EffectiveDate
-            left join edw_core.tcommercial_quote tcq on tcq.quote_no = acc.number and tcq.effective_dt = acc.EffectiveDate
+            left join edw_commercial.tcommercial_quote tcq on tcq.quote_no = acc.number and tcq.effective_dt = acc.EffectiveDate
             left join edw_stage.Insured ins on ins.Id = case 
                                                             when nt.ObjectType = 'Insured' then nt.ParentId
                                                             when nt.ObjectType = 'WorkTaskComment' then wt.InsuredId
