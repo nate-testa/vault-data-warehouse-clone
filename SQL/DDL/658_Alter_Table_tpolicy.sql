@@ -1,5 +1,3 @@
---AD9713 - SR-38158 - Integrate Document delivery data into EDW--
-
 IF NOT EXISTS (                
 SELECT 1                    
 FROM INFORMATION_SCHEMA.COLUMNS                
