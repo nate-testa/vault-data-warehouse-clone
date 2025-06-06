@@ -190,9 +190,9 @@ BEGIN
 						  end as monoline_in
             ,br.primary_address_state_cd broker_state
             , case when q.document_delivery_to = 'Broker' then 'Send to Agent Only'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Email' then 'By Email'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Mail' then 'By Mail'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Email & Mail' then 'By Email & Mail'
+				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Email' then 'Send to Customer by Email'
+				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Mail' then 'Send to Customer by Mail'
+				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Email & Mail' then 'Send to Customer by Email & Mail'
 				 else null
 			end document_delivery_preference
         into edw_temp.quote_hubspot_feed_temp1
@@ -328,9 +328,9 @@ BEGIN
 						  end as monoline_in
             ,br.primary_address_state_cd broker_state
             , case when q.document_delivery_to = 'Broker' then 'Send to Agent Only'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Email' then 'By Email'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Mail' then 'By Mail'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Email & Mail' then 'By Email & Mail'
+				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Email' then 'Send to Customer by Email'
+				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Mail' then 'Send to Customer by Mail'
+				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Email & Mail' then 'Send to Customer by Email & Mail'
 				 else null
 			end document_delivery_preference
         into edw_temp.quote_hubspot_feed_temp2
