@@ -14,6 +14,7 @@
 -- 03/20/25		Hernando Gonzalez				9. Included Target_Account
 -- 05/08/25		Architha Gudimalla				10. Added forecast_quote_in 
 -- 06/05/25		Yunus Mohammed					11. AD9715 - Integrate Document delivery data
+-- 06/06/25		Dinesh Bobbili					12. Updated document_delivery_to logic
 -- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -214,7 +215,13 @@ BEGIN
 				,tmp1.SubmissionCloseReasonDetailOther as close_reason_other_desc
 				,tmp1.TargetAccount as target_account
 				,case when tmp1.isForecast = 1 then 'Yes' else 'No' end as forecast_quote_in
-				,case when accdd.SendOnlyToBroker = 1 then 'Broker' else 'Customer' end document_delivery_to
+				,case 
+					when accdd.SendOnlyToBroker = 1 then 'Broker'
+					when accdd.SendOnlyToBroker = 0 
+						and accdd.EmailPrimaryInsured = 0 
+						and accdd.MailPrimaryInsured = 0 then null
+					else 'Customer' 
+				end as document_delivery_to
 				,case
 					when  accdd.SendOnlyToBroker = 0 and accdd.EmailPrimaryInsured = 1 and accdd.MailPrimaryInsured = 1 then 'Email & Mail'
 					when  accdd.SendOnlyToBroker = 0 and accdd.EmailPrimaryInsured = 1 then 'Email'

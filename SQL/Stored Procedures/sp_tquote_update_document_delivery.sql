@@ -4,6 +4,7 @@
 -- Change date              |Author						               |	Change Description
 -----------------------------------------------------------------------------------------------------------------------------
 -- 06/05/25                 Dinesh Bobbili			              		1. Created this procedure
+-- 06/06/25					Dinesh Bobbili								2. Updated document_delivery_to logic
 -- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote_update_document_delivery]
@@ -28,7 +29,8 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
 		-- Step1 limit amount of rows.
-		DROP TABLE IF EXISTS edw_temp.tquote_update_document_delivery_temp1
+		DROP TABLE IF EXISTS edw_temp.tquote_update_document_delivery_temp1;
+	
 		SELECT q.quote_sk,
 			acc.PolicyNumber,
 			acc.EffectiveDate,accdd.*
@@ -42,16 +44,27 @@ BEGIN
 		and  pr.ProductLine = 'PersonalLines' 
 		AND greatest(accdd.CreatedDate,accdd.UpdatedDate)>@last_source_extract_ts;
 		
-        -- Update stmt here 
-        update q set  q.document_delivery_to =  case when t.SendOnlyToBroker = 1 then 'Broker' else 'Customer' end 
-				,q.document_delivery_method = case
-					when  t.SendOnlyToBroker = 0 and t.EmailPrimaryInsured = 1 and t.MailPrimaryInsured = 1 then 'Email & Mail'
-					when  t.SendOnlyToBroker = 0 and t.EmailPrimaryInsured = 1 then 'Email'
-					when  t.SendOnlyToBroker = 0 and t.MailPrimaryInsured = 1 then 'Mail'					
-				end 
-        from edw_temp.tquote_update_document_delivery_temp1 t
-        inner join edw_core.tquote q 
-		on q.quote_sk = t.quote_sk;
+        UPDATE q
+		SET 
+		    q.document_delivery_to = CASE 
+		        WHEN t.SendOnlyToBroker = 1 THEN 'Broker'
+		        WHEN t.SendOnlyToBroker = 0 
+		             AND t.EmailPrimaryInsured = 0 
+		             AND t.MailPrimaryInsured = 0 THEN NULL
+		        ELSE 'Customer' 
+		    END,
+		    q.document_delivery_method = CASE
+		        WHEN t.SendOnlyToBroker = 0 
+		             AND t.EmailPrimaryInsured = 1 
+		             AND t.MailPrimaryInsured = 1 THEN 'Email & Mail'
+		        WHEN t.SendOnlyToBroker = 0 
+		             AND t.EmailPrimaryInsured = 1 THEN 'Email'
+		        WHEN t.SendOnlyToBroker = 0 
+		             AND t.MailPrimaryInsured = 1 THEN 'Mail'
+		    END
+		FROM edw_core.tquote q
+		INNER JOIN edw_temp.tquote_update_document_delivery_temp1 t  
+		ON q.quote_sk = t.quote_sk;
 
 
 		SET @rows_affected=@@ROWCOUNT;

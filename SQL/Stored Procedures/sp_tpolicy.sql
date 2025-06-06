@@ -26,6 +26,7 @@
 -- 03/20/25		Hernando Gonzalez				20. Included Target_Account
 -- 05/19/25		Architha Gudimalla				21. AD9528 - Added cancel eff dt, added policystatus to merge
 -- 06/05/25		Yunus Mohammed					22. AD9715 - Integrate Document delivery data
+-- 06/06/25		Dinesh Bobbili					23. Updated document_delivery_to logic
 -- ======================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tpolicy]
@@ -186,7 +187,13 @@ BEGIN
 							end term_no				
 				,acc.TargetAccount as target_account
 				,cast(case when tmp1.Stage = 'CANCELLATION' then tmp1.TransactionEffectiveDate else null end as date) cancellation_effective_dt
-				,case when accdd.SendOnlyToBroker = 1 then 'Broker' else 'Customer' end document_delivery_to
+				,case 
+					when accdd.SendOnlyToBroker = 1 then 'Broker'
+					when accdd.SendOnlyToBroker = 0 
+						and accdd.EmailPrimaryInsured = 0 
+						and accdd.MailPrimaryInsured = 0 then null
+					else 'Customer' 
+				end as document_delivery_to
 				,case
 					when  accdd.SendOnlyToBroker = 0 and accdd.EmailPrimaryInsured = 1 and accdd.MailPrimaryInsured = 1 then 'Email & Mail'
 					when accdd.SendOnlyToBroker = 0 and accdd.EmailPrimaryInsured = 1 then 'Email'

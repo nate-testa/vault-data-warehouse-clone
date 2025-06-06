@@ -4,6 +4,7 @@
 -- Change date              |Author						               |	Change Description
 -----------------------------------------------------------------------------------------------------------------------------
 -- 06/05/25                 Dinesh Bobbili			              		1. Created this procedure
+-- 06/06/25					Dinesh Bobbili								2. Updated document_delivery_to logic
 -- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tpolicy_update_document_delivery]
@@ -42,16 +43,27 @@ BEGIN
 				and pr.ProductLine = 'PersonalLines' 
 				AND greatest(accdd.CreatedDate,accdd.UpdatedDate)>@last_source_extract_ts;
 		
-        -- Update stmt here 
-        update p set  p.document_delivery_to =  case when t.SendOnlyToBroker = 1 then 'Broker' else 'Customer' end 
-				,p.document_delivery_method = case
-					when  t.SendOnlyToBroker = 0 and t.EmailPrimaryInsured = 1 and t.MailPrimaryInsured = 1 then 'Email & Mail'
-					when  t.SendOnlyToBroker = 0 and t.EmailPrimaryInsured = 1 then 'Email'
-					when  t.SendOnlyToBroker = 0 and t.MailPrimaryInsured = 1 then 'Mail'					
-				end 
-        from edw_temp.tpolicy_update_document_delivery_temp1 t
-        inner join edw_core.tpolicy p
-		on p.policy_sk = t.policy_sk;
+        UPDATE p
+		SET 
+		    p.document_delivery_to = CASE 
+		        WHEN t.SendOnlyToBroker = 1 THEN 'Broker'
+		        WHEN t.SendOnlyToBroker = 0 
+		             AND t.EmailPrimaryInsured = 0 
+		             AND t.MailPrimaryInsured = 0 THEN NULL
+		        ELSE 'Customer' 
+		    END,
+		    p.document_delivery_method = CASE
+		        WHEN t.SendOnlyToBroker = 0 
+		             AND t.EmailPrimaryInsured = 1 
+		             AND t.MailPrimaryInsured = 1 THEN 'Email & Mail'
+		        WHEN t.SendOnlyToBroker = 0 
+		             AND t.EmailPrimaryInsured = 1 THEN 'Email'
+		        WHEN t.SendOnlyToBroker = 0 
+		             AND t.MailPrimaryInsured = 1 THEN 'Mail'
+		    END
+		FROM edw_core.tpolicy p
+		INNER JOIN edw_temp.tpolicy_update_document_delivery_temp1 t  
+		ON p.policy_sk = t.policy_sk;
 
 
 		SET @rows_affected=@@ROWCOUNT;
