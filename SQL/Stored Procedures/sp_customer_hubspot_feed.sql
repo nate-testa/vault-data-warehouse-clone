@@ -25,6 +25,7 @@
 -- 01/13/25		Alberto Almario				17. AD8013 - Included yacht data
 -- 03/06/25		Archtha Gudimalla			18. AD8781 - Send latest broker info
 -- 04/29/25		Archtha Gudimalla			19. VI37310/AD9292 - Add monoline_in
+-- 06/05/25		Archtha Gudimalla			20. AZ9641 - Added customer_business_type
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -219,7 +220,7 @@ BEGIN
 				,customer_id
 			    ,producer_nm
 				,producer_id
-				,monoline_in
+				,monoline_in 
 				FROM edw_temp.customer_hubspot_feed_temp1/*
 				union ALL 
 			SELECT 
@@ -278,6 +279,7 @@ BEGIN
 			,producer_nm
 			,producer_id
 			,monoline_in
+			,customer_business_type
 			)
 		VALUES (source.policy_no,
 				source.first_nm,
@@ -303,7 +305,8 @@ BEGIN
 				,source.customer_id
 				,source.producer_nm
 				,source.producer_id
-				,source.monoline_in)
+				,source.monoline_in
+				,'Personal Lines')
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
