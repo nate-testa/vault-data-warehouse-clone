@@ -576,6 +576,7 @@ with DAG(
             'sp_tpolicy',
             'sp_tpolicy_onetime_litigation',
             'sp_tpolicy_update_non_renwal_billing',
+            'sp_tpolicy_update_document_delivery',
             'sp_tpolicy_history', 
             'sp_tpolicy_insured', 
             'sp_tpolicy_insured_update',
