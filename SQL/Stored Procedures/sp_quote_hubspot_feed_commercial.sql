@@ -4,6 +4,7 @@
 -- Change date          |Author						             |	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
 -- 06/02/25		        Yunus Mohammed				1. Created this procedure 
+-- 06/09/25		        Architha Gudimalla			2. Updated after intial run to fix errors
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed_commercial]  
@@ -41,39 +42,22 @@ BEGIN
 		or isnull(a.broker_tier,'') <> isnull(br.broker_tier,'')
 		or isnull(a.national_agency_in,'') <> isnull(br.national_agency_in,'')
 		or isnull(a.broker_nm,'') <> isnull(br.broker_nm,'');
-
- 		DROP TABLE IF exists edw_temp.quote_hubspot_feed_commercial_temp01;
-
-		--get customer inforce counts
-		SELECT customer_id = CASE 
-								WHEN customer_id IS NULL THEN 
-									'[Grand Total]' 
-								ELSE customer_id 
-							END
-				, product_cd = CASE 
-								WHEN pr.product_cd IS NULL THEN 
-									'[Total' + case when customer_id is null then '- Overall' else '' end + ']' COLLATE SQL_Latin1_General_CP1_CI_AS 
-								ELSE pr.product_cd 
-								END
-				, inforce_ct = COUNT(*)   
-		INTO  edw_temp.quote_hubspot_feed_commercial_temp01
-		FROM edw_commercial.tcommercial_daily_inforce_policy summ, edw_core.tproduct pr , edw_core.tcustomer cust 
-		where inforce_dt_sk = (select date_sk from edw_core.tdate where actual_dt = dateadd(dd,-1,cast(getdate() as date)))
-		and pr.product_sk = summ.product_sk 
-		and summ.customer_sk = cust.customer_sk 
-		GROUP BY ROLLUP (customer_id, pr.product_cd);
 		
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_commercial_temp1;
 
         with quote_tower_data as
         (
-            select cov.quote_no, cov.effective_dt, cov.transaction_seq_no, cov.commercial_quote_coverage_sk, h.commercial_quote_history_sk,			
+            select  cov.quote_no, cov.effective_dt, cov.transaction_seq_no, cov.commercial_quote_coverage_sk, h.commercial_quote_history_sk,
+				rank() over (partition by  cov.quote_no, cov.effective_dt order by tow.commercial_quote_tower_sk, qs.commercial_quote_quota_share_sk) rnk,			
                 cov.coverage_type,
                 tow.tower_type, tow.company_premium_amt, 	
                 tow.per_claim_retention_amt, tow.aggregate_retention_amt,tow.thereafter_retention_amt,	
                 tow.per_claim_attachment_amt, tow.aggregate_attachment_amt, 	
                 tow.company_nm tower_company_nm, tow.per_claim_policy_limit_amt tow_per_claim_policy_limit_amt, tow.aggregate_policy_limit_amt tow_aggregate_policy_limit_amt,	
-                qs.company_nm  qs_company_nm,  qs.per_claim_policy_limit_amt  qs_per_claim_policy_limit_amt,  qs.aggregate_policy_limit_amt  qs_aggregate_policy_limit_amt	
+                case when tow.company_nm = 'Vault E&S Insurance Company' then  null else qs.commercial_quote_quota_share_sk end commercial_quote_quota_share_sk,  
+				case when tow.company_nm = 'Vault E&S Insurance Company' then  null else qs.company_nm end qs_company_nm,  
+				case when tow.company_nm = 'Vault E&S Insurance Company' then  null else qs.per_claim_policy_limit_amt end qs_per_claim_policy_limit_amt,  
+				case when tow.company_nm = 'Vault E&S Insurance Company' then  null else  qs.aggregate_policy_limit_amt end qs_aggregate_policy_limit_amt
         from edw_commercial.tcommercial_quote_history h			
         inner join edw_commercial.tcommercial_quote_coverage cov on cov.commercial_quote_history_sk = h.commercial_quote_history_sk and h.latest_transaction_in = 'Y'			
         inner join edw_commercial.tcommercial_quote_tower tow on tow.commercial_quote_history_sk = cov.commercial_quote_history_sk			
@@ -91,11 +75,7 @@ BEGIN
             q.create_ts,
             q.update_ts,
             q.close_reason_desc,
-            case when pinf.customer_id is not null and pinf.inforce_ct = cinf.inforce_ct
-							   then 'Yes' 
-							   else 'No' 
-						  end 
-            as monoline_in,
+            null as monoline_in,
             br.primary_address_state_cd as broker_state,
             q.insured_nm,
             cov.retroactive_dt_desc,
@@ -120,10 +100,10 @@ BEGIN
 				end as vault_aggregate_policy_limit_amt,
 			case when cov.coverage_type = 'Excess' then tower_data.tow_per_claim_policy_limit_amt 	
 					 else null 
-				end as total_per_claim_policy_limit_amt,
+				end as total_layer_per_claim_policy_limit_amt,
 			case when cov.coverage_type = 'Excess' then tower_data.tow_aggregate_policy_limit_amt  	
 					 else null 
-				end as total_aggregate_policy_limit_amt,
+				end as total_layer_aggregate_policy_limit_amt,
 			case when cov.coverage_type = 'Excess' and tow_primary.company_nm = 'Vault E&S Insurance Company' then tow_primary.aggregate_attachment_amt 	
 					 when cov.coverage_type = 'Excess' and tower_data.tower_company_nm = 'Vault E&S Insurance Company' then tower_data.aggregate_attachment_amt  
 					 else null 
@@ -141,12 +121,10 @@ BEGIN
         inner join edw_commercial.tcommercial_quote_history h on h.commercial_quote_sk =  q.commercial_quote_sk
         left join edw_commercial.tcommercial_quote_coverage cov on cov.commercial_quote_history_sk = h.commercial_quote_history_sk
         left join edw_core.tcustomer cust on cust.customer_id = q.customer_id
-        left join edw_core.tbroker br on br.broker_id = q.broker_id
-        left join edw_temp.quote_hubspot_feed_commercial_temp01 pinf on cust.customer_id = pinf.customer_id and pr.product_cd = pinf.product_cd 
-		left join edw_temp.quote_hubspot_feed_commercial_temp01 cinf on cust.customer_id = cinf.customer_id and '[Total]' = cinf.product_cd   
+        left join edw_core.tbroker br on br.broker_id = q.broker_id 
 		left join edw_commercial.tcommercial_quote_tower tow_primary on tow_primary.commercial_quote_history_sk = h.commercial_quote_history_sk 
 			and tow_primary.tower_type = 'primary'
-		left join quote_tower_data AS tower_data on tower_data.commercial_quote_history_sk = h.commercial_quote_history_sk
+		left join quote_tower_data AS tower_data on tower_data.rnk =1 and tower_data.commercial_quote_history_sk = h.commercial_quote_history_sk
         where  h.latest_transaction_in = 'Y'
 		and (greatest(q.create_ts,q.update_ts) > @last_source_extract_ts 
 		 or exists (select 'x' from edw_temp.quote_hubspot_feed_commercial_temp0 a where a.quote_no = q.quote_no)
@@ -159,106 +137,7 @@ BEGIN
 		and isnull(cust.customer_nm,'') not like '%test%'
 		-- and q.product_cd <> 'BY'
         -- and q.forecast_quote_in = 'No'
-        ;         
-
-        --this is to pull in policies with pending non renewal = Y
-        DROP TABLE IF exists edw_temp.quote_hubspot_feed_commercial_temp2;
-
-        with policy_tower_data as
-        (
-            select cov.policy_no, cov.effective_dt, cov.transaction_seq_no, cov.commercial_policy_coverage_sk, h.commercial_policy_history_sk,
-                cov.coverage_type,
-                tow.tower_type, tow.company_premium_amt, 	
-                tow.per_claim_retention_amt, tow.aggregate_retention_amt, tow.thereafter_retention_amt,	
-                tow.per_claim_attachment_amt, tow.aggregate_attachment_amt, 	
-                tow.company_nm tower_company_nm, tow.per_claim_policy_limit_amt tow_per_claim_policy_limit_amt, tow.aggregate_policy_limit_amt tow_aggregate_policy_limit_amt,	
-                qs.company_nm  qs_company_nm,    qs.per_claim_policy_limit_amt  qs_per_claim_policy_limit_amt,  qs.aggregate_policy_limit_amt  qs_aggregate_policy_limit_amt	
-        from edw_commercial.tcommercial_policy_history h			
-        inner join edw_commercial.tcommercial_policy_coverage cov on cov.commercial_policy_history_sk = h.commercial_policy_history_sk and h.latest_transaction_in = 'Y'			
-        inner join edw_commercial.tcommercial_policy_tower tow on tow.commercial_policy_history_sk = cov.commercial_policy_history_sk			
-        left join edw_commercial.tcommercial_policy_quota_share qs on tow.commercial_policy_tower_sk = qs.commercial_policy_tower_sk			
-        where (tow.company_nm = 'Vault E&S Insurance Company' or qs.company_nm = 'Vault E&S Insurance Company') 
-        ) 
-        select 
-            q.policy_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,
-            q.customer_id,
-            br.broker_id, br.broker_nm, br.broker_tier, br.national_agency_in,
-			cust.vip_in,
-            q.policy_status, 
-            cast(null as varchar) as reason_policy_not_taken, 
-            q.create_ts,
-            q.update_ts            
-            ,'' as close_reason_desc             
-            ,case when pinf.customer_id is not null and pinf.inforce_ct = cinf.inforce_ct
-							   then 'Yes' 
-							   else 'No' 
-			    end as monoline_in
-            ,br.primary_address_state_cd broker_state
-            ,q.insured_nm
-            ,cov.retroactive_dt_desc
-            ,cov.prior_or_pending_dt_desc
-            ,case when cov.coverage_type = 'Excess' then tow_primary.company_nm else null end primary_carrier, 
-            tow_primary.per_claim_retention_amt,
-            case when cov.coverage_type = 'Excess' then tow_primary.aggregate_retention_amt else null end aggregate_retention_amt,	
-			case when cov.coverage_type = 'Excess' then tow_primary.thereafter_retention_amt else null end thereafter_retention_amt,
-            h.premium_amt as vault_premium_amt,
-            h.commission_amt as vault_commission_amt,
-            case when cov.coverage_type = 'Excess' then tower_data.company_premium_amt else null end  as total_layer_premium,
-            case when cov.coverage_type = 'Excess' then tower_data.company_premium_amt else null end  as total_layer_premium_amt,
-            case when tow_primary.company_nm      = 'Vault E&S Insurance Company' then tow_primary.aggregate_policy_limit_amt 	
-				 when tower_data.tower_company_nm = 'Vault E&S Insurance Company' then tower_data.tow_per_claim_policy_limit_amt 
-				 when tower_data.qs_company_nm    = 'Vault E&S Insurance Company' then tower_data.qs_per_claim_policy_limit_amt
-				 else null 
-			end as vault_per_claim_policy_limit_amt,
-        case when tow_primary.company_nm      = 'Vault E&S Insurance Company' then tow_primary.aggregate_policy_limit_amt 	
-				 when tower_data.tower_company_nm = 'Vault E&S Insurance Company' then tower_data.tow_aggregate_policy_limit_amt 
-				 when tower_data.qs_company_nm    = 'Vault E&S Insurance Company' then tower_data.qs_aggregate_policy_limit_amt 
-				 else null 
-			end as vault_aggregate_policy_limit_amt,
-        case when cov.coverage_type = 'Excess' then tower_data.tow_per_claim_policy_limit_amt 	
-				 else null 
-			end as total_per_claim_policy_limit_amt,
-        case when cov.coverage_type = 'Excess' then tower_data.tow_aggregate_policy_limit_amt  	
-				 else null 
-			end as total_aggregate_policy_limit_amt,
-        case when cov.coverage_type = 'Excess' and tow_primary.company_nm = 'Vault E&S Insurance Company' then tow_primary.aggregate_attachment_amt 	
-				 when cov.coverage_type = 'Excess' and tower_data.tower_company_nm = 'Vault E&S Insurance Company' then tower_data.aggregate_attachment_amt  
-				 else null 
-			end as total_aggregate_attachment_amt,	
-			case when cov.coverage_type = 'Excess' and tow_primary.company_nm = 'Vault E&S Insurance Company' then tow_primary.per_claim_attachment_amt 	
-				 when cov.coverage_type = 'Excess' and tower_data.tower_company_nm = 'Vault E&S Insurance Company' then tower_data.per_claim_attachment_amt 
-				 else null 
-			end as total_per_claim_attachment_amt,
-            'Commercial Lines' as quote_business_type
-        into edw_temp.quote_hubspot_feed_commercial_temp2        
-        from edw_commercial.tcommercial_policy q 
-		--left join edw_core.tquote q1 on q1.quote_no = q.policy_no
-        inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
-        inner join edw_commercial.tcommercial_policy_history h on h.commercial_policy_sk = q.commercial_policy_sk and h.latest_transaction_in = 'Y'
-        left join edw_commercial.tcommercial_policy_coverage cov on h.commercial_policy_history_sk = cov.commercial_policy_history_sk
-
---        left join edw_core.tpolicy_insured i	on i.policy_history_sk = h.policy_history_sk and i.primary_insured_in = 'Yes'
-        left join edw_core.tcustomer cust on cust.customer_id = q.customer_id
-        left join edw_core.tbroker br on br.broker_id = q.broker_id    
-        left join edw_temp.quote_hubspot_feed_commercial_temp01 pinf on cust.customer_id = pinf.customer_id and pr.product_cd = pinf.product_cd 
-		left join edw_temp.quote_hubspot_feed_commercial_temp01 cinf on cust.customer_id = cinf.customer_id and '[Total]' = cinf.product_cd 
-        left join  edw_commercial.tcommercial_policy_tower tow_primary on tow_primary.commercial_policy_history_sk = h.commercial_policy_history_sk and tow_primary.tower_type = 'primary'
-        left JOIN policy_tower_data AS tower_data on tower_data.commercial_policy_history_sk = h.commercial_policy_history_sk
-        where   q.broker_id <> '0'  
-		and isnull(q.insured_nm,'') not like '%test%' 
-		and isnull(cust.last_nm,'') not like '%test%'
-		and isnull(cust.first_nm,'') not like '%test%' 
-		and isnull(cust.customer_nm,'') not like '%test%'    
-		-- and pending_non_renewal_in = 'Yes'
-		and q.expiration_dt between dateadd(YYYY,-1,dateadd(d,-1,cast(getdate() as date))) and dateadd(dd,90,dateadd(YYYY,-1,dateadd(d,-1,cast(getdate() as date))))
-		and (isnull(non_renewal_sub_note_desc,'') like '%OTHER%' or
-			 isnull(non_renewal_sub_note_desc,'') like '%Renewal not taken%' or
-			 isnull(non_renewal_sub_note_desc,'') like '%Coverage no longer needed%' or
-			 isnull(non_renewal_sub_note_desc,'') like '%Coverage placed elseware%')       
-		-- and q.product_cd <> 'BY'
-        and q.policy_status <> 'Cancelled'
-        ;
-        --and q1.quote_no is null
+        ;    
       
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_commercial_temp3;
         
@@ -267,10 +146,7 @@ BEGIN
         FROM
         (
             select *
-            from edw_temp.quote_hubspot_feed_commercial_temp1
-            union ALL
-            select *
-            from edw_temp.quote_hubspot_feed_commercial_temp2
+            from edw_temp.quote_hubspot_feed_commercial_temp1 
         ) a;
         	
 
@@ -285,7 +161,7 @@ BEGIN
             create_ts, update_ts ,etl_audit_sk
             ,customer_id,close_reason_desc,monoline_in,broker_state,
             insured_nm,retroactive_dt_desc,prior_or_pending_dt_desc,primary_carrier_nm,
-            per_claim_retention_amt,aggregate_retention_amt,thereafter_retention_amt,vault_premium_amt,
+            per_claim_retention_amt,aggregate_retention_amt,thereafter_retention,vault_premium_amt,
             vault_commission_amt,total_layer_premium_amt,vault_per_claim_policy_limit_amt,vault_aggregate_policy_limit_amt,
             total_layer_per_claim_policy_limit_amt,total_layer_aggregate_policy_limit_amt,total_aggregate_attachment_amt,
             total_per_claim_attachment_amt,quote_business_type
@@ -327,9 +203,9 @@ BEGIN
            [target].primary_carrier_nm = [source].primary_carrier_nm,
             [target].per_claim_retention_amt= [source].per_claim_retention_amt,
             [target].aggregate_retention_amt= [source].aggregate_retention_amt,
-            [target].thereafter_retention_amt= [source].thereafter_retention_amt,
+            [target].thereafter_retention= [source].thereafter_retention_amt,
             [target].vault_premium_amt = [source].vault_premium_amt,
-            [target].vault_commission_amt = [source.].vault_commission_amt,
+            [target].vault_commission_amt = [source].vault_commission_amt,
             [target].total_layer_premium_amt = [source].total_layer_premium_amt,
             [target].vault_per_claim_policy_limit_amt= [source].vault_per_claim_policy_limit_amt,
             [target].vault_aggregate_policy_limit_amt= [source].vault_aggregate_policy_limit_amt,
