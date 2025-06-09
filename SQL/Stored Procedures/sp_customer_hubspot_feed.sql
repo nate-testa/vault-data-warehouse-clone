@@ -120,10 +120,10 @@ BEGIN
 							   then 'Yes' 
 							   else 'No' 
 						  end monoline_in
-            , case when q.document_delivery_to = 'Broker' then 'Send to Agent Only'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Email' then 'Send to Customer by Email'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Mail' then 'Send to Customer by Mail'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Email & Mail' then 'Send to Customer by Email & Mail'
+            , case when pol.document_delivery_to = 'Broker' then 'Send to Agent Only'
+				 when pol.document_delivery_to = 'Customer' and pol.document_delivery_method = 'Email' then 'Send to Customer by Email'
+				 when pol.document_delivery_to = 'Customer' and pol.document_delivery_method = 'Mail' then 'Send to Customer by Mail'
+				 when pol.document_delivery_to = 'Customer' and pol.document_delivery_method = 'Email & Mail' then 'Send to Customer by Email & Mail'
 				 else null
 			end document_delivery_preference
 		INTO edw_temp.customer_hubspot_feed_temp1
