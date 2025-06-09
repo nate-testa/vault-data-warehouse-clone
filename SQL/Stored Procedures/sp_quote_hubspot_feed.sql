@@ -27,7 +27,6 @@
 -- 05/12/25		        Archtha Gudimalla			22. AD9494 - Excluded forecast quotes  
 -- 05/22/25		        Archtha Gudimalla			23. VI37383/AD9512 - Added broker state 
 -- 06/05/25		        Archtha Gudimalla			24. AZ9641 - Added quote_business_type
--- 06/06/25		        Archtha Gudimalla			25. SR38158/AZ9753 - Added doc delivery preference
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]  
@@ -189,12 +188,6 @@ BEGIN
 							   else 'No' 
 						  end as monoline_in
             ,br.primary_address_state_cd broker_state
-            , case when q.document_delivery_to = 'Broker' then 'Send to Agent Only'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Email' then 'Send to Customer by Email'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Mail' then 'Send to Customer by Mail'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Email & Mail' then 'Send to Customer by Email & Mail'
-				 else null
-			end document_delivery_preference
         into edw_temp.quote_hubspot_feed_temp1
 
         from edw_core.tquote q
@@ -327,12 +320,6 @@ BEGIN
 							   else 'No' 
 						  end as monoline_in
             ,br.primary_address_state_cd broker_state
-            , case when q.document_delivery_to = 'Broker' then 'Send to Agent Only'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Email' then 'Send to Customer by Email'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Mail' then 'Send to Customer by Mail'
-				 when q.document_delivery_to = 'Customer' and q.document_delivery_method = 'Email & Mail' then 'Send to Customer by Email & Mail'
-				 else null
-			end document_delivery_preference
         into edw_temp.quote_hubspot_feed_temp2
         
         from edw_core.tpolicy q 
@@ -415,8 +402,7 @@ BEGIN
             ,close_reason_desc
             ,monoline_in
             ,broker_state
-            ,quote_business_type
-            ,document_delivery_preference
+            ,quote_business_type 
         )
         VALUES
         (
@@ -442,8 +428,7 @@ BEGIN
             ,close_reason_desc
             ,monoline_in
             ,broker_state
-            ,'Personal Lines'
-            ,document_delivery_preference
+            ,'Personal Lines' 
         )
         WHEN MATCHED THEN UPDATE
         SET        
@@ -503,8 +488,7 @@ BEGIN
             [target].target_account	                    =	[source].target_account  ,  
             [target].close_reason_desc	                =	[source].close_reason_desc ,  
             [target].monoline_in	                    =	[source].monoline_in ,  
-            [target].broker_state	                    =	[source].broker_state    ,  
-            [target].document_delivery_preference       =	[source].document_delivery_preference
+            [target].broker_state	                    =	[source].broker_state    
             ;
         
         SET @rows_affected=@@ROWCOUNT;
