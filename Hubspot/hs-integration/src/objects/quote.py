@@ -169,7 +169,7 @@ class Quote:
                 'primary_carrier_nm': record['primary_carrier_nm'],
                 'per_claim_retention_amt': record['per_claim_retention_amt'],
                 'aggregate_retention_amt': record['aggregate_retention_amt'],
-                'threafter_retention': record['threafter_retention'],
+                'thereafter_retention': record['thereafter_retention'],
                 'vault_premium_amt': record['vault_premium_amt'],
                 'vault_commission_amt': record['vault_commission_amt'],
                 'total_layer_premium_amt': record['total_layer_premium_amt'],
