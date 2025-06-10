@@ -7,7 +7,7 @@
 -- 06/09/25		        Architha Gudimalla			2. Updated after intial run to fix errors
 -- ============================================================================================================================= 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed_commercial]  
+CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed_commercial]   
  
 AS
 BEGIN
