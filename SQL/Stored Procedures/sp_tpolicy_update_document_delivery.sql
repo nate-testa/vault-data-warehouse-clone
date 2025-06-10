@@ -1,10 +1,11 @@
 -- ===========================================================================================================================
 -- Description: This procedures update document delivery for policy
 -----------------------------------------------------------------------------------------------------------------------------
--- Change date              |Author						               |	Change Description
+-- Change date              |Author						              		  |	Change Description
 -----------------------------------------------------------------------------------------------------------------------------
 -- 06/05/25                 Dinesh Bobbili			              		1. Created this procedure
 -- 06/06/25					Dinesh Bobbili								2. Updated document_delivery_to logic
+-- 06/10/25					Yunus Mohammed						3. AD-9715 Added Update_ts in update stmt
 -- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tpolicy_update_document_delivery]
@@ -60,7 +61,8 @@ BEGIN
 		             AND t.EmailPrimaryInsured = 1 THEN 'Email'
 		        WHEN t.SendOnlyToBroker = 0 
 		             AND t.MailPrimaryInsured = 1 THEN 'Mail'
-		    END
+		    END,
+			update_ts = getdate()
 		FROM edw_core.tpolicy p
 		INNER JOIN edw_temp.tpolicy_update_document_delivery_temp1 t  
 		ON p.policy_sk = t.policy_sk;
