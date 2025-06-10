@@ -19,6 +19,7 @@
 -- 04/29/2025		Yunus Mohammed				14. AD-8748 Updated claim_first_reopen_dt logic
 -- 05/08/2025		Yunus Mohammed				15 AD-9412 Added first_party_driver_relationship_to_insured
 -- 05/28/2025		Yunus Mohammed		  		16. AD-9616 Excluded Commercial Lines claims
+-- 06/09/2025		 Yunus Mohammed				 17. AD-9744 Add Litigation Tag Indicator
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -147,6 +148,17 @@ BEGIN
 				when c.claim_source = 'api' then 3
 				else 5
 			end as source_system_sk
+			,case when
+				exists (
+								select 1
+								from
+									edw_stage_snapsheet.tags t
+								where
+										t.claim_id = c.id
+										and t.[name] = 'Litigation'
+				) then 'Yes'
+				else 'No'
+			end as [litigation_in]
 		FROM edw_stage_snapsheet.claims c
 		LEFT JOIN edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
 		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcmp.claim_party_id and  cpcmp.contact_method_type = 'phone'
@@ -175,7 +187,7 @@ BEGIN
 		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_desc = c.loss_type
 		LEFT JOIN edw_stage_snapsheet.common_incident_details cid on cid.claim_id = c.id
 		LEFT JOIN edw_stage_snapsheet.coverage_checks covc on c.id = covc.claim_id
-		LEFT JOIN   edw_stage_snapsheet.users u on covc.determined_by_user_id = u.id
+		LEFT JOIN  edw_stage_snapsheet.users u on covc.determined_by_user_id = u.id
 		LEFT JOIN
 		(
 			select ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date desc, reporting_month desc) as transaction_seq_no,

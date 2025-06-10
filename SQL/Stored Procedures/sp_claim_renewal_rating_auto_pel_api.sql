@@ -1,6 +1,5 @@
 -- =================================================================================================
 -- Author:		Yunus Mohammed
--- Create Date: 11/15/2023
 -- Description: This procedures inserts and updates data for claim renewal rating for auto and pel
 ---------------------------------------------------------------------------------------------------
 -- Change date		|Author										|	Change Description
@@ -11,6 +10,7 @@
 -- 01/10/2025		Rushin Shah							 4. Updated the coverage information to match snapsheet coverages
 -- 01/14/2025		Sandeep Gundreddy			5. minor logic change to MedicalExpensePayment,MedicalPaymentPayment
 -- 05/08/2025		Yunus Mohammed				6. AD9412 Added adjuster_name
+-- 06/10/2025		Yunus Mohammed				7. AD-9744 Add Litigation Tag Indicator
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_auto_pel_api]
@@ -55,7 +55,8 @@ BEGIN
 		PropertyDamagePayment,PersonalInjuryProtectionPayment,SpousalLiabilityPayment,
 		TowingAndLaborPayment,UninsuredMotoristPayment,UnderinsuredMotoristPayment,
 		clf.claim_adjuster_nm as AdjusterName,
-		cl.first_party_driver_relationship_to_insured as FirstPartyDriverRelationshipToInsured
+		cl.first_party_driver_relationship_to_insured as FirstPartyDriverRelationshipToInsured,
+		cl.litigation_in
 		FROM
 		edw_core.tclaim cl
 		LEFT JOIN edw_core.tcause_of_loss l on cl.cause_of_loss_sk = l.cause_of_loss_sk 
@@ -113,7 +114,7 @@ BEGIN
 			CollisionPayment,ComprehensivePayment,GlassPayment,MedicalExpensePayment,MedicalPaymentPayment,OtherPayment,PropertyDamagePayment,
 			PersonalInjuryProtectionPayment,RentalReimbursementPayment,SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,
 			UnderinsuredMotoristPayment,ViolationPointClass,FirstPartyDriverName,FaultDecision,ResponsibleParty,AtFaultPercent,
-			AdjusterName,FirstPartyDriverRelationshipToInsured,
+			AdjusterName,FirstPartyDriverRelationshipToInsured,litigation_in,
 			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -124,6 +125,7 @@ BEGIN
 			SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,	UnderinsuredMotoristPayment,
 			NULL, -- ViolationPointClass
 			FirstPartyDriverName,FaultDecision,ResponsibleParty,AtFaultPercent,AdjusterName,FirstPartyDriverRelationshipToInsured,
+			litigation_in,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -158,6 +160,7 @@ BEGIN
 			Target.AtFaultPercent = Source.AtFaultPercent,
 			Target.AdjusterName = Source.AdjusterName,
 			Target.FirstPartyDriverRelationshipToInsured = Source.FirstPartyDriverRelationshipToInsured,
+			Target.litigation_in = Source.litigation_in,
 			Target.update_ts = GETDATE();
 			
 		SET @rows_affected=@@ROWCOUNT;

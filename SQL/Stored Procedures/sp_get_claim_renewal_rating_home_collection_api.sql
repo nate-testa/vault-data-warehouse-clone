@@ -7,6 +7,7 @@
 -- 10/06/23				Yunus Mohammed				1. Created this procedure 
 -- 12/18/24				Yunus Mohammed				2. AD7660 Added SourceOfFire and SourceOfWater
 -- 05/08/25				Yunus Mohammed				4. AD9412 Added new columns
+-- 06/10/2025		Yunus Mohammed				 5. AD-9744 Add Litigation Tag Indicator
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_claim_renewal_rating_home_collection_api]
 (
@@ -24,7 +25,8 @@ BEGIN
 		crrh.AddressLineUnit,crrh.AddressCity,crrh.AddressZipCode,
 		crrh.AddressState,crrh.AddressCounty,crrh.AddressCountry,crrh.Coverage,
 		crrh.SourceOfFire,crrh.SourceOfWater,
-		crrh.ReserveExpense,crrh.ReserveIndemnity,crrh.PaidExpense,crrh.PaidIndemnity,crrh.AdjusterName
+		crrh.ReserveExpense,crrh.ReserveIndemnity,crrh.PaidExpense,crrh.PaidIndemnity,crrh.AdjusterName,
+		crrh.Litigation_In
 	FROM
 		edw_integration.claim_renewal_rating_home_collection_api AS crrh
 		INNER JOIN
