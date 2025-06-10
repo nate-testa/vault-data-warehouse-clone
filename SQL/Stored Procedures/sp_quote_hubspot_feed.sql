@@ -402,7 +402,7 @@ BEGIN
             ,close_reason_desc
             ,monoline_in
             ,broker_state
-            ,quote_business_type
+            ,quote_business_type 
         )
         VALUES
         (
@@ -428,7 +428,7 @@ BEGIN
             ,close_reason_desc
             ,monoline_in
             ,broker_state
-            ,'Personal Lines'
+            ,'Personal Lines' 
         )
         WHEN MATCHED THEN UPDATE
         SET        
@@ -488,7 +488,7 @@ BEGIN
             [target].target_account	                    =	[source].target_account  ,  
             [target].close_reason_desc	                =	[source].close_reason_desc ,  
             [target].monoline_in	                    =	[source].monoline_in ,  
-            [target].broker_state	                    =	[source].broker_state   
+            [target].broker_state	                    =	[source].broker_state    
             ;
         
         SET @rows_affected=@@ROWCOUNT;
