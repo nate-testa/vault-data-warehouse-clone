@@ -9,7 +9,7 @@
 -- 01/08/2025		Rushin Shah				    		 2. AD7660 - Added new columns
 -- 01/14/2025		Sandeep Gundreddy			3. AD7660 - Added product_sk=5(Condo)
 -- 05/08/2025		Yunus Mohammed				4. AD9412 Added adjuster_name
--- 06/10/2025		Yunus Mohammed				5. AD-9744 Add Litigation Tag Indicator
+-- 06/11/2025		Yunus Mohammed				5. AD-9744 Add Litigation Tag Indicator  (Litigation_In and Litigation_Complete_In)
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_home_collection_api]
@@ -75,7 +75,8 @@ BEGIN
 		cl.source_of_fire as SourceOfFire,
 		cl.source_of_water as SourceOfWater
 		,cfa.claim_adjuster_nm as AdjusterName
-		,cl.litigation_in
+		,cl.litigation_in as Litigation_In
+		,cl.litigation_complete_in as Litigation_Complete_In		
 		,(
 		cfa.expense_reserve_amt + cfa.loss_reserve_amt + cfa.expense_paid_amt + cfa.loss_paid_amt+cfa.defense_paid_amt+cfa.defense_reserve_amt
 		) as amt
@@ -118,7 +119,7 @@ BEGIN
 			PropertyOrLiability,PolicyNumber,FileNumber,ClaimStatus,Claimant,LossDate,LossIdentifier,LossType,SubCauseOfLoss,
 			LossDescription,PolicyType,CatIndicator,CatCode,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressZipCode,
 			AddressState,AddressCounty,AddressCountry,Coverage,ReserveExpense,ReserveIndemnity,PaidExpense,PaidIndemnity,
-			SourceOfFire,SourceOfWater,AdjusterName,litigation_in,
+			SourceOfFire,SourceOfWater,AdjusterName,Litigation_In,Litigation_Complete_In,
 			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -126,7 +127,7 @@ BEGIN
 			PropertyOrLiability,PolicyNumber,FileNumber,ClaimStatus,Claimant,LossDate,LossIdentifier,LossType,SubCauseOfLoss,
 			LossDescription,PolicyType,CatIndicator,CatCode,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressZipCode,
 			AddressState,AddressCounty,AddressCountry,Coverage,ReserveExpense,ReserveIndemnity,PaidExpense,PaidIndemnity,
-			SourceOfFire,SourceOfWater,AdjusterName,litigation_in,
+			SourceOfFire,SourceOfWater,AdjusterName,litigation_in,Litigation_Complete_In,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -160,7 +161,8 @@ BEGIN
 		Target.SourceOfFire = Source.SourceOfFire,
 		Target.SourceOfWater = Source.SourceOfWater,
 		Target.AdjusterName = Source.AdjusterName,
-		Target.litigation_in = Source.litigation_in,
+		Target.Litigation_In = Source.Litigation_In,
+		Target.Litigation_Complete_In = Source.Litigation_Complete_In,
 		Target.update_ts = GETDATE();
 
 		SET @rows_affected=@@ROWCOUNT;
