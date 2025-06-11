@@ -21,7 +21,7 @@
 -- 03/19/25				Hernando Gonzalez			15. Added new columns wildfire_risk_score, wildfire_risk_class
 -- 04/02/25				Yunus Mohammed				16. AD-8973 roof_deck_attachment value logic updated
 -- 04/16/25				Yunus Mohammed				17. AD-9121 Corrected null values for premium mods
--- 06/10/22				Dinesh Bobbili				18. Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
+-- 06/10/22				Dinesh Bobbili				18. AD-9707 Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
 
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
