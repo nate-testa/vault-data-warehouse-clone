@@ -26,7 +26,7 @@ BEGIN
 		crrh.AddressState,crrh.AddressCounty,crrh.AddressCountry,crrh.Coverage,
 		crrh.SourceOfFire,crrh.SourceOfWater,
 		crrh.ReserveExpense,crrh.ReserveIndemnity,crrh.PaidExpense,crrh.PaidIndemnity,crrh.AdjusterName,
-		crrh.Litigation_In,crrh.Litigation_Complete_In
+		crrh.Litigation,crrh.LitigationComplete
 	FROM
 		edw_integration.claim_renewal_rating_home_collection_api AS crrh
 		INNER JOIN

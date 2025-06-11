@@ -27,7 +27,7 @@ BEGIN
 		crra.RentalReimbursementPayment,crra.SpousalLiabilityPayment,crra.TowingAndLaborPayment,crra.UninsuredMotoristPayment,
 		crra.UnderinsuredMotoristPayment,crra.ViolationPointClass,FirstPartyDriverName,
 		crra.FaultDecision,crra.ResponsibleParty,crra.AtFaultPercent,AdjusterName,FirstPartyDriverRelationshipToInsured,
-		crra.Litigation_In,crra.Litigation_Complete_In
+		crra.Litigation,crra.LitigationComplete
 	FROM
 		edw_integration.claim_renewal_rating_auto_pel_api AS crra
 		INNER JOIN

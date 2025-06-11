@@ -10,7 +10,7 @@
 -- 01/10/2025		Rushin Shah							 4. Updated the coverage information to match snapsheet coverages
 -- 01/14/2025		Sandeep Gundreddy			5. minor logic change to MedicalExpensePayment,MedicalPaymentPayment
 -- 05/08/2025		Yunus Mohammed				6. AD9412 Added adjuster_name
--- 06/11/2025		Yunus Mohammed				7. AD-9744 Add Litigation Tag Indicator  (Litigation_In and Litigation_Complete_In)
+-- 06/11/2025		Yunus Mohammed				7. AD-9744 Add Litigation Tag Indicator  (Litigation and LitigationComplete)
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_auto_pel_api]
@@ -56,7 +56,7 @@ BEGIN
 		TowingAndLaborPayment,UninsuredMotoristPayment,UnderinsuredMotoristPayment,
 		clf.claim_adjuster_nm as AdjusterName,
 		cl.first_party_driver_relationship_to_insured as FirstPartyDriverRelationshipToInsured,
-		cl.litigation_in as Litigation_In, cl.litigation_complete_in as Litigation_Complete_In
+		cl.litigation_in as Litigation, cl.litigation_complete_in as LitigationComplete
 		FROM
 		edw_core.tclaim cl
 		LEFT JOIN edw_core.tcause_of_loss l on cl.cause_of_loss_sk = l.cause_of_loss_sk 
@@ -114,7 +114,7 @@ BEGIN
 			CollisionPayment,ComprehensivePayment,GlassPayment,MedicalExpensePayment,MedicalPaymentPayment,OtherPayment,PropertyDamagePayment,
 			PersonalInjuryProtectionPayment,RentalReimbursementPayment,SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,
 			UnderinsuredMotoristPayment,ViolationPointClass,FirstPartyDriverName,FaultDecision,ResponsibleParty,AtFaultPercent,
-			AdjusterName,FirstPartyDriverRelationshipToInsured,Litigation_In,Litigation_Complete_In,
+			AdjusterName,FirstPartyDriverRelationshipToInsured,Litigation,LitigationComplete,
 			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -125,7 +125,7 @@ BEGIN
 			SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,	UnderinsuredMotoristPayment,
 			NULL, -- ViolationPointClass
 			FirstPartyDriverName,FaultDecision,ResponsibleParty,AtFaultPercent,AdjusterName,FirstPartyDriverRelationshipToInsured,
-			Litigation_In,Litigation_Complete_In,
+			Litigation,LitigationComplete,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -160,8 +160,8 @@ BEGIN
 			Target.AtFaultPercent = Source.AtFaultPercent,
 			Target.AdjusterName = Source.AdjusterName,
 			Target.FirstPartyDriverRelationshipToInsured = Source.FirstPartyDriverRelationshipToInsured,
-			Target.Litigation_In = Source.Litigation_In,
-			Target.Litigation_Complete_In = Source.Litigation_Complete_In,
+			Target.Litigation = Source.Litigation,
+			Target.LitigationComplete = Source.LitigationComplete,
 			Target.update_ts = GETDATE();
 			
 		SET @rows_affected=@@ROWCOUNT;
