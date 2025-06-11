@@ -80,7 +80,6 @@ class Customer:
                 'mailing_address_zip_cd': record['mailing_address_zip_cd'],
                 'risk_state_cd': record['risk_state_cd'],
                 'mailing_address_state_cd': record['mailing_address_state_cd'],
-                'monoline_in': record['monoline_in'],
                 'insured_nm': record['insured_nm'],
                 'customer_business_type': record['customer_business_type']
 
