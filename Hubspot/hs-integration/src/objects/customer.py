@@ -143,3 +143,25 @@ class Customer:
         
         customer_quote_associations = hubspot.AssociationHandler('customer-policy-association', 'customer-policy-associations')
         customer_quote_associations.dispatch(customer_policy_association_payload)
+
+
+    def check_and_log_duplicates(df, id_column, object_name):
+        """
+        Checks a DataFrame for duplicates based on an ID column and logs a warning if any are found.
+
+        Args:
+            df (pd.DataFrame): The DataFrame to check.
+            id_column (str): The name of the column to check for duplicates (e.g., 'producer_id').
+            object_name (str): The name of the object for the log message (e.g., 'Producer').
+        """
+        # Find all rows that are part of a set of duplicates
+        duplicates = df[df.duplicated(subset=id_column, keep=False)]
+
+        if not duplicates.empty:
+            # Get a list of the unique IDs that have duplicate entries
+            duplicated_ids = duplicates[id_column].unique()
+            logger.warning(
+                f"Found {len(duplicated_ids)} {object_name} ID(s) with duplicate records in the source data. "
+                f"These duplicates will be dropped before processing. "
+                f"Duplicated IDs: {list(duplicated_ids)}"
+            )

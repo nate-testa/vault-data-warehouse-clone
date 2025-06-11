@@ -8,14 +8,18 @@ import sqlite3
 
 logger = get_logger(__name__)
 
-
-
 class Producer:
 
     def sync_to_hubspot():
         producer_df = DatabaseFunctions.get_data_from_db(DatabaseFunctions.table_name['producer'])
 
         if not producer_df.empty:
+            # 1. ALERT: Check for and log any duplicates before taking action.
+            check_and_log_duplicates(producer_df, 'producer_id', 'Producer')
+
+            # 2. Deduplicate on producer_id to ensure each producer is processed only once
+            producer_df.drop_duplicates(subset='producer_id', keep='first', inplace=True, ignore_index=True)
+
             results = producer_df.apply(Producer.process_row, axis=1)
             create_batch_payload = {"inputs": []}
             update_batch_payload = {"inputs": []}
@@ -109,4 +113,23 @@ class Producer:
         customer_associations = hubspot.AssociationHandler('producer-broker-association', 'producer-associations')
         customer_associations.dispatch(producer_broker_association_payload)
     
-          
+    def check_and_log_duplicates(df, id_column, object_name):
+        """
+        Checks a DataFrame for duplicates based on an ID column and logs a warning if any are found.
+
+        Args:
+            df (pd.DataFrame): The DataFrame to check.
+            id_column (str): The name of the column to check for duplicates (e.g., 'producer_id').
+            object_name (str): The name of the object for the log message (e.g., 'Producer').
+        """
+        # Find all rows that are part of a set of duplicates
+        duplicates = df[df.duplicated(subset=id_column, keep=False)]
+
+        if not duplicates.empty:
+            # Get a list of the unique IDs that have duplicate entries
+            duplicated_ids = duplicates[id_column].unique()
+            logger.warning(
+                f"Found {len(duplicated_ids)} {object_name} ID(s) with duplicate records in the source data. "
+                f"These duplicates will be dropped before processing. "
+                f"Duplicated IDs: {list(duplicated_ids)}"
+            )    
