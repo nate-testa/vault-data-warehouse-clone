@@ -3,9 +3,10 @@
 -- Create Date: 10/07/2024
 -- Description: This procedure refreshes a list of views
 -----------------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author						            |	Change Description
 -----------------------------------------------------------------------------------------------------------------------------
--- 03/25/25		Hernando Gonzalez				1. AD8972 | Included vhome_coverage_ext, vissterritory, vnfppolicy, vquote_home_coverage_ext, vredzone, vticoplacecode
+-- 03/25/25		Hernando Gonzalez			1. AD8972 | Included vhome_coverage_ext, vissterritory, vnfppolicy, vquote_home_coverage_ext, vredzone, vticoplacecode
+-- 06/11/25     Yunus Mohammed             2. AD9702 Added vmajescocashactivity and vmajescoduedateaging views
 -- =============================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_refresh_views]
 AS
@@ -33,6 +34,8 @@ BEGIN
 	EXECUTE sp_refreshview '[edw_core].[vredzone]';
 	EXECUTE sp_refreshview '[edw_core].[vticoplacecode]';
     EXECUTE sp_refreshview '[edw_core].[vissterritory]';
+    EXECUTE sp_refreshview '[edw_core].[vmajescoduedateaging]';
+    EXECUTE sp_refreshview '[edw_core].[vmajescocashactivity]';
 
     SET NOCOUNT OFF;
 END
