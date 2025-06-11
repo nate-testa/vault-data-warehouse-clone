@@ -16,7 +16,10 @@ class Customer:
         customer_df = DatabaseFunctions.get_data_from_db(DatabaseFunctions.table_name['customer'])
         
         if not customer_df.empty:
-            # deduplicate on customer id since customer table has a line item per policy, but only data from 1 line item is needed
+            # 1. ALERT: Check for and log any duplicates before taking action.
+            check_and_log_duplicates(customer_df, 'customer_id', 'Customer')
+
+            # 2. deduplicate on customer id since customer table has a line item per policy, but only data from 1 line item is needed
             customer_df.drop_duplicates(subset='customer_id', keep='first', inplace=True, ignore_index=True )
             create_batch_payload = {"inputs": []}  
             update_batch_payload = {"inputs": []}  

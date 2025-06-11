@@ -9,8 +9,6 @@ import sqlite3
 
 logger = get_logger(__name__)
 
-
-
 class Policy:
 
     def sync_to_hubspot():
