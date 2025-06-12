@@ -91,7 +91,8 @@ class Policy:
                 'risk_state_cd': record['risk_state_cd'],               
                 'risk_address_zip_cd': record['mailing_address_zip_cd'],
                 'policy_status': record['policy_status'],
-                'monoline_in': record['monoline_in']
+                'monoline_in': record['monoline_in'],
+                'document_delivery_preference': record['document_delivery_preference']
                 
                 # 'create_ts': record['create_ts'],
                 # 'update_ts': record['update_ts'],
