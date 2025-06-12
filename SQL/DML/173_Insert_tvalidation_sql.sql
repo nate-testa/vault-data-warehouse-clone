@@ -1,6 +1,6 @@
 INSERT INTO edw_core.tvalidation_sql (validation_sql_desc , source_sql , target_sql , active_in , frequency_desc , create_ts , update_ts)
 SELECT
-'Clue Auto - Not null' AS validation_sql_desc ,
+'Clue Auto - null values' AS validation_sql_desc ,
 'SELECT count(*) FROM edw_integration.claim_clue_auto_feed
 WHERE
 LTRIM(RTRIM(PolicyHolderMailAddressStreetName)) = '''' OR
