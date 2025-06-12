@@ -1,0 +1,5 @@
+select distinct billingaccount_no as 'Account Number', 
+payor_nm as 'Account Name', 
+case when expiration_dt >= CURRENT_DATE  then 'Yes'
+else 'No'
+end as current_term_in
