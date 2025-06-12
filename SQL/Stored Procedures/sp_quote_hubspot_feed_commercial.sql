@@ -5,6 +5,7 @@
 ------------------------------------------------------------------------------------------------------------------------------
 -- 06/02/25		        Yunus Mohammed				1. Created this procedure 
 -- 06/09/25		        Architha Gudimalla			2. Updated after intial run to fix errors
+-- 06/11/25		        Architha Gudimalla			3. Added underwriter
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed_commercial]  
@@ -113,6 +114,7 @@ BEGIN
 					else null 
 			end as total_per_claim_attachment_amt,
             'Commercial Lines' as quote_business_type
+            ,h.underwriter_nm
         into edw_temp.quote_hubspot_feed_commercial_temp1
 
         from edw_commercial.tcommercial_quote q
@@ -165,6 +167,7 @@ BEGIN
             vault_commission_amt,total_layer_premium_amt,vault_per_claim_policy_limit_amt,vault_aggregate_policy_limit_amt,
             total_layer_per_claim_policy_limit_amt,total_layer_aggregate_policy_limit_amt,total_aggregate_attachment_amt,
             total_per_claim_attachment_amt,quote_business_type
+            ,underwriter_nm
         )
         VALUES
         (
@@ -177,6 +180,7 @@ BEGIN
             vault_commission_amt,total_layer_premium_amt,vault_per_claim_policy_limit_amt,vault_aggregate_policy_limit_amt,
             total_layer_per_claim_policy_limit_amt,total_layer_aggregate_policy_limit_amt,total_aggregate_attachment_amt,
             total_per_claim_attachment_amt,quote_business_type
+            ,underwriter_nm
         )
         WHEN MATCHED THEN UPDATE
         SET 
@@ -213,7 +217,8 @@ BEGIN
             [target].total_layer_aggregate_policy_limit_amt= [source].total_layer_aggregate_policy_limit_amt,
             [target].total_aggregate_attachment_amt= [source].total_aggregate_attachment_amt,
             [target].total_per_claim_attachment_amt= [source].total_per_claim_attachment_amt,
-            [target].quote_business_type= [source].quote_business_type
+            [target].quote_business_type= [source].quote_business_type,
+            [target].underwriter_nm= [source].underwriter_nm 
             ;
         
         SET @rows_affected=@@ROWCOUNT;
