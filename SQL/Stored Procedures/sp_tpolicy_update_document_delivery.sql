@@ -6,6 +6,7 @@
 -- 06/05/25                 Dinesh Bobbili			              		1. Created this procedure
 -- 06/06/25					Dinesh Bobbili								2. Updated document_delivery_to logic
 -- 06/10/25					Yunus Mohammed						3. AD-9715 Added Update_ts in update stmt
+-- 06/10/25					Yunus Mohammed						4. AD-9806 Replaced AccountTransaction with Account
 -- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tpolicy_update_document_delivery]
@@ -29,21 +30,24 @@ BEGIN
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.tpolicy_update_document_delivery_temp1
-		SELECT p.policy_sk,
-			acct.PolicyNumber,
-			acct.EffectiveDate,accdd.*
+
+		SELECT			
+			p.policy_sk,
+			acc.PolicyNumber,
+			acc.EffectiveDate,accdd.*
 		into edw_temp.tpolicy_update_document_delivery_temp1
-		FROM edw_stage.AccountTransaction acct 
-		    left join edw_stage.Product pr on acct.ProductId = pr.id
-		    inner join edw_core.tpolicy p on p.Policy_no = acct.PolicyNumber and p.effective_dt = acct.EffectiveDate
-		    inner join edw_stage.AccountDocumentDelivery accdd on acct.AccountId = accdd.AccountId
-			WHERE acct.PolicyNumber is not null and  
-				acct.State ='ISSUED' --- Review BOUND transactions 
+		FROM 
+			edw_stage.Account acc
+		    inner join edw_stage.Product pr on acc.ProductId = pr.id
+		    inner join edw_core.tpolicy p on p.Policy_no = acc.PolicyNumber and p.effective_dt = acc.EffectiveDate
+		    inner join edw_stage.AccountDocumentDelivery accdd on acc.Id = accdd.AccountId
+			WHERE
+					acc.PolicyNumber is not null and  
+					acc.Stage ='Policy' 
 				and pr.ProductLine = 'PersonalLines' 
-				AND greatest(accdd.CreatedDate,accdd.UpdatedDate)>@last_source_extract_ts;
-		
+				AND greatest(accdd.CreatedDate,accdd.UpdatedDate)>@last_source_extract_ts		
+
         UPDATE p
 		SET 
 		    p.document_delivery_to = CASE 
