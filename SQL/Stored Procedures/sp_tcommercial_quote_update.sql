@@ -7,9 +7,10 @@
 -- 31/03/2025           Alberto Almario				1. Created this procedure 
 -- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
 -- 02/05/2025           Architha Gudimalla		 3. Updated quote_status, commercial_policy_sk update
--- 05/29/2025			Yunus Mohammed		  4. AD-9649 Update Merge statement join
+-- 05/29/2025			Yunus Mohammed		  4. AD-9649 Modified Merge statement join
 -- 06/10/2025			Yunus Mohammed		  5. AD-9768 Added effective date in joins. 
 --																						Account table is used to get quote_no and effective_date
+-- 06/12/2025			Yununs Mohammed		6. AD-9809	Modified join
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_update]
 
@@ -118,7 +119,8 @@ BEGIN
 					INNER JOIN [edw_stage].[Account] acc  ON acct.AccountId = acc.Id 
 					INNER JOIN [edw_commercial].[tcommercial_quote] q  ON q.quote_no = cast(acc.Number as varchar(255))
 						and q.effective_dt = acc.EffectiveDate
-					LEFT JOIN [edw_commercial].[tcommercial_quote_history] AS qh   ON qh.quote_no = cast(acc.Number as varchar(255)) AND qh.effective_dt = acc.EffectiveDate AND qh.transaction_seq_no = acct.number
+					LEFT JOIN [edw_commercial].[tcommercial_quote_history] AS qh   ON qh.quote_no = cast(acc.Number as varchar(255)) 
+					AND qh.effective_dt = acct.EffectiveDate AND qh.transaction_seq_no = acct.number
 					left join edw_stage.Product pr on acc.ProductId = pr.id
 					where  acctsh.Stage in ('QUOTE','POLICY')
 					and pr.ProductLine = 'CommercialLines'
