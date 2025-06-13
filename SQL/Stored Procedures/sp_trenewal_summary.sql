@@ -50,6 +50,7 @@ GO
 -- 08/14/24		Architha Gudimalla				26. updated offered_or_not_taken_quote_ct logic
 -- 08/15/24		Architha Gudimalla				27. Fixed errors for the code changes done in 23-26
 -- 02/06/25		Architha Gudimalla				28. AD8428 - Prod error due to dupes in quotes
+-- 06/13/25		Architha Gudimalla				29. AD9823 - Exclude forcast quotes
 -- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -187,6 +188,7 @@ BEGIN
 						 , edw_core.tbroker br 
 					where	effective_dt between @begin_dt and @end_dt 
 					and br.broker_id = q.broker_id
+					and q.forecast_quote_in = 'No'
 					--and quote_Status <> 'Issued'
 				),
 				n as
