@@ -147,7 +147,7 @@ class Customer:
         customer_quote_associations = hubspot.AssociationHandler('customer-policy-association', 'customer-policy-associations')
         customer_quote_associations.dispatch(customer_policy_association_payload)
 
-
+    @staticmethod
     def check_and_log_duplicates(df, id_column, object_name):
         """
         Checks a DataFrame for duplicates based on an ID column and logs a warning if any are found.

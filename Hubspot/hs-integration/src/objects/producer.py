@@ -113,6 +113,7 @@ class Producer:
         customer_associations = hubspot.AssociationHandler('producer-broker-association', 'producer-associations')
         customer_associations.dispatch(producer_broker_association_payload)
     
+    @staticmethod
     def check_and_log_duplicates(df, id_column, object_name):
         """
         Checks a DataFrame for duplicates based on an ID column and logs a warning if any are found.

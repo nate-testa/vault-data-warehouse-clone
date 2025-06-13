@@ -133,6 +133,7 @@ class Policy:
         policy_broker_associations = hubspot.AssociationHandler('broker-policy-association', 'broker-policy-associations')
         policy_broker_associations.dispatch(policy_broker_associations_payload)
 
+    @staticmethod
     def check_and_log_duplicates(df, id_column, object_name):
         """
         Checks a DataFrame for duplicates based on an ID column and logs a warning if any are found.
