@@ -11,7 +11,7 @@ SELECT 1
 FROM INFORMATION_SCHEMA.COLUMNS					
 WHERE TABLE_SCHEMA='edw_integration'					
 AND TABLE_NAME = 'customer_hubspot_feed'					
-AND COLUMN_NAME = 'business_type'		
+AND COLUMN_NAME = 'customer_business_type'		
 ) BEGIN ALTER TABLE edw_integration.customer_hubspot_feed ADD customer_business_type varchar(255) END			 
 ; 
  
