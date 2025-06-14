@@ -1,17 +1,13 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 -- =====================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2025-04-04
 -- Description: This stored procedure insert and update info related to tcommercial_quote_subjectivity.
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						|	Change Description
+-- Change date          |Author								|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
--- 04/04/2025           Alberto Almario				1. Created this procedure 
--- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 04/04/25           	Alberto Almario				1. Created this procedure 
+-- 22/04/25           	Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 06/04/25				Yunus Mohammed		  3. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_subjectivity_wip]
 AS
@@ -47,6 +43,7 @@ BEGIN
 			,acc.EffectiveDate
 			,acc.ExpirationDate
 			,0 as transaction_seq_no
+			,acc.IsRenewal
 			,accs.Required
 			,accs.Description
 			,CASE WHEN accs.IsCompleted = 1 THEN 'Yes' ELSE 'No' END as completed_in
@@ -105,6 +102,7 @@ BEGIN
 			,tmp1.EffectiveDate as effective_dt
 			,tmp1.ExpirationDate as expiration_dt
 			,tmp1.transaction_seq_no
+			,tmp1.IsRenewal
 			,tmp1.Required as required_for
 			,tmp1.Description as [description]
 			,tmp1.completed_in
@@ -121,8 +119,13 @@ BEGIN
 		-- Start Merge process
 		MERGE edw_commercial.tcommercial_quote_subjectivity AS Target
 		USING edw_temp.tcommercial_quote_subjectivity_wip_temp3 AS Source	
-		ON Target.quote_no = Source.quote_no 
-		AND Target.effective_dt = Source.effective_dt
+		ON Target.quote_no = Source.quote_no				
+		AND (
+						(Source.IsRenewal = 0 AND YEAR(Target.effective_dt) = YEAR(Source.effective_dt))
+						OR
+						(Source.IsRenewal != 0 AND Target.effective_dt = Source.effective_dt)
+    				)
+		
 		AND Target.transaction_seq_no = Source.transaction_seq_no
 		AND Target.required_for = Source.required_for
 		AND Target.description = Source.description
@@ -163,7 +166,7 @@ BEGIN
 		SET
 			 Target.commercial_quote_history_sk = Source.commercial_quote_history_sk
 			-- ,Target.quote_no = Source.quote_no
-			-- ,Target.effective_dt = Source.effective_dt
+			,Target.effective_dt = Source.effective_dt
 			,Target.expiration_dt = Source.expiration_dt
 			-- ,Target.transaction_seq_no = Source.transaction_seq_no
 			-- ,Target.required_for = Source.required_for

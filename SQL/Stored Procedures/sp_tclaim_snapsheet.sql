@@ -18,6 +18,8 @@
 -- 04/24/2025		Yunus Mohammed				13. AD-9297 Added coverage check fields
 -- 04/29/2025		Yunus Mohammed				14. AD-8748 Updated claim_first_reopen_dt logic
 -- 05/08/2025		Yunus Mohammed				15 AD-9412 Added first_party_driver_relationship_to_insured
+-- 05/28/2025		Yunus Mohammed		  		16. AD-9616 Excluded Commercial Lines claims
+-- 06/11/2025	  Yunus Mohammed			  17. AD-9744 Add Litigation Indicators (litigation_in and litigation_complete_in)
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -66,7 +68,8 @@ BEGIN
 		claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
 		source_system_sk,update_time,first_party_driver_nm,source_of_fire,source_of_water
 		,fault_decision,responsible_party,at_fault_pct,migrated_in,
-		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured
+		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured,
+		litigation_in,litigation_complete_in
 		INTO edw_temp.tclaim_snapsheet_temp1
 		FROM
 		(
@@ -146,6 +149,14 @@ BEGIN
 				when c.claim_source = 'api' then 3
 				else 5
 			end as source_system_sk
+			, case
+					when c.in_litigation = 'true' then 'Yes'
+					when c.in_litigation = 'false' then 'No'
+			end as [litigation_in]
+			, case
+					when c.litigation_complete = 'true' then 'Yes'
+					when c.litigation_complete = 'false' then 'No'
+			end as [litigation_complete_in]
 		FROM edw_stage_snapsheet.claims c
 		LEFT JOIN edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
 		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcmp.claim_party_id and  cpcmp.contact_method_type = 'phone'
@@ -174,7 +185,7 @@ BEGIN
 		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_desc = c.loss_type
 		LEFT JOIN edw_stage_snapsheet.common_incident_details cid on cid.claim_id = c.id
 		LEFT JOIN edw_stage_snapsheet.coverage_checks covc on c.id = covc.claim_id
-		LEFT JOIN   edw_stage_snapsheet.users u on covc.determined_by_user_id = u.id
+		LEFT JOIN  edw_stage_snapsheet.users u on covc.determined_by_user_id = u.id
 		LEFT JOIN
 		(
 			select ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date desc, reporting_month desc) as transaction_seq_no,
@@ -182,6 +193,15 @@ BEGIN
 			from edw_stage.nfp_policy	
 		) nfp on nfp.policy_no = c.policy_number and nfp.transaction_seq_no = 1
 		WHERE greatest(c.created_at,c.updated_at) > @last_source_extract_ts
+		and not exists
+			(
+				select 1
+				from
+					edw_stage_snapsheet.tags ctg
+				where
+					ctg.claim_id = c.id
+					and ctg.[name] like 'Commercial%'
+			)
 	) AS t
 	WHERE
 		rn=1
@@ -201,7 +221,8 @@ BEGIN
 			,source_system_sk,create_ts,update_ts,etl_audit_sk
 			,first_party_driver_nm,source_of_fire,source_of_water
 			,fault_decision,responsible_party,at_fault_pct,migrated_in,
-			coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured
+			coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured,
+			litigation_in,litigation_complete_in
 		)
 	VALUES
 		(
@@ -214,7 +235,8 @@ BEGIN
 		,source_system_sk,@current_date,@current_date,@etl_audit_sk
 		,first_party_driver_nm,source_of_fire,source_of_water
 		,fault_decision,responsible_party,at_fault_pct,migrated_in,
-		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured
+		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured,
+		litigation_in,litigation_complete_in
 		)
 	-- For Updates
 	WHEN MATCHED THEN UPDATE 
@@ -260,6 +282,8 @@ BEGIN
 		,Target.coverage_confirmed_by_nm=Source.coverage_confirmed_by_nm
 		,Target.coverage_confirmed_in= Source.coverage_confirmed_in
 		,Target.first_party_driver_relationship_to_insured = Source.first_party_driver_relationship_to_insured
+		,Target.litigation_in = Source.litigation_in
+		,Target.litigation_complete_in= Source.litigation_complete_in
 		;
 		
 		--************End************

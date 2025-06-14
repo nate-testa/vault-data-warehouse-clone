@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote_marine_boat_yacht_coverage ALTER COLUMN liability_limit_amt varchar(255);

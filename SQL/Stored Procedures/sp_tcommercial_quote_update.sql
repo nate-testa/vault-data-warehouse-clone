@@ -1,17 +1,16 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 -- =====================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2025-03-31
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						|	Change Description
+-- Change date             |Author								 |	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 31/03/2025           Alberto Almario				1. Created this procedure 
 -- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
--- 02/05/2025           Architha Gudimalla			3. Updated quote_status, commercial_policy_sk update
+-- 02/05/2025           Architha Gudimalla		 3. Updated quote_status, commercial_policy_sk update
+-- 05/29/2025			Yunus Mohammed		  4. AD-9649 Modified Merge statement join
+-- 06/10/2025			Yunus Mohammed		  5. AD-9768 Added effective date in joins. 
+--																						Account table is used to get quote_no and effective_date
+-- 06/12/2025			Yununs Mohammed		6. AD-9809	Modified join
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_update]
 
@@ -43,6 +42,7 @@ BEGIN
         from edw_commercial.tcommercial_quote a
 		where exists (select * from edw_commercial.tcommercial_quote_history  b 
 					  where upper(transaction_status) = 'ISSUED' and a.quote_no=b.quote_no
+					  and b.effective_dt = a.effective_dt
 					 ) 
 		and ISNULL(a.quote_status,'xx')!='Issued';
 
@@ -81,16 +81,18 @@ BEGIN
 						(
 							select 	CAST(acc.Number AS VARCHAR(255)) as quote_no, effectivedate , acc.state, acc.SubmissionCloseReasonCategory
 							from 	edw_commercial.tcommercial_quote  q
-							inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(50)) = q.quote_no 
+							inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(50)) = q.quote_no
+							and q.effective_dt = acc.EffectiveDate 
 							where	acc.UpdatedDate > @last_source_extract_ts
 						) aa 
-					) b on	 a.quote_no = b.quote_no and ISNULL(a.quote_status,'xx')!='Issued'; 
-
+					) b on	 a.quote_no = b.quote_no
+					 and a.effective_dt = b.effectivedate
+					 and ISNULL(a.quote_status,'xx')!='Issued'; 
   
 		update a
 		set a.commercial_policy_sk = b.commercial_policy_sk
 		from edw_commercial.tcommercial_quote a
-		inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(50)) = a.quote_no 
+		inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(50)) = a.quote_no and a.effective_dt = acc.EffectiveDate
 		inner join edw_commercial.tcommercial_policy b on CAST(acc.policyNumber AS VARCHAR(50)) = b.policy_no
 		where a.commercial_policy_sk is null; 
 
@@ -100,16 +102,6 @@ BEGIN
 		inner join (select quote_no,max(bind_dt) max_bind_dt from edw_commercial.tcommercial_quote_history where bind_dt is not null group by quote_no) b 
         on a.quote_no = b.quote_no; 
 
-		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_update_temp1; 
-        
-		select 	qh.commercial_quote_sk, max(qh.commercial_quote_history_sk) commercial_quote_history_sk
-		into 	edw_temp.tcommercial_quote_update_temp1
-		from 	edw_commercial.tcommercial_quote_history qh
-		inner join edw_stage.account acc on CAST(acc.Number AS VARCHAR(255)) = qh.quote_no
-		where  	qh.transaction_status = 'Issued'
-		and 	acc.UpdatedDate	> @last_source_extract_ts
-		group by qh.commercial_quote_sk; 
-
 		update a
 		set a.first_quoted_commercial_quote_ts 	  = transaction_ts,
             a.first_quoted_commercial_quote_history_sk = commercial_quote_history_sk 
@@ -118,15 +110,17 @@ BEGIN
 				select * from 
 				(
 					SELECT DISTINCT
-							acct.PolicyNumber as quote_no, acct.EffectiveDate as effective_dt, acct.Number as transaction_seq_no,
+							acc.[Number] as quote_no, acc.EffectiveDate as effective_dt, acct.Number as transaction_seq_no,
 							qh.commercial_quote_history_sk, qh.commercial_quote_sk,  acctsh.Stage as transaction_type, acctsh.State as transaction_status, 
 							acctsh.CreatedDate as transaction_ts 
-							, dense_rank() OVER (PARTITION BY acct.PolicyNumber ORDER BY acctsh.CreatedDate ASC) AS policy_txn_order
+							, dense_rank() OVER (PARTITION BY acc.Number, acc.EffectiveDate ORDER BY acctsh.CreatedDate ASC) AS policy_txn_order
 					FROM [edw_stage].[AccountTransactionStatusHistory] acctsh 
 					INNER JOIN [edw_stage].[AccountTransaction] acct  ON acctsh.AccountTransactionId = acct.Id 
 					INNER JOIN [edw_stage].[Account] acc  ON acct.AccountId = acc.Id 
 					INNER JOIN [edw_commercial].[tcommercial_quote] q  ON q.quote_no = cast(acc.Number as varchar(255))
-					LEFT JOIN [edw_commercial].[tcommercial_quote_history] AS qh   ON qh.quote_no = cast(acc.Number as varchar(255)) AND qh.effective_dt = acc.EffectiveDate AND qh.transaction_seq_no = acct.number
+						and q.effective_dt = acc.EffectiveDate
+					LEFT JOIN [edw_commercial].[tcommercial_quote_history] AS qh   ON qh.quote_no = cast(acc.Number as varchar(255)) 
+					AND qh.effective_dt = acct.EffectiveDate AND qh.transaction_seq_no = acct.number
 					left join edw_stage.Product pr on acc.ProductId = pr.id
 					where  acctsh.Stage in ('QUOTE','POLICY')
 					and pr.ProductLine = 'CommercialLines'
@@ -135,18 +129,14 @@ BEGIN
 				)tqtsh
 				where policy_txn_order=1
 			 )b
-       where a.quote_no=b.quote_no ;
-		
-
-		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_update_temp1;
+       where a.quote_no=b.quote_no and a.effective_dt = b.effective_dt ;
       
 		SET @rows_affected=@@ROWCOUNT;   
 	
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(UpdatedDate) FROM edw_stage.account),@last_source_extract_ts); 
 		
 		-- Update control table
-		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
+		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;	
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
@@ -166,5 +156,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-
-GO

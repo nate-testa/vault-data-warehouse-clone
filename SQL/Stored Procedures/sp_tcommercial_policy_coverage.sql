@@ -5,7 +5,8 @@
 -- Change date          |Author						        |	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 03/26/25		        Yunus Mohammed						1.Procedure created
--- 22/04/2025           Alberto Almario						2.Use BindDate instead of IssuedDate
+--  04/22/25           Alberto Almario						2.Use BindDate instead of IssuedDate
+-- 05/29/25				  Yunus Mohammed		3. AD-9660 Added new columns
 -- =====================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_policy_coverage]
 
@@ -37,7 +38,12 @@ BEGIN
 		BindDate,commercial_policy_history_sk,product_name,
         CoverageType as coverage_type,CoverageTypeB as coverage_type_b,Revenue as revenue_amt,
         MemorandumOfInsurance as memorandum_of_insurance_in,NumberOfFTEAttorneys as employee_ct,
-        coalesce(ClaimsActivity,ClaimsHistory) as claim_history,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk
+        coalesce(ClaimsActivity,ClaimsHistory) as claim_history,RetroactiveDate as retroactive_dt_desc,PriorOrPendingDate as prior_or_pending_dt_desc,
+		case
+				when SingleRoundTheClockReinstatement = 'true' then 'Yes' 
+				when SingleRoundTheClockReinstatement = 'false' then 'No'
+			end as  single_round_the_clock_resinstatement_in,
+		getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk
 		into edw_temp.tcommercial_policy_coverage_temp1
 			from
 			(
@@ -61,7 +67,7 @@ BEGIN
 				act.[State] IN ('ISSUED','BOUND')
 				and pr.ProductLine = 'CommercialLines'
                 and atvof.Field in ('CoverageType','CoverageTypeB','Revenue','MemorandumOfInsurance','NumberOfFTEAttorneys',
-                'ClaimsActivity','ClaimsHistory'
+                'ClaimsActivity','ClaimsHistory','RetroactiveDate','PriorOrPendingDate','SingleRoundTheClockReinstatement'
                 )
 				and act.BindDate > @last_source_extract_ts
 			) as t
@@ -69,7 +75,8 @@ BEGIN
 			(
 				max(Value) FOR Field IN
                  (
-                    CoverageType,CoverageTypeB,Revenue,MemorandumOfInsurance,NumberOfFTEAttorneys, ClaimsActivity,ClaimsHistory
+                    CoverageType,CoverageTypeB,Revenue,MemorandumOfInsurance,NumberOfFTEAttorneys, ClaimsActivity,ClaimsHistory,
+					RetroactiveDate,PriorOrPendingDate,SingleRoundTheClockReinstatement
                 )
 			) as pivottable
     
@@ -77,12 +84,14 @@ BEGIN
         (
             policy_no,effective_dt,expiration_dt,transaction_effective_dt,transaction_dt,transaction_seq_no,
             commercial_policy_history_sk,coverage_type,coverage_type_b,revenue_amt,memorandum_of_insurance_in,
-        employee_ct,claim_history,source_system_sk,create_ts,update_ts,etl_audit_sk
+        	employee_ct,claim_history,retroactive_dt_desc,prior_or_pending_dt_desc,single_round_the_clock_resinstatement_in,
+			source_system_sk,create_ts,update_ts,etl_audit_sk
         )
         select
-         policy_no,effective_dt,expiration_dt,transaction_effective_dt,transaction_dt,transaction_seq_no,
+         	policy_no,effective_dt,expiration_dt,transaction_effective_dt,transaction_dt,transaction_seq_no,
             commercial_policy_history_sk,coverage_type,coverage_type_b,revenue_amt,memorandum_of_insurance_in,
-        employee_ct,claim_history,source_system_sk,create_ts,update_ts,etl_audit_sk
+        	employee_ct,claim_history,retroactive_dt_desc,prior_or_pending_dt_desc,single_round_the_clock_resinstatement_in,
+		source_system_sk,create_ts,update_ts,etl_audit_sk
         from
             edw_temp.tcommercial_policy_coverage_temp1
 

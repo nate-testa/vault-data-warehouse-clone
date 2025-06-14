@@ -1,17 +1,14 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 -- =====================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2025-03-28
 -- Description: This stored procedure insert and update info related to tcommercial_quote.
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						|	Change Description
+-- Change date          |Author								  |	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 31/03/2025           Alberto Almario				1. Created this procedure
 -- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 06/10/2024			Yunus Mohammed		  3. Updated DENSE_RANK function
+-- 06/10/2025			Yunus Mohammed		  5. AD-9768 Updated DENSE_RANK function, added effective date in joins
 -- ===================================================================================================================== 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tcommercial_quote_history]
 
@@ -46,7 +43,7 @@ BEGIN
 			CAST(ins.ReferenceCode AS VARCHAR(255)) as customer_id,
 			ins.id as MasterInsuredId,
 			acct.Number as transaction_seq_no,
-			DENSE_RANK()OVER(PARTITION BY acc.Number ORDER BY acct.UpdatedDate DESC, acct.Number DESC) AS rnk, 
+			DENSE_RANK()OVER(PARTITION BY acc.Number, acc.EffectiveDate ORDER BY acct.UpdatedDate DESC, acct.Number DESC) AS rnk, 
 			case when acct.TransactionEffectiveDate is null then acct.EffectiveDate else acct.TransactionEffectiveDate end TransactionEffectiveDate,
 			acct.CancellationReason, 
 			acct.CreatedDate,
@@ -343,8 +340,7 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.tcommercial_quote_history_temp5;
 		
 		-- Update control table
-		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
+		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;		
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

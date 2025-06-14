@@ -13,6 +13,7 @@
 -- 03/03/25     Sandeep Gundreddy			8. Update salvage and subo expense recovery logic after discussion with Dawn. will be loaded as +ve amounts
 -- 03/13/25     Sandeep Gundreddy			9. Added logic to load migrated payments stopped in Snapsheet
 -- 04/22/25     Sandeep Gundreddy			10. Exclude cancel transactions from reserve query to avoid duplicate transactions  
+-- 05/28/25		Yunus Mohammed				11. AD-9616 Modified the join on tclaim to use an inner join
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_transaction_snapsheet]
 AS
@@ -106,7 +107,7 @@ BEGIN
 		INNER JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = res.financial_transaction_id
 		INNER JOIN edw_stage_snapsheet.claims c on c.id = res.claim_id
 		INNER JOIN edw_stage_snapsheet.exposures e on e.claim_id = res.claim_id and e.id=res.exposure_id
-		LEFT JOIN edw_core.tclaim tc ON tc.claim_no = c.claim_number
+		INNER JOIN edw_core.tclaim tc ON tc.claim_no = c.claim_number
 		LEFT JOIN edw_core.tclaim_feature tf ON tf.claim_no = tc.claim_no and e.id = tf.claim_coverage_cd
 		LEFT JOIN edw_core.tpolicy tp ON tp.policy_sk = tc.policy_sk
 		LEFT JOIN edw_core.tbroker tb ON tb.broker_id = tp.broker_id

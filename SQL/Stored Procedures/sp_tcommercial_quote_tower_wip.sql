@@ -1,17 +1,13 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 -- =====================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2025-04-04
 -- Description: This stored procedure insert and update info related to tcommercial_quote_tower_wip.
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						|	Change Description
+-- Change date        |Author								|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
--- 04/04/2025           Alberto Almario				1. Created this procedure 
--- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 04/04/25           Alberto Almario				1. Created this procedure 
+-- 22/04/25           Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 06/04/25			  Yunus Mohammed		  3. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_tower_wip]
 AS
@@ -46,6 +42,7 @@ BEGIN
 			,acc.EffectiveDate
 			,acc.ExpirationDate
 			,0 as transaction_seq_no
+			,acc.IsRenewal
 			,CASE 
 				WHEN acc.ExternalSourceId IS NOT NULL THEN 2 --(AV2) 
 				ELSE 4 --(Metal)
@@ -91,7 +88,7 @@ BEGIN
 		FROM
 			(
 				SELECT  
-					 acc.Id 
+					 acc.Id					 
 					,acctvo.[UniqueId]
 					,acctvo.[Index]
 					,acctvof.Field
@@ -116,6 +113,7 @@ BEGIN
 			,tmp1.EffectiveDate as effective_dt
 			,tmp1.ExpirationDate as expiration_dt
 			,tmp1.transaction_seq_no
+			,tmp1.IsRenewal
 			,cp.commercial_quote_history_sk
 			,tmp2.tower_type
 			,tmp2.tower_unique_id
@@ -145,7 +143,11 @@ BEGIN
 		MERGE edw_commercial.tcommercial_quote_tower AS Target
 		USING edw_temp.tcommercial_quote_tower_wip_temp3 AS Source	
 		ON Source.quote_no = Target.quote_no
-		AND Source.effective_dt = Target.effective_dt
+		AND (
+						(Source.IsRenewal = 0 AND YEAR(Target.effective_dt) = YEAR(Source.effective_dt))
+						OR
+						(Source.IsRenewal != 0 AND Target.effective_dt = Source.effective_dt)
+    			)
 		AND Source.transaction_seq_no = Target.transaction_seq_no
 		AND Source.tower_unique_id = Target.tower_unique_id
 		-- For Inserts
@@ -208,8 +210,8 @@ BEGIN
 		WHEN MATCHED THEN UPDATE 
 		SET
 			--  Target.quote_no = Source.quote_no
-			-- ,Target.effective_dt = Source.effective_dt
-			 Target.expiration_dt = Source.expiration_dt
+			Target.effective_dt = Source.effective_dt
+			,Target.expiration_dt = Source.expiration_dt
 			-- ,Target.transaction_seq_no = Source.transaction_seq_no
 			,Target.commercial_quote_history_sk = Source.commercial_quote_history_sk
 			,Target.tower_type = Source.tower_type
