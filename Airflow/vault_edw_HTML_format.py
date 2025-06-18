@@ -37,7 +37,7 @@ def get_HTML_on_vault_format(p_msg_text, p_html_tbl):
                             <p style="margin-right:0;margin-bottom:0pt;margin-left:0;line-height:18.0pt;"><span style="color:#353535;font-size:12pt;font-family:Segoe UI,sans-serif;">This is an auto-generated message. If you have any questions, please reach out to <a href="mailto:itdatateam@vault.insurance">itdatateam@vault.insurance</a></span></p>
                             <p style="margin:0;line-height:18.0pt;"><span> <br> Sincerely,</span></p>
                             <p style="font-size:11pt;font-family:Calibri,sans-serif;margin:0;line-height:18.0pt;"><b><span style="color:#B31B34;font-size:12pt;font-family:Segoe UI,sans-serif;">Vault Data Team</span></b></p>
-                            <p style="margin-right:0;margin-bottom:18pt;margin-left:0;line-height:18.0pt;"><span style="color:#353535;font-size:12pt;font-family:Segoe UI,sans-serif;">For issues please contact <br> <a href="https://vsc.vaultinsurance.com">Vault Insurance IT Support</a> </span></p>
+                            <p style="margin-right:0;margin-bottom:18pt;margin-left:0;line-height:18.0pt;"><span style="color:#353535;font-size:12pt;font-family:Segoe UI,sans-serif;">For issues please contact <br> <a href="https://vsc.vaultinsurance.com">Vault Solution Center</a> </span></p>
                         </td>
                     </body>
                     </html>
