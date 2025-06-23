@@ -165,4 +165,4 @@ set CopyActivitySettings = '{
 		}
 	}
 }'
-where JSON_value(SourceObjectSettings,'$.table') = '"BrokerageLicense"';
+where JSON_value(SourceObjectSettings,'$.table') = 'BrokerageLicense';
