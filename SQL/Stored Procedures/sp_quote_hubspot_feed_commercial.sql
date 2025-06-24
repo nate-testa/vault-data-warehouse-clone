@@ -9,6 +9,7 @@
 -- 06/18/25             Dinesh Bobbili              4. AD9902 - Added mailing_address_line_1,mailing_address_line_2,
 --                                                      mailing_address_unit_no,mailing_address_city_nm,mailing_address_state_cd
 --                                                      ,mailing_address_zip_cd
+-- 06/24/25		        Dinesh Bobbili  			5. Removed Address columns and added product_cd
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed_commercial]  
@@ -118,12 +119,7 @@ BEGIN
 			end as total_per_claim_attachment_amt,
             'Commercial Lines' as quote_business_type
             ,h.underwriter_nm
-            ,q.mailing_address_line1 as mailing_address_line_1
-            ,q.mailing_address_line2 as mailing_address_line_2
-            ,q.mailing_address_unit_no	
-            ,q.mailing_address_city_nm	
-            ,q.mailing_address_state_cd	
-            ,q.mailing_address_zip_cd
+            ,pr.product_cd
         into edw_temp.quote_hubspot_feed_commercial_temp1
 
         from edw_commercial.tcommercial_quote q
@@ -176,8 +172,7 @@ BEGIN
             vault_commission_amt,total_layer_premium_amt,vault_per_claim_policy_limit_amt,vault_aggregate_policy_limit_amt,
             total_layer_per_claim_policy_limit_amt,total_layer_aggregate_policy_limit_amt,total_aggregate_attachment_amt,
             total_per_claim_attachment_amt,quote_business_type
-            ,underwriter_nm,mailing_address_line_1,mailing_address_line_2,mailing_address_unit_no	 
-            ,mailing_address_city_nm,mailing_address_state_cd,mailing_address_zip_cd
+            ,underwriter_nm,product_cd
         )
         VALUES
         (
@@ -190,8 +185,7 @@ BEGIN
             vault_commission_amt,total_layer_premium_amt,vault_per_claim_policy_limit_amt,vault_aggregate_policy_limit_amt,
             total_layer_per_claim_policy_limit_amt,total_layer_aggregate_policy_limit_amt,total_aggregate_attachment_amt,
             total_per_claim_attachment_amt,quote_business_type
-            ,underwriter_nm,mailing_address_line_1,mailing_address_line_2,mailing_address_unit_no	 
-            ,mailing_address_city_nm,mailing_address_state_cd,mailing_address_zip_cd
+            ,underwriter_nm,product_cd
         )
         WHEN MATCHED THEN UPDATE
         SET 
@@ -230,12 +224,7 @@ BEGIN
             [target].total_per_claim_attachment_amt= [source].total_per_claim_attachment_amt,
             [target].quote_business_type= [source].quote_business_type,
             [target].underwriter_nm= [source].underwriter_nm,
-            [target].mailing_address_line_1 = [source].mailing_address_line_1,
-            [target].mailing_address_line_2 = [source].mailing_address_line_2,
-            [target].mailing_address_unit_no = [source].mailing_address_unit_no,
-            [target].mailing_address_city_nm = [source].mailing_address_city_nm,	
-            [target].mailing_address_state_cd = [source].mailing_address_state_cd,	
-            [target].mailing_address_zip_cd = [source].mailing_address_zip_cd 
+            [target].product_cd= [source].product_cd
             ;
         
         SET @rows_affected=@@ROWCOUNT;
