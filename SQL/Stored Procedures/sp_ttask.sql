@@ -18,7 +18,7 @@ GO
 --												   Added customer id
 -- 05/03/24		Architha Gudimalla				6. Added filter on ProductLine
 -- 06/11/24		Architha Gudimalla				7. Added user_sk
--- 06/25/25		Dinesh Bobbili					8. AD9963 Added task_id column and updated merge join condition to use task_id
+-- 06/25/25		Dinesh Bobbili					8. AD9963 Added task_id column and updatedd merge join condition to use task_id
 -- ==================================================================================================================== 
 
 CREATE or ALTER PROCEDURE edw_core.sp_ttask
@@ -112,12 +112,10 @@ BEGIN
 						task_priority, task_created_dt, task_due_dt, task_completed_dt, 
 						task_completion_time_in_days, task_completion_time_in_minutes, task_updated_dt, task_closed_in, 
 						task_due_days, task_suspended_until_dt, task_abandoned_reason_desc, task_workflow_sk, task_workflow_step_sk, 
-						source_system_sk, create_ts, update_ts, etl_audit_sk, customer_sk, task_id
+						source_system_sk, create_ts, update_ts, etl_audit_sk, customer_sk,task_id 
 				FROM edw_temp.ttask_temp1
 		)  AS Source
-		ON  Source.task_id = Target.task_id/*isnull(Source.policy_no,'') = isnull(Target.policy_no,'') and isnull(Source.effective_dt,'') = isnull(Target.effective_dt,'') and isnull(Source.transaction_seq_no,0) = isnull(Target.transaction_seq_no ,0)
-		and Source.task_nm = Target.task_nm and Source.workflow_nm = Target.workflow_nm and Source.workflow_step_nm = Target.workflow_step_nm 
-		and Source.task_created_dt = Target.task_created_dt and Source.customer_sk = Target.customer_sk*/
+		ON  Source.task_id = Target.task_id
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
 				policy_no,
