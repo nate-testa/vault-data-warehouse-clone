@@ -6,6 +6,11 @@ AND TABLE_NAME = 'ttask'
 AND COLUMN_NAME = 'task_id'                    
 ) BEGIN ALTER TABLE edw_core.ttask ADD task_id VARCHAR(255) NULL END ; 
 
-CREATE UNIQUE NONCLUSTERED INDEX uidx_ttask_task_id ON edw_core.ttask(task_id);
+IF NOT EXISTS (                
+SELECT 1 
+FROM sys.indexes 
+WHERE name='uidx_ttask_task_id' 
+AND object_id = OBJECT_ID('edw_core.ttask')                   
+) BEGIN CREATE UNIQUE NONCLUSTERED INDEX uidx_ttask_task_id ON edw_core.ttask(task_id) END ; 
  
  
