@@ -179,8 +179,7 @@ BEGIN
 		Target.task_suspended_until_dt 			= Source.task_suspended_until_dt,
 		Target.task_abandoned_reason_desc 		= Source.task_abandoned_reason_desc,
 		Target.task_workflow_sk 				= Source.task_workflow_sk,
-		Target.task_workflow_step_sk 			= Source.task_workflow_step_sk,
-		Target.task_id 							= Source.task_id 
+		Target.task_workflow_step_sk 			= Source.task_workflow_step_sk
 		; 
 
         /*INSERT INTO edw_core.ttask(
