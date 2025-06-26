@@ -12,7 +12,8 @@ GO
 -- 11/22/23     Sandeep Gundreddy           3. Modified logic to fix quote_status for Issued quotes
 -- 09/08/23		Architha Gudimalla			4. VI34112|AD7632 - Added issued_quote_history_sk
 -- 01/23/25		Architha Gudimalla			5. VI33968/AD7635 - Added uwco orig eff dt..
--- 03/03/25		Architha Gudimalla			5. AD8347 - New quote close reasons
+-- 03/03/25		Architha Gudimalla			6. AD8347 - New quote close reasons
+-- 06/25/25		Architha Gudimalla			7. AD9828 - Update first_offered_quote_ts for quotes that RENEWAL_RELEASED transaction
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_update]
@@ -97,18 +98,20 @@ BEGIN
 						group by policynumber, effectivedate , state, tr_status, SubmissionCloseReasonCategory
 					) b on	 a.quote_no = b.policynumber and ISNULL(a.quote_status,'xx')!='Issued'; 
 
-  update a
-		set a.first_offered_quote_ts 	=transaction_ts,
-            first_offered_quote_history_sk=quote_history_sk
-  from edw_core.tquote a,
-        (select * from 
-            (
-             select quote_no, transaction_ts, quote_history_sk, dense_rank() OVER (PARTITION BY quote_no ORDER BY transaction_ts ASC) AS policy_txn_order
-					from edw_core.tquote_transaction_status_history  
-					WHERE upper(transaction_status) = 'OFFERED')tqtsh
-                    where policy_txn_order=1
-            )b
-             where a.quote_no=b.quote_no and a.first_offered_quote_ts is null;
+		update a
+				set a.first_offered_quote_ts 	=transaction_ts,
+					first_offered_quote_history_sk=quote_history_sk
+		from edw_core.tquote a,
+				(select * from 
+					(
+						select quote_no, transaction_ts, quote_history_sk, dense_rank() OVER (PARTITION BY quote_no ORDER BY transaction_ts ASC) AS policy_txn_order
+						from edw_core.tquote_transaction_status_history  a
+						WHERE upper(transaction_status) in ('OFFERED','RENEWAL_RELEASED') 
+
+					)tqtsh
+					where policy_txn_order=1
+				)b
+        where a.quote_no=b.quote_no and a.first_offered_quote_ts is null;
 		
         --AV2 Issued quotes which don't exist in tquote_transaction_status_history
         	         
@@ -161,7 +164,7 @@ BEGIN
 		inner join (select  quote_sk, min(effective_dt) over (partition by original_policy_no) uw_company_original_policy_effective_dt
 					from edw_core.tquote) q1 on q.quote_sk = q1.quote_sk
 		;  
-
+ 
 		DROP TABLE IF EXISTS edw_temp.tquote_update_temp1;
       
 		SET @rows_affected=@@ROWCOUNT;   
