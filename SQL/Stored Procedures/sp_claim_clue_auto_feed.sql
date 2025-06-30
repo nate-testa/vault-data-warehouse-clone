@@ -14,6 +14,7 @@ GO
 -- 01-21-2025               Rushin Shah                 2. Updated the claim amount field logic
 -- 04-30-2025               Alberto Almario             3. Include snapsheet claims and change logic for item_sk
 -- 05-08-2025               Alberto Almario             4. Add logic to retrieve the address for OneShield policies.
+-- 06-24-2025               Alberto Almario             5. Add logic for FaultIndicator column.
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
@@ -86,6 +87,8 @@ BEGIN
                 ,c.cause_of_loss_sk
                 ,c.catastrophe_sk
                 ,c.loss_dt
+                ,c.product_sk
+                ,c.fault_decision
             FROM edw_core.tclaim AS c
         )
         ,claim_feature AS (
@@ -274,7 +277,14 @@ BEGIN
                 WHEN cf.claim_feature_status_no = 1 THEN 'C' --1 = Closed
                 ELSE 'O' 
             END AS [ClaimDisposition],
-            '' AS [FaultIndicator],
+            CASE
+                WHEN c.catastrophe_sk IS NOT NULL AND c.product_sk = 3 THEN 'C'
+                WHEN c.fault_decision = 'insured' THEN 'A'
+                WHEN c.fault_decision in ('no_fault','other_party') THEN 'N'
+                WHEN c.fault_decision = 'split' THEN 'P'
+                WHEN c.fault_decision = 'unknown' THEN 'U'
+                ELSE ''
+            END AS [FaultIndicator],
             '' AS [DateofFirstPayment],
             '' AS [CAIndicator1],
             '' AS [CAIndicator2],
