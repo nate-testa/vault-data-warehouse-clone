@@ -5,6 +5,7 @@
 -- Change date |Author						|	Change Description
 -------------------------------------------------------------------------------------------------------------------
 -- 05/30/25		Dinesh Bobbili			    1. Created this procedure
+-- 06/30/25		Architha Gudimalla		    2. Updated last name to use policy insured_nm
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed_commercial
@@ -50,7 +51,7 @@ BEGIN
 		SELECT
 			pol.policy_no,
 			null as first_nm,
-			null last_nm,
+			pol.insured_nm last_nm,
 			case when cust.email like '%papermail%' or cust.email like '%@%@%' then null else cust.email end email, 
 			pol.risk_state_cd,
 			pol.product_cd AS product_nm,
