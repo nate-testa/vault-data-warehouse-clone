@@ -5,7 +5,7 @@
 ---------------------------------------------------------------------------------------------------
 --	06-24-2025				Yunus Mohammed				1 - Created procedure
 -- ================================================================================================= 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_commericial_policy_search_snapsheet_api]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_commercial_policy_search_snapsheet_api]
 AS
 BEGIN
 
