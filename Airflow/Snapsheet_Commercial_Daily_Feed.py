@@ -3,10 +3,10 @@ import pendulum
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.models import Variable
-from airflow.hooks.mssql_hook import MsSqlHook
-from airflow.operators.mssql_operator import MsSqlOperator
-from airflow.operators.email_operator import EmailOperator
-from airflow.operators.dummy_operator import DummyOperator
+from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
+from airflow.providers.microsoft.mssql.operators.mssql import MsSqlOperator
+from airflow.operators.email import EmailOperator
+from airflow.operators.dummy import DummyOperator
 from airflow.operators.python import PythonOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
 from snapsheet_api_claim_policy_search import process_policies, policies_qry
@@ -23,22 +23,22 @@ def snapsheet_api_policy_send_email(**kwargs):
     current_date = datetime.now().strftime('%m/%d/%Y')
     
     sql_qry = """
-                SELECT CAST(update_ts AS DATE) as update_ts, api_status, COUNT(1) as Row_Count 
-                FROM edw_integration.claim_policy_search_snapsheet_api 
-                WHERE policyType != 'professional_liability' 
+                SELECT CAST(update_ts AS DATE) as update_ts, api_status, COUNT(1) as Row_Count
+                FROM edw_integration.claim_policy_search_snapsheet_api
+                WHERE policyType = 'professional_liability' 
                 AND CAST(update_ts AS DATE) = CAST(GETDATE() AS DATE)
-                GROUP BY CAST(update_ts AS DATE), api_status
+                GROUP BY CAST(update_ts AS DATE), api_status ;
               """
     # mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
     # result = mssql_hook.get_first(sql_qry)
 
-    msg_text = f"The following report provides the status of policies processed on [{current_date}] through the Snapsheet API."
+    msg_text = f"The following report provides the status of policies processed on [{current_date}] through the Snapsheet Commercial API."
     
     # if result is not None:
     EmailOperator(
         task_id='send_email_snapsheet',
         to=to_email,
-        subject='Airflow - Snapsheet Policy API',
+        subject='Airflow - Snapsheet Commercial Policy API',
         html_content=get_vault_data_HTML(sql_qry,msg_text),
         dag=kwargs['dag'],
     ).execute(context=kwargs)
@@ -79,14 +79,14 @@ args = {
 }
 
 with DAG(
-    dag_id='Snapsheet_Daily_Feed',
+    dag_id='Snapsheet_Commercial_Daily_Feed',
     catchup=False,
     max_active_runs=1,
     default_args=args,
     start_date=pendulum.datetime(2025, 1, 9, tz="America/New_York"),
     # schedule_interval='0 3 * * *', # At 02:00 every day
     schedule_interval=None,
-    tags=["snapsheet daily feed dag", "vault"],
+    tags=["snapsheet commercial daily feed dag", "vault"],
 ) as dag:
     
 
@@ -95,8 +95,8 @@ with DAG(
     )
 
     snapsheet_items = [
-            'sp_claim_policy_search_snapsheet_api',
-            'sp_claim_policy_webhook_snapsheet_api',
+            'sp_claim_commercial_policy_search_snapsheet_api',
+            'sp_claim_commercial_policy_webhook_snapsheet_api',
             'sp_claim_policy_webhook_snapsheet_api_update_contactinfo'
         ]
     
@@ -106,10 +106,10 @@ with DAG(
         [policies_qry.replace('and 1=1', 'and id > 100000')],
     ]
 
-    sp_claim_policy_search_snapsheet_api = MsSqlOperator(
-            task_id='sp_claim_policy_search_snapsheet_api',
+    sp_claim_commercial_policy_search_snapsheet_api = MsSqlOperator(
+            task_id='sp_claim_commercial_policy_search_snapsheet_api',
             mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_claim_policy_search_snapsheet_api",
+            sql="EXEC edw_core.sp_claim_commercial_policy_search_snapsheet_api",
             database="vault_edw",
             autocommit=True,
         )
@@ -120,10 +120,10 @@ with DAG(
             dag=dag,
         ).expand(op_args=policie_queries)
 
-    sp_claim_policy_webhook_snapsheet_api = MsSqlOperator(
-            task_id='sp_claim_policy_webhook_snapsheet_api',
+    sp_claim_commercial_policy_webhook_snapsheet_api = MsSqlOperator(
+            task_id='sp_claim_commercial_policy_webhook_snapsheet_api',
             mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_claim_policy_webhook_snapsheet_api",
+            sql="EXEC edw_core.sp_claim_commercial_policy_webhook_snapsheet_api",
             database="vault_edw",
             autocommit=True,
         )
@@ -137,15 +137,15 @@ with DAG(
                 autocommit=True,
             )
     
-    send_snapsheet_email = EmailOperator(
-            task_id='send_snapsheet_email',
+    send_snapsheet_commercial_email = EmailOperator(
+            task_id='send_snapsheet_commercial_email',
             to=to_email,
-            subject='Airflow - Snapsheet tables loaded successfully',
-            html_content=get_sp_success_data_HTML(snapsheet_items, 'All stored procedures executed successfully for all the Snapsheet tables'),
+            subject='Airflow - Snapsheet commercial tables loaded successfully',
+            html_content=get_sp_success_data_HTML(snapsheet_items, 'All stored procedures executed successfully for all the Snapsheet commercial tables'),
         )
     
-    py_snapsheet_api_policy_send_email = PythonOperator(
-            task_id='py_snapsheet_api_policy_send_email',
+    py_snapsheet_commercial_api_policy_send_email = PythonOperator(
+            task_id='py_snapsheet_commercial_api_policy_send_email',
             python_callable=snapsheet_api_policy_send_email,
             provide_context=True,
             dag=dag,
@@ -155,6 +155,6 @@ with DAG(
         task_id='end',
     )
 if ENVIRONMENT != 'PRODUCTION':
-    start >> sp_claim_policy_search_snapsheet_api >> py_process_snapsheet_policies >> sp_claim_policy_webhook_snapsheet_api >> sp_claim_policy_webhook_snapsheet_api_update_contactinfo >> send_snapsheet_email >> py_snapsheet_api_policy_send_email >> end
+    start >> sp_claim_commercial_policy_search_snapsheet_api >> py_process_snapsheet_policies >> sp_claim_commercial_policy_webhook_snapsheet_api >> sp_claim_policy_webhook_snapsheet_api_update_contactinfo >> send_snapsheet_commercial_email >> py_snapsheet_commercial_api_policy_send_email >> end
 else:
-    start >> sp_claim_policy_search_snapsheet_api >> py_process_snapsheet_policies >> sp_claim_policy_webhook_snapsheet_api >> send_snapsheet_email >> py_snapsheet_api_policy_send_email >> end
+    start >> sp_claim_commercial_policy_search_snapsheet_api >> py_process_snapsheet_policies >> sp_claim_commercial_policy_webhook_snapsheet_api >> send_snapsheet_commercial_email >> py_snapsheet_commercial_api_policy_send_email >> end
