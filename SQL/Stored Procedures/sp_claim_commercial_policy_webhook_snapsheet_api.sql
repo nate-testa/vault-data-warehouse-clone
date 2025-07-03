@@ -4,6 +4,7 @@
 -- Change date 				|Author						                |	Change Description
 ---------------------------------------------------------------------------------------------------
 --	06/25/2025			  Yunus Mohammed				1 Created procedure
+--	07/03/2025			  Dinesh Bobbili				2 Commented out vehicle and drivers and replaced with CVG7777VES
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_commercial_policy_webhook_snapsheet_api]
 AS
@@ -227,8 +228,8 @@ BEGIN
 					'' as businessType
                     for json path, include_null_values, without_array_wrapper
                 )) as generalLiabilityDetails,
-			'{}' as [vehicle],
-             '[]' as [drivers],
+			--'{}' as [vehicle],
+             --'[]' as [drivers],
                 json_query
                 (
                     (
@@ -329,7 +330,7 @@ BEGIN
         (
           
         select
-        null as cancelledAt,null as cancelledReason,'2020-01-01T00:00:00Z' as effectiveAt,'2030-12-31T00:00:00Z' as expirationAt, '2020-01-01T00:00:00Z' as inceptionAt, 'COV9999VES' as policyNumber, 
+        null as cancelledAt,null as cancelledReason,'2020-01-01T00:00:00Z' as effectiveAt,'2030-12-31T00:00:00Z' as expirationAt, '2020-01-01T00:00:00Z' as inceptionAt, 'CVG7777VES' as policyNumber, 
         'general_liability' as policyType, 'Active' as [status], '2020-01-01' as [version],'0' as transaction_seq_no, 
         '{"agencyCode":"56536","agencyName":"Vault Custom Risk Solutions, LLC","agencyType":"broker","agencyAddress":{"address1":"24 West","address2":"40th Street","city":"New York","postalCode":"10018","region":"NY","country":"US"},"agencyContactMethods":[{"country":null,"countryCode":null,"type":"email","value":null},{"country":"us","countryCode":"1","type":"phone","value":null}]}' as agentInformation, 
         '{"code":"Excess Liability","name":"Excess Liability"}' as [product],null as reservation,'{"account":"vault_es_insurance_litigation_co"}' as underwriting, 
