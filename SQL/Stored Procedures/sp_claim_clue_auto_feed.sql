@@ -410,7 +410,7 @@ BEGIN
             PolicyType,
             Filler_reservedForFutureUse6,
             ClaimNumber,
-            '' AS ClaimType,
+            '  ' AS ClaimType,
             ClaimDate,
             '000000000' AS claimAmount,
             'R' AS claimReportingStatus,
