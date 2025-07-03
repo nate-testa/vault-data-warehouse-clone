@@ -8,6 +8,7 @@ GO
 -- Change date |Author						|	Change Description
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 07/02/25		Dinesh Bobbili				1. Created this procedure  
+-- 07/03/25		Dinesh Bobbili				2. Added condition on effective_dt
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_billing_paid_in_update]
@@ -40,6 +41,7 @@ BEGIN
 			SELECT 1
 			FROM edw_stage.stage_majesco_cash_activity AS mca
 			WHERE mca.policy_no = p.policy_no
+			and cast(mca.policy_effective_date as date) = p.effective_dt
 			and mca.create_ts > @last_source_extract_ts);  
 
 		SET @rows_affected=@@ROWCOUNT;   
