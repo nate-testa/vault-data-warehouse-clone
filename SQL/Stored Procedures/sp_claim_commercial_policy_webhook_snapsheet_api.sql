@@ -4,6 +4,7 @@
 -- Change date 				|Author						                |	Change Description
 ---------------------------------------------------------------------------------------------------
 --	06/25/2025			  Yunus Mohammed				1 Created procedure
+--	07/03/2025			  Dinesh Bobbili				2 Commented out vehicle and drivers
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_commercial_policy_webhook_snapsheet_api]
 AS
@@ -227,8 +228,8 @@ BEGIN
 					'' as businessType
                     for json path, include_null_values, without_array_wrapper
                 )) as generalLiabilityDetails,
-			'{}' as [vehicle],
-             '[]' as [drivers],
+			--'{}' as [vehicle],
+             --'[]' as [drivers],
                 json_query
                 (
                     (
