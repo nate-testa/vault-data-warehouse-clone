@@ -10,6 +10,7 @@
 -- 03/20/24		Architha Gudimalla				3. Added commission_amt
 -- 07/03/24		Yunus Mohammed					4. Added policy_history_sk
 -- 07/18/24		Architha Gudimalla				5. Updated logic for @last_source_extract_ts
+-- 07/08/25		Architha Gudimalla				6. Updated EP logic
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction_summary]
@@ -110,14 +111,23 @@ BEGIN
 		 				sum(tr.premium_amt) premium_amt,
 		 				sum(
 		 					--for transactions issued in the month, eff in the month or later
-								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) > 0
-								then
-									(1+(iif(tr.expiration_dt_sk >= @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
-									- (greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) ))
-									* tr.premium_amt/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
-								else 0
+								case when		tr.policy_transaction_type_sk in (1,7) 
+											and (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) > 0
+											and (tr.expiration_dt_sk-tr.transaction_effective_dt_sk) <> 0
+									then
+										(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+										- (greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) ))
+										* tr.premium_amt/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+									when		tr.policy_transaction_type_sk not in (1,7) 
+											and (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
+											and (tr.expiration_dt_sk-tr.transaction_effective_dt_sk) <> 0
+									then
+										(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+										- (tr.transaction_effective_dt_sk) ))
+										* tr.premium_amt/(tr.expiration_dt_sk-tr.transaction_effective_dt_sk)
+									else 0
 								end
-						   ) mtd_ep ,
+						   ) mtd_ep,
 				 		sum(commission_amt) commission_amt
 				 FROM edw_core.tpolicy_transaction tr, edw_core.tpolicy pol 
 				 where tr.policy_sk = pol.policy_sk
