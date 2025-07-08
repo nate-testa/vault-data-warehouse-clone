@@ -404,6 +404,7 @@ with DAG(
             'sp_tclaim_transaction_update_snapsheet',
             'sp_tclaim_note_snapsheet',
             'sp_tclaim_task_snapsheet',
+            'sp_tclaim_tag_snapsheet',
             'sp_update_tclaim_snapsheet',
             'sp_update_tclaim_feature_snapsheet',
             'sp_tpolicy_update_lifetime_claims',

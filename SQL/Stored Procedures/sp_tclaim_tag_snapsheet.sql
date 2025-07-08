@@ -4,8 +4,9 @@
 -- Change date 			|Author									|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 04/25/2025		 Yununs Mohammed		    1. Created this procedue
+-- 07/08/2025		 Yununs Mohammed		    2. Change sp name to sp_tclaim_tag_snapsheet and add suffix _snapsheet to temp tables
 -- ======================================================================================================== 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_tag]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_tag_snapsheet]
 AS	
 BEGIN
     SET NOCOUNT ON
@@ -24,7 +25,7 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-		drop table if exists edw_temp.tclaim_tag_temp1;
+		drop table if exists edw_temp.tclaim_tag_snapsheet_temp1;
 
         select
         tc.claim_sk,
@@ -32,7 +33,7 @@ BEGIN
         t.[name] as tag_nm,
         t.tagged_at as tag_created_ts,
         5 as  source_system_sk
-        into  edw_temp.tclaim_tag_temp1
+        into  edw_temp.tclaim_tag_snapsheet_temp1
         from
         edw_stage_snapsheet.claims c
         inner join edw_core.tclaim tc on c.claim_number = tc.claim_no
@@ -47,19 +48,19 @@ BEGIN
 		select 
             claim_sk,claim_no,tag_nm,tag_created_ts,source_system_sk,@etl_audit_sk as etl_audit_sk,@current_date  as create_ts,@current_date as update_ts
          from
-            edw_temp.tclaim_tag_temp1
+            edw_temp.tclaim_tag_snapsheet_temp1
 
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(tag_created_ts) FROM edw_temp.tclaim_tag_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(tag_created_ts) FROM edw_temp.tclaim_tag_snapsheet_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 		
 		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tclaim_tag_temp1;
+		DROP TABLE IF EXISTS edw_temp.tclaim_tag_snapsheet_temp1;
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
