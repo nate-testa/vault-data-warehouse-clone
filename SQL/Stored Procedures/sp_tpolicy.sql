@@ -27,6 +27,7 @@
 -- 05/19/25		Architha Gudimalla				21. AD9528 - Added cancel eff dt, added policystatus to merge
 -- 06/05/25		Yunus Mohammed					22. AD9715 - Integrate Document delivery data
 -- 06/06/25		Dinesh Bobbili					23. Updated document_delivery_to logic
+-- 08/07/25		Hernando Gonzalez				24. AD10220 | Added bound_by_broker_in
 -- ======================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tpolicy]
@@ -199,6 +200,7 @@ BEGIN
 					when accdd.SendOnlyToBroker = 0 and accdd.EmailPrimaryInsured = 1 then 'Email'
 					when  accdd.SendOnlyToBroker = 0 and accdd.MailPrimaryInsured = 1 then 'Mail'					
 				end as document_delivery_method
+				,BoundByBroker as bound_by_broker_in
 			FROM 
 				edw_temp.tpolicy_temp1 tmp1
 				INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = tmp1.Id
@@ -257,6 +259,7 @@ BEGIN
 		   ,cancellation_effective_dt
 		   ,document_delivery_to
 		   ,document_delivery_method
+		   ,bound_by_broker_in
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, Source.ExpirationDate, Source.BrokerId, Source.customer_id, 
@@ -291,6 +294,7 @@ BEGIN
 				,source.cancellation_effective_dt
 				,document_delivery_to
 		   		,document_delivery_method
+				,source.bound_by_broker_in
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -323,7 +327,8 @@ BEGIN
 		Target.cancellation_effective_dt	= source.cancellation_effective_dt,
 		Target.policy_status				= 'Active',
 		Target.document_delivery_to = source.document_delivery_to,
-		Target.document_delivery_method = source.document_delivery_method
+		Target.document_delivery_method = source.document_delivery_method,
+		Target.bound_by_broker_in = source.bound_by_broker_in
 		;
 
 		SET @rows_affected=@@ROWCOUNT;

@@ -15,6 +15,7 @@
 -- 05/08/25		Architha Gudimalla				10. Added forecast_quote_in 
 -- 06/05/25		Yunus Mohammed					11. AD9715 - Integrate Document delivery data
 -- 06/06/25		Dinesh Bobbili					12. Updated document_delivery_to logic
+-- 08/07/25		Hernando Gonzalez				13. AD10220 | Added bound_by_broker_in
 -- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -226,7 +227,8 @@ BEGIN
 					when  accdd.SendOnlyToBroker = 0 and accdd.EmailPrimaryInsured = 1 and accdd.MailPrimaryInsured = 1 then 'Email & Mail'
 					when  accdd.SendOnlyToBroker = 0 and accdd.EmailPrimaryInsured = 1 then 'Email'
 					when  accdd.SendOnlyToBroker = 0 and accdd.MailPrimaryInsured = 1 then 'Mail'					
-				end as document_delivery_method				
+				end as document_delivery_method
+				,BoundByBroker as bound_by_broker_in
 			FROM 
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
@@ -285,6 +287,7 @@ BEGIN
 		   ,forecast_quote_in
 		   ,document_delivery_to
 			,document_delivery_method
+			,bound_by_broker_in
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -325,6 +328,7 @@ BEGIN
 				,source.forecast_quote_in
 				,document_delivery_to
 		   		,document_delivery_method
+				,source.bound_by_broker_in
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -363,7 +367,8 @@ BEGIN
 		Target.target_account							= source.target_account,
 		Target.forecast_quote_in						= source.forecast_quote_in,
 		Target.document_delivery_to = source.document_delivery_to,
-		Target.document_delivery_method = source.document_delivery_method
+		Target.document_delivery_method = source.document_delivery_method,
+		Target.bound_by_broker_in = source.bound_by_broker_in
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
