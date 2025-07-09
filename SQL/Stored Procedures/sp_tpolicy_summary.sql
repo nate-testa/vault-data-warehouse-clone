@@ -19,6 +19,7 @@ GO
 -- 12/20/23		Architha Gudimalla				7. Added annual_net_premium_amt
 -- 07/03/24		Yunus Mohammed					8. Added policy_history_sk
 -- 07/18/24		Architha Gudimalla				9. Updated logic for @last_source_extract_ts
+-- 07/09/25		Architha Gudimalla				10. Updated EP logic
 -- ======================================================================================================================================== 
 
 CREATE or ALTER    PROCEDURE [edw_core].[sp_tpolicy_summary]
