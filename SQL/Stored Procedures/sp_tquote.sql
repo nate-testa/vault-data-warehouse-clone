@@ -228,7 +228,7 @@ BEGIN
 					when  accdd.SendOnlyToBroker = 0 and accdd.EmailPrimaryInsured = 1 then 'Email'
 					when  accdd.SendOnlyToBroker = 0 and accdd.MailPrimaryInsured = 1 then 'Mail'					
 				end as document_delivery_method
-				,acc_prior.BoundByBroker as bound_by_broker_in
+				,tmp1.BoundByBroker as bound_by_broker_in
 			FROM 
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
