@@ -15,7 +15,7 @@
 -- 05/08/25		Architha Gudimalla				10. Added forecast_quote_in 
 -- 06/05/25		Yunus Mohammed					11. AD9715 - Integrate Document delivery data
 -- 06/06/25		Dinesh Bobbili					12. Updated document_delivery_to logic
--- 08/07/25		Hernando Gonzalez				13. AD10220 | Added bound_by_broker_in
+-- 07/08/25		Hernando Gonzalez				13. AD10220 | Added bound_by_broker_in
 -- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]

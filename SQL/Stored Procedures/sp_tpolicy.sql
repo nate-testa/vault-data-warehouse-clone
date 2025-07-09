@@ -27,7 +27,7 @@
 -- 05/19/25		Architha Gudimalla				21. AD9528 - Added cancel eff dt, added policystatus to merge
 -- 06/05/25		Yunus Mohammed					22. AD9715 - Integrate Document delivery data
 -- 06/06/25		Dinesh Bobbili					23. Updated document_delivery_to logic
--- 08/07/25		Hernando Gonzalez				24. AD10220 | Added bound_by_broker_in
+-- 07/08/25		Hernando Gonzalez				24. AD10220 | Added bound_by_broker_in
 -- ======================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tpolicy]
