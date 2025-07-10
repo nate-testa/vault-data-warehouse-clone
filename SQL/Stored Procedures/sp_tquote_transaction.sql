@@ -14,7 +14,8 @@
 -- 										   Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S
 -- 08/30/24		Architha Gudimalla		8. Update product join to inner instead of left
 --11/25/2024	Sandeep Gundreddy		9. Added logic to load item_sk and coverage_sk for Marine Boat & Yacht
--- 06/04/2025	Alberto Almario			10. Added new column user_sk
+-- 06/04/2025	Alberto Almario			10. Added new column user_sk 
+-- 07/10/2025	Dinesh Bobbili			11. Added IssuedByUserId in the filter
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction]
@@ -218,7 +219,7 @@ BEGIN
 																	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Jewelry' then 'Worldwide Jewelry'  
 																	else replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')
 																end = cc.class_type   
-		left join edw_core.tuser u on u.user_id = source.CreatedById
+		left join edw_core.tuser u on u.user_id = coalesce(source.IssuedByUserId,source.CreatedById)
 		
 
 		SET @rows_affected=@@ROWCOUNT; 
