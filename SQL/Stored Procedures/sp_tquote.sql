@@ -230,7 +230,7 @@ BEGIN
 					when  accdd.SendOnlyToBroker = 0 and accdd.MailPrimaryInsured = 1 then 'Mail'					
 				end as document_delivery_method				
 				,tmp1.RenewalCapFactor as renewal_cap_factor
-				,case when tmp1.BoundByBroker = 0 then 'No' when tmp1.BoundByBroker = 1 then 'Yes' else '' end as bound_by_broker_in
+				,case when tmp1.BoundByBroker = 1 then 'Yes' else 'No' end as bound_by_broker_in
 			FROM 
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
