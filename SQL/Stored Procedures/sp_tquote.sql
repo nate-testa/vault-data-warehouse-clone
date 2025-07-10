@@ -16,6 +16,7 @@
 -- 06/05/25		Yunus Mohammed					11. AD9715 - Integrate Document delivery data
 -- 06/06/25		Dinesh Bobbili					12. Updated document_delivery_to logic
 -- 07/10/25		Alberto Almario					13. AD10214 - Added new column renewal_cap_factor
+-- 07/10/25		Hernando Gonzalez				14. AD10220 | Added bound_by_broker_in
 -- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -229,6 +230,7 @@ BEGIN
 					when  accdd.SendOnlyToBroker = 0 and accdd.MailPrimaryInsured = 1 then 'Mail'					
 				end as document_delivery_method				
 				,tmp1.RenewalCapFactor as renewal_cap_factor
+				,case when tmp1.BoundByBroker = 0 then 'No' when tmp1.BoundByBroker = 1 then 'Yes' else '' end as bound_by_broker_in
 			FROM 
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
@@ -288,6 +290,7 @@ BEGIN
 		   ,document_delivery_to
 			,document_delivery_method
 			,renewal_cap_factor
+			,bound_by_broker_in
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -329,6 +332,7 @@ BEGIN
 				,document_delivery_to
 		   		,document_delivery_method
 				,Source.renewal_cap_factor
+				,source.bound_by_broker_in
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -368,7 +372,8 @@ BEGIN
 		Target.forecast_quote_in						= source.forecast_quote_in,
 		Target.document_delivery_to = source.document_delivery_to,
 		Target.document_delivery_method = source.document_delivery_method,
-		Target.renewal_cap_factor						= Source.renewal_cap_factor
+		Target.renewal_cap_factor						= Source.renewal_cap_factor,
+		Target.bound_by_broker_in = source.bound_by_broker_in
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
