@@ -821,23 +821,23 @@ set CopyActivitySettings = '{
 			{
 				"source": {
 					"name": "CanAccessCommercialProducts",
-					"type": "String",
-					"physicalType": "nvarchar"
+					"type": "Boolean",
+					"physicalType": "bit"
 				},
 				"sink": {
 					"name": "CanAccessCommercialProducts",
-					"type": "String"
+					"type": "Boolean"
 				}
 			},
 			{
 				"source": {
 					"name": "CanAccessPersonalProducts",
-					"type": "String",
-					"physicalType": "nvarchar"
+					"type": "Boolean",
+					"physicalType": "bit"
 				},
 				"sink": {
 					"name": "CanAccessPersonalProducts",
-					"type": "String"
+					"type": "Boolean"
 				}
 			}
 		],
