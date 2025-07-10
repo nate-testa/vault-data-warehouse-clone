@@ -1,9 +1,4 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_tquote]    Script Date: 11/16/2023 11:49:52 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
--- ===========================================================================================================================
+﻿-- ===========================================================================================================================
 -- Description: This procedures inserts and updates tquote 
 -----------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
@@ -18,6 +13,10 @@ GO
 -- 03/03/25		Hernando Gonzalez		        8. AD8316 - Added competitor_carrier_nm, close_reason_other_desc
 -- 03/20/25		Hernando Gonzalez				9. Included Target_Account
 -- 05/08/25		Architha Gudimalla				10. Added forecast_quote_in 
+-- 06/05/25		Yunus Mohammed					11. AD9715 - Integrate Document delivery data
+-- 06/06/25		Dinesh Bobbili					12. Updated document_delivery_to logic
+-- 07/10/25		Alberto Almario					13. AD10214 - Added new column renewal_cap_factor
+-- 07/10/25		Hernando Gonzalez				14. AD10220 | Added bound_by_broker_in
 -- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -218,12 +217,23 @@ BEGIN
 				,tmp1.SubmissionCloseReasonDetailOther as close_reason_other_desc
 				,tmp1.TargetAccount as target_account
 				,case when tmp1.isForecast = 1 then 'Yes' else 'No' end as forecast_quote_in
-				--select *
+				,case 
+					when accdd.SendOnlyToBroker = 1 then 'Broker'
+					when accdd.SendOnlyToBroker = 0 
+						and accdd.EmailPrimaryInsured = 0 
+						and accdd.MailPrimaryInsured = 0 then null
+					else 'Customer' 
+				end as document_delivery_to
+				,case
+					when  accdd.SendOnlyToBroker = 0 and accdd.EmailPrimaryInsured = 1 and accdd.MailPrimaryInsured = 1 then 'Email & Mail'
+					when  accdd.SendOnlyToBroker = 0 and accdd.EmailPrimaryInsured = 1 then 'Email'
+					when  accdd.SendOnlyToBroker = 0 and accdd.MailPrimaryInsured = 1 then 'Mail'					
+				end as document_delivery_method				
+				,tmp1.RenewalCapFactor as renewal_cap_factor
+				,case when tmp1.BoundByBroker = 1 then 'Yes' else 'No' end as bound_by_broker_in
 			FROM 
 				edw_temp.tquote_temp1 tmp1
-				--left JOIN edw_stage.AccountTransaction acct ON acct.AccountId = tmp1.Id
-				--left JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = acct.Id
-				--inner join edw_stage.Account acc on tmp1.AccountId = acc.Id 
+				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
 				left join edw_stage.Account acc_prior on tmp1.copyofAccountId = acc_prior.Id 
 				left join edw_stage.BillingAccount ba on ba.id = tmp1.BillingAccountId
 				left join edw_core.tbillingaccount tb on tb.billingaccount_no = ba.ReferenceCode
@@ -277,6 +287,10 @@ BEGIN
 		   ,close_reason_other_desc
 		   ,target_account
 		   ,forecast_quote_in
+		   ,document_delivery_to
+			,document_delivery_method
+			,renewal_cap_factor
+			,bound_by_broker_in
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -315,6 +329,10 @@ BEGIN
 				,source.close_reason_other_desc
 				,source.target_account
 				,source.forecast_quote_in
+				,document_delivery_to
+		   		,document_delivery_method
+				,Source.renewal_cap_factor
+				,source.bound_by_broker_in
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -351,7 +369,11 @@ BEGIN
 		Target.close_reason_other_desc 					= source.close_reason_other_desc,
         Target.update_ts 								= getdate(),
 		Target.target_account							= source.target_account,
-		Target.forecast_quote_in						= source.forecast_quote_in
+		Target.forecast_quote_in						= source.forecast_quote_in,
+		Target.document_delivery_to = source.document_delivery_to,
+		Target.document_delivery_method = source.document_delivery_method,
+		Target.renewal_cap_factor						= Source.renewal_cap_factor,
+		Target.bound_by_broker_in = source.bound_by_broker_in
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
@@ -384,4 +406,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-

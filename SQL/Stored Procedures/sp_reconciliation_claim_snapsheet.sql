@@ -4,6 +4,7 @@
 -- Change date			|Author						               |	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 03/19/25				Yunus Mohammed				1. Created this procedure 
+-- 06/13/25             Sandeep Gundreddy           2. updated EDW query logic to -ve expense subro and salvage recovery amounts
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_reconciliation_claim_snapsheet]
 AS
@@ -94,8 +95,8 @@ BEGIN
                         ct.loss_paid_amt+ct.expense_paid_amt+ct.defense_paid_amt
         ) AS paid_amt,
         SUM(
-                        ct.subrogation_recovery_amt+ct.salvage_recovery_amt+(case when ct.source_system_sk=3 then -1*ct.salvage_expense_recovery_amt else ct.salvage_expense_recovery_amt end)+
-                        (case when ct.source_system_sk=3 then -1*ct.subrogation_expense_recovery_amt else ct.subrogation_expense_recovery_amt end)+ct.deductible_recovery_amt+
+                        ct.subrogation_recovery_amt+ct.salvage_recovery_amt+(-1*ct.salvage_expense_recovery_amt)+
+                        (-1*ct.subrogation_expense_recovery_amt)+ct.deductible_recovery_amt+
                         ct.reinsurance_recovery_amt+ct.overpayment_recovery_amt+ct.deductible_expense_recovery_amt+
                         ct.reinsurance_expense_recovery_amt+ct.overpayment_expense_recovery_amt+ct.subrogation_defense_recovery_amt+
                         ct.salvage_defense_recovery_amt+ct.deductible_defense_recovery_amt+
@@ -111,8 +112,8 @@ BEGIN
                         ct.deductible_recovery_defense_reserve_amt+ct.reinsurance_recovery_defense_reserve_amt+
                         ct.overpayment_recovery_defense_reserve_amt+ct.loss_paid_amt+ct.expense_paid_amt+ct.defense_paid_amt+
                         ct.subrogation_recovery_amt+ct.salvage_recovery_amt+
-                        (case when ct.source_system_sk=3 then -1*ct.salvage_expense_recovery_amt else ct.salvage_expense_recovery_amt end)+
-                        (case when ct.source_system_sk=3 then -1*ct.subrogation_expense_recovery_amt else ct.subrogation_expense_recovery_amt end)+ct.deductible_recovery_amt+
+                        (-1*ct.salvage_expense_recovery_amt)+
+                        (-1*ct.subrogation_expense_recovery_amt)+ct.deductible_recovery_amt+
                         ct.reinsurance_recovery_amt+ct.overpayment_recovery_amt+ct.deductible_expense_recovery_amt+
                         ct.reinsurance_expense_recovery_amt+ct.overpayment_expense_recovery_amt+ct.subrogation_defense_recovery_amt+
                         ct.salvage_defense_recovery_amt+ct.deductible_defense_recovery_amt+

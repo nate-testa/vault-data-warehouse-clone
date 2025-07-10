@@ -1,14 +1,11 @@
-﻿SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- =================================================================================================
+﻿-- =================================================================================================
 -- Description: This procedures inserts and updates claim notes snapsheet
 -----------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author									|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 10/25/24		Hernando Gonzalez			1. Created this procedure - AD7391
+-- 05/20/25		Yunus Mohammed				2. AD8750 Modified delta identifier
+-- 05/28/25		Yunus Mohammed				3. AD-9616 Modified the join on tclaim to use an inner join
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_note_snapsheet]
 AS
@@ -48,9 +45,9 @@ BEGIN
 		FROM edw_stage_snapsheet.claims as c
 		INNER JOIN edw_stage_snapsheet.notes as n ON n.claim_id = c.id
 		LEFT JOIN edw_stage_snapsheet.users as u ON u.id = n.logged_by_user_id
-		LEFT JOIN edw_core.tclaim as tc ON tc.claim_no = c.claim_number
+		INNER JOIN edw_core.tclaim as tc ON tc.claim_no = c.claim_number
 		LEFT JOIN edw_core.tclaim_feature as cf ON cf.claim_no = c.claim_number and cf.claim_coverage_cd=n.exposure_id
-		WHERE c.created_at > @last_source_extract_ts
+		WHERE n.created_at > @last_source_extract_ts
 		;
 
 		-- Start Insert process

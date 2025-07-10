@@ -8,7 +8,26 @@ import sqlite3
 
 logger = get_logger(__name__)
 
+def check_and_log_duplicates(df, id_column, object_name):
+    """
+    Checks a DataFrame for duplicates based on an ID column and logs a warning if any are found.
 
+    Args:
+        df (pd.DataFrame): The DataFrame to check.
+        id_column (str): The name of the column to check for duplicates (e.g., 'producer_id').
+        object_name (str): The name of the object for the log message (e.g., 'Producer').
+    """
+    # Find all rows that are part of a set of duplicates
+    duplicates = df[df.duplicated(subset=id_column, keep=False)]
+
+    if not duplicates.empty:
+        # Get a list of the unique IDs that have duplicate entries
+        duplicated_ids = duplicates[id_column].unique()
+        logger.warning(
+            f"Found {len(duplicated_ids)} {object_name} ID(s) with duplicate records in the source data. "
+            f"These duplicates will be dropped before processing. "
+            f"Duplicated IDs: {list(duplicated_ids)}"
+        )
 
 class Customer:
 
@@ -16,7 +35,10 @@ class Customer:
         customer_df = DatabaseFunctions.get_data_from_db(DatabaseFunctions.table_name['customer'])
         
         if not customer_df.empty:
-            # deduplicate on customer id since customer table has a line item per policy, but only data from 1 line item is needed
+            # 1. ALERT: Check for and log any duplicates before taking action.
+            check_and_log_duplicates(customer_df, 'customer_id', 'Customer')
+
+            # 2. deduplicate on customer id since customer table has a line item per policy, but only data from 1 line item is needed
             customer_df.drop_duplicates(subset='customer_id', keep='first', inplace=True, ignore_index=True )
             create_batch_payload = {"inputs": []}  
             update_batch_payload = {"inputs": []}  

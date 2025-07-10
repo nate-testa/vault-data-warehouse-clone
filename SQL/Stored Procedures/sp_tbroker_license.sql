@@ -2,6 +2,10 @@
 -- Author:		Mohammed Yunus
 -- Description: This procedures insert broker license data 
 ---------------------------------------------------------------------------------------------------
+-- Change date |Author						|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 06/20/25		Dinesh Bobbili				1. AD-9795 Added license_type column
+---------------------------------------------------------------------------------------------------
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker_license]
 
 AS
@@ -30,7 +34,7 @@ BEGIN
 		SELECT
 			tbrk.broker_id,tbrk.broker_sk,
 			brkl.StateCode as state_cd,brkl.License AS license_no,brkl.ExpirationDate AS expiration_dt,
-			brkl.HolderName AS licenseholder_nm,brkl.ResidencyCode AS residency_status,brkl.licenseCategory AS category_nm,
+			brkl.HolderName AS licenseholder_nm,brkl.ResidencyCode AS residency_status,brkl.licenseCategory AS category_nm,brkl.LicenseType AS license_type,
 			brkl.CreatedDate,brkl.UpdatedDate
 		INTO edw_temp.tbroker_license_temp
 		FROM
@@ -48,10 +52,10 @@ BEGIN
 
 		INSERT INTO edw_core.tbroker_license
 		(			
-			broker_id,broker_sk,state_cd,license_no,expiration_dt,licenseholder_nm,residency_status,category_nm,create_ts,update_ts,etl_audit_sk
+			broker_id,broker_sk,state_cd,license_no,expiration_dt,licenseholder_nm,residency_status,category_nm,license_type,create_ts,update_ts,etl_audit_sk
 		)
 		SELECT
-			broker_id,broker_sk,state_cd,license_no,expiration_dt,licenseholder_nm,residency_status,category_nm,
+			broker_id,broker_sk,state_cd,license_no,expiration_dt,licenseholder_nm,residency_status,category_nm,license_type,
 			@current_date AS create_ts,@current_date AS update_ts,@etl_audit_sk
 		FROM
 			edw_temp.tbroker_license_temp

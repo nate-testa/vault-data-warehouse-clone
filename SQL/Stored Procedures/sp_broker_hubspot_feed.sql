@@ -30,6 +30,7 @@
 -- 01/10/25		        Archtha Gudimalla			21. VI35254/AZ8015 - Added ytd_new_business_yacht_premium_amt
 -- 03/29/25		        Archtha Gudimalla			22. VI36791/AZ9023 - Concat broker_id to broker_nm
 -- 04/29/25		        Archtha Gudimalla			23. VI37383/AZ9290 - Added broker_state
+-- 05/30/25		        Archtha Gudimalla			24. AZ9641 - Added broker_business_type
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -223,6 +224,7 @@ BEGIN
             ,ytd_new_business_yacht_premium_amt
             ,ytd_renewal_retention_pc
             ,primary_address_state_cd
+            ,broker_business_type
         )
         SELECT        
             broker_id,broker_nm + ' - ' + broker_id,mailing_address_line_1,mailing_address_line_2,mailing_address_city_nm,mailing_address_state_cd,
@@ -237,6 +239,7 @@ BEGIN
             ,ytd_new_business_yacht_premium_amt
             ,ytd_renewal_retention_pc
             ,primary_address_state_cd
+            ,'Personal Lines'
         FROM edw_temp.broker_hubspot_feed_temp1
         
         

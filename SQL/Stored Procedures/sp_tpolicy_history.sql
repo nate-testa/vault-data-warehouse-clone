@@ -21,6 +21,8 @@
 -- 04/03/25		Yunus Mohammed			  			15. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
 -- 04/22/25		Yunus Mohammed						16. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
 -- 04/30/25		Yunus Mohammed						17. Ad-9338 Added cancellation_sub_reason_desc
+-- 05/20/25		Alberto Almario						18. Ad-9559 Added insurance_score_source
+-- 07/08/25		Dinesh Bobbili						19. Ad-10153 Added transaction_bound_by_user_nm
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -83,7 +85,8 @@ BEGIN
 			acct.ProRateFactor,
 			acct.IsReversed,
 			acct.IsReversal,
-			acctvprr.[Version] as premium_rater_version
+			acctvprr.[Version] as premium_rater_version,
+			usr2.name as transaction_bound_by_user_nm
 		INTO edw_temp.tpolicy_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
@@ -97,6 +100,7 @@ BEGIN
 		LEFT JOIN (SELECT * FROM edw_stage.AccountTransactionVersionPremiumRaterReference WHERE ReferenceType = 'Premium') acctvprr 
 		on acctvprr.AccountTransactionVersionPremiumId = acctvp.Id and pr.[InternalName] = acctvprr.ProductInternalName
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acctv.BrokerId
+		left join edw_stage.[user] usr2 on usr2.id = acct.BoundByUserId
 		WHERE acct.State ='ISSUED' --- Review BOUND transactions
 		and	acct.PolicyNumber is not null 
 		and pr.ProductLine = 'PersonalLines' 		
@@ -142,6 +146,7 @@ BEGIN
 				InsuranceScoreCode4,
 				InsuranceScoreCode4Description,
 				InsuranceScoreLastRunDate
+				,InsuranceScoreSource
 		INTO edw_temp.tpolicy_history_temp2
 		FROM
 			(
@@ -163,7 +168,8 @@ BEGIN
 										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
 										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
-										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate)
+										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate
+										 ,InsuranceScoreSource)
 			) pivottable 
 
 		-- Start Inserting records
@@ -219,6 +225,8 @@ BEGIN
 		   ,prorate_factor
 		   ,transaction_status
 		   ,premium_rater_version
+		   ,insurance_score_source
+		   ,transaction_bound_by_user_nm
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.PolicyChangeNumber, 
 				pol.policy_sk, br.broker_sk, cust.customer_sk, br.Broker_Id, Source.customer_id, 
@@ -258,6 +266,8 @@ BEGIN
 					ELSE 'Issued'
 				END AS transaction_status
 				,source.premium_rater_version
+				,source1.InsuranceScoreSource
+				,source.transaction_bound_by_user_nm
 		FROM edw_temp.tpolicy_history_temp1 source
 		LEFT JOIN edw_temp.tpolicy_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tpolicy_history_temp2 source1 on source.id = source1.AccountTransactionId

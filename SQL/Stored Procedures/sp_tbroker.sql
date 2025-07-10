@@ -11,7 +11,8 @@
 -- 08/02/24		Hernando Gonzalez				7. Added broker_terminated_dt
 -- 05/02/24		Yunus Mohammed					8. Added broker_tier
 -- 06/04/24		Yunus Mohammed					9. Added contract_dt and national_agency_in
--- 05/08/25		Architha Gudimalla				10. Added broker_servicing_team_sk 
+-- 05/08/25		Architha Gudimalla				10. Added broker_servicing_team_sk
+-- 07/10/25		Dinesh Bobbili					11. AD10149 Added commercial_or_personal_business_type
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker]
@@ -120,6 +121,7 @@ BEGIN
 				WHEN 0 THEN 'No'
 				ELSE '' END AS national_agency_in
 			,bst1.broker_servicing_team_sk
+			,case when brk.CanAccessPersonalProducts=1 then 'Personal lines' when brk.CanAccessCommercialProducts=1  then 'Commercial lines' Else Null end as commercial_or_personal_business_type
 		INTO edw_temp.tbroker_temp1
 		FROM
 			edw_stage.Brokerage brk
@@ -151,7 +153,7 @@ BEGIN
 				commission_address_zip_cd,commission_address_county_nm,commission_address_country_nm,insurance_company_nm,insurance_policy_no,
 				insurance_policy_limit_amt,insurance_policy_effective_dt,insurance_policy_expiration_dt,company_nm,bank_nm,routing_no,account_no,
 				accounting_type,token_id,commission_statement_email,broker_tier,broker_terminated_dt,contract_dt,national_agency_in,
-				create_ts,update_ts,etl_audit_sk, broker_servicing_team_sk
+				create_ts,update_ts,etl_audit_sk, broker_servicing_team_sk, commercial_or_personal_business_type
 			)
 		VALUES
 			(
@@ -168,7 +170,7 @@ BEGIN
 				commission_address_zip_cd,commission_address_county_nm,commission_address_country_nm,insurance_company_nm,insurance_policy_no,
 				insurance_policy_limit_amt,insurance_policy_effective_dt,insurance_policy_expiration_dt,company_nm,bank_nm,routing_no,account_no,
 				accounting_type,token_id,commission_statement_email,broker_tier,TerminatedDate,contract_dt,national_agency_in,
-				getdate(),getdate(),@etl_audit_sk, broker_servicing_team_sk
+				getdate(),getdate(),@etl_audit_sk, broker_servicing_team_sk, commercial_or_personal_business_type
 			)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -244,7 +246,8 @@ BEGIN
 		Target.contract_dt = Source.contract_dt,
 		Target.national_agency_in = Source.national_agency_in,
 		Target.[update_ts] = getdate(),
-		Target.broker_servicing_team_sk = Source.broker_servicing_team_sk
+		Target.broker_servicing_team_sk = Source.broker_servicing_team_sk,
+		Target.commercial_or_personal_business_type = Source.commercial_or_personal_business_type
 		;
 		
 		SET @rows_affected=@@ROWCOUNT;

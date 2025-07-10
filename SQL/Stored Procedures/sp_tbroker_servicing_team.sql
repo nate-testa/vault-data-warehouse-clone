@@ -12,6 +12,7 @@ GO
 -- 05/08/05		Architha Gudimalla				1. Created the proc 
 -- 05/08/05		Architha Gudimalla				2. Updated after initital run 
 -- 05/08/05		Architha Gudimalla				3. Added broker_servicing_team_id
+-- 05/14/05		Architha Gudimalla				4. Removed delete from brok srv team member
 -- =========================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker_servicing_team]
@@ -45,10 +46,7 @@ BEGIN
 		INTO edw_temp.tbroker_servicing_team_temp
 		FROM edw_stage.[BrokerageServicingTeam] bst
 		WHERE
-			GREATEST(bst.CreatedDate,bst.UpdatedDate) > @last_source_extract_ts 
-
-		-- Delete from tbroker_license table
-		DELETE FROM edw_core.tbroker_servicing_team_member;
+			GREATEST(bst.CreatedDate,bst.UpdatedDate) > @last_source_extract_ts  
 
 		-- Insert and Update tuser table
 		MERGE [edw_core].[tbroker_servicing_team] AS Target

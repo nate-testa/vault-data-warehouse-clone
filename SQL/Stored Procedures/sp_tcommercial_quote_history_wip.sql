@@ -1,17 +1,13 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 -- =====================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2025-03-28
 -- Description: This stored procedure insert and update info related to tcommercial_quote.
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						|	Change Description
+-- Change date          |Author									 |	Change Description
 -----------------------------------------------------------------------------------------------------------------------
--- 03/04/2025           Alberto Almario				1. Created this procedure
--- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 03/04/25              Alberto Almario				  1. Created this procedure
+-- 22/04/25           	 Alberto Almario				  2. Change PolicyNumber to Number from Account table
+-- 06/04/25				 Yunus Mohammed		  		3. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tcommercial_quote_history_wip]
 
@@ -244,6 +240,11 @@ BEGIN
 		USING 
 		edw_temp.tcommercial_quote_history_wip_temp5 AS Source	
 		ON Source.quote_no = Target.quote_no  and Source.transaction_seq_no = Target.transaction_seq_no
+		AND (
+						(Source.transaction_type = 'New'  AND YEAR(Target.effective_dt) = YEAR(Source.effective_dt))
+						OR
+						(Source.transaction_type != 'New'  AND Target.effective_dt = Source.effective_dt)
+    			)
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN 
 		INSERT 

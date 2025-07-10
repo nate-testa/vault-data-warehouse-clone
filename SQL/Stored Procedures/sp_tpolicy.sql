@@ -1,9 +1,4 @@
-﻿SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- ========================================================================================================================================
+﻿-- ========================================================================================================================================
 -- Description: This procedures inserts and updates TPolicy 
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
@@ -29,6 +24,11 @@ GO
 -- 09/05/24		Architha Gudimalla		        18. Added term_no
 -- 09/18/24		Architha Gudimalla		        19. Updated term_no
 -- 03/20/25		Hernando Gonzalez				20. Included Target_Account
+-- 05/19/25		Architha Gudimalla				21. AD9528 - Added cancel eff dt, added policystatus to merge
+-- 06/05/25		Yunus Mohammed					22. AD9715 - Integrate Document delivery data
+-- 06/06/25		Dinesh Bobbili					23. Updated document_delivery_to logic
+-- 07/10/25		Alberto Almario					24. AD10214 - Added new column renewal_cap_factor
+-- 07/10/25		Hernando Gonzalez				25. AD10220 | Added bound_by_broker_in
 -- ======================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tpolicy]
@@ -186,13 +186,28 @@ BEGIN
 								when tmp1.PolicyNumber like '%B'		   then 2
 								when tmp1.PolicyNumber like '%C'		   then 3
 							 	else 1
-							end term_no
-				--select *
+							end term_no				
 				,acc.TargetAccount as target_account
+				,cast(case when tmp1.Stage = 'CANCELLATION' then tmp1.TransactionEffectiveDate else null end as date) cancellation_effective_dt
+				,case 
+					when accdd.SendOnlyToBroker = 1 then 'Broker'
+					when accdd.SendOnlyToBroker = 0 
+						and accdd.EmailPrimaryInsured = 0 
+						and accdd.MailPrimaryInsured = 0 then null
+					else 'Customer' 
+				end as document_delivery_to
+				,case
+					when  accdd.SendOnlyToBroker = 0 and accdd.EmailPrimaryInsured = 1 and accdd.MailPrimaryInsured = 1 then 'Email & Mail'
+					when accdd.SendOnlyToBroker = 0 and accdd.EmailPrimaryInsured = 1 then 'Email'
+					when  accdd.SendOnlyToBroker = 0 and accdd.MailPrimaryInsured = 1 then 'Mail'					
+				end as document_delivery_method
+				,acc.RenewalCapFactor as renewal_cap_factor
+				,case when acc.BoundByBroker = 1 then 'Yes' else 'No' end as bound_by_broker_in
 			FROM 
 				edw_temp.tpolicy_temp1 tmp1
 				INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = tmp1.Id
 				inner join edw_stage.Account acc on tmp1.AccountId = acc.Id 
+				left join edw_stage.AccountDocumentDelivery accdd on acc.Id = accdd.AccountId				
 				left join edw_stage.Account acc_prior on acc.copyofAccountId = acc_prior.Id 
 				--added on 3/21/24 - AG
 				left join edw_stage.Account acc_rw on acc.rewrittenfromaccountid = acc_rw.Id 
@@ -243,6 +258,11 @@ BEGIN
 		   ,rewritten_in
 		   ,term_no
 		   ,target_account
+		   ,cancellation_effective_dt
+		   ,document_delivery_to
+		   ,document_delivery_method
+		   ,renewal_cap_factor
+		   ,bound_by_broker_in
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, Source.ExpirationDate, Source.BrokerId, Source.customer_id, 
@@ -274,6 +294,11 @@ BEGIN
 				,source.rewritten_in
 				,term_no
 				,source.target_account
+				,source.cancellation_effective_dt
+				,document_delivery_to
+		   		,document_delivery_method
+				,source.renewal_cap_factor
+				,source.bound_by_broker_in
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -302,7 +327,13 @@ BEGIN
 		Target.source_system_sk				= source.source_system_sk, 
         Target.update_ts 					= getdate(),
         Target.rewritten_in 				= source.rewritten_in,
-		Target.target_account				= source.target_account
+		Target.target_account				= source.target_account,
+		Target.cancellation_effective_dt	= source.cancellation_effective_dt,
+		Target.policy_status				= 'Active',
+		Target.document_delivery_to = source.document_delivery_to,
+		Target.document_delivery_method = source.document_delivery_method,
+		Target.renewal_cap_factor 			= Source.renewal_cap_factor,
+		Target.bound_by_broker_in = source.bound_by_broker_in
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
@@ -334,4 +365,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-

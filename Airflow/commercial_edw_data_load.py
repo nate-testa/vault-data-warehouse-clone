@@ -70,6 +70,7 @@ with DAG(
 
         commercial_policy_group_items = [
             'sp_tcommercial_policy',
+            'sp_tcommercial_policy_onetime_litigation',
             'sp_tcommercial_policy_update_cancels',
             'sp_tcommercial_policy_history',
             'sp_tcommercial_policy_history_update',
@@ -102,6 +103,17 @@ with DAG(
             operators[i] >> operators[i + 1]
 
         operators[-1] >> send_commercial_policy_email
+
+    
+    with TaskGroup("commercial_integration_group") as commercial_integration_group:
+
+        exec_Snapsheet_Commercial_Daily_Feed = TriggerDagRunOperator(
+            task_id="exec_Snapsheet_Commercial_Daily_Feed",
+            trigger_dag_id="Snapsheet_Commercial_Daily_Feed",
+            dag=dag,
+        )
+
+        exec_Snapsheet_Commercial_Daily_Feed
 
 
     with TaskGroup("commercial_quote_group") as commercial_quote_group:
@@ -152,7 +164,9 @@ with DAG(
 
         commercial_datamart_group_items = [
             'sp_tcommercial_daily_inforce_policy',
-            'sp_tcommercial_policy_summary'
+            'sp_tcommercial_policy_summary',
+            'sp_tcommercial_renewal_summary',
+            'sp_tcommercial_broker_summary'
         ]
 
         operators = []
@@ -183,4 +197,4 @@ with DAG(
     )
 
 
-start >> commercial_policy_group >> commercial_quote_group >> commercial_datamart_group >> end
+start >> commercial_policy_group >> commercial_integration_group >> commercial_quote_group >> commercial_datamart_group >> end

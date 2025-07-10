@@ -1,14 +1,10 @@
-﻿SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- ========================================================================================================
+﻿-- ========================================================================================================
 -- Description: This procedures inserts tclaim_cost_category snapsheet data
 -----------------------------------------------------------------------------------------------------------
--- Change date 		|Author						|	Change Description
+-- Change date 		|Author								 	|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 11/15/2024		Alberto Almario				1. Created this procedure
+-- 11/15/2024		Alberto Almario				  1. Created this procedure
+-- 05/28/2025		Yunus Mohammed		  	2. AD-9616 Excluded Commercial Lines claims
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_cost_category_snapsheet]
 AS
@@ -40,9 +36,18 @@ BEGIN
 			5 AS source_system_sk,
 			MAX(updated_at) AS updated_at
 		INTO edw_temp.tclaim_cost_category_snapsheet_temp1
-		FROM edw_stage_snapsheet.financial_reserve_items
+		FROM edw_stage_snapsheet.financial_reserve_items fri
 		WHERE updated_at > @last_source_extract_ts
 		AND cost_category NOT IN (select claim_cost_category_nm from edw_core.tclaim_cost_category where source_system_sk = 5)
+		AND NOT EXISTS
+			(
+				select 1
+				from
+					edw_stage_snapsheet.tags ctg
+				where
+					ctg.claim_id = fri.claim_id
+					and ctg.[name] like 'Commercial%'
+			)
 		GROUP BY cost_category
 		;
 

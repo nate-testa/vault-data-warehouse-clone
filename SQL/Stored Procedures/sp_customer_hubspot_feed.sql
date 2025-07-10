@@ -25,6 +25,10 @@
 -- 01/13/25		Alberto Almario				17. AD8013 - Included yacht data
 -- 03/06/25		Archtha Gudimalla			18. AD8781 - Send latest broker info
 -- 04/29/25		Archtha Gudimalla			19. VI37310/AD9292 - Add monoline_in
+-- 06/05/25		Archtha Gudimalla			20. AZ9641 - Added customer_business_type
+-- 06/06/25		Archtha Gudimalla			21. SR38158/AZ9753 - Added doc delivery preference
+-- 06/18/25		Dinesh Bobbili				22. AD9848 Added product_cd column
+-- 06/24/25		Dinesh Bobbili				23. AD9848 Removed product_cd column
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -118,6 +122,12 @@ BEGIN
 							   then 'Yes' 
 							   else 'No' 
 						  end monoline_in
+            , case when pol.document_delivery_to = 'Broker' then 'Send to Agent Only'
+				 when pol.document_delivery_to = 'Customer' and pol.document_delivery_method = 'Email' then 'Send to Customer by Email'
+				 when pol.document_delivery_to = 'Customer' and pol.document_delivery_method = 'Mail' then 'Send to Customer by Mail'
+				 when pol.document_delivery_to = 'Customer' and pol.document_delivery_method = 'Email & Mail' then 'Send to Customer by Email & Mail'
+				 else null
+			end document_delivery_preference
 		INTO edw_temp.customer_hubspot_feed_temp1
 		FROM edw_core.tpolicy pol		
 		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
@@ -219,7 +229,8 @@ BEGIN
 				,customer_id
 			    ,producer_nm
 				,producer_id
-				,monoline_in
+				,monoline_in 
+				,document_delivery_preference
 				FROM edw_temp.customer_hubspot_feed_temp1/*
 				union ALL 
 			SELECT 
@@ -278,6 +289,8 @@ BEGIN
 			,producer_nm
 			,producer_id
 			,monoline_in
+			,customer_business_type
+			,document_delivery_preference
 			)
 		VALUES (source.policy_no,
 				source.first_nm,
@@ -303,7 +316,9 @@ BEGIN
 				,source.customer_id
 				,source.producer_nm
 				,source.producer_id
-				,source.monoline_in)
+				,source.monoline_in
+				,'Personal Lines'
+				,source.document_delivery_preference)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
@@ -330,6 +345,7 @@ BEGIN
             ,target.producer_nm 			= source.producer_nm
             ,target.producer_id 			= source.producer_id
             ,target.monoline_in 			= source.monoline_in
+			,target.document_delivery_preference	=	source.document_delivery_preference
 		;
 
 		SET @rows_affected=@@ROWCOUNT;

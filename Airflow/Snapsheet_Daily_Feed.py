@@ -25,7 +25,8 @@ def snapsheet_api_policy_send_email(**kwargs):
     sql_qry = """
                 SELECT CAST(update_ts AS DATE) as update_ts, api_status, COUNT(1) as Row_Count 
                 FROM edw_integration.claim_policy_search_snapsheet_api 
-                WHERE CAST(update_ts AS DATE) = CAST(GETDATE() AS DATE)
+                WHERE policyType != 'professional_liability' 
+                AND CAST(update_ts AS DATE) = CAST(GETDATE() AS DATE)
                 GROUP BY CAST(update_ts AS DATE), api_status
               """
     # mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')

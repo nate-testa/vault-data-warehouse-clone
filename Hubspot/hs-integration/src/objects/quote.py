@@ -161,7 +161,9 @@ class Quote:
                 'current_underlying_company_nm': record['current_underlying_company_nm'],
                 'target_account': record['target_account'],
                 'close_reason_desc': record['close_reason_desc'],
-                'monoline_in': record['monoline_in']
+                'monoline_in': record['monoline_in'],
+                'broker_state': record['broker_state'],
+                'product_cd': record['product_cd']
                 
                 # 'pipeline': record['pipeline'],
                 # 'dealstage': record['dealstage'],
@@ -175,11 +177,3 @@ class Quote:
             payload['id'] = record['hs_object_id']
         
         return payload
-        
-
-
-        
-
-
-          
-

@@ -6,6 +6,7 @@ from airflow.models import Variable
 from airflow.models import BaseOperator
 from airflow.providers.sftp.hooks.sftp import SFTPHook
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
+from airflow.exceptions import AirflowException
 
 
 ENVIRONMENT = Variable.get("environment")
@@ -163,6 +164,9 @@ def PGP_encrypt_file(file_to_encrypt, recipient_public_key):
     print(status.ok)
     print(status.stderr)
 
+    if not status.ok:
+        raise AirflowException(f"PGP encryption failed: {status.stderr}")
+
 
 def generate_auto_txt_file_and_encrypt(**kwargs):
 
@@ -195,8 +199,8 @@ def generate_auto_txt_file_and_encrypt(**kwargs):
     record_count = str(df.shape[0]).zfill(6) #should be 6 digits, like 002578
     start_end_date = get_start_end_date()
     yydddhhmm = datetime.now().strftime('%y%j%H%M')
-    header = f"##!!SAC#{yydddhhmm}CLUE          A12345678E11967000Vault Insurance                                          CLUE_HISTORY                  {start_end_date}                                                                                                        "
-    footer = f"##!!SAT#{yydddhhmm}CLUE          A12345678{record_count}                                                                                                                                                                                                                  "
+    header = f"##!!SAC#{yydddhhmm}CLUE          E10736FTPE11967000Vault Insurance                                          CLUE_HISTORY                  {start_end_date}                                                                                                        "
+    footer = f"##!!SAT#{yydddhhmm}CLUE          E10736FTP{record_count}                                                                                                                                                                                                                  "
 
     # Read all rows
     with open(TXT_FILE_PATH, 'r') as f:

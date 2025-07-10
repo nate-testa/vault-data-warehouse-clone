@@ -1,18 +1,15 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 -- =====================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2025-03-28
 -- Description: This stored procedure insert and update info related to tcommercial_quote.
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						|	Change Description
+-- Change date        |Author							   |	Change Description
 -----------------------------------------------------------------------------------------------------------------------
--- 28/03/2025           Alberto Almario				1. Created this procedure 
--- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
--- 02/05/2025           Architha Gudimalla			3. Removed quote_status
+-- 28/03/25           Alberto Almario				1. Created this procedure 
+-- 22/04/25           Alberto Almario				2. Change PolicyNumber to Number from Account table
+-- 02/05/25           Architha Gudimalla		 3. Removed quote_status
+-- 14/05/25           Alberto Almario				4. Add new columns prior_policy_no and prior_term_policy_no
+-- 06/04/25			 Yunus Mohammed		  	  5. AD-9649 Update Merge statement join
 -- ===================================================================================================================== 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tcommercial_quote]
 
@@ -120,9 +117,12 @@ BEGIN
 			,GETDATE() as update_ts
 			,@etl_audit_sk as etl_audit_sk
 			,tmp1.source_system_sk
+			,case when acc_prior.PolicyNumber is not null then acc_prior.PolicyNumber else acc_rw.PolicyNumber end as prior_policy_no
+			,tmp1.renewalofpolicynumber as prior_term_policy_no
 		INTO edw_temp.tcommercial_quote_temp3
 		FROM edw_temp.tcommercial_quote_temp1 tmp1
 		left join edw_stage.Account acc_prior on tmp1.copyofAccountId = acc_prior.Id 
+		left join edw_stage.Account acc_rw on tmp1.rewrittenfromaccountid = acc_rw.Id
 		left join edw_stage.BillingAccount ba on ba.id = tmp1.BillingAccountId
 		left join edw_core.tbillingaccount tb on tb.billingaccount_no = ba.ReferenceCode
 		left join edw_stage.Brokerage br on tmp1.BrokerageId = br.id
@@ -137,6 +137,11 @@ BEGIN
 		MERGE edw_commercial.tcommercial_quote AS Target
 		USING edw_temp.tcommercial_quote_temp3 AS Source
 		ON Source.quote_no = Target.quote_no
+			AND (
+						(Source.quote_term = 'New'  AND YEAR(Target.effective_dt) = YEAR(Source.effective_dt))
+						OR
+						(Source.quote_term != 'New'  AND Target.effective_dt = Source.effective_dt)
+    			)
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
@@ -166,6 +171,8 @@ BEGIN
 			,update_ts
 			,etl_audit_sk
 			,source_system_sk
+			,prior_policy_no
+			,prior_term_policy_no
 		)
 		VALUES (
 			 quote_no
@@ -194,6 +201,8 @@ BEGIN
 			,update_ts
 			,etl_audit_sk
 			,source_system_sk
+			,prior_policy_no
+			,prior_term_policy_no
 		)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -221,6 +230,8 @@ BEGIN
 			,Target.close_reason_desc = Source.close_reason_desc
 			,Target.update_ts = getdate()
 			,Target.source_system_sk = Source.source_system_sk
+			,Target.prior_policy_no = Source.prior_policy_no
+			,Target.prior_term_policy_no = Source.prior_term_policy_no
 		;
 
 		SET @rows_affected=@@ROWCOUNT;

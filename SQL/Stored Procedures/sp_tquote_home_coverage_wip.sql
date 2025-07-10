@@ -21,6 +21,7 @@
 -- 03/19/25				Hernando Gonzalez			15. Added new columns wildfire_risk_score, wildfire_risk_class
 -- 04/02/25				Yunus Mohammed				16. AD-8973 roof_deck_attachment value logic updated
 -- 04/16/25				Yunus Mohammed				17. AD-9121 Corrected null values for premium mods
+-- 06/10/22				Dinesh Bobbili				18. AD-9707 Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
 
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
@@ -300,6 +301,8 @@ BEGIN
 				tthc.FencedPool as fenced_pool_in,
 				tthc.WildfireRiskScore as wildfire_risk_score,
 				tthc.WildfireRiskClass as wildfire_risk_class,
+				tthc.WildfireSuppressionSystem as wildfire_suppression_system,
+				tthc.WildfireDecksBalconiesPorchesStairs as wildfire_decks_balconies_porches_stairs,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk				
 			FROM
 				edw_temp.tquote_home_coverage_wip_temp2 AS tthc
@@ -350,6 +353,7 @@ BEGIN
 				facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, 
 				current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
 				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
+				wildfire_suppression_system,wildfire_decks_balconies_porches_stairs,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
@@ -395,6 +399,7 @@ BEGIN
 				facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, 
 				newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
 				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
+				wildfire_suppression_system,wildfire_decks_balconies_porches_stairs,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			WHEN MATCHED THEN UPDATE
@@ -551,6 +556,8 @@ BEGIN
 			[target].fenced_pool_in = [source].fenced_pool_in,
 			[target].wildfire_risk_score = [source].wildfire_risk_score,
 			[target].wildfire_risk_class = [source].wildfire_risk_class,
+			[target].wildfire_suppression_system = [source].wildfire_suppression_system,
+			[target].wildfire_decks_balconies_porches_stairs = [source].wildfire_decks_balconies_porches_stairs,
 			[target].update_ts = GETDATE();
 
 			SET @rows_affected=@@ROWCOUNT; 

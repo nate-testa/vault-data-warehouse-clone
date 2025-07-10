@@ -16,6 +16,7 @@ GO
 -- 04/17/24         Architha Gudimalla              7. AD9089 - Updated the query that gets data from ProductObjectFieldValueDisplay
 -- 04/17/24         Architha Gudimalla              8. AD9089 - Updated the query that gets data from ProductObjectFieldValueDisplay
 -- 03/15/25         Hernando Gonzalez               9. AD99483 - added consent_to_rate_otccoll
+-- 07/03/25         Dinesh Bobbili                  10. AD10146 - Added UMPDLimit column logic
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage_wip]
@@ -58,7 +59,8 @@ BEGIN
             [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
             [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied],
 			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay], 
-                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM], [ConsentToRateOTCCOLL]
+                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM], [ConsentToRateOTCCOLL],
+                    [UMPDLimit]
 		
         INTO [edw_temp].[tquote_auto_policy_coverage_wip_temp1]
 		
@@ -110,7 +112,8 @@ BEGIN
                     [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
                     [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], 
                     [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay], 
-                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM],[ConsentToRateOTCCOLL]
+                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM],[ConsentToRateOTCCOLL],
+                    [UMPDLimit]
                 )
 			) pivottable
 
@@ -195,7 +198,7 @@ BEGIN
                 target.combined_uninsured_motorist_limit_amt = source.[CombinedUMLimit],
                 target.combined_underinsured_motorist_limit_amt = source.[CombinedUIMLimit],
                 target.um_bi_policy_limit_amt = source.[UMBIPolicyLimit],
-                target.um_pd_policy_limit_amt = source.[UMPDPolicyLimit],
+                target.um_pd_policy_limit_amt = case when source.[UMPDLimit] is not null then source.[UMPDLimit] else source.[UMPDPolicyLimit] end,
                 target.combined_um_bi_policy_limit_amt = source.[CombinedUMBIPolicyLimit],
                 target.combined_um_pd_policy_limit_amt = source.[CombinedUMPDPolicyLimit],
                 target.pip_limit_amt = source.[PIPLimit],
@@ -422,7 +425,7 @@ BEGIN
                 source.[CombinedUMLimit],
                 source.[CombinedUIMLimit],
                 source.[UMBIPolicyLimit],
-                source.[UMPDPolicyLimit],
+                case when source.[UMPDLimit] is not null then source.[UMPDLimit] else source.[UMPDPolicyLimit] end,
                 source.[CombinedUMBIPolicyLimit],
                 source.[CombinedUMPDPolicyLimit],
                 source.[PIPLimit],

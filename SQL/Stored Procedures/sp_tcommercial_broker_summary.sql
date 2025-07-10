@@ -11,6 +11,9 @@ GO
 -- Change date |Author						|	Change Description 
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 -- 04/29/25		Architha Gudimalla				1. Created this procedure  
+-- 05/15/25		Architha Gudimalla				2. Updated after initial run errors
+-- 05/15/25		Architha Gudimalla				3. Added filter on tower type
+-- 05/15/25		Architha Gudimalla				4. Updated tower join
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tcommercial_broker_summary] 
@@ -243,11 +246,8 @@ BEGIN
 						select 	@end_dt = max(actual_dt) , @end_dt_sk = max(date_sk) 
 						from edw_core.tdate
 						where yearmonth = @yearmonth and actual_dt < cast(getdate() as date); 
-				END 
-				
-				 
-				
-
+				END 	
+				 			
 				--quotes data
 				DROP TABLE IF EXISTS edw_temp.tcommercial_broker_summ_quotes;
 				select *
@@ -266,33 +266,33 @@ BEGIN
 							count(distinct case when CAST(q.quote_create_ts AS DATE) between 	dateadd("dd",-30,@end_dt) and 				   @end_dt then q.commercial_quote_sk end) 	  last30_days_submission_ct, 
 							count(distinct case when CAST(q.quote_create_ts AS DATE)  <= @end_dt and q.quote_status not in ('Declined by Vault','Issued','Not taken by Insured','Not Needed','No Response by Broker/Producer','Expired') then q.commercial_quote_sk end)      open_submission_ct,
 							--
-							count(distinct case when CAST(qh.transaction_created_ts AS DATE) between 		@prior_year_begin_dt and @prior_year_month_end_dt then q.commercial_quote_sk end) prior_ytd_quote_ct, 
-							count(distinct case when CAST(qh.transaction_created_ts AS DATE) between 			  @year_begin_dt and 				  @end_dt then q.commercial_quote_sk end) 		 ytd_quote_ct, 
-							count(distinct case when CAST(qh.transaction_created_ts AS DATE) between 	 @prior_quarter_begin_dt and @prior_year_month_end_dt then q.commercial_quote_sk end) prior_qtd_quote_ct, 
-							count(distinct case when CAST(qh.transaction_created_ts AS DATE) between 		   @quarter_begin_dt and 				  @end_dt then q.commercial_quote_sk end) 		 qtd_quote_ct,
-							count(distinct case when CAST(qh.transaction_created_ts AS DATE) between   @prior_year_month_begin_dt and @prior_year_month_end_dt then q.commercial_quote_sk end) prior_mtd_quote_ct, 
-							count(distinct case when CAST(qh.transaction_created_ts AS DATE) between 			 @month_begin_dt and 				  @end_dt then q.commercial_quote_sk end) 		 mtd_quote_ct, 
+							count(distinct case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 		@prior_year_begin_dt and @prior_year_month_end_dt then q.commercial_quote_sk end) prior_ytd_quote_ct, 
+							count(distinct case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 			  @year_begin_dt and 				  @end_dt then q.commercial_quote_sk end) 		 ytd_quote_ct, 
+							count(distinct case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 	 @prior_quarter_begin_dt and @prior_year_month_end_dt then q.commercial_quote_sk end) prior_qtd_quote_ct, 
+							count(distinct case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 		   @quarter_begin_dt and 				  @end_dt then q.commercial_quote_sk end) 		 qtd_quote_ct,
+							count(distinct case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between   @prior_year_month_begin_dt and @prior_year_month_end_dt then q.commercial_quote_sk end) prior_mtd_quote_ct, 
+							count(distinct case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 			 @month_begin_dt and 				  @end_dt then q.commercial_quote_sk end) 		 mtd_quote_ct, 
 							--
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 		 @prior_year_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_ytd_quote_premium_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 		 	   @year_begin_dt and 				   @end_dt 	then qh.net_premium_amt end) 		ytd_quote_premium_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_qtd_quote_premium_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 		 	@quarter_begin_dt and 				   @end_dt 	then qh.net_premium_amt end) 		qtd_quote_premium_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between   @prior_year_month_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_mtd_quote_premium_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 			  @month_begin_dt and 				   @end_dt 	then qh.net_premium_amt end)		mtd_quote_premium_amt,  
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 		 @prior_year_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_ytd_quote_premium_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 		 	   @year_begin_dt and 				   @end_dt 	then qh.net_premium_amt end) 		ytd_quote_premium_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_qtd_quote_premium_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 		 	@quarter_begin_dt and 				   @end_dt 	then qh.net_premium_amt end) 		qtd_quote_premium_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between   @prior_year_month_begin_dt and @prior_year_month_end_dt 	then qh.net_premium_amt end) prior_mtd_quote_premium_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 			  @month_begin_dt and 				   @end_dt 	then qh.net_premium_amt end)		mtd_quote_premium_amt,  
 							--
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 		 @prior_year_begin_dt and @prior_year_month_end_dt and tow.commercial_quote_history_sk is not null	then tow.aggregate_attachment_amt else 0 end) prior_ytd_quote_attachment_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 		 	   @year_begin_dt and 				   @end_dt and tow.commercial_quote_history_sk is not null	then tow.aggregate_attachment_amt else 0 end) 		 ytd_quote_attachment_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt and tow.commercial_quote_history_sk is not null	then tow.aggregate_attachment_amt else 0 end) prior_qtd_quote_attachment_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 		 	@quarter_begin_dt and 				   @end_dt and tow.commercial_quote_history_sk is not null	then tow.aggregate_attachment_amt else 0 end) 		 qtd_quote_attachment_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between   @prior_year_month_begin_dt and @prior_year_month_end_dt and tow.commercial_quote_history_sk is not null	then tow.aggregate_attachment_amt else 0 end) prior_mtd_quote_attachment_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 			  @month_begin_dt and 				   @end_dt and tow.commercial_quote_history_sk is not null	then tow.aggregate_attachment_amt else 0 end)		 mtd_quote_attachment_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 		 @prior_year_begin_dt and @prior_year_month_end_dt and tow.commercial_quote_history_sk is not null	then cast(tow.aggregate_attachment_amt as bigint) else 0 end) prior_ytd_quote_attachment_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 		 	   @year_begin_dt and 				   @end_dt and tow.commercial_quote_history_sk is not null	then cast(tow.aggregate_attachment_amt as bigint) else 0 end) 		 ytd_quote_attachment_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt and tow.commercial_quote_history_sk is not null	then cast(tow.aggregate_attachment_amt as bigint) else 0 end) prior_qtd_quote_attachment_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 		 	@quarter_begin_dt and 				   @end_dt and tow.commercial_quote_history_sk is not null	then cast(tow.aggregate_attachment_amt as bigint) else 0 end) 		 qtd_quote_attachment_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between   @prior_year_month_begin_dt and @prior_year_month_end_dt and tow.commercial_quote_history_sk is not null	then cast(tow.aggregate_attachment_amt as bigint) else 0 end) prior_mtd_quote_attachment_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 			  @month_begin_dt and 				   @end_dt and tow.commercial_quote_history_sk is not null	then cast(tow.aggregate_attachment_amt as bigint) else 0 end)		 mtd_quote_attachment_amt, 
 							--
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 		 @prior_year_begin_dt and @prior_year_month_end_dt and tow.commercial_quote_history_sk is not null	then tow.aggregate_policy_limit_amt else 0 end) prior_ytd_quote_limit_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 		 	   @year_begin_dt and 				   @end_dt and tow.commercial_quote_history_sk is not null	then tow.aggregate_policy_limit_amt else 0 end) 		ytd_quote_limit_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt and tow.commercial_quote_history_sk is not null	then tow.aggregate_policy_limit_amt else 0 end) prior_qtd_quote_limit_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 		 	@quarter_begin_dt and 				   @end_dt and tow.commercial_quote_history_sk is not null	then tow.aggregate_policy_limit_amt else 0 end) 		qtd_quote_limit_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between   @prior_year_month_begin_dt and @prior_year_month_end_dt and tow.commercial_quote_history_sk is not null	then tow.aggregate_policy_limit_amt else 0 end) prior_mtd_quote_limit_amt, 
-							sum(case when CAST(qh.transaction_created_ts AS DATE) between 			  @month_begin_dt and 				   @end_dt and tow.commercial_quote_history_sk is not null	then tow.aggregate_policy_limit_amt else 0 end)		mtd_quote_limit_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 		 @prior_year_begin_dt and @prior_year_month_end_dt and tow.commercial_quote_history_sk is not null	then cast(tow.aggregate_policy_limit_amt as bigint) else 0 end) prior_ytd_quote_limit_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 		 	   @year_begin_dt and 				   @end_dt and tow.commercial_quote_history_sk is not null	then cast(tow.aggregate_policy_limit_amt as bigint) else 0 end) 		ytd_quote_limit_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 	  @prior_quarter_begin_dt and @prior_year_month_end_dt and tow.commercial_quote_history_sk is not null	then cast(tow.aggregate_policy_limit_amt as bigint) else 0 end) prior_qtd_quote_limit_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 		 	@quarter_begin_dt and 				   @end_dt and tow.commercial_quote_history_sk is not null	then cast(tow.aggregate_policy_limit_amt as bigint) else 0 end) 		qtd_quote_limit_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between   @prior_year_month_begin_dt and @prior_year_month_end_dt and tow.commercial_quote_history_sk is not null	then cast(tow.aggregate_policy_limit_amt as bigint) else 0 end) prior_mtd_quote_limit_amt, 
+							sum(case when CAST(q.first_quoted_commercial_quote_ts AS DATE) between 			  @month_begin_dt and 				   @end_dt and tow.commercial_quote_history_sk is not null	then cast(tow.aggregate_policy_limit_amt as bigint) else 0 end)		mtd_quote_limit_amt, 
 							--
 							max(CAST(qh.transaction_created_ts AS DATE)) max_quoted_dt, 
 							max(q.bind_dt) max_bind_dt, 
@@ -306,11 +306,11 @@ BEGIN
 							--
 					from edw_commercial.tcommercial_quote q  
 					left join edw_commercial.tcommercial_quote_history qh on q.commercial_quote_sk = qh.commercial_quote_sk and qh.latest_transaction_in = 'Y' -- q.first_offered_commercial_quote_history_sk = qh.commercial_quote_history_sk 
-					left join edw_commercial.tcommercial_quote_tower tow on tow.commercial_quote_history_sk = qh.commercial_quote_history_sk
+					left join edw_commercial.tcommercial_quote_tower tow on tow.commercial_quote_history_sk = qh.commercial_quote_history_sk and tow.company_nm = 'Vault E&S Insurance Company'  
 					inner join edw_core.tbroker br on q.broker_id = br.broker_id 
 					where  q.quote_term = 'New'
 					and (		  CAST(q.quote_create_ts AS DATE) between @prior_year_begin_dt and @end_dt 
-							or CAST(qh.transaction_created_ts AS DATE) between @prior_year_begin_dt and @end_dt 
+							or CAST(q.first_quoted_commercial_quote_ts AS DATE) between @prior_year_begin_dt and @end_dt 
 							or 				  q.bind_dt between @prior_year_begin_dt and @end_dt) 
 					group by br.broker_sk 
 				) a
@@ -331,35 +331,31 @@ BEGIN
 						or prior_mtd_bind_ct <> 0 or mtd_bind_ct <> 0 
 						;  
 
-				/*
-				
- 
 				--retention data
 				DROP TABLE IF EXISTS edw_temp.tcommercial_broker_summ_retention;
 				with ren AS
 				(
 					select 	r.month_sk,
-							r.broker_sk, 
-							
+							r.broker_sk, 							
 						   	sum(r.renewal_non_flat_cancelled_ct) renewal_accepted_ct,  
 							sum(r.renewal_ct) renewal_ct,  
 							sum(case when renewal_commercial_policy_sk > 0 
-									or (renewal_commercial_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_offered_commercial_quote_history_sk IS NOT NULL ) 
+									or (renewal_commercial_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_quoted_commercial_quote_history_sk IS NOT NULL ) 
 									or (renewal_commercial_quote_sk > 0 and q.quote_status in ('Issued','Offered','Not taken by Insured') ) 
 									then 1 
 									else 0 
 								end) policy_renewal_offered_ct, 
-							sum(case when (renewal_commercial_policy_sk > 0 and renewal_initial_written_premium_amt > 50000)
-									   or (renewal_commercial_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_offered_commercial_quote_history_sk IS NOT NULL AND qh.net_premium_amt > 50000) 
+							sum(case when (renewal_commercial_policy_sk > 0 and renewal_written_premium_amt > 50000)
+									   or (renewal_commercial_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_quoted_commercial_quote_history_sk IS NOT NULL AND qh.net_premium_amt > 50000) 
 									   or (renewal_commercial_quote_sk > 0 and q.quote_status in ('Issued','Offered','Not taken by Insured')  AND qh.net_premium_amt > 50000)
 									 then 1 
 									 else 0 
 								end) policy_renewal_offered_over_50k_ct, 
-							sum(case when renewal_ct > 0 then renewal_initial_written_premium_amt else 0 end) policy_renewal_offered_premium_amt, 
+							sum(case when renewal_ct > 0 then renewal_written_premium_amt else 0 end) policy_renewal_offered_premium_amt, 
 							sum(case when renewal_ct > 0 then r.expiring_written_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,
 							sum(r.non_flat_cancelled_ct-r.mid_term_cancelled_ct) expiring_ct,
-							sum(isnull(r.expiring_sixty_day_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) ) expiring_prm,
-							sum(case when r.renewal_non_flat_cancelled_ct = 1 then isnull(r.renewal_sixty_day_written_premium_amt,0) else 0 end) renewal_prm
+							sum(isnull(r.expiring_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) ) expiring_prm,
+							sum(case when r.renewal_non_flat_cancelled_ct = 1 then isnull(r.renewal_written_premium_amt,0) else 0 end) renewal_prm
 
 					from edw_commercial.tcommercial_renewal_summary r 
 					inner join edw_commercial.tcommercial_policy pol on r.commercial_policy_sk = pol.commercial_policy_sk  
@@ -392,8 +388,7 @@ BEGIN
 				into edw_temp.tcommercial_broker_summ_retention
 				from ren
 				group by broker_sk
-				;
-				*/
+				; 
 
 				--inforce and ytd prm data
 				DROP TABLE IF EXISTS edw_temp.tcommercial_broker_summ_pols;
@@ -416,8 +411,8 @@ BEGIN
 							sum(case when summ.month_sk = @prior_year_month_end_dt_sk and summ.inforce_ct = 1 then summ.inforce_ct else 0 end) prior_inforce_ct,  
 							sum(case when summ.month_sk = @prior_year_month_end_dt_sk and summ.inforce_ct = 1 then summ.inforce_net_premium_amt else 0 end) prior_inforce_premium_amt,   
 							
-							sum(case when summ.month_sk = @month_end_dt_sk 			  and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null	then tow.aggregate_attachment_amt else 0 end) inforce_attachment_amt,
-							sum(case when summ.month_sk = @month_end_dt_sk 			  and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null	then tow.aggregate_policy_limit_amt else 0 end) inforce_limit_amt,
+							sum(case when summ.month_sk = @month_end_dt_sk 			  and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null	then cast(tow.aggregate_attachment_amt as bigint) else 0 end) inforce_attachment_amt,
+							sum(case when summ.month_sk = @month_end_dt_sk 			  and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null	then cast(tow.aggregate_policy_limit_amt as bigint) else 0 end) inforce_limit_amt,
 							
 							sum(case when summ.month_sk = @prior_year_month_end_dt_sk and summ.product_sk = 3 and summ.inforce_ct = 1 then 1 else 0 end) +  
 							sum(case when summ.month_sk = @prior_year_month_end_dt_sk and summ.product_sk = 5 and summ.inforce_ct = 1 then 1 else 0 end) +  
@@ -441,19 +436,19 @@ BEGIN
 							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 then pol.commercial_policy_sk end) prior_mtd_new_business_ct ,
 							count(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	   @month_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 then pol.commercial_policy_sk end) 	   mtd_new_business_ct ,
 							--
-							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between    	  @prior_year_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then tow.aggregate_attachment_amt else 0 end) prior_ytd_new_business_attachment_amt ,
-							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	    @year_begin_dt and 			     	@end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then tow.aggregate_attachment_amt else 0 end) 	   ytd_new_business_attachment_amt ,
-							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between    @prior_quarter_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then tow.aggregate_attachment_amt else 0 end) prior_qtd_new_business_attachment_amt ,
-							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	 @quarter_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then tow.aggregate_attachment_amt else 0 end) 	   qtd_new_business_attachment_amt ,
-							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then tow.aggregate_attachment_amt else 0 end) prior_mtd_new_business_attachment_amt ,
-							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	   @month_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then tow.aggregate_attachment_amt else 0 end) 	   mtd_new_business_attachment_amt ,
+							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between    	  @prior_year_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then cast(tow.aggregate_attachment_amt as bigint) else 0 end) prior_ytd_new_business_attachment_amt ,
+							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	    @year_begin_dt and 			     	@end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then cast(tow.aggregate_attachment_amt as bigint) else 0 end) 	   ytd_new_business_attachment_amt ,
+							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between    @prior_quarter_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then cast(tow.aggregate_attachment_amt as bigint) else 0 end) prior_qtd_new_business_attachment_amt ,
+							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	 @quarter_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then cast(tow.aggregate_attachment_amt as bigint) else 0 end) 	   qtd_new_business_attachment_amt ,
+							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then cast(tow.aggregate_attachment_amt as bigint) else 0 end) prior_mtd_new_business_attachment_amt ,
+							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	   @month_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then cast(tow.aggregate_attachment_amt as bigint) else 0 end) 	   mtd_new_business_attachment_amt ,
 							--
-							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between    	  @prior_year_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then tow.aggregate_policy_limit_amt else 0 end) prior_ytd_new_business_limit_amt ,
-							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	    @year_begin_dt and 			     	@end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then tow.aggregate_policy_limit_amt else 0 end) 	   ytd_new_business_limit_amt ,
-							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between    @prior_quarter_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then tow.aggregate_policy_limit_amt else 0 end) prior_qtd_new_business_limit_amt ,
-							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	 @quarter_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then tow.aggregate_policy_limit_amt else 0 end) 	   qtd_new_business_limit_amt ,
-							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then tow.aggregate_policy_limit_amt else 0 end) prior_mtd_new_business_limit_amt ,
-							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	   @month_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then tow.aggregate_policy_limit_amt else 0 end) 	   mtd_new_business_limit_amt ,
+							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between    	  @prior_year_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then cast(tow.aggregate_policy_limit_amt as bigint) else 0 end) prior_ytd_new_business_limit_amt ,
+							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	    @year_begin_dt and 			     	@end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then cast(tow.aggregate_policy_limit_amt as bigint) else 0 end) 	   ytd_new_business_limit_amt ,
+							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between    @prior_quarter_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then cast(tow.aggregate_policy_limit_amt as bigint) else 0 end) prior_qtd_new_business_limit_amt ,
+							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	 @quarter_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then cast(tow.aggregate_policy_limit_amt as bigint) else 0 end) 	   qtd_new_business_limit_amt ,
+							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between @prior_year_month_begin_dt and @prior_year_month_end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then cast(tow.aggregate_policy_limit_amt as bigint) else 0 end) prior_mtd_new_business_limit_amt ,
+							sum(distinct case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	   @month_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 and tow.commercial_policy_history_sk is not null then cast(tow.aggregate_policy_limit_amt as bigint) else 0 end) 	   mtd_new_business_limit_amt ,
 							--
 							/*
 							sum(           case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  @prior_year_begin_dt and @prior_year_month_end_dt then summ.mtd_net_premium_amt else 0 end) prior_ytd_new_business_premium_amt ,   
@@ -494,7 +489,7 @@ BEGIN
 				 inner join edw_core.tdate td on td.date_sk = summ.month_sk 
 				 inner join edw_commercial.tcommercial_policy_history ph_cancels on summ.commercial_policy_history_sk = ph_cancels.commercial_policy_history_sk 
 				 inner join edw_commercial.tcommercial_policy_history ph on summ.commercial_policy_sk = ph.commercial_policy_sk 
-				 inner join edw_commercial.tcommercial_policy_tower tow on summ.commercial_policy_history_sk = tow.commercial_policy_history_sk  
+				 inner join edw_commercial.tcommercial_policy_tower tow on summ.commercial_policy_history_sk = tow.commercial_policy_history_sk and tow.company_nm = 'Vault E&S Insurance Company' and tow.tower_deleted_in = 0
 				 inner join (select commercial_policy_sk, min(transaction_seq_no) transaction_seq_no
 								from edw_commercial.tcommercial_policy_history
 								group by commercial_policy_sk ) min_ph on ph.commercial_policy_sk = min_ph.commercial_policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
@@ -591,6 +586,7 @@ BEGIN
 							0 five_year_loss_incurred_capped_amt
 					into edw_temp.tcommercial_broker_summ_claims
 					from edw_core.tbroker cs  
+					where 1 = 0
 					group by cs.broker_sk 
 
 					/*
@@ -805,9 +801,7 @@ BEGIN
 				group by  COALESCE(ps.broker_sk, 	ps1.broker_sk, 		ps2.broker_sk, 		cs.broker_sk, 	q.broker_sk);
 
 				delete from edw_commercial.tcommercial_broker_summary
-				where month_sk = @month_end_dt_sk; 
-
-				
+				where month_sk = @month_end_dt_sk; 				
        
 				SET @rows_affected=0;
 
@@ -968,7 +962,7 @@ BEGIN
 						-- 
 					)
 				select @month_end_dt_sk, 
-						coalesce(summ.broker_sk, null --r.broker_sk
+						coalesce(summ.broker_sk, null , r.broker_sk
 						),  
 						--
 						sum(summ.prior_ytd_submission_ct), 
@@ -1095,32 +1089,32 @@ BEGIN
 						sum(summ.five_year_claim_ct), 
 						sum(summ.five_year_loss_incurred_amt),   
 						--
-						0, --sum(isnull(r.policy_expiring_ct							,0)) policy_expiring_ct,
-						0, --sum(isnull(r.policy_renewal_accepted_ct					,0)) policy_renewal_accepted_ct,
-						0, --sum(isnull(r.policy_renewal_ct							,0)) policy_renewal_ct,
-						0, --sum(isnull(r.policy_renewal_offered_ct					,0)) policy_renewal_offered_ct,
-						0, --sum(isnull(r.policy_renewal_offered_over_50k_ct			,0)) policy_renewal_offered_over_50k_ct, 
-						0, --sum(isnull(r.policy_renewal_offered_premium_amt			,0)) policy_renewal_offered_premium_amt,
-						0, --sum(isnull(r.policy_renewal_offered_expiring_premium_amt,0)) policy_renewal_offered_expiring_premium_amt, 
-						0, --sum(isnull(r.policy_expiring_prm						,0)) policy_expiring_premium_amt,
-						0, --sum(isnull(r.policy_renewal_prm							,0)) policy_renewal_premium_amt,
+						sum(isnull(r.policy_expiring_ct							,0)) policy_expiring_ct,
+						sum(isnull(r.policy_renewal_accepted_ct					,0)) policy_renewal_accepted_ct,
+						sum(isnull(r.policy_renewal_ct							,0)) policy_renewal_ct,
+						sum(isnull(r.policy_renewal_offered_ct					,0)) policy_renewal_offered_ct,
+						sum(isnull(r.policy_renewal_offered_over_50k_ct			,0)) policy_renewal_offered_over_50k_ct, 
+						sum(isnull(r.policy_renewal_offered_premium_amt			,0)) policy_renewal_offered_premium_amt,
+						sum(isnull(r.policy_renewal_offered_expiring_premium_amt,0)) policy_renewal_offered_expiring_premium_amt, 
+						sum(isnull(r.policy_expiring_prm						,0)) policy_expiring_premium_amt,
+						sum(isnull(r.policy_renewal_prm							,0)) policy_renewal_premium_amt,
 						--
-						0, --sum(isnull(r.ytd_policy_expiring_ct							,0)) ytd_policy_expiring_ct,
-						0, --sum(isnull(r.ytd_policy_renewal_accepted_ct					,0)) ytd_policy_renewal_accepted_ct,
-						0, --sum(isnull(r.ytd_policy_renewal_ct							,0)) ytd_policy_renewal_ct,
-						0, --sum(isnull(r.ytd_policy_renewal_offered_ct					,0)) ytd_policy_renewal_offered_ct,
-						0, --sum(isnull(r.ytd_policy_renewal_offered_over_50k_ct			,0)) ytd_policy_renewal_offered_over_50k_ct, 
-						0, --sum(isnull(r.ytd_policy_renewal_offered_premium_amt			,0)) ytd_policy_renewal_offered_premium_amt,
-						0, --sum(isnull(r.ytd_policy_renewal_offered_expiring_premium_amt,0)) ytd_policy_renewal_offered_expiring_premium_amt, 
-						0, --sum(isnull(r.ytd_policy_expiring_prm						,0)) ytd_policy_expiring_premium_amt,
-						0, --sum(isnull(r.ytd_policy_renewal_prm							,0)) ytd_policy_renewal_premium_amt,
+						sum(isnull(r.ytd_policy_expiring_ct							,0)) ytd_policy_expiring_ct,
+						sum(isnull(r.ytd_policy_renewal_accepted_ct					,0)) ytd_policy_renewal_accepted_ct,
+						sum(isnull(r.ytd_policy_renewal_ct							,0)) ytd_policy_renewal_ct,
+						sum(isnull(r.ytd_policy_renewal_offered_ct					,0)) ytd_policy_renewal_offered_ct,
+						sum(isnull(r.ytd_policy_renewal_offered_over_50k_ct			,0)) ytd_policy_renewal_offered_over_50k_ct, 
+						sum(isnull(r.ytd_policy_renewal_offered_premium_amt			,0)) ytd_policy_renewal_offered_premium_amt,
+						sum(isnull(r.ytd_policy_renewal_offered_expiring_premium_amt,0)) ytd_policy_renewal_offered_expiring_premium_amt, 
+						sum(isnull(r.ytd_policy_expiring_prm						,0)) ytd_policy_expiring_premium_amt,
+						sum(isnull(r.ytd_policy_renewal_prm							,0)) ytd_policy_renewal_premium_amt,
 						--
 						max(summ.update_ts), max(summ.etl_audit_sk)  
 						--
 				from edw_temp.tcommercial_broker_summary_temp summ
-				--LEFT join edw_temp.tcommercial_broker_summ_retention r on summ.broker_sk = r.broker_sk
+				LEFT join edw_temp.tcommercial_broker_summ_retention r on summ.broker_sk = r.broker_sk
 				group by  
-						coalesce(summ.broker_sk, null --r.broker_sk
+						coalesce(summ.broker_sk, null , r.broker_sk
 						)  ;
        
 				SET @rows_affected=@@ROWCOUNT;
@@ -1155,13 +1149,13 @@ BEGIN
 				end 
 				EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;   
 				
-				DROP TABLE IF EXISTS edw_temp.tcommercial_broker_summary_temp; 
+			/*	DROP TABLE IF EXISTS edw_temp.tcommercial_broker_summary_temp; 
 				DROP TABLE IF EXISTS edw_temp.tcommercial_broker_summ_quotes; 
 				DROP TABLE IF EXISTS edw_temp.tcommercial_broker_summ_pols; 
 				DROP TABLE IF EXISTS edw_temp.tcommercial_broker_summ_pols1; 
 				DROP TABLE IF EXISTS edw_temp.tcommercial_broker_summ_claims;
 				DROP TABLE IF EXISTS edw_temp.tcommercial_broker_summ_retention; 
-								 
+								 */
 				FETCH NEXT FROM c2_rec INTO @yearmonth, @year;
 			END; 
 		CLOSE c2_rec;

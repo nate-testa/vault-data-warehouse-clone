@@ -10,6 +10,7 @@
 -- 09/04/24		Architha Gudimalla				5. Added enrollment_forms
 -- 09/19/24		Architha Gudimalla				6. Changed broker email to producer email
 -- 09/24/24		Architha Gudimalla				7. Updated join for tbroker_vault_team
+-- 05/15/25     Yunus Mohammed               8. AD-9392 Added gate_entry_code_required_in
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_policy_redzone_feed]
 AS
@@ -80,6 +81,7 @@ BEGIN
             acov.emergency_contact_nm,
             acov.emergency_contact_phone_no,
             acov.emergency_contact_email,
+            acov.gate_entry_code_required_in,
             @current_date AS create_ts,
             @current_date AS update_ts,
             @etl_audit_sk AS etl_audit_sk
@@ -153,6 +155,7 @@ BEGIN
             '' as emergency_contact_nm,
             '' as emergency_contact_phone_no,
             '' as emergency_contact_email,
+            '' as gate_entry_code_required_in,
             @current_date as create_ts,
             @current_date as update_ts,
             @etl_audit_sk as etl_audit_sk
@@ -240,6 +243,7 @@ BEGIN
             , emergency_contact_nm
             , emergency_contact_phone_no
             , emergency_contact_email 
+            ,gate_entry_code_required_in
         )
         SELECT 
             unique_id, 
@@ -279,6 +283,7 @@ BEGIN
             , emergency_contact_nm
             , emergency_contact_phone_no
             , emergency_contact_email 
+            ,gate_entry_code_required_in
         FROM [edw_temp].[policy_redzone_feed_temp1];
 
         --************End************
