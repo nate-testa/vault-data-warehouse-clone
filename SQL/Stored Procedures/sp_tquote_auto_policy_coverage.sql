@@ -17,6 +17,7 @@ GO
 -- 07/25/24             Tuba Mohsin                     7. Added new coverage EnhancedUIM
 -- 04/17/24             Architha Gudimalla              8. AD9089 - Updated the query that gets data from ProductObjectFieldValueDisplay
 -- 03/15/25             Hernando Gonzalez               9. AD99483 - added consent_to_rate_otccoll
+-- 07/03/25             Dinesh Bobbili                  10. AD10146 - Added UMPDLimit column logic
 -- ======================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage] 
@@ -59,7 +60,8 @@ BEGIN
             [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
             [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied],
 			source_system_sk, [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay],
-            [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM], [ConsentToRateOTCCOLL]
+            [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM], [ConsentToRateOTCCOLL],
+            [UMPDLimit]
 		
         INTO [edw_temp].[tquote_auto_policy_coverage_temp1]
 		
@@ -111,7 +113,8 @@ BEGIN
                     [NumberofYouthsonPolicy], [YearsCleanDiscount], [YouthfulonPolicy], [PriorCarrierNAFPoints], [PriorCarrierMinorAccidents], [PriorCarrierMinorAccidentsPoints], [SDIPPoints], [COMPClaims], 
                     [NCViolations], [NCAccidents], [NumberofMotorcycles], [NumberofOtherMiscVehicles], [MultiBikeDiscount], [MulticarDiscount], [IncludeChangeInTermsSummary], [YearCleanDiscountApplied], 
                     [NCRBPPACOLLTotal],[NCRBPPAOTCTotal], [TransportationExpense], [TransportationExpenseDailyLimit], [TransportationExpenseCoPay],
-                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM],[ConsentToRateOTCCOLL]
+                    [PermissiveDriverUniqueLiabilityLimits], [PermissiveDriverUniqueCombinedSingleLimit], [PermissiveDriverUniqueBILimit], [PermissiveDriverUniquePDLimit], [EmergencyExtensionNotice],[EnhancedUIM],[ConsentToRateOTCCOLL],
+                    [UMPDLimit]
                 )
 			) pivottable
 
@@ -308,7 +311,7 @@ BEGIN
             t1.[CombinedUMLimit] as combined_uninsured_motorist_limit_amt,
             t1.[CombinedUIMLimit] as combined_underinsured_motorist_limit_amt,
             t1.[UMBIPolicyLimit] as um_bi_policy_limit_amt,
-            t1.[UMPDPolicyLimit] as um_pd_policy_limit_amt,
+            case when t1.[UMPDLimit] is not null then t1.[UMPDLimit] else t1.[UMPDPolicyLimit] end as um_pd_policy_limit_amt,
             t1.[CombinedUMBIPolicyLimit] as combined_um_bi_policy_limit_amt,
             t1.[CombinedUMPDPolicyLimit] as combined_um_pd_policy_limit_amt,
             t1.[PIPLimit] as pip_limit_amt,

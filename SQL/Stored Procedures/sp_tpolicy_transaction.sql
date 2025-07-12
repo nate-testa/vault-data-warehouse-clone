@@ -28,6 +28,7 @@
 -- 										   			Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S
 --11/25/2024	Sandeep Gundreddy				19. Added logic to load item_sk and coverage_sk for Marine Boat & Yacht
 -- 06/04/2025	Alberto Almario					20. Added new column user_sk
+-- 07/10/2025	Dinesh Bobbili					21. Added IssuedByUserId in the filter
 -- ====================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -97,6 +98,7 @@ BEGIN
 			null covID
 			,tmp1.ReviewedById
 			,tmp1.CreatedById
+			,tmp1.IssuedByUserId
 		INTO edw_temp.tpolicy_transaction_temp2  
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
@@ -132,6 +134,7 @@ BEGIN
 			cov.Name covID
 			,tmp1.ReviewedById
 			,tmp1.CreatedById
+			,tmp1.IssuedByUserId
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
 		inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = tmp1.Id 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
@@ -248,7 +251,14 @@ BEGIN
 																	when replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')  = 'Fine Arts' then 'Fine Art' 
 																	else replace(replace(ic.internal_coverage_cd,' (Blanket)',''),' (Scheduled)','')
 																end = cc.class_type  
-		left join edw_core.tuser u on u.user_id = CASE WHEN source.ReviewedById IS NOT NULL and source.ReviewedById <> '00000000-0000-0000-0000-000000000000' THEN source.ReviewedById ELSE source.CreatedById END
+		left join edw_core.tuser u on u.user_id 
+                                    = CASE WHEN source.IssuedByUserId IS NOT NULL 
+                                                 THEN source.IssuedByUserId
+                                                WHEN source.ReviewedById IS NOT NULL 
+                                                         and source.ReviewedById <> '00000000-0000-0000-0000-000000000000' 
+                                                 THEN source.ReviewedById                                      
+                                                 ELSE source.CreatedById 
+                                         END
 
 		SET @rows_affected=@@ROWCOUNT;  
 		

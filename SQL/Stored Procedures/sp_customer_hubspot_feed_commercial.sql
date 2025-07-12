@@ -5,6 +5,8 @@
 -- Change date |Author						|	Change Description
 -------------------------------------------------------------------------------------------------------------------
 -- 05/30/25		Dinesh Bobbili			    1. Created this procedure
+-- 06/18/25		Dinesh Bobbili			    2. AD9853 added underwriter_nm column 
+-- 06/30/25		Architha Gudimalla		    3. Updated last name to use policy insured_nm
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed_commercial
@@ -50,7 +52,7 @@ BEGIN
 		SELECT
 			pol.policy_no,
 			null as first_nm,
-			null last_nm,
+			pol.insured_nm last_nm,
 			case when cust.email like '%papermail%' or cust.email like '%@%@%' then null else cust.email end email, 
 			pol.risk_state_cd,
 			pol.product_cd AS product_nm,
@@ -74,6 +76,7 @@ BEGIN
 			,null as monoline_in
 			,pol.insured_nm
 			,'Commercial Lines' as customer_business_type
+			,ph.underwriter_nm
 		INTO edw_temp.customer_hubspot_feed_commercial_temp1
 		FROM edw_commercial.tcommercial_policy pol		
 		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
@@ -170,6 +173,7 @@ BEGIN
 				,monoline_in
 				,insured_nm
 				,customer_business_type
+				,underwriter_nm
 				FROM edw_temp.customer_hubspot_feed_commercial_temp1/*
 				union ALL 
 			SELECT 
@@ -230,6 +234,7 @@ BEGIN
 			,monoline_in
 			,insured_nm
 			,customer_business_type
+			,underwriter_nm
 			)
 		VALUES (source.policy_no,
 				source.first_nm,
@@ -258,6 +263,7 @@ BEGIN
 				,source.monoline_in
 				,source.insured_nm
 				,source.customer_business_type
+				,source.underwriter_nm
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -287,6 +293,7 @@ BEGIN
             ,target.monoline_in 			= source.monoline_in
 			,target.insured_nm				= source.insured_nm
 			,target.customer_business_type  = source.customer_business_type
+			,target.underwriter_nm  		= source.underwriter_nm 
 		;
 
 		SET @rows_affected=@@ROWCOUNT;

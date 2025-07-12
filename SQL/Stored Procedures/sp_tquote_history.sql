@@ -14,6 +14,7 @@
 -- 04/03/25		Yunus Mohammed								9. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
 -- 04/22/25		Yunus Mohammed								10. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
 -- 05/20/25		Alberto Almario								11. Ad-9559 Added insurance_score_source
+-- 07/08/25		Dinesh Bobbili								12. Ad-10153 Added bound_by_user_nm,issued_by_user_nm
 -- ============================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history]
@@ -78,7 +79,9 @@ BEGIN
 				usr.name uw_nm, nullif(trim(acct.note),'') note,
                 acct.state, acc.isrenewal, acct.BindDate, acct.ReferredByUserId,
 				pd.producer_sk,
-				acctvprr.[Version] as premium_rater_version
+				acctvprr.[Version] as premium_rater_version,
+			usr2.name as bound_by_user_nm,
+			usr3.name as issued_by_user_nm
 		INTO edw_temp.tquote_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
@@ -93,6 +96,8 @@ BEGIN
 		LEFT JOIN (SELECT * FROM edw_stage.AccountTransactionVersionPremiumRaterReference WHERE ReferenceType = 'Premium') acctvprr 
 		on acctvprr.AccountTransactionVersionPremiumId = acctvp.Id 	and pr.[InternalName] = acctvprr.ProductInternalName
 		LEFT JOIN edw_core.tproducer pd on pd.producer_id = acctv.BrokerId
+		left join edw_stage.[user] usr2 on usr2.id = acct.BoundByUserId
+		left join edw_stage.[user] usr3 on usr3.id = coalesce(acct.IssuedByUserId, acct.ReviewedById)
 		WHERE acct.Stage in ('QUOTE','POLICY') --- Review BOUND transactions
 		and	acct.PolicyNumber is not null 
 		and pr.ProductLine = 'PersonalLines' 		
@@ -218,6 +223,8 @@ BEGIN
 		   ,insurance_score_last_run_dt
 		   ,premium_rater_version
 		   ,insurance_score_source
+		   ,bound_by_user_nm
+		   ,issued_by_user_nm
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, 
 				Source.TransactionEffectiveDate, Source.Number, 
@@ -261,6 +268,8 @@ BEGIN
 				,source1.InsuranceScoreLastRunDate
 				,source. premium_rater_version
 				,source1.InsuranceScoreSource
+				,source.bound_by_user_nm
+				,source.issued_by_user_nm
 		FROM edw_temp.tquote_history_temp1 source
 		LEFT JOIN edw_temp.tquote_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tquote_history_temp2 source1 on source.id = source1.AccountTransactionId 

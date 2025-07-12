@@ -27,6 +27,8 @@
 -- 04/29/25		Archtha Gudimalla			19. VI37310/AD9292 - Add monoline_in
 -- 06/05/25		Archtha Gudimalla			20. AZ9641 - Added customer_business_type
 -- 06/06/25		Archtha Gudimalla			21. SR38158/AZ9753 - Added doc delivery preference
+-- 06/18/25		Dinesh Bobbili				22. AD9848 Added product_cd column
+-- 06/24/25		Dinesh Bobbili				23. AD9848 Removed product_cd column
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
