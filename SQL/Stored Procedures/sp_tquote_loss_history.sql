@@ -14,6 +14,7 @@ GO
 -- ---------------------------------------------------------------------------------------------------
 -- 01-15-2025				Alberto Almario				1. Add include_in_rating_in column.
 -- 02-05-2025				Alberto Almario				2. Add new columns source_of_water, source_of_fire and include_in_rating_override_in..
+-- 07-16-2025				Dinesh Bobbili				3. Added logic to remove time from LossDate
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_loss_history]
 AS
@@ -43,7 +44,8 @@ BEGIN
 			PolicyNumber as quote_no, EffectiveDate, ExpirationDate, Number
 			,quote_history_sk
 			,[index] as loss_seq_no
-			,PropertyOrLiability, [Source] as source_nm, ClaimStatus, Claimant, FileNumber, LossDate, LossIdentifier, LossType, 
+			,PropertyOrLiability, [Source] as source_nm, ClaimStatus, Claimant, FileNumber, 
+			case when LossDate is not null then LEFT(LossDate, CHARINDEX(' ', LossDate + ' ') - 1) else LossDate end as LossDate, LossIdentifier, LossType, 
 			SubCauseofLoss as sub_cause_of_loss, LossDescription, PolicyType, CatIndicator, Disputed,
 			AddressLine1, AddressLine2, AddressLineUnit, AddressCity, AddressState, AddressZipCode, Coverage,
 			ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred, IncludeInRating
