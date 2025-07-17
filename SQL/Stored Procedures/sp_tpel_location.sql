@@ -10,6 +10,7 @@
 -- 04/29/24		Hernando Gonzalez			3. add new columns SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental
 -- 02/05/24		Hernando Gonzalez			4. Added Limits Indicator
 -- 07/03/24		Alberto Almario				5. Added primary_location_in
+-- 17/07/25		Alberto Almario				6. New Column location_deleted_in
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_location]
 
@@ -40,6 +41,7 @@ BEGIN
 			IssuedDate,AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
 			NumberOfSwimmingPools,MultiFamilyDwelling,VacantOrUnoccupied,ForSale,
 			SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator,primary_location_in
+			,location_deleted_in
 			into edw_temp.tpel_location_temp1
 		from
 		(
@@ -57,6 +59,7 @@ BEGIN
 			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,atvo.[index],
 			act.IssuedDate,atvof.Field,atvof.[Value] -- ,atvo.Id
 			,CASE WHEN atvof_2.Field = 'PrimaryLocationId' THEN 'Yes' ELSE 'No' END AS primary_location_in
+			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END as location_deleted_in
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
@@ -97,6 +100,7 @@ BEGIN
 			location_no,address_line_1,address_line_2,unit_no,city_nm,state_cd,zip_cd,county_nm,country_nm,longitude,latitude,
 			swimming_pool_ct,multi_family_dwelling_in,vacant_unoccupied_in,for_sale_in,source_system_sk,create_ts,update_ts,etl_audit_sk,
 			square_feet,no_of_athletic_structures,short_term_rental_in,long_term_rental_in,location_limit_type,primary_location_in
+			,location_deleted_in
 		)
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
@@ -108,6 +112,7 @@ BEGIN
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,
 			SquareFootage AS square_feet,NumberofAthleticStructures AS no_of_athletic_structures,ShortTermRental AS short_term_rental_in,LongTermRental AS long_term_rental_in,LocationsLimitsIndicator as location_limit_type
 			,primary_location_in
+			,location_deleted_in
 		FROM
 			edw_temp.tpel_location_temp1 AS ttlc
 
