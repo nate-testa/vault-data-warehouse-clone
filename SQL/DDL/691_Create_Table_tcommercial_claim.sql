@@ -12,11 +12,6 @@ CREATE TABLE edw_commercial.tcommercial_claim (
   source_claim_status varchar(255) ,
   product_sk int ,
   underwriting_company_nm varchar(255) ,
-  loss_address varchar(255),
-  loss_city_nm varchar(255),
-  loss_state_cd varchar(255),
-  loss_zip_cd varchar(255),
-  loss_country_nm varchar(255),
   broker_id varchar(255) ,
   customer_id varchar(255) ,
   contact_nm varchar(255),
@@ -85,3 +80,4 @@ CREATE TABLE edw_commercial.tcommercial_claim (
 
 INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
     VALUES ('tcommercial_claim','Type-1 Dimension','Base','Claim','Stored Procedure','Insert/Update','Daily',getdate(),getdate());
+

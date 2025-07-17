@@ -5,12 +5,10 @@ CREATE TABLE edw_commercial.tcommercial_claim_feature (
   claim_coverage_cd bigint ,
   claim_coverage_desc varchar(255) ,
   claimant_nm varchar(255) ,
-  total_loss_in varchar(1) ,
   product_sk int ,
   claim_feature_status varchar(255) ,
   aslob_sk int ,
   claim_adjuster_nm varchar(255) ,
-  coverage_sk int,
   loss_reserve_amt decimal(15,2) ,
   expense_reserve_amt decimal(15,2) ,
   subrogation_recovery_reserve_amt decimal(15,2) ,
@@ -62,3 +60,4 @@ CREATE TABLE edw_commercial.tcommercial_claim_feature (
 
 INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
     VALUES ('tcommercial_claim_feature','Type-1 Dimension','Base','Claim','Stored Procedure','Insert/Update','Daily',getdate(),getdate());
+
