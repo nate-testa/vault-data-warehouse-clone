@@ -46,8 +46,8 @@ BEGIN
 		FROM edw_stage_snapsheet.claims as c
 		INNER JOIN edw_stage_snapsheet.notes as n ON n.claim_id = c.id
 		LEFT JOIN edw_stage_snapsheet.users as u ON u.id = n.logged_by_user_id
-		INNER JOIN edw_core.tclaim as tc ON tc.claim_no = c.claim_number
-		LEFT JOIN edw_core.tclaim_feature as cf ON cf.claim_no = c.claim_number and cf.claim_coverage_cd=n.exposure_id
+		INNER JOIN edw_core.tcommercial_claim as tc ON tc.claim_no = c.claim_number
+		LEFT JOIN edw_core.tcommercial_claim_feature as cf ON cf.claim_no = c.claim_number and cf.claim_coverage_cd=n.exposure_id
 		WHERE n.created_at > @last_source_extract_ts
 		and exists
 			(
