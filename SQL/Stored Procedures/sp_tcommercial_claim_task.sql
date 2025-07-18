@@ -73,7 +73,7 @@ BEGIN
 		;
 		
 		
-		MERGE edw_core.tclaim_task AS Target
+		MERGE edw_core.tcommercial_claim_task AS Target
 		USING edw_temp.tcommercial_claim_task_temp1 AS Source
 			ON Source.claim_no = Target.claim_no
 			and Source.task_id = Target.task_id

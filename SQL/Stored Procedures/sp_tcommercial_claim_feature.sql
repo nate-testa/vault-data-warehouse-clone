@@ -206,7 +206,7 @@ BEGIN
 			)
 		;
 
-		MERGE edw_core.tclaim_feature AS Target
+		MERGE edw_core.tcommercial_claim_feature AS Target
 		USING edw_temp.sp_tcommercial_claim_feature_temp1 AS Source
 		ON cast(Source.claim_coverage_cd as varchar(255)) = Target.claim_coverage_cd
 		-- For Inserts

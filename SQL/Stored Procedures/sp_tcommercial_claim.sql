@@ -52,7 +52,7 @@ BEGIN
 		policy_sk,cause_of_loss_sk,loss_desc, source_claim_status,claim_status, product_sk,
 		broker_id,customer_id,underwriting_company_nm,
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
-		claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
+		claim_created_ts,claim_created_by_nm,commercial_policy_history_sk,claim_reject_reason_desc,
 		source_system_sk,update_time
 		,fault_decision,
 		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,
@@ -100,7 +100,7 @@ BEGIN
 			CASE WHEN c.first_opened_at!=c.opened_at THEN c.opened_at END AS claim_first_reopen_dt,			
 			c.created_at AS claim_created_ts,
 			c.creator_user_name AS claim_created_by_nm,
-			tph.policy_history_sk,
+			tph.commercial_policy_history_sk,
 			NULL AS claim_reject_reason_desc,
 			la.fault_decision
 			,covc.updated_at as coverage_confirmed_ts
@@ -131,10 +131,10 @@ BEGIN
 		LEFT JOIN edw_stage_snapsheet.property_incident_detail_water_damages pidwd on c.id = pidwd.claim_id
 		LEFT JOIN edw_stage_snapsheet.liability_assignments la on la.claim_id = c.id
 		LEFT JOIN edw_stage_snapsheet.liability_determinations ld on ld.claim_id = c.id
-		LEFT JOIN edw_core.tpolicy tp on TRIM(c.policy_number) = tp.policy_no												
-		LEFT JOIN edw_core.tpolicy_history tph ON TRIM(c.policy_number) = tph.policy_no
-												AND tph.policy_history_sk = (
-																	SELECT TOP 1 policy_history_sk
+		LEFT JOIN edw_core.tcommercial_policy tp on TRIM(c.policy_number) = tp.policy_no												
+		LEFT JOIN edw_core.tcommercial_policy_history tph ON TRIM(c.policy_number) = tph.policy_no
+												AND tph.commercial_policy_history_sk = (
+																	SELECT TOP 1 commercial_policy_history_sk
 																	FROM
 																		edw_core.tpolicy_history tph1
 																	WHERE
@@ -169,7 +169,7 @@ BEGIN
 	WHERE
 		rn=1
 		
-	MERGE edw_core.tclaim AS Target
+	MERGE edw_core.tcommercial_claim AS Target
 	USING edw_temp.tcommercial_claim_temp1 AS Source
 	ON Source.claim_no=Target.claim_no
 	-- For Inserts
@@ -179,7 +179,7 @@ BEGIN
 			,policy_effective_dt,policy_sk,cause_of_loss_sk,loss_desc,claim_status
 			,source_claim_status,product_sk,underwriting_company_nm,broker_id,customer_id,contact_nm,contact_type
 			,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt
-			,claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc
+			,claim_created_ts,claim_created_by_nm,commercial_policy_history_sk,claim_reject_reason_desc
 			,source_system_sk,create_ts,update_ts,etl_audit_sk
 			,fault_decision,
 			coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,
@@ -191,7 +191,7 @@ BEGIN
 		,policy_effective_dt,policy_sk,cause_of_loss_sk,loss_desc,claim_status
 		,source_claim_status,product_sk,underwriting_company_nm,broker_id,customer_id,contact_nm,contact_type
 		,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,claim_created_ts ,claim_created_by_nm
-		,policy_history_sk,claim_reject_reason_desc
+		,commercial_policy_history_sk,claim_reject_reason_desc
 		,source_system_sk,@current_date,@current_date,@etl_audit_sk
 		,fault_decision,
 		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,
@@ -217,7 +217,7 @@ BEGIN
 		Target.contact_type=Source.contact_type,
 		Target.contact_phone=Source.contact_phone,
 		Target.contact_person_email=Source.contact_person_email,
-		Target.policy_history_sk=Source.policy_history_sk,
+		Target.commercial_policy_history_sk=Source.commercial_policy_history_sk,
 		Target.claim_first_closed_dt=Source.claim_first_closed_dt,
 		Target.claim_first_reopen_dt= case when Target.claim_first_reopen_dt is null then  Source.claim_first_reopen_dt else Target.claim_first_reopen_dt end,
 		Target.claim_created_ts=Source.claim_created_ts,
