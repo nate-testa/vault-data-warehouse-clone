@@ -49,7 +49,7 @@ BEGIN
 		
 		SELECT
 		claim_number as claim_no, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS policy_effective_dt, 
-		policy_sk,cause_of_loss_sk,loss_desc, source_claim_status,claim_status, product_sk,
+		commercial_policy_sk,cause_of_loss_sk,loss_desc, source_claim_status,claim_status, product_sk,
 		broker_id,customer_id,underwriting_company_nm,
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
 		claim_created_ts,claim_created_by_nm,commercial_policy_history_sk,claim_reject_reason_desc,
@@ -69,7 +69,7 @@ BEGIN
 			c.datetime_of_loss AS loss_dt, 
 			c.datetime_of_notification AS report_dt, 
 			c.policy_number as policy_no, 
-			tp.policy_sk,
+			tp.commercial_policy_sk,
 			cl.cause_of_loss_sk,
 			case
 				when c.claim_source = 'api' then c.incident_location_description
@@ -85,7 +85,7 @@ BEGIN
 			CASE
 					WHEN c.account_code='vault_reciprocal_exchange' THEN 'VRE'
 					WHEN c.account_code='vault_es_insurance_company' THEN 'VES'
-					WHEN tp.uw_company_nm like '%litigation%' then tp.uw_company_nm
+					--WHEN tp.uw_company_nm like '%litigation%' then tp.uw_company_nm
 			ELSE '' END AS underwriting_company_nm,
 			CONCAT(	'',
 					TRIM(cp.first_name), 
