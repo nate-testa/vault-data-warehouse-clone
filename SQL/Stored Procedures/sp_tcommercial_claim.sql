@@ -48,9 +48,9 @@ BEGIN
 		;		
 		
 		SELECT
-		claim_number as claim_no, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS policy_effective_dt, 
+		claim_number as claim_no, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS effective_dt, 
 		commercial_policy_sk,cause_of_loss_sk,loss_desc, source_claim_status,claim_status, product_sk,
-		broker_id,customer_id,underwriting_company_nm,
+		broker_id,customer_id,
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
 		claim_created_ts,claim_created_by_nm,commercial_policy_history_sk,claim_reject_reason_desc,
 		source_system_sk,update_time
@@ -82,11 +82,6 @@ BEGIN
 				else 'Closed' 
 			END) AS claim_status,
 			CASE WHEN c.policy_number LIKE 'NFP%' THEN 4 ELSE pr.product_sk END as product_sk,
-			CASE
-					WHEN c.account_code='vault_reciprocal_exchange' THEN 'VRE'
-					WHEN c.account_code='vault_es_insurance_company' THEN 'VES'
-					--WHEN tp.uw_company_nm like '%litigation%' then tp.uw_company_nm
-			ELSE '' END AS underwriting_company_nm,
 			CONCAT(	'',
 					TRIM(cp.first_name), 
 					CASE WHEN TRIM(ISNULL(cp.first_name,''))='' THEN '' ELSE '' END,
@@ -176,8 +171,8 @@ BEGIN
 	WHEN NOT MATCHED BY Target THEN
 	INSERT (
 			claim_no,loss_dt,report_dt,policy_no
-			,policy_effective_dt,policy_sk,cause_of_loss_sk,loss_desc,claim_status
-			,source_claim_status,product_sk,underwriting_company_nm,broker_id,customer_id,contact_nm,contact_type
+			,effective_dt,commercial_policy_sk,cause_of_loss_sk,loss_desc,claim_status
+			,source_claim_status,product_sk,broker_id,customer_id,contact_nm,contact_type
 			,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt
 			,claim_created_ts,claim_created_by_nm,commercial_policy_history_sk,claim_reject_reason_desc
 			,source_system_sk,create_ts,update_ts,etl_audit_sk
@@ -188,8 +183,8 @@ BEGIN
 	VALUES
 		(
 		claim_no,loss_dt,report_dt,policy_no
-		,policy_effective_dt,policy_sk,cause_of_loss_sk,loss_desc,claim_status
-		,source_claim_status,product_sk,underwriting_company_nm,broker_id,customer_id,contact_nm,contact_type
+		,effective_dt,commercial_policy_sk,cause_of_loss_sk,loss_desc,claim_status
+		,source_claim_status,product_sk,broker_id,customer_id,contact_nm,contact_type
 		,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,claim_created_ts ,claim_created_by_nm
 		,commercial_policy_history_sk,claim_reject_reason_desc
 		,source_system_sk,@current_date,@current_date,@etl_audit_sk
@@ -203,8 +198,8 @@ BEGIN
 		Target.loss_dt=Source.loss_dt,
 		Target.report_dt=Source.report_dt,
 		Target.policy_no=Source.policy_no,
-		Target.policy_effective_dt=Source.policy_effective_dt,
-		Target.policy_sk=Source.policy_sk,
+		Target.effective_dt=Source.effective_dt,
+		Target.commercial_policy_sk=Source.commercial_policy_sk,
 		Target.cause_of_loss_sk=Source.cause_of_loss_sk,
 		Target.loss_desc=Source.loss_desc,
 		Target.claim_status=Source.claim_status,
@@ -212,7 +207,6 @@ BEGIN
 		Target.product_sk=Source.product_sk,
 		Target.broker_id=Source.broker_id,
 		Target.customer_id=Source.customer_id,
-		Target.underwriting_company_nm=Source.underwriting_company_nm,
 		Target.contact_nm=Source.contact_nm,
 		Target.contact_type=Source.contact_type,
 		Target.contact_phone=Source.contact_phone,

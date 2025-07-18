@@ -34,7 +34,7 @@ BEGIN
 		
 		SELECT 
 			c.claim_number AS claim_no,
-			tc.claim_sk AS claim_sk,
+			tc.commercial_claim_sk AS commercial_claim_sk,
 			t.id AS task_id,
 			t.task_type_name AS task_type_nm,
 			t.status AS task_status,
@@ -81,7 +81,7 @@ BEGIN
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
 				claim_no
-				,claim_sk
+				,commercial_claim_sk
 				,task_id
 				,task_type_nm
 				,task_status
@@ -105,7 +105,7 @@ BEGIN
 			)
 		VALUES (
 				claim_no
-				,claim_sk
+				,commercial_claim_sk
 				,task_id
 				,task_type_nm
 				,task_status
@@ -130,7 +130,7 @@ BEGIN
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-			Target.claim_sk = Source.claim_sk
+			Target.commercial_claim_sk = Source.commercial_claim_sk
 			,Target.task_id = Source.task_id
 			,Target.task_type_nm = Source.task_type_nm
 			,Target.task_status = Source.task_status

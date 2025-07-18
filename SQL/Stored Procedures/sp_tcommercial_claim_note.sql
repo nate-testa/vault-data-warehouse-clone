@@ -34,13 +34,13 @@ BEGIN
 
 		SELECT 
 			c.claim_number as claim_no,
-			tc.claim_sk,
+			tc.commercial_claim_sk,
 			n.body as content_desc,
 			n.note_type,
 			u.name as note_created_by_nm,
 			n.created_at as note_created_ts,
 			n.contact_type,
-			cf.claim_feature_sk,
+			cf.commercial_claim_feature_sk,
 			5 AS source_system_sk
 		INTO edw_temp.tcommercial_claim_note_snapsheet_temp1
 		FROM edw_stage_snapsheet.claims as c
@@ -64,13 +64,13 @@ BEGIN
 		INSERT INTO edw_commercial.tcommercial_claim_note
 			(
 				claim_no,
-				claim_sk,
+				commercial_claim_sk,
 				content_desc,
 				note_type,
 				note_created_by_nm,
 				note_created_ts,
 				contact_type,
-				claim_feature_sk,
+				commercial_claim_feature_sk,
 				source_system_sk,
 				create_ts,
 				update_ts,
@@ -78,13 +78,13 @@ BEGIN
 			)
 		SELECT 
 			claim_no,
-			claim_sk,
+			commercial_claim_sk,
 			content_desc,
 			note_type,
 			note_created_by_nm,
 			note_created_ts,
 			contact_type,
-			claim_feature_sk,
+			commercial_claim_feature_sk,
 			source_system_sk,
 			GETDATE() AS create_ts,
 			GETDATE() AS update_ts,
