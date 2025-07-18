@@ -92,7 +92,7 @@ BEGIN
 			greatest(clm.created_at,clm.updated_at) AS greatest_created_updated
 		INTO edw_temp.sp_tcommercial_claim_feature_temp1
 		FROM edw_stage_snapsheet.claims clm
-		INNER JOIN edw_core.tcommercial_claim tcl ON clm.claim_number = tcl.claim_no
+		INNER JOIN edw_commercial.tcommercial_claim tcl ON clm.claim_number = tcl.claim_no
 		INNER JOIN edw_stage_snapsheet.exposures exps on exps.claim_id = clm.id
 		LEFT JOIN edw_stage_snapsheet.vehicles veh on veh.claim_id = exps.claim_id and veh.exposure_id = exps.id
 		LEFT JOIN edw_core.tproduct prd ON prd.product_sk = tcl.product_sk
@@ -125,7 +125,7 @@ BEGIN
 					ELSE asl.product_cd
 		END= case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
 		-- Home Coverage
-		LEFT JOIN edw_core.tcommercial_policy_coverage thcov ON
+		LEFT JOIN edw_commercial.tcommercial_policy_coverage thcov ON
 		thcov.home_coverage_sk = (
 								SELECT TOP 1 home_coverage_sk
 								FROM
@@ -206,7 +206,7 @@ BEGIN
 			)
 		;
 
-		MERGE edw_core.tcommercial_claim_feature AS Target
+		MERGE edw_commercial.tcommercial_claim_feature AS Target
 		USING edw_temp.sp_tcommercial_claim_feature_temp1 AS Source
 		ON cast(Source.claim_coverage_cd as varchar(255)) = Target.claim_coverage_cd
 		-- For Inserts

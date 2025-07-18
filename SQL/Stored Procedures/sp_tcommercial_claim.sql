@@ -131,8 +131,8 @@ BEGIN
 		LEFT JOIN edw_stage_snapsheet.property_incident_detail_water_damages pidwd on c.id = pidwd.claim_id
 		LEFT JOIN edw_stage_snapsheet.liability_assignments la on la.claim_id = c.id
 		LEFT JOIN edw_stage_snapsheet.liability_determinations ld on ld.claim_id = c.id
-		LEFT JOIN edw_core.tcommercial_policy tp on TRIM(c.policy_number) = tp.policy_no												
-		LEFT JOIN edw_core.tcommercial_policy_history tph ON TRIM(c.policy_number) = tph.policy_no
+		LEFT JOIN edw_commercial.tcommercial_policy tp on TRIM(c.policy_number) = tp.policy_no												
+		LEFT JOIN edw_commercial.tcommercial_policy_history tph ON TRIM(c.policy_number) = tph.policy_no
 												AND tph.commercial_policy_history_sk = (
 																	SELECT TOP 1 commercial_policy_history_sk
 																	FROM
@@ -169,7 +169,7 @@ BEGIN
 	WHERE
 		rn=1
 		
-	MERGE edw_core.tcommercial_claim AS Target
+	MERGE edw_commercial.tcommercial_claim AS Target
 	USING edw_temp.tcommercial_claim_temp1 AS Source
 	ON Source.claim_no=Target.claim_no
 	-- For Inserts

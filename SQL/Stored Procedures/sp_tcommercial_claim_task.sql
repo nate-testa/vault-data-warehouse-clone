@@ -55,7 +55,7 @@ BEGIN
 		INTO edw_temp.tcommercial_claim_task_temp1
 		FROM edw_stage_snapsheet.tasks as t
 		INNER JOIN edw_stage_snapsheet.claims as c ON c.id = t.claim_id
-		INNER JOIN edw_core.tcommercial_claim as tc ON tc.claim_no = c.claim_number
+		INNER JOIN edw_commercial.tcommercial_claim as tc ON tc.claim_no = c.claim_number
 		LEFT JOIN edw_stage_snapsheet.users as u1 ON u1.id = t.created_by_user_id
 		LEFT JOIN edw_stage_snapsheet.users as u2 ON u2.id = t.completed_by_user_id
 		LEFT JOIN edw_stage_snapsheet.users as u3 ON u3.id = t.assigned_to_user_id
@@ -73,7 +73,7 @@ BEGIN
 		;
 		
 		
-		MERGE edw_core.tcommercial_claim_task AS Target
+		MERGE edw_commercial.tcommercial_claim_task AS Target
 		USING edw_temp.tcommercial_claim_task_temp1 AS Source
 			ON Source.claim_no = Target.claim_no
 			and Source.task_id = Target.task_id
