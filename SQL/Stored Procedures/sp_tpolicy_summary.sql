@@ -372,7 +372,11 @@ BEGIN
 										then
 											(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
 											-
-											iif(tr.transaction_effective_dt_sk >= @month_begin_dt_sk, tr.transaction_effective_dt_sk, @month_begin_dt_sk))) 
+											--iif(tr.transaction_effective_dt_sk >= @month_begin_dt_sk, tr.transaction_effective_dt_sk, @month_begin_dt_sk))
+											iif(tr.transaction_effective_dt_sk < @month_begin_dt_sk and tr.transaction_dt_sk between @month_begin_dt_sk and @month_end_dt_sk
+													, tr.transaction_effective_dt_sk,
+													iif(tr.transaction_effective_dt_sk >= @month_begin_dt_sk, tr.transaction_effective_dt_sk, @month_begin_dt_sk))											
+											)) 
 											* tr.premium_amt/(tr.expiration_dt_sk-tr.transaction_effective_dt_sk)
 										 when tr.calendar_month_sk  = @month_end_dt_sk
 										  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
@@ -394,8 +398,8 @@ BEGIN
 									then
 										(1+iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
 										-
-										greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) 
-										* tr.premium_amt/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+										greatest(0, tr.transaction_effective_dt_sk)) 
+										* tr.premium_amt/(tr.expiration_dt_sk-greatest(0, tr.transaction_effective_dt_sk))
 									 when tr.calendar_month_sk  = @month_end_dt_sk
 									  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
 									 then tr.premium_amt
@@ -403,7 +407,7 @@ BEGIN
 								end
 							) total_ep, 
 		 				sum(
-		 						(--for transactions issued in the month, eff in the month or later
+								(--for transactions issued in the month, eff in the month or later
 									case when tr.expiration_dt_sk > @month_begin_dt_sk and 
 											tr.policy_transaction_type_sk in (1,7) 
 											and (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
@@ -419,7 +423,11 @@ BEGIN
 										then
 											(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
 											-
-											iif(tr.transaction_effective_dt_sk >= @month_begin_dt_sk, tr.transaction_effective_dt_sk, @month_begin_dt_sk))) 
+											--iif(tr.transaction_effective_dt_sk >= @month_begin_dt_sk, tr.transaction_effective_dt_sk, @month_begin_dt_sk))
+											iif(tr.transaction_effective_dt_sk < @month_begin_dt_sk and tr.transaction_dt_sk between @month_begin_dt_sk and @month_end_dt_sk
+													, tr.transaction_effective_dt_sk,
+													iif(tr.transaction_effective_dt_sk >= @month_begin_dt_sk, tr.transaction_effective_dt_sk, @month_begin_dt_sk))											
+											)) 
 											* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-tr.transaction_effective_dt_sk)
 										 when tr.calendar_month_sk  = @month_end_dt_sk
 										  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
@@ -441,8 +449,8 @@ BEGIN
 									then
 										(1+iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
 										-
-										greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) 
-										* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+										greatest(0, tr.transaction_effective_dt_sk)) 
+										* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-greatest(0, tr.transaction_effective_dt_sk))
 									 when tr.calendar_month_sk  = @month_end_dt_sk
 									  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
 									 then (tr.premium_amt - tr.tax_fee_surcharge_amt)
