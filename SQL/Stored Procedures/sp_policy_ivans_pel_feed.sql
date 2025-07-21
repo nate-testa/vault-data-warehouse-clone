@@ -3,13 +3,18 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =============================================
+-- ==============================================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2023-10-17
 -- Description: This stored procedure insert and update info related to policy_ivans_pel_feed.
--- 04/05/2024 repush to Git Repo
--- 04/05/2024                      sandeep Gundreddy                             repush to Git Repo
--- =============================================
+-------------------------------------------------------------------------------------------------------------------------------------------------
+-- Change date      |Author						|Change Description
+-------------------------------------------------------------------------------------------------------------------------------------------------
+-- 04/05/2024       Sandeep Gundreddy           Repush to Git Repo
+-- 04/05/2024       Sandeep Gundreddy           Repush to Git Repo
+-- 21/07/2025       Alberto Almario             Add filter location_deleted_in = 'No'
+-- ==============================================================================================================================================
+
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_pel_feed]
 AS
 BEGIN
@@ -101,6 +106,7 @@ BEGIN
                     WHERE pl.policy_no = plf.policy_no
                     AND pl.effective_dt = plf.effective_dt
                     AND pl.transaction_seq_no = plf.transaction_seq_no
+                    AND pl.location_deleted_in = 'No'
                     FOR JSON PATH, INCLUDE_NULL_VALUES
                 ) AS PEL_Locations
             FROM edw_core.tpel_location AS plf
