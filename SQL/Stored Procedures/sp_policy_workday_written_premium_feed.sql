@@ -77,8 +77,8 @@ BEGIN
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,NULL AS number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,SUM(premium_amt) AS amount,NULL AS deleteddate,NULL AS contribcutoffdate,
-				GETDATE() AS extraction_time,GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk as etl_audit_sk,
-				do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt
+				do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt,
+				GETDATE() AS extraction_time,GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk as etl_audit_sk
 			FROM
 			(
 			SELECT
@@ -213,8 +213,8 @@ BEGIN
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,NULL AS number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,SUM(premium_amt) AS amount,NULL AS deleteddate,NULL AS contribcutoffdate,
-				GETDATE() AS extraction_time,GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk as etl_audit_sk,
-				do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt
+				do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt,
+				GETDATE() AS extraction_time,GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk as etl_audit_sk
 			FROM
 			(
 				SELECT
@@ -341,8 +341,8 @@ BEGIN
 			accounting_date,policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
 			effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 			[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
-			aslob,amount,deleteddate,contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk,
-			do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt
+			aslob,amount,deleteddate,contribcutoffdate,do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,
+			uninsured_underinsured_motorist_liability_amt,extraction_time,create_ts,update_ts,etl_audit_sk			
 			--,scheduled_limit_amt,scheduled_highest_value_limit_amt,blanket_limit_amt,blanket_highest_value_limit_amt,blanket_single_article_limit_amt
 			)
 
@@ -350,9 +350,8 @@ BEGIN
 				wp.accounting_date,wp.policy_image_id,wp.transaction_id,wp.policy_number,wp.product,wp.transaction_sequence,wp.company,wp.transaction_date,
 				wp.effective_date,wp.expiration_date,wp.transaction_type,wp.producer_code,wp.agency_name,wp.number_of_installments,wp.insured_name,
 				wp.[address],wp.county,wp.city,wp.risk_state,wp.zip,wp.fire_protection,category,wp.subcategory,wp.financial_category_id,wp.financial_category_name,
-				wp.aslob,wp.amount,wp.deleteddate,d.subscriber_contribution_end_dt AS contribcutoffdate,wp.extraction_time,
-				wp.create_ts,wp.update_ts,wp.etl_audit_sk,wp.do_limit_amt,wp.employment_practices_liability_amt,wp.pel_limit_amt,wp.uninsured_underinsured_liability_amt,
-				wp.uninsured_underinsured_motorist_liability_amt
+				wp.aslob,wp.amount,wp.deleteddate,d.subscriber_contribution_end_dt AS contribcutoffdate,wp.do_limit_amt,wp.employment_practices_liability_amt,wp.pel_limit_amt,
+				wp.uninsured_underinsured_liability_amt,wp.uninsured_underinsured_motorist_liability_amt,wp.extraction_time,wp.create_ts,wp.update_ts,wp.etl_audit_sk
 				--,tc.scheduled_limit_amt,tc.scheduled_highest_value_limit_amt,tc.blanket_limit_amt,tc.blanket_highest_value_limit_amt,tc.blanket_single_article_limit_amt
 			FROM
 			(

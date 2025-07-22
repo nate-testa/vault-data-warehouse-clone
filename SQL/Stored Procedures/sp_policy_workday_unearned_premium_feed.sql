@@ -79,11 +79,11 @@ BEGIN
 				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,sum(amount) as amount,sum(unearned) as unearned,contribcutoffdate,
+				do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt,
 				getdate() as extraction_time,
 				getdate() as create_ts,
 				getdate() as update_ts,
-				@etl_audit_sk AS etl_audit_sk,
-				do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt
+				@etl_audit_sk AS etl_audit_sk
 			FROM
 			(
 			 SELECT				
@@ -220,8 +220,8 @@ BEGIN
 				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
 				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
-				aslob,amount,unearned,contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk,
-				do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt
+				aslob,amount,unearned,contribcutoffdate,do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,
+				uninsured_underinsured_motorist_liability_amt,extraction_time,create_ts,update_ts,etl_audit_sk
 				--,scheduled_limit_amt,scheduled_highest_value_limit_amt,blanket_limit_amt,blanket_highest_value_limit_amt,blanket_single_article_limit_amt
 			)
 			SELECT
@@ -232,8 +232,9 @@ BEGIN
 				THEN 'Subscriber Contribution'
 				ELSE uep.subcategory END AS subcategory,
 				uep.financial_category_id,uep.financial_category_name,
-				uep.aslob,uep.amount,uep.unearned,d.subscriber_contribution_end_dt AS contribcutoffdate,uep.extraction_time,uep.create_ts,uep.update_ts,uep.etl_audit_sk,
-				uep.do_limit_amt,uep.employment_practices_liability_amt,uep.pel_limit_amt,uep.uninsured_underinsured_liability_amt,uep.uninsured_underinsured_motorist_liability_amt
+				uep.aslob,uep.amount,uep.unearned,d.subscriber_contribution_end_dt AS contribcutoffdate,
+				uep.do_limit_amt,uep.employment_practices_liability_amt,uep.pel_limit_amt,uep.uninsured_underinsured_liability_amt,uep.uninsured_underinsured_motorist_liability_amt,
+				uep.extraction_time,uep.create_ts,uep.update_ts,uep.etl_audit_sk
 				--,tc.scheduled_limit_amt,tc.scheduled_highest_value_limit_amt,tc.blanket_limit_amt,tc.blanket_highest_value_limit_amt,tc.blanket_single_article_limit_amt
 			FROM
 				policy_workday_unearned_premium_feed_temp uep
