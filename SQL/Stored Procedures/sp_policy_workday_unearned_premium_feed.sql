@@ -17,6 +17,7 @@
 --																					Update run date logic
 -- 05/07/25		Yunus Mohammed				9. AD9047 Used tdaily_inforce table to check inforce policies.
 --																					Removed cancellation logic
+-- 07/22/25		Dinesh Bobbili				10. AD10205 Added 5 PEL columns
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -81,7 +82,8 @@ BEGIN
 				getdate() as extraction_time,
 				getdate() as create_ts,
 				getdate() as update_ts,
-				@etl_audit_sk AS etl_audit_sk
+				@etl_audit_sk AS etl_audit_sk,
+				do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt
 			FROM
 			(
 			 SELECT				
@@ -158,7 +160,12 @@ BEGIN
 				tic.aslob_cd AS [aslob],
 				tpts.premium_amt AS [amount],
 				tpts.unearned_premium_amt AS [unearned],
-				null as contribcutoffdate
+				null as contribcutoffdate,
+				pc.do_limit_amt,
+				pc.employment_practices_liability_amt,
+				pc.PEL_LIMIT_AMT,
+				pc.uninsured_underinsured_liability_amt,
+				pc.uninsured_underinsured_motorist_liability_amt
 			FROM
 			edw_core.tpolicy_transaction_summary tpts
 			INNER JOIN edw_core.tpolicy tp on tp.policy_sk=tpts.policy_sk
@@ -170,6 +177,7 @@ BEGIN
 			INNER JOIN edw_core.tdaily_inforce_policy  dip on dip.policy_sk = tp.policy_sk	and dip.inforce_dt_sk = @end_dt_sk
 			LEFT JOIN edw_core.thome_location hl on hl.policy_no = tp.policy_no and hl.effective_dt = tp.effective_dt
 			LEFT JOIN edw_core.tcollection_location cl on cl.policy_no = tp.policy_no and cl.effective_dt = tp.effective_dt
+			LEFT JOIN edw_core.tpel_coverage pc on pc.policy_history_sk = tpts.policy_history_sk
 			LEFT JOIN 
 			(
 				SELECT
@@ -204,7 +212,7 @@ BEGIN
 				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
 				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
-				aslob,contribcutoffdate
+				aslob,contribcutoffdate,do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt
 			)	
 		
 			INSERT INTO edw_integration.policy_workday_unearned_premium_feed
@@ -212,7 +220,9 @@ BEGIN
 				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
 				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
-				aslob,amount,unearned,contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
+				aslob,amount,unearned,contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk,
+				do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt
+				--,scheduled_limit_amt,scheduled_highest_value_limit_amt,blanket_limit_amt,blanket_highest_value_limit_amt,blanket_single_article_limit_amt
 			)
 			SELECT
 				uep.accounting_date,uep.policy_image_id,uep.policy_number,uep.product,uep.company,uep.transaction_date,uep.transaction_sequence,uep.effective_date,
@@ -222,7 +232,9 @@ BEGIN
 				THEN 'Subscriber Contribution'
 				ELSE uep.subcategory END AS subcategory,
 				uep.financial_category_id,uep.financial_category_name,
-				uep.aslob,uep.amount,uep.unearned,d.subscriber_contribution_end_dt AS contribcutoffdate,uep.extraction_time,uep.create_ts,uep.update_ts,uep.etl_audit_sk
+				uep.aslob,uep.amount,uep.unearned,d.subscriber_contribution_end_dt AS contribcutoffdate,uep.extraction_time,uep.create_ts,uep.update_ts,uep.etl_audit_sk,
+				uep.do_limit_amt,uep.employment_practices_liability_amt,uep.pel_limit_amt,uep.uninsured_underinsured_liability_amt,uep.uninsured_underinsured_motorist_liability_amt
+				--,tc.scheduled_limit_amt,tc.scheduled_highest_value_limit_amt,tc.blanket_limit_amt,tc.blanket_highest_value_limit_amt,tc.blanket_single_article_limit_amt
 			FROM
 				policy_workday_unearned_premium_feed_temp uep
 				left join
@@ -234,6 +246,21 @@ BEGIN
 				group by policy_no,effective_dt,transaction_seq_no
 				) as d on uep.policy_number = d.policy_no and uep.effective_date = d.effective_dt
 				and uep.transaction_sequence = d.transaction_seq_no
+				/*left join 
+				(
+				select policy_no,
+					effective_dt,
+					transaction_seq_no,
+					sum(scheduled_limit_amt) as scheduled_limit_amt,
+					max(scheduled_highest_value_limit_amt) as scheduled_highest_value_limit_amt,
+					sum(blanket_limit_amt) as blanket_limit_amt,
+					max(blanket_highest_value_limit_amt) as blanket_highest_value_limit_amt,
+					max(blanket_single_article_limit_amt) as blanket_single_article_limit_amt
+				from edw_core.tcollection_class_type
+				group by policy_no,effective_dt,transaction_seq_no
+				) tc
+				on uep.policy_number = tc.policy_no and uep.effective_date = tc.effective_dt
+				and uep.transaction_sequence = tc.transaction_seq_no*/
 
 			SET @rows_affected=@@ROWCOUNT;
 
