@@ -18,6 +18,7 @@
 -- 03/11/25		Yunus Mohammed				10.  Corrected proc running for past months
 -- 04/25/25		Yunus Mohammed				11. AD8820 Updated logic to get risk address
 --																					Update run date logic
+-- 07/22/25		Dinesh Bobbili				12. AD10205 Added 5 PEL columns
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
@@ -76,6 +77,7 @@ BEGIN
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,NULL AS number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,SUM(premium_amt) AS amount,NULL AS deleteddate,NULL AS contribcutoffdate,
+				do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt,
 				GETDATE() AS extraction_time,GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk as etl_audit_sk
 			FROM
 			(
@@ -144,7 +146,12 @@ BEGIN
 				tic.internal_coverage_sk as financial_category_id,
 				tic.internal_coverage_desc AS [financial_category_name],
 				tic.aslob_cd AS [aslob],
-				tpt.premium_amt	
+				tpt.premium_amt,
+				pc.do_limit_amt,
+				pc.employment_practices_liability_amt,
+				pc.pel_limit_amt,
+				pc.uninsured_underinsured_liability_amt,
+				pc.uninsured_underinsured_motorist_liability_amt	
 			FROM
 				edw_core.tpolicy_transaction tpt
 				INNER JOIN edw_core.tpolicy tp on tp.policy_sk=tpt.policy_sk
@@ -157,6 +164,7 @@ BEGIN
 				INNER JOIN edw_core.tproduct tprd on tprd.product_sk = tpt.product_sk
 				LEFT JOIN edw_core.thome_location hl on hl.policy_no = tp.policy_no and hl.effective_dt = tp.effective_dt
 				LEFT JOIN edw_core.tcollection_location cl on cl.policy_no = tp.policy_no and cl.effective_dt = tp.effective_dt
+				LEFT JOIN edw_core.tpel_coverage pc on pc.policy_history_sk = tpt.policy_history_sk
 				LEFT JOIN
 				(
 					SELECT
@@ -188,7 +196,7 @@ BEGIN
 				accounting_date,transaction_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
-				aslob
+				aslob,do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt
 			),
 			policy_workday_written_premium_feed_commission_temp AS
 			(
@@ -205,6 +213,7 @@ BEGIN
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,NULL AS number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,SUM(premium_amt) AS amount,NULL AS deleteddate,NULL AS contribcutoffdate,
+				do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt,
 				GETDATE() AS extraction_time,GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk as etl_audit_sk
 			FROM
 			(
@@ -276,7 +285,12 @@ BEGIN
 				tic.internal_coverage_sk as financial_category_id,
 				tic.internal_coverage_desc AS [financial_category_name],
 				tic.aslob_cd AS [aslob],
-				tpt.commission_amt AS premium_amt
+				tpt.commission_amt AS premium_amt,
+				pc.do_limit_amt,
+				pc.employment_practices_liability_amt,
+				pc.pel_limit_amt,
+				pc.uninsured_underinsured_liability_amt,
+				pc.uninsured_underinsured_motorist_liability_amt
 				FROM
 				edw_core.tpolicy_transaction tpt
 				INNER JOIN edw_core.tinternal_coverage tic ON tic.internal_coverage_sk=tpt.internal_coverage_sk
@@ -288,6 +302,7 @@ BEGIN
 				INNER JOIN edw_core.tproduct tprd on tprd.product_sk = tpt.product_sk
 				LEFT JOIN edw_core.thome_location hl on hl.policy_no = tp.policy_no and hl.effective_dt = tp.effective_dt
 				LEFT JOIN edw_core.tcollection_location cl on cl.policy_no = tp.policy_no and cl.effective_dt = tp.effective_dt
+				LEFT JOIN edw_core.tpel_coverage pc on pc.policy_history_sk = tpt.policy_history_sk
 				LEFT JOIN 
 				(
 					SELECT
@@ -318,7 +333,7 @@ BEGIN
 				accounting_date,transaction_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
-				aslob
+				aslob,do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt
 			)
 
 			INSERT INTO edw_integration.policy_workday_written_premium_feed
@@ -326,22 +341,26 @@ BEGIN
 			accounting_date,policy_image_id,policy_image_identifier_id,policy_number,product,transaction_sequence,company,transaction_date,
 			effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 			[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
-			aslob,amount,deleteddate,contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
+			aslob,amount,deleteddate,contribcutoffdate,do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,
+			uninsured_underinsured_motorist_liability_amt,extraction_time,create_ts,update_ts,etl_audit_sk			
+			--,scheduled_limit_amt,scheduled_highest_value_limit_amt,blanket_limit_amt,blanket_highest_value_limit_amt,blanket_single_article_limit_amt
 			)
 
 			SELECT
 				wp.accounting_date,wp.policy_image_id,wp.transaction_id,wp.policy_number,wp.product,wp.transaction_sequence,wp.company,wp.transaction_date,
 				wp.effective_date,wp.expiration_date,wp.transaction_type,wp.producer_code,wp.agency_name,wp.number_of_installments,wp.insured_name,
 				wp.[address],wp.county,wp.city,wp.risk_state,wp.zip,wp.fire_protection,category,wp.subcategory,wp.financial_category_id,wp.financial_category_name,
-				wp.aslob,wp.amount,wp.deleteddate,d.subscriber_contribution_end_dt AS contribcutoffdate,wp.extraction_time,
-				wp.create_ts,wp.update_ts,wp.etl_audit_sk
+				wp.aslob,wp.amount,wp.deleteddate,d.subscriber_contribution_end_dt AS contribcutoffdate,wp.do_limit_amt,wp.employment_practices_liability_amt,wp.pel_limit_amt,
+				wp.uninsured_underinsured_liability_amt,wp.uninsured_underinsured_motorist_liability_amt,wp.extraction_time,wp.create_ts,wp.update_ts,wp.etl_audit_sk
+				--,tc.scheduled_limit_amt,tc.scheduled_highest_value_limit_amt,tc.blanket_limit_amt,tc.blanket_highest_value_limit_amt,tc.blanket_single_article_limit_amt
 			FROM
 			(
 			SELECT
 				accounting_date,policy_image_id,transaction_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
-				aslob,amount,null as deleteddate,null contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
+				aslob,amount,null as deleteddate,null contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk,
+				do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt
 			FROM
 				policy_workday_written_premium_feed_temp
 			UNION
@@ -349,7 +368,8 @@ BEGIN
 				accounting_date,policy_image_id,transaction_id,policy_number,product,transaction_sequence,company,transaction_date,
 				effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
-				aslob,amount,null as deleteddate,null contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk
+				aslob,amount,null as deleteddate,null contribcutoffdate,extraction_time,create_ts,update_ts,etl_audit_sk,
+				do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt
 			FROM
 			policy_workday_written_premium_feed_commission_temp
 			) as wp
@@ -362,6 +382,21 @@ BEGIN
 			group by policy_no,effective_dt,transaction_seq_no
 			) as d on wp.policy_number = d.policy_no and wp.effective_date = d.effective_dt
 			and wp.transaction_sequence = d.transaction_seq_no
+			/*left join 
+			(
+			select policy_no,
+				effective_dt,
+				transaction_seq_no,
+				sum(scheduled_limit_amt) as scheduled_limit_amt,
+				max(scheduled_highest_value_limit_amt) as scheduled_highest_value_limit_amt,
+				sum(blanket_limit_amt) as blanket_limit_amt,
+				max(blanket_highest_value_limit_amt) as blanket_highest_value_limit_amt,
+				max(blanket_single_article_limit_amt) as blanket_single_article_limit_amt
+			from edw_core.tcollection_class_type
+			group by policy_no,effective_dt,transaction_seq_no
+			) tc
+			on wp.policy_number = tc.policy_no and wp.effective_date = tc.effective_dt
+			and wp.transaction_sequence = tc.transaction_seq_no*/
 
 			SET @rows_affected=@@ROWCOUNT;
 
