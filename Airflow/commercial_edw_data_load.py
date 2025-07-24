@@ -108,10 +108,10 @@ with DAG(
     with TaskGroup("commercial_claim_group") as commercial_claim_group:
 
         commercial_claim_group_items = [
-            'tcommercial_claim',
-            'tcommercial_claim_feature',
-            'tcommercial_claim_task',
-            'tcommercial_claim_note'
+            'sp_tcommercial_claim',
+            'sp_tcommercial_claim_feature',
+            'sp_tcommercial_claim_task',
+            'sp_tcommercial_claim_note'
             ]
 
         operators = []
@@ -119,7 +119,7 @@ with DAG(
             operator = MsSqlOperator(
                 task_id=item,
                 mssql_conn_id='Vault_EDW',
-                sql=f"EXEC edw_commercial.{item}",
+                sql=f"EXEC edw_core.{item}",
                 database="vault_edw",
                 autocommit=True,
             )
