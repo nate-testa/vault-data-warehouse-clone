@@ -105,6 +105,39 @@ with DAG(
         operators[-1] >> send_commercial_policy_email
 
     
+    with TaskGroup("commercial_claim_group") as commercial_claim_group:
+
+        commercial_claim_group_items = [
+            'sp_tcommercial_claim',
+            'sp_tcommercial_claim_feature',
+            'sp_tcommercial_claim_task',
+            'sp_tcommercial_claim_note'
+            ]
+
+        operators = []
+        for item in commercial_claim_group_items:
+            operator = MsSqlOperator(
+                task_id=item,
+                mssql_conn_id='Vault_EDW',
+                sql=f"EXEC edw_core.{item}",
+                database="vault_edw",
+                autocommit=True,
+            )
+            operators.append(operator)       
+        
+        send_commercial_claim_email = EmailOperator(
+            task_id='send_commercial_claim_email',
+            to=to_email,
+            subject='Airflow - Commercial Claim tables loaded successfully',
+            html_content=get_sp_success_data_HTML(commercial_claim_group_items, 'All stored procedures executed successfully for all the Commercial Claim tables'),
+        )
+
+        for i in range(len(operators) - 1):
+            operators[i] >> operators[i + 1]
+
+        operators[-1] >> send_commercial_claim_email
+    
+
     with TaskGroup("commercial_integration_group") as commercial_integration_group:
 
         exec_Snapsheet_Commercial_Daily_Feed = TriggerDagRunOperator(
@@ -197,4 +230,4 @@ with DAG(
     )
 
 
-start >> commercial_policy_group >> commercial_integration_group >> commercial_quote_group >> commercial_datamart_group >> end
+start >> commercial_policy_group >> commercial_claim_group >> commercial_integration_group >> commercial_quote_group >> commercial_datamart_group >> end

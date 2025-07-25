@@ -14,6 +14,7 @@ GO
 -- 08/22/24				Yunus Mohammed				2. Removed effective date from merge and added in update clause
 -- 01/15/25				Alberto Almario				3. Add include_in_rating_in column.
 -- 02/05/25				Alberto Almario				4. Add new columns source_of_water, source_of_fire and include_in_rating_override_in..
+-- 07/16/25				Dinesh Bobbili				5. Added logic to remove time from LossDate
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_loss_history_wip]
 AS
@@ -43,7 +44,8 @@ BEGIN
 			PolicyNumber as quote_no, EffectiveDate, ExpirationDate, [Number]
 			,quote_history_sk
 			,[index] as loss_seq_no
-			,PropertyOrLiability, Source as source_nm, ClaimStatus, Claimant, FileNumber, LossDate, LossIdentifier, LossType, 
+			,PropertyOrLiability, Source as source_nm, ClaimStatus, Claimant, FileNumber, 
+			case when LossDate is not null then LEFT(LossDate, CHARINDEX(' ', LossDate + ' ') - 1) else LossDate end as LossDate, LossIdentifier, LossType, 
 			SubCauseofLoss as sub_cause_of_loss, LossDescription, PolicyType, CatIndicator, Disputed,
 			AddressLine1, AddressLine2, AddressLineUnit, AddressCity, AddressState, AddressZipCode, Coverage,
 			ReserveIndemnity, ReserveExpense, PaidIndemnity, PaidExpense, TotalIncurred, IncludeInRating

@@ -7,8 +7,9 @@
 -- 11/10/23		Alberto Almario					1. Created this procedure 
 -- 11/11/23		Sandeep Gundreddy				2. modified source query logic and user logic
 -- 11/13/23		Architha Gudimalla				3. Added filter for personal lines
+-- 07/15/25     Sandeep Gundreddy               4. Modified stage filter to use from accounttransaction
 -- =====================================================================================================================
-CREATE   or alter   PROCEDURE [edw_core].[sp_tquote_transaction_status_history]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction_status_history]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -49,7 +50,7 @@ BEGIN
         left join edw_stage.Account acc on acc.id = acctsh.accountid
 		left join edw_stage.Product pr on acc.ProductId = pr.id
 		where acctsh.CreatedDate > @last_source_extract_ts 
-		  and acctsh.Stage in ('QUOTE','POLICY')
+		  and acct.Stage in ('QUOTE','POLICY')
           and pr.ProductLine = 'PersonalLines'
 
 		-- Start Insert process
