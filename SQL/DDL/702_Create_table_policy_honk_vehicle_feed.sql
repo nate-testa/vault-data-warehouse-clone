@@ -14,4 +14,4 @@ CREATE TABLE edw_integration.policy_honk_vehicle_feed (
 );
 
 INSERT INTO edw_integration.tintegration_table_detail(table_nm,	table_type,	table_desc,	load_method,	load_type,	load_frequency,	create_ts,	update_ts)
-VALUES ('policy_honk_vehicle_feed','Feed','This table provides daily policy and associated vehicles data feed to Honk','Stored Procedure','Insert/Update','Daily',getdate(),getdate());
+VALUES ('policy_honk_vehicle_feed','Feed','This table provides daily policy and associated vehicles data feed to Honk','Stored Procedure','Full Load','Daily',getdate(),getdate());
