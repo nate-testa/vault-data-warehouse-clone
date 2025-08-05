@@ -3,9 +3,10 @@
 -- Create Date: 07/17/2025
 -- Description: This procedures inserts and updates claim feature data
 -----------------------------------------------------------------------------------------------------------
--- Change date 			|Author						|	Change Description
+-- Change date 		  |Author						           |	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 07/17/2025	Hernando Gonzalez			1. Created this procedure
+-- 07/17/2025		Hernando Gonzalez			1. Created this procedure
+-- 08/05/2025		Yunus Mohammed			   2. Remove case statement from product_cd 
 -- ========================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_claim_feature]
@@ -37,19 +38,18 @@ BEGIN
 			tcl.commercial_claim_sk,tcl.claim_no,exps.exposure_type,exps.exposure_name,
 			-- exps.coverage_premium_class as claim_coverage_cd,
 			exps.id as claim_coverage_cd,
-							case
-
+						case
 						when exps.coverage_name is not null then exps.coverage_name
 						when  exists
 							(
 								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
 								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
-								and mcm.product_cd = case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
+								and mcm.product_cd = prd.product_cd
 							) then		
 							(
 								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
 								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
-								and mcm.product_cd = case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
+								and mcm.product_cd = prd.product_cd
 							) 
 				end as claim_coverage_desc,
 			exps.claimant_name as claimant_nm,		
@@ -71,7 +71,7 @@ BEGIN
 		LEFT JOIN edw_core.tproduct prd ON prd.product_sk = tcl.product_sk
 		LEFT JOIN 
 		(
-					select ROW_NUMBER()over(partition by product_cd,coverage_cd order by aslob_cd) as row_no, *
+				select ROW_NUMBER()over(partition by product_cd,coverage_cd order by aslob_cd) as row_no, *
 				from edw_core.taslob
 		) as asl on asl.row_no = 1 and asl.coverage_cd = 
 						case
@@ -80,23 +80,16 @@ BEGIN
 							(
 								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
 								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
-								and mcm.product_cd = case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
+								and mcm.product_cd = prd.product_cd
 							) then		
 							(
 								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
 								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
-								and mcm.product_cd = case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
+								and mcm.product_cd = prd.product_cd
 							) 
 				end
-		and 
-		CASE asl.product_cd
-					WHEN 'Homeowners' THEN 'HO'
-					WHEN 'Excess Liability' THEN 'PEL'
-					WHEN 'Auto' THEN 'AU'
-					WHEN 'Collections' THEN 'LUX'
-					WHEN 'Marine Boat & Yacht' THEN 'BY'
-					ELSE asl.product_cd
-		END= case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
+		and
+			asl.product_cd = prd.product_cd
 
 		WHERE greatest(clm.created_at,clm.updated_at) > @last_source_extract_ts
 		and exists
