@@ -33,93 +33,103 @@ BEGIN
 		with temp_inforce_policy as
 		(
 		select dip.*,
-			CASE 
-					WHEN TRY_CAST(collision_deductible AS float) IS NOT NULL THEN TRY_CAST(collision_deductible AS float) -- to handle varchar values
-					ELSE 0
-			END as collision_deductible_1,
-			CASE 
-					WHEN TRY_CAST(otc_deductible AS float) IS NOT NULL THEN TRY_CAST(otc_deductible AS float)  -- to handle varchar values
-					ELSE 0
-			END as otc_deductible_1,
-			pol.policy_no as policy_number,
-			av.vehicle_vin as vin,
-			av.vehicle_make,
-			av.vehicle_model,
-			av.vehicle_model_year as vehicle_year,
-			pol.risk_state_cd,
-			vehicle_type,
-			avc.extended_towing_and_labor_in,
-			avc.vehicle_deleted_in,
-			collision_deductible,
-			otc_deductible
+		CASE 
+			WHEN TRY_CAST(collision_deductible AS float) IS NOT NULL THEN TRY_CAST(collision_deductible AS float) -- to handle varchar values
+			ELSE 0
+		END as collision_deductible_1,
+		CASE 
+			WHEN TRY_CAST(otc_deductible AS float) IS NOT NULL THEN TRY_CAST(otc_deductible AS float)  -- to handle varchar values
+			ELSE 0
+		END as otc_deductible_1,
+		pol.policy_no as policy_number,
+		av.vehicle_vin as vin,
+		av.vehicle_make,
+		av.vehicle_model,
+		av.vehicle_model_year as vehicle_year,
+		pol.risk_state_cd,
+		vehicle_type,
+		avc.extended_towing_and_labor_in,
+		avc.vehicle_deleted_in,
+		collision_deductible,
+		otc_deductible
 		from edw_core.tdaily_inforce_policy dip 
+		inner join edw_core.tpolicy_history ph
+		on ph.policy_history_sk = dip.policy_history_sk
 		inner join edw_core.tpolicy pol
-			on dip.policy_sk = pol.policy_sk
-		inner join edw_core.tauto_vehicle av 
-			on pol.policy_no = av.policy_no
-			and pol.effective_dt = av.effective_dt
+		on ph.policy_sk = pol.policy_sk
 		inner join edw_core.tauto_vehicle_coverage avc
-			on av.auto_vehicle_sk = avc.auto_vehicle_sk
+		on avc.policy_no = ph.policy_no
+		and avc.effective_dt = ph.effective_dt 
+		and avc.transaction_seq_no = ph.transaction_seq_no
+		inner join edw_core.tauto_vehicle av 
+			on avc.auto_vehicle_sk = av.auto_vehicle_sk
 		where dip.inforce_dt_sk = (select max(date_sk) from edw_core.tdate where actual_dt < cast(getdate() as date))
-			and avc.vehicle_deleted_in = 'No'
-			and av.vehicle_type in ('Private Passenger Auto', 'Collector Car', 'Motorcycles / Mopeds / Scooter / Go Karts')
+		and avc.vehicle_deleted_in = 'No'
+		and av.vehicle_type in ('Private Passenger Auto', 'Collector Car', 'Motorcycles / Mopeds / Scooter / Go Karts')
+		--and pol.policy_no in (--'AU100003131-05','AU100013273-04')
 		)
-		select policy_number,
-			vin,
-			vehicle_make,
-			vehicle_model,
-			vehicle_year,
+		select distinct policy_number,
+		vin,
+		vehicle_make,
+		vehicle_model,
+		vehicle_year,
+		CASE 
+			WHEN vehicle_type = 'Private Passenger Auto' THEN 
 			CASE 
-				WHEN vehicle_type = 'Private Passenger Auto' THEN 
-					CASE 
-						WHEN risk_state_cd = 'NC' THEN 
-							CASE WHEN extended_towing_and_labor_in = 'Yes' THEN 10000 ELSE 0 END
-						WHEN risk_state_cd = 'SC' THEN 
-							CASE 
-								WHEN collision_deductible_1 <> 0 AND otc_deductible_1 <> 0 THEN 350 ELSE 0 
-							END
-						ELSE 
-							CASE WHEN extended_towing_and_labor_in = 'Yes' THEN 350 ELSE 0 END
-					END
+				WHEN risk_state_cd = 'NC' THEN 
+				CASE WHEN extended_towing_and_labor_in = 'Yes' THEN 10000 ELSE 0 END
+				WHEN risk_state_cd = 'SC' THEN 
+				CASE 
+					WHEN collision_deductible_1 <> 0 AND otc_deductible_1 <> 0 THEN 350 ELSE 0 
+				END
+				ELSE 
+				CASE 
+					WHEN risk_state_cd IN ('PA','MD','TN') AND extended_towing_and_labor_in IS NULL AND collision_deductible_1 <> 0 AND otc_deductible_1 <> 0 THEN 350
+					WHEN extended_towing_and_labor_in = 'Yes' THEN 350 
+					ELSE 0 END
+			END
+			WHEN vehicle_type IN ('Motorcycles / Mopeds / Scooter / Go Karts', 'Collector Car') THEN 
+			CASE 
+				WHEN risk_state_cd = 'NC' THEN 
+				CASE 
+					WHEN collision_deductible_1 <> 0 AND otc_deductible_1 <> 0 THEN 10000 ELSE 0 
+				END
+				ELSE 
+				CASE 
+					WHEN collision_deductible_1 <> 0 AND otc_deductible_1 <> 0 THEN 350 ELSE 0 
+				END
+			END
+			ELSE 0
+		END AS coverage_amount_tow,
 
-				WHEN vehicle_type IN ('Motorcycles / Mopeds / Scooter / Go Karts', 'Collector Car') THEN 
-					CASE 
-						WHEN risk_state_cd = 'NC' THEN 
-							CASE 
-								WHEN collision_deductible_1 <> 0 AND otc_deductible_1 <> 0 THEN 10000 ELSE 0 
-							END
-						ELSE 
-							CASE 
-								WHEN collision_deductible_1 <> 0 AND otc_deductible_1 <> 0 THEN 350 ELSE 0 
-							END
-					END
-				ELSE 0
-			END AS coverage_amount_tow,
+		CASE 
+			WHEN vehicle_type = 'Private Passenger Auto' AND collision_deductible_1 = 0 AND otc_deductible_1 <> 0 THEN 10000
+			WHEN collision_deductible_1 <> 0 AND otc_deductible_1 <> 0 THEN 10000
+			ELSE 0
+		END AS coverage_amount_accident,
+
+		CASE 
+			WHEN vehicle_type = 'Private Passenger Auto' THEN 
 			CASE 
-				WHEN collision_deductible_1 <> 0 AND otc_deductible_1 <> 0 THEN 10000
-				ELSE 0
-			END AS coverage_amount_accident,
+				WHEN risk_state_cd = 'SC' THEN 
+				CASE 
+					WHEN collision_deductible_1 <> 0 AND otc_deductible_1 <> 0 THEN 'Yes' 
+					ELSE 'No' 
+				END
+				ELSE 
+				CASE 
+					WHEN risk_state_cd IN ('PA','MD','TN') AND extended_towing_and_labor_in IS NULL AND collision_deductible_1 <> 0 AND otc_deductible_1 <> 0 THEN 'Yes'
+					WHEN extended_towing_and_labor_in = 'Yes' THEN 'Yes' 
+					ELSE 'No' 
+				END
+			END
+			WHEN vehicle_type IN ('Collector Car', 'Motorcycles / Mopeds / Scooter / Go Karts') THEN 
 			CASE 
-				WHEN vehicle_type = 'Private Passenger Auto' THEN 
-					CASE 
-						WHEN risk_state_cd = 'SC' THEN 
-							CASE 
-								WHEN collision_deductible_1 <> 0 AND otc_deductible_1 <> 0 THEN 'Yes' 
-								ELSE 'No' 
-							END
-						ELSE 
-							CASE 
-								WHEN extended_towing_and_labor_in = 'Yes' THEN 'Yes' 
-								ELSE 'No' 
-							END
-					END
-				WHEN vehicle_type IN ('Collector Car', 'Motorcycles / Mopeds / Scooter / Go Karts') THEN 
-					CASE 
-						WHEN collision_deductible_1 <> 0 AND otc_deductible_1 <> 0 THEN 'Yes' 
-						ELSE 'No' 
-					END
-				ELSE 'No'
-			END AS coverage_soft_services
+				WHEN collision_deductible_1 <> 0 AND otc_deductible_1 <> 0 THEN 'Yes' 
+				ELSE 'No' 
+			END
+			ELSE 'No'
+		END AS coverage_soft_services  
 		into edw_temp.policy_honk_vehicle_feed_temp1
 		from temp_inforce_policy ip
 
