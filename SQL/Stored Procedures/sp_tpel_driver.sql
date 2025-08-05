@@ -10,6 +10,7 @@
 -- 01/08/24		Yunus Mohammed			    2. Added deleted_on_policy_change_in
 -- 02/05/24		Hernando Gonzalez			3. Added Limits Indicator
 -- 11/19/24		Architha Gudimalla		    4. AD7757 - Added driver unique id
+-- 08/05/25		Dinesh Bobbili			    5. AD10467 Added driver_status
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_driver]
 
@@ -40,7 +41,8 @@ BEGIN
 			Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,
 			CASE IsDeletedOnPolicyChange WHEN 0 THEN 'No' WHEN 1 THEN 'Yes' END AS IsDeletedOnPolicyChange,
 			DriverLimitsIndicator
-			,driver_unique_id		
+			,driver_unique_id
+			,DriverStatus		
 			into edw_temp.tpel_driver_temp1
 		from
 		(
@@ -74,7 +76,7 @@ BEGIN
 				and atvof.Field IN 
 				(
 					'FirstName','LastName','Birthdate','InsuredType','LicenseStatus','LicenseNumber',
-					'Model','LicenseCountry','LicenseState','MiddleName','Suffix','Prefix','LicenseYear','DriverLimitsIndicator'
+					'Model','LicenseCountry','LicenseState','MiddleName','Suffix','Prefix','LicenseYear','DriverLimitsIndicator','DriverStatus'
 				)
 				and act.IssuedDate > @last_source_extract_ts
 			) as t
@@ -82,7 +84,7 @@ BEGIN
 		pivot 
 		(
 			max(Value) FOR Field IN (FirstName,LastName,Birthdate,InsuredType,LicenseStatus,LicenseNumber,
-					Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,DriverLimitsIndicator)
+					Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,DriverLimitsIndicator,DriverStatus)
 		) as pivottable
 			
 		INSERT INTO [edw_core].[tpel_driver]
@@ -90,7 +92,7 @@ BEGIN
 			policy_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no,policy_history_sk,
 			driver_no,prefix,first_nm,middle_nm,last_nm,suffix,birth_dt,license_status,license_country_nm,license_state_cd,license_year,
 			license_no,driver_deleted_in,source_system_sk,create_ts,update_ts,etl_audit_sk, driver_limit_type
-			,driver_unique_id
+			,driver_unique_id, driver_status
 		)
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
@@ -100,7 +102,7 @@ BEGIN
 			LicenseCountry AS license_country_nm,LicenseState AS license_state_cd,LicenseYear AS license_year,
 			LicenseNumber AS license_no,IsDeletedOnPolicyChange AS driver_deleted_in,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,DriverLimitsIndicator as driver_limit_type
-			,driver_unique_id
+			,driver_unique_id, DriverStatus as driver_status
 		FROM
 			edw_temp.tpel_driver_temp1 AS ttlc
 
