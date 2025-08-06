@@ -1,14 +1,15 @@
 import os
 import time
 import shutil
+import urllib.parse
 from pathlib import Path
 from datetime import datetime
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.utils.logging import logger
 from app.utils.tools import get_model_options
-from app.utils.file_validators import sanitize_filename, is_allowed_filetype, is_file_size_valid, ALLOWED_MIME_TYPES, ALLOWED_EXTENSIONS, MAX_FILE_SIZE_MB
+from app.utils.file_validators import sanitize_filename, is_allowed_filetype, is_file_size_valid, is_filename_valid, ALLOWED_MIME_TYPES, ALLOWED_EXTENSIONS, MAX_FILE_SIZE_MB
 from app.config import get_config
 from app.schemas.rag import RAGRequest, RAGResponse
 from app.services.rag_service import build_prompt
@@ -30,13 +31,50 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # Configure CORS
+# Get allowed origins from environment or use defaults
+CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5001,https://ai.vaultinsurance.com").split(",")
+logger.info(f"Configuring CORS with allowed origins: {CORS_ORIGINS}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Replace "*" with specific origins for better security
+    allow_origins=CORS_ORIGINS,  # Use specific origins for better security
     allow_credentials=True,
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
 )
+
+# Custom middleware to log request timing and detect client disconnections
+@app.middleware("http")
+async def request_timing_middleware(request: Request, call_next):
+    """
+    Middleware to log request timing and detect client disconnections.
+    """
+    start_time = time.time()
+    client_ip = request.client.host if request.client else "unknown"
+    method = request.method
+    path = request.url.path
+    
+    # Generate a unique request ID for this request
+    request_id = f"req_{int(start_time * 1000)}"
+    logger.info(f"[REQUEST_START] [{request_id}] Request started - {method} {path} from {client_ip}")
+    
+    try:
+        response = await call_next(request)
+        duration = time.time() - start_time
+        status_code = response.status_code
+        
+        if status_code >= 400:
+            logger.warning(f"[REQUEST_ERROR] [{request_id}] Request completed with error - {method} {path} - {status_code} in {duration:.2f}s")
+        else:
+            logger.info(f"[REQUEST_SUCCESS] [{request_id}] Request completed successfully - {method} {path} - {status_code} in {duration:.2f}s")
+        
+        return response
+        
+    except Exception as e:
+        duration = time.time() - start_time
+        logger.error(f"[REQUEST_EXCEPTION] [{request_id}] Request failed with exception - {method} {path} after {duration:.2f}s: {str(e)}", exc_info=True)
+        # Re-raise the exception so FastAPI can handle it appropriately
+        raise
 
 # Routers and endpoints should be added here
 
@@ -67,35 +105,82 @@ def rag_complete(request: RAGRequest, config=Depends(get_config_dep), conn=Depen
     Then send that prompt to Snowflake Cortex via SNOWFLAKE.CORTEX.AI_COMPLETE,
     and return the generated answer as JSON.
     """
-
+    endpoint_start_time = time.time()
     question = request.question.strip()
     chat_history = request.chat_history or []
     llm_model = request.llm_model
-    logger.info(f"Received request for LLM model: {llm_model}, question: {question}, chat history length: {len(chat_history)}")
+    
+    logger.info(f"[RAG_REQUEST] RAG request started - Model: {llm_model}, Question: '{question[:100]}...', Chat history: {len(chat_history)} messages")
+    
     if not llm_model:
+        logger.error("[RAG_ERROR] Request validation failed - llm_model missing")
         raise HTTPException(status_code=400, detail="`llm_model` must be provided in the request.")
 
     if not question:
+        logger.error("[RAG_ERROR] Request validation failed - question empty or missing")
         raise HTTPException(status_code=400, detail="`question` must be a non-empty string.")
 
     try:
         prompt = build_prompt(question, chat_history, llm_model)
+        logger.info("[RAG_PROCESS] Prompt built successfully, starting Snowflake Cortex query execution.")
+        
+        snowflake_start_time = time.time()
         cur = conn.cursor()
         sql = """
             SELECT SNOWFLAKE.CORTEX.AI_COMPLETE(%s, %s) AS response
         """
         try:
+            logger.info("[RAG_SNOWFLAKE] Executing SNOWFLAKE.CORTEX.AI_COMPLETE query...")
             cur.execute(sql, (llm_model, prompt))
             row = cur.fetchone()
+            snowflake_duration = time.time() - snowflake_start_time
+            logger.info(f"[RAG_SNOWFLAKE] Snowflake query completed in {snowflake_duration:.2f}s, processing response...")
         finally:
             cur.close()
             conn.close()
+            logger.info("[RAG_PROCESS] Database connection closed.")
 
         if not row or not row[0]:
+            logger.error("[RAG_ERROR] Empty response from Snowflake Cortex - no data returned")
             raise HTTPException(status_code=500, detail="No response returned from Snowflake Cortex.")
-        return RAGResponse(answer=row[0].replace("'", "").replace('"', ''))
+        
+        # Log response details for debugging
+        raw_response = row[0]
+        response_length = len(raw_response) if raw_response else 0
+        logger.info(f"[RAG_RESPONSE] Raw response received from Snowflake Cortex - Length: {response_length} characters")
+        
+        # Process the response more carefully - only remove leading/trailing quotes if they exist
+        try:
+            processed_response = raw_response.strip()
+            # Only remove quotes if the entire string is wrapped in them
+            if processed_response.startswith('"') and processed_response.endswith('"'):
+                processed_response = processed_response[1:-1]
+            elif processed_response.startswith("'") and processed_response.endswith("'"):
+                processed_response = processed_response[1:-1]
+                
+            logger.info("[RAG_PROCESS] Response processed successfully, creating RAGResponse object...")
+            response_obj = RAGResponse(answer=processed_response)
+            
+            total_duration = time.time() - endpoint_start_time
+            logger.info(f"[RAG_SUCCESS] RAGResponse object created successfully - Total request duration: {total_duration:.2f}s")
+            logger.info("[RAG_RESPONSE] Sending response to client...")
+            
+            return response_obj
+            
+        except Exception as response_error:
+            logger.error(f"[RAG_ERROR] Error processing Snowflake response: {str(response_error)}")
+            logger.error(f"[RAG_DEBUG] Raw response preview (first 200 chars): {raw_response[:200] if raw_response else 'None'}")
+            raise HTTPException(status_code=500, detail="Error processing AI response.")
+            
+    except HTTPException as http_exc:
+        total_duration = time.time() - endpoint_start_time
+        logger.error(f"[RAG_HTTP_ERROR] HTTP exception after {total_duration:.2f}s: {http_exc.status_code} - {http_exc.detail}")
+        # Re-raise HTTP exceptions as-is
+        raise
+        
     except Exception as e:
-        logger.error(f"Error in /rag_complete: {str(e)}")
+        total_duration = time.time() - endpoint_start_time
+        logger.error(f"[RAG_EXCEPTION] Unexpected error in /rag_complete after {total_duration:.2f}s: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error.")
 
 
@@ -104,18 +189,33 @@ async def upload_file_to_snowflake(file: UploadFile = File(...), config=Depends(
     """
     Upload a file to Snowflake stage. Checks for duplicates and returns status.
     """
+    upload_start_time = time.time()
     upload_id = f"upload_{int(time.time())}"
+    
+    logger.info(f"[UPLOAD_REQUEST] File upload started - ID: {upload_id}, Filename: {file.filename}, Content-Type: {file.content_type}")
+    
     if file.filename is None:
+        logger.error(f"[UPLOAD_ERROR] [{upload_id}] Upload failed - filename is None")
         raise HTTPException(status_code=400, detail="Filename cannot be None")
+        
+    # Check if the filename contains only allowed characters
+    if not is_filename_valid(file.filename):
+        logger.warning(f"[UPLOAD_WARNING] [{upload_id}] Invalid filename format: {file.filename}")
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid filename. Only alphanumeric characters, dots, underscores, and hyphens are allowed."
+        )
+    
+    # Only remove path traversal, keep original filename
     sanitized_filename = sanitize_filename(file.filename)
     temp_path = Path(config["UPLOAD_FOLDER"]) / sanitized_filename
-    logger.info(f"[{upload_id}] Received file: {sanitized_filename}")
+    logger.info(f"[UPLOAD_PROCESS] [{upload_id}] Filename sanitized: {sanitized_filename}, temp path: {temp_path}")
 
     # Validate file type (MIME and extension)
     content_type = file.content_type or ""
     extension = os.path.splitext(sanitized_filename)[1]
     if not is_allowed_filetype(content_type, extension):
-        logger.warning(f"[{upload_id}] File type not allowed: {content_type}, {extension}")
+        logger.warning(f"[UPLOAD_WARNING] [{upload_id}] File type not allowed: {content_type}, {extension}")
         raise HTTPException(status_code=400, detail=f"File type not allowed. Allowed types: {ALLOWED_EXTENSIONS}")
 
     # Check file size before saving (streamed, so check after save)
@@ -125,16 +225,23 @@ async def upload_file_to_snowflake(file: UploadFile = File(...), config=Depends(
     schema = config["SF_SCHEMA"]
     stage = config["SF_STAGE"]
     qualified_stage = f"{database}.{schema}.{stage}"
+    logger.info(f"[UPLOAD_TARGET] [{upload_id}] Target Snowflake stage: {qualified_stage}")
 
     # Check if file already exists in Snowflake stage
     cur = None
     try:
+        logger.info(f"[UPLOAD_CHECK] [{upload_id}] Checking if file already exists in stage...")
+        stage_check_start = time.time()
         cur = conn.cursor()
         cur.execute(f"LIST @{qualified_stage}")
         files = cur.fetchall()
+        stage_check_duration = time.time() - stage_check_start
+        
         existing_filenames = [str(file_info[0]).split('/')[-1] for file_info in files if file_info and len(file_info) > 0]
+        logger.info(f"[UPLOAD_CHECK] [{upload_id}] Stage check completed in {stage_check_duration:.2f}s - Found {len(existing_filenames)} existing files")
+        
         if sanitized_filename in existing_filenames:
-            logger.info(f"[{upload_id}] File '{sanitized_filename}' already exists in @{qualified_stage}. Upload aborted.")
+            logger.info(f"[UPLOAD_WARNING] [{upload_id}] File '{sanitized_filename}' already exists in @{qualified_stage}. Upload aborted.")
             raise HTTPException(status_code=409, detail=f"A file named '{sanitized_filename}' has already been uploaded.")
     finally:
         if cur:
@@ -205,6 +312,15 @@ def check_file_processed(file_name: str, config=Depends(get_config_dep), conn=De
     """
     Check if a file has been processed by verifying its presence in the chunks table.
     """
+    check_id = f"check_{int(time.time())}"
+    # Handle URL-encoded filenames
+    try:
+        file_name = urllib.parse.unquote(file_name)
+        logger.info(f"[{check_id}] Checking processing status for file: '{file_name}'")
+    except Exception as e:
+        logger.warning(f"[{check_id}] Error decoding filename '{file_name}': {str(e)}")
+        # Continue with the original filename if decoding fails
+    
     cur = None
     try:
         cur = conn.cursor()
@@ -225,15 +341,20 @@ def check_file_processed(file_name: str, config=Depends(get_config_dep), conn=De
             FROM {chunks_table}
             WHERE RELATIVE_PATH = %s
         """
+        
+        logger.info(f"[{check_id}] Executing query with RELATIVE_PATH = '{file_name}'")
         cur.execute(query, (file_name,))
         result = cur.fetchone()
+        
         if result and result[0] > 0:
+            logger.info(f"[{check_id}] File '{file_name}' has been processed.")
             return {"processed": True, "message": f"File '{file_name}' has been processed."}
         else:
+            logger.info(f"[{check_id}] File '{file_name}' has not been processed yet.")
             return {"processed": False, "message": f"File '{file_name}' has not been processed yet."}
     except Exception as e:
-        logger.error(f"Error checking file processing status: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Error checking file processing status.")
+        logger.error(f"[{check_id}] Error checking processing status for '{file_name}': {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error checking file processing status: {str(e)}")
     finally:
         if cur:
             cur.close()
