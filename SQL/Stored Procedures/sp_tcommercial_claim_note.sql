@@ -3,9 +3,10 @@
 -- Create Date: 07/17/2025
 -- Description: This procedures inserts and updates claim notes
 -----------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date		 |Author								 |	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 07/17/2025	Hernando Gonzalez			1. Created this procedure
+-- 07/17/2025		Hernando Gonzalez			1. Created this procedure
+-- 08/06/2025		Yunus Mohammed			   2. Removed commercial line tag condition from where clause
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_claim_note]
 
@@ -48,17 +49,7 @@ BEGIN
 		LEFT JOIN edw_stage_snapsheet.users as u ON u.id = n.logged_by_user_id
 		INNER JOIN edw_commercial.tcommercial_claim as tc ON tc.claim_no = c.claim_number
 		LEFT JOIN edw_commercial.tcommercial_claim_feature as cf ON cf.claim_no = c.claim_number and cf.claim_coverage_cd=n.exposure_id
-		WHERE n.created_at > @last_source_extract_ts
-		and exists
-			(
-				select 1
-				from
-					edw_stage_snapsheet.tags ctg
-				where
-					ctg.claim_id = c.id
-					and ctg.[name] like 'Commercial%'
-			)
-		;
+		WHERE n.created_at > @last_source_extract_ts;
 
 		-- Start Insert process
 		INSERT INTO edw_commercial.tcommercial_claim_note
