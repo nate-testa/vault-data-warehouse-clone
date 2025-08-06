@@ -698,7 +698,7 @@
     {% if not rag_messages %}
     <div class="text-center my-5 py-5">
         <div class="mb-4">
-            <i class="fa-solid fa-brain text-primary" style="font-size: 3rem; opacity: 0.7;"></i>
+            <i class="fa-solid fa-robot text-primary" style="font-size: 3rem; opacity: 0.7;"></i>
         </div>
         <h4 class="fw-semibold text-muted mb-3">DocuClaims AI Assistant</h4>
         <p class="text-muted col-md-8 mx-auto">
@@ -738,7 +738,7 @@
             
             <div class="d-flex">
                 <div class="message-avatar assistant-avatar">
-                    <i class="fa-solid fa-brain"></i>
+                    <i class="fa-solid fa-robot"></i>
                 </div>
                 <div class="assistant-message markdown-content">
                     {% if model_name %}
@@ -1007,9 +1007,19 @@
                     }
                     
                     // Function to poll status for a single file
-                    function pollFileStatus(filename) {
+                    function pollFileStatus(filename, startTime = Date.now()) {
                         // If modal is closed or polling should be stopped, exit early
                         if (!window.shouldPollFileStatus) {
+                            return;
+                        }
+                        
+                        // Check if 5 minutes (300 seconds) have passed since start
+                        const elapsedTime = (Date.now() - startTime) / 1000;
+                        if (elapsedTime > 300) {
+                            console.log(`File ${filename} processing timeout after ${elapsedTime.toFixed(1)} seconds`);
+                            fileStatuses[filename] = 'timeout';
+                            updateFileStatusUI(filename, 'timeout', 'Processing timed out after 5 minutes');
+                            checkAllFilesProcessed();
                             return;
                         }
                         
@@ -1029,45 +1039,65 @@
                                     updateFileStatusUI(filename, 'processed');
                                     checkAllFilesProcessed();
                                 } else if (data.processed === false && window.shouldPollFileStatus) {
-                                    // Continue polling only if modal is still open and we haven't stopped polling
+                                    // Continue polling every 10 seconds instead of 3 seconds
                                     setTimeout(() => {
                                         // Double-check flag before continuing
                                         if (window.shouldPollFileStatus) {
-                                            pollFileStatus(filename);
+                                            pollFileStatus(filename, startTime);
                                         }
-                                    }, 3000);
+                                    }, 10000);
                                 } else {
                                     fileStatuses[filename] = 'error';
                                     updateFileStatusUI(filename, 'error');
                                     checkAllFilesProcessed();
                                 }
                             },
-                            error: function() {
+                            error: function(xhr, status, error) {
+                                console.error(`Error checking status for file ${filename}:`, {status, error, responseText: xhr.responseText});
                                 fileStatuses[filename] = 'error';
-                                updateFileStatusUI(filename, 'error');
+                                updateFileStatusUI(filename, 'error', xhr.responseText || 'Error checking file status');
                                 checkAllFilesProcessed();
                             }
                         });
                     }
                 },
                 error: function(xhr, status, error) {
+                    // Try to get detailed error message from API
+                    let errorMessage = error;
+                    try {
+                        if (xhr.responseJSON && xhr.responseJSON.detail) {
+                            errorMessage = xhr.responseJSON.detail;
+                        } else if (xhr.responseText) {
+                            const errorObj = JSON.parse(xhr.responseText);
+                            if (errorObj.detail) {
+                                errorMessage = errorObj.detail;
+                            }
+                        }
+                    } catch (e) {
+                        // If parsing fails, use the original error
+                    }
+                    
                     $('#uploadStatus').html(`
                         <div class="alert alert-danger mt-3">
                             <div class="d-flex align-items-center">
                                 <i class="fas fa-exclamation-circle me-2"></i>
                                 <div>
                                     <strong>Upload failed</strong><br>
-                                    ${error}
+                                    ${errorMessage}
+                                    <br><small class="text-muted">Status code: ${xhr.status}</small>
                                 </div>
                             </div>
                         </div>
                     `);
                     $('#attachmentBtn').prop('disabled', false);
+                    
+                    // Log error to console for debugging
+                    console.error("File upload failed:", {status: xhr.status, statusText: xhr.statusText, responseText: xhr.responseText});
                 }
             });
             
             // Function to update the UI for a single file's status
-            function updateFileStatusUI(filename, status) {
+            function updateFileStatusUI(filename, status, errorDetails) {
                 // Find the card for this file
                 const fileCard = $(`#fileStatusList .card:contains('${filename}')`);
                 
@@ -1102,7 +1132,7 @@
                         case 'error':
                             icon = '<i class="fa-solid fa-circle-xmark text-danger"></i>';
                             statusClass = 'status-error text-danger';
-                            statusText = 'Error';
+                            statusText = errorDetails ? 'Error: ' + errorDetails : 'Error';
                             progressBarStyle = 'width: 100%';
                             badgeClass = 'bg-danger';
                             progressBarClass = 'bg-danger';
@@ -1167,7 +1197,7 @@
                     <div class="d-flex w-100 flex-column">
                         <div class="d-flex">
                             <div class="message-avatar assistant-avatar">
-                                <i class="fa-solid fa-brain"></i>
+                                <i class="fa-solid fa-robot"></i>
                             </div>
                             <div class="assistant-message">
                                 <div class="d-flex align-items-center">
@@ -1220,7 +1250,7 @@
                                 ${modelName ? `<div class="model-tag">${modelName}</div>` : ''}
                                 <div class="d-flex">
                                     <div class="message-avatar assistant-avatar">
-                                        <i class="fa-solid fa-brain"></i>
+                                        <i class="fa-solid fa-robot"></i>
                                     </div>
                                     <div class="assistant-message markdown-content">
                                         ${parseMarkdown(content)}
@@ -1245,7 +1275,7 @@
                             <div class="d-flex w-100 flex-column">
                                 <div class="d-flex">
                                     <div class="message-avatar assistant-avatar">
-                                        <i class="fa-solid fa-brain"></i>
+                                        <i class="fa-solid fa-robot"></i>
                                     </div>
                                     <div class="assistant-message">
                                         <div class="d-flex align-items-center text-danger mb-2">
