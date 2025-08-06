@@ -7,6 +7,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 07/17/2025		Hernando Gonzalez			1. Created this procedure
 -- 08/05/2025		Yunus Mohammed			   2. Remove case statement from product_cd 
+-- 08/06/2025		Yunus Mohammed			   3. Removed vehicle join
 -- ========================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_claim_feature]
@@ -67,7 +68,6 @@ BEGIN
 		FROM edw_stage_snapsheet.claims clm
 		INNER JOIN edw_commercial.tcommercial_claim tcl ON clm.claim_number = tcl.claim_no
 		INNER JOIN edw_stage_snapsheet.exposures exps on exps.claim_id = clm.id
-		LEFT JOIN edw_stage_snapsheet.vehicles veh on veh.claim_id = exps.claim_id and veh.exposure_id = exps.id
 		LEFT JOIN edw_core.tproduct prd ON prd.product_sk = tcl.product_sk
 		LEFT JOIN 
 		(
