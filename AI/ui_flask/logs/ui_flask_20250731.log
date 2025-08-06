@@ -1,0 +1,245 @@
+2025-07-31 17:27:46,359 - ui_flask - INFO - app.py:43 - Home page loaded.
+2025-07-31 17:27:49,822 - ui_flask - INFO - app.py:48 - DocuClaims AI page loaded.
+2025-07-31 17:27:49,834 - ui_flask - INFO - app.py:205 - Fetched model options from API.
+2025-07-31 17:28:03,779 - ui_flask - INFO - app.py:48 - DocuClaims AI page loaded.
+2025-07-31 17:28:03,783 - ui_flask - INFO - app.py:205 - Fetched model options from API.
+2025-07-31 17:28:04,144 - ui_flask - INFO - app.py:48 - DocuClaims AI page loaded.
+2025-07-31 17:28:04,166 - ui_flask - INFO - app.py:205 - Fetched model options from API.
+2025-07-31 17:28:06,084 - ui_flask - INFO - app.py:48 - DocuClaims AI page loaded.
+2025-07-31 17:28:06,090 - ui_flask - INFO - app.py:205 - Fetched model options from API.
+2025-07-31 17:28:06,445 - ui_flask - INFO - app.py:48 - DocuClaims AI page loaded.
+2025-07-31 17:28:06,451 - ui_flask - INFO - app.py:205 - Fetched model options from API.
+2025-07-31 17:33:09,246 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 17:33:15,244 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 17:33:15,272 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 17:33:29,151 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 17:33:30,270 - ui_flask - INFO - app.py:199 - File 'sparkling_circuit_quest_2.pdf' uploaded to API.
+2025-07-31 17:33:42,931 - ui_flask - INFO - app.py:116 - Files processed: ['sparkling_circuit_quest_2.pdf']
+2025-07-31 17:33:44,319 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 17:33:44,324 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 17:34:09,438 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 17:34:09,438 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 17:43:08,061 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 17:43:11,752 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 17:43:11,846 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 17:43:51,079 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 17:43:51,079 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 18:58:36,080 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 18:58:51,670 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 18:58:51,717 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 18:59:31,228 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 18:59:31,228 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 19:00:33,257 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 19:00:51,362 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 19:00:54,911 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 19:00:54,916 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 19:01:24,803 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 19:01:24,809 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 19:22:18,142 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 19:22:20,794 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 19:22:20,801 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 19:26:42,778 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 19:26:44,347 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 19:26:44,353 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 19:27:10,098 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 19:27:10,099 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 19:30:21,152 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 19:30:23,213 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 19:30:23,246 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 19:30:51,265 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 19:30:51,265 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 19:31:39,558 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 19:31:41,311 - ui_flask - INFO - app.py:199 - File 'mx464029.pdf' uploaded to API.
+2025-07-31 19:32:04,969 - ui_flask - INFO - app.py:199 - File 'mx465494.pdf' uploaded to API.
+2025-07-31 19:32:27,624 - ui_flask - INFO - app.py:116 - Files processed: ['mx464029.pdf', 'mx465494.pdf']
+2025-07-31 19:32:29,707 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 19:32:29,711 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 19:33:02,586 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 19:33:02,586 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 19:35:57,879 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 19:35:57,880 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 19:39:46,540 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 19:39:49,099 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 19:39:49,105 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 19:40:13,881 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 19:40:13,881 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 19:40:29,434 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 19:40:29,884 - ui_flask - ERROR - app.py:205 - Error uploading file 'mx464029.pdf': 409 Client Error: Conflict for url: http://127.0.0.1:8080/upload_file
+2025-07-31 19:40:30,352 - ui_flask - ERROR - app.py:205 - Error uploading file 'mx465494.pdf': 409 Client Error: Conflict for url: http://127.0.0.1:8080/upload_file
+2025-07-31 19:40:45,413 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 19:40:46,137 - ui_flask - INFO - app.py:199 - File 'esq2502025.pdf' uploaded to API.
+2025-07-31 19:40:58,268 - ui_flask - INFO - app.py:199 - File 'esq2502252.pdf' uploaded to API.
+2025-07-31 19:41:32,079 - ui_flask - INFO - app.py:116 - Files processed: ['esq2502025.pdf', 'esq2502252.pdf']
+2025-07-31 19:41:33,445 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 19:41:33,450 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 19:53:14,175 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 19:53:17,667 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 19:53:17,674 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 19:53:51,139 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 19:53:51,140 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 19:54:08,169 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 19:54:09,312 - ui_flask - INFO - app.py:199 - File 'mx467752.pdf' uploaded to API.
+2025-07-31 19:54:21,600 - ui_flask - ERROR - app.py:205 - Error uploading file 'mx475799.pdf': 409 Client Error: Conflict for url: http://127.0.0.1:8080/upload_file
+2025-07-31 19:54:21,601 - ui_flask - INFO - app.py:116 - Files processed: ['mx467752.pdf']
+2025-07-31 19:54:22,966 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 19:54:22,970 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 19:59:07,312 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 19:59:13,684 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 19:59:13,690 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 19:59:37,724 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 19:59:37,725 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 20:00:17,475 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 20:00:17,476 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 20:00:44,102 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 20:00:45,340 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:00:45,347 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:01:07,000 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 20:01:07,000 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 20:01:23,657 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:01:23,684 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:01:38,711 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 20:01:39,998 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:01:40,004 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:02:01,978 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 20:02:01,979 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 20:02:26,114 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 20:02:27,930 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:02:28,041 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:02:48,116 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 20:02:48,116 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 20:04:20,592 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 20:04:22,472 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:04:22,479 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:04:44,127 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 20:04:44,128 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 20:14:49,189 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 20:14:51,193 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:14:51,210 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:42:53,624 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 20:42:55,484 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:42:55,491 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:45:01,587 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 20:45:03,168 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:45:03,174 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:45:07,110 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:45:07,114 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:45:15,918 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:45:15,933 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:45:32,560 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 20:45:34,037 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:45:34,044 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:47:14,939 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 20:47:16,523 - ui_flask - INFO - app.py:199 - File '1. Madison Williams (part 1).pdf' uploaded to API.
+2025-07-31 20:49:39,229 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:49:39,233 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:50:56,250 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 20:51:21,166 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:51:21,178 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:51:27,641 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 20:51:29,194 - ui_flask - INFO - app.py:199 - File '1. Madison Williams (part 4).pdf' uploaded to API.
+2025-07-31 20:52:14,277 - ui_flask - INFO - app.py:116 - Files processed: ['1._Madison_Williams_part_4.pdf']
+2025-07-31 20:52:15,654 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:52:15,658 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:52:36,258 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 20:52:36,258 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 20:52:58,441 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 20:52:58,442 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 20:53:05,566 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 20:53:06,424 - ui_flask - INFO - app.py:199 - File 'Airflow - SMTP - Postgres Installation and Configuration.docx' uploaded to API.
+2025-07-31 20:53:29,070 - ui_flask - INFO - app.py:116 - Files processed: ['Airflow_-_SMTP_-_Postgres_Installation_and_Configuration.docx']
+2025-07-31 20:53:30,473 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:53:30,478 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 20:54:01,149 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 20:54:01,157 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 20:56:16,223 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 20:56:17,390 - ui_flask - INFO - app.py:199 - File '1. Madison Williams (part 1).pdf' uploaded to API.
+2025-07-31 20:56:41,546 - ui_flask - INFO - app.py:199 - File '1. Madison Williams (part 2).pdf' uploaded to API.
+2025-07-31 20:57:26,284 - ui_flask - INFO - app.py:116 - Files processed: ['1._Madison_Williams_part_1.pdf', '1._Madison_Williams_part_2.pdf']
+2025-07-31 20:57:27,640 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 20:57:27,644 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 21:10:57,308 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 21:10:59,721 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 21:10:59,727 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 21:11:28,369 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 21:17:23,592 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 21:17:25,822 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 21:17:25,877 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 21:17:51,875 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 21:17:51,900 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 21:18:06,677 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 21:18:08,507 - ui_flask - INFO - app.py:199 - File '1. Madison Williams (part 3).pdf' uploaded to API.
+2025-07-31 21:18:32,789 - ui_flask - INFO - app.py:199 - File '1. Madison Williams (part 5).pdf' uploaded to API.
+2025-07-31 21:18:55,401 - ui_flask - INFO - app.py:116 - Files processed: ['1._Madison_Williams_part_3.pdf', '1._Madison_Williams_part_5.pdf']
+2025-07-31 21:18:57,785 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 21:18:57,825 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 21:23:54,382 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 21:23:56,490 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 21:23:56,504 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 21:24:22,336 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 21:24:22,346 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 21:24:49,974 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 21:24:50,778 - ui_flask - INFO - app.py:199 - File '1869575.pdf' uploaded to API.
+2025-07-31 21:25:03,124 - ui_flask - INFO - app.py:199 - File '1896674.pdf' uploaded to API.
+2025-07-31 21:25:37,933 - ui_flask - INFO - app.py:116 - Files processed: ['1869575.pdf', '1896674.pdf']
+2025-07-31 21:25:39,405 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 21:25:39,409 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 21:31:41,149 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 21:31:42,564 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 21:31:42,572 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 21:31:50,694 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 21:31:50,696 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 21:32:03,948 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 21:32:04,755 - ui_flask - INFO - app.py:199 - File '1869575.pdf' uploaded to API.
+2025-07-31 21:32:17,064 - ui_flask - INFO - app.py:199 - File '1896674.pdf' uploaded to API.
+2025-07-31 21:32:50,389 - ui_flask - INFO - app.py:116 - Files processed: ['1869575.pdf', '1896674.pdf']
+2025-07-31 21:32:52,728 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 21:32:52,799 - ui_flask - INFO - app.py:186 - Fetched model options from API.
+2025-07-31 21:34:09,907 - ui_flask - INFO - app.py:238 - Document query successful.
+2025-07-31 21:34:09,911 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 21:45:08,568 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 21:45:10,012 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 21:45:10,024 - ui_flask - INFO - app.py:199 - Fetched model options from API.
+2025-07-31 21:45:27,095 - ui_flask - INFO - app.py:256 - Document query successful.
+2025-07-31 21:45:27,096 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 21:45:35,040 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 21:45:36,264 - ui_flask - INFO - app.py:212 - File '1. Madison Williams (part 1).pdf' uploaded to API.
+2025-07-31 21:45:38,235 - ui_flask - INFO - app.py:212 - File '1. Madison Williams (part 2).pdf' uploaded to API.
+2025-07-31 21:46:36,480 - ui_flask - INFO - app.py:256 - Document query successful.
+2025-07-31 21:46:36,490 - ui_flask - INFO - app.py:147 - Assistant response received from API.
+2025-07-31 21:54:02,668 - ui_flask - INFO - app.py:31 - Home page loaded.
+2025-07-31 21:54:06,231 - ui_flask - INFO - app.py:36 - DocuClaims AI page loaded.
+2025-07-31 21:54:06,238 - ui_flask - INFO - app.py:199 - Fetched model options from API.
+2025-07-31 21:54:19,708 - ui_flask - INFO - app.py:87 - File upload initiated.
+2025-07-31 21:54:21,831 - ui_flask - INFO - app.py:212 - File '1. Madison Williams (part 3).pdf' uploaded to API.
+2025-07-31 21:54:24,103 - ui_flask - INFO - app.py:212 - File '1. Madison Williams (part 4).pdf' uploaded to API.
+2025-07-31 21:55:29,278 - ui_flask - INFO - app.py:30 - Home page loaded.
+2025-07-31 21:55:32,697 - ui_flask - INFO - app.py:35 - DocuClaims AI page loaded.
+2025-07-31 21:55:32,766 - ui_flask - INFO - app.py:198 - Fetched model options from API.
+2025-07-31 21:55:43,813 - ui_flask - INFO - app.py:86 - File upload initiated.
+2025-07-31 21:55:44,826 - ui_flask - INFO - app.py:211 - File 'mx467752.pdf' uploaded to API.
+2025-07-31 21:55:46,242 - ui_flask - INFO - app.py:211 - File 'mx475799.pdf' uploaded to API.
+2025-07-31 21:56:04,405 - ui_flask - INFO - app.py:35 - DocuClaims AI page loaded.
+2025-07-31 21:56:04,410 - ui_flask - INFO - app.py:198 - Fetched model options from API.
+2025-07-31 22:02:01,709 - ui_flask - INFO - app.py:30 - Home page loaded.
+2025-07-31 22:02:04,049 - ui_flask - INFO - app.py:35 - DocuClaims AI page loaded.
+2025-07-31 22:02:04,153 - ui_flask - INFO - app.py:198 - Fetched model options from API.
+2025-07-31 22:02:29,185 - ui_flask - INFO - app.py:255 - Document query successful.
+2025-07-31 22:02:29,185 - ui_flask - INFO - app.py:146 - Assistant response received from API.
+2025-07-31 22:03:00,073 - ui_flask - INFO - app.py:86 - File upload initiated.
+2025-07-31 22:03:00,825 - ui_flask - INFO - app.py:211 - File 'esq2502025.pdf' uploaded to API.
+2025-07-31 22:03:03,083 - ui_flask - INFO - app.py:211 - File 'esq2502252.pdf' uploaded to API.
+2025-07-31 22:03:04,976 - ui_flask - INFO - app.py:211 - File 'mx464029.pdf' uploaded to API.
+2025-07-31 22:05:27,080 - ui_flask - INFO - app.py:35 - DocuClaims AI page loaded.
+2025-07-31 22:05:27,085 - ui_flask - INFO - app.py:198 - Fetched model options from API.
+2025-07-31 22:07:51,984 - ui_flask - INFO - app.py:30 - Home page loaded.
+2025-07-31 22:07:57,503 - ui_flask - INFO - app.py:35 - DocuClaims AI page loaded.
+2025-07-31 22:07:57,510 - ui_flask - INFO - app.py:198 - Fetched model options from API.
+2025-07-31 22:08:21,979 - ui_flask - INFO - app.py:255 - Document query successful.
+2025-07-31 22:08:21,980 - ui_flask - INFO - app.py:146 - Assistant response received from API.
+2025-07-31 22:08:38,443 - ui_flask - INFO - app.py:35 - DocuClaims AI page loaded.
+2025-07-31 22:08:38,493 - ui_flask - INFO - app.py:198 - Fetched model options from API.
+2025-07-31 22:08:38,961 - ui_flask - INFO - app.py:35 - DocuClaims AI page loaded.
+2025-07-31 22:08:38,993 - ui_flask - INFO - app.py:198 - Fetched model options from API.
+2025-07-31 22:09:31,674 - ui_flask - INFO - app.py:30 - Home page loaded.
+2025-07-31 22:09:33,305 - ui_flask - INFO - app.py:35 - DocuClaims AI page loaded.
+2025-07-31 22:09:33,312 - ui_flask - INFO - app.py:198 - Fetched model options from API.
