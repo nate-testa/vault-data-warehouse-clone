@@ -242,7 +242,7 @@ BEGIN
                         pw.watercraft_make as manufacturer,
                         pw.watercraft_model as model,
                         REPLACE(REPLACE(pw.watercraft_length,'<','less than'),'>','greater than') as [length],
-                        REPLACE(REPLACE(pw.watercraft_horsepower,'<','less than'),'>','greater than') as horsepower
+                        REPLACE(REPLACE(pw.watercraft_horsepower,'<','less than'),'>','greater than') as horsepower,
                         'Other' as WaterUnitTypeCd
                     FROM edw_core.tpel_watercraft as pw
                     INNER JOIN edw_core.tpolicy_history as ph ON pw.policy_history_sk = ph.policy_history_sk
