@@ -13,6 +13,7 @@ GO
 -- 04/05/2024       Sandeep Gundreddy           Repush to Git Repo
 -- 04/05/2024       Sandeep Gundreddy           Repush to Git Repo
 -- 21/07/2025       Alberto Almario             Add filter location_deleted_in = 'No'
+-- 06/08/2025       Alberto Almario             Add column WaterUnitTypeCd on json_pel_objects -> PEL_Watercrafts
 -- ==============================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_pel_feed]
@@ -242,6 +243,7 @@ BEGIN
                         pw.watercraft_model as model,
                         REPLACE(REPLACE(pw.watercraft_length,'<','less than'),'>','greater than') as [length],
                         REPLACE(REPLACE(pw.watercraft_horsepower,'<','less than'),'>','greater than') as horsepower
+                        'Other' as WaterUnitTypeCd
                     FROM edw_core.tpel_watercraft as pw
                     INNER JOIN edw_core.tpolicy_history as ph ON pw.policy_history_sk = ph.policy_history_sk
                     WHERE pw.policy_no = phf.policy_no
