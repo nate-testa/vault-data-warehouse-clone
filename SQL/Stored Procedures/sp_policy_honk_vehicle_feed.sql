@@ -5,7 +5,7 @@
 -- ---------------------------------------------------------------------------------------------------
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
---
+-- 08/07/25					Dinesh Bobbili			    1. Created this procedure
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_honk_vehicle_feed]
 AS
@@ -58,9 +58,7 @@ BEGIN
 		inner join edw_core.tpolicy pol
 		on ph.policy_sk = pol.policy_sk
 		inner join edw_core.tauto_vehicle_coverage avc
-		on avc.policy_no = ph.policy_no
-		and avc.effective_dt = ph.effective_dt 
-		and avc.transaction_seq_no = ph.transaction_seq_no
+		on avc.policy_history_sk = ph.policy_history_sk
 		inner join edw_core.tauto_vehicle av 
 			on avc.auto_vehicle_sk = av.auto_vehicle_sk
 		where dip.inforce_dt_sk = (select max(date_sk) from edw_core.tdate where actual_dt < cast(getdate() as date))
