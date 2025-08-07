@@ -25,12 +25,109 @@
             --vault-shadow: 0 2px 16px 0 rgba(44,62,80,0.07);
             --vault-radius: 18px;
             --vault-font: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+            --navbar-height: 28px;
+        }
+        
+        /* Fix navbar positioning to prevent layout conflicts */
+        .auth-navbar {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 1050 !important;
+            height: var(--navbar-height) !important;
+            margin-bottom: 0 !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+            padding: 0.125rem 1rem !important;
+            min-height: unset !important;
+        }
+        
+        /* Adjust body padding to compensate for fixed navbar */
+        body {
+            padding-top: var(--navbar-height) !important;
+        }
+        
+        /* Ensure main content area respects the navbar */
+        .main-content-wrapper {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+            height: calc(100vh - var(--navbar-height)) !important;
+            overflow: hidden !important;
+        }
+        
+        /* Fix dropdown menu z-index to appear above sidebar */
+        .dropdown-menu {
+            z-index: 1060 !important;
+        }
+        
+        /* Make navbar items much smaller */
+        .auth-navbar .nav-link {
+            padding: 0.125rem 0.375rem !important;
+            font-size: 0.8rem !important;
+            line-height: 1.2 !important;
+        }
+        
+        .auth-navbar .dropdown-toggle {
+            font-size: 0.8rem !important;
+            line-height: 1.2 !important;
+        }
+        
+        .auth-navbar .container-fluid {
+            padding: 0 !important;
+        }
+        
+        .auth-navbar .fas {
+            font-size: 0.75rem !important;
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
+    <!-- Authentication Navigation Bar -->
+    <nav class="navbar navbar-expand-lg auth-navbar" style="background-color: var(--primary-color);">
+        <div class="container-fluid">
+            <div class="navbar-nav ms-auto">
+                {% if user %}
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-white" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-1"></i>{{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" style="width: 400px; max-height: 500px; overflow-y: auto;">
+                            <li><h6 class="dropdown-header">{{ user.full_name or user.username }}</h6></li>
+                            {% if user.email %}
+                            <li><span class="dropdown-item-text text-muted small">{{ user.email }}</span></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            
+                            <!-- ========================================= -->
+                            <!-- DEBUG SSO SAML DATA - COMMENT/UNCOMMENT -->
+                            <!-- ========================================= -->
+                            <!-- 
+                            <li><h6 class="dropdown-header text-primary">SSO SAML Data (Raw JSON):</h6></li>
+                            <li><div class="dropdown-item-text" style="font-family: monospace; font-size: 0.7rem; white-space: pre-wrap; background: #f8f9fa; padding: 10px; border-radius: 4px; max-height: 300px; overflow-y: auto;">
+                                {{ user.attributes | tojson(indent=2) if user.attributes else 'No attributes' }}
+                            </div></li>
+                            -->
+                            <!-- ========================================= -->
+                            <!-- END DEBUG SSO SAML DATA -->
+                            <!-- ========================================= -->
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                            </a></li>
+                        </ul>
+                    </div>
+                {% else %}
+                    <a class="nav-link text-white" href="{{ url_for('login') }}">
+                        <i class="fas fa-sign-in-alt me-2"></i>Login
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container-fluid main-content-wrapper">
+        <div class="row h-100">
             {% block sidebar %}{% endblock %}
             <div class="col main-content">
                 {% block content %}{% endblock %}
@@ -41,7 +138,7 @@
     <!-- Footer -->
     <div class="vault-footer">
         <div style="text-align: center; padding: 0.5rem 0 0.5rem 0; color: #888; font-size: 0.98rem;">
-            &copy; DocuClaims AI can make mistakes. Check important info.
+            AI can make mistakes. Check important info.
         </div>
     </div>
 

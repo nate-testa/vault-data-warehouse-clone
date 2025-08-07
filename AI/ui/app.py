@@ -9,6 +9,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils_logging import logger
 import json
 
+# Import auth components
+from auth.sso_auth import SSOAuth
+from auth.session_manager import SessionManager
+from auth.user_service import UserService
+from auth.models import User
+from auth.decorators import login_required
+
 # Load environment variables
 load_dotenv()
 
@@ -30,6 +37,18 @@ app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB max upload size
 logger.info("[APP_INIT] Flask secret key configured for secure sessions")
 logger.info("[APP_INIT] Flask session configuration loaded")
 
+# Initialize auth components
+sso_auth = SSOAuth()
+session_manager = SessionManager()
+user_service = UserService()
+
+# Manually set the app and components for SSOAuth without route registration
+sso_auth.app = app
+sso_auth.session_manager = session_manager
+sso_auth.user_service = user_service
+
+logger.info("[APP_INIT] SSO authentication components initialized")
+
 # Fixed color for app styling
 PRIMARY_COLOR = "#DC2626"  # Main accent color
 
@@ -39,6 +58,12 @@ if not API_BASE:
     raise RuntimeError("Missing required environment variable: API_BASE_URL")
 
 # No theme customization
+
+# Compatibility route for SSOAuth which expects 'index' endpoint
+@app.route('/index')
+def index():
+    """Index route - redirects to home for compatibility with SSOAuth"""
+    return redirect(url_for('home'))
 
 @app.route('/favicon.ico')
 def favicon():
@@ -56,9 +81,13 @@ def home():
     if client_ip not in monitoring_ips:
         logger.info(f"Home page loaded by user from IP: {client_ip}")
     
-    return render_template('home.html')
+    # Get current user for template context
+    user = session_manager.get_current_user()
+    
+    return render_template('home.html', user=user)
 
 @app.route('/docuclaims')
+@login_required  # Add authentication protection
 def docuclaims():
     # Get user IP for tracking
     client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', 'unknown'))
@@ -93,6 +122,9 @@ def docuclaims():
         # If no options are available, clear any existing selection
         session['selected_model'] = None
     
+    # Get current user for template context
+    user = session_manager.get_current_user()
+    
     return render_template(
         'docuclaims.html',
         accent_color=PRIMARY_COLOR,  # Using fixed color
@@ -102,16 +134,19 @@ def docuclaims():
         file_uploaded=session.get('file_uploaded', False),
         uploaded_filename=session.get('uploaded_filename'),
         use_chat_history=session.get('use_chat_history', True),
-        debug=session.get('debug', False)
+        debug=session.get('debug', False),
+        user=user
     )
 
 @app.route('/clear_chat', methods=['POST'])
+@login_required
 def clear_chat():
     session['rag_messages'] = []
     session['rag_warnings'] = []
     return redirect(url_for('docuclaims'))
 
 @app.route('/reset_everything', methods=['POST'])
+@login_required
 def reset_everything():
     # Reset all session variables
     session['rag_messages'] = []
@@ -124,6 +159,7 @@ def reset_everything():
 # Theme customization removed
 
 @app.route('/upload_files', methods=['POST'])
+@login_required
 def upload_files():
     upload_id = f"upload_{int(time.time())}_{os.urandom(4).hex()}"
     
@@ -183,6 +219,7 @@ def upload_files():
     return jsonify({"file_status": file_status, "uploaded_files": uploaded_filenames})
 
 @app.route('/send_message', methods=['POST'])
+@login_required
 def send_message():
     # Generate unique session ID for tracking this interaction
     interaction_id = f"rag_{int(time.time())}_{os.urandom(4).hex()}"
@@ -294,6 +331,7 @@ def send_message():
     })
 
 @app.route('/toggle_setting', methods=['POST'])
+@login_required
 def toggle_setting():
     setting = request.form.get('setting')
     value = request.form.get('value') == 'true'
@@ -304,6 +342,7 @@ def toggle_setting():
     return jsonify({"success": True})
 
 @app.route('/select_model', methods=['POST'])
+@login_required
 def select_model():
     model = request.form.get('model')
     if model:
@@ -316,6 +355,7 @@ def select_model():
     return jsonify({"success": True, "model": model})
 
 @app.route('/check_file_processed/<file_name>')
+@login_required
 def check_file_processed_endpoint(file_name):
     check_id = f"check_{int(time.time())}"
     logger.info(f"[{check_id}] Checking processing status for file: '{file_name}'")
@@ -497,6 +537,88 @@ def get_chat_history(slide_window=5):
     start_index = max(0, len(rag_messages) - slide_window)
     chat_history = [rag_messages[i]["content"] for i in range(start_index, len(rag_messages))]
     return chat_history
+
+# ============================================================================
+# SSO AUTHENTICATION ROUTES
+# ============================================================================
+
+# SAML Standard Routes (matching .env configuration)
+@app.route('/saml/sso')
+def saml_sso():
+    """SAML SSO initiation endpoint"""
+    try:
+        # Check if SSO is enabled
+        if not os.getenv('ENABLE_SSO', 'false').lower() == 'true':
+            return "SSO is not enabled. Configure ENABLE_SSO=true in .env", 400
+        
+        # Call the SSO method directly (it returns a redirect response)
+        return sso_auth.sso()
+        
+    except Exception as e:
+        logger.error(f"[SSO_SSO] Error starting SSO: {str(e)}")
+        return f"Error starting SSO: {str(e)}", 500
+
+@app.route('/saml/acs', methods=['GET', 'POST'])
+def saml_acs():
+    """SAML Assertion Consumer Service - handles SAML response from Azure AD"""
+    try:
+        return sso_auth.acs()
+    except Exception as e:
+        logger.error(f"[SSO_ACS] Error processing SSO callback: {str(e)}")
+        return f"Error processing SSO callback: {str(e)}", 500
+
+@app.route('/saml/slo', methods=['POST'])
+def saml_slo():
+    """SAML Single Logout endpoint"""
+    try:
+        return sso_auth.slo()
+    except Exception as e:
+        logger.error(f"[SSO_SLO] Error in SLO: {str(e)}")
+        return f"Error in SLO: {str(e)}", 500
+
+@app.route('/saml/sls')
+def saml_sls():
+    """SAML Single Logout Service endpoint"""
+    try:
+        return sso_auth.sls()
+    except Exception as e:
+        logger.error(f"[SSO_SLS] Error in SLS: {str(e)}")
+        return f"Error in SLS: {str(e)}", 500
+
+@app.route('/saml/metadata')
+def saml_metadata():
+    """SAML metadata endpoint"""
+    try:
+        return sso_auth.metadata()
+    except Exception as e:
+        logger.error(f"[SSO_METADATA] Error generating metadata: {str(e)}")
+        return f"Error generating metadata: {str(e)}", 500
+
+# Convenience routes
+@app.route('/login')
+def login():
+    """Convenience login route - redirects to SAML SSO"""
+    try:
+        if not os.getenv('ENABLE_SSO', 'false').lower() == 'true':
+            return "SSO is not enabled. Configure ENABLE_SSO=true in .env", 400
+        
+        # Redirect to SAML SSO endpoint (like in working POC)
+        return redirect(url_for('saml_sso'))
+        
+    except Exception as e:
+        logger.error(f"[SSO_LOGIN] Error starting SSO: {str(e)}")
+        return f"Error starting SSO: {str(e)}", 500
+
+@app.route('/logout')
+def logout():
+    """Close session"""
+    try:
+        session_manager.clear_session()
+        logger.info("[SSO_LOGOUT] User session cleared successfully")
+        return redirect(url_for('home'))
+    except Exception as e:
+        logger.error(f"[SSO_LOGOUT] Error in logout: {str(e)}")
+        return f"Error in logout: {str(e)}", 500
 
 if __name__ == "__main__":
     # Use debug based on environment variable
