@@ -6,6 +6,7 @@
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
 -- 08/07/25					Dinesh Bobbili			    1. Created this procedure
+-- 08/08/25					Dinesh Bobbili			    2. Added logic to populate customer_nm as last_name for Entity
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_honk_policyholder_feed]
 AS
@@ -32,7 +33,7 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.policy_honk_policyholder_feed_temp1;
 		select pol.policy_no as policy_number,
 			cus.first_nm as first_name,
-			cus.last_nm as last_name,
+			case when cus.insured_type = 'Entity' then cus.customer_nm else cus.last_nm end as last_name,
 			cus.mailing_address_line1 as address,
 			cus.mailing_address_city_nm as city,
 			cus.mailing_address_state_cd as state,
