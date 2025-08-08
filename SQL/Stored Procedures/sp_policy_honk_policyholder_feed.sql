@@ -7,6 +7,7 @@
 -- ---------------------------------------------------------------------------------------------------
 -- 08/07/25					Dinesh Bobbili			    1. Created this procedure
 -- 08/08/25					Dinesh Bobbili			    2. Added logic to populate customer_nm as last_name for Entity
+-- 08/08/25					Dinesh Bobbili			    3. Added logic to get data from tpolicy_insured
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_honk_policyholder_feed]
 AS
@@ -31,23 +32,35 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
 		DROP TABLE IF EXISTS edw_temp.policy_honk_policyholder_feed_temp1;
-		select pol.policy_no as policy_number,
-			cus.first_nm as first_name,
-			case when cus.insured_type = 'Entity' then cus.customer_nm else cus.last_nm end as last_name,
-			cus.mailing_address_line1 as address,
-			cus.mailing_address_city_nm as city,
-			cus.mailing_address_state_cd as state,
-			cus.mailing_address_zip_cd as postal_code
+		select policy_number	
+			,first_name	
+			,last_name	
+			,address	
+			,city	
+			,state	
+			,postal_code
 		into edw_temp.policy_honk_policyholder_feed_temp1
-		from edw_core.tdaily_inforce_policy dip 
-		inner join edw_core.tproduct pr 
-			on dip.product_sk = pr.product_sk
-			and pr.product_cd = 'AU'
-		inner join edw_core.tpolicy pol 
-			on dip.policy_sk = pol.policy_sk
-		inner join edw_core.tcustomer cus
-			on dip.customer_sk = cus.customer_sk
-		where dip.inforce_dt_sk = (select max(date_sk) from edw_core.tdate where actual_dt < cast(getdate() as date))
+		from (select distinct pol.policy_no as policy_number,
+					pins.first_nm as first_name,
+					case when pins.insured_type = 'Entity' then pins.insured_nm else pins.last_nm end as last_name,
+					pins.mailing_address_line_1 as address,
+					pins.mailing_address_city_nm as city,
+					pins.mailing_address_state_cd as state,
+					pins.mailing_address_zip_cd as postal_code,
+					row_number() over(partition by pins.policy_no,pins.effective_dt order by pins.transaction_seq_no desc) as rn
+				from edw_core.tdaily_inforce_policy dip 
+				inner join edw_core.tproduct pr 
+					on dip.product_sk = pr.product_sk
+					and pr.product_cd = 'AU'
+				inner join edw_core.tpolicy pol 
+					on dip.policy_sk = pol.policy_sk
+				inner join edw_core.tpolicy_insured pins
+					on pol.policy_no = pins.policy_no
+					and pol.effective_dt = pins.effective_dt
+				where dip.inforce_dt_sk = (select max(date_sk) from edw_core.tdate where actual_dt < cast(getdate() as date))
+				and primary_insured_in = 'Yes'
+		) a 
+		where rn = 1;
 
 		TRUNCATE TABLE edw_integration.policy_honk_policyholder_feed;
 		-- Start Insert process
