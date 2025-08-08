@@ -9,7 +9,7 @@ os.makedirs(log_dir, exist_ok=True)
 LOG_RETENTION_DAYS = 2  # Change this value to adjust retention
 
 # Use industry standard: TimedRotatingFileHandler
-log_file = os.path.join(log_dir, "api.log")
+log_file = os.path.join(log_dir, "ui.log")
 file_handler = TimedRotatingFileHandler(
     log_file,
     when="midnight",
@@ -28,7 +28,7 @@ file_handler.setFormatter(log_formatter)
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(log_formatter)
 
-logger = logging.getLogger("api")
+logger = logging.getLogger("ui")
 logger.setLevel(logging.INFO)
 logger.addHandler(file_handler)
 logger.addHandler(stream_handler)

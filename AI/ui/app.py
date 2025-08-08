@@ -6,7 +6,7 @@ import urllib.parse
 import secrets
 from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from utils_logging import logger
+from utils.logging import logger
 import json
 
 # Import auth components
