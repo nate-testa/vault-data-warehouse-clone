@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from .models import User, Session as AuthSession
 from .session_manager import SessionManager
 from .user_service import UserService
+from utils.logging import logger
 
 # Load environment variables from .env file
 load_dotenv()
@@ -224,7 +225,7 @@ class SSOAuth:
         else:
             https = 'off'
             
-        current_app.logger.info(f"HTTPS status: {https}, Host: {request.host}, Path: {request.path}")
+        logger.info(f"HTTPS status: {https}, Host: {request.host}, Path: {request.path}")
         
         return {
             'https': https,
@@ -257,29 +258,29 @@ class SSOAuth:
         auth = self.init_saml_auth(req)
         
         # Add debug information before processing response
-        current_app.logger.info("Processing SAML response at /saml/acs")
+        logger.info("Processing SAML response at /saml/acs")
         
         try:
             auth.process_response()
             errors = auth.get_errors()
             error_reason = auth.get_last_error_reason()
             
-            current_app.logger.info(f"SAML errors: {errors}")
-            current_app.logger.info(f"Error reason: {error_reason}")
+            logger.info(f"SAML errors: {errors}")
+            logger.info(f"Error reason: {error_reason}")
             
             if not errors:
-                current_app.logger.info("SAML authentication successful, processing user data")
+                logger.info("SAML authentication successful, processing user data")
                 
                 # Extract user information using new models
                 name_id = auth.get_nameid()
                 attributes = auth.get_attributes()
                 
-                current_app.logger.info(f"NameID: {name_id}")
-                current_app.logger.info(f"User attributes: {attributes}")
+                logger.info(f"NameID: {name_id}")
+                logger.info(f"User attributes: {attributes}")
                 
                 # Ensure name_id is not None
                 if not name_id:
-                    current_app.logger.error("No NameID received from SAML response")
+                    logger.error("No NameID received from SAML response")
                     return render_template('login.html', error="Authentication failed: No user identifier received")
                 
                 # Create user object from SAML attributes
@@ -298,22 +299,22 @@ class SSOAuth:
                         saml_session_index=auth.get_session_index(),
                         saml_nameid=name_id
                     )
-                    current_app.logger.info(f"Created session for user: {enhanced_user.username}")
+                    logger.info(f"Created session for user: {enhanced_user.username}")
                 else:
                     # Fallback to legacy session storage
                     session['user'] = attributes
                     session['saml_session_index'] = auth.get_session_index()
                     session['saml_nameid'] = name_id
-                    current_app.logger.info(f"Created legacy session for user: {enhanced_user.username}")
+                    logger.info(f"Created legacy session for user: {enhanced_user.username}")
                 
                 return redirect(url_for('index'))
             else:
                 error_msg = f"Errors: {', '.join(errors)}. Reason: {error_reason}"
-                current_app.logger.error(f"SAML authentication error: {error_msg}")
+                logger.error(f"SAML authentication error: {error_msg}")
                 return render_template('login.html', error=error_msg)
                 
         except Exception as e:
-            current_app.logger.error(f"Exception when processing SAML response: {str(e)}")
+            logger.error(f"Exception when processing SAML response: {str(e)}")
             return render_template('login.html', error=f"Processing error: {str(e)}")
 
     def slo(self):
@@ -326,7 +327,7 @@ class SSOAuth:
         req = self.prepare_flask_request(request)
         auth = self.init_saml_auth(req)
         
-        current_app.logger.info("Processing SAML logout...")
+        logger.info("Processing SAML logout...")
         
         # Get session information
         name_id = None
@@ -342,8 +343,8 @@ class SSOAuth:
             name_id = session.get('saml_nameid')
             session_index = session.get('saml_session_index')
         
-        current_app.logger.info(f"NameID: {name_id}")
-        current_app.logger.info(f"Session Index: {session_index}")
+        logger.info(f"NameID: {name_id}")
+        logger.info(f"Session Index: {session_index}")
         
         # Clear local session first to ensure user logs out locally
         if self.session_manager is not None:
@@ -358,10 +359,10 @@ class SSOAuth:
                 session_index=session_index, 
                 return_to=url_for('login', _external=True)
             )
-            current_app.logger.info(f"Logout URL: {logout_url}")
+            logger.info(f"Logout URL: {logout_url}")
             return redirect(logout_url)
         except Exception as e:
-            current_app.logger.error(f"Error in SAML logout: {str(e)}")
+            logger.error(f"Error in SAML logout: {str(e)}")
             # In case of error, simply redirect to login page
             return redirect(url_for('login'))
 
@@ -372,7 +373,7 @@ class SSOAuth:
         Returns:
             Response: Redirect to login page
         """
-        current_app.logger.info("Processing logout response from IdP...")
+        logger.info("Processing logout response from IdP...")
         req = self.prepare_flask_request(request)
         auth = self.init_saml_auth(req)
         
@@ -387,16 +388,16 @@ class SSOAuth:
             url = auth.process_slo(delete_session_cb=clear_session_callback)
             errors = auth.get_errors()
             
-            current_app.logger.info(f"SLS errors: {errors}")
+            logger.info(f"SLS errors: {errors}")
             
             if len(errors) == 0:
-                current_app.logger.info("Logout successful")
+                logger.info("Logout successful")
                 if url is not None:
                     return redirect(url)
                 return redirect(url_for('login'))
             else:
                 error_reason = auth.get_last_error_reason()
-                current_app.logger.error(f"Logout error: {errors}, Reason: {error_reason}")
+                logger.error(f"Logout error: {errors}, Reason: {error_reason}")
                 # Despite SAML error, clear local session anyway
                 if self.session_manager is not None:
                     self.session_manager.clear_session()
@@ -405,7 +406,7 @@ class SSOAuth:
                 return render_template('login.html', 
                     error=f"Logout error: {', '.join(errors)}. Reason: {error_reason}")
         except Exception as e:
-            current_app.logger.error(f"Exception in SLO process: {str(e)}")
+            logger.error(f"Exception in SLO process: {str(e)}")
             if self.session_manager is not None:
                 self.session_manager.clear_session()
             else:
