@@ -1,3 +1,6 @@
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'edw_core'
+and TABLE_name = 'tgroup_umbrella_coverage')
+BEGIN
 CREATE TABLE edw_core.tgroup_umbrella_coverage
 (
 group_umbrella_coverage_sk              int NOT NULL IDENTITY(1,1),  
@@ -48,7 +51,33 @@ etl_audit_sk                        int,
 CONSTRAINT pk_tgroup_umbrella_coverage PRIMARY KEY (group_umbrella_coverage_sk),
 CONSTRAINT uidx_tgroup_umbrella_coverage_polno_effdt_transeq UNIQUE (policy_no,effective_dt,transaction_seq_no),
 CONSTRAINT fk_tgroup_umbrella_coverage_policy_history_sk FOREIGN KEY (policy_history_sk) REFERENCES  edw_core.tpolicy_history(policy_history_sk)
+)
+END;
+
+    INSERT INTO edw_core.tedw_table_detail (
+    table_nm,
+    table_type,
+    table_category_nm,
+    domain_nm,
+    load_method,
+    load_type,
+    load_frequency,
+    create_ts,
+    update_ts
+)
+SELECT
+    'tgroup_umbrella_coverage',
+    'Type-2 Dimension',
+    'Base',
+    'Policy',
+    'Stored Procedure',
+    'Insert',
+    'Monthly',
+    GETDATE(),
+    GETDATE()
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM edw_core.tedw_table_detail
+    WHERE table_nm = 'tgroup_umbrella_coverage'
 );
 
-INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
-    VALUES ('tgroup_umbrella_coverage','Type-2 Dimension','Base','Policy','Stored Procedure','Insert','Monthly',getdate(),getdate());
