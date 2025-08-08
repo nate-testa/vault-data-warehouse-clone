@@ -21,6 +21,7 @@ GO
 -- 03/26/24		Architha Gudimalla				10. Added collection_class_type_sk
 -- 07/03/24		Yunus Mohammed					11. Added policy_history_sk
 -- 07/18/24		Architha Gudimalla				12. Updated logic for @last_source_extract_ts
+-- 07/08/25		Architha Gudimalla				13. Updated EP logic 
 -- ========================================================================================================================================= 
 
 create or ALTER  PROCEDURE [edw_core].[sp_tinternal_coverage_summary]
@@ -376,61 +377,101 @@ BEGIN
 		 				sum(
 		 						(--for transactions issued in the month, eff in the month or later
 									case when tr.expiration_dt_sk > @month_begin_dt_sk and 
-											(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
+											tr.policy_transaction_type_sk in (1,7) 
+											and (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
+										then
+											(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+											-
+											iif(greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk) >= @month_begin_dt_sk, 
+												greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk), @month_begin_dt_sk))) 
+											* tr.premium_amt/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+										 when tr.expiration_dt_sk > @month_begin_dt_sk and 
+											tr.policy_transaction_type_sk not in (1,7) 
+											and (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
+										then
+											(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+											-
+											iif(tr.transaction_effective_dt_sk < @month_begin_dt_sk and tr.transaction_dt_sk between @month_begin_dt_sk and @month_end_dt_sk
+													, tr.transaction_effective_dt_sk,
+													iif(tr.transaction_effective_dt_sk >= @month_begin_dt_sk, tr.transaction_effective_dt_sk, @month_begin_dt_sk))
+											)) 
+											* tr.premium_amt/(tr.expiration_dt_sk-tr.transaction_effective_dt_sk)
+										 when tr.calendar_month_sk  = @month_end_dt_sk
+										  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
+										 then tr.premium_amt
+										else 0
+									end
+								)  
+						   ) mtd_ep,  
+						sum(
+								case when tr.policy_transaction_type_sk in (1,7) 
+											and (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
 									then
-										(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+										(1+iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
 										-
-										iif(greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk) >= @month_begin_dt_sk, 
-											greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk), @month_begin_dt_sk))) 
+										greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) 
 										* tr.premium_amt/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+									  when tr.policy_transaction_type_sk not in (1,7) 
+											and (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
+									then
+										(1+iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+										-
+										greatest(0, tr.transaction_effective_dt_sk)) 
+										* tr.premium_amt/(tr.expiration_dt_sk-greatest(0, tr.transaction_effective_dt_sk))
 									 when tr.calendar_month_sk  = @month_end_dt_sk
 									  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
 									 then tr.premium_amt
 									else 0
-									end
-								) 
-						   ) mtd_ep,
-						sum(
-								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
-								then
-									(1+iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
-									-
-									greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) 
-									* tr.premium_amt/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
-								 when tr.calendar_month_sk  = @month_end_dt_sk
-								  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
-								 then tr.premium_amt
-								else 0
 								end
-							) total_ep,
+							) total_ep, 
 		 				sum(
 		 						(--for transactions issued in the month, eff in the month or later
 									case when tr.expiration_dt_sk > @month_begin_dt_sk and 
-											(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
-									then
-										(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
-										-
-										iif(greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk) >= @month_begin_dt_sk, 
-											greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk), @month_begin_dt_sk))) 
-										* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
-									 when tr.calendar_month_sk  between @month_begin_dt_sk  and @month_end_dt_sk
-									  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
-									 then (tr.premium_amt - tr.tax_fee_surcharge_amt)
-									else 0
+											tr.policy_transaction_type_sk in (1,7) 
+											and (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
+										then
+											(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+											-
+											iif(greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk) >= @month_begin_dt_sk, 
+												greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk), @month_begin_dt_sk))) 
+											* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+										 when tr.expiration_dt_sk > @month_begin_dt_sk and 
+											tr.policy_transaction_type_sk not in (1,7) 
+											and (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
+										then
+											(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+											-
+											iif(tr.transaction_effective_dt_sk < @month_begin_dt_sk and tr.transaction_dt_sk between @month_begin_dt_sk and @month_end_dt_sk
+													, tr.transaction_effective_dt_sk,
+													iif(tr.transaction_effective_dt_sk >= @month_begin_dt_sk, tr.transaction_effective_dt_sk, @month_begin_dt_sk))
+											)) 
+											* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-tr.transaction_effective_dt_sk)
+										 when tr.calendar_month_sk  = @month_end_dt_sk
+										  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
+										 then (tr.premium_amt - tr.tax_fee_surcharge_amt)
+										else 0
 									end
 								) 
 						   ) mtd_net_ep,
 						sum(
-								case when (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
-								then
-									(1+iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
-									-
-									greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) 
-									* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
-								 when tr.calendar_month_sk  between @month_begin_dt_sk  and @month_end_dt_sk
-								  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
-								 then (tr.premium_amt - tr.tax_fee_surcharge_amt)
-								else 0
+								case when tr.policy_transaction_type_sk in (1,7) 
+											and (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
+									then
+										(1+iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+										-
+										greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) 
+										* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+									  when tr.policy_transaction_type_sk not in (1,7) 
+											and (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
+									then
+										(1+iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+										-
+										greatest(0, tr.transaction_effective_dt_sk)) 
+										* (tr.premium_amt - tr.tax_fee_surcharge_amt)/(tr.expiration_dt_sk-greatest(0, tr.transaction_effective_dt_sk))
+									 when tr.calendar_month_sk  = @month_end_dt_sk
+									  and tr.expiration_dt_sk <= @month_begin_dt_sk and (tr.transaction_dt_sk - tr.expiration_dt_sk) between 1 and 60
+									 then (tr.premium_amt - tr.tax_fee_surcharge_amt)
+									else 0
 								end
 							) total_net_ep 
 				 FROM edw_core.tpolicy_transaction tr, edw_core.tpolicy pol 
