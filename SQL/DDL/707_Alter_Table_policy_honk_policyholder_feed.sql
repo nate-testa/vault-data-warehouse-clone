@@ -2,4 +2,4 @@
 DROP CONSTRAINT pk_policy_honk_policyholder_feed;
 
 ALTER TABLE edw_integration.policy_honk_policyholder_feed
-ADD CONSTRAINT pk_policy_honk_policyholder_feed PRIMARY KEY (policy_number, last_name);
+ADD CONSTRAINT pk_policy_honk_policyholder_feed PRIMARY KEY (policy_number);
