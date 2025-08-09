@@ -11,6 +11,7 @@
 -- 06/10/2025			Yunus Mohammed		  5. AD-9768 Added effective date in joins. 
 --																						Account table is used to get quote_no and effective_date
 -- 06/12/2025			Yununs Mohammed		6. AD-9809	Modified join
+-- 08/07/2025			Yunus Mohammed		 7. AD-10493 Added "Bound" state condition in Update stmt
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_quote_update]
 
@@ -71,7 +72,8 @@ BEGIN
 									and a.close_reason_desc 					
 										in ('IncompleteSubmission','NotTaken'					
 									) then 'Not Taken by Insured'				
-								when b.state = 'Issued' then 'Issued'					
+								when b.state = 'Issued' then 'Issued'
+								when b.state = 'Bound' then 'Bound'				
 								else 'In Progress'					
 								end	 
 		from edw_commercial.tcommercial_quote a

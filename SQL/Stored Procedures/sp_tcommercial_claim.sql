@@ -3,9 +3,10 @@
 -- Create Date: 07/17/2025
 -- Description: This procedures inserts and updates claim data
 -----------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date		  |Author									|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 07/17/2025	Hernando Gonzalez			1. Created this procedure
+-- 07/17/2025		Hernando Gonzalez			1. Created this procedure
+-- 08/05/2025		Yunus Mohammed			   2. Removed NFP and Catastrophe code
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_claim]
 
@@ -29,24 +30,7 @@ BEGIN
 		--************Start************
 
 		DROP TABLE IF exists edw_temp.tcommercial_claim_temp1;
-		DROP TABLE IF exists edw_temp.tcommercial_claim_temp2;
 
-		SELECT 
-			b.claim_id,
-			a.option_name,
-			LEFT(a.option_name, CHARINDEX('|', a.option_name) - 1) AS catastrophe_cd,
-			SUBSTRING(
-				a.option_name, 
-				CHARINDEX('|', a.option_name) + 1, 
-				CHARINDEX('|', a.option_name, CHARINDEX('|', a.option_name) + 1) - CHARINDEX('|', a.option_name) - 1
-			) AS catastrophe_nm,
-			RIGHT(a.option_name, LEN(a.option_name) - CHARINDEX('|', a.option_name, CHARINDEX('|', a.option_name) + 1)) AS catastrophe_desc
-		INTO edw_temp.tcommercial_claim_temp2
-		FROM edw_stage_snapsheet.custom_field_claims_enumeration_values a
-		INNER JOIN edw_stage_snapsheet.custom_field_claims b
-		ON a.custom_field_claims_id = b.id
-		;		
-		
 		SELECT
 		claim_number as claim_no, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS effective_dt, 
 		commercial_policy_sk,cause_of_loss_sk,loss_desc, source_claim_status,claim_status, product_sk,
@@ -62,7 +46,7 @@ BEGIN
 		(
 		SELECT
 			ROW_NUMBER() OVER(PARTITION BY c.claim_number ORDER BY c.claim_number) as rn,
-			CASE WHEN c.policy_number LIKE 'NFP%'  then nfp.effective_dt else tp.effective_dt end as effective_dt,
+			tp.effective_dt as effective_dt,
 			tp.broker_id,
 			tp.customer_id,
 			c.claim_number, 
@@ -81,7 +65,7 @@ BEGIN
 				THEN 'Open' 
 				else 'Closed' 
 			END) AS claim_status,
-			CASE WHEN c.policy_number LIKE 'NFP%' THEN 4 ELSE pr.product_sk END as product_sk,
+			pr.product_sk,
 			CONCAT(	'',
 					TRIM(cp.first_name), 
 					CASE WHEN TRIM(ISNULL(cp.first_name,''))='' THEN '' ELSE '' END,
@@ -131,25 +115,17 @@ BEGIN
 												AND tph.commercial_policy_history_sk = (
 																	SELECT TOP 1 commercial_policy_history_sk
 																	FROM
-																		edw_core.tpolicy_history tph1
+																		 edw_commercial.tcommercial_policy_history tph1
 																	WHERE
 																		tph1.policy_no = c.policy_number
 																		AND CAST(tph1.transaction_effective_dt AS DATE) <= CAST(c.datetime_of_loss AS DATE)
 																	ORDER BY transaction_seq_no DESC
 																)
-		LEFT JOIN edw_core.tproduct pr on pr.product_cd = tp.product_cd
-		LEFT JOIN edw_temp.tcommercial_claim_temp2 cc ON cc.claim_id = c.id
-		LEFT JOIN edw_core.tcatastrophe cat ON cc.catastrophe_cd = cat.catastrophe_cd
+		LEFT JOIN edw_core.tproduct pr on pr.product_cd = tp.product_cd		
 		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_desc = c.loss_type
 		LEFT JOIN edw_stage_snapsheet.common_incident_details cid on cid.claim_id = c.id
 		LEFT JOIN edw_stage_snapsheet.coverage_checks covc on c.id = covc.claim_id
-		LEFT JOIN  edw_stage_snapsheet.users u on covc.determined_by_user_id = u.id
-		LEFT JOIN
-		(
-			select ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date desc, reporting_month desc) as transaction_seq_no,
-			insured_cert_no as policy_no,effective_date as effective_dt
-			from edw_stage.nfp_policy	
-		) nfp on nfp.policy_no = c.policy_number and nfp.transaction_seq_no = 1
+		LEFT JOIN  edw_stage_snapsheet.users u on covc.determined_by_user_id = u.id		
 		WHERE greatest(c.created_at,c.updated_at) > @last_source_extract_ts
 		and exists
 			(
@@ -159,7 +135,7 @@ BEGIN
 				where
 					ctg.claim_id = c.id
 					and ctg.[name] like 'Commercial%'
-			)
+			)	
 	) AS t
 	WHERE
 		rn=1
@@ -239,7 +215,6 @@ BEGIN
 		
 		-- Drop temp table
 		DROP TABLE IF EXISTS edw_temp.tcommercial_claim_temp1;
-		DROP TABLE IF exists edw_temp.tcommercial_claim_temp2;
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)

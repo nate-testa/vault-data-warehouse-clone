@@ -3,9 +3,10 @@
 -- Create Date: 07/17/2025
 -- Description: This procedures inserts and updates claim notes
 -----------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date		  |Author								|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 07/18/2025	Hernando Gonzalez			1. Created this procedure
+-- 07/18/2025		Hernando Gonzalez			1. Created this procedure
+-- 08/06/2025		Yunus Mohammed			   2. Removed commercial line tag condition from where clause
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_claim_task]
@@ -60,17 +61,7 @@ BEGIN
 		LEFT JOIN edw_stage_snapsheet.users as u2 ON u2.id = t.completed_by_user_id
 		LEFT JOIN edw_stage_snapsheet.users as u3 ON u3.id = t.assigned_to_user_id
 		LEFT JOIN edw_stage_snapsheet.users as u4 ON u4.id = t.assigned_by_user_id
-		WHERE GREATEST(t.created_at,t.updated_at) > @last_source_extract_ts
-		and exists
-			(
-				select 1
-				from
-					edw_stage_snapsheet.tags ctg
-				where
-					ctg.claim_id = c.id
-					and ctg.[name] like 'Commercial%'
-			)
-		;
+		WHERE GREATEST(t.created_at,t.updated_at) > @last_source_extract_ts;
 		
 		
 		MERGE edw_commercial.tcommercial_claim_task AS Target
