@@ -16,6 +16,9 @@ from auth.user_service import UserService
 from auth.models import User
 from auth.decorators import login_required
 
+# Import UI session management
+from utils.ui_session_manager import UISessionManager
+
 # Load environment variables
 load_dotenv()
 
@@ -41,6 +44,9 @@ logger.info("[APP_INIT] Flask session configuration loaded")
 sso_auth = SSOAuth()
 session_manager = SessionManager()
 user_service = UserService()
+
+# Initialize UI session manager
+ui_session = UISessionManager(max_cookie_size=3500, max_chat_messages=8)
 
 # Manually set the app and components for SSOAuth without route registration
 sso_auth.app = app
@@ -96,17 +102,11 @@ def docuclaims():
     
     logger.info(f"DocuClaims AI page accessed by IP: {client_ip}")
     
-    # Initialize session variables if they don't exist
-    if 'rag_messages' not in session:
-        session['rag_messages'] = []
-    if 'file_uploaded' not in session:
-        session['file_uploaded'] = False
-    if 'uploaded_filename' not in session:
-        session['uploaded_filename'] = None
-    if 'debug' not in session:
-        session['debug'] = False
-    if 'use_chat_history' not in session:
-        session['use_chat_history'] = True
+    # Initialize UI session variables using UISessionManager
+    ui_session.initialize_ui_session()
+    
+    # Perform proactive session cleanup to prevent cookie overflow
+    ui_session.cleanup_session_storage()
         
     # Fetch model options from API
     model_options = fetch_model_options()
@@ -116,44 +116,43 @@ def docuclaims():
         logger.error("No model options returned from API")
     
     # Only set a selected model if there are valid options and the current selection is invalid
-    if model_options and ('selected_model' not in session or session['selected_model'] not in model_options):
-        session['selected_model'] = model_options[0]
+    current_model = ui_session.get_user_preference('selected_model')
+    if model_options and (not current_model or current_model not in model_options):
+        ui_session.set_user_preference('selected_model', model_options[0])
     elif not model_options:
         # If no options are available, clear any existing selection
-        session['selected_model'] = None
+        ui_session.set_user_preference('selected_model', None)
     
     # Get current user for template context
     user = session_manager.get_current_user()
+    
+    # Get UI data through UISessionManager
+    file_status = ui_session.get_file_upload_status()
     
     return render_template(
         'docuclaims.html',
         accent_color=PRIMARY_COLOR,  # Using fixed color
         model_options=model_options,
-        selected_model=session.get('selected_model'),
-        rag_messages=session.get('rag_messages', []),
-        file_uploaded=session.get('file_uploaded', False),
-        uploaded_filename=session.get('uploaded_filename'),
-        use_chat_history=session.get('use_chat_history', True),
-        debug=session.get('debug', False),
+        selected_model=ui_session.get_user_preference('selected_model'),
+        rag_messages=ui_session.get_chat_messages(),
+        file_uploaded=file_status['uploaded'],
+        uploaded_filename=file_status['filenames'],
+        use_chat_history=ui_session.get_user_preference('use_chat_history', True),
+        debug=ui_session.get_user_preference('debug', False),
         user=user
     )
 
 @app.route('/clear_chat', methods=['POST'])
 @login_required
 def clear_chat():
-    session['rag_messages'] = []
-    session['rag_warnings'] = []
+    ui_session.clear_chat_messages()
     return redirect(url_for('docuclaims'))
 
 @app.route('/reset_everything', methods=['POST'])
 @login_required
 def reset_everything():
-    # Reset all session variables
-    session['rag_messages'] = []
-    session['rag_warnings'] = []
-    session['file_uploaded'] = False
-    session['uploaded_filename'] = None
-    session['debug'] = False
+    # Reset all UI session data
+    ui_session.reset_all_ui_data()
     return redirect(url_for('docuclaims'))
 
 # Theme customization removed
@@ -208,10 +207,9 @@ def upload_files():
                 uploaded_filenames.append(filename)
                 any_success = True
     
-    # Update session variables
+    # Update session variables using UISessionManager
     if uploaded_filenames:
-        session['uploaded_filename'] = uploaded_filenames
-        session['file_uploaded'] = True
+        ui_session.set_file_upload_status(True, uploaded_filenames)
         logger.info(f"[{upload_id}] Files processed successfully: {uploaded_filenames}")
     else:
         logger.warning(f"[{upload_id}] No files were processed successfully. Status: {file_status}")
@@ -247,7 +245,7 @@ def send_message():
     
     # Fallback to session or default if no model provided in request
     if not selected_model:
-        selected_model = session.get('selected_model')
+        selected_model = ui_session.get_user_preference('selected_model')
         
         # Final fallback to first available model if no model in session
         if not selected_model:
@@ -256,19 +254,16 @@ def send_message():
     
     logger.info(f"[{interaction_id}] Using LLM model: {selected_model}")
     
-    # Get rag_messages from session
-    rag_messages = session.get('rag_messages', [])
-    
     try:
         # Get chat history for context BEFORE adding the current message
-        message_history = get_chat_history() if session.get('use_chat_history', True) else []
+        use_history = ui_session.get_user_preference('use_chat_history', True)
+        message_history = ui_session.get_chat_history_for_context() if use_history else []
         chat_context_length = len(message_history)
         logger.info(f"[{interaction_id}] Chat history context: {chat_context_length} previous messages")
         logger.info(f"[{interaction_id}] [RAG_START] Starting API query process...")
         
-        # NOW add user message to chat history (after getting the context)
-        rag_messages.append(user_message)
-        session['rag_messages'] = rag_messages
+        # Add user message to chat history using UISessionManager
+        ui_session.add_chat_message(user_message)
         
         # Query document with timeout handling
         response = query_document(prompt, message_history, selected_model)
@@ -317,10 +312,9 @@ def send_message():
         logger.error(f"[{interaction_id}] [RAG_EXCEPTION] Unexpected error after {query_time:.2f}s: {str(e)}", exc_info=True)
         assistant_response_text = "Sorry, I encountered an error processing your question. Please try again."
     
-    # Add assistant response to chat history
+    # Add assistant response to chat history using UISessionManager
     assistant_message = {"role": "assistant", "content": assistant_response_text}
-    rag_messages.append(assistant_message)
-    session['rag_messages'] = rag_messages
+    ui_session.add_chat_message(assistant_message)
     
     total_time = time.time() - start_time
     logger.info(f"[{interaction_id}] Total interaction completed in {total_time:.2f}s")
@@ -337,7 +331,7 @@ def toggle_setting():
     value = request.form.get('value') == 'true'
     
     if setting in ['use_chat_history', 'debug']:
-        session[setting] = value
+        ui_session.set_user_preference(setting, value)
     
     return jsonify({"success": True})
 
@@ -346,7 +340,7 @@ def toggle_setting():
 def select_model():
     model = request.form.get('model')
     if model:
-        session['selected_model'] = model
+        ui_session.set_user_preference('selected_model', model)
         logger.info(f"Model selected: {model}")
     else:
         logger.error("Attempt to select model but no model provided")
@@ -533,10 +527,7 @@ def query_document(question, message_history=None, model=None):
 
 def get_chat_history(slide_window=5):
     """Get the recent chat history for context."""
-    rag_messages = session.get('rag_messages', [])
-    start_index = max(0, len(rag_messages) - slide_window)
-    chat_history = [rag_messages[i]["content"] for i in range(start_index, len(rag_messages))]
-    return chat_history
+    return ui_session.get_chat_history_for_context(slide_window)
 
 # ============================================================================
 # SSO AUTHENTICATION ROUTES
