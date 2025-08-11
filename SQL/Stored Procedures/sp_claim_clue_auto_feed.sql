@@ -16,6 +16,7 @@ GO
 -- 05-08-2025               Alberto Almario             4. Add logic to retrieve the address for OneShield policies.
 -- 06-24-2025               Alberto Almario             5. Add logic for FaultIndicator column.
 -- 07-01-2025               Alberto Almario             6. Include R records for changes in ClaimDate (loss_dt).
+-- 08-12-2025               Alberto Almario             7. Update logic for ClaimAmount and ClaimDisposition fields
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
@@ -122,11 +123,8 @@ BEGIN
                     COALESCE(
                             (
                                 a.loss_paid_amt                     +
-                                a.expense_paid_amt                  +
-                                a.defense_paid_amt                  +
-                                a.overpayment_recovery_amt          +
-                                a.overpayment_expense_recovery_amt  +
-                                a.overpayment_defense_recovery_amt
+                                a.subrogation_recovery_amt          +
+                                a.overpayment_recovery_amt          
                             ), 0)
                     ) AS [claimAmount]
             FROM edw_core.tclaim_feature AS a
@@ -276,7 +274,7 @@ BEGIN
             END AS [InsuredVehicleMakeModel],
             '' AS [InsuredVehicleDisposition],
             CASE 
-                WHEN cf.sum_subro_exp_rec_amt < 0 THEN 'S'
+                WHEN cf.sum_subro_exp_rec_amt <> 0 THEN 'S'
                 WHEN cf.claim_feature_status_no = 1 THEN 'C' --1 = Closed
                 ELSE 'O' 
             END AS [ClaimDisposition],
