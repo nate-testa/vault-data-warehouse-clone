@@ -52,7 +52,7 @@ args = {
 }
 
 with DAG(
-    dag_id='honk_daily_feed',
+    dag_id='Honk_Daily_Feed',
     catchup=False,
     max_active_runs=1,
     default_args=args,
