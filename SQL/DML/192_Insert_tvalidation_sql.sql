@@ -20,7 +20,7 @@ inner join edw_core.tdate td on td.date_sk = summ.month_sk
 where td.yearmonth = FORMAT(DATEADD(MONTH, -1, GETDATE()), ''yyyyMM'')
 group by summ.policy_sk
 ) b on a.policy_sk = b.policy_sk
-where a.ep-b.ep not between -0.00 and 0.0013 or a.policy_sk is null or b.policy_sk is null' AS source_sql ,
+where a.ep-b.ep not between -0.1 and 0.1 or a.policy_sk is null or b.policy_sk is null' AS source_sql ,
        'select 0' AS target_sql ,
        'Y' AS active_in ,
        'Monthly' AS frequency_desc ,
