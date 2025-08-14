@@ -22,6 +22,34 @@
         border-bottom: 1px solid #e5e7eb;
     }
     
+    /* Breadcrumb navigation */
+    .breadcrumb-nav {
+        background: none;
+        padding: 0;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .breadcrumb-nav .breadcrumb-item {
+        color: #64748b;
+    }
+    
+    .breadcrumb-nav .breadcrumb-item a {
+        color: #667eea;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+    
+    .breadcrumb-nav .breadcrumb-item a:hover {
+        color: #4f46e5;
+        text-decoration: underline;
+    }
+    
+    .breadcrumb-nav .breadcrumb-item.active {
+        color: #1e293b;
+        font-weight: 500;
+    }
+    
     .sidebar {
         background: #ffffff;
         border-right: 1px solid #e5e7eb;
@@ -649,13 +677,18 @@
 {% block content %}
 <!-- Header -->
 <div class="header">
-    <div class="d-flex align-items-center justify-content-between max-width-900 mx-auto">
-        <div>
-            <h4 class="m-0 fw-semibold">DocuClaims AI Assistant</h4>
-        </div>
-        <div>
-            <small class="text-muted"><i class="fas fa-circle text-success me-1" style="font-size: 8px;"></i> Connected</small>
-        </div>
+    <div class="max-width-900 mx-auto">
+        <!-- Breadcrumb Navigation -->
+        <nav aria-label="breadcrumb" class="breadcrumb-nav">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('applications') }}">
+                        <i class="fas fa-apps me-1"></i>Applications
+                    </a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">DocuClaims AI</li>
+            </ol>
+        </nav>
     </div>
 </div>
 
@@ -694,7 +727,6 @@
         <div class="mb-4">
             <i class="fa-solid fa-robot text-primary" style="font-size: 3rem; opacity: 0.7;"></i>
         </div>
-        <h4 class="fw-semibold text-muted mb-3">DocuClaims AI Assistant</h4>
         <p class="text-muted col-md-8 mx-auto">
             Upload your documents and ask me questions about them. I'll help you extract insights and information using AI.
         </p>

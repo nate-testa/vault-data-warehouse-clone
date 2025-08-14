@@ -1,47 +1,58 @@
 {% extends "base.html" %}
 
-{% block title %}Vault AI - Home{% endblock %}
+{% block title %}Vault AI - Your AI Assistant Platform{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1 class="text-center mb-4">
-        {% if user and user.is_authenticated %}
-            {% if user.first_name %}
-                Hey {{ user.first_name }} 👋 I am your Vault AI Assistant
-            {% elif user.display_name %}
-                Hey {{ user.display_name.split(' ')[0] }} 👋 I am your Vault AI Assistant
+<div class="landing-page">
+    <div class="landing-container">
+        <div class="landing-card">
+            <!-- Logo Section -->
+            <div class="landing-logo">
+                <img src="https://d2j09jzq254cyj.cloudfront.net/vault-logo.png" alt="Vault AI Logo" class="vault-logo">
+            </div>
+            
+            <!-- Title Section -->
+            <div class="landing-title">
+                <h1>Vault AI</h1>
+                <p class="landing-subtitle">Your AI Assistant Platform</p>
+            </div>
+            
+            <!-- Authentication Check -->
+            {% if user and user.is_authenticated %}
+                <!-- User is already authenticated, show welcome and dashboard link -->
+                <div class="welcome-section">
+                    <p class="welcome-text">
+                        Welcome back, 
+                        {% if user.first_name %}
+                            {{ user.first_name }}
+                        {% elif user.display_name %}
+                            {{ user.display_name.split(' ')[0] }}
+                        {% else %}
+                            {{ user.username.split('@')[0] }}
+                        {% endif %}!
+                    </p>
+                    <a href="{{ url_for('applications') }}" class="btn btn-vault-primary">
+                        <i class="fas fa-tachometer-alt me-2"></i>
+                        Go to Applications
+                    </a>
+                </div>
             {% else %}
-                Hey {{ user.username.split('@')[0] }} 👋 I am your Vault AI Assistant
+                <!-- User not authenticated, show sign-in button -->
+                <div class="signin-section">
+                    {% if config.get('ENABLE_SSO', '').lower() == 'true' %}
+                        <a href="{{ url_for('login') }}" class="btn btn-vault-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>
+                            Sign In
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('docuclaims') }}" class="btn btn-vault-primary">
+                            <i class="fas fa-arrow-right me-2"></i>
+                            Continue to Applications
+                        </a>
+                    {% endif %}
+                </div>
             {% endif %}
-        {% else %}
-            Hey there 👋 I am your Vault AI Assistant
-        {% endif %}
-    </h1>
-
-    <div class="text-center mb-4">
-        <img src="https://d2j09jzq254cyj.cloudfront.net/vault-logo.png" width="250px">
+        </div>
     </div>
-    
-    <div class="disclaimer-simple">
-        <p class="text-muted small">
-            <i class="fas fa-info-circle me-1"></i>
-            This application uses AI to interpret and analyze data. Results should be verified with your team and used as guidance.
-        </p>
-    </div>
-    
-    <div class="mt-5 text-center">
-        <a href="{{ url_for('docuclaims') }}" class="btn btn-primary btn-lg">DocuClaims AI</a>
-    </div>
-
-    <style>
-        .disclaimer-simple {
-            background-color: #fefdf8;
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 2rem auto;
-            max-width: 500px;
-            border-left: 3px solid #f0e68c;
-        }
-    </style>
 </div>
 {% endblock %}

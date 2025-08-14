@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Applications | Vault AI Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Override base styles to allow scrolling */
+    .main-content-wrapper {
+        overflow: auto !important;
+        height: auto !important;
+    }
+    
+    .main-content {
+        overflow: visible !important;
+        height: auto !important;
+    }
+    
+    /* Ensure proper scrolling */
+    html, body {
+        height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+    
+    /* Professional Applications Page Styles */
+    .applications-page {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 3rem 2rem 5rem 2rem; /* Added extra bottom padding for fixed footer */
+        min-height: calc(100vh - 60px);
+        overflow-y: visible;
+    }
+    
+    .page-header {
+        text-align: center;
+        margin-bottom: 4rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .page-title {
+        font-size: 2.75rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 1rem;
+        letter-spacing: -0.025em;
+    }
+    
+    .page-subtitle {
+        font-size: 1.25rem;
+        color: #64748b;
+        font-weight: 400;
+        line-height: 1.6;
+    }
+    
+    .applications-list {
+        display: grid;
+        gap: 1rem;
+        margin-bottom: 3rem; /* Reduced since we removed footer-info */
+    }
+    
+    .app-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.3s ease;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        position: relative;
+        overflow: hidden;
+        min-height: 80px;
+    }
+    
+    .app-card:hover {
+        color: inherit;
+        text-decoration: none;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px 0 rgba(0, 0, 0, 0.1);
+        border-color: #cbd5e1;
+    }
+    
+    .app-card.disabled {
+        background: #f8fafc;
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+    
+    .app-card.disabled:hover {
+        transform: none;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    
+    .app-icon-container {
+        flex-shrink: 0;
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1.5rem;
+        color: white;
+        font-size: 1.5rem;
+    }
+    
+    .app-card.disabled .app-icon-container {
+        background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
+    }
+    
+    .app-content {
+        flex: 1;
+    }
+    
+    .app-name {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 0.25rem;
+    }
+    
+    .app-description {
+        font-size: 0.9rem;
+        color: #64748b;
+        line-height: 1.4;
+        margin-bottom: 0;
+    }
+    
+    .app-status {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        padding: 0.25rem 0.625rem;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .status-active {
+        background: #dcfce7;
+        color: #166534;
+    }
+    
+    .status-coming-soon {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .app-arrow {
+        flex-shrink: 0;
+        margin-left: 1rem;
+        font-size: 1.2rem;
+        color: #94a3b8;
+        transition: all 0.3s ease;
+    }
+    
+    .app-card:hover .app-arrow {
+        color: #667eea;
+        transform: translateX(4px);
+    }
+    
+    .app-card.disabled .app-arrow {
+        display: none;
+    }
+    
+    @media (max-width: 768px) {
+        .applications-page {
+            padding: 2rem 1rem;
+        }
+        
+        .page-title {
+            font-size: 2rem;
+        }
+        
+        .app-card {
+            flex-direction: column;
+            text-align: center;
+            padding: 1.5rem;
+        }
+        
+        .app-icon-container {
+            margin-right: 0;
+            margin-bottom: 1.5rem;
+        }
+        
+        .app-arrow {
+            margin-left: 0;
+            margin-top: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="applications-page">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">AI Applications</h1>
+    </div>
+    
+    <!-- Applications List -->
+    <div class="applications-list">
+        {% for app in apps %}
+        <a href="{{ app.url if app.status == 'active' else '#' }}" 
+           class="app-card {{ 'disabled' if app.status != 'active' else '' }}"
+           {% if app.status != 'active' %}onclick="return false;"{% endif %}>
+            
+            <div class="app-status status-{{ app.status.replace('_', '-') }}">
+                {{ 'Available' if app.status == 'active' else 'Coming Soon' }}
+            </div>
+            
+            <div class="app-icon-container">
+                <i class="fas {{ app.icon }}"></i>
+            </div>
+            
+            <div class="app-content">
+                <h3 class="app-name">{{ app.name }}</h3>
+                <p class="app-description">{{ app.description }}</p>
+            </div>
+            
+            {% if app.status == 'active' %}
+            <div class="app-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </div>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle clicks on disabled applications - prevent any action
+    document.querySelectorAll('.app-card.disabled').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            // Do nothing when clicking on disabled applications
+            return false;
+        });
+    });
+    
+    // Log page access
+    console.log('Applications page loaded for user: {{ user.username if user else "Unknown" }}');
+});
+</script>
+{% endblock %}

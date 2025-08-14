@@ -67,9 +67,71 @@ if not API_BASE:
 
 # Compatibility route for SSOAuth which expects 'index' endpoint
 @app.route('/index')
+@login_required
 def index():
-    """Index route - redirects to home for compatibility with SSOAuth"""
-    return redirect(url_for('home'))
+    """Index route - redirects to applications page after SSO login for compatibility with SSOAuth"""
+    return redirect(url_for('applications'))
+
+@app.route('/applications')
+@login_required  # Add authentication protection
+def applications():
+    """Applications page displaying available AI tools and services"""
+    # Get user IP for tracking
+    client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', 'unknown'))
+    if ',' in client_ip:
+        client_ip = client_ip.split(',')[0].strip()
+    
+    logger.info(f"Applications page accessed by IP: {client_ip}")
+    
+    # Get current user for personalization
+    user = session_manager.get_current_user()
+    
+    # Extract first name for personalized greeting
+    first_name = "User"  # Default fallback
+    if user and user.display_name:
+        # Try to extract first name from display_name
+        name_parts = user.display_name.split()
+        if name_parts:
+            first_name = name_parts[0]
+    elif user and user.username:
+        # Fallback to username if no display name
+        first_name = user.username.split('@')[0] if '@' in user.username else user.username
+    
+    logger.info(f"Applications page loaded for user: {user.username if user else 'Unknown'} (Display: {first_name})")
+    
+    # Available applications
+    apps = [
+        {
+            'id': 'docuclaims',
+            'name': 'DocuClaims AI',
+            'description': 'AI-powered document analysis and claims processing',
+            'icon': 'fa-file-contract',
+            'url': url_for('docuclaims'),
+            'status': 'active'
+        },
+        {
+            'id': 'doculegal',
+            'name': 'DocuLegal AI',
+            'description': 'Legal document analysis and compliance checking',
+            'icon': 'fa-balance-scale',
+            'url': '#',
+            'status': 'coming_soon'
+        },
+        {
+            'id': 'docufinance',
+            'name': 'DocuFinance AI',
+            'description': 'Financial document processing and analysis',
+            'icon': 'fa-chart-line',
+            'url': '#',
+            'status': 'coming_soon'
+        }
+    ]
+    
+    return render_template('applications.html', 
+                         user=user, 
+                         first_name=first_name,
+                         apps=apps,
+                         config=os.environ)
 
 @app.route('/favicon.ico')
 def favicon():
@@ -85,12 +147,13 @@ def home():
     
     # Only log actual user visits, not health checks
     if client_ip not in monitoring_ips:
-        logger.info(f"Home page loaded by user from IP: {client_ip}")
+        logger.info(f"Landing page loaded by user from IP: {client_ip}")
     
     # Get current user for template context
     user = session_manager.get_current_user()
     
-    return render_template('home.html', user=user)
+    # Pass config to template for SSO check
+    return render_template('home.html', user=user, config=os.environ)
 
 @app.route('/docuclaims')
 @login_required  # Add authentication protection
