@@ -8,6 +8,7 @@
 -- 08/07/25					Dinesh Bobbili			    1. Created this procedure
 -- 08/08/25					Dinesh Bobbili			    2. Added logic to populate customer_nm as last_name for Entity
 -- 08/08/25					Dinesh Bobbili			    3. Added logic to get data from tpolicy_insured
+-- 08/14/25					Dinesh Bobbili			    4. Updated last_name logic
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_honk_policyholder_feed]
 AS
@@ -42,7 +43,8 @@ BEGIN
 		into edw_temp.policy_honk_policyholder_feed_temp1
 		from (select distinct pol.policy_no as policy_number,
 					pins.first_nm as first_name,
-					case when pins.insured_type = 'Entity' then pins.insured_nm else pins.last_nm end as last_name,
+					case when pins.insured_type = 'Entity' then isnull(pins.insured_nm, 'Unknown') 
+					else isnull(pins.last_nm, isnull(pins.insured_nm, 'Unknown')) end as last_name,
 					pins.mailing_address_line_1 as address,
 					pins.mailing_address_city_nm as city,
 					pins.mailing_address_state_cd as state,
