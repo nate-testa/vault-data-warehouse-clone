@@ -1,7 +1,7 @@
 CREATE TABLE [edw_integration].[policy_current_carrier_auto_sj01_feed](
 	[RecordCode] [char](4) NULL,
 	[ContribCompanyAMBestNumber] [char](5) NULL,
-	[policyNumber] [char](20) NULL,
+	[PolicyNumber] [char](20) NULL,
 	[InsuranceType] [char](2) NULL,
 	[ChangeEffectiveDate] [char](8) NULL,
 	[RelationshipToPolicyHolder] [char](2) NULL,

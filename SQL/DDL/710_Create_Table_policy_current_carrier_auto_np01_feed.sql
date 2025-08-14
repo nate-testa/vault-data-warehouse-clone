@@ -1,7 +1,7 @@
 CREATE TABLE [edw_integration].[policy_current_carrier_auto_np01_feed](
 	[RecordCode] [char](4) NULL,
 	[ContribCompanyAMBestNumber] [char](5) NULL,
-	[policyNumber] [char](20) NULL,
+	[PolicyNumber] [char](20) NULL,
 	[InsuranceType] [char](2) NULL,
 	[ChangeEffectiveDate] [char](8) NULL,
 	[ContribCompanyName] [char](20) NULL,
@@ -16,16 +16,16 @@ CREATE TABLE [edw_integration].[policy_current_carrier_auto_np01_feed](
 	[PremiumPaymentPlan] [char](1) NULL,
 	[PremiumMethodPayment] [char](3) NULL,
 	[Reserved1] [char](1) NULL,
-	[policyHolderMailAddressHouseNum] [char](9) NULL,
+	[PolicyHolderMailAddressHouseNum] [char](9) NULL,
 	[PolicyHolderMailAddressStreetName] [char](20) NULL,
-	[policyHolderMailAddressAptNum] [char](5) NULL,
-	[policyHolderMailAddressCity] [char](20) NULL,
-	[policyHolderMailAddressState] [char](2) NULL,
-	[policyHolderMailAddressZip] [char](5) NULL,
-	[policyHolderMailAddressZipPlus4] [char](4) NULL,
-	[policyHolderTelephoneAreaCode] [char](3) NULL,
-	[policyHolderTelephoneNumber] [char](7) NULL,
-	[policyHolderTelephoneExtension] [char](4) NULL,
+	[PolicyHolderMailAddressAptNum] [char](5) NULL,
+	[PolicyHolderMailAddressCity] [char](20) NULL,
+	[PolicyHolderMailAddressState] [char](2) NULL,
+	[PolicyHolderMailAddressZip] [char](5) NULL,
+	[PolicyHolderMailAddressZipPlus4] [char](4) NULL,
+	[PolicyHolderTelephoneAreaCode] [char](3) NULL,
+	[PolicyHolderTelephoneNumber] [char](7) NULL,
+	[PolicyHolderTelephoneExtension] [char](4) NULL,
 	[Reserved2] [char](10) NULL,
 	[Reserved3] [char](3) NULL,
 	[AgentIdentifier] [char](10) NULL,
@@ -41,3 +41,4 @@ CREATE TABLE [edw_integration].[policy_current_carrier_auto_np01_feed](
 
 ) 
 GO
+
