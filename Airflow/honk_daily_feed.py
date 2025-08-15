@@ -3,10 +3,13 @@ import pendulum
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.models import Variable
+from airflow.utils.task_group import TaskGroup
 from airflow.operators.mssql_operator import MsSqlOperator
 from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.python_operator import PythonOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format
+from honk_api import call_honk_api
 
 to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
@@ -66,36 +69,45 @@ with DAG(
         task_id='start',
     )
 
-    policy_honk_group_items = [
-            'sp_policy_honk_policyholder_feed',
-            'sp_policy_honk_vehicle_feed'
-        ]
+    with TaskGroup("honk_group") as honk_group:
 
-    operators = []
-    for item in policy_honk_group_items:
-        operator = MsSqlOperator(
-            task_id=item,
-            mssql_conn_id='Vault_EDW',
-            sql=f"EXEC edw_core.{item}",
-            database="vault_edw",
-            autocommit=True,
+        honk_group_items = [
+                'sp_policy_honk_policyholder_feed',
+                'sp_policy_honk_vehicle_feed'
+            ]
+
+        operators = []
+        for item in honk_group_items:
+            operator = MsSqlOperator(
+                task_id=item,
+                mssql_conn_id='Vault_EDW',
+                sql=f"EXEC edw_core.{item}",
+                database="vault_edw",
+                autocommit=True,
+            )
+            operators.append(operator)
+
+        honk_api_call = PythonOperator(
+            task_id='honk_api_call',
+            python_callable=call_honk_api,
+            provide_context=True,
+            dag=dag,
         )
-        operators.append(operator)
 
-    send_policy_honk_group_email = EmailOperator(
-        task_id='send_policy_honk_group_email',
-        to=to_email,
-        subject='Airflow - Policy honk group tables loaded successfully',
-        html_content=get_sp_success_data_HTML(policy_honk_group_items, 'All stored procedures executed successfully for all the Policy honk group tables'),
-    )
+        send_honk_email = EmailOperator(
+            task_id='send_honk_email',
+            to=to_email,
+            subject='Airflow - Policy honk group tables loaded successfully',
+            html_content=get_sp_success_data_HTML(honk_group_items, 'All stored procedures executed successfully for all the Policy honk group tables'),
+        )
 
-    for i in range(len(operators) - 1):
-        operators[i] >> operators[i + 1]
+        for i in range(len(operators) - 1):
+            operators[i] >> operators[i + 1]
 
-    operators[-1] >> send_policy_honk_group_email
+        operators[-1] >> honk_api_call >> send_honk_email
 
     end = DummyOperator(
         task_id='end',
     )
-    
-start >> send_policy_honk_group_email >> end
+
+start >> honk_group >> end
