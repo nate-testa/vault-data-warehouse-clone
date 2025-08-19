@@ -12,6 +12,7 @@ from flask import request, redirect, url_for, flash, jsonify, current_app, sessi
 
 from .session_manager import session_manager
 from .user_service import user_service
+from .access_control import AccessControlService
 from utils.logging import logger
 
 
@@ -399,6 +400,105 @@ def csrf_protected(f: Callable) -> Callable:
         return f(*args, **kwargs)
     
     return wrapper
+
+
+def require_app_access(app_name: str, 
+                      redirect_to: str = 'applications',
+                      json_response: bool = False) -> Callable:
+    """
+    Decorator to require specific application access based on user groups.
+    
+    This decorator checks if the current user has access to a specific application
+    based on their Azure AD group memberships and the app_roles.json configuration.
+    
+    Args:
+        app_name (str): Name of the application to check access for
+        redirect_to (str): Route name to redirect to if access is denied (default: 'applications')
+        json_response (bool): Return JSON error instead of redirect
+        
+    Returns:
+        Callable: Decorated function
+        
+    Usage:
+        @require_app_access('DocuClaims AI')
+        def docuclaims():
+            return "DocuClaims application"
+            
+        @require_app_access('DocuLegal AI', json_response=True)
+        def api_doculegal():
+            return jsonify({"status": "success"})
+    """
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        @login_required(json_response=json_response)
+        def wrapper(*args, **kwargs):
+            # If SSO is disabled, allow all requests through
+            if not sso_enabled():
+                logger.debug(f"SSO disabled, allowing access to {app_name} via {func.__name__}")
+                return func(*args, **kwargs)
+            
+            # Get current user (should be available from @login_required)
+            current_user = g.get('current_user') or session_manager.get_current_user()
+            
+            if not current_user:
+                logger.error(f"No current user found for app access check: {app_name}")
+                if json_response:
+                    return jsonify({
+                        'error': 'Authentication required',
+                        'code': 401,
+                        'message': 'User authentication is required to access this application'
+                    }), 401
+                flash('Authentication required.', 'error')
+                return redirect(url_for('saml_sso'))
+            
+            # Initialize access control service
+            try:
+                access_control = AccessControlService()
+                
+                # Get user groups
+                user_groups = current_user.groups if hasattr(current_user, 'groups') and current_user.groups else []
+                
+                # Check if user has access to the application
+                has_access = access_control.user_has_access(app_name, user_groups)
+                
+                if not has_access:
+                    logger.warning(
+                        f"User {current_user.username} denied access to application '{app_name}'. "
+                        f"User has {len(user_groups)} groups."
+                    )
+                    
+                    if json_response:
+                        return jsonify({
+                            'error': 'Insufficient permissions',
+                            'code': 403,
+                            'message': f'You do not have permission to access {app_name}. Please contact your administrator if you believe this is an error.'
+                        }), 403
+                    
+                    flash(f'Access denied to {app_name}. You do not have the required permissions.', 'error')
+                    return redirect(url_for(redirect_to))
+                
+                # Log successful access
+                logger.info(
+                    f"User {current_user.username} granted access to application '{app_name}'"
+                )
+                
+                return func(*args, **kwargs)
+                
+            except Exception as e:
+                logger.error(f"Error during application access check for '{app_name}': {e}")
+                
+                if json_response:
+                    return jsonify({
+                        'error': 'Access control error',
+                        'code': 500,
+                        'message': 'An error occurred while checking application permissions'
+                    }), 500
+                
+                flash('An error occurred while checking permissions. Please try again.', 'error')
+                return redirect(url_for(redirect_to))
+        
+        return wrapper
+    return decorator
 
 
 class RouteProtection:

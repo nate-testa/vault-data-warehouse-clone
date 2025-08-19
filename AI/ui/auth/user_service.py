@@ -444,7 +444,7 @@ class UserService:
         if self._is_azure_object_id(group):
             # In production, you might want to resolve these to friendly names
             logger.debug(f"Azure AD Object ID found: {group}")
-            return f"azure_group_{group}"
+            return group
         
         # Handle DN format (e.g., "CN=GroupName,OU=Groups,DC=domain,DC=com")
         if group.startswith('CN='):

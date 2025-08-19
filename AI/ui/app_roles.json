@@ -1,0 +1,18 @@
+{
+    "DocuClaims AI": {
+      "required_groups": [
+        "c40e783c-97f3-47d5-9e8e-dd007f1ba704"
+      ]
+    },
+    "DocuLegal AI": {
+      "required_groups": [
+        "c40e783c-97f3-47d5-9e8e-dd007f1ba704"
+      ]
+    },
+    "DocuFinance AI": {
+      "required_groups": [
+        "c40e783c-97f3-47d5-9e8e-dd007f1ba704"
+      ]
+    }
+  }
+  
