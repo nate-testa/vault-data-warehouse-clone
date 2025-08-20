@@ -24,6 +24,7 @@
 -- 07/02/25				Dinesh Bobbili				  18. AD-10034 Added all_peril_roof_covering_coverage_specified_states_in column
 -- 08/05/25				Dinesh Bobbili				  19. AD-10467 Added mine_subsidence_and_sinkhole_coverage_in column
 -- 08/12/25				Dinesh Bobbili				  20. AD-10619 Added defense_coverage_within_limits_in, wind_sublimit_in, wind_sublimit_value_amt
+-- 08/20/25				Dinesh Bobbili				  21. AD-10619 Added logic to handle blank values for defense_coverage_within_limits_in, wind_sublimit_in, wind_sublimit_value_amt
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage_wip]
@@ -357,9 +358,9 @@ BEGIN
 						,WFGateQuestion as gate_entry_code_required_in
 						,AllPerilRoofCoveringCoverageSpecifiedStates as all_peril_roof_covering_coverage_specified_states_in
 						,MineSubsidenceAndSinkholeCoverage as mine_subsidence_and_sinkhole_coverage_in
-						,DefenseCoverageWithinLimits as defense_coverage_within_limits_in
-						,WindSublimit as wind_sublimit_in
-						,WindSublimitValue as wind_sublimit_value_amt
+						,NULLIF(TRIM(DefenseCoverageWithinLimits), '') as defense_coverage_within_limits_in
+						,NULLIF(TRIM(WindSublimit), '') as wind_sublimit_in
+						,NULLIF(TRIM(WindSublimitValue), '') as wind_sublimit_value_amt
 						,GETDATE() AS create_ts
 						,GETDATE() AS update_ts
 						,@etl_audit_sk AS etl_audit_sk
