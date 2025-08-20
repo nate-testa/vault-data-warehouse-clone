@@ -13,6 +13,7 @@ GO
 -- 08/12/24     Architha Gudimalla              2. Added logic for additional_interest_deleted_in
 -- 08/12/24     Architha Gudimalla              3. Added additional interest vehicle
 -- 08/15/24     Architha Gudimalla              4. Update additional_interest_deleted_in to use Yes/No instead of 1/0
+-- 08/20/25     Dinesh Bobbili		            5. Fixed the mapping issue for transaction_effective_dt and transaction_dt
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tadditional_interest]
 AS
@@ -39,7 +40,7 @@ BEGIN
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tadditional_interest_temp1];
 		SELECT 
-			PolicyNumber, EffectiveDate, IssuedDate, ExpirationDate, transaction_dt, PolicyChangeNumber
+			PolicyNumber, EffectiveDate, IssuedDate, ExpirationDate, TransactionEffectiveDate, PolicyChangeNumber
 			,policy_history_sk
 			,[index] as additional_interest_seq_no
 			,InterestType, EntityType
@@ -58,7 +59,7 @@ BEGIN
 		FROM
 			(
 			SELECT
-				acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, acc.PolicyChangeNumber
+				acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate, acc.PolicyChangeNumber
 				,his.[policy_history_sk] as [policy_history_sk]
 				,acct.[Index]
 				,accto.[Field]
@@ -163,9 +164,9 @@ BEGIN
 		)
 		SELECT [PolicyNumber]
       ,[EffectiveDate]
-      ,[IssuedDate]
+      ,[TransactionEffectiveDate]
       ,[ExpirationDate]
-      ,[transaction_dt]
+      ,[IssuedDate]
       ,[PolicyChangeNumber]
       ,[policy_history_sk]
       ,[additional_interest_seq_no]
