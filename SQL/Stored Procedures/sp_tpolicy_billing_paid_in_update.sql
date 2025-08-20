@@ -9,6 +9,7 @@ GO
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 07/02/25		Dinesh Bobbili				1. Created this procedure  
 -- 07/03/25		Dinesh Bobbili				2. Added condition on effective_dt
+-- 08/20/25		Dinesh Bobbili				3. Updated logic for billing_paid_in and added logic for first_billing_payment_dt
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_billing_paid_in_update]
@@ -40,9 +41,33 @@ BEGIN
 		WHERE EXISTS (
 			SELECT 1
 			FROM edw_stage.stage_majesco_cash_activity AS mca
-			WHERE mca.policy_no = p.policy_no
+			WHERE mca.transaction_type in ('PAYMENT', 'PAYMENT_TRANSFER_INTERNAL') 
+			and mca.receivable_type = 'Premium'	
+			and mca.policy_no = p.policy_no
 			and cast(mca.policy_effective_date as date) = p.effective_dt
-			and mca.create_ts > @last_source_extract_ts);  
+			and mca.create_ts > @last_source_extract_ts)
+			and p.billing_paid_in is null;  
+
+		UPDATE p
+		SET p.first_billing_payment_dt = mca.entry_date
+		FROM edw_core.tpolicy AS p
+		INNER JOIN 
+		(SELECT
+				policy_no,
+				policy_effective_date,
+				min(entry_date) AS entry_date
+			FROM
+				edw_stage.stage_majesco_cash_activity
+			WHERE
+				transaction_type IN ('PAYMENT', 'PAYMENT_TRANSFER_INTERNAL')
+				AND receivable_type = 'Premium'
+				AND create_ts > @last_source_extract_ts
+			GROUP BY
+				policy_no,
+				policy_effective_date) mca 
+		ON mca.policy_no = p.policy_no
+			AND CAST(mca.policy_effective_date AS date) = p.effective_dt
+		WHERE p.first_billing_payment_dt is null;
 
 		SET @rows_affected=@@ROWCOUNT;   
 	
