@@ -14,7 +14,8 @@ from auth.sso_auth import SSOAuth
 from auth.session_manager import SessionManager
 from auth.user_service import UserService
 from auth.models import User
-from auth.decorators import login_required
+from auth.decorators import login_required, require_app_access
+from auth.access_control import AccessControlService
 
 # Import UI session management
 from utils.ui_session_manager import UISessionManager
@@ -45,6 +46,9 @@ sso_auth = SSOAuth()
 session_manager = SessionManager()
 user_service = UserService()
 
+# Initialize access control service
+access_control = AccessControlService()
+
 # Initialize UI session manager
 ui_session = UISessionManager(max_cookie_size=3500, max_chat_messages=8)
 
@@ -53,7 +57,7 @@ sso_auth.app = app
 sso_auth.session_manager = session_manager
 sso_auth.user_service = user_service
 
-logger.info("[APP_INIT] SSO authentication components initialized")
+logger.info("[APP_INIT] SSO authentication components and access control service initialized")
 
 # Fixed color for app styling
 PRIMARY_COLOR = "#DC2626"  # Main accent color
@@ -99,7 +103,7 @@ def applications():
     
     logger.info(f"Applications page loaded for user: {user.username if user else 'Unknown'} (Display: {first_name})")
     
-    # Available applications
+    # Available applications (complete list)
     apps = [
         {
             'id': 'docuclaims',
@@ -126,6 +130,27 @@ def applications():
             'status': 'coming_soon'
         }
     ]
+    
+    # Apply role-based access control filtering
+    try:
+        # Get user groups from the current user object
+        user_groups = user.groups if user and hasattr(user, 'groups') and user.groups else []
+        
+        # Log user groups for debugging (only log count for security)
+        logger.info(f"[ACCESS_CONTROL] User has {len(user_groups)} groups for filtering")
+        
+        # Filter applications based on user groups
+        filtered_apps = access_control.filter_applications(apps, user_groups)
+        
+        logger.info(f"[ACCESS_CONTROL] Filtered {len(apps)} applications to {len(filtered_apps)} accessible applications")
+        
+        # Use filtered applications
+        apps = filtered_apps
+        
+    except Exception as e:
+        logger.error(f"[ACCESS_CONTROL] Error during application filtering: {e}")
+        logger.info("[ACCESS_CONTROL] Falling back to showing all applications due to filtering error")
+        # On error, keep original apps list for backward compatibility
     
     return render_template('applications.html', 
                          user=user, 
@@ -157,6 +182,7 @@ def home():
 
 @app.route('/docuclaims')
 @login_required  # Add authentication protection
+@require_app_access('DocuClaims AI')  # Add application-level access control
 def docuclaims():
     # Get user IP for tracking
     client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', 'unknown'))
@@ -207,12 +233,14 @@ def docuclaims():
 
 @app.route('/clear_chat', methods=['POST'])
 @login_required
+@require_app_access('DocuClaims AI')
 def clear_chat():
     ui_session.clear_chat_messages()
     return redirect(url_for('docuclaims'))
 
 @app.route('/reset_everything', methods=['POST'])
 @login_required
+@require_app_access('DocuClaims AI')
 def reset_everything():
     # Reset all UI session data
     ui_session.reset_all_ui_data()
@@ -222,6 +250,7 @@ def reset_everything():
 
 @app.route('/upload_files', methods=['POST'])
 @login_required
+@require_app_access('DocuClaims AI')
 def upload_files():
     upload_id = f"upload_{int(time.time())}_{os.urandom(4).hex()}"
     
@@ -281,6 +310,7 @@ def upload_files():
 
 @app.route('/send_message', methods=['POST'])
 @login_required
+@require_app_access('DocuClaims AI')
 def send_message():
     # Generate unique session ID for tracking this interaction
     interaction_id = f"rag_{int(time.time())}_{os.urandom(4).hex()}"
@@ -389,6 +419,7 @@ def send_message():
 
 @app.route('/toggle_setting', methods=['POST'])
 @login_required
+@require_app_access('DocuClaims AI')
 def toggle_setting():
     setting = request.form.get('setting')
     value = request.form.get('value') == 'true'
@@ -400,6 +431,7 @@ def toggle_setting():
 
 @app.route('/select_model', methods=['POST'])
 @login_required
+@require_app_access('DocuClaims AI')
 def select_model():
     model = request.form.get('model')
     if model:
@@ -413,6 +445,7 @@ def select_model():
 
 @app.route('/check_file_processed/<file_name>')
 @login_required
+@require_app_access('DocuClaims AI')
 def check_file_processed_endpoint(file_name):
     check_id = f"check_{int(time.time())}"
     logger.info(f"[{check_id}] Checking processing status for file: '{file_name}'")
