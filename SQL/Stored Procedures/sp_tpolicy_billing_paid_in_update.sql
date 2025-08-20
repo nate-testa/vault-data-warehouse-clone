@@ -54,7 +54,7 @@ BEGIN
 		INNER JOIN 
 		(SELECT
 				policy_no,
-				policy_effective_date,
+				CAST(policy_effective_date AS date) as policy_effective_date,
 				min(entry_date) AS entry_date
 			FROM
 				edw_stage.stage_majesco_cash_activity
@@ -64,9 +64,9 @@ BEGIN
 				AND create_ts > @last_source_extract_ts
 			GROUP BY
 				policy_no,
-				policy_effective_date) mca 
+				CAST(policy_effective_date AS date)) mca 
 		ON mca.policy_no = p.policy_no
-			AND CAST(mca.policy_effective_date AS date) = p.effective_dt
+			AND mca.policy_effective_date = p.effective_dt
 		WHERE p.first_billing_payment_dt is null;
 
 		SET @rows_affected=@@ROWCOUNT;   
