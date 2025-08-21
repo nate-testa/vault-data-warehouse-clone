@@ -9,6 +9,7 @@
 -- 02/08/24				Alberto Almario					3. Added new column producer_id and change to use merge
 -- 07/06/24				Alberto Almario					4. Change logic for producer_status column
 -- 08/12/24				Yunus Mohammed					5. Added user_role
+-- 08/21/24				Dinesh Bobbili					6. Updated producer_status logic
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tproducer]
@@ -52,11 +53,7 @@ BEGIN
 			br.CreatedDate,
 			br.UpdatedDate,
 			br.ID AS producer_id,
-			CASE 
-				WHEN br.[Disabled] = 1 THEN 'Disabled'
-				ELSE
-					CASE WHEN br.UserEmailConfirmed = 1 THEN 'Active' ELSE 'Pending' END
-			END AS producer_status,
+			br.[Status] AS producer_status,
 			ur.RoleName as producer_role
 		INTO edw_temp.tproducer_temp1
 		FROM
