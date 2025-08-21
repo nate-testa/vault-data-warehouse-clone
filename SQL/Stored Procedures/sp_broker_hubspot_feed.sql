@@ -31,6 +31,7 @@
 -- 03/29/25		        Archtha Gudimalla			22. VI36791/AZ9023 - Concat broker_id to broker_nm
 -- 04/29/25		        Archtha Gudimalla			23. VI37383/AZ9290 - Added broker_state
 -- 05/30/25		        Archtha Gudimalla			24. AZ9641 - Added broker_business_type
+-- 08/21/25		        Dinesh Bobbili  			25. Updated filter condition
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -204,9 +205,7 @@ BEGIN
         left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
         left join br_summ as bs    on bs.broker_sk = tb.broker_sk
         left join comm_tier as ct   on ct.broker_id = tb.broker_id
-        where   isnull(tb.broker_nm,'') not like '%test%'
-		and     not (tb.broker_id like '1%' and len(tb.broker_id) = 5)
-		and     not (len(tb.broker_id) > 6);
+        where commercial_or_personal_business_type = 'Personal lines';
 
         truncate table edw_integration.broker_hubspot_feed       
     
