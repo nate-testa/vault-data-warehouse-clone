@@ -850,7 +850,7 @@ set CopyActivitySettings = '{
 					"name": "Status",
 					"type": "String"
 				}
-			
+			}
 		],
 		"typeConversion": true,
 		"typeConversionSettings": {
