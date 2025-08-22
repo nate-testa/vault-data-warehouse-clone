@@ -1,4 +1,4 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_tvendor_report]    Script Date: 2/27/2024 10:19:04 PM ******/
+﻿/****** Object:  StoredProcedure [edw_core].[sp_tvendor_report]    Script Date: 8/20/2025 5:03:11 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -12,9 +12,10 @@ GO
 -- 07/27/23		Architha Gudimalla				1. Created this procedure  
 -- 03/08/23		Architha Gudimalla				2. Updated a label for LC360
 -- 10/11/24		Architha Gudimalla				3. Addec cache column
+-- 08/22/25		Architha Gudimalla				4. Excluded images category for LC360 
 -- ================================================================================================= 
 
-CREATE OR ALTER     PROCEDURE [edw_core].[sp_tvendor_report]
+ALTER       PROCEDURE [edw_core].[sp_tvendor_report]
 @in_source varchar(255)
 AS
 BEGIN
@@ -85,7 +86,8 @@ BEGIN
 		DECLARE @ColumnsToPivot3 NVARCHAR(MAX)=''  
 		DECLARE @ColumnsToPivot4 NVARCHAR(MAX)=''  
 		DECLARE @ColumnsToPivot5 NVARCHAR(MAX)=''  
-		DECLARE @ColumnsToPivot6 NVARCHAR(MAX)=''  
+		DECLARE @ColumnsToPivot6 NVARCHAR(MAX)='' 
+		DECLARE @ColumnsToPivot7 NVARCHAR(MAX)=''  
 		declare @i int = 0 
 
 		DECLARE c1_rec CURSOR
@@ -117,6 +119,7 @@ BEGIN
 				set @ColumnsToPivot4 = ''
 				set @ColumnsToPivot5 = '' 
 				set @ColumnsToPivot6 = '' 
+				set @ColumnsToPivot7 = '' 
 
 				SELECT
 					/*@ColumnsToPivot = ISNULL( @ColumnsToPivot + ', ', '') +  
@@ -156,6 +159,11 @@ BEGIN
 									  cast(case when Row_num between 3000 and 3500 then field_name else '' end + '=' +  
 									  case when Row_num between 3000 and 3500 then cast('max(IIF(field_name='''+ 
 									  replace(replace(field_name,'[',''),']','') + ''',[Value],null)) ' as varchar(max))   else '' end
+									  as varchar(max)),
+					@ColumnsToPivot7 = ISNULL( @ColumnsToPivot7 + ', ', '') +  
+									  cast(case when Row_num between 3501 and 4000 then field_name else '' end + '=' +  
+									  case when Row_num between 3501 and 4000 then cast('max(IIF(field_name='''+ 
+									  replace(replace(field_name,'[',''),']','') + ''',[Value],null)) ' as varchar(max))   else '' end
 									  as varchar(max))/*
 					@ColumnsToPivot2 = case when @ColumnsToPivot2 = '' then @ColumnsToPivot2 else ISNULL( @ColumnsToPivot2 + ', ', '') end  +  
 									  cast(case when Row_num between 2001 and 3000 then field_name + '=' else '' end +  
@@ -178,6 +186,7 @@ BEGIN
 											 as nvarchar(max)) as field_name 
 						FROM  edw_stage.tvendor_report_field 
 						where source = @source and reporttype = @reporttype
+						and Category not like '%images%'
 					) a 
 				) as temp 
 		print 'here4'
