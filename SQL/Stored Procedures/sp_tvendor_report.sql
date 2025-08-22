@@ -15,7 +15,7 @@ GO
 -- 08/22/25		Architha Gudimalla				4. Excluded images category for LC360 
 -- ================================================================================================= 
 
-ALTER       PROCEDURE [edw_core].[sp_tvendor_report]
+CREATE or ALTER       PROCEDURE [edw_core].[sp_tvendor_report]
 @in_source varchar(255)
 AS
 BEGIN
