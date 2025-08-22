@@ -53,7 +53,12 @@ BEGIN
 			br.CreatedDate,
 			br.UpdatedDate,
 			br.ID AS producer_id,
-			br.[Status] AS producer_status,
+			CASE
+			WHEN br.[Status] is not null THEN br.[Status]
+			WHEN br.[Disabled] = 1 THEN 'Disabled'
+			ELSE
+			CASE WHEN br.UserEmailConfirmed = 1 THEN 'Active' ELSE 'Pending' END
+			END AS producer_status,
 			ur.RoleName as producer_role
 		INTO edw_temp.tproducer_temp1
 		FROM
