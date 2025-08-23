@@ -5,6 +5,7 @@
 -- Change date          |Author						            |	Change Description
 -----------------------------------------------------------------------------------------------------------------------------------
 -- 05/30/25		         Yunus Mohammed				1. Created this procedure
+-- 08/21/25		         Dinesh Bobbili  			2. Updated filter condition
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed_commercial]
@@ -154,8 +155,7 @@ BEGIN
         -- left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
         left join br_summ as bs    on bs.broker_sk = tb.broker_sk
         left join comm_tier as ct   on ct.broker_id = tb.broker_id
-        where   isnull(tb.broker_nm,'') not like '%test%'
-        and (tb.broker_id like '1%' and len(tb.broker_id) = 5)		
+        where commercial_or_personal_business_type = 'Commercial lines';		
     
         INSERT edw_integration.broker_hubspot_feed
         (

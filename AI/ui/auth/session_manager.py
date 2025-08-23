@@ -13,6 +13,7 @@ from flask import session, request, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from .models import User, Session
+from utils.logging import logger
 
 
 class SessionManager:
@@ -131,7 +132,7 @@ class SessionManager:
             return user
             
         except Exception as e:
-            current_app.logger.error(f"Error getting current user: {str(e)}")
+            logger.error(f"Error getting current user: {str(e)}")
             self.clear_session()
             return None
     
@@ -157,7 +158,7 @@ class SessionManager:
             return auth_session
             
         except Exception as e:
-            current_app.logger.error(f"Error getting current session: {str(e)}")
+            logger.error(f"Error getting current session: {str(e)}")
             self.clear_session()
             return None
     

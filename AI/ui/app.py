@@ -14,7 +14,11 @@ from auth.sso_auth import SSOAuth
 from auth.session_manager import SessionManager
 from auth.user_service import UserService
 from auth.models import User
-from auth.decorators import login_required
+from auth.decorators import login_required, require_app_access
+from auth.access_control import AccessControlService
+
+# Import UI session management
+from utils.ui_session_manager import UISessionManager
 
 # Load environment variables
 load_dotenv()
@@ -42,12 +46,18 @@ sso_auth = SSOAuth()
 session_manager = SessionManager()
 user_service = UserService()
 
+# Initialize access control service
+access_control = AccessControlService()
+
+# Initialize UI session manager
+ui_session = UISessionManager(max_cookie_size=3500, max_chat_messages=8)
+
 # Manually set the app and components for SSOAuth without route registration
 sso_auth.app = app
 sso_auth.session_manager = session_manager
 sso_auth.user_service = user_service
 
-logger.info("[APP_INIT] SSO authentication components initialized")
+logger.info("[APP_INIT] SSO authentication components and access control service initialized")
 
 # Fixed color for app styling
 PRIMARY_COLOR = "#DC2626"  # Main accent color
@@ -61,9 +71,92 @@ if not API_BASE:
 
 # Compatibility route for SSOAuth which expects 'index' endpoint
 @app.route('/index')
+@login_required
 def index():
-    """Index route - redirects to home for compatibility with SSOAuth"""
-    return redirect(url_for('home'))
+    """Index route - redirects to applications page after SSO login for compatibility with SSOAuth"""
+    return redirect(url_for('applications'))
+
+@app.route('/applications')
+@login_required  # Add authentication protection
+def applications():
+    """Applications page displaying available AI tools and services"""
+    # Get user IP for tracking
+    client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', 'unknown'))
+    if ',' in client_ip:
+        client_ip = client_ip.split(',')[0].strip()
+    
+    logger.info(f"Applications page accessed by IP: {client_ip}")
+    
+    # Get current user for personalization
+    user = session_manager.get_current_user()
+    
+    # Extract first name for personalized greeting
+    first_name = "User"  # Default fallback
+    if user and user.display_name:
+        # Try to extract first name from display_name
+        name_parts = user.display_name.split()
+        if name_parts:
+            first_name = name_parts[0]
+    elif user and user.username:
+        # Fallback to username if no display name
+        first_name = user.username.split('@')[0] if '@' in user.username else user.username
+    
+    logger.info(f"Applications page loaded for user: {user.username if user else 'Unknown'} (Display: {first_name})")
+    
+    # Available applications (complete list)
+    apps = [
+        {
+            'id': 'docuclaims',
+            'name': 'DocuClaims AI',
+            'description': 'AI-powered document analysis and claims processing',
+            'icon': 'fa-file-contract',
+            'url': url_for('docuclaims'),
+            'status': 'active'
+        },
+        {
+            'id': 'doculegal',
+            'name': 'DocuLegal AI',
+            'description': 'Legal document analysis and compliance checking',
+            'icon': 'fa-balance-scale',
+            'url': '#',
+            'status': 'coming_soon'
+        },
+        {
+            'id': 'docufinance',
+            'name': 'DocuFinance AI',
+            'description': 'Financial document processing and analysis',
+            'icon': 'fa-chart-line',
+            'url': '#',
+            'status': 'coming_soon'
+        }
+    ]
+    
+    # Apply role-based access control filtering
+    try:
+        # Get user groups from the current user object
+        user_groups = user.groups if user and hasattr(user, 'groups') and user.groups else []
+        
+        # Log user groups for debugging (only log count for security)
+        logger.info(f"[ACCESS_CONTROL] User has {len(user_groups)} groups for filtering")
+        
+        # Filter applications based on user groups
+        filtered_apps = access_control.filter_applications(apps, user_groups)
+        
+        logger.info(f"[ACCESS_CONTROL] Filtered {len(apps)} applications to {len(filtered_apps)} accessible applications")
+        
+        # Use filtered applications
+        apps = filtered_apps
+        
+    except Exception as e:
+        logger.error(f"[ACCESS_CONTROL] Error during application filtering: {e}")
+        logger.info("[ACCESS_CONTROL] Falling back to showing all applications due to filtering error")
+        # On error, keep original apps list for backward compatibility
+    
+    return render_template('applications.html', 
+                         user=user, 
+                         first_name=first_name,
+                         apps=apps,
+                         config=os.environ)
 
 @app.route('/favicon.ico')
 def favicon():
@@ -79,15 +172,17 @@ def home():
     
     # Only log actual user visits, not health checks
     if client_ip not in monitoring_ips:
-        logger.info(f"Home page loaded by user from IP: {client_ip}")
+        logger.info(f"Landing page loaded by user from IP: {client_ip}")
     
     # Get current user for template context
     user = session_manager.get_current_user()
     
-    return render_template('home.html', user=user)
+    # Pass config to template for SSO check
+    return render_template('home.html', user=user, config=os.environ)
 
 @app.route('/docuclaims')
 @login_required  # Add authentication protection
+@require_app_access('DocuClaims AI')  # Add application-level access control
 def docuclaims():
     # Get user IP for tracking
     client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', 'unknown'))
@@ -96,17 +191,11 @@ def docuclaims():
     
     logger.info(f"DocuClaims AI page accessed by IP: {client_ip}")
     
-    # Initialize session variables if they don't exist
-    if 'rag_messages' not in session:
-        session['rag_messages'] = []
-    if 'file_uploaded' not in session:
-        session['file_uploaded'] = False
-    if 'uploaded_filename' not in session:
-        session['uploaded_filename'] = None
-    if 'debug' not in session:
-        session['debug'] = False
-    if 'use_chat_history' not in session:
-        session['use_chat_history'] = True
+    # Initialize UI session variables using UISessionManager
+    ui_session.initialize_ui_session()
+    
+    # Perform proactive session cleanup to prevent cookie overflow
+    ui_session.cleanup_session_storage()
         
     # Fetch model options from API
     model_options = fetch_model_options()
@@ -116,50 +205,52 @@ def docuclaims():
         logger.error("No model options returned from API")
     
     # Only set a selected model if there are valid options and the current selection is invalid
-    if model_options and ('selected_model' not in session or session['selected_model'] not in model_options):
-        session['selected_model'] = model_options[0]
+    current_model = ui_session.get_user_preference('selected_model')
+    if model_options and (not current_model or current_model not in model_options):
+        ui_session.set_user_preference('selected_model', model_options[0])
     elif not model_options:
         # If no options are available, clear any existing selection
-        session['selected_model'] = None
+        ui_session.set_user_preference('selected_model', None)
     
     # Get current user for template context
     user = session_manager.get_current_user()
+    
+    # Get UI data through UISessionManager
+    file_status = ui_session.get_file_upload_status()
     
     return render_template(
         'docuclaims.html',
         accent_color=PRIMARY_COLOR,  # Using fixed color
         model_options=model_options,
-        selected_model=session.get('selected_model'),
-        rag_messages=session.get('rag_messages', []),
-        file_uploaded=session.get('file_uploaded', False),
-        uploaded_filename=session.get('uploaded_filename'),
-        use_chat_history=session.get('use_chat_history', True),
-        debug=session.get('debug', False),
+        selected_model=ui_session.get_user_preference('selected_model'),
+        rag_messages=ui_session.get_chat_messages(),
+        file_uploaded=file_status['uploaded'],
+        uploaded_filename=file_status['filenames'],
+        use_chat_history=ui_session.get_user_preference('use_chat_history', True),
+        debug=ui_session.get_user_preference('debug', False),
         user=user
     )
 
 @app.route('/clear_chat', methods=['POST'])
 @login_required
+@require_app_access('DocuClaims AI')
 def clear_chat():
-    session['rag_messages'] = []
-    session['rag_warnings'] = []
+    ui_session.clear_chat_messages()
     return redirect(url_for('docuclaims'))
 
 @app.route('/reset_everything', methods=['POST'])
 @login_required
+@require_app_access('DocuClaims AI')
 def reset_everything():
-    # Reset all session variables
-    session['rag_messages'] = []
-    session['rag_warnings'] = []
-    session['file_uploaded'] = False
-    session['uploaded_filename'] = None
-    session['debug'] = False
+    # Reset all UI session data
+    ui_session.reset_all_ui_data()
     return redirect(url_for('docuclaims'))
 
 # Theme customization removed
 
 @app.route('/upload_files', methods=['POST'])
 @login_required
+@require_app_access('DocuClaims AI')
 def upload_files():
     upload_id = f"upload_{int(time.time())}_{os.urandom(4).hex()}"
     
@@ -208,10 +299,9 @@ def upload_files():
                 uploaded_filenames.append(filename)
                 any_success = True
     
-    # Update session variables
+    # Update session variables using UISessionManager
     if uploaded_filenames:
-        session['uploaded_filename'] = uploaded_filenames
-        session['file_uploaded'] = True
+        ui_session.set_file_upload_status(True, uploaded_filenames)
         logger.info(f"[{upload_id}] Files processed successfully: {uploaded_filenames}")
     else:
         logger.warning(f"[{upload_id}] No files were processed successfully. Status: {file_status}")
@@ -220,6 +310,7 @@ def upload_files():
 
 @app.route('/send_message', methods=['POST'])
 @login_required
+@require_app_access('DocuClaims AI')
 def send_message():
     # Generate unique session ID for tracking this interaction
     interaction_id = f"rag_{int(time.time())}_{os.urandom(4).hex()}"
@@ -247,7 +338,7 @@ def send_message():
     
     # Fallback to session or default if no model provided in request
     if not selected_model:
-        selected_model = session.get('selected_model')
+        selected_model = ui_session.get_user_preference('selected_model')
         
         # Final fallback to first available model if no model in session
         if not selected_model:
@@ -256,19 +347,16 @@ def send_message():
     
     logger.info(f"[{interaction_id}] Using LLM model: {selected_model}")
     
-    # Get rag_messages from session
-    rag_messages = session.get('rag_messages', [])
-    
     try:
         # Get chat history for context BEFORE adding the current message
-        message_history = get_chat_history() if session.get('use_chat_history', True) else []
+        use_history = ui_session.get_user_preference('use_chat_history', True)
+        message_history = ui_session.get_chat_history_for_context() if use_history else []
         chat_context_length = len(message_history)
         logger.info(f"[{interaction_id}] Chat history context: {chat_context_length} previous messages")
         logger.info(f"[{interaction_id}] [RAG_START] Starting API query process...")
         
-        # NOW add user message to chat history (after getting the context)
-        rag_messages.append(user_message)
-        session['rag_messages'] = rag_messages
+        # Add user message to chat history using UISessionManager
+        ui_session.add_chat_message(user_message)
         
         # Query document with timeout handling
         response = query_document(prompt, message_history, selected_model)
@@ -317,10 +405,9 @@ def send_message():
         logger.error(f"[{interaction_id}] [RAG_EXCEPTION] Unexpected error after {query_time:.2f}s: {str(e)}", exc_info=True)
         assistant_response_text = "Sorry, I encountered an error processing your question. Please try again."
     
-    # Add assistant response to chat history
+    # Add assistant response to chat history using UISessionManager
     assistant_message = {"role": "assistant", "content": assistant_response_text}
-    rag_messages.append(assistant_message)
-    session['rag_messages'] = rag_messages
+    ui_session.add_chat_message(assistant_message)
     
     total_time = time.time() - start_time
     logger.info(f"[{interaction_id}] Total interaction completed in {total_time:.2f}s")
@@ -332,21 +419,23 @@ def send_message():
 
 @app.route('/toggle_setting', methods=['POST'])
 @login_required
+@require_app_access('DocuClaims AI')
 def toggle_setting():
     setting = request.form.get('setting')
     value = request.form.get('value') == 'true'
     
     if setting in ['use_chat_history', 'debug']:
-        session[setting] = value
+        ui_session.set_user_preference(setting, value)
     
     return jsonify({"success": True})
 
 @app.route('/select_model', methods=['POST'])
 @login_required
+@require_app_access('DocuClaims AI')
 def select_model():
     model = request.form.get('model')
     if model:
-        session['selected_model'] = model
+        ui_session.set_user_preference('selected_model', model)
         logger.info(f"Model selected: {model}")
     else:
         logger.error("Attempt to select model but no model provided")
@@ -356,6 +445,7 @@ def select_model():
 
 @app.route('/check_file_processed/<file_name>')
 @login_required
+@require_app_access('DocuClaims AI')
 def check_file_processed_endpoint(file_name):
     check_id = f"check_{int(time.time())}"
     logger.info(f"[{check_id}] Checking processing status for file: '{file_name}'")
@@ -533,10 +623,7 @@ def query_document(question, message_history=None, model=None):
 
 def get_chat_history(slide_window=5):
     """Get the recent chat history for context."""
-    rag_messages = session.get('rag_messages', [])
-    start_index = max(0, len(rag_messages) - slide_window)
-    chat_history = [rag_messages[i]["content"] for i in range(start_index, len(rag_messages))]
-    return chat_history
+    return ui_session.get_chat_history_for_context(slide_window)
 
 # ============================================================================
 # SSO AUTHENTICATION ROUTES

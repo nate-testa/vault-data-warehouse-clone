@@ -13,6 +13,7 @@ GO
 -- 01-03-2025				Alberto Almario				1. Add snasheet mapping to causeOfLoss column.
 -- 01-21-2025               Rushin Shah                 2. Updated the claim amount field logic
 -- 03-21-2025               Sandeep Gundreddy           3. Updated source_system_sk filter to include snapsheet claims
+-- 08-12-2025               Alberto Almario             4. Update logic for ClaimAmount and ClaimDisposition fields
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_property_feed]
 AS
@@ -122,16 +123,13 @@ BEGIN
                 ,ct.transaction_ts
                 ,COALESCE(
                     (
-                        c.loss_paid_amt             + 
-                        c.expense_paid_amt          + 
-                        c.defense_paid_amt          +
-                        c.overpayment_recovery_amt  +
-                        c.overpayment_expense_recovery_amt +
-                        c.overpayment_defense_recovery_amt
+                        c.loss_paid_amt              + 
+                        c.subrogation_recovery_amt   + 
+                        c.overpayment_recovery_amt   
                     ), 0
                 ) AS [claimAmount]
                 ,CASE 
-                    WHEN (c.subrogation_expense_recovery_amt + c.subrogation_recovery_amt) < 0 THEN 'S'
+                    WHEN (c.subrogation_expense_recovery_amt <> 0 OR c.subrogation_recovery_amt <> 0) THEN 'S'
                     WHEN c.claim_status ='CLOSED' THEN 'C' 
                     ELSE 'O' 
                 END AS [claimDisposition]

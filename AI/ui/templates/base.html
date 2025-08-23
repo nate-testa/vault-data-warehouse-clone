@@ -96,17 +96,25 @@
                             {% if user.email %}
                             <li><span class="dropdown-item-text text-muted small">{{ user.email }}</span></li>
                             {% endif %}
+                            <!-- {% if user.groups %}
+                            <li><span class="dropdown-item-text text-muted small">
+                                <strong>Groups:</strong><br>
+                                {% for group in user.groups %}
+                                 - {{ group }}<br>
+                                {% endfor %}
+                            </span></li>
+                            {% endif %} -->
                             <li><hr class="dropdown-divider"></li>
                             
                             <!-- ========================================= -->
                             <!-- DEBUG SSO SAML DATA - COMMENT/UNCOMMENT -->
                             <!-- ========================================= -->
-                            <!-- 
-                            <li><h6 class="dropdown-header text-primary">SSO SAML Data (Raw JSON):</h6></li>
+                            
+                            <!-- <li><h6 class="dropdown-header text-primary">SSO SAML Data (Raw JSON):</h6></li>
                             <li><div class="dropdown-item-text" style="font-family: monospace; font-size: 0.7rem; white-space: pre-wrap; background: #f8f9fa; padding: 10px; border-radius: 4px; max-height: 300px; overflow-y: auto;">
                                 {{ user.attributes | tojson(indent=2) if user.attributes else 'No attributes' }}
-                            </div></li>
-                            -->
+                            </div></li> -->
+                            
                             <!-- ========================================= -->
                             <!-- END DEBUG SSO SAML DATA -->
                             <!-- ========================================= -->

@@ -17,6 +17,7 @@ from flask import (
 from .models import User
 from .session_manager import SessionManager
 from .user_service import UserService
+from utils.logging import logger
 
 
 class AuthMiddleware:
@@ -186,7 +187,7 @@ class AuthMiddleware:
                 return self.session_manager.get_current_user()
             return None
         except Exception as e:
-            current_app.logger.warning(f"Error getting current user: {str(e)}")
+            logger.warning(f"Error getting current user: {str(e)}")
             return None
     
     def _set_authenticated_user_context(self, user: User) -> None:
@@ -204,7 +205,7 @@ class AuthMiddleware:
             try:
                 g.auth_session = self.session_manager.get_current_session()
             except Exception as e:
-                current_app.logger.warning(f"Error getting current session: {str(e)}")
+                logger.warning(f"Error getting current session: {str(e)}")
                 g.auth_session = None
         else:
             g.auth_session = None
@@ -243,7 +244,7 @@ class AuthMiddleware:
                 # Use the internal _extend_session method
                 self.session_manager._extend_session()
         except Exception as e:
-            current_app.logger.warning(f"Error refreshing session: {str(e)}")
+            logger.warning(f"Error refreshing session: {str(e)}")
     
     def _clear_stale_session_data(self) -> None:
         """
@@ -271,7 +272,7 @@ class AuthMiddleware:
                 session.pop(key, None)
                 
         except Exception as e:
-            current_app.logger.warning(f"Error clearing stale session data: {str(e)}")
+            logger.warning(f"Error clearing stale session data: {str(e)}")
     
     def _add_security_headers(self, response) -> Any:
         """
@@ -318,7 +319,7 @@ class AuthMiddleware:
                 # Use _extend_session to update activity
                 self.session_manager._extend_session()
         except Exception as e:
-            current_app.logger.warning(f"Error updating session activity: {str(e)}")
+            logger.warning(f"Error updating session activity: {str(e)}")
     
     def _log_auth_exception(self, exception: Exception) -> None:
         """
@@ -332,7 +333,7 @@ class AuthMiddleware:
             if hasattr(g, 'current_user') and g.current_user:
                 user_info = g.current_user.username
             
-            current_app.logger.error(
+            logger.error(
                 f"Authentication exception for user {user_info}: {str(exception)}",
                 exc_info=True
             )

@@ -13,6 +13,7 @@ from datetime import datetime
 
 from .models import User, Session
 from .session_manager import session_manager
+from utils.logging import logger
 
 
 class UserService:
@@ -132,7 +133,7 @@ class UserService:
         )
         
         # Log user creation for audit
-        current_app.logger.info(f"User created from SAML: {user.username} with groups: {groups}")
+        logger.info(f"User created from SAML: {user.username} with groups: {groups}")
         
         return user
     
@@ -175,7 +176,7 @@ class UserService:
             from flask import session
             session[session_manager.USER_KEY] = user.to_dict()
         
-        current_app.logger.info(f"User profile updated: {user.username}")
+        logger.info(f"User profile updated: {user.username}")
         
         return user
     
@@ -297,7 +298,7 @@ class UserService:
             List[str]: List of user IDs in the group
         """
         # This would be implemented with persistent user storage
-        current_app.logger.info(f"Group search requested for: {group_name}")
+        logger.info(f"Group search requested for: {group_name}")
         return []
     
     def get_group_statistics(self) -> Dict[str, int]:
@@ -442,8 +443,8 @@ class UserService:
         # Handle Azure AD Object IDs (GUIDs)
         if self._is_azure_object_id(group):
             # In production, you might want to resolve these to friendly names
-            current_app.logger.debug(f"Azure AD Object ID found: {group}")
-            return f"azure_group_{group}"
+            logger.debug(f"Azure AD Object ID found: {group}")
+            return group
         
         # Handle DN format (e.g., "CN=GroupName,OU=Groups,DC=domain,DC=com")
         if group.startswith('CN='):

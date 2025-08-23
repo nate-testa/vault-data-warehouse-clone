@@ -23,6 +23,8 @@
 -- 06/02/25				Sandeep Gundreddy			  17. Modified gate location and code seperator from ',' to '-'
 -- 07/02/25				Dinesh Bobbili				  18. AD-10034 Added all_peril_roof_covering_coverage_specified_states_in column
 -- 08/05/25				Dinesh Bobbili				  19. AD-10467 Added mine_subsidence_and_sinkhole_coverage_in column
+-- 08/12/25				Dinesh Bobbili				  20. AD-10619 Added defense_coverage_within_limits_in, wind_sublimit_in, wind_sublimit_value_amt
+-- 08/20/25				Dinesh Bobbili				  21. AD-10619 Added logic to handle blank values for defense_coverage_within_limits_in, wind_sublimit_in, wind_sublimit_value_amt
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage_wip]
@@ -355,7 +357,10 @@ BEGIN
 						,AllPerilRoofCoveringCoverageCW as all_peril_roof_covering_coverage_cw_in
 						,WFGateQuestion as gate_entry_code_required_in
 						,AllPerilRoofCoveringCoverageSpecifiedStates as all_peril_roof_covering_coverage_specified_states_in
-						,MineSubsidenceAndSinkholeCoverage as mine_subsidence_and_sinkhole_coverage_in 
+						,MineSubsidenceAndSinkholeCoverage as mine_subsidence_and_sinkhole_coverage_in
+						,NULLIF(TRIM(DefenseCoverageWithinLimits), '') as defense_coverage_within_limits_in
+						,NULLIF(TRIM(WindSublimit), '') as wind_sublimit_in
+						,NULLIF(TRIM(WindSublimitValue), '') as wind_sublimit_value_amt
 						,GETDATE() AS create_ts
 						,GETDATE() AS update_ts
 						,@etl_audit_sk AS etl_audit_sk
@@ -459,6 +464,7 @@ BEGIN
 			risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
 			theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
 			all_peril_roof_covering_coverage_cw_in,gate_entry_code_required_in,all_peril_roof_covering_coverage_specified_states_in,mine_subsidence_and_sinkhole_coverage_in,
+			defense_coverage_within_limits_in, wind_sublimit_in, wind_sublimit_value_amt,
 			source_system_sk,create_ts,update_ts,etl_audit_sk,caddy_grade
 			)
 			VALUES
@@ -551,6 +557,7 @@ BEGIN
 				risk_score_liability, risk_score_hurricane, risk_score_wildfire, risk_score_sinkhole_mine,risk_score_all_perils,risk_score_fire,
 				theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
 				all_peril_roof_covering_coverage_cw_in,gate_entry_code_required_in,all_peril_roof_covering_coverage_specified_states_in,mine_subsidence_and_sinkhole_coverage_in,
+				defense_coverage_within_limits_in, wind_sublimit_in, wind_sublimit_value_amt,
 				source_system_sk,create_ts,update_ts,etl_audit_sk,caddy_grade
 			)
 			WHEN MATCHED THEN UPDATE
@@ -764,6 +771,9 @@ BEGIN
 			[target].gate_entry_code_required_in = [source].gate_entry_code_required_in,
 			[target].all_peril_roof_covering_coverage_specified_states_in = [source].all_peril_roof_covering_coverage_specified_states_in,
 			[target].mine_subsidence_and_sinkhole_coverage_in = [source].mine_subsidence_and_sinkhole_coverage_in,
+			[target].defense_coverage_within_limits_in = [source].defense_coverage_within_limits_in,
+			[target].wind_sublimit_in = [source].wind_sublimit_in,
+			[target].wind_sublimit_value_amt = [source].wind_sublimit_value_amt,
 			[target].update_ts = [source].update_ts,
 			[target].caddy_grade = [source].caddy_grade
 			;
