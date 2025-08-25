@@ -1,0 +1,1 @@
+alter table edw_integration.policy_current_carrier_auto_vr01_feed alter column [TelematicsIndicator] [char](1) NULL;
