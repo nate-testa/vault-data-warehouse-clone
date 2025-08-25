@@ -296,10 +296,10 @@ QRY_CLUE = f"""
         WHERE policy_no IN (select policy_no from filter_table)
     )
     ,final_table AS (
-        SELECT * FROM np UNION ALL
-        SELECT * FROM sj UNION ALL
-        SELECT * FROM pr UNION ALL
-        SELECT * FROM vr 
+        SELECT policy_no, policy_history_sk, auto_vehicle_sk, auto_driver_sk, RecordCode, CAST(FinalData AS varchar(215)) AS FinalData FROM np UNION ALL
+        SELECT policy_no, policy_history_sk, auto_vehicle_sk, auto_driver_sk, RecordCode, CAST(FinalData AS varchar(999)) AS FinalData FROM sj UNION ALL
+        SELECT policy_no, policy_history_sk, auto_vehicle_sk, auto_driver_sk, RecordCode, CAST(FinalData AS varchar(999)) AS FinalData FROM pr UNION ALL
+        SELECT policy_no, policy_history_sk, auto_vehicle_sk, auto_driver_sk, RecordCode, CAST(FinalData AS varchar(999)) AS FinalData FROM vr 
     )
     SELECT FinalData FROM final_table
     ORDER BY policy_no, policy_history_sk, auto_vehicle_sk, auto_driver_sk, RecordCode
@@ -395,18 +395,22 @@ def generate_Current_Carrier_txt_file_and_encrypt(**kwargs):
 
     create_directory_if_not_exists(TXT_FOLDER_PATH)
     TXT_FILE_PATH = os.path.join(TXT_FOLDER_PATH, TXT_FILE_NAME)
-    # df.to_csv(TXT_FILE_PATH, sep=None, index=False, header=False)
-    df_string = df.to_string(index=False, header=False)
-
-    # write into txt file
+    
+    # write into txt file - write each row directly to preserve exact formatting
     with open(TXT_FILE_PATH, 'w') as f:
-        f.write(df_string)
+        for index, row in df.iterrows():
+            # Get the FinalData value exactly as returned from SQL - preserve all spaces and exact length
+            final_data = str(row['FinalData'])
+            if index < len(df) - 1:
+                f.write(final_data + '\n')
+            else:
+                f.write(final_data)
 
     # Parameter to be included into the file
     record_count = str(df.shape[0]).zfill(6) #should be 6 digits, like 002578
     start_end_date = get_start_end_date()
     yydddhhmm = datetime.now().strftime('%y%j%H%M')
-    header = f"##!!SAC#{yydddhhmm}CARR          E10736FTPE11967000Vault Insurance                                            CC_HISTORY                  {start_end_date}01                                                                                                      "
+    header = f"##!!SAC#{yydddhhmm}CARR          E10736FTPE11967000Vault Insurance                                          CC_HISTORY                    {start_end_date}01                                                                                                      "
     footer = f"##!!SAT#{yydddhhmm}CARR          E10736FTP{record_count}                                                                                                                                                                                                                  "
 
     # Read all rows
