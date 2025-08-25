@@ -16,7 +16,7 @@ BEGIN
     SET NOCOUNT ON
 
 	BEGIN TRY
-    DECLARE @last_source_extract_ts DATETIME2(7)
+        	DECLARE @last_source_extract_ts DATETIME2(7)
 	DECLARE @etl_audit_sk INT
 	DECLARE @new_last_source_extract_ts DATETIME2(7)
 	DECLARE @rows_affected INT
@@ -30,16 +30,25 @@ BEGIN
 
 	DROP TABLE IF EXISTS edw_temp.policy_current_carrier_auto_vr01_feed_temp1;
 	
+	declare @isfirstday int = 0
+
+	if(cast(@last_source_extract_ts as date) = '1900-01-01')
+	begin
+	set @isfirstday = 1
+	end
+
 	select
 	'VRO1' as [RecordCode],
 	np.[ContribCompanyAMBestNumber],
 	np.PolicyNumber,
 	np.InsuranceType,
+    /*
 	case
-		when cast(@last_source_extract_ts as date) = '1900-01-01' then FORMAT(getdate(),'yyyyMMdd')
+		when (@isfirstday = 1 and cast(avc.transaction_effective_dt as date)<= cast(getdate() as date)) then FORMAT(getdate(),'yyyyMMdd')		
 	else 
 		format(avc.transaction_effective_dt,'yyyyMMdd')
-	end as ChangeEffectiveDate,	
+	end */
+   np.ChangeEffectiveDate as ChangeEffectiveDate,	
 	av.vehicle_vin as [VIN],
 	avc.registration_state_cd as [VehicleRegisteredState],
 	-- -- Dune Buggy
@@ -59,7 +68,17 @@ BEGIN
 	'' as LicensePlateNumber,
 	'' as StateTrackingNumber,
 	'' as Reserved1,
-	FORMAT(avc.transaction_effective_dt,'yyyyMMdd') as VehicleAddDate,
+	(
+		select
+			FORMAT(min(avc1.transaction_effective_dt),'yyyyMMdd')
+		from
+			edw_core.tauto_vehicle_coverage avc1
+		where
+			avc1.policy_no = p.policy_no
+			and avc1.effective_dt = p.effective_dt
+			and avc1.auto_vehicle_sk = avc.auto_vehicle_sk
+
+	) as VehicleAddDate,
 	'' InsuredRegistrantSequenceNumber,
 	'' as VehicleMileage,
 	'' as ALIRtSActivityCode,
@@ -86,7 +105,7 @@ BEGIN
 	@etl_audit_sk as etl_audit_sk
 	into edw_temp.policy_current_carrier_auto_vr01_feed_temp1
 	from
-	edw_temp.policy_current_carrier_auto_np01_feed np
+	edw_integration.policy_current_carrier_auto_np01_feed np
 	inner join edw_core.tpolicy p on p.policy_sk = np.policy_sk
 	inner join edw_core.tauto_vehicle av on p.policy_no = av.policy_no and p.effective_dt = av.effective_dt
 	inner join edw_core.tauto_vehicle_coverage avc on av.auto_vehicle_sk = avc.auto_vehicle_sk 
@@ -144,8 +163,7 @@ BEGIN
 
 	SET @rows_affected=@@ROWCOUNT;
 
-	SET @new_last_source_extract_ts=COALESCE(dateadd("dd",-1, cast(getdate() as date)),@last_source_extract_ts);
-		
+	SET @new_last_source_extract_ts=COALESCE((SELECT MAX(create_ts) FROM edw_integration.policy_current_carrier_auto_np01_feed),@last_source_extract_ts);
 	-- Update control table
 	EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 	
@@ -153,7 +171,6 @@ BEGIN
 	SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200)) 
 	EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 	DROP TABLE IF EXISTS edw_temp.policy_current_carrier_auto_vr01_feed_temp1;
-
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)

@@ -16,7 +16,9 @@ BEGIN
     SET NOCOUNT ON
 
 	BEGIN TRY
-    		DECLARE @last_source_extract_ts DATETIME2(7)
+    
+       
+		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
 		DECLARE @rows_affected INT
@@ -30,15 +32,19 @@ BEGIN
 		
 		DROP TABLE IF EXISTS edw_temp.policy_current_carrier_auto_sj01_feed_temp1;
 		
+		declare @isfirstday int = 0
+
+        if(cast(@last_source_extract_ts as date) = '1900-01-01')
+        begin
+            set @isfirstday = 1
+        end
+
         select
             'SJO1' as [RecordCode],
             np.[ContribCompanyAMBestNumber],
             np.PolicyNumber,
             np.InsuranceType,
-			case
-				when cast(@last_source_extract_ts as date) = '1900-01-01' then FORMAT(getdate(),'yyyyMMdd')
-				else format(tad.transaction_effective_dt,'yyyyMMdd')
-			end as ChangeEffectiveDate,
+			np.ChangeEffectiveDate,
 			--TODO: check else part
             case
                 when tad.relationship_to_insured = 'Self' and driver_status = 'Active' then 'A1'
@@ -106,7 +112,7 @@ BEGIN
             @etl_audit_sk as etl_audit_sk
 		into edw_temp.policy_current_carrier_auto_sj01_feed_temp1
         from
-            edw_temp.policy_current_carrier_auto_np01_feed np
+            edw_integration.policy_current_carrier_auto_np01_feed np
             inner join edw_core.tauto_driver tad on np.policy_history_sk = tad.policy_history_sk
             inner join edw_core.tpolicy tp on tp.policy_sk = np.policy_sk
             inner join edw_core.tpolicy_history tph on tp.policy_sk = tph.policy_sk and tph.policy_history_sk = tad.policy_history_sk
@@ -172,7 +178,7 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE(dateadd("dd",-1, cast(getdate() as date)),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(create_ts) FROM edw_integration.policy_current_carrier_auto_np01_feed),@last_source_extract_ts);
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;

@@ -15,8 +15,8 @@ BEGIN
     -- interfering with SELECT statements.
     SET NOCOUNT ON
 
-	BEGIN TRY
-    	DECLARE @last_source_extract_ts DATETIME2(7)
+    BEGIN TRY
+        	DECLARE @last_source_extract_ts DATETIME2(7)
 	DECLARE @etl_audit_sk INT
 	DECLARE @new_last_source_extract_ts DATETIME2(7)
 	DECLARE @rows_affected INT
@@ -29,12 +29,24 @@ BEGIN
 	SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
 	drop table if exists edw_temp.policy_current_carrier_auto_pr01_feed_temp1
+
+	declare @isfirstday int = 0
+    if(cast(@last_source_extract_ts as date) = '1900-01-01')
+    begin
+        set @isfirstday = 1
+    end
+
 	select
 	'PRO1' as [RecordCode],
 	vr.[ContribCompanyAMBestNumber],
 	vr.policyNumber,
 	vr.InsuranceType,
-	format(ph.transaction_effective_dt,'yyyyMMdd') as ChangeEffectiveDate,
+    /*
+	case when (@isfirstday = 1 and cast(ph.transaction_effective_dt as date)<= cast(getdate() as date)) then FORMAT(getdate(),'yyyyMMdd')
+	else
+	format(ph.transaction_effective_dt,'yyyyMMdd')
+	end */
+    vr.ChangeEffectiveDate as ChangeEffectiveDate,
 	LEFT(av.vehicle_vin,25) as [VIN],
 	av.vehicle_model_year as VehicleModelYear,
 	LEFT(av.vehicle_make,20) as VehicleMake,
@@ -398,7 +410,7 @@ BEGIN
 	
 	SET @rows_affected=@@ROWCOUNT;
 
-	SET @new_last_source_extract_ts=COALESCE(dateadd("dd",-1, cast(getdate() as date)),@last_source_extract_ts);
+	SET @new_last_source_extract_ts=COALESCE((SELECT MAX(create_ts) FROM edw_integration.policy_current_carrier_auto_vr01_feed),@last_source_extract_ts);
 		
 	-- Update control table
 	EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
@@ -406,9 +418,8 @@ BEGIN
 	-- Update audit table
 	SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200)) 
 	EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
-	DROP TABLE IF EXISTS edw_temp.policy_current_carrier_auto_pr01_feed_temp1;	
-        
-	END TRY
+	DROP TABLE IF EXISTS edw_temp.policy_current_carrier_auto_pr01_feed_temp1;
+    END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
 		SET @error_message = 'Error Number:' + ISNULL(CAST(ERROR_NUMBER() AS NVARCHAR(100)),'') + 

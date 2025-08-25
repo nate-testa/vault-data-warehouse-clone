@@ -32,6 +32,7 @@ BEGIN
         DROP TABLE IF EXISTS edw_temp.policy_current_carrier_auto_np01_feed_temp2;
 		
         declare @isfirstday int = 0
+		declare @reporting_period_begin_dt date,@reporting_period_end_dt date
 
         if(cast(@last_source_extract_ts as date) = '1900-01-01')
         begin
@@ -47,7 +48,7 @@ BEGIN
             inner join edw_core.tpolicy_history tph on tp.policy_sk = tph.policy_sk
             where tp.product_cd = 'AU'
             and tp.policy_status = 'Active'
-            and cast(tph.transaction_ts as date) < = cast(dateadd(dd,-1,getdate()) as date)
+            and cast(tph.transaction_ts as date) < = cast(dateadd(dd,-1,getdate()) as date)			
         end
         else
         begin
@@ -71,10 +72,12 @@ BEGIN
 		case when CHARINDEX('-', tp.policy_no) >0 then 
 			LEFT(tp.policy_no, CHARINDEX('-', tp.policy_no) - 1)
 		else tp.policy_no end as [PolicyNumber],
-		'PA' AS [InsuranceType],
-		case when cast(@last_source_extract_ts as date) = '1900-01-01' then FORMAT(getdate(),'yyyyMMdd')
-		else
-			FORMAT(tph.transaction_ts,'yyyyMMdd')
+		'PA' AS [InsuranceType],		
+		case
+			when (@isfirstday = 1 and cast(tph.effective_dt as date)<= cast(getdate() as date)) then FORMAT(getdate(),'yyyyMMdd')
+			when @isfirstday = 1 then FORMAT(tph.effective_dt,'yyyyMMdd')
+			else
+				FORMAT(tph.transaction_effective_dt,'yyyyMMdd')
 		end as [ChangeEffectiveDate],
 		CASE
 		WHEN tp.uw_company_nm = 'Vault Reciprocal Exchange' then 'VRE'
@@ -123,7 +126,20 @@ BEGIN
             edw_temp.policy_current_carrier_auto_np01_feed_temp1 t
             inner join edw_core.tpolicy_history tph on t.policy_history_sk = tph.policy_history_sk
             inner join edw_core.tpolicy tp on tp.policy_sk = tph.policy_sk
-
+				
+		SELECT
+		@reporting_period_begin_dt = case 
+		 															when @isfirstday = 1 then min(transaction_ts)
+																	else
+																		(
+																			select DATEADD(day, 1, MAX(reporting_period_end_dt))
+																			FROM
+																				edw_integration.policy_current_carrier_auto_np01_feed
+																		)
+																	end,
+		@reporting_period_end_dt =  max(transaction_ts)
+		from
+			edw_temp.policy_current_carrier_auto_np01_feed_temp2
 		
 		-- Start Insert process
 		INSERT INTO edw_integration.policy_current_carrier_auto_np01_feed
@@ -134,7 +150,7 @@ BEGIN
             PolicyHolderMailAddressStreetName,policyHolderMailAddressAptNum,policyHolderMailAddressCity,policyHolderMailAddressState,
             policyHolderMailAddressZip,policyHolderMailAddressZipPlus4,policyHolderTelephoneAreaCode,policyHolderTelephoneNumber,
             policyHolderTelephoneExtension,Reserved2,Reserved3,AgentIdentifier,PolicyState,
-            policy_sk,policy_no,policy_history_sk,transaction_seq_no,transaction_ts,
+            policy_sk,policy_no,policy_history_sk,transaction_seq_no,transaction_ts,reporting_period_begin_dt,reporting_period_end_dt,
             create_ts,update_ts,etl_audit_sk
         )			
 
@@ -169,14 +185,15 @@ BEGIN
 		REPLACE(REPLACE(REPLACE(ISNULL(AgentIdentifier, ' '), CHAR(9), ' '), CHAR(13), ' '), CHAR(10), ' ')  as AgentIdentifier,
 		REPLACE(REPLACE(REPLACE(ISNULL(PolicyState, ' '), CHAR(9), ' '), CHAR(13), ' '), CHAR(10), ' ') PolicyState,
         policy_sk,policy_no,policy_history_sk,transaction_seq_no,transaction_ts,
+		@reporting_period_begin_dt,@reporting_period_end_dt,
         create_ts,update_ts,etl_audit_sk
 		FROM 
 			edw_temp.policy_current_carrier_auto_np01_feed_temp2
 		
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE(dateadd("dd",-1, cast(getdate() as date)),@last_source_extract_ts);
-		
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(transaction_ts) FROM edw_temp.policy_current_carrier_auto_np01_feed_temp2),@last_source_extract_ts);
+
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		
