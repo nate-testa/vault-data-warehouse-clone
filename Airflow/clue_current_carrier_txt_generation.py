@@ -17,13 +17,10 @@ GPG_HOME_PATH   = HOME_PATH + "/.gnupg"
 TXT_FOLDER_PATH = HOME_PATH + "/airflow/tmp_files/clue"
 PGP_PUBKEY_FILE = HOME_PATH + "/airflow/key_files/CLUE_pubkey.asc"
 
+# WHERE_CLAUSE = "WHERE CAST(create_ts AS DATE) = CAST(GETDATE() AS DATE)"
+WHERE_CLAUSE = " WHERE policy_no in ('AU100103987-04','AU100221825-02') "
 QRY_CLUE = f"""
-    WITH filter_table AS (
-        SELECT distinct policy_no
-        FROM edw_integration.policy_current_carrier_auto_np01_feed
-        WHERE CAST(create_ts AS DATE) = CAST(GETDATE() AS DATE)
-    )
-    ,np AS (
+    WITH np AS (
         SELECT 
             RecordCode
             ,policy_no
@@ -65,7 +62,7 @@ QRY_CLUE = f"""
                 + PolicyState
             ) AS FinalData
         FROM edw_integration.policy_current_carrier_auto_np01_feed
-        WHERE policy_no IN (select policy_no from filter_table)
+        {WHERE_CLAUSE}
     )
     ,sj as (
         SELECT 
@@ -115,7 +112,7 @@ QRY_CLUE = f"""
                 + Filler1
             ) AS FinalData
         FROM edw_integration.policy_current_carrier_auto_sj01_feed
-        WHERE policy_no IN (select policy_no from filter_table)
+        WHERE policy_history_sk IN (select distinct policy_history_sk from np)
     )
     ,pr as (
         SELECT 
@@ -124,6 +121,7 @@ QRY_CLUE = f"""
             ,policy_history_sk
             ,null as auto_driver_sk
             ,auto_vehicle_sk
+            ,auto_vehicle_coverage_sk
             ,create_ts
             ,(
                 RecordCode
@@ -251,7 +249,7 @@ QRY_CLUE = f"""
                 + Filler2
             ) AS FinalData
         FROM edw_integration.policy_current_carrier_auto_pr01_feed
-        WHERE policy_no IN (select policy_no from filter_table)
+        WHERE policy_history_sk IN (select policy_history_sk from sj)
     )
     ,vr as (
         SELECT
@@ -292,8 +290,13 @@ QRY_CLUE = f"""
                 + CellphoneNumber
                 + Filler1
             ) AS FinalData
-        FROM edw_integration.policy_current_carrier_auto_vr01_feed
-        WHERE policy_no IN (select policy_no from filter_table)
+        FROM edw_integration.policy_current_carrier_auto_vr01_feed vr
+        WHERE EXISTS (
+            SELECT 1 FROM pr
+            WHERE vr.policy_history_sk = pr.policy_history_sk
+            AND vr.auto_vehicle_sk = pr.auto_vehicle_sk
+            AND vr.auto_vehicle_coverage_sk = pr.auto_vehicle_coverage_sk
+        )
     )
     ,final_table AS (
         SELECT policy_no, policy_history_sk, auto_vehicle_sk, auto_driver_sk, RecordCode, CAST(FinalData AS varchar(215)) AS FinalData FROM np UNION ALL
@@ -305,11 +308,11 @@ QRY_CLUE = f"""
     ORDER BY policy_no, policy_history_sk, auto_vehicle_sk, auto_driver_sk, RecordCode
 """
 
-QRY_CLUE_START_END_DATE = """
+QRY_CLUE_START_END_DATE = f"""
     SELECT TOP 1  
         CONVERT(VARCHAR(8), reporting_period_begin_dt, 112) + CONVERT(VARCHAR(8), reporting_period_end_dt, 112) AS start_end_date
     FROM edw_integration.policy_current_carrier_auto_np01_feed
-    WHERE CAST(create_ts AS DATE) = CAST(GETDATE() AS DATE)
+    {WHERE_CLAUSE}
 """
 
 def get_start_end_date():
