@@ -17,8 +17,7 @@ GPG_HOME_PATH   = HOME_PATH + "/.gnupg"
 TXT_FOLDER_PATH = HOME_PATH + "/airflow/tmp_files/clue"
 PGP_PUBKEY_FILE = HOME_PATH + "/airflow/key_files/CLUE_pubkey.asc"
 
-# WHERE_CLAUSE = "WHERE CAST(create_ts AS DATE) = CAST(GETDATE() AS DATE)"
-WHERE_CLAUSE = " WHERE policy_no in ('AU100103987-04','AU100221825-02') "
+WHERE_CLAUSE = " WHERE CAST(create_ts AS DATE) = CAST(GETDATE() AS DATE)"
 QRY_CLUE = f"""
     WITH np AS (
         SELECT 
