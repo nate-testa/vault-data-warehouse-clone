@@ -6,6 +6,7 @@
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
 -- 08/07/25					Dinesh Bobbili			    1. Created this procedure
+-- 08/28/25					Dinesh Bobbili			    2. Added logic to remove duplicate vin
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_honk_vehicle_feed]
 AS
@@ -51,7 +52,8 @@ BEGIN
 		avc.extended_towing_and_labor_in,
 		avc.vehicle_deleted_in,
 		collision_deductible,
-		otc_deductible
+		otc_deductible,
+		row_number() over(partition by pol.policy_no, av.vehicle_vin order by av.vehicle_vin_invalid_in) as rn
 		from edw_core.tdaily_inforce_policy dip 
 		inner join edw_core.tpolicy_history ph
 		on ph.policy_history_sk = dip.policy_history_sk
@@ -130,6 +132,7 @@ BEGIN
 		END AS coverage_soft_services  
 		into edw_temp.policy_honk_vehicle_feed_temp1
 		from temp_inforce_policy ip
+		where rn = 1;
 
 		TRUNCATE TABLE edw_integration.policy_honk_vehicle_feed;
 		-- Start Insert process
