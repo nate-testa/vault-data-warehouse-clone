@@ -16,7 +16,7 @@ BEGIN
     SET NOCOUNT ON
 
 	BEGIN TRY
-		DECLARE @last_source_extract_ts DATETIME2(7)
+			DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
 		DECLARE @rows_affected INT
@@ -141,7 +141,6 @@ BEGIN
 		from
 			edw_temp.policy_current_carrier_auto_np01_feed_temp2
 		
-		-- Start Insert process
 		INSERT INTO edw_integration.policy_current_carrier_auto_np01_feed
         (
             RecordCode,ContribCompanyAMBestNumber,PolicyNumber,InsuranceType,ChangeEffectiveDate,ContribCompanyName,
@@ -188,7 +187,7 @@ BEGIN
 		@reporting_period_begin_dt,@reporting_period_end_dt,
         create_ts,update_ts,etl_audit_sk
 		FROM 
-			edw_temp.policy_current_carrier_auto_np01_feed_temp2
+			edw_temp.policy_current_carrier_auto_np01_feed_temp2		
 		
 		SET @rows_affected=@@ROWCOUNT;
 
@@ -199,7 +198,8 @@ BEGIN
 		
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
-		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;		
+		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
+		
 		
 		DROP TABLE IF EXISTS edw_temp.policy_current_carrier_auto_np01_feed_temp1;
         DROP TABLE IF EXISTS edw_temp.policy_current_carrier_auto_np01_feed_temp2;

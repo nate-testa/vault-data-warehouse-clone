@@ -16,7 +16,7 @@ BEGIN
     SET NOCOUNT ON
 
     BEGIN TRY
-        	DECLARE @last_source_extract_ts DATETIME2(7)
+	DECLARE @last_source_extract_ts DATETIME2(7)
 	DECLARE @etl_audit_sk INT
 	DECLARE @new_last_source_extract_ts DATETIME2(7)
 	DECLARE @rows_affected INT
@@ -30,23 +30,13 @@ BEGIN
 
 	drop table if exists edw_temp.policy_current_carrier_auto_pr01_feed_temp1
 
-	declare @isfirstday int = 0
-    if(cast(@last_source_extract_ts as date) = '1900-01-01')
-    begin
-        set @isfirstday = 1
-    end
 
 	select
 	'PRO1' as [RecordCode],
-	vr.[ContribCompanyAMBestNumber],
-	vr.policyNumber,
-	vr.InsuranceType,
-    /*
-	case when (@isfirstday = 1 and cast(ph.transaction_effective_dt as date)<= cast(getdate() as date)) then FORMAT(getdate(),'yyyyMMdd')
-	else
-	format(ph.transaction_effective_dt,'yyyyMMdd')
-	end */
-    vr.ChangeEffectiveDate as ChangeEffectiveDate,
+	np.[ContribCompanyAMBestNumber],
+	np.policyNumber,
+	np.InsuranceType,
+	np.ChangeEffectiveDate,
 	LEFT(av.vehicle_vin,25) as [VIN],
 	av.vehicle_model_year as VehicleModelYear,
 	LEFT(av.vehicle_make,20) as VehicleMake,
@@ -226,29 +216,31 @@ BEGIN
 	'' as OtherYear,
 	'' as Filler2,
 
-	vr.policy_sk,
-	vr.policy_no,
-	vr.policy_history_sk,
+	np.policy_sk,
+	np.policy_no,
+	np.policy_history_sk,
 	avc.auto_vehicle_coverage_sk,
 	avc.auto_vehicle_sk,
 	av.vehicle_no,
 	apc.auto_policy_coverage_sk,
-	ph.transaction_seq_no,
-	ph.transaction_ts,
+	np.transaction_seq_no,
+	np.transaction_ts,
+	np.create_ts as np_create_ts,
 	getdate() as create_ts,
 	getdate() as update_ts,
-	null as etl_audit_sk
+	@etl_audit_sk as etl_audit_sk
 	into edw_temp.policy_current_carrier_auto_pr01_feed_temp1
 	from
-	edw_integration.policy_current_carrier_auto_vr01_feed vr
-	inner join edw_core.tpolicy p on p.policy_sk = vr.policy_sk
-	inner join edw_core.tauto_vehicle av on av.auto_vehicle_sk = vr.auto_vehicle_sk
-	inner join edw_core.tauto_vehicle_coverage avc on av.auto_vehicle_sk = avc.auto_vehicle_sk and avc.policy_history_sk = vr.policy_history_sk
-	inner join edw_core.tpolicy_history ph on p.policy_sk = ph.policy_sk and avc.policy_history_sk = ph.policy_history_sk
+	edw_integration.policy_current_carrier_auto_np01_feed np
+	inner join edw_core.tpolicy p on p.policy_sk = np.policy_sk
+	inner join edw_core.tauto_vehicle av on p.policy_no = av.policy_no and p.effective_dt = av.effective_dt
+	inner join edw_core.tauto_vehicle_coverage avc on av.auto_vehicle_sk = avc.auto_vehicle_sk and avc.policy_history_sk = np.policy_history_sk
+	--inner join edw_core.tpolicy_history ph on p.policy_sk = ph.policy_sk and avc.policy_history_sk = ph.policy_history_sk
 	--left join edw_core.tauto_garage_location agl on agl.policy_no = ph.policy_no and agl.effective_dt = ph.effective_dt	and agl.transaction_seq_no = ph.transaction_seq_no and ag
-	left join edw_core.tauto_policy_coverage apc on apc.policy_history_sk = ph.policy_history_sk and avc.policy_history_sk = ph.policy_history_sk
+	left join edw_core.tauto_policy_coverage apc on apc.policy_history_sk = np.policy_history_sk -- and avc.policy_history_sk = ph.policy_history_sk
 	where
 	avc.vehicle_deleted_in = 'No'
+	and cast(np.create_ts as date) >@last_source_extract_ts
 	
 	insert into edw_integration.policy_current_carrier_auto_pr01_feed
 	(
@@ -268,7 +260,7 @@ BEGIN
 	Deductible14Amount,Deductible15Perc,Deductible15Amount,FormNumber,OtherSerialNumber,OtherMake,OtherModel,OtherYear,Filler2,
 	policy_sk,policy_no,policy_history_sk,auto_vehicle_coverage_sk,auto_vehicle_sk,vehicle_no,auto_policy_coverage_sk,
 	transaction_seq_no,transaction_ts,create_ts,update_ts,etl_audit_sk
-	)
+	)	
 	select
 	REPLACE(REPLACE(REPLACE(ISNULL(RecordCode ,''), CHAR(9), ' '), CHAR(13), ' '), CHAR(10), ' ') as RecordCode,
 	REPLACE(REPLACE(REPLACE(ISNULL(ContribCompanyAMBestNumber ,''), CHAR(9), ' '), CHAR(13), ' '), CHAR(10), ' ') as ContribCompanyAMBestNumber,
@@ -404,13 +396,13 @@ BEGIN
 	transaction_ts,
 	create_ts,
 	update_ts,
-	null etl_audit_sk
+	etl_audit_sk
 	from
 	edw_temp.policy_current_carrier_auto_pr01_feed_temp1
 	
 	SET @rows_affected=@@ROWCOUNT;
 
-	SET @new_last_source_extract_ts=COALESCE((SELECT MAX(create_ts) FROM edw_integration.policy_current_carrier_auto_vr01_feed),@last_source_extract_ts);
+	SET @new_last_source_extract_ts=COALESCE((SELECT MAX(np_create_ts) FROM edw_temp.policy_current_carrier_auto_pr01_feed_temp1),@last_source_extract_ts);
 		
 	-- Update control table
 	EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
@@ -419,6 +411,7 @@ BEGIN
 	SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200)) 
 	EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 	DROP TABLE IF EXISTS edw_temp.policy_current_carrier_auto_pr01_feed_temp1;
+	
     END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
