@@ -6,6 +6,7 @@
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
 -- 08/07/25					Dinesh Bobbili			    1. Created this procedure
+-- 08/27/25					Dinesh Bobbili			    2. logic to add leading zeros to vin if length is less than 15
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_honk_vehicle_feed]
 AS
@@ -42,7 +43,7 @@ BEGIN
 			ELSE 0
 		END as otc_deductible_1,
 		pol.policy_no as policy_number,
-		av.vehicle_vin as vin,
+		RIGHT(REPLICATE('0', 15) + av.vehicle_vin, 15) as vin,
 		av.vehicle_make,
 		av.vehicle_model,
 		av.vehicle_model_year as vehicle_year,
