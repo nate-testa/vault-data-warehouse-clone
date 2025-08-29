@@ -29,6 +29,7 @@
 --11/25/2024	Sandeep Gundreddy				19. Added logic to load item_sk and coverage_sk for Marine Boat & Yacht
 -- 06/04/2025	Alberto Almario					20. Added new column user_sk
 -- 07/10/2025	Dinesh Bobbili					21. Added IssuedByUserId in the filter
+-- 08/29/2025	Dinesh Bobbili					22. Added ncrb_premium_amt, ncrb_annual_premium_amt
 -- ====================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -99,6 +100,8 @@ BEGIN
 			,tmp1.ReviewedById
 			,tmp1.CreatedById
 			,tmp1.IssuedByUserId
+			,COALESCE(acctrcp.StatePremiumDeltaProRated,acctrcp.StatePremium) as ncrb_premium_amt
+			,COALESCE(acctrcp.StatePremiumDelta,acctrcp.StatePremium) as ncrb_annual_premium_amt
 		INTO edw_temp.tpolicy_transaction_temp2  
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
@@ -135,6 +138,8 @@ BEGIN
 			,tmp1.ReviewedById
 			,tmp1.CreatedById
 			,tmp1.IssuedByUserId
+			,0 as ncrb_premium_amt
+			,0 as ncrb_annual_premium_amt
 		FROM edw_temp.tpolicy_transaction_temp1 tmp1 
 		inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = tmp1.Id 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
@@ -173,7 +178,9 @@ BEGIN
            ,create_ts
            ,update_ts
            ,etl_audit_sk 
-		   ,collection_class_type_sk)
+		   ,collection_class_type_sk
+		   ,ncrb_premium_amt
+		   ,ncrb_annual_premium_amt)
 		SELECT
 			pol.policy_sk,polh.policy_history_sk ,dt1.date_sk, dt2.date_sk, dt3.date_sk, Source.PolicyChangeNumber, 
 			br.broker_sk, cust.customer_sk, source.wp, Source.comm, source.ap, source.tfs, source.wp - source.tfs, 
@@ -214,6 +221,8 @@ BEGIN
 			      when cc.collection_class_type_sk is not null then cc.collection_class_type_sk
 				  else 0
 			end collection_class_type_sk 
+			,ncrb_premium_amt
+		    ,ncrb_annual_premium_amt
 		FROM
 			edw_temp.tpolicy_transaction_temp2 source
 		LEFT JOIN edw_core.tdate dt1 on dt1.actual_dt = cast(source.EffectiveDate as date)
