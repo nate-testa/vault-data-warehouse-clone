@@ -1,9 +1,3 @@
-/****** Object:  StoredProcedure [edw_core].[sp_tauto_vehicle_coverage]    Script Date: 09-08-2024 21:41:16 ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 -- ================================================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2023-09-11
@@ -24,6 +18,7 @@ GO
 -- 12/10/24     Alberto Almario                11. Add column rater_pip_discount
 -- 04/11/25     Alberto Almario                12. Add 40 new columns
 -- 04/29/25     Alberto Almario                13. Add agreed_value_coverage_in and flood_deductible
+-- 08/29/25     Yunus Mohammed           14. Added logic to use IsDeletedOnRenewal for vehicle_deleted_in
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_vehicle_coverage]
@@ -265,7 +260,8 @@ BEGIN
             [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
             [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
             [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-            [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal], [RaterPIPDiscount],
+            [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, vehicle_deleted_on_renewal_in,
+            [NewlyPurchasedVehicle], [NewlyPurchasedVehicleDate], [NewlyPurchasedVehicleFinal], [RaterPIPDiscount],
             [AgreedValueCoverage],[FloodDeductible]
         INTO [edw_temp].[tauto_vehicle_coverage_temp3]
         FROM
@@ -275,6 +271,7 @@ BEGIN
                     acct.ExpirationDate as expiration_dt, acct.IssuedDate as transaction_dt, acct.PolicyChangeNumber as transaction_seq_no,
                     ph.policy_history_sk, av.auto_vehicle_sk, 0 auto_garage_location_sk, 
                     acctvo.IsdeletedOnPolicyChange as vehicle_deleted_in,
+                    acctvo.IsDeletedOnRenewal as vehicle_deleted_on_renewal_in,
                     acctvof.[Field],
                     CASE
                         WHEN acctvof.Field = 'GaragingLocationId' THEN CAST(acctvof.ReferenceObjectId AS nvarchar(3800))
@@ -708,7 +705,7 @@ BEGIN
             getdate() AS create_ts,
             getdate() AS update_ts,
             @etl_audit_sk AS etl_audit_sk,
-            CASE WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in,
+            CASE WHEN t1.vehicle_deleted_in = 1  OR t1.vehicle_deleted_on_renewal_in = 1 THEN 'Yes' ELSE 'No' END as vehicle_deleted_in,
             t1.vehicle_unique_id,
             t1.[VendorReportedWholesaleAmount] as carfax_wholesale_value_amt
             ,t1.[BasicModelName] as basic_model_nm
