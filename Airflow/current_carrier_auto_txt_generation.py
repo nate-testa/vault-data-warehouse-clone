@@ -14,11 +14,11 @@ ENVIRONMENT = Variable.get("environment")
 CONN_STR = MsSqlHook(mssql_conn_id="Vault_EDW")
 HOME_PATH = os.path.expanduser('~')
 GPG_HOME_PATH   = HOME_PATH + "/.gnupg"
-TXT_FOLDER_PATH = HOME_PATH + "/airflow/tmp_files/clue"
+TXT_FOLDER_PATH = HOME_PATH + "/airflow/tmp_files/current_carrier"
 PGP_PUBKEY_FILE = HOME_PATH + "/airflow/key_files/CLUE_pubkey.asc"
 
 WHERE_CLAUSE = " WHERE CAST(create_ts AS DATE) = CAST(GETDATE() AS DATE)"
-QRY_CLUE = f"""
+QRY_CURRENT_CARRIER_AUTO = f"""
     WITH np AS (
         SELECT 
             RecordCode
@@ -307,7 +307,7 @@ QRY_CLUE = f"""
     ORDER BY policy_no, policy_history_sk, auto_vehicle_sk, auto_driver_sk, RecordCode
 """
 
-QRY_CLUE_START_END_DATE = f"""
+QRY_CURRENT_CARRIER_AUTO_START_END_DATE = f"""
     SELECT TOP 1  
         CONVERT(VARCHAR(8), reporting_period_begin_dt, 112) + CONVERT(VARCHAR(8), reporting_period_end_dt, 112) AS start_end_date
     FROM edw_integration.policy_current_carrier_auto_np01_feed
@@ -315,7 +315,7 @@ QRY_CLUE_START_END_DATE = f"""
 """
 
 def get_start_end_date():
-    df = CONN_STR.get_pandas_df(QRY_CLUE_START_END_DATE)
+    df = CONN_STR.get_pandas_df(QRY_CURRENT_CARRIER_AUTO_START_END_DATE)
     start_end_date = df['start_end_date'].iloc[0]
     return start_end_date
 
@@ -379,9 +379,9 @@ def PGP_encrypt_file(file_to_encrypt, recipient_public_key):
 
 def generate_Current_Carrier_txt_file_and_encrypt(**kwargs):
 
-    print(f"**** Start file generation for CLUE Current_Carrier Data")
-    
-    kwargs['ti'].xcom_push(key='clue_Current_Carrier_data_present', value=True)
+    print(f"**** Start file generation for Current Carrier auto Data")
+
+    kwargs['ti'].xcom_push(key='current_Carrier_auto_data_present', value=True)
 
     FILE_DATE = datetime.now().strftime('%Y%m%d%H%M%S')
     if ENVIRONMENT == 'PRODUCTION':
@@ -389,9 +389,9 @@ def generate_Current_Carrier_txt_file_and_encrypt(**kwargs):
     else:
         TXT_FILE_NAME = f'cc_history_test_vaulthd1_{FILE_DATE}.txt'
 
-    df = CONN_STR.get_pandas_df(QRY_CLUE)
+    df = CONN_STR.get_pandas_df(QRY_CURRENT_CARRIER_AUTO)
     if df.empty:
-        kwargs['ti'].xcom_push(key='clue_Current_Carrier_data_present', value=False)
+        kwargs['ti'].xcom_push(key='current_Carrier_auto_data_present', value=False)
         print("**** !!!There is no data to send. File generation will not proceed.!!!")
         return
 
@@ -432,7 +432,7 @@ def generate_Current_Carrier_txt_file_and_encrypt(**kwargs):
     # ******************
     # ****Encryption****
     # ******************
-    print(f"**** CLUE Current_Carrier Data, written to {TXT_FILE_PATH}")
+    print(f"**** Current Carrier Auto Data, written to {TXT_FILE_PATH}")
     
     # Encrypt file
     print(f"**** Start file encryption")
@@ -440,14 +440,14 @@ def generate_Current_Carrier_txt_file_and_encrypt(**kwargs):
     print(f"**** ENd file encryption")
 
     # set xcom parameters
-    file_local_clue_file_name = TXT_FILE_PATH + '.pgp'
-    file_remote_clue_file_name = f'/vaulthd1/{TXT_FILE_NAME}.pgp'
+    file_local_current_carrier_auto_file_name = TXT_FILE_PATH + '.pgp'
+    file_remote_current_carrier_auto_file_name = f'/vaulthd1/{TXT_FILE_NAME}.pgp'
 
-    kwargs['ti'].xcom_push(key='file_local_clue_Current_Carrier_file_name', value=file_local_clue_file_name)
-    kwargs['ti'].xcom_push(key='file_remote_clue_Current_Carrier_file_name', value=file_remote_clue_file_name)
+    kwargs['ti'].xcom_push(key='file_local_current_carrier_auto_file_name', value=file_local_current_carrier_auto_file_name)
+    kwargs['ti'].xcom_push(key='file_remote_current_carrier_auto_file_name', value=file_remote_current_carrier_auto_file_name)
 
 
-class SFTPUploadClueCurrent_CarrierFileOperator(BaseOperator):
+class SFTPUploadCurrentCarrierAutoFileOperator(BaseOperator):
 
     def __init__(self, sftp_conn_id, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -456,13 +456,13 @@ class SFTPUploadClueCurrent_CarrierFileOperator(BaseOperator):
     def execute(self, context):
         if ENVIRONMENT == 'PRODUCTION':
             ti = context.get('ti')
-            clue_data_present = ti.xcom_pull(task_ids='CLUE_Current_Carrier_group.generate_clue_Current_Carrier_txt_file', key='clue_Current_Carrier_data_present') if ti else None
+            current_carrier_auto_data_present = ti.xcom_pull(task_ids='current_carrier_auto_group.generate_current_carrier_auto_txt_file', key='current_Carrier_auto_data_present') if ti else None
 
-            if clue_data_present == True:
+            if current_carrier_auto_data_present == True:
                 ti = context.get('ti')
-                local_filepath = ti.xcom_pull(task_ids='CLUE_Current_Carrier_group.generate_clue_Current_Carrier_txt_file', key='file_local_clue_Current_Carrier_file_name') if ti else None
-                remote_filepath = ti.xcom_pull(task_ids='CLUE_Current_Carrier_group.generate_clue_Current_Carrier_txt_file', key='file_remote_clue_Current_Carrier_file_name') if ti else None
-                
+                local_filepath = ti.xcom_pull(task_ids='current_carrier_auto_group.generate_current_carrier_auto_txt_file', key='file_local_current_carrier_auto_file_name') if ti else None
+                remote_filepath = ti.xcom_pull(task_ids='current_carrier_auto_group.generate_current_carrier_auto_txt_file', key='file_remote_current_carrier_auto_file_name') if ti else None
+
                 hook = SFTPHook(ftp_conn_id=self.sftp_conn_id)
                 self.log.info(f"**** Starting to transfer {local_filepath} to {remote_filepath}")
                 if local_filepath is None or remote_filepath is None:
@@ -472,5 +472,5 @@ class SFTPUploadClueCurrent_CarrierFileOperator(BaseOperator):
             else:
                 print("**** !!!There is no data to send. no files to transfer into SFTP!!!")
         else:
-            print(f"**** Environment: [{ENVIRONMENT}] is not authorized to send Clue files.")
+            print(f"**** Environment: [{ENVIRONMENT}] is not authorized to send Current Carrier Auto files.")
 

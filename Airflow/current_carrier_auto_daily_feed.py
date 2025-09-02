@@ -9,14 +9,14 @@ from airflow.operators.email import EmailOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator, BranchPythonOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format
-from clue_current_carrier_txt_generation import generate_Current_Carrier_txt_file_and_encrypt, SFTPUploadClueCurrent_CarrierFileOperator
+from dags.current_carrier_auto_txt_generation import generate_Current_Carrier_txt_file_and_encrypt, SFTPUploadCurrentCarrierAutoFileOperator
 
 to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
 cc_email = ""
 
 HOME_PATH = os.path.expanduser('~')
-FOLDER_PATH = HOME_PATH + "/airflow/tmp_files/clue"
+FOLDER_PATH = HOME_PATH + "/airflow/tmp_files/current_carrier"
 
 def on_failure_callback(context):
 
@@ -70,14 +70,14 @@ args = {
 }
 
 with DAG(
-    dag_id='vault_CLUE_current_carrier_daily_feed',
+    dag_id='vault_current_carrier_auto_daily_feed',
     catchup=False,
     max_active_runs=1,
     default_args=args,
     start_date=pendulum.datetime(2024, 3, 29, tz="America/New_York"),
     # schedule_interval='0 4 * * *', # At 04:00 every day
     schedule_interval=None,
-    tags=["CLUE current carrier dag", "vault"],
+    tags=["current carrier auto dag", "vault"],
 ) as dag:
     
 
@@ -98,15 +98,15 @@ with DAG(
         task_id='continue_task',
     )
 
-    clue_current_carrier_executed_today = BranchPythonOperator(
-        task_id='clue_current_carrier_executed_today',
+    current_carrier_auto_executed_today = BranchPythonOperator(
+        task_id='current_carrier_auto_executed_today',
         python_callable=current_carrier_executed_today,
         dag=dag,
     )
 
-    with TaskGroup("CLUE_Current_Carrier_group") as CLUE_Current_Carrier_group:
+    with TaskGroup("current_carrier_auto_group") as current_carrier_auto_group:
 
-        CLUE_current_carrier_group_items = [
+        current_carrier_auto_group_items = [
             'sp_policy_current_carrier_auto_np01_feed',
             'sp_policy_current_carrier_auto_sj01_feed',
             'sp_policy_current_carrier_auto_pr01_feed',
@@ -114,7 +114,7 @@ with DAG(
         ]
         
         operators = []
-        for item in CLUE_current_carrier_group_items:
+        for item in current_carrier_auto_group_items:
             operator = MsSqlOperator(
                 task_id=item,
                 mssql_conn_id='Vault_EDW',
@@ -124,35 +124,35 @@ with DAG(
             )
             operators.append(operator) 
 
-        generate_clue_current_carrier_txt_file = PythonOperator(
-            task_id='generate_clue_current_carrier_txt_file',
+        generate_current_carrier_auto_txt_file = PythonOperator(
+            task_id='generate_current_carrier_auto_txt_file',
             python_callable=generate_Current_Carrier_txt_file_and_encrypt,
             dag=dag,
         )
 
-        upload_clue_current_carrier_txt_to_sftp = SFTPUploadClueCurrent_CarrierFileOperator(
-            task_id='upload_clue_current_carrier_txt_to_sftp',
+        upload_current_carrier_auto_txt_to_sftp = SFTPUploadCurrentCarrierAutoFileOperator(
+            task_id='upload_current_carrier_auto_txt_to_sftp',
             sftp_conn_id='Vault_CLUE_sftp',
             dag=dag,
         )
 
-        send_clue_current_carrier_email = EmailOperator(
-            task_id='send_clue_current_carrier_email',
+        send_current_carrier_auto_email = EmailOperator(
+            task_id='send_current_carrier_auto_email',
             to=to_email,
-            subject='Airflow - CLUE current_carrier process completed successfully',
-            html_content=get_sp_success_data_HTML(CLUE_current_carrier_group_items, 'The Clue current_carrier process finished successfully.'),
+            subject='Airflow - current_carrier_auto process completed successfully',
+            html_content=get_sp_success_data_HTML(current_carrier_auto_group_items, 'The current_carrier_auto process finished successfully.'),
         )
 
         for i in range(len(operators) - 1):
             operators[i].set_downstream(operators[i + 1])
 
-        operators[-1].set_downstream(generate_clue_current_carrier_txt_file)
-        generate_clue_current_carrier_txt_file.set_downstream(upload_clue_current_carrier_txt_to_sftp)
-        upload_clue_current_carrier_txt_to_sftp.set_downstream(send_clue_current_carrier_email)
+        operators[-1].set_downstream(generate_current_carrier_auto_txt_file)
+        generate_current_carrier_auto_txt_file.set_downstream(upload_current_carrier_auto_txt_to_sftp)
+        upload_current_carrier_auto_txt_to_sftp.set_downstream(send_current_carrier_auto_email)
 
 
-start.set_downstream(clue_current_carrier_executed_today)
-clue_current_carrier_executed_today.set_downstream([continue_task, skip_task])
+start.set_downstream(current_carrier_auto_executed_today)
+current_carrier_auto_executed_today.set_downstream([continue_task, skip_task])
 skip_task.set_downstream(end)
-continue_task.set_downstream(CLUE_Current_Carrier_group)
-CLUE_Current_Carrier_group.set_downstream(end)
+continue_task.set_downstream(current_carrier_auto_group)
+current_carrier_auto_group.set_downstream(end)
