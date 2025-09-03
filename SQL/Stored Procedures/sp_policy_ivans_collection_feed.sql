@@ -422,7 +422,7 @@ BEGIN
             END AS [061_PaidInFullInd]
 		,tprc.national_producer_no as [062_NIPRid]
 		,cl.address_line_1 AS [063_Addr1]
-		,cl.address_line_2 AS [064_City]
+		,cl.city_nm AS [064_City]
 		,cl.state_cd AS [065_StateProvCd]
 		,cl.zip_cd AS [066_PostalCode]
 		,cl.latitude AS [067_Latitude]
