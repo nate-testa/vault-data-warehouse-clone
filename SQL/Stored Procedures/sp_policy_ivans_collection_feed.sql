@@ -5,6 +5,7 @@
 -- Change date			|Author										|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 05/06/25				Yunus Mohammed				1. Created this procedure
+-- 09/02/25				Alberto Almario				2. Add new columns Addr1_063,City_064,StateProvCd_065,PostalCode_066,Latitude_067,Longitude_068,County_069,Country_070
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_collection_feed]
@@ -419,7 +420,15 @@ BEGIN
                 WHEN ba.payment_plan is null OR ba.payment_method = '' THEN ''
                 ELSE 'N'
             END AS [061_PaidInFullInd]
-		,tprc.national_producer_no as [062_NIPRid]			
+		,tprc.national_producer_no as [062_NIPRid]
+		,cl.address_line_1 AS [063_Addr1]
+		,cl.city_nm AS [064_City]
+		,cl.state_cd AS [065_StateProvCd]
+		,cl.zip_cd AS [066_PostalCode]
+		,cl.latitude AS [067_Latitude]
+		,cl.longitude AS [068_Longitude]
+		,cl.county_nm AS [069_County]
+		,cl.country_nm AS [070_Country]
 		,jhcc.Collection_Coverages
 		,jai.Additional_Interests
 		,jsi.Scheduled_Items
@@ -471,6 +480,7 @@ BEGIN
             ,RenewalPayorCd_045,FormNumber_046,FormName_047,EditionDt_048,IterationNumber_049,TotalPaidLossAmt_050
             ,NumLosses_051,PolicyCd_052,PolicyNumber_053,LOBCd_054,NAICCd_055,InsurerName_056
             ,EffectiveDt_057,ExpirationDt_058,MethodPaymentCd_059,PaymentPlanCd_060,PaidInFullInd_061,NIPRid_062
+			,Addr1_063,City_064,StateProvCd_065,PostalCode_066,Latitude_067,Longitude_068,County_069,Country_070
             ,Collection_Coverages,Additional_Interests,Scheduled_Items
             ,transaction_seq_no,create_ts,update_ts,etl_audit_sk
     )
@@ -516,7 +526,8 @@ BEGIN
     ,[044_RenewalBillingMethodCd],[045_RenewalPayorCd],[046_FormNumber],[047_FormName],[048_EditionDt]
     ,[049_IterationNumber],[050_TotalPaidLossAmt],[051_NumLosses],[052_PolicyCd],[053_PolicyNumber],[054_LOBCd]
     ,[055_NAICCd],[056_InsurerName],[057_EffectiveDt],[058_ExpirationDt],[059_MethodPaymentCd],[060_PaymentPlanCd]
-    ,[061_PaidInFullInd],[062_NIPRid],Collection_Coverages,Additional_Interests,Scheduled_Items,transaction_seq_no
+    ,[061_PaidInFullInd],[062_NIPRid],[063_Addr1],[064_City],[065_StateProvCd],[066_PostalCode],[067_Latitude],[068_Longitude],[069_County],[070_Country]
+	,Collection_Coverages,Additional_Interests,Scheduled_Items,transaction_seq_no
     ,getdate(),getdate(),@etl_audit_sk
     FROM edw_temp.policy_ivans_collection_temp2
     WHERE [053_PolicyNumber] IS NOT NULL;
