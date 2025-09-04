@@ -31,7 +31,7 @@ BEGIN
 	DROP TABLE IF EXISTS edw_temp.policy_current_carrier_auto_vr01_feed_temp1;
 	
 	select
-	'VRO1' as [RecordCode],
+	'VR01' as [RecordCode],
 	pr.[ContribCompanyAMBestNumber],
 	pr.PolicyNumber,
 	pr.InsuranceType,

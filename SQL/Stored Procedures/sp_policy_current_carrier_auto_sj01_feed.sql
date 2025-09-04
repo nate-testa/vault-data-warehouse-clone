@@ -32,7 +32,7 @@ BEGIN
 		
 
 		select
-        'SJO1' as [RecordCode],
+        'SJ01' as [RecordCode],
         np.[ContribCompanyAMBestNumber],
         np.PolicyNumber,
         np.InsuranceType,

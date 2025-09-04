@@ -16,7 +16,7 @@ BEGIN
     SET NOCOUNT ON
 
 	BEGIN TRY
-			DECLARE @last_source_extract_ts DATETIME2(7)
+	DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
 		DECLARE @rows_affected INT
@@ -89,7 +89,11 @@ BEGIN
 		WHEN tp.uw_company_nm = 'Vault Reciprocal Exchange' then '16186'
 		WHEN tp.uw_company_nm ='Vault E & S Insurance Company' then '16237'
 		END AS [NAICCode],
-        FORMAT(tp.original_policy_effective_dt,'yyyyMMdd') as [PolicyInceptionDate],
+        FORMAT(		
+			case 
+			when tp.policy_term = 'New' and tp.original_policy_effective_dt is null then tp.effective_dt
+			else tp.original_policy_effective_dt
+			end ,'yyyyMMdd') as [PolicyInceptionDate],
         FORMAT(tp.expiration_dt,'yyyyMMdd') as [PolicyPeriodEndDate],
         FORMAT(tp.effective_dt,'yyyyMMdd') as [PolicyPeriodBeginDate],
 		case 
@@ -112,7 +116,7 @@ BEGIN
 		'' AS Reserved2,
 		'' AS Reserved3,
 		'' AS AgentIdentifier,
-		'' AS PolicyState,
+		tp.risk_state_cd AS PolicyState,
         tp.policy_sk,
         tp.policy_no ,
         tph.policy_history_sk,
