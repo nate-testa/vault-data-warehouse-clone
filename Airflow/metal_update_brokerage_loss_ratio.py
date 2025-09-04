@@ -63,7 +63,7 @@ args = {
 }
 
 with DAG(
-    dag_id='metal_update_brokerage_loss_ratio_cross_server',
+    dag_id='metal_update_brokerage_loss_ratio',
     default_args=args,
     schedule_interval=None,
     catchup=False,
