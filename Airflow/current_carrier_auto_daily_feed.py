@@ -49,7 +49,7 @@ def current_carrier_executed_today(**kwargs):
     sql_qry = """
                 SELECT process_nm, status_desc
                 FROM edw_core.tetl_audit
-                WHERE process_nm = 'sp_policy_current_carrier_auto_pr01_feed'
+                WHERE process_nm = 'sp_policy_current_carrier_auto_np01_feed'
                 AND status_desc = 'Success'
                 AND CAST(process_start_ts AS DATE) = CAST(GETDATE() AS DATE)
               """
@@ -70,7 +70,7 @@ args = {
 }
 
 with DAG(
-    dag_id='vault_current_carrier_auto_daily_feed',
+    dag_id='current_carrier_auto_daily_feed',
     catchup=False,
     max_active_runs=1,
     default_args=args,
