@@ -30,10 +30,11 @@ BEGIN
 		truncate table edw_integration.broker_claim_metal_feed;				
        
 		select
-		b.broker_id,		
+		b.broker_id,
+		cast(
 		 round(case when sum(bs.one_year_earned_net_premium_amt) = 0 then 0 
 								else 100.0*sum(bs.one_year_loss_incurred_amt)/sum(bs.one_year_earned_net_premium_amt) 
-		end,2) as loss_ratio
+		end,2) as decimal(16,4)) as loss_ratio
 		into edw_temp.broker_claim_metal_feed_temp
 		from 
 		edw_core.tbroker_summary bs
