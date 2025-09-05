@@ -9,7 +9,7 @@ from airflow.operators.email import EmailOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator, BranchPythonOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format
-from dags.current_carrier_auto_txt_generation import generate_Current_Carrier_txt_file_and_encrypt, SFTPUploadCurrentCarrierAutoFileOperator
+from current_carrier_auto_txt_generation import generate_Current_Carrier_txt_file_and_encrypt, SFTPUploadCurrentCarrierAutoFileOperator
 
 to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
