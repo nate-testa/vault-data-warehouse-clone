@@ -10,6 +10,7 @@
 --                                                      mailing_address_unit_no,mailing_address_city_nm,mailing_address_state_cd
 --                                                      ,mailing_address_zip_cd
 -- 06/24/25		        Dinesh Bobbili  			5. Removed Address columns and added product_cd
+-- 09/05/25		        Dinesh Bobbili  			6. Added logic to populate VES for uw_company_nm
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed_commercial]  
@@ -172,7 +173,7 @@ BEGIN
             vault_commission_amt,total_layer_premium_amt,vault_per_claim_policy_limit_amt,vault_aggregate_policy_limit_amt,
             total_layer_per_claim_policy_limit_amt,total_layer_aggregate_policy_limit_amt,total_aggregate_attachment_amt,
             total_per_claim_attachment_amt,quote_business_type
-            ,underwriter_nm,product_cd
+            ,underwriter_nm,product_cd,uw_company_nm
         )
         VALUES
         (
@@ -185,7 +186,7 @@ BEGIN
             vault_commission_amt,total_layer_premium_amt,vault_per_claim_policy_limit_amt,vault_aggregate_policy_limit_amt,
             total_layer_per_claim_policy_limit_amt,total_layer_aggregate_policy_limit_amt,total_aggregate_attachment_amt,
             total_per_claim_attachment_amt,quote_business_type
-            ,underwriter_nm,product_cd
+            ,underwriter_nm,product_cd,'VES'
         )
         WHEN MATCHED THEN UPDATE
         SET 
@@ -224,7 +225,8 @@ BEGIN
             [target].total_per_claim_attachment_amt= [source].total_per_claim_attachment_amt,
             [target].quote_business_type= [source].quote_business_type,
             [target].underwriter_nm= [source].underwriter_nm,
-            [target].product_cd= [source].product_cd
+            [target].product_cd= [source].product_cd,
+            [target].uw_company_nm= 'VES'
             ;
         
         SET @rows_affected=@@ROWCOUNT;
