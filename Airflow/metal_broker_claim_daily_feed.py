@@ -70,7 +70,7 @@ with DAG(
     )
 
     broker_claim_metal_items = [
-            'edw_core.sp_broker_claim_metal_feed'
+            'sp_broker_claim_metal_feed'
         ]
 
     sp_broker_claim_metal_feed = MsSqlOperator(
