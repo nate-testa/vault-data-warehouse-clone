@@ -6,6 +6,7 @@
 -- Change date |Author						            |	Change Description 
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 -- 09/03/25		Yunus Mohammed				1. Created this procedure
+-- 09/05/25		Yunus Mohammed				2. loss_ratio rounded to 2 decimal
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_claim_metal_feed]
@@ -30,9 +31,9 @@ BEGIN
        
 		select
 		b.broker_id,		
-		case when sum(bs.one_year_earned_net_premium_amt) = 0 then 0 
+		 round(case when sum(bs.one_year_earned_net_premium_amt) = 0 then 0 
 								else 100.0*sum(bs.one_year_loss_incurred_amt)/sum(bs.one_year_earned_net_premium_amt) 
-		end as loss_ratio
+		end,2) as loss_ratio
 		into edw_temp.broker_claim_metal_feed_temp
 		from 
 		edw_core.tbroker_summary bs
@@ -45,7 +46,6 @@ BEGIN
 		group by broker_id
 
 		SET @rows_affected=0;
-
 		INSERT INTO edw_integration.broker_claim_metal_feed
 			(	
 				broker_id, loss_ratio,create_ts,update_ts, etl_audit_sk
