@@ -130,11 +130,11 @@ with DAG(
             dag=dag,
         )
 
-        upload_current_carrier_auto_txt_to_sftp = SFTPUploadCurrentCarrierAutoFileOperator(
-            task_id='upload_current_carrier_auto_txt_to_sftp',
-            sftp_conn_id='Vault_CLUE_sftp',
-            dag=dag,
-        )
+        # upload_current_carrier_auto_txt_to_sftp = SFTPUploadCurrentCarrierAutoFileOperator(
+        #     task_id='upload_current_carrier_auto_txt_to_sftp',
+        #     sftp_conn_id='Vault_CLUE_sftp',
+        #     dag=dag,
+        # )
 
         send_current_carrier_auto_email = EmailOperator(
             task_id='send_current_carrier_auto_email',
@@ -147,8 +147,9 @@ with DAG(
             operators[i].set_downstream(operators[i + 1])
 
         operators[-1].set_downstream(generate_current_carrier_auto_txt_file)
-        generate_current_carrier_auto_txt_file.set_downstream(upload_current_carrier_auto_txt_to_sftp)
-        upload_current_carrier_auto_txt_to_sftp.set_downstream(send_current_carrier_auto_email)
+        # generate_current_carrier_auto_txt_file.set_downstream(upload_current_carrier_auto_txt_to_sftp)
+        # upload_current_carrier_auto_txt_to_sftp.set_downstream(send_current_carrier_auto_email)
+        generate_current_carrier_auto_txt_file.set_downstream(send_current_carrier_auto_email)
 
 
 start.set_downstream(current_carrier_auto_executed_today)
