@@ -1,8 +1,3 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 -- ==============================================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2023-09-14
@@ -17,6 +12,7 @@ GO
 -- 22/08/24		Hernnando Gonzalez		    5. Added auto_vehicle_sk
 -- 10/22/24		Architha Gudimalla		    6. AD6949 - Added excluded driver
 -- 11/19/24		Architha Gudimalla		    7. AD7756 - Added driver unique id
+-- 09/04/25     Yunus Mohammed            8. AD10855 - driver_deleted_in logic updated to include IsDeletedOnRenewal
 -- ==============================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tauto_driver]
 AS
@@ -54,8 +50,12 @@ BEGIN
             [ArmyNationalGuardOrAirNationalGuardPersonnelDiscount], [MobileDeviceControlDiscount], [SeasonalUsePart1], [OccasionalOperatorDiscount], [AddReportedIncidents], 
             [SDIPPoints], [AAFWithVault], [AFBWithVault], [NAFWithVault], [CPAWithVault], [MINWithVault], [MAJWithVault], [SPDWithVault], [AAFPrior], [AFBPrior], [NAFPrior], 
             [CPAPrior], [MINPrior], [MAJPrior], [SPDPrior], [AAFFactor], [AFBFactor], [NAFFactor], [CPAFactor], [MINFactor], [MAJFactor], [SPDFactor], [PrimaryVehicleId],
-			source_system_sk,CASE IsDeletedOnPolicyChange WHEN 0 THEN 'No' WHEN 1 THEN 'Yes' END AS IsDeletedOnPolicyChange
-            ,driver_unique_id
+			source_system_sk,
+            CASE
+                WHEN IsDeletedOnPolicyChange = 1 OR IsDeletedOnRenewal =1 THEN 'Yes'
+                ELSE 'No'
+            END AS driver_deleted_in,
+            driver_unique_id
         INTO [edw_temp].[tauto_driver_temp1]
         FROM
 			(
@@ -68,6 +68,7 @@ BEGIN
                         WHEN acct.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
                         ELSE 4 --(Metal)
                     END as [source_system_sk],
+                    acctvo.IsDeletedOnRenewal,
                     acctvo.IsDeletedOnPolicyChange, acctvof.VersionObjectId
                     ,acctvo.[UniqueId] driver_unique_id
                 FROM (
@@ -252,7 +253,7 @@ BEGIN
             t1.[MINPrior] as min_prior_ct,
             t1.[MAJPrior] as maj_prior_ct,
             t1.[SPDPrior] as spd_prior_ct,
-            t1.IsDeletedOnPolicyChange as driver_deleted_in,
+            t1.driver_deleted_in,
             t1.[AAFFactor] as aaf_factor,
             t1.[AFBFactor] as afb_factor,
             t1.[NAFFactor] as naf_factor,

@@ -1,7 +1,3 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO 
 -- ================================================================================================================================================
 -- Description: This stored procedure inserts and updates info related to quote auto vehicle coverage - wip
 --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -23,6 +19,7 @@ GO
 -- 12/10/24     Alberto Almario                14. Add column rater_pip_discount
 -- 04/11/25     Alberto Almario                15. Add 40 new columns
 -- 04/29/25     Alberto Almario                16. Add agreed_value_coverage_in and flood_deductible
+-- 08/29/25     Yunus Mohammed           17. Added logic to use IsDeletedOnRenewal for vehicle_deleted_in
 -- ================================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_vehicle_coverage_wip] 
@@ -264,7 +261,8 @@ BEGIN
                 [BasicModelName],[DistributionDate],[Restraint],[FieldChangeIndicator],[FourWheelDriveIndicator],[ElectronicStabilityControl],[TonnageIndicator],[PayloadCapacity],
                 [DaytimeRunningLightIndicator],[Wheelbase],[ClassCode],[AntiTheftIndicator],[GrossVehicleWeight],[StateException],[VMPerformanceIndicator],[NCICCode],[Chassis],[BaseMSRP],
                 [SpecialHandlingIndicator],[RAPAInterimIndicator],[SpecialInfoSelector],[ModelSeriesInfo],[BodyInfo],[EngineInfo],[RestraintInfo],[TransmissionInfo],[OtherInfo],[ReleaseDate],
-                [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, vehicle_unique_id, NewlyPurchasedVehicle, NewlyPurchasedVehicleDate, [NewlyPurchasedVehicleFinal],
+                [MotorHomeClass],[PassengerHazardExclusion],source_system_sk, vehicle_deleted_in, vehicle_deleted_on_renewal_in,
+                vehicle_unique_id, NewlyPurchasedVehicle, NewlyPurchasedVehicleDate, [NewlyPurchasedVehicleFinal],
                 [RaterPIPDiscount],[AgreedValueCoverage],[FloodDeductible]
             
             FROM
@@ -273,6 +271,7 @@ BEGIN
                         acc.CreatedDate, acc.UpdatedDate, acc.PolicyNumber as quote_no, acc.EffectiveDate as effective_dt, qav.[vehicle_no] as vehicle_no, acco.[UniqueId] as vehicle_unique_id,
                         acc.ExpirationDate as expiration_dt, --acc.Number as transaction_seq_no,
                         qh.quote_history_sk, qav.quote_auto_vehicle_sk, 
+                        acco.IsDeletedOnRenewal as vehicle_deleted_on_renewal_in,
                         acco.IsdeletedOnPolicyChange as vehicle_deleted_in,
                         accof.[Field], 
                         CASE
@@ -507,7 +506,7 @@ BEGIN
                 GETDATE() AS update_ts,
                 @etl_audit_sk AS etl_audit_sk,
                 CASE 
-                    WHEN t1.vehicle_deleted_in = 1 THEN 'Yes' 
+                    WHEN t1.vehicle_deleted_in = 1 or t1.vehicle_deleted_on_renewal_in = 1 THEN 'Yes' 
                     ELSE 'No' 
                 END AS vehicle_deleted_in,
                 t1.vehicle_unique_id,
