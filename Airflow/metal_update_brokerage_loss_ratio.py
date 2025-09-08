@@ -57,7 +57,7 @@ def extract_edw_and_update_metal():
             sql_merge = f"""
             MERGE INTO Brokerage AS TGT
             USING {staging_table_name} AS SRC
-            ON TGT.ProducerId = SRC.broker_id
+            ON CAST(TGT.ProducerId AS VARCHAR(255)) = SRC.broker_id
             WHEN MATCHED THEN
                 UPDATE SET TGT.LossRatio = CAST(SRC.loss_ratio AS DECIMAL(16, 4));
             """
