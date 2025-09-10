@@ -47,8 +47,7 @@ BEGIN
         UPDATE [target]
         SET
             [target].transaction_status = source.transaction_status,
-            [target].update_ts = getdate(),
-            [target].etl_audit_sk = @etl_audit_sk
+            [target].update_ts = getdate()
         FROM
             edw_core.tpolicy_history [target]
             INNER JOIN edw_temp.tpolicy_history_update_temp1 as [source] ON  [target].policy_no = [source] .policy_no AND
