@@ -28,6 +28,7 @@
 -- 05/22/25		        Archtha Gudimalla			23. VI37383/AD9512 - Added broker state 
 -- 06/05/25		        Archtha Gudimalla			24. AZ9641 - Added quote_business_type
 -- 06/24/25		        Dinesh Bobbili				25. AD9848 Added product_cd column
+-- 09/09/25		        Archtha Gudimalla			26. AD10935 - Added monoline fix
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]  
