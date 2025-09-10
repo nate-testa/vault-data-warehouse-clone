@@ -80,6 +80,7 @@ BEGIN
 		DECLARE @tablename4 NVARCHAR(MAX)=''
 		DECLARE @tablename5 NVARCHAR(MAX)=''
 		DECLARE @tablename6 NVARCHAR(MAX)=''
+		DECLARE @tablename7 NVARCHAR(MAX)=''
 		DECLARE @ColumnsToPivot NVARCHAR(MAX)=''  
 		DECLARE @ColumnsToPivot1 NVARCHAR(MAX)=''  
 		DECLARE @ColumnsToPivot2 NVARCHAR(MAX)='' 
@@ -197,7 +198,8 @@ BEGIN
 				set @ColumnsToPivot3  = REPLACE(@ColumnsToPivot3,', =','')
 				set @ColumnsToPivot4  = REPLACE(@ColumnsToPivot4,', =','')
 				set @ColumnsToPivot5  = REPLACE(@ColumnsToPivot5,', =','') 
-				set @ColumnsToPivot6  = REPLACE(@ColumnsToPivot6,', =','') 
+				set @ColumnsToPivot6  = REPLACE(@ColumnsToPivot6,', =','')  
+				set @ColumnsToPivot7  = REPLACE(@ColumnsToPivot7,', =','') 
 				
 				/*
 				print 'ColumnsToPivot'  
@@ -215,6 +217,7 @@ BEGIN
 				set @tablename4  = ''
 				set @tablename5  = '' 
 				set @tablename6  = '' 
+				set @tablename7  = '' 
 				
 				set @tablename = 'edw_stage.tvendor_report_' + replace(@source,' ','')
 				set @tablename1 = case when LEN(@ColumnsToPivot1) > 0 
@@ -233,7 +236,10 @@ BEGIN
 										then 'edw_stage.tvendor_report_' + replace(@source,' ','') + '_5'
 								 end 
 				set @tablename6 = case when LEN(@ColumnsToPivot6) > 0 
-										then 'edw_stage.tvendor_report_' + replace(@source,' ','') + '_5'
+										then 'edw_stage.tvendor_report_' + replace(@source,' ','') + '_6'
+								 end   
+				set @tablename7 = case when LEN(@ColumnsToPivot7) > 0 
+										then 'edw_stage.tvendor_report_' + replace(@source,' ','') + '_7'
 								 end  
  
 
@@ -242,7 +248,7 @@ BEGIN
 
 				set @i = 0
 
-				while @i <= 6 and @tablename <> ''
+				while @i <= 7 and @tablename <> ''
 				begin
 					--print @ColumnsToPivot
 					--print @tablename  
@@ -351,13 +357,15 @@ BEGIN
 											  	   when @i = 4 then @ColumnsToPivot4  
 											  	   when @i = 5 then @ColumnsToPivot5  
 											  	   when @i = 6 then @ColumnsToPivot6  
+											  	   when @i = 7 then @ColumnsToPivot7  
 											  end
 						set @tablename	    = case when @i = 1 then @tablename1
 											  	   when @i = 2 then @tablename2
 											  	   when @i = 3 then @tablename3
 											  	   when @i = 4 then @tablename4
 											  	   when @i = 5 then @tablename5
-											  	   when @i = 6 then @tablename6       
+											  	   when @i = 6 then @tablename6 
+											  	   when @i = 7 then @tablename7       
 											  end  
 					end 
 				 
