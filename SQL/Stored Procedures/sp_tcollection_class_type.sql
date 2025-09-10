@@ -13,6 +13,7 @@
 -- 05/28/24		Alberto Almario									7. Integrate Premium Adjustments data into EDW - Collection
 -- 11/09/24		Alberto Almario									8. Include Condo data
 -- 04/16/25		Yunus Mohammed							 9. AD-9140 Corrected null values for premium mods
+-- 09/10/25     Yunus Mohammed            				10. AD10967 - class_deleted_in logic updated to include IsDeletedOnRenewal
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_class_type]
@@ -113,8 +114,8 @@ BEGIN
 			,[ClassType], [ScheduledCoverage], [ScheduledHighestValueLimit], [BlanketCoverage], [BlanketHighestValue], [BlanketSingleArticleLimit], ScheduledItemAppraisalDate
 			--,4 as [source_system_sk] --20230717 removed
 			,source_system_sk --20230717 added
-			,CreatedDate, UpdatedDate
-			,class_deleted_in
+			,CreatedDate, UpdatedDate,
+			CASE WHEN IsdeletedOnPolicyChange = 1 or IsDeletedOnRenewal =1  THEN 'Yes' ELSE 'No' END as class_deleted_in
 		INTO [edw_temp].[tcollection_class_type_temp3]
 		FROM
 			(
@@ -127,7 +128,8 @@ BEGIN
 				,case when acct.ExternalSourceId is not NULL then 2--(AV2) 
 					Else 4 --(Metal)
 				end as [source_system_sk] --20230717 added
-				,acctvo.IsdeletedOnPolicyChange as class_deleted_in
+				,acctvo.IsdeletedOnPolicyChange
+				,acctvo.IsDeletedOnRenewal
 			FROM [edw_stage].[AccountTransaction] as acct
 				INNER JOIN [edw_stage].[Product] p on p.Id = acct.ProductId
 				INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
@@ -226,7 +228,7 @@ BEGIN
 			,getdate()
 			,getdate()
 			,@etl_audit_sk
-			,CASE WHEN class_deleted_in = 1 THEN 'Yes' ELSE 'No' END as class_deleted_in
+			,class_deleted_in
 			,[blanket_premium_adjustment_method]
 			,[blanket_premium_adjustment_factor]
 			,[blanket_premium_adjustment_retention]

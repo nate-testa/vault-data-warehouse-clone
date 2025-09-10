@@ -12,6 +12,7 @@
 -- 11/02/23		Architha Gudimalla				6. Updated left joins to inner
 -- 11/09/24		Alberto Almario					7. Include Condo data
 -- 10/31/24		Architha Gudimalla				8. VI34577/AD7581 - Added scheduled item deleted in
+-- 09/10/25     Yunus Mohammed            	9. AD10967 - scheduled_item_deleted_in logic updated to include IsDeletedOnRenewal
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_scheduled_item]
@@ -62,7 +63,7 @@ BEGIN
 				acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, acc.PolicyChangeNumber
 				,his.[policy_history_sk], ct.collection_class_type_sk, acct.[Index]
 				,accto.Field, accto.[Value]
-				,CASE WHEN acct.IsDeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END as scheduled_item_deleted_in
+				,CASE WHEN acct.IsDeletedOnPolicyChange = 1 and acct.IsDeletedOnRenewal =1 THEN 'Yes' ELSE 'No' END as scheduled_item_deleted_in
 				,acc.CreatedDate, acc.UpdatedDate
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)

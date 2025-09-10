@@ -30,6 +30,7 @@
 -- 08/05/25						Dinesh Bobbili				   21. AD-10467 Added mine_subsidence_and_sinkhole_coverage_in column
 -- 08/12/25						Dinesh Bobbili				   22. AD-10619 Added defense_coverage_within_limits_in, wind_sublimit_in, wind_sublimit_value_amt
 -- 08/20/25						Dinesh Bobbili				   23. AD-10619 Added logic to handle blank values for defense_coverage_within_limits_in, wind_sublimit_in, wind_sublimit_value_amt
+-- 09/10/25						Yunus Mohammed			24 AD-10965	IsDeletedOnRenewal check added in extended_liability_loc_ct
 -- ===========================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_thome_additional_coverage]
 
@@ -152,6 +153,7 @@ BEGIN
 				where
 					atvo.ObjectType in ('ExtendedLiabilityLocation')
 					and atvo.IsDeletedOnPolicyChange = 0
+					and atvo.IsDeletedOnRenewal = 0
 				group by act.PolicyNumber, act.EffectiveDate, act.PolicyChangeNumber
 			)
 

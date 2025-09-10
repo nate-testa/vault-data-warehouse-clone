@@ -1,10 +1,4 @@
-﻿SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
- 
--- ================================================================================================================================================
+﻿-- ================================================================================================================================================
 -- Description: This procedures insert and update info related to Additional Interest
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
@@ -14,6 +8,7 @@ GO
 -- 08/12/24     Architha Gudimalla              3. Added additional interest vehicle
 -- 08/15/24     Architha Gudimalla              4. Update additional_interest_deleted_in to use Yes/No instead of 1/0
 -- 08/20/25     Dinesh Bobbili		            5. Fixed the mapping issue for transaction_effective_dt and transaction_dt
+-- 09/09/25		Yunus Mohammed		 		6. AD10907 - Added logic to use IsDeletedOnRenewal
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tadditional_interest]
 AS
