@@ -3,9 +3,10 @@
 -- Create Date: 2023-07-01
 -- Description: This procedures insert pel watercraft data
 --------------------------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date 			|Author												|	Change Description
 --------------------------------------------------------------------------------------------------------------------------------------------------
--- 15/08/24		Alberto Almario					1. New Column watercraft_deleted_in
+-- 15/08/24				Alberto Almario								1. New Column watercraft_deleted_in
+-- 09/09/2025		 Yunus Mohammed			  			2.  AD10907 - Added logic to use IsDeletedOnRenewal
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_watercraft]
 
@@ -48,7 +49,7 @@ BEGIN
 			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,act.IssuedDate,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			atvof.Field,atvof.[Value]
-			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END as watercraft_deleted_in
+			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 OR atvo.IsDeletedOnRenewal =1 THEN 'Yes' ELSE 'No' END as watercraft_deleted_in
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
