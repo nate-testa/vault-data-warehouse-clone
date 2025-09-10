@@ -187,7 +187,7 @@ BEGIN
 											 as nvarchar(max)) as field_name 
 						FROM  edw_stage.tvendor_report_field 
 						where source = @source and reporttype = @reporttype
-						and Category not like '%images%'
+						and Category <> 'Inspection Images'
 					) a 
 				) as temp 
 		print 'here4'
