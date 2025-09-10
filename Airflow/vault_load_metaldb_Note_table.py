@@ -48,7 +48,7 @@ def load_note_tbl():
         SELECT
             NEWID() as Id
             ,'00000000-0000-0000-0000-000000000000' as UserId
-            ,qn.hs_note_body as Content
+            ,LEFT(qn.hs_note_body, 3000) as Content
             ,acc.id as ParentId
             ,'Account' as ObjectType
             ,GETDATE() as CreatedDate
