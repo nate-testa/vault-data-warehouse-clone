@@ -89,7 +89,24 @@ BEGIN
 		where inforce_dt_sk = (select date_sk from edw_core.tdate where actual_dt = dateadd(dd,-1,cast(getdate() as date)))
 		and pr.product_sk = summ.product_sk 
 		and summ.customer_sk = cust.customer_sk 
-		GROUP BY ROLLUP (customer_id, pr.product_cd);
+		GROUP BY ROLLUP (customer_id, pr.product_cd);	
+
+		--added to handle future effective inforce monoline customers
+		insert into edw_temp.quote_hubspot_feed_temp0
+		select c.quote_no 
+		from edw_integration.quote_hubspot_feed c
+		inner join edw_core.tcustomer cust on c.customer_id = cust.customer_id
+		inner join (select customer_sk from edw_core.tdaily_inforce_policy 
+                    where inforce_dt_sk = (select date_sk from edw_core.tdate where actual_dt = dateadd(dd,-1,cast(getdate() as date)))
+                    ) inf on cust.customer_sk = inf.customer_sk 
+		left join edw_temp.quote_hubspot_feed_temp01 pinf on c.customer_id = pinf.customer_id and c.product_cd = pinf.product_cd 
+		left join edw_temp.quote_hubspot_feed_temp01 cinf on c.customer_id = cinf.customer_id and '[Total]' = cinf.product_cd 
+		where c.monoline_in
+			<> case when pinf.customer_id is not null and pinf.inforce_ct = cinf.inforce_ct
+							   then 'Yes' 
+							   else 'No' 
+						  end
+         and c.quote_no not in (select quote_no from edw_temp.quote_hubspot_feed_temp0);  
 		
         DROP TABLE IF exists edw_temp.quote_hubspot_feed_temp1;
 		
