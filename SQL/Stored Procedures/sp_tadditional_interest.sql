@@ -49,7 +49,7 @@ BEGIN
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
 			,product_cd
-			,IsDeletedOnPolicyChange as additional_interest_deleted_in
+			,CASE WHEN IsDeletedOnPolicyChange = 1 OR IsDeletedOnRenewal = 1 THEN 'Yes' ELSE 'No' END as additional_interest_deleted_in
 		INTO [edw_temp].[tadditional_interest_temp1]
 		FROM
 			(
@@ -67,7 +67,8 @@ BEGIN
 					  Else 4 --(Metal)
 				 end as [source_system_sk] --20230717 added
 				 ,ProductCode as product_cd 
-				 ,CASE WHEN acct.IsDeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END as IsDeletedOnPolicyChange
+				 ,acct.IsDeletedOnPolicyChange
+				 ,acct.IsDeletedOnRenewal
 			FROM
 				(SELECT
 					*
