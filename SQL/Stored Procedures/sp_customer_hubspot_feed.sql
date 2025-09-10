@@ -30,6 +30,7 @@
 -- 06/18/25		Dinesh Bobbili				22. AD9848 Added product_cd column
 -- 06/24/25		Dinesh Bobbili				23. AD9848 Removed product_cd column
 -- 09/09/25		Archtha Gudimalla			24. AD10935 - Added monoline fix
+-- 09/10/25		Archtha Gudimalla			25. AD10960 - Added customer email id fix
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -70,6 +71,14 @@ BEGIN
 		or isnull(a.broker_nm,'') <> isnull(br.broker_nm,'')
 		or isnull(a.broker_phone_no,'') <> isnull(br.broker_phone_no,'') 
 		or isnull(a.bdm_nm,'') <> isnull(bvt.team_member_nm,''); 
+
+        --used to see if there are any changes in customer email
+        insert into  edw_temp.customer_hubspot_feed_temp0
+		select a.policy_no 
+		from  [edw_integration].[customer_hubspot_feed] a
+		inner join edw_core.tcustomer cust on cust.customer_id = a.customer_id 
+		where a.email <> cust.email
+		and policy_no not in (select policy_no from edw_temp.customer_hubspot_feed_temp0);
 
  		DROP TABLE IF exists edw_temp.customer_hubspot_feed_temp01;
 
