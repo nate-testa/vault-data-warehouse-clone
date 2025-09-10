@@ -70,10 +70,13 @@ with DAG(
 
         hubspot_group_items = [
             'sp_customer_hubspot_feed',
+            'sp_customer_hubspot_feed_commercial',
             'sp_broker_relation_hubspot_feed',
             'sp_producer_hubspot_feed',
             'sp_quote_hubspot_feed',
+            'sp_quote_hubspot_feed_commercial',
             'sp_broker_hubspot_feed',
+            'sp_broker_hubspot_feed_commercial',
             'sp_quote_note_hubspot_feed'
         ]
 
