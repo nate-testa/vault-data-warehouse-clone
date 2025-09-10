@@ -3,11 +3,15 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- =============================================
+-- ==============================================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2023-09-29
 -- Description: This stored procedure insert and update info related to policy_ivans_auto_feed.
--- =============================================
+-------------------------------------------------------------------------------------------------------------------------------------------------
+-- Change date      |Author						|Change Description
+-------------------------------------------------------------------------------------------------------------------------------------------------
+-- 09/10/2025        Alberto Almario             Change order for case on limits column
+-- ==============================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_auto_feed]
 AS
 BEGIN
@@ -167,13 +171,13 @@ BEGIN
                     ELSE ic.internal_coverage_desc
                 END AS coverageDesc,
                 CASE 
+                    WHEN ic.internal_coverage_cd = 'Medical Payments' then apc.medical_payment_limit_amt
+                    WHEN ic.internal_coverage_cd = 'Personal Injury Protection' then apc.pip_limit_amt
                     WHEN apc.limit_type = 'Combined' then apc.combined_single_limit_amt
                     WHEN ic.internal_coverage_cd = 'Added First Party' then apc.added_first_party_limit_amt
                     WHEN ic.internal_coverage_cd = 'Bodily Injury' then apc.bodily_injury_limit_amt
                     WHEN ic.internal_coverage_cd = 'Basic First Party' then apc.combination_fpb_limit_amt
                     WHEN ic.internal_coverage_cd = 'Auto Death Disability' then apc.accidental_death_benefit_limit_amt
-                    WHEN ic.internal_coverage_cd = 'Medical Payments' then apc.medical_payment_limit_amt
-                    WHEN ic.internal_coverage_cd = 'Personal Injury Protection' then apc.pip_limit_amt
                     WHEN ic.internal_coverage_cd = 'Property Damage' then apc.property_damage_limit_amt
                     WHEN ic.internal_coverage_cd = 'Underinsured Motorist' AND apc.limit_type = 'Combined' then apc.combined_underinsured_motorist_limit_amt
                     WHEN ic.internal_coverage_cd = 'Underinsured Motorist' AND apc.limit_type = 'Split' then apc.underinsured_motorist_limit_amt
