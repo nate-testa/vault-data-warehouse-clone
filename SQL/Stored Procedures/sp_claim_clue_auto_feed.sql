@@ -17,6 +17,7 @@ GO
 -- 06-24-2025               Alberto Almario             5. Add logic for FaultIndicator column.
 -- 07-01-2025               Alberto Almario             6. Include R records for changes in ClaimDate (loss_dt).
 -- 08-12-2025               Alberto Almario             7. Update logic for ClaimAmount and ClaimDisposition fields
+-- 09-11-2025               Alberto Almario             8. Add logic for new records where the claimDisposition changed on tclaim_feature
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
@@ -697,6 +698,244 @@ BEGIN
         --************End************
 
 		SET @rows_affected=@@ROWCOUNT;
+
+        ---------------------------------------------------------------------------------
+        --*** Start Insert rows with claimDisposition changed on tclaim_feature table ***
+        ---------------------------------------------------------------------------------
+        WITH 
+        tclaim_feature_agg AS (
+            SELECT 
+                a.claim_no,
+                CASE
+                    WHEN claim_coverage_desc = 'Combined Single Limits' THEN 'BI'
+                    WHEN claim_coverage_desc = 'Collision' THEN 'CO'
+                    WHEN claim_coverage_desc = 'Comprehensive' THEN 'CP'
+                    WHEN claim_coverage_desc = 'Full Glass' THEN 'GL'
+                    WHEN claim_coverage_desc = 'Medical Payments' THEN 'MP'
+                    WHEN claim_coverage_desc = 'PIP' THEN 'OT'
+                    WHEN claim_coverage_desc = 'PD Liability Limit' THEN 'PD'
+                    WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TL'
+                    WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UN'
+                    ELSE 'OT'
+                END AS ClaimType,
+                SUM(a.subrogation_expense_recovery_amt + a.subrogation_recovery_amt) AS sum_subro_exp_rec_amt,
+                MAX(
+                    CASE 
+                        WHEN a.claim_feature_status = 'CLOSED' THEN 1
+                        ELSE 2
+                    END
+                )
+                AS claim_feature_status_no
+            FROM edw_core.tclaim_feature AS a
+            WHERE a.source_system_sk in (3,5)
+            AND a.product_sk = 3
+            GROUP BY
+                a.claim_no,
+                CASE
+                    WHEN claim_coverage_desc = 'Combined Single Limits' THEN 'BI'
+                    WHEN claim_coverage_desc = 'Collision' THEN 'CO'
+                    WHEN claim_coverage_desc = 'Comprehensive' THEN 'CP'
+                    WHEN claim_coverage_desc = 'Full Glass' THEN 'GL'
+                    WHEN claim_coverage_desc = 'Medical Payments' THEN 'MP'
+                    WHEN claim_coverage_desc = 'PIP' THEN 'OT'
+                    WHEN claim_coverage_desc = 'PD Liability Limit' THEN 'PD'
+                    WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TL'
+                    WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UN'
+                    ELSE 'OT'
+                END
+        )
+        ,tclaim_feature AS (
+            SELECT 
+                claim_no,
+                ClaimType,
+                CASE 
+                    WHEN sum_subro_exp_rec_amt <> 0 THEN 'S'
+                    WHEN claim_feature_status_no = 1 THEN 'C'
+                    ELSE 'O' 
+                END AS [ClaimDisposition]
+            FROM tclaim_feature_agg
+        ) 
+        ,clue_auto_tbl AS (
+            SELECT 
+                ROW_NUMBER() OVER (PARTITION BY claimNumber, ClaimType ORDER BY etl_audit_sk DESC, claimReportingStatus ASC) rn
+                , *
+            FROM [edw_integration].[claim_clue_auto_feed]
+        )
+
+        INSERT INTO [edw_integration].[claim_clue_auto_feed] (
+            [PolicyHolderNamePrefix],
+            [PolicyHolderNameLast],
+            [PolicyHolderNameFirst],
+            [PolicyHolderNameMiddle],
+            [PolicyHolderNameSuffix],
+            [PolicyHolderMailAddrHseNum],
+            [PolicyHolderMailAddressStreetName],
+            [PolicyHolderMailAddressAptNum],
+            [PolicyHolderMailAddressCity],
+            [PolicyHolderMailAddressState],
+            [PolicyHolderMailAddressZip],
+            [PolicyHolderMailAddressZipPlus4],
+            [Filler_reservedForFutureUse1],
+            [PolicyHolderSSN],
+            [PolicyHolderDOB],
+            [PolicyHolderDriversLicenseNum],
+            [PolicyHolderDriversLicenseState],
+            [PolicyHolderSex],
+            [Filler_reservedForFutureUse2],
+            [PolicyHolder2NamePrefix],
+            [PolicyHolder2NameLast],
+            [PolicyHolder2NameFirst],
+            [PolicyHolder2NameMiddle],
+            [PolicyHolder2NameSuffix],
+            [PolicyHolder2SSN],
+            [PolicyHolder2DOB],
+            [PolicyHolder2DriversLicenseNum],
+            [PolicyHolder2DriversLicenseState],
+            [PolicyHolder2Sex],
+            [Filler_reservedForFutureUse3],
+            [VehicleOperatorNamePrefix],
+            [VehicleOperatorNameLast],
+            [VehicleOperatorNameFirst],
+            [VehicleOperatorNameMiddle],
+            [VehicleOperatorNameSuffix],
+            [VehicleOperatorAddrHseNum],
+            [VehicleOperatorAddrStreetName],
+            [VehicleOperatorAddrAptNum],
+            [VehicleOperatorAddrCity],
+            [VehicleOperatorAddrState],
+            [VehicleOperatorAddrZipCode],
+            [VehicleOperatorAddrZipPlus4],
+            [Filler_reservedForFutureUse4],
+            [VehicleOperatorSSN],
+            [VehicleOperatorDOB],
+            [VehicleOperatorDriversLicenseNum],
+            [VehicleOperatorDriversLicenseState],
+            [VehicleOperatorSex],
+            [VehicleOperatorRelationship],
+            [Filler_reservedForFutureUse5],
+            [contribCompany],
+            [PolicyNumber],
+            [PolicyType],
+            [Filler_reservedForFutureUse6],
+            [ClaimNumber],
+            [ClaimType],
+            [ClaimDate],
+            [ClaimAmount],
+            [ClaimReportingStatus],
+            [InsuredVehicleVIN],
+            [InsuredVehicleModelYear],
+            [InsuredVehicleMakeModel],
+            [InsuredVehicleDisposition],
+            [ClaimDisposition],
+            [FaultIndicator],
+            [DateofFirstPayment],
+            [CAIndicator1],
+            [CAIndicator2],
+            [CAIndicator3],
+            [CAIndicator4],
+            [Filler_reservedForFutureUse7],
+            [RecordVersionNumber],
+            [create_ts],
+            [update_ts],
+            [etl_audit_sk],
+            [report_start_date],
+            [report_end_date]
+        )
+        SELECT 
+            b.[PolicyHolderNamePrefix],
+            b.[PolicyHolderNameLast],
+            b.[PolicyHolderNameFirst],
+            b.[PolicyHolderNameMiddle],
+            b.[PolicyHolderNameSuffix],
+            b.[PolicyHolderMailAddrHseNum],
+            b.[PolicyHolderMailAddressStreetName],
+            b.[PolicyHolderMailAddressAptNum],
+            b.[PolicyHolderMailAddressCity],
+            b.[PolicyHolderMailAddressState],
+            b.[PolicyHolderMailAddressZip],
+            b.[PolicyHolderMailAddressZipPlus4],
+            b.[Filler_reservedForFutureUse1],
+            b.[PolicyHolderSSN],
+            b.[PolicyHolderDOB],
+            b.[PolicyHolderDriversLicenseNum],
+            b.[PolicyHolderDriversLicenseState],
+            b.[PolicyHolderSex],
+            b.[Filler_reservedForFutureUse2],
+            b.[PolicyHolder2NamePrefix],
+            b.[PolicyHolder2NameLast],
+            b.[PolicyHolder2NameFirst],
+            b.[PolicyHolder2NameMiddle],
+            b.[PolicyHolder2NameSuffix],
+            b.[PolicyHolder2SSN],
+            b.[PolicyHolder2DOB],
+            b.[PolicyHolder2DriversLicenseNum],
+            b.[PolicyHolder2DriversLicenseState],
+            b.[PolicyHolder2Sex],
+            b.[Filler_reservedForFutureUse3],
+            b.[VehicleOperatorNamePrefix],
+            b.[VehicleOperatorNameLast],
+            b.[VehicleOperatorNameFirst],
+            b.[VehicleOperatorNameMiddle],
+            b.[VehicleOperatorNameSuffix],
+            b.[VehicleOperatorAddrHseNum],
+            b.[VehicleOperatorAddrStreetName],
+            b.[VehicleOperatorAddrAptNum],
+            b.[VehicleOperatorAddrCity],
+            b.[VehicleOperatorAddrState],
+            b.[VehicleOperatorAddrZipCode],
+            b.[VehicleOperatorAddrZipPlus4],
+            b.[Filler_reservedForFutureUse4],
+            b.[VehicleOperatorSSN],
+            b.[VehicleOperatorDOB],
+            b.[VehicleOperatorDriversLicenseNum],
+            b.[VehicleOperatorDriversLicenseState],
+            b.[VehicleOperatorSex],
+            b.[VehicleOperatorRelationship],
+            b.[Filler_reservedForFutureUse5],
+            b.[contribCompany],
+            b.[PolicyNumber],
+            b.[PolicyType],
+            b.[Filler_reservedForFutureUse6],
+            b.[ClaimNumber],
+            b.[ClaimType],
+            b.[ClaimDate],
+            b.[ClaimAmount],
+            'A' AS [ClaimReportingStatus],
+            b.[InsuredVehicleVIN],
+            b.[InsuredVehicleModelYear],
+            b.[InsuredVehicleMakeModel],
+            b.[InsuredVehicleDisposition],
+            a.[ClaimDisposition],
+            b.[FaultIndicator],
+            b.[DateofFirstPayment],
+            b.[CAIndicator1],
+            b.[CAIndicator2],
+            b.[CAIndicator3],
+            b.[CAIndicator4],
+            b.[Filler_reservedForFutureUse7],
+            b.[RecordVersionNumber],
+            @current_date AS create_ts,
+            @current_date AS update_ts,
+            @etl_audit_sk AS etl_audit_sk,
+            CASE 
+                WHEN (SELECT MAX(report_end_date) FROM [edw_integration].[claim_clue_property_feed]) IS NULL THEN '2020-06-29 00:00:00'
+                ELSE (SELECT DATEADD(day, 1, MAX(report_end_date)) FROM [edw_integration].[claim_clue_property_feed])
+            END AS [report_start_date],
+            CONVERT(datetime, CONVERT(date, DATEADD(day, -1, GETDATE()))) AS [report_end_date]
+        FROM tclaim_feature a 
+        INNER JOIN clue_auto_tbl b
+            ON a.claim_no = b.claimNumber
+            AND a.ClaimType = b.ClaimType
+        WHERE b.rn = 1
+            AND a.claimDisposition <> b.claimDisposition
+        ;
+        ---------------------------------------------------------------------------------
+        --*** Start Insert rows with claimDisposition changed on tclaim_feature table ***
+        ---------------------------------------------------------------------------------
+
+        --************End************
+
+		SET @rows_affected=@rows_affected+@@ROWCOUNT;
 
 		
 		-- Update control table
