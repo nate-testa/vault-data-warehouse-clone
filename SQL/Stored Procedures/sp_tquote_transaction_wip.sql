@@ -1,14 +1,15 @@
 	-- ====================================================================================================================================
 	-- Description: This procedures inserts into TQuote_Transaction  wip
 	---------------------------------------------------------------------------------------------------------------------------------------
-	-- Change date |Author						|	Change Description
+	-- Change date |Author										|	Change Description
 	---------------------------------------------------------------------------------------------------------------------------------------
 	-- 05/08/24		Architha Gudimalla				1. Created this procedure
 	-- 05/14/24 	Architha Gudimalla				2. Corrected errors
 	-- 08/30/24		Architha Gudimalla				3. Update product join to inner instead of left
 	-- 09/18/24		Architha Gudimalla				4. Updated AccountObject join to left instead of inner since its dropping of records
-	--11/25/2024	Sandeep Gundreddy		        5. Added logic to load item_sk and coverage_sk for Marine Boat & Yacht
-	-- 08/29/2025	Dinesh Bobbili					6. Added ncrb_premium_amt, ncrb_annual_premium_amt
+	--11/25/24		Sandeep Gundreddy		      5. Added logic to load item_sk and coverage_sk for Marine Boat & Yacht
+	-- 08/29/25		Dinesh Bobbili						  6. Added ncrb_premium_amt, ncrb_annual_premium_amt
+	-- 09/11/25		Yunus Mohammed				  7. AD10946 Renamed ncrb_premium_amt, ncrb_annual_premium_amt
 	-- ====================================================================================================================================  
 	CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction_wip]
 
@@ -76,8 +77,8 @@
 				apc.CededPremium as ceded_annual_premium_amt,
 				apc.CededPremium as ceded_premium_amt,
 				null covID,
-				apc.StatePremium as ncrb_annual_premium_amt, 
-				apc.StatePremium as ncrb_premium_amt 
+				apc.StatePremium as state_annual_premium_amt, 
+				apc.StatePremium as state_premium_amt 
 			INTO edw_temp.TQuote_transaction_wip_temp2  
 			FROM edw_temp.TQuote_transaction_wip_temp1 tmp1 
 			inner join edw_stage.Account acct on acct.id = tmp1.id
@@ -112,8 +113,8 @@
 				0 as ceded_annual_premium_amt,
 				0 as ceded_premium_amt,
 				cov.Name covID,
-				0 as ncrb_annual_premium_amt, 
-				0 as ncrb_premium_amt 
+				0 as state_annual_premium_amt, 
+				0 as state_premium_amt 
 			FROM edw_temp.TQuote_transaction_wip_temp1 tmp1 
 			left join edw_stage.Accountpremium ap on ap.AccountId=tmp1.id 
 			INNER JOIN edw_stage.[AccountPremiumTaxAndFee] accptf on accptf.AccountPremiumId = ap.Id 
@@ -155,8 +156,9 @@
 				,ceded_annual_premium_amt
 				,ceded_premium_amt
 			,quote_collection_class_type_sk
-			,ncrb_premium_amt
-		    ,ncrb_annual_premium_amt)
+			,state_premium_amt
+		    ,state_annual_premium_amt
+			)
 			SELECT
 				q.quote_sk
 			,qh.quote_history_sk, dt1.date_sk, dt2.date_sk, dt3.date_sk, Source.number, 
@@ -192,8 +194,8 @@
 					when cc.quote_collection_class_type_sk is not null then cc.quote_collection_class_type_sk
 					else 0
 				end quote_collection_class_type_sk
-				,ncrb_premium_amt
-		    	,ncrb_annual_premium_amt
+				,state_premium_amt
+		    	,state_annual_premium_amt
 			FROM
 				edw_temp.TQuote_transaction_wip_temp2 source
 			LEFT JOIN edw_core.tdate dt1 on dt1.actual_dt = cast(source.EffectiveDate as date)

@@ -1,7 +1,7 @@
 -- ====================================================================================================================================
 -- Description: This procedures inserts into TQuote_Transaction  
 ---------------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author								|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 06/02/23		Architha Gudimalla		1. Created this procedure
 -- 11/14/23		Sandeep Gundreddy		2. modified quote_auto_vehicle join
@@ -13,9 +13,10 @@
 --										   Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S
 -- 										   Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S
 -- 08/30/24		Architha Gudimalla		8. Update product join to inner instead of left
---11/25/2024	Sandeep Gundreddy		9. Added logic to load item_sk and coverage_sk for Marine Boat & Yacht
--- 06/04/2025	Alberto Almario			10. Added new column user_sk
--- 08/29/2025	Dinesh Bobbili			11. Added ncrb_premium_amt, ncrb_annual_premium_amt
+--11/25/24		Sandeep Gundreddy	9. Added logic to load item_sk and coverage_sk for Marine Boat & Yacht
+-- 06/04/25		Alberto Almario				10. Added new column user_sk
+-- 08/29/25		Dinesh Bobbili				11. Added ncrb_premium_amt, ncrb_annual_premium_amt
+-- 09/11/25		Yunus Mohammed		12. AD10946 Renamed ncrb_premium_amt, ncrb_annual_premium_amt
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction]
@@ -84,8 +85,8 @@ BEGIN
 			COALESCE(acctrcp.CededPremiumDeltaProRated,acctrcp.CededPremium) as ceded_premium_amt,
 			null covID
 			,tmp1.CreatedById
-			,COALESCE(acctrcp.StatePremiumDeltaProRated,acctrcp.StatePremium) as ncrb_premium_amt
-			,COALESCE(acctrcp.StatePremiumDelta,acctrcp.StatePremium) as ncrb_annual_premium_amt
+			,COALESCE(acctrcp.StatePremiumDeltaProRated,acctrcp.StatePremium) as state_premium_amt
+			,COALESCE(acctrcp.StatePremiumDelta,acctrcp.StatePremium) as state_annual_premium_amt
 		INTO edw_temp.TQuote_transaction_temp2  
 		FROM edw_temp.TQuote_transaction_temp1 tmp1 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
@@ -120,8 +121,8 @@ BEGIN
 			0 as ceded_premium_amt,
 			cov.Name covID
 			,tmp1.CreatedById
-			,0 as ncrb_premium_amt
-			,0 as ncrb_annual_premium_amt
+			,0 as state_premium_amt
+			,0 as state_annual_premium_amt
 		FROM edw_temp.TQuote_transaction_temp1 tmp1 
 		inner join edw_stage.AccountTransactionTaxAndFee acctrtf on acctrtf.AccountTransactionId = tmp1.Id 
 		inner join edw_stage.Account acct on acct.id = tmp1.AccountId
@@ -157,8 +158,9 @@ BEGIN
 			,ceded_annual_premium_amt
 			,ceded_premium_amt
 		   ,quote_collection_class_type_sk
-		   ,ncrb_premium_amt
-		   ,ncrb_annual_premium_amt)
+		   ,state_premium_amt
+		   ,state_annual_premium_amt
+		)
 		SELECT
 			q.quote_sk
            ,qh.quote_history_sk, dt1.date_sk, dt2.date_sk, dt3.date_sk, Source.number, 
@@ -194,8 +196,8 @@ BEGIN
 			      when cc.quote_collection_class_type_sk is not null then cc.quote_collection_class_type_sk
 				  else 0
 			end quote_collection_class_type_sk
-			,ncrb_premium_amt
-		   ,ncrb_annual_premium_amt
+			,state_premium_amt
+		   ,state_annual_premium_amt
 		FROM
 			edw_temp.TQuote_transaction_temp2 source
 		LEFT JOIN edw_core.tdate dt1 on dt1.actual_dt = cast(source.EffectiveDate as date)
