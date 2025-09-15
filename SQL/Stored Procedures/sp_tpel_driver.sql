@@ -4,13 +4,14 @@
 -- Description: This procedures insert pel driver data
 -- =============================================
 ---------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author									 |	Change Description
 ---------------------------------------------------------------------------------------------------
--- 				Yunus Mohammed			    1. Created this procedure
+-- 							Yunus Mohammed			    1. Created this procedure
 -- 01/08/24		Yunus Mohammed			    2. Added deleted_on_policy_change_in
--- 02/05/24		Hernando Gonzalez			3. Added Limits Indicator
--- 11/19/24		Architha Gudimalla		    4. AD7757 - Added driver unique id
--- 08/05/25		Dinesh Bobbili			    5. AD10467 Added driver_status
+-- 02/05/24		Hernando Gonzalez			 3. Added Limits Indicator
+-- 11/19/24		Architha Gudimalla		      4. AD7757 - Added driver unique id
+-- 08/05/25		Dinesh Bobbili			    		5. AD10467 Added driver_status
+--09/09/25		Yunus Mohammed				6. AD10908 - Added logic to use IsDeletedOnRenewal
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_driver]
 
@@ -39,7 +40,9 @@ BEGIN
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,policy_history_sk,source_system_sk,[Index],
 			IssuedDate,FirstName,LastName,Birthdate,InsuredType,LicenseStatus,LicenseNumber,
 			Model,LicenseCountry,LicenseState,MiddleName,Suffix,Prefix,LicenseYear,
-			CASE IsDeletedOnPolicyChange WHEN 0 THEN 'No' WHEN 1 THEN 'Yes' END AS IsDeletedOnPolicyChange,
+			CASE
+				WHEN IsDeletedOnPolicyChange =1 OR IsDeletedOnRenewal =1  THEN 'Yes'
+				ELSE 'No' END AS IsDeletedOnPolicyChange,
 			DriverLimitsIndicator
 			,driver_unique_id
 			,DriverStatus		
@@ -56,6 +59,7 @@ BEGIN
 			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,atvo.[Index],
 			act.IssuedDate,CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value],
 			atvo.IsDeletedOnPolicyChange
+			,atvo.IsDeletedOnRenewal
 			,atvo.[UniqueId] driver_unique_id
 			from
 				edw_stage.AccountTransaction act
