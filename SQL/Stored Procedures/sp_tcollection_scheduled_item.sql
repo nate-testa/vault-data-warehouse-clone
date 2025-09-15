@@ -63,7 +63,7 @@ BEGIN
 				acc.PolicyNumber, acc.EffectiveDate, acc.IssuedDate, acc.ExpirationDate, acc.TransactionEffectiveDate as transaction_dt, acc.PolicyChangeNumber
 				,his.[policy_history_sk], ct.collection_class_type_sk, acct.[Index]
 				,accto.Field, accto.[Value]
-				,CASE WHEN acct.IsDeletedOnPolicyChange = 1 and acct.IsDeletedOnRenewal =1 THEN 'Yes' ELSE 'No' END as scheduled_item_deleted_in
+				,CASE WHEN acct.IsDeletedOnPolicyChange = 1 OR  acct.IsDeletedOnRenewal =1 THEN 'Yes' ELSE 'No' END as scheduled_item_deleted_in
 				,acc.CreatedDate, acc.UpdatedDate
 				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
 					  Else 4 --(Metal)
