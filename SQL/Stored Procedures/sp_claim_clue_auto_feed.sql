@@ -17,6 +17,7 @@ GO
 -- 06-24-2025               Alberto Almario             5. Add logic for FaultIndicator column.
 -- 07-01-2025               Alberto Almario             6. Include R records for changes in ClaimDate (loss_dt).
 -- 08-12-2025               Alberto Almario             7. Update logic for ClaimAmount and ClaimDisposition fields
+-- 09-16-2025               Alberto Almario             8. Add logic for new records where the claimDisposition changed on tclaim_feature
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
@@ -44,6 +45,80 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp0];
         DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp1];
         DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp2];
+        DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp3];
+
+        -- Get records where the claimDisposition changed on tclaim_feature 
+        SELECT DISTINCT a.claim_sk, a.claim_no
+        INTO edw_temp.[claim_clue_auto_feed_temp3]
+        FROM
+            (
+                SELECT 
+                    claim_sk,
+                    claim_no,
+                    ClaimType,
+                    CASE 
+                        WHEN sum_subro_exp_rec_amt <> 0 THEN 'S'
+                        WHEN claim_feature_status_no = 1 THEN 'C'
+                        ELSE 'O' 
+                    END AS [ClaimDisposition]
+                FROM 
+                    (
+                        SELECT 
+                            a.claim_sk,
+                            a.claim_no,
+                            CASE
+                                WHEN claim_coverage_desc = 'Combined Single Limits' THEN 'BI'
+                                WHEN claim_coverage_desc = 'Collision' THEN 'CO'
+                                WHEN claim_coverage_desc = 'Comprehensive' THEN 'CP'
+                                WHEN claim_coverage_desc = 'Full Glass' THEN 'GL'
+                                WHEN claim_coverage_desc = 'Medical Payments' THEN 'MP'
+                                WHEN claim_coverage_desc = 'PIP' THEN 'OT'
+                                WHEN claim_coverage_desc = 'PD Liability Limit' THEN 'PD'
+                                WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TL'
+                                WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UN'
+                                ELSE 'OT'
+                            END AS ClaimType,
+                            SUM(a.subrogation_expense_recovery_amt + a.subrogation_recovery_amt) AS sum_subro_exp_rec_amt,
+                            MAX(
+                                CASE 
+                                    WHEN a.claim_feature_status = 'CLOSED' THEN 1
+                                    ELSE 2
+                                END
+                            )
+                            AS claim_feature_status_no
+                        FROM edw_core.tclaim_feature AS a
+                        WHERE a.source_system_sk in (3,5)
+                        AND a.product_sk = 3
+                        GROUP BY
+                            a.claim_sk,
+                            a.claim_no,
+                            CASE
+                                WHEN claim_coverage_desc = 'Combined Single Limits' THEN 'BI'
+                                WHEN claim_coverage_desc = 'Collision' THEN 'CO'
+                                WHEN claim_coverage_desc = 'Comprehensive' THEN 'CP'
+                                WHEN claim_coverage_desc = 'Full Glass' THEN 'GL'
+                                WHEN claim_coverage_desc = 'Medical Payments' THEN 'MP'
+                                WHEN claim_coverage_desc = 'PIP' THEN 'OT'
+                                WHEN claim_coverage_desc = 'PD Liability Limit' THEN 'PD'
+                                WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TL'
+                                WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UN'
+                                ELSE 'OT'
+                            END
+                    ) as tbl
+            ) a
+        INNER JOIN 
+            (
+                SELECT 
+                    ROW_NUMBER() OVER (PARTITION BY claimNumber, ClaimType ORDER BY etl_audit_sk DESC, claimReportingStatus ASC) rn
+                    , *
+                FROM [edw_integration].[claim_clue_auto_feed]
+            ) b
+        ON a.claim_no = b.claimNumber
+            AND a.ClaimType = b.ClaimType
+        WHERE b.rn = 1
+            AND a.claimDisposition <> b.claimDisposition
+        ;
+        --------------------------------------------------------------
 
         WITH 
         customer AS (
@@ -136,7 +211,11 @@ BEGIN
                 ) AS b ON a.claim_sk = b.claim_sk
             WHERE a.source_system_sk in (3,5)
             AND a.product_sk = 3
-            AND cast(b.transaction_ts as datetime2(7)) > @last_source_extract_ts
+            AND (
+                    cast(b.transaction_ts as datetime2(7)) > @last_source_extract_ts
+                    OR
+                    a.claim_sk IN (select claim_sk from [edw_temp].[claim_clue_auto_feed_temp3])
+            )
             GROUP BY
                 a.claim_sk,
                 b.transaction_ts,
@@ -700,7 +779,7 @@ BEGIN
 
 		
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(transaction_ts) FROM edw_temp.[claim_clue_auto_feed_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(transaction_ts) FROM edw_temp.[claim_clue_auto_feed_temp1] WHERE claimNumber NOT IN (SELECT claim_no FROM [edw_temp].[claim_clue_auto_feed_temp3]) ),@last_source_extract_ts);
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
@@ -710,6 +789,7 @@ BEGIN
         DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp0];
         DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp1];
         DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp2];
+        DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp3];
 
 	END TRY
 	BEGIN CATCH

@@ -14,6 +14,7 @@ GO
 -- 01-21-2025               Rushin Shah                 2. Updated the claim amount field logic
 -- 03-21-2025               Sandeep Gundreddy           3. Updated source_system_sk filter to include snapsheet claims
 -- 08-12-2025               Alberto Almario             4. Update logic for ClaimAmount and ClaimDisposition fields
+-- 09-16-2025               Alberto Almario             5. Add logic for new records where the claimDisposition changed on tclaim
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_property_feed]
 AS
@@ -41,6 +42,35 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp0];
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp1];
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp2];
+        DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp3];
+
+        -- Get records where the claimDisposition changed on tclaim 
+        SELECT DISTINCT a.claim_sk, a.claim_no
+        INTO [edw_temp].[claim_clue_property_feed_temp3]
+        FROM (
+            SELECT 
+                claim_no,
+                claim_sk,
+                CASE 
+                    WHEN (c.subrogation_expense_recovery_amt <> 0 OR c.subrogation_recovery_amt <> 0) THEN 'S'
+                    WHEN c.claim_status ='CLOSED' THEN 'C' 
+                    ELSE 'O' 
+                END AS [claimDisposition],
+                'changed_on_tclaim' as record_type
+            FROM edw_core.tclaim c 
+            WHERE c.source_system_sk in (3,5)
+        ) as a
+        INNER JOIN (
+            SELECT 
+                ROW_NUMBER() OVER (PARTITION BY claimNumber ORDER BY etl_audit_sk DESC, claimReportingStatus ASC) rn
+                , *
+            FROM [edw_integration].[claim_clue_property_feed]
+        ) as b
+        ON a.claim_no = b.claimNumber
+        WHERE b.rn = 1
+        AND a.claimDisposition <> b.claimDisposition
+        ;
+        --------------------------------------------------------------
         
 
         WITH 
@@ -141,7 +171,12 @@ BEGIN
                     GROUP BY claim_sk
                 ) AS ct ON c.claim_sk = ct.claim_sk
             WHERE c.source_system_sk in (3,5)
-            AND cast(ct.transaction_ts as datetime2(7)) > @last_source_extract_ts
+            AND ( 
+                    cast(ct.transaction_ts as datetime2(7)) > @last_source_extract_ts
+                    OR
+                    c.claim_sk IN (select claim_sk from [edw_temp].[claim_clue_property_feed_temp3])
+            )
+
         )
 
         SELECT  
@@ -681,7 +716,7 @@ BEGIN
 
 		
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(transaction_ts) FROM edw_temp.[claim_clue_property_feed_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(transaction_ts) FROM edw_temp.[claim_clue_property_feed_temp1] WHERE claimNumber NOT IN (SELECT claim_no FROM [edw_temp].[claim_clue_property_feed_temp3]) ),@last_source_extract_ts);
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
@@ -691,6 +726,7 @@ BEGIN
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp0];
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp1];
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp2];
+        DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp3];
 
 	END TRY
 	BEGIN CATCH
