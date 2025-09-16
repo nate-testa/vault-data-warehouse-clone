@@ -102,13 +102,11 @@ BEGIN
 				nullif(trim(MailingAddressZipCode),'') MailingAddressZipCode, 
 				nullif(trim(MailingAddressCounty),'') MailingAddressCounty, 
 				nullif(trim(MailingAddressCountry),'') MailingAddressCountry, 
-				nullif(trim(Program),'') Program,
-				RenewalViewShow,
-				RenewalReviewStartDate				
+				nullif(trim(Program),'') Program	
 		INTO edw_temp.tquote_temp2
 		FROM
 			(
-				SELECT  acc.id, accof.Field, accof.Value, acc.RenewalViewShow,acc.RenewalReviewStartDate 
+				SELECT  acc.id, accof.Field, accof.Value
 						/*case when pin.id is not null and accof.Field in  ('FirstName','LastName','MiddleName')  then accof.Field 
 							 when pin.id is  null and accof.Field in  ('FirstName','LastName','MiddleName')  then null 
 							 else accof.Field
@@ -234,8 +232,8 @@ BEGIN
 				end as document_delivery_method				
 				,tmp1.RenewalCapFactor as renewal_cap_factor
 				,case when tmp1.BoundByBroker = 1 then 'Yes' else 'No' end as bound_by_broker_in
-				,case when acc.RenewalViewShow = 1 then 'Yes' when acc.RenewalViewShow = 0 then 'No' end as renewal_quote_in
-				,acc.RenewalReviewStartDate as renewal_quote_review_start_dt
+				,case when tmp1.RenewalViewShow = 1 then 'Yes' when tmp1.RenewalViewShow = 0 then 'No' end as renewal_quote_in
+				,tmp1.RenewalReviewStartDate as renewal_quote_review_start_dt
 			FROM 
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
