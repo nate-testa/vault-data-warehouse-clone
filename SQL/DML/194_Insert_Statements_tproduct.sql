@@ -7,7 +7,7 @@ INSERT INTO edw_core.tproduct (
 )
 SELECT
     N'GRPEL',
-    N'Group Umbrella',
+    N'Group Personal Excess Liability',
     NULL,
     GETDATE(),
     'PersonalLines'
