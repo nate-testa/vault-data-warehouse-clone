@@ -113,7 +113,8 @@ class Policy:
                 'risk_address_zip_cd': record['mailing_address_zip_cd'],
                 'policy_status': record['policy_status'],
                 'monoline_in': record['monoline_in'],
-                'document_delivery_preference': record['document_delivery_preference']
+                'document_delivery_preference': record['document_delivery_preference'],
+                'insured_nm': record['insured_nm']
                 
                 # 'create_ts': record['create_ts'],
                 # 'update_ts': record['update_ts'],
