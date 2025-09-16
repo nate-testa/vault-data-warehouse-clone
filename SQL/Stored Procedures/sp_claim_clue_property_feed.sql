@@ -14,7 +14,7 @@ GO
 -- 01-21-2025               Rushin Shah                 2. Updated the claim amount field logic
 -- 03-21-2025               Sandeep Gundreddy           3. Updated source_system_sk filter to include snapsheet claims
 -- 08-12-2025               Alberto Almario             4. Update logic for ClaimAmount and ClaimDisposition fields
--- 09-11-2025               Alberto Almario             5. Add logic for new records where the claimDisposition changed on tclaim
+-- 09-16-2025               Alberto Almario             5. Add logic for new records where the claimDisposition changed on tclaim
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_property_feed]
 AS
@@ -42,6 +42,35 @@ BEGIN
 		DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp0];
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp1];
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp2];
+        DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp3];
+
+        -- Get records where the claimDisposition changed on tclaim 
+        SELECT DISTINCT a.claim_sk, a.claim_no
+        INTO [edw_temp].[claim_clue_property_feed_temp3]
+        FROM (
+            SELECT 
+                claim_no,
+                claim_sk,
+                CASE 
+                    WHEN (c.subrogation_expense_recovery_amt <> 0 OR c.subrogation_recovery_amt <> 0) THEN 'S'
+                    WHEN c.claim_status ='CLOSED' THEN 'C' 
+                    ELSE 'O' 
+                END AS [claimDisposition],
+                'changed_on_tclaim' as record_type
+            FROM edw_core.tclaim c 
+            WHERE c.source_system_sk in (3,5)
+        ) as a
+        INNER JOIN (
+            SELECT 
+                ROW_NUMBER() OVER (PARTITION BY claimNumber ORDER BY etl_audit_sk DESC, claimReportingStatus ASC) rn
+                , *
+            FROM [edw_integration].[claim_clue_property_feed]
+        ) as b
+        ON a.claim_no = b.claimNumber
+        WHERE b.rn = 1
+        AND a.claimDisposition <> b.claimDisposition
+        ;
+        --------------------------------------------------------------
         
 
         WITH 
@@ -142,7 +171,12 @@ BEGIN
                     GROUP BY claim_sk
                 ) AS ct ON c.claim_sk = ct.claim_sk
             WHERE c.source_system_sk in (3,5)
-            AND cast(ct.transaction_ts as datetime2(7)) > @last_source_extract_ts
+            AND ( 
+                    cast(ct.transaction_ts as datetime2(7)) > @last_source_extract_ts
+                    OR
+                    c.claim_sk IN (select claim_sk from [edw_temp].[claim_clue_property_feed_temp3])
+            )
+
         )
 
         SELECT  
@@ -676,203 +710,13 @@ BEGIN
             [report_end_date]
         FROM [edw_temp].[claim_clue_property_feed_temp1];
 
-        SET @rows_affected=@@ROWCOUNT;
-
-        -------------------------------------------------------------------------
-        --*** Start Insert rows with claimDisposition changed on tclaim table ***
-        -------------------------------------------------------------------------
-        WITH 
-        tclaim_tbl AS (
-            SELECT 
-                claim_no,
-                CASE 
-                    WHEN (c.subrogation_expense_recovery_amt <> 0 OR c.subrogation_recovery_amt <> 0) THEN 'S'
-                    WHEN c.claim_status ='CLOSED' THEN 'C' 
-                    ELSE 'O' 
-                END AS [claimDisposition]
-            FROM edw_core.tclaim c 
-            WHERE c.source_system_sk in (3,5)
-        )
-        ,clue_property_tbl AS (
-            SELECT 
-                ROW_NUMBER() OVER (PARTITION BY claimNumber ORDER BY etl_audit_sk DESC, claimReportingStatus ASC) rn
-                , *
-            FROM [edw_integration].[claim_clue_property_feed]
-        )
-
-        INSERT INTO [edw_integration].[claim_clue_property_feed] (
-            [contribCompany],
-            [claimNumber],
-            [policyNumber],
-            [policyType],
-            [claimDate],
-            [causeOfLoss],
-            [locationOfLoss],
-            [claimAmount],
-            [claimReportingStatus],
-            [claimDisposition],
-            [catastropheRelated],
-            [mortgageName],
-            [mortgageLoanNumber],
-            [filler_reservedforFutureUse],
-            [riskAddressHseNum],
-            [riskAddressStreetName],
-            [riskAddressAptNum],
-            [riskAddressCity],
-            [riskAddressState],
-            [riskAddressZip],
-            [riskAddressZipPlus4],
-            [policyHolderMailAddrHseNum],
-            [policyHolderMailAddressStreetName],
-            [policyHolderMailAddressAptNum],
-            [policyHolderMailAddressCity],
-            [policyHolderMailAddressState],
-            [policyHolderMailAddressZip],
-            [policyHolderMailAddressZipPlus4],
-            [policyHolderTelAreaCode],
-            [policyHolderTelNumber],
-            [filler_reservedforFutureUse1],
-            [policyHolderNamePrefix],
-            [policyHolderNameLast],
-            [policyHolderNameFirst],
-            [policyHolderNameMiddle],
-            [policyHolderNameSuffix],
-            [policyHolderSSN],
-            [policyHolderDOB],
-            [policyHolderSex],
-            [filler_reservedforFutureUse2],
-            [policyHolder2NamePrefix],
-            [policyHolder2NameLast],
-            [policyHolder2NameFirst],
-            [policyHolder2NameMiddle],
-            [policyHolder2NameSuffix],
-            [policyHolder2SSN],
-            [policyHolder2DOB],
-            [policyHolder2Sex],
-            [filler_reservedforFutureUse3],
-            [claimantNamePrefix],
-            [claimantNameLast],
-            [claimantNameFirst],
-            [claimantNameMiddle],
-            [claimantNameSuffix],
-            [claimantSSN],
-            [claimantDOB],
-            [claimantSex],
-            [claimantAddressHseNum],
-            [claimantAddressStreetName],
-            [claimantAddressAptNum],
-            [claimantAddressCity],
-            [claimantAddressState],
-            [claimantAddressZip],
-            [claimantAddressZipPlus4],
-            [claimantTelephoneAreaCode],
-            [claimantTelephoneNumber],
-            [filler_reservedforFutureUse4],
-            [clueControlArea],
-            [filler_reservedforFutureUse5],
-            [recordVersionNumber],
-            [create_ts],
-            [update_ts],
-            [etl_audit_sk],
-            [report_start_date],
-            [report_end_date]
-        )
-        SELECT 
-            b.[contribCompany],
-            b.[claimNumber],
-            b.[policyNumber],
-            b.[policyType],
-            b.[claimDate],
-            b.[causeOfLoss],
-            b.[locationOfLoss],
-            b.[claimAmount],
-            'A' as [claimReportingStatus],
-            a.[claimDisposition],
-            b.[catastropheRelated],
-            b.[mortgageName],
-            b.[mortgageLoanNumber],
-            b.[filler_reservedforFutureUse],
-            b.[riskAddressHseNum],
-            b.[riskAddressStreetName],
-            b.[riskAddressAptNum],
-            b.[riskAddressCity],
-            b.[riskAddressState],
-            b.[riskAddressZip],
-            b.[riskAddressZipPlus4],
-            b.[policyHolderMailAddrHseNum],
-            b.[policyHolderMailAddressStreetName],
-            b.[policyHolderMailAddressAptNum],
-            b.[policyHolderMailAddressCity],
-            b.[policyHolderMailAddressState],
-            b.[policyHolderMailAddressZip],
-            b.[policyHolderMailAddressZipPlus4],
-            b.[policyHolderTelAreaCode],
-            b.[policyHolderTelNumber],
-            b.[filler_reservedforFutureUse1],
-            b.[policyHolderNamePrefix],
-            b.[policyHolderNameLast],
-            b.[policyHolderNameFirst],
-            b.[policyHolderNameMiddle],
-            b.[policyHolderNameSuffix],
-            b.[policyHolderSSN],
-            b.[policyHolderDOB],
-            b.[policyHolderSex],
-            b.[filler_reservedforFutureUse2],
-            b.[policyHolder2NamePrefix],
-            b.[policyHolder2NameLast],
-            b.[policyHolder2NameFirst],
-            b.[policyHolder2NameMiddle],
-            b.[policyHolder2NameSuffix],
-            b.[policyHolder2SSN],
-            b.[policyHolder2DOB],
-            b.[policyHolder2Sex],
-            b.[filler_reservedforFutureUse3],
-            b.[claimantNamePrefix],
-            b.[claimantNameLast],
-            b.[claimantNameFirst],
-            b.[claimantNameMiddle],
-            b.[claimantNameSuffix],
-            b.[claimantSSN],
-            b.[claimantDOB],
-            b.[claimantSex],
-            b.[claimantAddressHseNum],
-            b.[claimantAddressStreetName],
-            b.[claimantAddressAptNum],
-            b.[claimantAddressCity],
-            b.[claimantAddressState],
-            b.[claimantAddressZip],
-            b.[claimantAddressZipPlus4],
-            b.[claimantTelephoneAreaCode],
-            b.[claimantTelephoneNumber],
-            b.[filler_reservedforFutureUse4],
-            b.[clueControlArea],
-            b.[filler_reservedforFutureUse5],
-            b.[recordVersionNumber],
-            @current_date AS create_ts,
-            @current_date AS update_ts,
-            @etl_audit_sk AS etl_audit_sk,
-            CASE 
-                WHEN (SELECT MAX(report_end_date) FROM [edw_integration].[claim_clue_property_feed]) IS NULL THEN '2020-06-29 00:00:00'
-                ELSE (SELECT DATEADD(day, 1, MAX(report_end_date)) FROM [edw_integration].[claim_clue_property_feed])
-            END AS [report_start_date],
-            CONVERT(datetime, CONVERT(date, DATEADD(day, -1, GETDATE()))) AS [report_end_date]
-        FROM tclaim_tbl a 
-        INNER JOIN clue_property_tbl b
-            ON a.claim_no = b.claimNumber
-        WHERE b.rn = 1
-            AND a.claimDisposition <> b.claimDisposition
-        ;
-        -----------------------------------------------------------------------
-        --*** End Insert rows with claimDisposition changed on tclaim table ***
-        -----------------------------------------------------------------------
-
         --************End************
 
-		SET @rows_affected=@rows_affected+@@ROWCOUNT;
+		SET @rows_affected=@@ROWCOUNT;
 
 		
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(transaction_ts) FROM edw_temp.[claim_clue_property_feed_temp1]),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(transaction_ts) FROM edw_temp.[claim_clue_property_feed_temp1] WHERE claimNumber NOT IN (SELECT claim_no FROM [edw_temp].[claim_clue_property_feed_temp3]) ),@last_source_extract_ts);
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
@@ -882,6 +726,7 @@ BEGIN
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp0];
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp1];
         DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp2];
+        DROP TABLE IF EXISTS [edw_temp].[claim_clue_property_feed_temp3];
 
 	END TRY
 	BEGIN CATCH
