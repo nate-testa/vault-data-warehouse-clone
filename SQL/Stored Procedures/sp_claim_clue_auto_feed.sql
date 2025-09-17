@@ -18,6 +18,7 @@ GO
 -- 07-01-2025               Alberto Almario             6. Include R records for changes in ClaimDate (loss_dt).
 -- 08-12-2025               Alberto Almario             7. Update logic for ClaimAmount and ClaimDisposition fields
 -- 09-16-2025               Alberto Almario             8. Add logic for new records where the claimDisposition changed on tclaim_feature
+-- 09-17-2025               Alberto Almario             9. Update FaultIndicator and ClaimType logic.
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
@@ -72,10 +73,11 @@ BEGIN
                                 WHEN claim_coverage_desc = 'Comprehensive' THEN 'CP'
                                 WHEN claim_coverage_desc = 'Full Glass' THEN 'GL'
                                 WHEN claim_coverage_desc = 'Medical Payments' THEN 'MP'
-                                WHEN claim_coverage_desc = 'PIP' THEN 'OT'
+                                WHEN claim_coverage_desc = 'PIP' THEN 'PI'
                                 WHEN claim_coverage_desc = 'PD Liability Limit' THEN 'PD'
                                 WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TL'
-                                WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UN'
+                                WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UM'
+                                WHEN claim_coverage_desc = 'Underinsured Motorist Liablity' THEN 'UN'
                                 ELSE 'OT'
                             END AS ClaimType,
                             SUM(a.subrogation_expense_recovery_amt + a.subrogation_recovery_amt) AS sum_subro_exp_rec_amt,
@@ -98,10 +100,11 @@ BEGIN
                                 WHEN claim_coverage_desc = 'Comprehensive' THEN 'CP'
                                 WHEN claim_coverage_desc = 'Full Glass' THEN 'GL'
                                 WHEN claim_coverage_desc = 'Medical Payments' THEN 'MP'
-                                WHEN claim_coverage_desc = 'PIP' THEN 'OT'
+                                WHEN claim_coverage_desc = 'PIP' THEN 'PI'
                                 WHEN claim_coverage_desc = 'PD Liability Limit' THEN 'PD'
                                 WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TL'
-                                WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UN'
+                                WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UM'
+                                WHEN claim_coverage_desc = 'Underinsured Motorist Liablity' THEN 'UN'
                                 ELSE 'OT'
                             END
                     ) as tbl
@@ -168,6 +171,7 @@ BEGIN
                 ,c.loss_dt
                 ,c.product_sk
                 ,c.fault_decision
+                ,c.loss_state_cd
             FROM edw_core.tclaim AS c
         )
         ,claim_feature AS (
@@ -358,6 +362,8 @@ BEGIN
                 ELSE 'O' 
             END AS [ClaimDisposition],
             CASE
+                WHEN c.loss_state_cd = 'CA' AND c.fault_decision = 'insured' AND cf.ClaimType = 'BI' THEN 'B'
+                WHEN c.loss_state_cd = 'CA' AND c.fault_decision = 'insured' AND cf.ClaimType = 'PD' THEN 'D'
                 WHEN c.catastrophe_sk IS NOT NULL AND c.product_sk = 3 THEN 'C'
                 WHEN c.fault_decision = 'insured' THEN 'A'
                 WHEN c.fault_decision in ('no_fault','other_party') THEN 'N'
