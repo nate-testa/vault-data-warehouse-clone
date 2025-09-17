@@ -499,6 +499,7 @@ with DAG(
 
         reference_group_items = [
             'sp_tcustomer',
+            'sp_tcustomer_update_email',
             'sp_tcustomer_onetime_litigation',
             'sp_tuser',
             'sp_tinternal_coverage',
