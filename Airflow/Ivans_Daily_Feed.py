@@ -87,6 +87,7 @@ with DAG(
             'sp_policy_ivans_auto_feed',
             'sp_policy_ivans_home',
             'sp_policy_ivans_pel_feed'
+            'sp_policy_ivans_collection_feed',
         ]
 
         operators = []
