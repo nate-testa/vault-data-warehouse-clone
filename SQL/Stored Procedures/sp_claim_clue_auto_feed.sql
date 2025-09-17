@@ -192,10 +192,11 @@ BEGIN
                     WHEN claim_coverage_desc = 'Comprehensive' THEN 'CP'
                     WHEN claim_coverage_desc = 'Full Glass' THEN 'GL'
                     WHEN claim_coverage_desc = 'Medical Payments' THEN 'MP'
-                    WHEN claim_coverage_desc = 'PIP' THEN 'OT'
+                    WHEN claim_coverage_desc = 'PIP' THEN 'PI'
                     WHEN claim_coverage_desc = 'PD Liability Limit' THEN 'PD'
                     WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TL'
-                    WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UN'
+                    WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UM'
+                    WHEN claim_coverage_desc = 'Underinsured Motorist Liablity' THEN 'UN'
                     ELSE 'OT'
                 END AS [ClaimType],
                 SUM(
@@ -229,10 +230,11 @@ BEGIN
                     WHEN claim_coverage_desc = 'Comprehensive' THEN 'CP'
                     WHEN claim_coverage_desc = 'Full Glass' THEN 'GL'
                     WHEN claim_coverage_desc = 'Medical Payments' THEN 'MP'
-                    WHEN claim_coverage_desc = 'PIP' THEN 'OT'
+                    WHEN claim_coverage_desc = 'PIP' THEN 'PI'
                     WHEN claim_coverage_desc = 'PD Liability Limit' THEN 'PD'
                     WHEN claim_coverage_desc = 'Roadside Assistance' THEN 'TL'
-                    WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UN'
+                    WHEN claim_coverage_desc = 'Uninsured Motorist Liablity' THEN 'UM'
+                    WHEN claim_coverage_desc = 'Underinsured Motorist Liablity' THEN 'UN'
                     ELSE 'OT'
                 END
         )
