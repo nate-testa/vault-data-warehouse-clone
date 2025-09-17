@@ -6,6 +6,7 @@
 -----------------------------------------------------------------------------------------------------------------------------------
 -- 05/30/25		         Yunus Mohammed				1. Created this procedure
 -- 08/21/25		         Dinesh Bobbili  			2. Updated filter condition
+-- 09/17/25		         Dinesh Bobbili  			3. Updated logic for quote_to_bind_ratio, submission_to_quote_ratio
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed_commercial]
@@ -148,8 +149,8 @@ BEGIN
             ,bs.ytd_new_business_premium_amt as ytd_nb_premium_amt            
             ,case when rolling_12_policy_renewal_ct > 0 then round(100*cast(rolling_12_policy_renewal_accepted_ct as float)/rolling_12_policy_renewal_ct,2) else null end ytd_renewal_retention_pc
             ,tb.primary_address_state_cd
-            ,case when ytd_bind_ct = 0 then null else ytd_quote_ct/ytd_bind_ct end as quote_to_bind_ratio
-	        ,case when ytd_quote_ct = 0 then null else ytd_submission_ct/ytd_quote_ct end as submission_to_quote_ratio
+            ,case when ytd_bind_ct = 0 then null else ytd_bind_ct/ytd_quote_ct end as quote_to_bind_ratio
+	        ,case when ytd_quote_ct = 0 then null else ytd_quote_ct/ytd_submission_ct end as submission_to_quote_ratio
         into    edw_temp.broker_hubspot_feed_commercial_temp1
         FROM    edw_core.tbroker tb
         -- left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
