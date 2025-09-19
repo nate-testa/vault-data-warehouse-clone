@@ -4,6 +4,7 @@
 -- Change date      |Author						             |	Change Description
 -------------------------------------------------------------------------------------------
 -- 09/10/25		     Yunus Mohammed			    1. Created this procedure  
+-- 09/19/25          Sandeep Gundreddy	        2. Removed update_ts
 -- ========================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history_update]
@@ -46,12 +47,11 @@ BEGIN
 
         UPDATE [target]
         SET
-            [target].transaction_status = source.transaction_status,
-            [target].update_ts = getdate()
+            [target].transaction_status = source.transaction_status
         FROM
             edw_core.tpolicy_history [target]
             INNER JOIN edw_temp.tpolicy_history_update_temp1 as [source] ON  [target].policy_no = [source] .policy_no AND
-                [target].policy_no = [source] .policy_no AND [target].transaction_seq_no = [source] .transaction_seq_no
+                [target].effective_dt = [source] .effective_dt AND [target].transaction_seq_no = [source] .transaction_seq_no
       
 		SET @rows_affected=@@ROWCOUNT; 
 	
