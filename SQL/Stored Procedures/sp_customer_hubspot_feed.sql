@@ -29,6 +29,8 @@
 -- 06/06/25		Archtha Gudimalla			21. SR38158/AZ9753 - Added doc delivery preference
 -- 06/18/25		Dinesh Bobbili				22. AD9848 Added product_cd column
 -- 06/24/25		Dinesh Bobbili				23. AD9848 Removed product_cd column
+-- 09/09/25		Archtha Gudimalla			24. AD10935 - Added monoline fix
+-- 09/10/25		Archtha Gudimalla			25. AD10960 - Added customer email id fix
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -70,6 +72,14 @@ BEGIN
 		or isnull(a.broker_phone_no,'') <> isnull(br.broker_phone_no,'') 
 		or isnull(a.bdm_nm,'') <> isnull(bvt.team_member_nm,''); 
 
+        --used to see if there are any changes in customer email
+        insert into  edw_temp.customer_hubspot_feed_temp0
+		select a.policy_no 
+		from  [edw_integration].[customer_hubspot_feed] a
+		inner join edw_core.tcustomer cust on cust.customer_id = a.customer_id 
+		where a.email <> cust.email
+		and policy_no not in (select policy_no from edw_temp.customer_hubspot_feed_temp0);
+
  		DROP TABLE IF exists edw_temp.customer_hubspot_feed_temp01;
 
 		--get customer inforce counts
@@ -89,7 +99,22 @@ BEGIN
 		where inforce_dt_sk = (select date_sk from edw_core.tdate where actual_dt = dateadd(dd,-1,cast(getdate() as date)))
 		and pr.product_sk = summ.product_sk 
 		and summ.customer_sk = cust.customer_sk 
-		GROUP BY ROLLUP (customer_id, pr.product_cd);
+		GROUP BY ROLLUP (customer_id, pr.product_cd);		
+
+		--added to handle future effective inforce monoline customers
+		insert into edw_temp.customer_hubspot_feed_temp0
+		select c.policy_no 
+		from edw_integration.customer_hubspot_feed c
+		inner join edw_core.tpolicy pol on pol.policy_no = c.policy_no
+		inner join edw_core.tdaily_inforce_policy inf on inf.policy_sk = pol.policy_sk and inforce_dt_sk = (select date_sk from edw_core.tdate where actual_dt = dateadd(dd,-1,cast(getdate() as date)))
+		left join edw_temp.customer_hubspot_feed_temp01 pinf on c.customer_id = pinf.customer_id and c.product_nm = pinf.product_cd 
+		left join edw_temp.customer_hubspot_feed_temp01 cinf on c.customer_id = cinf.customer_id and '[Total]' = cinf.product_cd 
+		where c.monoline_in
+			<> case when pinf.customer_id is not null and pinf.inforce_ct = cinf.inforce_ct
+							   then 'Yes' 
+							   else 'No' 
+						  end
+         and c.policy_no not in (select policy_no from edw_temp.customer_hubspot_feed_temp0);  
 
  		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp1; 

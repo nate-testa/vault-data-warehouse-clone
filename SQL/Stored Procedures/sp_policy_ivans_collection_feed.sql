@@ -6,6 +6,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 05/06/25				Yunus Mohammed				1. Created this procedure
 -- 09/02/25				Alberto Almario				2. Add new columns Addr1_063,City_064,StateProvCd_065,PostalCode_066,Latitude_067,Longitude_068,County_069,Country_070
+-- 09/08/25				Alberto Almario				3. Use tpolicy_insured for address columns
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_collection_feed]
@@ -67,6 +68,7 @@ BEGIN
 		WHERE
 			pt.product_sk = 2			
             AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
+			AND ph.policy_no not in ('CO100122506','CO100120957')
         GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, 
 		pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk,pt.coverage_sk
 		
@@ -74,7 +76,7 @@ BEGIN
 		INTO [edw_temp].[policy_ivans_collection_temp3]
 		FROM (
 		SELECT
-		    ptf.policy_no, ptf.effective_dt, ptf.transaction_seq_no,
+		    DISTINCT ptf.policy_no, ptf.effective_dt, ptf.transaction_seq_no,
 		    (
 				SELECT uniqueId, policyNumber, commercialName, addr1, city, [state], zip, natureInterestCd, accountNumberId
 				FROM (
@@ -361,15 +363,15 @@ BEGIN
 		,c.middle_nm as [014_OtherGivenName]
 		,CASE WHEN c.Insured_type = 'Trust/LLC'  THEN 'Entity' END as [182_CommercialName]
 		,c.prefix AS [015_Prefix]
-		,CASE WHEN c.mailing_Address_line1 IS NOT NULL THEN 'MailingAddress' ELSE 'LocationAddress' END as [016_AddrTypeCd]
-		,c.mailing_address_line1 as [017_Addr1]
-		,c.mailing_address_city_nm as [018_City]
-		,c.mailing_address_state_cd as [019_StateProvCd]
-		,c.mailing_address_zip_cd as [020_PostalCode]
-		,c.mailing_address_country_nm as [021_Country]
+		,CASE WHEN poi.mailing_address_line_1 IS NOT NULL THEN 'MailingAddress' ELSE 'LocationAddress' END as [016_AddrTypeCd]
+		,poi.mailing_address_line_1 as [017_Addr1]
+		,poi.mailing_address_city_nm as [018_City]
+		,poi.mailing_address_state_cd as [019_StateProvCd]
+		,poi.mailing_address_zip_cd as [020_PostalCode]
+		,poi.mailing_address_country_nm as [021_Country]
 		,cl.latitude as [022_Latitude]
 		,cl.longitude as [023_Longitude]
-		,c.mailing_address_county_nm as [024_County]
+		,poi.mailing_address_county_nm as [024_County]
 		,'' as [025_PhoneTypeCd]
 		,RIGHT(REPLACE(TRANSLATE(c.home_phone_no, '+-/()#', '      '), ' ', ''), 10) as [026_HomePhoneNumber]
 		,RIGHT(REPLACE(TRANSLATE(c.mobile_phone_no, '+-/()#', '      '), ' ', ''), 10) as [026_MobilePhoneNumber]

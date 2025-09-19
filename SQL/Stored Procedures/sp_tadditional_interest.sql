@@ -1,10 +1,4 @@
-﻿SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
- 
--- ================================================================================================================================================
+﻿-- ================================================================================================================================================
 -- Description: This procedures insert and update info related to Additional Interest
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
@@ -14,6 +8,7 @@ GO
 -- 08/12/24     Architha Gudimalla              3. Added additional interest vehicle
 -- 08/15/24     Architha Gudimalla              4. Update additional_interest_deleted_in to use Yes/No instead of 1/0
 -- 08/20/25     Dinesh Bobbili		            5. Fixed the mapping issue for transaction_effective_dt and transaction_dt
+-- 09/09/25		Yunus Mohammed		 		6. AD10907 - Added logic to use IsDeletedOnRenewal
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tadditional_interest]
 AS
@@ -54,7 +49,7 @@ BEGIN
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
 			,product_cd
-			,IsDeletedOnPolicyChange as additional_interest_deleted_in
+			,CASE WHEN IsDeletedOnPolicyChange = 1 OR IsDeletedOnRenewal = 1 THEN 'Yes' ELSE 'No' END as additional_interest_deleted_in
 		INTO [edw_temp].[tadditional_interest_temp1]
 		FROM
 			(
@@ -72,7 +67,8 @@ BEGIN
 					  Else 4 --(Metal)
 				 end as [source_system_sk] --20230717 added
 				 ,ProductCode as product_cd 
-				 ,CASE WHEN acct.IsDeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END as IsDeletedOnPolicyChange
+				 ,acct.IsDeletedOnPolicyChange
+				 ,acct.IsDeletedOnRenewal
 			FROM
 				(SELECT
 					*

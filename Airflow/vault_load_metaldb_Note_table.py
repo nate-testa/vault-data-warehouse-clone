@@ -48,7 +48,7 @@ def load_note_tbl():
         SELECT
             NEWID() as Id
             ,'00000000-0000-0000-0000-000000000000' as UserId
-            ,qn.hs_note_body as Content
+            ,LEFT(qn.hs_note_body, 3000) as Content
             ,acc.id as ParentId
             ,'Account' as ObjectType
             ,GETDATE() as CreatedDate
@@ -100,7 +100,7 @@ def load_note_tbl():
         logging.info("Selected necessary columns for Metaldb insertion.")
 
         # **Step 4:** metaldb connection
-        metaldb_hook = MsSqlHook(mssql_conn_id='MetalDB')
+        metaldb_hook = MsSqlHook(mssql_conn_id='Vault_METAL')
         engine = create_engine(metaldb_hook.get_uri())
         with engine.begin() as connection:
             df_to_insert.to_sql(name='Note', con=connection, schema='dbo', if_exists='append', index=False)

@@ -8,6 +8,7 @@
 -- 10/24/2023 			Yunus Mohammed					1. Created this procedure 
 -- 07/19/2024 			Alberto Almario					2. Add new column vehicle_deleted_in 
 -- 07/31/2024 			Alberto Almario					3. Add new column vehicle_unique_id
+-- 09/09/2025			Yunus Mohammed			  4.  AD10909 - Added logic to use IsDeletedOnRenewal
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_vehicle]
 
@@ -55,7 +56,7 @@ BEGIN
 			act.IssuedDate,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			atvof.Field,atvof.[Value]
-			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END AS vehicle_deleted_in
+			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 OR atvo.IsDeletedOnRenewal = 1 THEN 'Yes' ELSE 'No' END AS vehicle_deleted_in
 			,atvo.[UniqueId] as vehicle_unique_id
 			from
 				edw_stage.AccountTransaction act

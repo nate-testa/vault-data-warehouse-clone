@@ -3,14 +3,15 @@
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert pel location data
 ---------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author									|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 08/11/23		Yunus Mohammed				1. Created this procedure 
 -- 11/24/23		Yunus Mohammed				2. Removed bug. Only one pel location was showing for a policy.
 -- 04/29/24		Hernando Gonzalez			3. add new columns SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental
 -- 02/05/24		Hernando Gonzalez			4. Added Limits Indicator
--- 07/03/24		Alberto Almario				5. Added primary_location_in
--- 17/07/25		Alberto Almario				6. New Column location_deleted_in
+-- 07/03/24		Alberto Almario					5. Added primary_location_in
+-- 17/07/25		Alberto Almario					6. New Column location_deleted_in
+-- 09/09/25		Yunus Mohammed		 		7. AD10907 - Added logic to use IsDeletedOnRenewal
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_location]
 
@@ -59,7 +60,7 @@ BEGIN
 			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,atvo.[index],
 			act.IssuedDate,atvof.Field,atvof.[Value] -- ,atvo.Id
 			,CASE WHEN atvof_2.Field = 'PrimaryLocationId' THEN 'Yes' ELSE 'No' END AS primary_location_in
-			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 THEN 'Yes' ELSE 'No' END as location_deleted_in
+			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 OR atvo.IsDeletedOnRenewal =1 THEN 'Yes' ELSE 'No' END as location_deleted_in
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId

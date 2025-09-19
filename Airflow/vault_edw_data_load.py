@@ -499,6 +499,7 @@ with DAG(
 
         reference_group_items = [
             'sp_tcustomer',
+            'sp_tcustomer_update_email',
             'sp_tcustomer_onetime_litigation',
             'sp_tuser',
             'sp_tinternal_coverage',
@@ -579,7 +580,8 @@ with DAG(
             'sp_tpolicy_update_non_renwal_billing',
             'sp_tpolicy_update_document_delivery',
             'sp_tpolicy_billing_paid_in_update',
-            'sp_tpolicy_history', 
+            'sp_tpolicy_history',
+            'sp_tpolicy_history_update',
             'sp_tpolicy_insured', 
             'sp_tpolicy_insured_update',
             'sp_tloss_history', 

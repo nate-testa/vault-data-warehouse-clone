@@ -14,6 +14,7 @@ GO
 -- 05/15/23		Architha Gudimalla				2. Updated after initial run errors
 -- 05/15/23		Architha Gudimalla				3. Added filter on tower type
 -- 05/26/25		Architha Gudimalla				4. Updated tower join
+-- 09/12/25		Architha Gudimalla				5. Updated renewal join logic
 -- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_tcommercial_renewal_summary] 
@@ -125,9 +126,9 @@ BEGIN
 				(
 					select  q.commercial_quote_sk, q.quote_no, q.effective_dt,  
 							q.quote_Status, q.first_quoted_commercial_quote_history_sk,  
-							case when q.prior_policy_no is null  
+							case when q.prior_term_policy_no is null  
 								 then q.quote_no 
-								 else q.prior_policy_no  
+								 else q.prior_term_policy_no  
 							end prior_policy_no  
 							, br.primary_address_state_cd
 					from edw_commercial.tcommercial_quote q
@@ -164,13 +165,13 @@ BEGIN
 				ren_pols_all as
 				(
 				 SELECT commercial_policy_sk, policy_no, effective_dt, expiration_dt,  
-						 case when prior_policy_no is null 
+						 case when prior_term_policy_no is null 
 								then policy_no 
-								else prior_policy_no  
+								else prior_term_policy_no  
 						end prior_policy_no,
-						rank() over (partition by case when prior_policy_no is null 
+						rank() over (partition by case when prior_term_policy_no is null 
 								then policy_no 
-								else prior_policy_no  
+								else prior_term_policy_no  
 						end order by commercial_policy_sk) rnk
 				 FROM	edw_commercial.tcommercial_policy
 				 where	effective_dt between @begin_dt and @end_dt 
@@ -407,7 +408,7 @@ BEGIN
 						,renewal_quote_limit_amt  
 						,renewal_quote_attachment_amt 
 					)
-				select @month_end_dt_sk, 
+				select distinct @month_end_dt_sk, 
 						a.commercial_policy_sk,   
 						a.customer_sk, 
 						a.broker_sk, 
