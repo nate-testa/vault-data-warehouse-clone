@@ -68,7 +68,7 @@ BEGIN
 		WHERE
 			pt.product_sk = 2			
             AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
-			AND ph.policy_no in ('CO100122506','CO100120957')
+			AND ph.policy_no not in ('CO100122506','CO100120957')
         GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, 
 		pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk,pt.coverage_sk
 		
