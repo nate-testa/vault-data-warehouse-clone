@@ -2,6 +2,16 @@ import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
+class RelativePathFormatter(logging.Formatter):
+    def format(self, record):
+        # Extract only the part from 'app/' onwards without the filename
+        pathname = record.pathname
+        if 'app/' in pathname:
+            relative_path = pathname.split('app/', 1)[1]
+            # Get only the directory, without the filename
+            record.pathname = 'app/' + os.path.dirname(relative_path)
+        return super().format(record)
+
 log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../logs")
 os.makedirs(log_dir, exist_ok=True)
 
@@ -19,7 +29,7 @@ file_handler = TimedRotatingFileHandler(
 )
 
 # Define formatters
-log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+log_formatter = RelativePathFormatter('%(asctime)s - [%(pathname)s] - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 # Apply formatters
 file_handler.setFormatter(log_formatter)
