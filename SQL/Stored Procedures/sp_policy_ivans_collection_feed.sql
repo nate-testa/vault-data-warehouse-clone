@@ -68,6 +68,7 @@ BEGIN
 		WHERE
 			pt.product_sk = 2			
             AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
+			AND ph.policy_no not in ('CO100122506','CO100120957')
         GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, 
 		pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk,pt.coverage_sk
 		
@@ -75,7 +76,7 @@ BEGIN
 		INTO [edw_temp].[policy_ivans_collection_temp3]
 		FROM (
 		SELECT
-		    ptf.policy_no, ptf.effective_dt, ptf.transaction_seq_no,
+		    DISTINCT ptf.policy_no, ptf.effective_dt, ptf.transaction_seq_no,
 		    (
 				SELECT uniqueId, policyNumber, commercialName, addr1, city, [state], zip, natureInterestCd, accountNumberId
 				FROM (
