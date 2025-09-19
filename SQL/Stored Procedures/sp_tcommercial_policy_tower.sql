@@ -1,17 +1,13 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
 -- =====================================================================================================================
 -- Author:		Alberto Almario
 -- Create Date: 2025-03-19
 -- Description: This stored procedure insert and update info related to tcommercial_policy_tower.
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						|	Change Description
+-- Change date          |Author									|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -- 19/03/2025           Alberto Almario				1. Created this procedure 
 -- 22/04/2025           Alberto Almario				2. Use BindDate instead of IssuedDate
+-- 09/19/2025			Yunus Mohammed		  3. AD10985 Logic updated for  tower_deleted_in
 -- ===================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_policy_tower]
 AS
@@ -71,7 +67,10 @@ BEGIN
 			,CASE WHEN [UniqueId] IS NULL OR [UniqueId] = '00000000-0000-0000-0000-000000000000' THEN cast([Index] as varchar(255)) ELSE cast([UniqueId] as varchar(255)) END as tower_unique_id
 			,CASE WHEN [Index] = '1' THEN 'primary' ELSE 'layer' END as tower_type
 			,[Index] as tower_no
-			,IsDeletedOnPolicyChange as tower_deleted_in
+			,CASE
+				WHEN IsDeletedOnPolicyChange=1 THEN 'Yes'
+				ELSE 'No'
+			END as tower_deleted_in
 			,nullif(trim(Company),'') as company_nm
 			,nullif(trim(PolicyNumber),'') as company_policy_no
 			,nullif(trim(EffectiveDate),'') as company_policy_effective_dt
