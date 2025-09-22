@@ -1,23 +1,18 @@
-/****** Object:  StoredProcedure [edw_core].[sp_tcommercial_broker_summary]    Script Date: 1/10/2024 3:09:53 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
- 
 -- ==================================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the broker data for each month
 ---------------------------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description 
+-- Change date |Author										|	Change Description 
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 -- 04/29/25		Architha Gudimalla				1. Created this procedure  
 -- 05/15/25		Architha Gudimalla				2. Updated after initial run errors
 -- 05/15/25		Architha Gudimalla				3. Added filter on tower type
 -- 05/15/25		Architha Gudimalla				4. Updated tower join
--- 09/11/25		Sandeep Gundreddy				5. Updated tower join to left join
+-- 09/11/25		Sandeep Gundreddy			5. Updated tower join to left join
+-- 09/22/25		Yunus Mohammed				6. Updated tcommercial_policy_tower join. 
 -- ================================================================================================================================================== 
 
-CREATE OR ALTER     PROCEDURE [edw_core].[sp_tcommercial_broker_summary] 
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_tcommercial_broker_summary] 
 @in_end_dt date = null
 AS 
 BEGIN
@@ -490,7 +485,7 @@ BEGIN
 				 inner join edw_core.tdate td on td.date_sk = summ.month_sk 
 				 inner join edw_commercial.tcommercial_policy_history ph_cancels on summ.commercial_policy_history_sk = ph_cancels.commercial_policy_history_sk 
 				 inner join edw_commercial.tcommercial_policy_history ph on summ.commercial_policy_sk = ph.commercial_policy_sk 
-				 left join edw_commercial.tcommercial_policy_tower tow on summ.commercial_policy_history_sk = tow.commercial_policy_history_sk and tow.company_nm = 'Vault E&S Insurance Company' and tow.tower_deleted_in = 0
+				 left join edw_commercial.tcommercial_policy_tower tow on summ.commercial_policy_history_sk = tow.commercial_policy_history_sk and tow.company_nm = 'Vault E&S Insurance Company' and tow.tower_deleted_in = 'No'
 				 inner join (select commercial_policy_sk, min(transaction_seq_no) transaction_seq_no
 								from edw_commercial.tcommercial_policy_history
 								group by commercial_policy_sk ) min_ph on ph.commercial_policy_sk = min_ph.commercial_policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
