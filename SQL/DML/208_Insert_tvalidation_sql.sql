@@ -61,29 +61,3 @@ from edw_core.tdaily_inforce_policy dip
        'Daily' AS frequency_desc ,
        getdate() AS create_ts ,
        getdate() AS update_ts;
-
-
-INSERT INTO edw_core.tvalidation_sql (validation_sql_desc , source_sql , target_sql , active_in , frequency_desc , create_ts , update_ts)
-SELECT
-'HONK : Duplicate VIN on same policy' ,
-       'select count(*) from (				
-select  av.vehicle_vin
-from edw_core.tdaily_inforce_policy dip 
-		inner join edw_core.tpolicy_history ph
-		on ph.policy_history_sk = dip.policy_history_sk
-		inner join edw_core.tpolicy pol
-		on ph.policy_sk = pol.policy_sk
-		inner join edw_core.tauto_vehicle_coverage avc
-		on avc.policy_history_sk = ph.policy_history_sk
-		inner join edw_core.tauto_vehicle av 
-			on avc.auto_vehicle_sk = av.auto_vehicle_sk
-		where dip.inforce_dt_sk = (select max(date_sk) from edw_core.tdate where actual_dt < cast(getdate() as date))
-		and avc.vehicle_deleted_in = ''No''
-		and av.vehicle_type in (''Private Passenger Auto'', ''Collector Car'', ''Motorcycles / Mopeds / Scooter / Go Karts'')
-GROUP BY pol.policy_no, av.vehicle_vin
-HAVING COUNT(*) > 1) dup_vin' AS source_sql ,
-       'select 0' AS target_sql ,
-       'Y' AS active_in ,
-       'Daily' AS frequency_desc ,
-       getdate() AS create_ts ,
-       getdate() AS update_ts;
