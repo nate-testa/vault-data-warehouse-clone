@@ -88,7 +88,9 @@ BEGIN
 			case
 				when c.claim_source ! = 'api' then c.incident_location_description				
 			end AS loss_desc,
-			c.incident_location_description as loss_location_desc,
+			case
+				when c.claim_source ! = 'api' then c.incident_location_description 
+			end as loss_location_desc,
 			UPPER(c.status) AS source_claim_status,
 			UPPER(CASE 
 				WHEN c.status IN('DRAFT','OPEN') 
