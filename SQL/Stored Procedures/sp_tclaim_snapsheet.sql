@@ -86,7 +86,8 @@ BEGIN
 			tp.policy_sk,
 			cl.cause_of_loss_sk,
 			case
-				when c.claim_source ! = 'api' then c.incident_location_description				
+				when c.claim_source = 'api' then c.incident_location_description
+				else cid.facts_of_loss
 			end AS loss_desc,
 			case
 				when c.claim_source ! = 'api' then c.incident_location_description 
