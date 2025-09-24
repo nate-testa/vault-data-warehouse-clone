@@ -1,6 +1,4 @@
--- Workday Written Premium
-
- CREATE TABLE edw_integration.policy_yacht_commission_feed 
+CREATE TABLE edw_integration.policy_yacht_commission_feed 
  (
   accounting_month varchar(255) ,
   insured_nm varchar(255) ,
