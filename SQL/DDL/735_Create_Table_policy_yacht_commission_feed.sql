@@ -14,7 +14,7 @@ CREATE TABLE edw_integration.policy_yacht_commission_feed
   create_ts datetime ,
   update_ts datetime ,
   etl_audit_sk int,
-  CONSTRAINT pk_policy_yacht_commission_feed PRIMARY KEY (accounting_month,policy_number,policy_term)
+  CONSTRAINT pk_policy_yacht_commission_feed PRIMARY KEY (accounting_month,policy_number)
 );
 
 INSERT INTO edw_integration.tintegration_table_detail(table_nm,table_type,table_desc,load_method,load_type,load_frequency,create_ts,update_ts) 
