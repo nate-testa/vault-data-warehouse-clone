@@ -82,6 +82,8 @@ BEGIN
           and pay.accounting_month  = cast(@yearmonth as varchar(255))
           group by p.policy_no,p.effective_dt,p.expiration_dt,p.insured_nm,p.risk_state_cd,p.uw_company_nm,policy_term,pay.accounting_month
 
+          SET @rows_affected  = @@ROWCOUNT
+
      -- Update control table
         IF @yearmonth = concat(datepart(yyyy,getdate()),iif(datepart(mm,getdate()) < 10,'0','') ,datepart(mm,getdate()) )
         BEGIN
