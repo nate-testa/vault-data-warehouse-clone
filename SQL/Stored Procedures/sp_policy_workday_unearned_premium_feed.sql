@@ -32,7 +32,7 @@ BEGIN
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
 		DECLARE @rows_affected INT
 		DECLARE @process_nm VARCHAR(255)=@ProcedureName
-		DECLARE @current_date DATETIME=v
+		DECLARE @current_date DATETIME=GETDATE()
 		DECLARE @parameter_desc VARCHAR(255)
 
 		-- Get last source extract date
