@@ -18,6 +18,7 @@
 -- 05/07/25		Yunus Mohammed				9. AD9047 Used tdaily_inforce table to check inforce policies.
 --																					Removed cancellation logic
 -- 07/22/25		Dinesh Bobbili				10. AD10205 Added 5 PEL columns
+-- 09/25/25		Dinesh Bobbili				11. AD11102 Added scheduled_limit_amt,blanket_limit_amt columns 
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -80,6 +81,9 @@ BEGIN
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,sum(amount) as amount,sum(unearned) as unearned,contribcutoffdate,
 				do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt,
+				CASE WHEN CHARINDEX(' (', financial_category_name) > 0 
+					THEN LEFT(financial_category_name, CHARINDEX(' (', financial_category_name) - 1)
+					ELSE financial_category_name END as class_type,
 				getdate() as extraction_time,
 				getdate() as create_ts,
 				getdate() as update_ts,
@@ -221,8 +225,7 @@ BEGIN
 				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,amount,unearned,contribcutoffdate,do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,
-				uninsured_underinsured_motorist_liability_amt,extraction_time,create_ts,update_ts,etl_audit_sk
-				--,scheduled_limit_amt,scheduled_highest_value_limit_amt,blanket_limit_amt,blanket_highest_value_limit_amt,blanket_single_article_limit_amt
+				uninsured_underinsured_motorist_liability_amt,extraction_time,create_ts,update_ts,etl_audit_sk,scheduled_limit_amt,blanket_limit_amt
 			)
 			SELECT
 				uep.accounting_date,uep.policy_image_id,uep.policy_number,uep.product,uep.company,uep.transaction_date,uep.transaction_sequence,uep.effective_date,
@@ -234,9 +237,10 @@ BEGIN
 				uep.financial_category_id,uep.financial_category_name,
 				uep.aslob,uep.amount,uep.unearned,d.subscriber_contribution_end_dt AS contribcutoffdate,
 				uep.do_limit_amt,uep.employment_practices_liability_amt,uep.pel_limit_amt,uep.uninsured_underinsured_liability_amt,uep.uninsured_underinsured_motorist_liability_amt,
-				uep.extraction_time,uep.create_ts,uep.update_ts,uep.etl_audit_sk
-				--,tc.scheduled_limit_amt,tc.scheduled_highest_value_limit_amt,tc.blanket_limit_amt,tc.blanket_highest_value_limit_amt,tc.blanket_single_article_limit_amt
-			FROM
+				uep.extraction_time,uep.create_ts,uep.update_ts,uep.etl_audit_sk,
+				case when uep.product = 'Collections' and financial_category_name like '%(Scheduled)' then scheduled_limit_amt end as scheduled_limit_amt,
+				case when uep.product = 'Collections' and financial_category_name like '%(Blanket)' then blanket_limit_amt end as blanket_limit_amt			
+				FROM
 				policy_workday_unearned_premium_feed_temp uep
 				left join
 				(
@@ -247,21 +251,12 @@ BEGIN
 				group by policy_no,effective_dt,transaction_seq_no
 				) as d on uep.policy_number = d.policy_no and uep.effective_date = d.effective_dt
 				and uep.transaction_sequence = d.transaction_seq_no
-				/*left join 
-				(
-				select policy_no,
-					effective_dt,
-					transaction_seq_no,
-					sum(scheduled_limit_amt) as scheduled_limit_amt,
-					max(scheduled_highest_value_limit_amt) as scheduled_highest_value_limit_amt,
-					sum(blanket_limit_amt) as blanket_limit_amt,
-					max(blanket_highest_value_limit_amt) as blanket_highest_value_limit_amt,
-					max(blanket_single_article_limit_amt) as blanket_single_article_limit_amt
-				from edw_core.tcollection_class_type
-				group by policy_no,effective_dt,transaction_seq_no
-				) tc
-				on uep.policy_number = tc.policy_no and uep.effective_date = tc.effective_dt
-				and uep.transaction_sequence = tc.transaction_seq_no*/
+				left join (select tc.policy_no,tc.effective_dt,tc.transaction_seq_no, tc.scheduled_limit_amt, tc.blanket_limit_amt, tc.class_type
+				from edw_core.tcollection_class_type tc) tc 
+				on uep.policy_number = tc.policy_no 
+				and uep.effective_date = tc.effective_dt
+				and uep.transaction_sequence = tc.transaction_seq_no
+				and uep.class_type = tc.class_type;
 
 			SET @rows_affected=@@ROWCOUNT;
 
