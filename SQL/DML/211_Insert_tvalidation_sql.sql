@@ -20,7 +20,7 @@ from
 
 INSERT INTO edw_core.tvalidation_sql (validation_sql_desc , source_sql , target_sql , active_in , frequency_desc , create_ts , update_ts)
 SELECT
-'Clue Auto - ClaimType CO has at_fault_indicator = ''A''' ,
+'Clue Auto - ClaimType CP has at_fault_indicator = ''A''' ,
 'select
 	count(*)
 from
@@ -29,7 +29,7 @@ inner join edw_core.tclaim c
 on
 	cf.claim_sk = c.claim_sk
 where
-	cf.claim_coverage_desc = ''Collision''
+	cf.claim_coverage_desc = ''Comprehensive''
 	and c.fault_decision = ''insured''' AS source_sql ,
        'select 0' AS target_sql ,
        'Y' AS active_in ,
