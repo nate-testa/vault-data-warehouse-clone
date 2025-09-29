@@ -114,7 +114,14 @@ class Policy:
                 'policy_status': record['policy_status'],
                 'monoline_in': record['monoline_in'],
                 'document_delivery_preference': record['document_delivery_preference'],
-                'insured_nm': record['insured_nm']
+                'insured_nm': record['insured_nm'],
+                'occupancy_type': record['occupancy_type'],
+                'effective_dt': record['effective_dt'],
+                'expiration_dt': record['expiration_dt'],
+                'policy_inforce_in': record['policy_inforce_in'],
+                'per_claim_policy_limit_amt': record['per_claim_policy_limit_amt'],
+                'per_claim_attachment_amt': record['per_claim_attachment_amt'],
+                'per_claim_retention_amt': record['per_claim_retention_amt']
                 
                 # 'create_ts': record['create_ts'],
                 # 'update_ts': record['update_ts'],
