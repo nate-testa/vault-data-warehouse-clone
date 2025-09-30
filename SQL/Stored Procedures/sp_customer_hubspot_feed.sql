@@ -182,7 +182,6 @@ BEGIN
 		left join edw_temp.customer_hubspot_feed_temp01 pinf on cust.customer_id = pinf.customer_id and pr.product_cd = pinf.product_cd 
 		left join edw_temp.customer_hubspot_feed_temp01 cinf on cust.customer_id = cinf.customer_id and '[Total]' = cinf.product_cd 
 		left join edw_core.thome_coverage hc on ph.policy_history_sk = hc.policy_history_sk
-		left join edw_core.tdaily_inforce_policy dip on ph.policy_history_sk = dip.policy_history_sk
 		WHERE (greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
 		or exists (select 'x' from edw_temp.customer_hubspot_feed_temp0 a where a.policy_no = pol.policy_no)
 		)

@@ -183,7 +183,6 @@ BEGIN
 		INNER JOIN edw_core.tbroker br	ON br.broker_id = pol.broker_id
 		INNER join edw_commercial.tcommercial_policy_history ph on ph.commercial_policy_sk = pol.commercial_policy_sk and ph.latest_transaction_in = 'Y'
 		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk 
-		left join edw_core.tcommercial_daily_inforce_policy dip on ph.commercial_policy_history_sk = dip.commercial_policy_history_sk
 		left join edw_temp.customer_hubspot_feed_commercial_temp3 cmt on pol.commercial_policy_sk = cmt.commercial_policy_sk
 		WHERE (greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
 		or exists (select 'x' from edw_temp.customer_hubspot_feed_commercial_temp0 a where a.policy_no = pol.policy_no)
