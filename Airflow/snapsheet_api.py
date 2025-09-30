@@ -9,12 +9,13 @@ from datetime import datetime
 from urllib.parse import urlencode
 from airflow.models import Variable
 
-# Parameters
-P_SECRET = Variable.get("snapsheet-secret")
-P_KEY = Variable.get("snapsheet-API-key")
-P_BASE_URL = Variable.get("snapsheet-url")
 
 class SnapsheetAPI:
+    # Parameters
+    P_SECRET = Variable.get("snapsheet-secret")
+    P_KEY = Variable.get("snapsheet-API-key")
+    P_BASE_URL = Variable.get("snapsheet-url")
+
     # Class-level variables to maintain shared state across instances
     request_count = 0               # For enforcing rate limit
     start_time = time.time()        # Initialize start time as class-level attribute
