@@ -197,6 +197,7 @@ with DAG(
 
         commercial_datamart_group_items = [
             'sp_tcommercial_daily_inforce_policy',
+            'sp_tcommercial_policy_update_policy_inforce_in',
             'sp_tcommercial_policy_summary',
             'sp_tcommercial_renewal_summary',
             'sp_tcommercial_broker_summary'
