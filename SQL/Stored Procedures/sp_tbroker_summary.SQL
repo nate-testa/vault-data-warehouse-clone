@@ -61,6 +61,7 @@ GO
 -- 12/17/24		Architha Gudimalla				32. VI35593 - new columns request 
 -- 02/13/25		Architha Gudimalla				33. AD8573 - excluded OS claims which do not have broker
 -- 03/05/25		Hernando Gonzalez				34. AD8315 - Summary tables - Close Reasons
+-- 10/02/25		Dinesh Bobbili					35. AD11217 - Added new columns
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -408,7 +409,9 @@ BEGIN
 							sum(case when renewal_ct > 0 then r.expiring_written_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,
 							sum(r.non_flat_cancelled_ct-r.mid_term_cancelled_ct) expiring_ct,
 							sum(isnull(r.expiring_sixty_day_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) ) expiring_prm,
-							sum(case when r.renewal_non_flat_cancelled_ct = 1 then isnull(r.renewal_sixty_day_written_premium_amt,0) else 0 end) renewal_prm
+							sum(case when r.renewal_non_flat_cancelled_ct = 1 then isnull(r.renewal_sixty_day_written_premium_amt,0) else 0 end) renewal_prm,
+							sum(r.non_flat_cancelled_ct) non_flat_cancelled_ct,
+							sum(isnull(r.expiring_sixty_day_written_premium_amt,0)) expiring_sixty_day_written_premium_amt
 
 					from edw_core.trenewal_summary r 
 					inner join edw_core.tpolicy pol on r.policy_sk = pol.policy_sk 
@@ -532,7 +535,10 @@ BEGIN
 							--sum(           case when pol.policy_term = 'New' and greatest(cast(ph.transaction_ts as date), ph.transaction_effective_dt) between 	  	   @month_begin_dt and 				 	@end_dt and summ.inforce_ct = 1 then ph.net_premium_amt else 0 end) 	  mtd_gross_new_business_net_premium_amt,   
 							--
 							sum(case when summ.month_sk between @prior_year_month_begin_dt_sk and @prior_year_month_end_dt_sk then summ.mtd_premium_amt else 0 end) prior_mtd_written_premium_amt,   
-							sum(case when summ.month_sk between 	  	   @month_begin_dt_sk and 	  		 @month_end_dt_sk then summ.mtd_premium_amt else 0 end) 	  mtd_written_premium_amt,     
+							sum(case when summ.month_sk between 	  	   @month_begin_dt_sk and 	  		 @month_end_dt_sk then summ.mtd_premium_amt else 0 end) 	  mtd_written_premium_amt, 
+							sum(case when summ.month_sk between     @month_begin_dt_sk and   @month_end_dt_sk then summ.mtd_net_premium_amt else 0 end)  mtd_written_net_premium_amt,
+							sum(case when summ.month_sk between     @month_begin_dt_sk and   @month_end_dt_sk then summ.earned_premium_amt else 0 end)  mtd_earned_premium_amt,
+							sum(case when summ.month_sk between     @month_begin_dt_sk and   @month_end_dt_sk then summ.earned_net_premium_amt else 0 end)  mtd_earned_net_premium_amt,    
 							--
 							sum(case when summ.month_sk > @prior_year_month_end_dt_sk 		then summ.mtd_premium_amt else 0 end) one_year_written_premium_amt,   
 							sum(case when summ.month_sk > @prior_year_three_month_end_dt_sk then summ.mtd_premium_amt else 0 end) three_year_written_premium_amt,   
@@ -854,6 +860,9 @@ BEGIN
 						sum(isnull(ps.inforce_dwelling_limit_amt,0)) inforce_dwelling_limit_amt, 
 						sum(isnull(ps.inforce_tiv_amt,0)) inforce_tiv_amt, 
 						--
+						sum(isnull(ps.mtd_written_net_premium_amt,0)) mtd_written_net_premium_amt,
+						sum(isnull(ps.mtd_earned_premium_amt,0)) mtd_earned_premium_amt,
+						sum(isnull(ps.mtd_earned_net_premium_amt,0)) mtd_earned_net_premium_amt,
 						sum(isnull(ps.one_year_earned_net_premium_amt,0)) one_year_earned_net_premium_amt, 
 						sum(isnull(ps.three_year_earned_net_premium_amt,0)) three_year_earned_net_premium_amt, 
 						sum(isnull(ps.one_year_earned_exposure,0)) one_year_earned_exposure, 
@@ -1027,6 +1036,9 @@ BEGIN
 						inforce_dwelling_limit_amt, 
 						inforce_tiv_amt, 
 						--
+						mtd_written_net_premium_amt,
+						mtd_earned_premium_amt,
+						mtd_earned_net_premium_amt,
 						one_year_earned_net_premium_amt, 
 						three_year_earned_net_premium_amt, 
 						one_year_earned_exposure, 
@@ -1067,7 +1079,9 @@ BEGIN
 						policy_renewal_offered_premiumm_amt,
 						policy_renewal_offered_expiring_premium_amt,
 						policy_expiring_premium_amt,
-						policy_renewal_premium_amt, 
+						non_flat_cancelled_ct,
+						expiring_sixty_day_written_premium_amt, 
+						policy_renewal_premium_amt,						
 						--
 						ytd_policy_expiring_ct,
 						ytd_policy_renewal_accepted_ct,
@@ -1201,6 +1215,9 @@ BEGIN
 						--
 						sum(summ.inforce_dwelling_limit_amt), sum(summ.inforce_tiv_amt),   
 						--
+						sum(summ.mtd_written_net_premium_amt),
+						sum(summ.mtd_earned_premium_amt),
+						sum(summ.mtd_earned_net_premium_amt),
 						sum(summ.one_year_earned_net_premium_amt), 
 						sum(summ.three_year_earned_net_premium_amt), 
 						sum(summ.one_year_earned_exposure), 
@@ -1241,6 +1258,8 @@ BEGIN
 						sum(isnull(r.policy_renewal_offered_premium_amt			,0)) policy_renewal_offered_premium_amt,
 						sum(isnull(r.policy_renewal_offered_expiring_premium_amt,0)) policy_renewal_offered_expiring_premium_amt, 
 						sum(isnull(r.policy_expiring_prm						,0)) policy_expiring_premium_amt,
+						sum(isnull(r.non_flat_cancelled_ct ,0)) non_flat_cancelled_ct,
+						sum(isnull(r.expiring_sixty_day_written_premium_amt ,0)) expiring_sixty_day_written_premium_amt,
 						sum(isnull(r.policy_renewal_prm							,0)) policy_renewal_premium_amt,
 						--
 						sum(isnull(r.ytd_policy_expiring_ct							,0)) ytd_policy_expiring_ct,
