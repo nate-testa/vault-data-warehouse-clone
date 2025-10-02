@@ -19,6 +19,7 @@ GO
 -- 08-12-2025               Alberto Almario             7. Update logic for ClaimAmount and ClaimDisposition fields
 -- 09-16-2025               Alberto Almario             8. Add logic for new records where the claimDisposition changed on tclaim_feature
 -- 09-17-2025               Alberto Almario             9. Update FaultIndicator and ClaimType logic.
+-- 10-01-2025               Alberto Almario             10.  AD11173-Set Date of births to 0 for default Birthdate
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
@@ -290,7 +291,10 @@ BEGIN
             CAST('' AS char(4)) AS [PolicyHolderMailAddressZipPlus4],
             '' AS [Filler_reservedForFutureUse1],
             CAST('' AS char(9)) AS [PolicyHolderSSN],
-            FORMAT(cu.birth_dt, 'MMddyyyy') AS [PolicyHolderDOB],
+            CASE 
+                WHEN cu.birth_dt <= '1900-12-31' THEN '00000000'
+                ELSE FORMAT(cu.birth_dt, 'MMddyyyy')
+            END AS [PolicyHolderDOB],
             '' AS [PolicyHolderDriversLicenseNum],
             '' AS [PolicyHolderDriversLicenseState],
             '' AS [PolicyHolderSex],
