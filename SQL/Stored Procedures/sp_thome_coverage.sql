@@ -28,6 +28,7 @@
 -- 04/02/25		Yunus Mohammed					23. AD-8973 roof_deck_attachment value logic updated
 -- 04/16/25		Yunus Mohammed					24. AD-9121 Corrected null values for premium mods
 -- 06/10/22		Dinesh Bobbili					25. AD-9707 Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
+-- 10/01/25		Alberto Almario					26. AD-11140 Added new column premium_analytics_grade
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -134,6 +135,7 @@ BEGIN
 			select ROW_NUMBER()over(partition by act.PolicyNumber ,act.EffectiveDate ,act.PolicyChangeNumber  order by pofv.[version] desc ) as rn,
 			act.PolicyNumber ,act.EffectiveDate ,act.PolicyChangeNumber as transaction_seq_no,
 			pofv.ValueDisplay as [Value]
+			,acc.PremiumAnalyticsGrade as premium_analytics_grade
 			from
 				edw_temp.thome_coverage_temp1 act
 				inner join edw_stage.Account acc on acc.PolicyNumber = act.PolicyNumber and acc.EffectiveDate = act.EffectiveDate
@@ -201,6 +203,7 @@ BEGIN
 				current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
 				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
 				wildfire_suppression_system,wildfire_decks_balconies_porches_stairs,
+				premium_analytics_grade,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 				
 			)
@@ -362,6 +365,7 @@ BEGIN
 				tthc.WildfireRiskClass as wildfire_risk_class,
 				tthc.WildfireSuppressionSystem as wildfire_suppression_system,
 				tthc.WildfireDecksBalconiesPorchesStairs as wildfire_decks_balconies_porches_stairs,
+				t.premium_analytics_grade,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_coverage_temp2 AS tthc
