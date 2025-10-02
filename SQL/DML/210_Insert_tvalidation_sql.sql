@@ -1,6 +1,6 @@
 INSERT INTO edw_core.tvalidation_sql (validation_sql_desc , source_sql , target_sql , active_in , frequency_desc , create_ts , update_ts)
 SELECT
-'Current Carrier  NP01- Missing requied fields' ,
+'Current Carrier  NP01- Missing required fields' ,
 'select count(*) 
 from edw_integration.policy_current_carrier_auto_np01_feed pccanf 
 where 
@@ -28,7 +28,7 @@ ISNULL(LTRIM(RTRIM(PolicyHolderMailAddressZip)),'''')  = ''''
        getdate() AS update_ts
 UNION
 SELECT
-'Current Carrier  PR01- Missing requied fields' ,
+'Current Carrier  PR01- Missing required fields' ,
 'select count(* )
 from edw_integration.policy_current_carrier_auto_PR01_feed pccapf 
 where 
@@ -47,7 +47,7 @@ ISNULL(LTRIM(RTRIM(VIN)),'''') = ''''
        getdate() AS update_ts
 UNION
    SELECT
-'Current Carrier SJ01- Missing requied fields' ,
+'Current Carrier SJ01- Missing required fields' ,
 'select COUNT(*)
 from 
 edw_integration.policy_current_carrier_auto_SJ01_feed pccasf 
@@ -73,7 +73,7 @@ UNION
 
 
 SELECT
-'Current Carrier VR01- Missing requied fields' ,
+'Current Carrier VR01- Missing required fields' ,
 'select  count(*) 
 from edw_integration.policy_current_carrier_auto_vr01_feed pccavf 
 WHERE 
