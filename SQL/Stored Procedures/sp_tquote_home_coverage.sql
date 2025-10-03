@@ -24,7 +24,7 @@
 -- 04/02/25				Yunus Mohammed				18. AD-8973 roof_deck_attachment value logic updated
 -- 04/16/25				Yunus Mohammed				19. AD-9121 Corrected null values for premium mods
 -- 06/10/22				Dinesh Bobbili				20. AD-9707 Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
--- 10/01/25				Alberto Almario				21. AD-11140 Added new column premium_analytics_grade
+-- 10/03/25				Alberto Almario				21. AD-11140 Added new column premium_analytics_grade
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage]
 
@@ -92,6 +92,7 @@ BEGIN
 		SET @sql ='select quote_no,EffectiveDate,ExpirationDate,transaction_seq_no,source_system_sk,
 		quote_history_sk,quote_home_location_sk,product_name,CreatedDate,
 		FactorMethod, Factor, Retention, Reason,
+		premium_analytics_grade,
 		'+ @ColumnsToPivot +' into edw_temp.tquote_home_coverage_temp2
 			from
 			(
@@ -102,6 +103,7 @@ BEGIN
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,
 			atvof.[Value] as [Value],
 			atvpf.FactorMethod, atvpf.Factor, atvpf.Retention, atvpf.Reason
+			,atv.PremiumAnalyticsGrade as premium_analytics_grade
 			from
 				edw_temp.tquote_home_coverage_temp1 act
 				inner join edw_stage.Product p on p.Id=act.ProductId
@@ -131,7 +133,6 @@ BEGIN
 			select ROW_NUMBER()over(partition by act.PolicyNumber ,act.EffectiveDate ,act.[Number]  order by pofv.[version] desc ) as rn,
 			act.PolicyNumber as quote_no ,act.EffectiveDate ,act.[Number] as transaction_seq_no,
 			pofv.ValueDisplay as [Value]
-			,acc.PremiumAnalyticsGrade as premium_analytics_grade
 			from
 				edw_temp.tquote_home_coverage_temp1 act
 				inner join edw_stage.Account acc on acc.PolicyNumber = act.PolicyNumber and acc.EffectiveDate = act.EffectiveDate
@@ -357,7 +358,7 @@ BEGIN
 				tthc.WildfireRiskClass as wildfire_risk_class,
 				tthc.WildfireSuppressionSystem as wildfire_suppression_system,
 				tthc.WildfireDecksBalconiesPorchesStairs as wildfire_decks_balconies_porches_stairs,
-				t.premium_analytics_grade,
+				tthc.premium_analytics_grade,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.tquote_home_coverage_temp2 AS tthc

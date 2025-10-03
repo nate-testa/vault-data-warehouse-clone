@@ -22,7 +22,7 @@
 -- 04/02/25				Yunus Mohammed				16. AD-8973 roof_deck_attachment value logic updated
 -- 04/16/25				Yunus Mohammed				17. AD-9121 Corrected null values for premium mods
 -- 06/10/22				Dinesh Bobbili				18. AD-9707 Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
--- 10/02/25				Alberto Almario				19. AD-11140 Added new column premium_analytics_grade
+-- 10/03/25				Alberto Almario				19. AD-11140 Added new column premium_analytics_grade
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
 
@@ -98,6 +98,7 @@ BEGIN
 			0 as transaction_seq_no,acc.CreatedDate,acc.UpdatedDate, p.name product_name,
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,accvof.Field,	accvof.[Value] ,
 			accpf.FactorMethod, accpf.Factor, accpf.Retention, accpf.Reason
+			,acc.PremiumAnalyticsGrade as premium_analytics_grade
 			from
 				edw_temp.tquote_home_coverage_wip_temp1 acc
 				inner join edw_stage.Product p on p.Id=acc.ProductId
@@ -133,7 +134,6 @@ BEGIN
 			select ROW_NUMBER()over(partition by acc.PolicyNumber ,acc.EffectiveDate  order by pofv.[version] desc ) as rn,
 			acc.PolicyNumber as quote_no,acc.EffectiveDate ,0 as transaction_seq_no,
 			pofv.ValueDisplay as [Value]
-			,acc.PremiumAnalyticsGrade as premium_analytics_grade
 			from
 				edw_temp.tquote_home_coverage_wip_temp1 acc
 				INNER JOIN edw_stage.[AccountObject] AS accvo ON accvo.AccountId = acc.Id
@@ -304,7 +304,7 @@ BEGIN
 				tthc.WildfireRiskClass as wildfire_risk_class,
 				tthc.WildfireSuppressionSystem as wildfire_suppression_system,
 				tthc.WildfireDecksBalconiesPorchesStairs as wildfire_decks_balconies_porches_stairs,
-				t.premium_analytics_grade,
+				tthc.premium_analytics_grade,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk				
 			FROM
 				edw_temp.tquote_home_coverage_wip_temp2 AS tthc
