@@ -1,20 +1,15 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_trenewal_summary]    Script Date: 11/16/2023 10:55:23 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
--- =======================================================================================================================================================================
+﻿-- =======================================================================================================================================================================
 -- Author:		Architha Gudimalla 
 -- Description: This proceudre summarizes the renewals data for commercial for each month
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author										|	Change Description
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
--- 05/09/23		Architha Gudimalla				1. Created this procedure   
+-- 05/09/23		Architha Gudimalla				1. Created this procedure 
 -- 05/15/23		Architha Gudimalla				2. Updated after initial run errors
 -- 05/15/23		Architha Gudimalla				3. Added filter on tower type
 -- 05/26/25		Architha Gudimalla				4. Updated tower join
 -- 09/12/25		Architha Gudimalla				5. Updated renewal join logic
+-- 09/22/25		Yunus Mohammed				 6. Updated tower_deleted_in where clause and modified temp table names
 -- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_tcommercial_renewal_summary] 
@@ -120,7 +115,7 @@ BEGIN
 				delete from edw_commercial.tcommercial_renewal_summary
 				where month_sk = @month_end_dt_sk;
 				
-				DROP TABLE IF EXISTS edw_temp.tren_summ_quotes;
+				DROP TABLE IF EXISTS edw_temp.tcommercial_ren_summ_quotes;
 				
 				with q as
 				(
@@ -147,11 +142,11 @@ BEGIN
 				)
 				select    q.* 
 						, n.note_desc				
-				into edw_temp.tren_summ_quotes 
+				into edw_temp.tcommercial_ren_summ_quotes 
 				from q
 				left join n on q.quote_no = n.quote_no and n.rnk = 1;
 
-				DROP TABLE IF EXISTS edw_temp.tren_summ;
+				DROP TABLE IF EXISTS edw_temp.tcommercial_ren_summ;
 
 				with exp_pols as
 				--pols expiration in current month
@@ -192,7 +187,7 @@ BEGIN
 						SELECT *--, 
 								--added replace x, to remove dupes
 								--rank() over (partition by replace(prior_policy_no,'x','') order by pol_no_changed_in, commercial_quote_sk) rnk  
-						from edw_temp.tren_summ_quotes
+						from edw_temp.tcommercial_ren_summ_quotes
 					) A
 				 	--where rnk = 1
 
@@ -290,7 +285,7 @@ BEGIN
 								 --and	transaction_effective_dt_sk <= @end_dt_sk
 								 and 	(transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk < 61) 
 							) sixty_day_pol_tr on tr.commercial_policy_sk = sixty_day_pol_tr.commercial_policy_sk
-				 left join edw_commercial.tcommercial_policy_tower cpt on pol.policy_no = cpt.policy_no and pol.effective_dt = cpt.effective_dt and tr.transaction_seq_no = cpt.transaction_seq_no and cpt.company_nm = 'Vault E&S Insurance Company' and cpt.tower_deleted_in = 0
+				 left join edw_commercial.tcommercial_policy_tower cpt on pol.policy_no = cpt.policy_no and pol.effective_dt = cpt.effective_dt and tr.transaction_seq_no = cpt.transaction_seq_no and cpt.company_nm = 'Vault E&S Insurance Company' and cpt.tower_deleted_in = 'No'
 				 where	max_pol_tr.rnk = 1
 				 and (sixty_day_pol_tr.rnk = 1 or sixty_day_pol_tr.rnk is null)
 				 and effective_dt_sk <= @end_dt_sk
@@ -364,7 +359,7 @@ BEGIN
 						,ren_quotes.primary_address_state_cd renewal_quote_agency_primary_location_state_cd  
 						,case when ren_pols.commercial_policy_sk is not null then ren_pols_prm.day_0_limit else null end renewal_limit_amt,
 						 case when ren_pols.commercial_policy_sk is not null then ren_pols_prm.day_0_attach else null end renewal_attachment_amt 
-				into edw_temp.tren_summ
+				into edw_temp.tcommercial_ren_summ
 				from exp_pols
 				-- join to get prms for expiring policies
 				inner join prm exp_pols_prm on exp_pols_prm.commercial_policy_sk = exp_pols.commercial_policy_sk 
@@ -440,7 +435,7 @@ BEGIN
 						,(qh.premium_amt-qh.commission_amt)as renewal_quote_written_premium_amt
 						,qpt.aggregate_policy_limit_amt 	renewal_quote_limit_amt 
 						,qpt.aggregate_attachment_amt 		renewal_quote_attachment_amt  
-				from edw_temp.tren_summ a
+				from edw_temp.tcommercial_ren_summ a
 				left join ( select distinct cancellation_reason_desc, commercial_policy_sk, effective_dt 
 							FROM edw_commercial.tcommercial_policy_history ph
 							Where transaction_type  = 'Cancellation'
@@ -468,8 +463,8 @@ BEGIN
 				end 
 				EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;   
 				 
-				DROP TABLE IF EXISTS edw_temp.tren_summ;
-				DROP TABLE IF EXISTS edw_temp.tren_summ_quotes;
+				DROP TABLE IF EXISTS edw_temp.tcommercial_ren_summ;
+				DROP TABLE IF EXISTS edw_temp.tcommercial_ren_summ_quotes;
 				 
 				FETCH NEXT FROM c1_rec INTO @yearmonth;
 			END; 

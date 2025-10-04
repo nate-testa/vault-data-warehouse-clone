@@ -454,6 +454,7 @@ with DAG(
 
         datamart_group_items = [
             'sp_tdaily_inforce_policy',
+            'sp_tpolicy_update_policy_inforce_in',
             'sp_tpolicy_summary',
             'sp_tpolicy_transaction_summary',
             'sp_tcustomer_summary',

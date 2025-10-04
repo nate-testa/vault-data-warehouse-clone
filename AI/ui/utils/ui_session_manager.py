@@ -15,7 +15,29 @@ from datetime import datetime
 from .logging import logger
 
 
-class UISessionManager:
+class BaseUISessionManager:
+    """
+    Base session manager for shared UI functionality.
+    Provides core session management that can be extended by modules.
+    """
+    
+    # Generic session keys
+    DEBUG_KEY = 'debug'
+    
+    def __init__(self, max_cookie_size: int = 3500):
+        self.max_cookie_size = max_cookie_size
+        
+    def get_generic_session_size_estimate(self) -> int:
+        """Basic session size estimation for generic data."""
+        try:
+            debug_data = {'debug': session.get(self.DEBUG_KEY, False)}
+            json_str = json.dumps(debug_data, separators=(',', ':'))
+            return len(json_str.encode('utf-8'))
+        except Exception:
+            return 0
+
+
+class UISessionManager(BaseUISessionManager):
     """
     Session manager for UI-specific data and chat history.
     
@@ -23,166 +45,39 @@ class UISessionManager:
     file uploads, and user preferences, while preventing cookie overflow issues.
     """
     
-    # Session keys for UI data
-    CHAT_MESSAGES_KEY = 'rag_messages'
-    FILE_UPLOADED_KEY = 'file_uploaded'
-    UPLOADED_FILENAME_KEY = 'uploaded_filename'
-    DEBUG_KEY = 'debug'
-    USE_CHAT_HISTORY_KEY = 'use_chat_history'
-    SELECTED_MODEL_KEY = 'selected_model'
-    RAG_WARNINGS_KEY = 'rag_warnings'
+    # Generic session keys (inherited from BaseUISessionManager)
+    # Note: Specific functionality has been moved to module-specific session managers
     
-    def __init__(self, max_cookie_size: int = 3500, max_chat_messages: int = 8):
+    def __init__(self, max_cookie_size: int = 3500):
         """
-        Initialize the UI session manager.
+        Initialize the generic UI session manager.
         
         Args:
             max_cookie_size (int): Maximum cookie size in bytes (with safety buffer)
-            max_chat_messages (int): Maximum number of chat messages to keep in session
         """
-        self.max_cookie_size = max_cookie_size
-        self.max_chat_messages = max_chat_messages
+        super().__init__(max_cookie_size)  # Call parent constructor
         
-    def initialize_ui_session(self):
-        """Initialize UI session variables with default values."""
-        if self.CHAT_MESSAGES_KEY not in session:
-            session[self.CHAT_MESSAGES_KEY] = []
-        if self.FILE_UPLOADED_KEY not in session:
-            session[self.FILE_UPLOADED_KEY] = False
-        if self.UPLOADED_FILENAME_KEY not in session:
-            session[self.UPLOADED_FILENAME_KEY] = None
+    def initialize_generic_session(self):
+        """Initialize generic session variables with default values."""
         if self.DEBUG_KEY not in session:
             session[self.DEBUG_KEY] = False
-        if self.USE_CHAT_HISTORY_KEY not in session:
-            session[self.USE_CHAT_HISTORY_KEY] = True
-        if self.RAG_WARNINGS_KEY not in session:
-            session[self.RAG_WARNINGS_KEY] = []
     
-    def add_chat_message(self, message: Dict[str, str], cleanup_threshold: Optional[int] = None) -> bool:
+    def set_generic_preference(self, key: str, value: Any):
         """
-        Add a chat message to the session with automatic cleanup to prevent overflow.
+        Set generic user preference in session.
         
         Args:
-            message (Dict[str, str]): Message with 'role' and 'content' keys
-            cleanup_threshold (Optional[int]): Custom threshold for cleanup
-            
-        Returns:
-            bool: True if message was added successfully
-        """
-        try:
-            messages = session.get(self.CHAT_MESSAGES_KEY, [])
-            
-            # Add the new message
-            messages.append(message)
-            
-            # Apply cleanup if needed
-            threshold = cleanup_threshold or self.max_chat_messages
-            if len(messages) > threshold:
-                # Keep only the most recent messages
-                messages_to_remove = len(messages) - threshold
-                messages = messages[messages_to_remove:]
-                
-                logger.info(
-                    f"[UI_SESSION] Cleaned up chat history: removed {messages_to_remove} old messages, "
-                    f"kept {len(messages)} recent messages"
-                )
-            
-            # Check estimated size and perform additional cleanup if needed
-            if self._is_session_size_critical(messages):
-                # More aggressive cleanup
-                messages = messages[-4:]  # Keep only last 4 messages
-                logger.warning(
-                    f"[UI_SESSION] Critical session size detected, aggressive cleanup applied. "
-                    f"Kept only {len(messages)} messages"
-                )
-            
-            session[self.CHAT_MESSAGES_KEY] = messages
-            return True
-            
-        except Exception as e:
-            logger.error(f"[UI_SESSION] Error adding chat message: {str(e)}")
-            return False
-    
-    def get_chat_messages(self, limit: Optional[int] = None) -> List[Dict[str, str]]:
-        """
-        Get chat messages from session.
-        
-        Args:
-            limit (Optional[int]): Maximum number of messages to return
-            
-        Returns:
-            List[Dict[str, str]]: List of chat messages
-        """
-        messages = session.get(self.CHAT_MESSAGES_KEY, [])
-        
-        if limit is not None and limit > 0:
-            return messages[-limit:]
-        
-        return messages
-    
-    def get_chat_history_for_context(self, slide_window: int = 5) -> List[str]:
-        """
-        Get chat history content for API context.
-        
-        Args:
-            slide_window (int): Number of recent messages to include
-            
-        Returns:
-            List[str]: List of message contents
-        """
-        messages = self.get_chat_messages()
-        # Use smaller slide window to ensure we don't exceed session limits
-        effective_window = min(slide_window, 6)
-        start_index = max(0, len(messages) - effective_window)
-        
-        return [messages[i]["content"] for i in range(start_index, len(messages))]
-    
-    def clear_chat_messages(self):
-        """Clear all chat messages from session."""
-        session[self.CHAT_MESSAGES_KEY] = []
-        session[self.RAG_WARNINGS_KEY] = []
-    
-    def set_file_upload_status(self, uploaded: bool, filename: Optional[Union[str, List[str]]] = None):
-        """
-        Set file upload status in session.
-        
-        Args:
-            uploaded (bool): Whether files are uploaded
-            filename (Optional[Union[str, List[str]]]): Filename(s) that were uploaded
-        """
-        session[self.FILE_UPLOADED_KEY] = uploaded
-        session[self.UPLOADED_FILENAME_KEY] = filename
-    
-    def get_file_upload_status(self) -> Dict[str, Any]:
-        """
-        Get file upload status from session.
-        
-        Returns:
-            Dict[str, Any]: File upload status and filenames
-        """
-        return {
-            'uploaded': session.get(self.FILE_UPLOADED_KEY, False),
-            'filenames': session.get(self.UPLOADED_FILENAME_KEY, None)
-        }
-    
-    def set_user_preference(self, key: str, value: Any):
-        """
-        Set user preference in session.
-        
-        Args:
-            key (str): Preference key
+            key (str): Preference key (must be DEBUG_KEY)
             value (Any): Preference value
         """
-        valid_keys = [self.DEBUG_KEY, self.USE_CHAT_HISTORY_KEY, self.SELECTED_MODEL_KEY]
-        
-        if key in valid_keys:
+        if key == self.DEBUG_KEY:
             session[key] = value
         else:
-            raise ValueError(f"Invalid preference key: {key}")
+            raise ValueError(f"Invalid generic preference key: {key}. Only DEBUG_KEY is supported.")
     
-    def get_user_preference(self, key: str, default: Any = None) -> Any:
+    def get_generic_preference(self, key: str, default: Any = None) -> Any:
         """
-        Get user preference from session.
+        Get generic user preference from session.
         
         Args:
             key (str): Preference key
@@ -193,47 +88,23 @@ class UISessionManager:
         """
         return session.get(key, default)
     
-    def reset_all_ui_data(self):
-        """Reset all UI-related session data to defaults."""
-        session[self.CHAT_MESSAGES_KEY] = []
-        session[self.RAG_WARNINGS_KEY] = []
-        session[self.FILE_UPLOADED_KEY] = False
-        session[self.UPLOADED_FILENAME_KEY] = None
-        session[self.DEBUG_KEY] = False
-        # Preserve use_chat_history and selected_model as user preferences
-    
-    def cleanup_session_storage(self) -> bool:
+    def cleanup_generic_session_storage(self) -> bool:
         """
-        Perform cleanup of session storage to prevent cookie overflow.
+        Perform cleanup of generic session storage to prevent cookie overflow.
         
         Returns:
             bool: True if cleanup was performed
         """
-        original_size = self.get_session_size_estimate()
+        original_size = self.get_generic_session_size_estimate()
         cleanup_performed = False
         
-        # Clean up chat messages if session is getting large
-        if original_size > self.max_cookie_size * 0.8:  # 80% threshold
-            messages = session.get(self.CHAT_MESSAGES_KEY, [])
-            if len(messages) > 4:
-                # Keep only the most recent 4 messages
-                session[self.CHAT_MESSAGES_KEY] = messages[-4:]
-                cleanup_performed = True
-                
-                logger.info(
-                    f"[UI_SESSION] Proactive cleanup performed. "
-                    f"Reduced chat messages from {len(messages)} to 4"
-                )
-        
-        # Clean up warnings if they exist and session is still large
-        if session.get(self.RAG_WARNINGS_KEY):
-            session[self.RAG_WARNINGS_KEY] = []
-            cleanup_performed = True
+        # For generic session, there's minimal data to clean up
+        # This method serves as a template for module-specific implementations
         
         if cleanup_performed:
-            new_size = self.get_session_size_estimate()
+            new_size = self.get_generic_session_size_estimate()
             logger.info(
-                f"[UI_SESSION] Session cleanup completed. "
+                f"[GENERIC_SESSION] Session cleanup completed. "
                 f"Size reduced from ~{original_size} to ~{new_size} bytes"
             )
         
@@ -241,69 +112,27 @@ class UISessionManager:
     
     def get_session_size_estimate(self) -> int:
         """
-        Estimate the current session size in bytes.
+        Estimate the current generic session size in bytes.
         
         Returns:
             int: Estimated session size in bytes
         """
-        try:
-            # Get UI-related session data
-            ui_data = {
-                key: session.get(key) for key in [
-                    self.CHAT_MESSAGES_KEY, self.FILE_UPLOADED_KEY,
-                    self.UPLOADED_FILENAME_KEY, self.DEBUG_KEY,
-                    self.USE_CHAT_HISTORY_KEY, self.SELECTED_MODEL_KEY,
-                    self.RAG_WARNINGS_KEY
-                ] if key in session
-            }
-            
-            # Estimate size by serializing to JSON
-            json_str = json.dumps(ui_data, separators=(',', ':'))
-            return len(json_str.encode('utf-8'))
-            
-        except Exception:
-            # Fallback estimation
-            messages = session.get(self.CHAT_MESSAGES_KEY, [])
-            return sum(len(str(msg)) for msg in messages) if messages else 0
+        # Delegate to the generic estimation method
+        return self.get_generic_session_size_estimate()
     
-    def get_session_stats(self) -> Dict[str, Any]:
+    def get_generic_session_stats(self) -> Dict[str, Any]:
         """
-        Get session statistics for monitoring.
+        Get generic session statistics for monitoring.
         
         Returns:
-            Dict[str, Any]: Session statistics
+            Dict[str, Any]: Generic session statistics
         """
-        messages = session.get(self.CHAT_MESSAGES_KEY, [])
-        
         return {
-            'chat_message_count': len(messages),
-            'estimated_size_bytes': self.get_session_size_estimate(),
+            'module': 'generic',
+            'estimated_size_bytes': self.get_generic_session_size_estimate(),
             'max_allowed_size': self.max_cookie_size,
             'size_utilization_percent': round(
-                (self.get_session_size_estimate() / self.max_cookie_size) * 100, 2
+                (self.get_generic_session_size_estimate() / self.max_cookie_size) * 100, 2
             ),
-            'files_uploaded': session.get(self.FILE_UPLOADED_KEY, False),
-            'debug_enabled': session.get(self.DEBUG_KEY, False),
-            'chat_history_enabled': session.get(self.USE_CHAT_HISTORY_KEY, True)
+            'debug_enabled': session.get(self.DEBUG_KEY, False)
         }
-    
-    def _is_session_size_critical(self, messages: List[Dict[str, str]]) -> bool:
-        """
-        Check if session size is approaching critical limits.
-        
-        Args:
-            messages (List[Dict[str, str]]): Current messages list
-            
-        Returns:
-            bool: True if size is critical
-        """
-        # Quick size check based on message content
-        total_content_size = sum(
-            len(msg.get('content', '')) + len(msg.get('role', ''))
-            for msg in messages
-        )
-        
-        # Add overhead for JSON structure and other session data
-        estimated_total = total_content_size * 1.3  # 30% overhead
-        
-        return estimated_total > self.max_cookie_size * 0.9  # 90% threshold

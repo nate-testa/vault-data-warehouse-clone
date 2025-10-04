@@ -19,7 +19,9 @@
 -- 04/29/2025		Yunus Mohammed				14. AD-8748 Updated claim_first_reopen_dt logic
 -- 05/08/2025		Yunus Mohammed				15 AD-9412 Added first_party_driver_relationship_to_insured
 -- 05/28/2025		Yunus Mohammed		  		16. AD-9616 Excluded Commercial Lines claims
--- 06/11/2025	  Yunus Mohammed			  17. AD-9744 Add Litigation Indicators (litigation_in and litigation_complete_in)
+-- 06/11/2025	    Yunus Mohammed			    17. AD-9744 Add Litigation Indicators (litigation_in and litigation_complete_in)
+-- 09/23/2025		Yunus Mohammed				18. AD-11092 Added loss_location_desc column to tclaim table
+-- 09/25/2025		Yunus Mohammed				19. AD-11148 Added large_loss_in column			
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -62,14 +64,14 @@ BEGIN
 		
 		SELECT
 		claim_number as claim_no, CAST(loss_dt AS DATE) AS loss_dt, CAST(report_dt AS DATE) AS report_dt, policy_no , effective_dt AS policy_effective_dt, 
-		policy_sk,cause_of_loss_sk,loss_desc, source_claim_status,claim_status, catastrophe_sk, product_sk,
+		policy_sk,cause_of_loss_sk,loss_desc,loss_location_desc, source_claim_status,claim_status, catastrophe_sk, product_sk,
 		loss_address ,loss_city_nm ,loss_state_cd ,loss_zip_cd,loss_country_nm,broker_id,customer_id,underwriting_company_nm,
 		contact_nm,contact_type,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,
 		claim_created_ts,claim_created_by_nm,policy_history_sk,claim_reject_reason_desc,
 		source_system_sk,update_time,first_party_driver_nm,source_of_fire,source_of_water
 		,fault_decision,responsible_party,at_fault_pct,migrated_in,
 		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured,
-		litigation_in,litigation_complete_in
+		litigation_in,litigation_complete_in,large_loss_in
 		INTO edw_temp.tclaim_snapsheet_temp1
 		FROM
 		(
@@ -87,7 +89,10 @@ BEGIN
 			case
 				when c.claim_source = 'api' then c.incident_location_description
 				else cid.facts_of_loss
-			end AS loss_desc,		
+			end AS loss_desc,
+			case
+				when c.claim_source ! = 'api' then c.incident_location_description 
+			end as loss_location_desc,
 			UPPER(c.status) AS source_claim_status,
 			UPPER(CASE 
 				WHEN c.status IN('DRAFT','OPEN') 
@@ -157,6 +162,10 @@ BEGIN
 					when c.litigation_complete = 'true' then 'Yes'
 					when c.litigation_complete = 'false' then 'No'
 			end as [litigation_complete_in]
+			,case
+				when c.large_loss = 'true' then 'Yes' 
+				when c.large_loss = 'false' then 'No'
+			end as  large_loss_in
 		FROM edw_stage_snapsheet.claims c
 		LEFT JOIN edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
 		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcmp.claim_party_id and  cpcmp.contact_method_type = 'phone'
@@ -213,7 +222,7 @@ BEGIN
 	WHEN NOT MATCHED BY Target THEN
 	INSERT (
 			claim_no,loss_dt,report_dt,policy_no
-			,policy_effective_dt,policy_sk,cause_of_loss_sk,loss_desc,claim_status
+			,policy_effective_dt,policy_sk,cause_of_loss_sk,loss_desc,loss_location_desc,claim_status
 			,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,loss_address,loss_city_nm
 			,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_id,contact_nm,contact_type
 			,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt
@@ -222,12 +231,12 @@ BEGIN
 			,first_party_driver_nm,source_of_fire,source_of_water
 			,fault_decision,responsible_party,at_fault_pct,migrated_in,
 			coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured,
-			litigation_in,litigation_complete_in
+			litigation_in,litigation_complete_in,large_loss_in
 		)
 	VALUES
 		(
 		claim_no,loss_dt,report_dt,policy_no
-		,policy_effective_dt,policy_sk,cause_of_loss_sk,loss_desc,claim_status
+		,policy_effective_dt,policy_sk,cause_of_loss_sk,loss_desc,loss_location_desc,claim_status
 		,source_claim_status,catastrophe_sk,product_sk,underwriting_company_nm,loss_address,loss_city_nm
 		,loss_state_cd,loss_zip_cd,loss_country_nm,broker_id,customer_id,contact_nm,contact_type
 		,contact_phone,contact_person_email,claim_first_closed_dt,claim_first_reopen_dt,claim_created_ts ,claim_created_by_nm
@@ -236,7 +245,7 @@ BEGIN
 		,first_party_driver_nm,source_of_fire,source_of_water
 		,fault_decision,responsible_party,at_fault_pct,migrated_in,
 		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured,
-		litigation_in,litigation_complete_in
+		litigation_in,litigation_complete_in,large_loss_in
 		)
 	-- For Updates
 	WHEN MATCHED THEN UPDATE 
@@ -248,6 +257,7 @@ BEGIN
 		Target.policy_sk=Source.policy_sk,
 		Target.cause_of_loss_sk=Source.cause_of_loss_sk,
 		Target.loss_desc=Source.loss_desc,
+		Target.loss_location_desc=Source.loss_location_desc,
 		Target.claim_status=Source.claim_status,
 		Target.source_claim_status=Source.source_claim_status,
 		Target.catastrophe_sk=Source.catastrophe_sk,
@@ -284,6 +294,7 @@ BEGIN
 		,Target.first_party_driver_relationship_to_insured = Source.first_party_driver_relationship_to_insured
 		,Target.litigation_in = Source.litigation_in
 		,Target.litigation_complete_in= Source.litigation_complete_in
+		,Target.large_loss_in = Source.large_loss_in
 		;
 		
 		--************End************

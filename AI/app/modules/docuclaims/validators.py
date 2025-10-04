@@ -1,3 +1,13 @@
+"""
+DocuClaims Validators Module
+
+This module contains all file validation functions and constants for DocuClaims functionality including:
+- File type validation (MIME types and extensions)
+- File size validation
+- Filename sanitization and validation
+- Security constants for allowed file types
+"""
+
 import os
 import re
 from typing import List

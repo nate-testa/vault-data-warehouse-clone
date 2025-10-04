@@ -31,6 +31,7 @@
 -- 06/24/25		Dinesh Bobbili				23. AD9848 Removed product_cd column
 -- 09/09/25		Archtha Gudimalla			24. AD10935 - Added monoline fix
 -- 09/10/25		Archtha Gudimalla			25. AD10960 - Added customer email id fix
+-- 09/30/25		Dinesh Bobbili				26. AD10938 - Added new columns
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -116,6 +117,14 @@ BEGIN
 						  end
          and c.policy_no not in (select policy_no from edw_temp.customer_hubspot_feed_temp0);  
 
+		--used to see if there are any changes in policy_inforce_in
+		insert into  edw_temp.customer_hubspot_feed_temp0
+        select a.policy_no
+        from  [edw_integration].[customer_hubspot_feed] a
+        inner join edw_core.tpolicy pol on pol.policy_no = a.policy_no
+        where a.policy_inforce_in <> pol.policy_inforce_in 
+        and a.policy_no not in (select policy_no from edw_temp.customer_hubspot_feed_temp0);
+
  		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp1; 
 		--for policies
@@ -152,7 +161,11 @@ BEGIN
 				 when pol.document_delivery_to = 'Customer' and pol.document_delivery_method = 'Mail' then 'Send to Customer by Mail'
 				 when pol.document_delivery_to = 'Customer' and pol.document_delivery_method = 'Email & Mail' then 'Send to Customer by Email & Mail'
 				 else null
-			end document_delivery_preference
+			end document_delivery_preference,
+			hc.occupancy_type,
+			pol.effective_dt,
+			pol.expiration_dt,
+			pol.policy_inforce_in
 		INTO edw_temp.customer_hubspot_feed_temp1
 		FROM edw_core.tpolicy pol		
 		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
@@ -168,6 +181,7 @@ BEGIN
 		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk 
 		left join edw_temp.customer_hubspot_feed_temp01 pinf on cust.customer_id = pinf.customer_id and pr.product_cd = pinf.product_cd 
 		left join edw_temp.customer_hubspot_feed_temp01 cinf on cust.customer_id = cinf.customer_id and '[Total]' = cinf.product_cd 
+		left join edw_core.thome_coverage hc on ph.policy_history_sk = hc.policy_history_sk
 		WHERE (greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
 		or exists (select 'x' from edw_temp.customer_hubspot_feed_temp0 a where a.policy_no = pol.policy_no)
 		)
@@ -256,6 +270,10 @@ BEGIN
 				,producer_id
 				,monoline_in 
 				,document_delivery_preference
+				,occupancy_type
+				,effective_dt
+				,expiration_dt
+				,policy_inforce_in
 				FROM edw_temp.customer_hubspot_feed_temp1/*
 				union ALL 
 			SELECT 
@@ -316,6 +334,10 @@ BEGIN
 			,monoline_in
 			,customer_business_type
 			,document_delivery_preference
+			,occupancy_type
+			,effective_dt
+			,expiration_dt
+			,policy_inforce_in
 			)
 		VALUES (source.policy_no,
 				source.first_nm,
@@ -343,7 +365,11 @@ BEGIN
 				,source.producer_id
 				,source.monoline_in
 				,'Personal Lines'
-				,source.document_delivery_preference)
+				,source.document_delivery_preference
+				,source.occupancy_type
+				,source.effective_dt
+				,source.expiration_dt
+				,source.policy_inforce_in)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
@@ -371,6 +397,10 @@ BEGIN
             ,target.producer_id 			= source.producer_id
             ,target.monoline_in 			= source.monoline_in
 			,target.document_delivery_preference	=	source.document_delivery_preference
+			,target.occupancy_type 			= source.occupancy_type
+			,target.effective_dt 			= source.effective_dt
+			,target.expiration_dt 			= source.expiration_dt
+			,target.policy_inforce_in 		= source.policy_inforce_in
 		;
 
 		SET @rows_affected=@@ROWCOUNT;

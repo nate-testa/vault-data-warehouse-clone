@@ -1,0 +1,26 @@
+{
+    "module_info": {
+      "name": "docuclaims",
+      "version": "1.0.0",
+      "description": "Document Claims RAG Module"
+    },
+    "snowflake": {
+      "warehouse": "VAULT_AI_DOCUCLAIMS_WH",
+      "database": "VAULT_AI",
+      "schema": "DOCUCLAIMS",
+      "stage": "DOCS",
+      "chunks_table": "DOC_CHUNKS_VECTORS"
+    },
+    "ai_models": {
+      "embedding_model": "snowflake-arctic-embed-l-v2.0",
+      "available_llm_models": [
+        "claude-4-sonnet",
+        "openai-gpt-5"
+      ],
+      "cortex_search_service": "VAULT_AI.DOCUCLAIMS.DOC_CHUNK_VECTORS_SEARCH_SERVICE"
+    },
+    "search_config": {
+      "num_chunks": 200,
+      "use_cortex_search": true
+    }
+  }

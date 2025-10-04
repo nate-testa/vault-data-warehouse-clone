@@ -7,6 +7,7 @@
 -- 05/30/25		Dinesh Bobbili			    1. Created this procedure
 -- 06/18/25		Dinesh Bobbili			    2. AD9853 added underwriter_nm column 
 -- 06/30/25		Architha Gudimalla		    3. Updated last name to use policy insured_nm
+-- 09/30/25		Dinesh Bobbili				4. AD10938 - Added new columns
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed_commercial
@@ -45,6 +46,98 @@ BEGIN
 		or isnull(a.broker_phone_no,'') <> isnull(br.broker_phone_no,''))
 		and pr.product_category_nm = 'CommercialLines'; 
 
+		--used to see if there are any changes in policy_inforce_in
+		insert into  edw_temp.customer_hubspot_feed_commercial_temp0
+        select a.policy_no
+        from  [edw_integration].[customer_hubspot_feed] a
+        inner join edw_commercial.tcommercial_policy  pol on pol.policy_no = a.policy_no
+        where a.policy_inforce_in <> pol.policy_inforce_in
+        and a.policy_no not in (select policy_no from edw_temp.customer_hubspot_feed_commercial_temp0);
+
+		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_commercial_temp3;
+		SELECT DISTINCT
+			p.commercial_policy_sk,
+			p.policy_no,
+			p.effective_dt,
+			ISNULL(pqs.max_per_claim_policy_limit_amt, ptl.max_per_claim_policy_limit_amt) AS per_claim_policy_limit_amt,
+			ptl_1.per_claim_attachment_amt AS per_claim_attachment_amt,
+			pt.per_claim_retention_amt AS per_claim_retention_amt
+		into edw_temp.customer_hubspot_feed_commercial_temp3
+		FROM edw_commercial.tcommercial_policy AS p
+		LEFT JOIN (
+			SELECT
+				policy_no,
+				effective_dt,
+				per_claim_retention_amt
+			FROM edw_commercial.tcommercial_policy_tower
+			WHERE tower_type = 'primary'
+		) AS pt
+			ON p.policy_no = pt.policy_no
+		AND p.effective_dt = pt.effective_dt
+		LEFT JOIN (
+			SELECT
+				policy_no,
+				effective_dt,
+				MAX(aggregate_policy_limit_amt) AS max_per_claim_policy_limit_amt
+			FROM edw_commercial.tcommercial_policy_tower
+			WHERE company_nm = 'Vault E&S Insurance Company'
+			GROUP BY policy_no, effective_dt
+		) AS ptl
+			ON p.policy_no = ptl.policy_no
+		AND p.effective_dt = ptl.effective_dt
+		LEFT JOIN (
+			SELECT
+				policy_no,
+				effective_dt,
+				MAX(aggregate_policy_limit_amt) AS max_aggregate_policy_limit_amt,
+				MAX(per_claim_policy_limit_amt) AS max_per_claim_policy_limit_amt
+			FROM edw_commercial.tcommercial_policy_quota_share
+			WHERE company_nm LIKE 'Vault%'
+			GROUP BY policy_no, effective_dt
+		) AS pqs
+			ON p.policy_no = pqs.policy_no
+		AND p.effective_dt = pqs.effective_dt
+		LEFT JOIN (
+			SELECT
+				policy_no,
+				effective_dt,
+				MAX(per_claim_attachment_amt) AS per_claim_attachment_amt
+			FROM edw_commercial.tcommercial_policy_tower
+			GROUP BY policy_no, effective_dt
+		) AS ptl_1
+			ON p.policy_no = ptl_1.policy_no
+		AND p.effective_dt = ptl_1.effective_dt
+		LEFT JOIN edw_core.tbroker AS br
+			ON br.broker_id = p.broker_id
+		LEFT JOIN edw_commercial.tcommercial_policy_history AS ph
+			ON p.policy_no = ph.policy_no
+		AND p.effective_dt = ph.effective_dt
+		LEFT JOIN (
+			SELECT
+				policy_no,
+				effective_dt,
+				MAX(
+					CASE
+						WHEN memorandum_of_insurance_in = 'true'  THEN 'Yes'
+						WHEN memorandum_of_insurance_in = 'false' THEN 'No'
+					END
+				) AS moi_val,
+				MAX(coverage_type) AS coverage_type
+			FROM edw_commercial.tcommercial_policy_coverage
+			GROUP BY policy_no, effective_dt
+		) AS pc
+			ON pc.policy_no = p.policy_no
+		AND pc.effective_dt = p.effective_dt
+		LEFT JOIN (
+			SELECT
+				commercial_policy_sk,
+				SUM(premium_amt)   AS premium_amt,
+				SUM(commission_amt) AS commission_amt
+			FROM edw_commercial.tcommercial_policy_transaction
+			GROUP BY commercial_policy_sk
+		) AS ptxn
+			ON ptxn.commercial_policy_sk = ph.commercial_policy_sk;
+ 
 
  		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_commercial_temp1; 
@@ -77,6 +170,12 @@ BEGIN
 			,pol.insured_nm
 			,'Commercial Lines' as customer_business_type
 			,ph.underwriter_nm
+			,pol.effective_dt
+			,pol.expiration_dt
+			,pol.policy_inforce_in
+			,cmt.per_claim_policy_limit_amt
+			,cmt.per_claim_attachment_amt
+			,cmt.per_claim_retention_amt
 		INTO edw_temp.customer_hubspot_feed_commercial_temp1
 		FROM edw_commercial.tcommercial_policy pol		
 		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
@@ -84,6 +183,7 @@ BEGIN
 		INNER JOIN edw_core.tbroker br	ON br.broker_id = pol.broker_id
 		INNER join edw_commercial.tcommercial_policy_history ph on ph.commercial_policy_sk = pol.commercial_policy_sk and ph.latest_transaction_in = 'Y'
 		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk 
+		left join edw_temp.customer_hubspot_feed_commercial_temp3 cmt on pol.commercial_policy_sk = cmt.commercial_policy_sk
 		WHERE (greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
 		or exists (select 'x' from edw_temp.customer_hubspot_feed_commercial_temp0 a where a.policy_no = pol.policy_no)
 		)
@@ -174,6 +274,12 @@ BEGIN
 				,insured_nm
 				,customer_business_type
 				,underwriter_nm
+				,effective_dt
+				,expiration_dt
+				,policy_inforce_in
+				,per_claim_policy_limit_amt
+				,per_claim_attachment_amt
+				,per_claim_retention_amt
 				FROM edw_temp.customer_hubspot_feed_commercial_temp1/*
 				union ALL 
 			SELECT 
@@ -235,6 +341,12 @@ BEGIN
 			,insured_nm
 			,customer_business_type
 			,underwriter_nm
+			,effective_dt
+			,expiration_dt
+			,policy_inforce_in
+			,per_claim_policy_limit_amt
+			,per_claim_attachment_amt
+			,per_claim_retention_amt
 			)
 		VALUES (source.policy_no,
 				source.first_nm,
@@ -264,6 +376,12 @@ BEGIN
 				,source.insured_nm
 				,source.customer_business_type
 				,source.underwriter_nm
+				,source.effective_dt
+				,source.expiration_dt
+				,source.policy_inforce_in
+				,source.per_claim_policy_limit_amt
+				,source.per_claim_attachment_amt
+				,source.per_claim_retention_amt
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -294,6 +412,12 @@ BEGIN
 			,target.insured_nm				= source.insured_nm
 			,target.customer_business_type  = source.customer_business_type
 			,target.underwriter_nm  		= source.underwriter_nm 
+			,target.effective_dt 			= source.effective_dt
+			,target.expiration_dt 			= source.expiration_dt
+			,target.policy_inforce_in 		= source.policy_inforce_in
+			,target.per_claim_policy_limit_amt 		= source.per_claim_policy_limit_amt
+			,target.per_claim_attachment_amt 		= source.per_claim_attachment_amt
+			,target.per_claim_retention_amt 		= source.per_claim_retention_amt
 		;
 
 		SET @rows_affected=@@ROWCOUNT;

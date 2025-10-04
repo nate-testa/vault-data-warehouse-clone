@@ -163,7 +163,8 @@ class Quote:
                 'close_reason_desc': record['close_reason_desc'],
                 'monoline_in': record['monoline_in'],
                 'broker_state': record['broker_state'],
-                'product_cd': record['product_cd']
+                'product_cd': record['product_cd'],
+                'broker_id_new': record['broker_id']
                 
                 # 'pipeline': record['pipeline'],
                 # 'dealstage': record['dealstage'],
