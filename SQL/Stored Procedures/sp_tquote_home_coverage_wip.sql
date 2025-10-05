@@ -21,8 +21,9 @@
 -- 03/19/25				Hernando Gonzalez			15. Added new columns wildfire_risk_score, wildfire_risk_class
 -- 04/02/25				Yunus Mohammed				16. AD-8973 roof_deck_attachment value logic updated
 -- 04/16/25				Yunus Mohammed				17. AD-9121 Corrected null values for premium mods
--- 06/10/22				Dinesh Bobbili				18. AD-9707 Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
--- 10/03/25				Alberto Almario				19. AD-11140 Added new column premium_analytics_grade
+-- 06/10/22				Dinesh Bobbili						18. AD-9707 Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
+-- 10/03/25				Alberto Almario					 19. AD-11140 Added new column premium_analytics_grade
+-- 10/05/25				Yunus Mohammed				20. AD-11240 Resolved runtime error (premium_analytics_grade not found)
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
 
@@ -88,7 +89,7 @@ BEGIN
 
 		SET @sql ='select quote_no,EffectiveDate,ExpirationDate,0 as transaction_seq_no,source_system_sk,
 		quote_history_sk,quote_home_location_sk,product_name,CreatedDate,UpdatedDate,
-		FactorMethod, Factor, Retention, Reason,
+		FactorMethod, Factor, Retention, Reason,premium_analytics_grade,
 		'+ @ColumnsToPivot +' into edw_temp.tquote_home_coverage_wip_temp2
 			from
 			(
