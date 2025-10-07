@@ -124,4 +124,4 @@ END;
 delete edw_integration.tintegration_table_detail
 where table_nm = 'customer_midterm_review_ghostdraft_feed' ; 
 INSERT INTO edw_integration.tintegration_table_detail(table_nm,table_type,table_desc,load_method,load_type,load_frequency,create_ts,update_ts) 
-VALUES ('','','','Stored Procedure','Full Load','Daily',getdate(),getdate());
+VALUES ('customer_midterm_review_ghostdraft_feed','Feed','This table holds customers ghostdraft feed data for midterm review','Stored Procedure','Full Load','Daily',getdate(),getdate());
