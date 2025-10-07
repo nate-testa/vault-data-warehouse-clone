@@ -1,14 +1,23 @@
+IF NOT EXISTS
+(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = 'edw_integration'
+AND TABLE_name = 'customer_midterm_review_eligibility_feed')
+BEGIN
 
-	drop table if exists edw_integration.customer_midterm_review_eligibility_feed ; 
+Create table edw_integration.customer_midterm_review_eligibility_feed
+(
+	customer_id varchar(50),
+	midterm_review_year int,
+	midterm_review_process_in varchar(255),
+	reason_desc varchar(255) ,
+    data nvarchar(max) null,
+	create_ts datetime2(7),
+	update_ts datetime2(7),
+	etl_audit_sk int    
+); 
+END ; 
 
-	Create table edw_integration.customer_midterm_review_eligibility_feed
-	(
-		customer_id varchar(50),
-		midterm_review_year int,
-		midterm_review_process_in varchar(255),
-		reason_desc varchar(255) ,
-        data nvarchar(max) null,
-		create_ts datetime2(7),
-		update_ts datetime2(7),
-		etl_audit_sk int    
-	); 
+delete from edw_core.tedw_table_detail
+where table_nm = 'customer_midterm_review_eligibility_feed' ; 
+INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts,schema_nm) 
+	VALUES ('','','Base','Common','Manual','Insert/Update','Static',getdate(),getdate(),'edw_integration');

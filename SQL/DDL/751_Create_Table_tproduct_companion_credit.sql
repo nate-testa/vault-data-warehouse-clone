@@ -1,4 +1,8 @@
-drop table if exists edw_core.tproduct_companion_credit ; 
+IF NOT EXISTS
+(SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = 'edw_core'
+AND TABLE_name = 'tproduct_companion_credit')
+BEGIN
 
 	CREATE TABLE edw_core.tproduct_companion_credit
 	(   
@@ -21,11 +25,10 @@ drop table if exists edw_core.tproduct_companion_credit ;
 		CONSTRAINT pk_product_companion_credit PRIMARY KEY (product_companion_credit_sk),
 		CONSTRAINT uidx_product_companion_credit UNIQUE (state_cd, product_cd,uw_company_cd)
 	);
+END;
 
-
-	delete from edw_core.tedw_table_detail
-	where table_nm = 'tproduct_companion_credit' ; 
-
-	INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts,schema_nm) 
-		VALUES ('tproduct_companion_credit','Type-1 Dimension','Base','Common','Manual','Insert/Update','Static',getdate(),getdate(),'edw_core');
+delete from edw_core.tedw_table_detail
+where table_nm = 'tproduct_companion_credit' ; 
+INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts,schema_nm) 
+	VALUES ('tproduct_companion_credit','Type-1 Dimension','Base','Common','Manual','Insert/Update','Static',getdate(),getdate(),'edw_core');
 
