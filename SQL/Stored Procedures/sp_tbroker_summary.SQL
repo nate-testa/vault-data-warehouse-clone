@@ -62,6 +62,7 @@ GO
 -- 02/13/25		Architha Gudimalla				33. AD8573 - excluded OS claims which do not have broker
 -- 03/05/25		Hernando Gonzalez				34. AD8315 - Summary tables - Close Reasons
 -- 10/02/25		Dinesh Bobbili					35. AD11217 - Added new columns
+-- 10/07/25		Dinesh Bobbili					36. AD11217 - Updated the logics for non_flat_cancelled_ct, non_flat_cancelled_ct,expiring_sixty_day_written_premium_amt
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -411,7 +412,7 @@ BEGIN
 							sum(isnull(r.expiring_sixty_day_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) ) expiring_prm,
 							sum(case when r.renewal_non_flat_cancelled_ct = 1 then isnull(r.renewal_sixty_day_written_premium_amt,0) else 0 end) renewal_prm,
 							sum(r.non_flat_cancelled_ct) non_flat_cancelled_ct,
-							sum(isnull(r.expiring_sixty_day_written_premium_amt,0)) expiring_sixty_day_written_premium_amt
+							sum(isnull(case when non_flat_cancelled_ct = 1 THEN r.expiring_sixty_day_written_premium_amt end,0)) expiring_sixty_day_written_premium_amt
 
 					from edw_core.trenewal_summary r 
 					inner join edw_core.tpolicy pol on r.policy_sk = pol.policy_sk 
@@ -433,6 +434,8 @@ BEGIN
 						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then expiring_ct 								else 0 end) policy_expiring_ct,
 						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then renewal_prm 								else 0 end) policy_renewal_prm,   
 						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then expiring_prm 								else 0 end) policy_expiring_prm  ,
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then non_flat_cancelled_ct                         else 0 end) non_flat_cancelled_ct,
+                        sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then expiring_sixty_day_written_premium_amt      else 0 end) expiring_sixty_day_written_premium_amt,
 						--  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_accepted_ct 						   else 0 end) ytd_policy_renewal_accepted_ct,  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_ct 								   else 0 end) ytd_policy_renewal_ct,  
@@ -442,9 +445,7 @@ BEGIN
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_expiring_premium_amt else 0 end) ytd_policy_renewal_offered_expiring_premium_amt,   
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_ct 								   else 0 end) ytd_policy_expiring_ct,
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_prm 								   else 0 end) ytd_policy_renewal_prm,   
-						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_prm 							   else 0 end) ytd_policy_expiring_prm,
-						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then non_flat_cancelled_ct 						else 0 end) non_flat_cancelled_ct,
-						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_sixty_day_written_premium_amt 		else 0 end) expiring_sixty_day_written_premium_amt 
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_prm 							   else 0 end) ytd_policy_expiring_prm
 				into edw_temp.tbroker_summ_retention
 				from ren
 				group by broker_sk,product_sk, customer_sk, uwco, state_sk;
