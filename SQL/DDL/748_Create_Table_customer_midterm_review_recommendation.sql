@@ -39,7 +39,7 @@ create table edw_integration.customer_midterm_review_recommendation
 );
 END;
 
-delete from edw_core.tedw_table_detail
+delete edw_integration.tintegration_table_detail
 where table_nm = 'customer_midterm_review_recommendation' ; 
-INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts,schema_nm) 
-	VALUES ('','','Base','Common','Manual','Insert/Update','Static',getdate(),getdate(),'edw_integration');
+INSERT INTO edw_integration.tintegration_table_detail(table_nm,table_type,table_desc,load_method,load_type,load_frequency,create_ts,update_ts) 
+VALUES ('','','','Stored Procedure','Full Load','Daily',getdate(),getdate());
