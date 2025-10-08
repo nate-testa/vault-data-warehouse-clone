@@ -135,7 +135,7 @@ BEGIN
 					--custom_recommendation_message_3,
 					--custom_recommendation_message_4_id,
 					--custom_recommendation_message_4,  
-				from edw_integration.customer_midterm_review_eligibility e
+				from edw_integration.customer_midterm_review_eligibility_feed e
 				inner join edw_core.tcustomer cust on e.customer_id = cust.customer_id
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
 				left join edw_integration.customer_midterm_review_policy_detail p on r.existing_policy_no = p.policy_no
