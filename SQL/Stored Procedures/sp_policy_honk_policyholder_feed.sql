@@ -9,6 +9,7 @@
 -- 08/08/25					Dinesh Bobbili			    2. Added logic to populate customer_nm as last_name for Entity
 -- 08/08/25					Dinesh Bobbili			    3. Added logic to get data from tpolicy_insured
 -- 08/14/25					Dinesh Bobbili			    4. Updated last_name logic
+-- 10/09/25					Dinesh Bobbili			    5. Added logic to replace single and double quotes
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_honk_policyholder_feed]
 AS
@@ -42,12 +43,12 @@ BEGIN
 			,postal_code
 		into edw_temp.policy_honk_policyholder_feed_temp1
 		from (select distinct pol.policy_no as policy_number,
-					pins.first_nm as first_name,
-					case when pins.insured_type = 'Entity' then isnull(pins.insured_nm, 'Unknown') 
-					else isnull(pins.last_nm, isnull(pins.insured_nm, 'Unknown')) end as last_name,
-					pins.mailing_address_line_1 as address,
-					pins.mailing_address_city_nm as city,
-					pins.mailing_address_state_cd as state,
+					REPLACE(REPLACE(pins.first_nm, '''', ''), '"', '')  as first_name,
+					case when pins.insured_type = 'Entity' then isnull(REPLACE(REPLACE(pins.insured_nm, '''', ''), '"', ''), 'Unknown') 
+					else isnull(REPLACE(REPLACE(pins.last_nm, '''', ''), '"', ''), isnull(REPLACE(REPLACE(pins.insured_nm, '''', ''), '"', ''), 'Unknown')) end as last_name,
+					REPLACE(REPLACE(pins.mailing_address_line_1, '''', ''), '"', '') as address,
+					REPLACE(REPLACE(pins.mailing_address_city_nm, '''', ''), '"', '') as city,
+					REPLACE(REPLACE(pins.mailing_address_state_cd, '''', ''), '"', '') as state,
 					pins.mailing_address_zip_cd as postal_code,
 					row_number() over(partition by pins.policy_no,pins.effective_dt order by pins.transaction_seq_no desc) as rn
 				from edw_core.tdaily_inforce_policy dip 
