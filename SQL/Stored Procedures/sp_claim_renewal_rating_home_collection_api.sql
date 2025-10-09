@@ -10,6 +10,7 @@
 -- 01/14/2025		Sandeep Gundreddy			3. AD7660 - Added product_sk=5(Condo)
 -- 05/08/2025		Yunus Mohammed				4. AD9412 Added adjuster_name
 -- 06/11/2025		Yunus Mohammed				5. AD-9744 Add Litigation Tag Indicator  (Litigation and LitigationComplete)
+-- 10/09/2025		Yunus Mohammed				8. AD-10933 Added new columns and updated definition of other columns
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_home_collection_api]
@@ -52,7 +53,7 @@ BEGIN
 		'Customer-Location Loss' AS [LossIdentifier],
 		l.cause_of_loss_desc AS LossType,
 		NULL AS [SubCauseOfLoss],
-		cl.loss_desc AS [LossDescription],
+		cl.loss_location_desc AS [LossDescription],
 		p.policy_term AS PolicyType,
 		CASE
 		WHEN cl.catastrophe_sk IS NOT NULL THEN 'Y'
@@ -76,7 +77,8 @@ BEGIN
 		cl.source_of_water as SourceOfWater
 		,cfa.claim_adjuster_nm as AdjusterName
 		,cl.litigation_in as Litigation
-		,cl.litigation_complete_in as LitigationComplete		
+		,cl.litigation_complete_in as LitigationComplete
+		,cl.large_loss_in as LargeLoss,cl.loss_location_desc  as IncidentDescription2
 		,(
 		cfa.expense_reserve_amt + cfa.loss_reserve_amt + cfa.expense_paid_amt + cfa.loss_paid_amt+cfa.defense_paid_amt+cfa.defense_reserve_amt
 		) as amt
