@@ -13,7 +13,7 @@ IF NOT EXISTS (SELECT *
         AND TABLE_NAME = 'claim_renewal_rating_home_collection_api'
         AND COLUMN_NAME = 'LossDescription2')
 BEGIN
-    ALTER TABLE edw_integration.claim_renewal_rating_home_collection_api ADD IncidentDescription2 NVARCHAR(MAX) NULL;
+    ALTER TABLE edw_integration.claim_renewal_rating_home_collection_api ADD LossDescription2 NVARCHAR(MAX) NULL;
 END;
 
 IF NOT EXISTS (SELECT *
