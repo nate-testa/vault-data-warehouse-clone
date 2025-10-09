@@ -44,8 +44,8 @@ BEGIN
 		into edw_temp.policy_honk_policyholder_feed_temp1
 		from (select distinct pol.policy_no as policy_number,
 					REPLACE(REPLACE(pins.first_nm, '''', ''), '"', '')  as first_name,
-					case when pins.insured_type = 'Entity' then isnull(REPLACE(REPLACE(pins.insured_nm, '''', ''), '"', ''), 'Unknown') 
-					else isnull(REPLACE(REPLACE(pins.last_nm, '''', ''), '"', ''), isnull(REPLACE(REPLACE(pins.insured_nm, '''', ''), '"', ''), 'Unknown')) end as last_name,
+					REPLACE(REPLACE(case when pins.insured_type = 'Entity' then isnull(pins.insured_nm, 'Unknown') 
+					else isnull(pins.last_nm, isnull(pins.insured_nm, 'Unknown')) end, '''', ''), '"', '') as last_name,
 					REPLACE(REPLACE(pins.mailing_address_line_1, '''', ''), '"', '') as address,
 					REPLACE(REPLACE(pins.mailing_address_city_nm, '''', ''), '"', '') as city,
 					REPLACE(REPLACE(pins.mailing_address_state_cd, '''', ''), '"', '') as state,
