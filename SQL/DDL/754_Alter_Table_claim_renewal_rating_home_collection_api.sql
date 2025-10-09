@@ -11,7 +11,7 @@ IF NOT EXISTS (SELECT *
         FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = 'edw_integration'
         AND TABLE_NAME = 'claim_renewal_rating_home_collection_api'
-        AND COLUMN_NAME = 'IncidentDescription2')
+        AND COLUMN_NAME = 'LossDescription2')
 BEGIN
     ALTER TABLE edw_integration.claim_renewal_rating_home_collection_api ADD IncidentDescription2 NVARCHAR(MAX) NULL;
 END;
