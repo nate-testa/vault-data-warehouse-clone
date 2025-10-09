@@ -20,6 +20,7 @@ GO
 -- 09-16-2025               Alberto Almario             8. Add logic for new records where the claimDisposition changed on tclaim_feature
 -- 09-17-2025               Alberto Almario             9. Update FaultIndicator and ClaimType logic.
 -- 10-01-2025               Alberto Almario             10.  AD11173-Set Date of births to 0 for default Birthdate
+-- 10-09-2025               Alberto Almario             11.  AD11296-Change logic for PolicyHolderNameLast, PolicyHolderNameFirst, and PolicyHolderNameMiddle
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
@@ -260,9 +261,18 @@ BEGIN
 
         SELECT  
             '' AS [PolicyHolderNamePrefix],
-            CASE WHEN cu.insured_type = 'Individual' THEN cu.last_nm ELSE cu.customer_nm END AS [PolicyHolderNameLast],
-            CASE WHEN cu.insured_type = 'Individual' THEN cu.first_nm ELSE cu.customer_nm END AS [PolicyHolderNameFirst],
-            CASE WHEN cu.insured_type = 'Individual' THEN cu.middle_nm ELSE cu.customer_nm END AS [PolicyHolderNameMiddle],
+            CASE 
+                WHEN cu.insured_type = 'Individual' THEN cu.last_nm 
+                WHEN cu.insured_type = 'Entity' THEN cu.customer_nm
+            END AS [PolicyHolderNameLast],
+            CASE 
+                WHEN cu.insured_type = 'Individual' THEN cu.first_nm 
+                WHEN cu.insured_type = 'Entity' THEN 'DBA'
+            END AS [PolicyHolderNameFirst],
+            CASE 
+                WHEN cu.insured_type = 'Individual' THEN cu.middle_nm 
+                WHEN cu.insured_type = 'Entity' THEN NULL
+            END AS [PolicyHolderNameMiddle],
             '' AS [PolicyHolderNameSuffix],
             CASE 
                 WHEN p.mailing_address_line1 IS NULL THEN osp.home_no 
