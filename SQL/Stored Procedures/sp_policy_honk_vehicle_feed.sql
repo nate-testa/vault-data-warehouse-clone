@@ -9,7 +9,7 @@
 -- 08/27/25					Dinesh Bobbili			    2. logic to add leading zeros to vin if length is less than 15
 -- 08/29/25					Dinesh Bobbili			    3. updated leading zeros for vin
 -- 09/09/25					Yunus Mohammed		 		4. Update vin no logic for null values
--- 10/09/25					Dinesh Bobbili			    5. Added logic to replace single and double quotes
+-- 10/09/25					Dinesh Bobbili			    5. Added logic to replace double quotes
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_honk_vehicle_feed]
 AS
@@ -46,12 +46,12 @@ BEGIN
 			ELSE 0
 		END as otc_deductible_1,
 		pol.policy_no as policy_number,
-		REPLACE(REPLACE(case 
+		REPLACE(case 
 			when len(isnull(av.vehicle_vin,'')) < 15 then concat_ws('',REPLICATE('0', 15-len(isnull(av.vehicle_vin,''))), av.vehicle_vin)
 			else av.vehicle_vin
-		end, '''', ''), '"', '') as vin,
-		REPLACE(REPLACE(av.vehicle_make, '''', ''), '"', '') as vehicle_make,
-		REPLACE(REPLACE(av.vehicle_model, '''', ''), '"', '') as vehicle_model,
+		end, '"', '') as vin,
+		REPLACE(av.vehicle_make, '"', '') as vehicle_make,
+		REPLACE(av.vehicle_model, '"', '') as vehicle_model,
 		av.vehicle_model_year as vehicle_year,
 		pol.risk_state_cd,
 		vehicle_type,
