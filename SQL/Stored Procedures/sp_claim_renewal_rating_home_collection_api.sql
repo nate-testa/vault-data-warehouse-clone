@@ -71,14 +71,15 @@ BEGIN
 		cf.claim_coverage_desc AS Coverage,
 		cl.expense_reserve_amt AS ReserveExpense,
 		cl.loss_reserve_amt AS ReserveIndemnity,
-		cl.expense_paid_amt AS PaidExpense,
-		cl.loss_paid_amt AS PaidIndemnity,
+		(cl.expense_paid_amt + cl.subrogation_recovery_amt + cl.overpayment_recovery_amt) AS PaidExpense,
+		(cl.loss_paid_amt + cl.subrogation_recovery_amt + cl.overpayment_recovery_amt) AS PaidIndemnity,
+		(cl.expense_paid_amt + cl.subrogation_recovery_amt + cl.overpayment_recovery_amt + cl.loss_paid_amt) AS TotalIncurred,
 		cl.source_of_fire as SourceOfFire,
 		cl.source_of_water as SourceOfWater
 		,cfa.claim_adjuster_nm as AdjusterName
 		,cl.litigation_in as Litigation
 		,cl.litigation_complete_in as LitigationComplete
-		,cl.large_loss_in as LargeLoss,cl.loss_location_desc  as IncidentDescription2
+		,cl.large_loss_in as LargeLoss,cl.loss_location_desc  as LossDescription2
 		,(
 		cfa.expense_reserve_amt + cfa.loss_reserve_amt + cfa.expense_paid_amt + cfa.loss_paid_amt+cfa.defense_paid_amt+cfa.defense_reserve_amt
 		) as amt
@@ -93,11 +94,13 @@ BEGIN
 		SELECT 
 			row_number() over(partition by claim_sk order by 
 			sum(
-					clf.expense_reserve_amt + clf.loss_reserve_amt + clf.expense_paid_amt + clf.loss_paid_amt+clf.defense_paid_amt+clf.defense_reserve_amt
+					clf.expense_reserve_amt + clf.loss_reserve_amt + 
+					cl.expense_paid_amt + cl.subrogation_recovery_amt + cl.overpayment_recovery_amt
+					+ clf.loss_paid_amt+clf.defense_paid_amt+clf.defense_reserve_amt
 				) desc
 				) as row_no, 
-		claim_sk,claim_coverage_desc,
-		sum(clf.expense_reserve_amt + clf.loss_reserve_amt + clf.expense_paid_amt + clf.loss_paid_amt+clf.defense_paid_amt+clf.defense_reserve_amt) as incurred_amt
+		claim_sk,claim_coverage_desc
+		--,sum(clf.expense_reserve_amt + clf.loss_reserve_amt + clf.expense_paid_amt + clf.loss_paid_amt+clf.defense_paid_amt+clf.defense_reserve_amt) as incurred_amt
 		FROM
 			edw_core.tclaim_feature clf
 		group by claim_sk,claim_coverage_desc
@@ -121,7 +124,7 @@ BEGIN
 			PropertyOrLiability,PolicyNumber,FileNumber,ClaimStatus,Claimant,LossDate,LossIdentifier,LossType,SubCauseOfLoss,
 			LossDescription,PolicyType,CatIndicator,CatCode,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressZipCode,
 			AddressState,AddressCounty,AddressCountry,Coverage,ReserveExpense,ReserveIndemnity,PaidExpense,PaidIndemnity,
-			SourceOfFire,SourceOfWater,AdjusterName,Litigation,LitigationComplete,
+			SourceOfFire,SourceOfWater,AdjusterName,Litigation,LitigationComplete,LargeLoss,LossDescription2,TotalIncurred,
 			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -129,7 +132,7 @@ BEGIN
 			PropertyOrLiability,PolicyNumber,FileNumber,ClaimStatus,Claimant,LossDate,LossIdentifier,LossType,SubCauseOfLoss,
 			LossDescription,PolicyType,CatIndicator,CatCode,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressZipCode,
 			AddressState,AddressCounty,AddressCountry,Coverage,ReserveExpense,ReserveIndemnity,PaidExpense,PaidIndemnity,
-			SourceOfFire,SourceOfWater,AdjusterName,Litigation,LitigationComplete,
+			SourceOfFire,SourceOfWater,AdjusterName,Litigation,LitigationComplete,LargeLoss,LossDescription2,TotalIncurred,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -165,6 +168,9 @@ BEGIN
 		Target.AdjusterName = Source.AdjusterName,
 		Target.Litigation = Source.Litigation,
 		Target.LitigationComplete = Source.LitigationComplete,
+		Target.LargeLoss = Source.LargeLoss,
+		Target.LossDescription2 = Source.LossDescription2,
+		Target.TotalIncurred = Source.TotalIncurred,
 		Target.update_ts = GETDATE();
 
 		SET @rows_affected=@@ROWCOUNT;
