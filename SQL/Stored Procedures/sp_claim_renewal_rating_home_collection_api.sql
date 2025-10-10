@@ -38,7 +38,7 @@ BEGIN
 		from
 		(
 		SELECT ROW_NUMBER()over(partition by cl.claim_no order by (
-		cfa.expense_paid_amt + cfa.subrogation_recovery_amt + cfa.overpayment_recovery_amt + cfa.loss_paid_amt
+		 cfa.subrogation_recovery_amt + cfa.overpayment_recovery_amt + cfa.loss_paid_amt
 		) desc) as rn,
 		CASE cl.product_sk
 		WHEN 1 THEN 'Property'
@@ -80,9 +80,6 @@ BEGIN
 		,cl.litigation_in as Litigation
 		,cl.litigation_complete_in as LitigationComplete
 		,cl.large_loss_in as LargeLoss,cl.loss_location_desc  as LossDescription2
-		,(
-		cfa.expense_reserve_amt + cfa.loss_reserve_amt + cfa.expense_paid_amt + cfa.loss_paid_amt+cfa.defense_paid_amt+cfa.defense_reserve_amt
-		) as amt
 		FROM
 		edw_core.tclaim cl
 		inner join edw_core.tproduct tp on tp.product_sk=cl.product_sk
