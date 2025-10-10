@@ -54,7 +54,7 @@ BEGIN
 		TotalPayout,BodilyInjuryPayment,CollisionPayment,
 		ComprehensivePayment,GlassPayment,MedicalExpensePayment,MedicalPaymentPayment,
 		PropertyDamagePayment,PersonalInjuryProtectionPayment,SpousalLiabilityPayment,
-		TowingAndLaborPayment,UninsuredMotoristPayment,UnderinsuredMotoristPayment,
+		TowingAndLaborPayment,UninsuredMotoristPayment,UnderinsuredMotoristPayment,TotalIncurred,
 		clf.claim_adjuster_nm as AdjusterName,
 		cl.first_party_driver_relationship_to_insured as FirstPartyDriverRelationshipToInsured,
 		cl.litigation_in as Litigation, cl.litigation_complete_in as LitigationComplete,
@@ -117,7 +117,7 @@ BEGIN
 			CollisionPayment,ComprehensivePayment,GlassPayment,MedicalExpensePayment,MedicalPaymentPayment,OtherPayment,PropertyDamagePayment,
 			PersonalInjuryProtectionPayment,RentalReimbursementPayment,SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,
 			UnderinsuredMotoristPayment,ViolationPointClass,FirstPartyDriverName,FaultDecision,ResponsibleParty,AtFaultPercent,
-			AdjusterName,FirstPartyDriverRelationshipToInsured,Litigation,LitigationComplete,LargeLoss,IncidentDescription2,
+			AdjusterName,FirstPartyDriverRelationshipToInsured,Litigation,LitigationComplete,LargeLoss,IncidentDescription2,TotalIncurred,
 			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -128,7 +128,7 @@ BEGIN
 			SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,	UnderinsuredMotoristPayment,
 			NULL, -- ViolationPointClass
 			FirstPartyDriverName,FaultDecision,ResponsibleParty,AtFaultPercent,AdjusterName,FirstPartyDriverRelationshipToInsured,
-			Litigation,LitigationComplete,LargeLoss,IncidentDescription2,
+			Litigation,LitigationComplete,LargeLoss,IncidentDescription2,TotalIncurred,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -167,6 +167,7 @@ BEGIN
 			Target.LitigationComplete = Source.LitigationComplete,
 			Target.LargeLoss = Source.LargeLoss,
 			Target.IncidentDescription2 = Source.IncidentDescription2,
+			Target.TotalIncurred = Source.TotalIncurred,
 			Target.update_ts = GETDATE();
 			
 		SET @rows_affected=@@ROWCOUNT;
