@@ -53,7 +53,7 @@ BEGIN
 		'Customer-Location Loss' AS [LossIdentifier],
 		l.cause_of_loss_desc AS LossType,
 		NULL AS [SubCauseOfLoss],
-		cl.loss_location_desc AS [LossDescription],
+		cl.loss_desc  AS [LossDescription],
 		p.policy_term AS PolicyType,
 		CASE
 		WHEN cl.catastrophe_sk IS NOT NULL THEN 'Yes'
