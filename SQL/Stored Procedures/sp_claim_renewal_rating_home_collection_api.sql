@@ -10,6 +10,7 @@
 -- 01/14/2025		Sandeep Gundreddy			3. AD7660 - Added product_sk=5(Condo)
 -- 05/08/2025		Yunus Mohammed				4. AD9412 Added adjuster_name
 -- 06/11/2025		Yunus Mohammed				5. AD-9744 Add Litigation Tag Indicator  (Litigation and LitigationComplete)
+-- 10/09/2025		Yunus Mohammed				8. AD-10933 Added new columns and updated definition of other columns
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_home_collection_api]
@@ -37,7 +38,7 @@ BEGIN
 		from
 		(
 		SELECT ROW_NUMBER()over(partition by cl.claim_no order by (
-		cfa.expense_reserve_amt + cfa.loss_reserve_amt + cfa.expense_paid_amt + cfa.loss_paid_amt+cfa.defense_paid_amt+cfa.defense_reserve_amt
+		 cfa.subrogation_recovery_amt + cfa.overpayment_recovery_amt + cfa.loss_paid_amt
 		) desc) as rn,
 		CASE cl.product_sk
 		WHEN 1 THEN 'Property'
@@ -52,11 +53,11 @@ BEGIN
 		'Customer-Location Loss' AS [LossIdentifier],
 		l.cause_of_loss_desc AS LossType,
 		NULL AS [SubCauseOfLoss],
-		cl.loss_desc AS [LossDescription],
+		cl.loss_desc  AS [LossDescription],
 		p.policy_term AS PolicyType,
 		CASE
-		WHEN cl.catastrophe_sk IS NOT NULL THEN 'Y'
-		ELSE 'N'
+		WHEN cl.catastrophe_sk IS NOT NULL THEN 'Yes'
+		ELSE 'No'
 		END AS [CatIndicator],
 		cat.catastrophe_nm as CatCode,
 		cl.loss_address AS AddressLine1,
@@ -70,16 +71,15 @@ BEGIN
 		cf.claim_coverage_desc AS Coverage,
 		cl.expense_reserve_amt AS ReserveExpense,
 		cl.loss_reserve_amt AS ReserveIndemnity,
-		cl.expense_paid_amt AS PaidExpense,
-		cl.loss_paid_amt AS PaidIndemnity,
+		(cl.expense_paid_amt + cl.subrogation_recovery_amt + cl.overpayment_recovery_amt) AS PaidExpense,
+		(cl.loss_paid_amt + cl.subrogation_recovery_amt + cl.overpayment_recovery_amt) AS PaidIndemnity,
+		(cl.expense_paid_amt + cl.subrogation_recovery_amt + cl.overpayment_recovery_amt + cl.loss_paid_amt) AS TotalIncurred,
 		cl.source_of_fire as SourceOfFire,
 		cl.source_of_water as SourceOfWater
 		,cfa.claim_adjuster_nm as AdjusterName
 		,cl.litigation_in as Litigation
-		,cl.litigation_complete_in as LitigationComplete		
-		,(
-		cfa.expense_reserve_amt + cfa.loss_reserve_amt + cfa.expense_paid_amt + cfa.loss_paid_amt+cfa.defense_paid_amt+cfa.defense_reserve_amt
-		) as amt
+		,cl.litigation_complete_in as LitigationComplete
+		,cl.large_loss_in as LargeLoss,cl.loss_location_desc  as LossDescription2
 		FROM
 		edw_core.tclaim cl
 		inner join edw_core.tproduct tp on tp.product_sk=cl.product_sk
@@ -91,11 +91,10 @@ BEGIN
 		SELECT 
 			row_number() over(partition by claim_sk order by 
 			sum(
-					clf.expense_reserve_amt + clf.loss_reserve_amt + clf.expense_paid_amt + clf.loss_paid_amt+clf.defense_paid_amt+clf.defense_reserve_amt
+					clf.subrogation_recovery_amt + clf.overpayment_recovery_amt + clf.loss_paid_amt
 				) desc
 				) as row_no, 
-		claim_sk,claim_coverage_desc,
-		sum(clf.expense_reserve_amt + clf.loss_reserve_amt + clf.expense_paid_amt + clf.loss_paid_amt+clf.defense_paid_amt+clf.defense_reserve_amt) as incurred_amt
+		claim_sk,claim_coverage_desc
 		FROM
 			edw_core.tclaim_feature clf
 		group by claim_sk,claim_coverage_desc
@@ -119,7 +118,7 @@ BEGIN
 			PropertyOrLiability,PolicyNumber,FileNumber,ClaimStatus,Claimant,LossDate,LossIdentifier,LossType,SubCauseOfLoss,
 			LossDescription,PolicyType,CatIndicator,CatCode,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressZipCode,
 			AddressState,AddressCounty,AddressCountry,Coverage,ReserveExpense,ReserveIndemnity,PaidExpense,PaidIndemnity,
-			SourceOfFire,SourceOfWater,AdjusterName,Litigation,LitigationComplete,
+			SourceOfFire,SourceOfWater,AdjusterName,Litigation,LitigationComplete,LargeLoss,LossDescription2,TotalIncurred,
 			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -127,7 +126,7 @@ BEGIN
 			PropertyOrLiability,PolicyNumber,FileNumber,ClaimStatus,Claimant,LossDate,LossIdentifier,LossType,SubCauseOfLoss,
 			LossDescription,PolicyType,CatIndicator,CatCode,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressZipCode,
 			AddressState,AddressCounty,AddressCountry,Coverage,ReserveExpense,ReserveIndemnity,PaidExpense,PaidIndemnity,
-			SourceOfFire,SourceOfWater,AdjusterName,Litigation,LitigationComplete,
+			SourceOfFire,SourceOfWater,AdjusterName,Litigation,LitigationComplete,LargeLoss,LossDescription2,TotalIncurred,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -163,6 +162,9 @@ BEGIN
 		Target.AdjusterName = Source.AdjusterName,
 		Target.Litigation = Source.Litigation,
 		Target.LitigationComplete = Source.LitigationComplete,
+		Target.LargeLoss = Source.LargeLoss,
+		Target.LossDescription2 = Source.LossDescription2,
+		Target.TotalIncurred = Source.TotalIncurred,
 		Target.update_ts = GETDATE();
 
 		SET @rows_affected=@@ROWCOUNT;
