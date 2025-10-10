@@ -91,11 +91,10 @@ BEGIN
 		SELECT 
 			row_number() over(partition by claim_sk order by 
 			sum(
-					clf.expense_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt + clf.loss_paid_amt
+					clf.subrogation_recovery_amt + clf.overpayment_recovery_amt + clf.loss_paid_amt
 				) desc
 				) as row_no, 
 		claim_sk,claim_coverage_desc
-		--,sum(clf.expense_reserve_amt + clf.loss_reserve_amt + clf.expense_paid_amt + clf.loss_paid_amt+clf.defense_paid_amt+clf.defense_reserve_amt) as incurred_amt
 		FROM
 			edw_core.tclaim_feature clf
 		group by claim_sk,claim_coverage_desc
