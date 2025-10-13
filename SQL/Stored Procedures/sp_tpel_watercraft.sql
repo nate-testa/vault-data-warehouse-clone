@@ -3,10 +3,11 @@
 -- Create Date: 2023-07-01
 -- Description: This procedures insert pel watercraft data
 --------------------------------------------------------------------------------------------------------------------------------------------------
--- Change date 			|Author												|	Change Description
+-- Change date 			|Author									|	Change Description
 --------------------------------------------------------------------------------------------------------------------------------------------------
--- 15/08/24				Alberto Almario								1. New Column watercraft_deleted_in
--- 09/09/2025		 Yunus Mohammed			  			2.  AD10907 - Added logic to use IsDeletedOnRenewal
+-- 15/08/24				Alberto Almario					1. New Column watercraft_deleted_in
+-- 09/09/25		 		Yunus Mohammed			  2.  AD10907 - Added logic to use IsDeletedOnRenewal
+-- 10/13/25				Yunus Mohammed			  3. AD11353  -Added watercraft_unique_id
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_watercraft]
 
@@ -35,7 +36,7 @@ BEGIN
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,[Index],policy_history_sk,source_system_sk,
 			IssuedDate,[Year],Make,Model,[Length],HullValue,Horsepower,AnyWatercraftOwnedTrustOrLlc,AnyWatercraftCaptainOrCrew,
 			MotorType,MilesPerHour,SailboatPowerType
-			,watercraft_deleted_in
+			,watercraft_deleted_in,watercraft_unique_id
 			into edw_temp.tpel_watercraft_temp1
 		from
 		(
@@ -49,7 +50,8 @@ BEGIN
 			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,act.IssuedDate,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			atvof.Field,atvof.[Value]
-			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 OR atvo.IsDeletedOnRenewal =1 THEN 'Yes' ELSE 'No' END as watercraft_deleted_in
+			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 OR atvo.IsDeletedOnRenewal =1 THEN 'Yes' ELSE 'No' END as watercraft_deleted_in,
+			atvo.UniqueId as watercraft_unique_id
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
@@ -86,8 +88,8 @@ BEGIN
 			watercraft_no,watercraft_year,watercraft_make,watercraft_model,	watercraft_length,watercraft_hull_value,
 			watercraft_horsepower,vessels_owned_trust_llc_in,vessels_with_captain_crew_in,
 			source_system_sk,create_ts,	update_ts,etl_audit_sk,
-			watercraft_motor_type, watercraft_miles_per_hr, watercraft_sailboat_power_type
-			,watercraft_deleted_in
+			watercraft_motor_type, watercraft_miles_per_hr, watercraft_sailboat_power_type,
+			watercraft_deleted_in,watercraft_unique_id
 		)
 		SELECT
 			PolicyNumber AS policy_no,EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
@@ -97,7 +99,7 @@ BEGIN
 			AnyWatercraftOwnedTrustOrLlc AS vessels_owned_trust_llc_in,AnyWatercraftCaptainOrCrew AS vessels_with_captain_crew_in,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,
 			MotorType AS watercraft_motor_type,MilesPerHour AS watercraft_miles_per_hr,SailboatPowerType AS watercraft_sailboat_power_type
-			,watercraft_deleted_in
+			,watercraft_deleted_in,watercraft_unique_id
 		FROM
 			edw_temp.tpel_watercraft_temp1 AS ttpv
 

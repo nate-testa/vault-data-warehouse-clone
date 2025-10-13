@@ -4,9 +4,10 @@
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert pel quote watercraft data
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date			|Author							|	Change Description
+-- Change date			|Author									|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
--- 10/24/2023 			Yunus Mohammed					1. Created this procedure 
+-- 10/24/23 			Yunus Mohammed			   1. Created this procedure 
+-- 10/13/25				Yunus Mohammed			   2. AD11353  - Added watercraft_unique_id
 -- =========================================================================================================================== 
 CREATE or alter  PROCEDURE [edw_core].[sp_tquote_pel_watercraft]
 
@@ -34,7 +35,7 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,[Index],quote_history_sk,source_system_sk,
 			CreatedDate,[Year],Make,Model,[Length],HullValue,Horsepower,AnyWatercraftOwnedTrustOrLlc,AnyWatercraftCaptainOrCrew,
-			MotorType,MilesPerHour,SailboatPowerType
+			MotorType,MilesPerHour,SailboatPowerType,watercraft_unique_id
 			into edw_temp.tquote_pel_watercraft_temp1
 		from
 		(
@@ -47,7 +48,8 @@ BEGIN
 			CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,atvo.[Index],tph.quote_history_sk,
 			act.[Number] AS transaction_seq_no,act.CreatedDate,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
-			atvof.Field,atvof.[Value]
+			atvof.Field,atvof.[Value],
+			atvo.UniqueId as watercraft_unique_id
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
@@ -84,7 +86,7 @@ BEGIN
 			watercraft_no,watercraft_year,watercraft_make,watercraft_model,	watercraft_length,watercraft_hull_value,
 			watercraft_horsepower,vessels_owned_trust_llc_in,vessels_with_captain_crew_in,
 			source_system_sk,create_ts,	update_ts,etl_audit_sk,
-			watercraft_motor_type, watercraft_miles_per_hr, watercraft_sailboat_power_type
+			watercraft_motor_type, watercraft_miles_per_hr, watercraft_sailboat_power_type,watercraft_unique_id
 		)
 		SELECT
 			PolicyNumber AS policy_no,EffectiveDate AS effective_dt,
@@ -93,7 +95,8 @@ BEGIN
 			[Length] AS watercraft_length,HullValue AS watercraft_hull_value,Horsepower AS watercraft_horsepower,
 			AnyWatercraftOwnedTrustOrLlc AS vessels_owned_trust_llc_in,AnyWatercraftCaptainOrCrew AS vessels_with_captain_crew_in,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,
-			MotorType AS watercraft_motor_type,MilesPerHour AS watercraft_miles_per_hr,SailboatPowerType AS watercraft_sailboat_power_type
+			MotorType AS watercraft_motor_type,MilesPerHour AS watercraft_miles_per_hr,SailboatPowerType AS watercraft_sailboat_power_type,
+			watercraft_unique_id
 		FROM
 			edw_temp.tquote_pel_watercraft_temp1 AS ttpv
 
