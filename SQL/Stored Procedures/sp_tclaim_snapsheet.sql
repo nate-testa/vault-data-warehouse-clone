@@ -22,6 +22,7 @@
 -- 06/11/2025	    Yunus Mohammed			    17. AD-9744 Add Litigation Indicators (litigation_in and litigation_complete_in)
 -- 09/23/2025		Yunus Mohammed				18. AD-11092 Added loss_location_desc column to tclaim table
 -- 09/25/2025		Yunus Mohammed				19. AD-11148 Added large_loss_in column			
+-- 10/13/2025		Yunus Mohammed				20 AD-11322 Added closed_reason_desc column
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -71,7 +72,7 @@ BEGIN
 		source_system_sk,update_time,first_party_driver_nm,source_of_fire,source_of_water
 		,fault_decision,responsible_party,at_fault_pct,migrated_in,
 		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured,
-		litigation_in,litigation_complete_in,large_loss_in
+		litigation_in,litigation_complete_in,large_loss_in,closed_reason_desc
 		INTO edw_temp.tclaim_snapsheet_temp1
 		FROM
 		(
@@ -165,7 +166,8 @@ BEGIN
 			,case
 				when c.large_loss = 'true' then 'Yes' 
 				when c.large_loss = 'false' then 'No'
-			end as  large_loss_in
+			end as  large_loss_in,
+			c.closed_reason_code  as closed_reason_desc
 		FROM edw_stage_snapsheet.claims c
 		LEFT JOIN edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
 		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcmp.claim_party_id and  cpcmp.contact_method_type = 'phone'
@@ -231,7 +233,7 @@ BEGIN
 			,first_party_driver_nm,source_of_fire,source_of_water
 			,fault_decision,responsible_party,at_fault_pct,migrated_in,
 			coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured,
-			litigation_in,litigation_complete_in,large_loss_in
+			litigation_in,litigation_complete_in,large_loss_in,closed_reason_desc
 		)
 	VALUES
 		(
@@ -245,7 +247,7 @@ BEGIN
 		,first_party_driver_nm,source_of_fire,source_of_water
 		,fault_decision,responsible_party,at_fault_pct,migrated_in,
 		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,first_party_driver_relationship_to_insured,
-		litigation_in,litigation_complete_in,large_loss_in
+		litigation_in,litigation_complete_in,large_loss_in,closed_reason_desc
 		)
 	-- For Updates
 	WHEN MATCHED THEN UPDATE 
@@ -294,7 +296,8 @@ BEGIN
 		,Target.first_party_driver_relationship_to_insured = Source.first_party_driver_relationship_to_insured
 		,Target.litigation_in = Source.litigation_in
 		,Target.litigation_complete_in= Source.litigation_complete_in
-		,Target.large_loss_in = Source.large_loss_in
+		,Target.large_loss_in = Source.large_loss_in,
+		Target.closed_reason_desc = Source.closed_reason_desc
 		;
 		
 		--************End************
