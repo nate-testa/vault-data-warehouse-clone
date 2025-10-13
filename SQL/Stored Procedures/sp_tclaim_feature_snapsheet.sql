@@ -12,6 +12,7 @@
 -- 02/21/2025				Yunus Mohammed				7. Code updated fornull aslob_sk	
 -- 03/03/2025               Sandeep Gundreddy			8. updated logic to use created_at/updated_at from claims table
 -- 04/02/2025				Yunus Mohammed				9. AD-9039 Updated aslob_sk and claim_coverage_desc logic for condo policies
+-- 10/13/2025				Yunus Mohammed				10. AD-11322 Added closed_reason_desc column
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet]
 AS
@@ -93,6 +94,7 @@ BEGIN
 				WHEN 'PEL' THEN NULL
 				WHEN 'AU' THEN tavc.auto_vehicle_coverage_sk
 			END AS vehicle_coverage_sk,
+			exps.closed_reason_code  as closed_reason_desc,
 			greatest(clm.created_at,clm.updated_at) AS greatest_created_updated
 		INTO edw_temp.tclaim_feature_snapsheet_temp1
 		FROM edw_stage_snapsheet.claims clm
@@ -209,7 +211,7 @@ BEGIN
 				claim_sk,claim_no,exposure_type,exposure_name,claim_coverage_cd,claim_coverage_desc,
 				claimant_nm,total_loss_in,
 				product_sk,claim_feature_status,aslob_sk,claim_adjuster_nm,
-				coverage_sk,item_sk,vehicle_coverage_sk,
+				coverage_sk,item_sk,vehicle_coverage_sk,closed_reason_desc,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 		VALUES
@@ -217,7 +219,7 @@ BEGIN
 			claim_sk,claim_no,exposure_type,exposure_name,claim_coverage_cd,claim_coverage_desc,
 			claimant_nm,total_loss_in,
 			product_sk,claim_feature_status,aslob_sk,claim_adjuster_nm,
-			coverage_sk,item_sk,vehicle_coverage_sk,		
+			coverage_sk,item_sk,vehicle_coverage_sk,closed_reason_desc,
 			source_system_sk,@current_date,@current_date,@etl_audit_sk
 			)
 		-- For Updates
@@ -232,7 +234,8 @@ BEGIN
 			Target.item_sk=Source.item_sk,
 			Target.coverage_sk=Source.coverage_sk,
 			Target.vehicle_coverage_sk=Source.vehicle_coverage_sk,
-			Target.claim_adjuster_nm=Source.claim_adjuster_nm,		
+			Target.claim_adjuster_nm=Source.claim_adjuster_nm,
+			Target.closed_reason_desc=Source.closed_reason_desc,
 			Target.update_ts=@current_date;
 
 		--************End************
