@@ -39,7 +39,13 @@ create table edw_integration.customer_midterm_review_recommendation
 );
 END;
 
-delete edw_integration.tintegration_table_detail
-where table_nm = 'customer_midterm_review_recommendation' ; 
+IF EXISTS
+(SELECT 1 FROM edw_integration.tintegration_table_detail
+	where table_nm = 'customer_midterm_review_recommendation')
+BEGIN
+	delete edw_integration.tintegration_table_detail
+	where table_nm = 'customer_midterm_review_recommendation' ; 
+END ;   
+
 INSERT INTO edw_integration.tintegration_table_detail(table_nm,table_type,table_desc,load_method,load_type,load_frequency,create_ts,update_ts) 
 VALUES ('customer_midterm_review_recommendation','Feed','This table holds customers product recommendation for midterm review','Stored Procedure','Full Load','Daily',getdate(),getdate());
