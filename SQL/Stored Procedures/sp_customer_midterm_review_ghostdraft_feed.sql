@@ -260,7 +260,7 @@ BEGIN
 					--custom_recommendation_message_3,
 					--custom_recommendation_message_4_id,
 					--custom_recommendation_message_4,  
-				from edw_integration.customer_midterm_review_eligibility e
+				from edw_integration.customer_midterm_review_eligibility_feed e
 				inner join edw_core.tcustomer cust on e.customer_id = cust.customer_id
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
 				left join edw_integration.customer_midterm_review_policy_detail p on r.existing_policy_no = p.policy_no
@@ -632,19 +632,175 @@ BEGIN
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.renovation_recommendation_message_1_id = m.message_id   
 		 
-        /*
-		--- Update custom reco message 1
-        update a
-        set custom_recommendation_message_1 =  m.message_desc 
-		from edw_integration.customer_midterm_review_ghostdraft_feed a
-		inner join edw_stage.customer_midterm_review_message m on a.custom_recommendation_message_1_id = m.message_id 
-		 
-        --- Update custom reco message 2
-        update a
-        set custom_recommendation_message_2 =  m.message_desc 
-		from edw_integration.customer_midterm_review_ghostdraft_feed a
-		inner join edw_stage.customer_midterm_review_message m on a.custom_recommendation_message_2_id = m.message_id
-		*/
+		drop table if exists edw_temp.customer_midterm_review_ghostdraft_feed_temp2;
+
+		 with CustomerList as
+		(
+			select distinct
+			customer_id,customer_nm,customer_email,
+			customer_phone_no,no_of_years_with_vault,no_of_years_with_vault_tx,
+			mailing_address_line1,mailing_address_line2,mailing_address_unit_no,mailing_address_city_nm,
+			mailing_address_state_cd,mailing_address_zip_cd,broker_id,broker_nm,broker_phone_no,broker_email
+			from
+			edw_integration.customer_midterm_review_ghostdraft_feed
+			where 
+			   -- customer_id in ('1234500211', '1234502277', '1234548368') and
+				existing_product_in  = 'Yes'
+		)
+		select  
+			cmr.customer_id,
+			(
+			SELECT
+			cmr.customer_nm as insured_full_name,
+			cmr.no_of_years_with_vault_tx as insured_message,
+			cmr.broker_nm as broker_name,
+			cmr.broker_phone_no as broker_phone,
+			cmr.broker_email,
+			cmr.mailing_address_line1,
+			cmr.mailing_address_line2,
+			cmr.mailing_address_unit_no,
+			cmr.mailing_address_city_nm,
+			cmr.mailing_address_state_cd,
+			cmr.mailing_address_zip_cd,
+	
+				JSON_QUERY((
+				  -- select *
+				--	from
+				--	(
+						select
+							'Yes' [existing_home],
+							cmrh.risk_address_line1 as [home.risk_address_line1],
+							cmrh.risk_address_line2 as [home.risk_address_line2],
+							cmrh.risk_address_unit_no as [home.risk_address_unit_no],
+							cmrh.risk_address_city_nm as [home.risk_address_city_nm],
+							cmrh.risk_address_state_cd as [home.risk_address_state_cd],
+							cmrh.risk_address_zip_cd as [home.risk_address_zip_cd],
+							cmrh.risk_address as [home.risk_address]
+						from
+							edw_integration.customer_midterm_review_ghostdraft_feed cmrh
+							inner join edw_integration.customer_midterm_review_policy_detail cmrp on cmrh.policy_no = cmrp.policy_no
+						WHERE
+							cmrh.customer_id = cmr.customer_id
+							and cmrh. product_nm = 'Homeowners'
+							and cmrh.existing_product_in = 'Yes'
+						order by cmrp.total_insured_value_amt
+					--) as a
+					for json path, include_null_values
+				)) as [current_coverage.home]
+				,
+					(
+					select top 1
+					 'Yes' 
+					 from edw_integration.customer_midterm_review_ghostdraft_feed cmra 
+					 where cmra.customer_id = cmr.customer_id
+					 and cmra. product_nm = 'Auto'
+					and cmra.existing_product_in = 'Yes'
+					) as [current_coverage.existing_auto],
+					(
+					select top 1
+						auto_message
+					 from edw_integration.customer_midterm_review_ghostdraft_feed cmra 
+					 where cmra.customer_id = cmr.customer_id
+					 and cmra. product_nm = 'Auto'
+					and cmra.existing_product_in = 'Yes'
+					) as [current_coverage.message_auto],
+					(
+					select top 1
+					 'Yes' 
+					 from edw_integration.customer_midterm_review_ghostdraft_feed cmre
+					 where cmre.customer_id = cmr.customer_id
+					 and cmre. product_nm = 'Excess Liability'
+					and cmre.existing_product_in = 'Yes'
+					) as [current_coverage.existing_excess],
+					 (
+						select top 1
+							pel_message
+						 from edw_integration.customer_midterm_review_ghostdraft_feed cmre 
+						 where cmre.customer_id = cmr.customer_id
+						 and cmre. product_nm = 'Excess Liability'
+						and cmre.existing_product_in = 'Yes'
+					) as [current_coverage.message_excess],
+					(
+						select top 1
+						 'Yes' 
+						 from edw_integration.customer_midterm_review_ghostdraft_feed cmrc
+						 where cmrc.customer_id = cmr.customer_id
+						 and cmrc. product_nm = 'Collections'
+						and cmrc.existing_product_in = 'Yes'
+					) as [current_coverage.existing_collection],
+					 (
+						select top 1
+							collection_message
+						 from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
+						 where cmrc.customer_id = cmr.customer_id
+						 and cmrc. product_nm = 'Collections'
+						and cmrc.existing_product_in = 'Yes'
+					) as [current_coverage.message_collection],
+					(
+						select top 1
+						 'Yes' 
+						 from edw_integration.customer_midterm_review_ghostdraft_feed cmrc
+						 where cmrc.customer_id = cmr.customer_id
+						 and cmrc. product_nm = 'Marine Boat & Yacht'
+						and cmrc.existing_product_in = 'Yes'
+					) as [current_coverage.existing_marine],
+					 (
+						select top 1
+							yacht_boat_message
+						 from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
+						 where cmrc.customer_id = cmr.customer_id
+						 and cmrc. product_nm = 'Marine Boat & Yacht'
+						and cmrc.existing_product_in = 'Yes'
+					) as [current_coverage.message_marine]
+	
+			,json_query
+			( (
+				select * from
+				(
+					select distinct mrm.rms_recommendation_message as [message]
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
+					where mrm.customer_id= cmr.customer_id and mrm.rms_recommendation_message is not null
+					union
+					select distinct mrm.wildfire_protection_recommendation_message as [message]
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
+					where mrm.customer_id= cmr.customer_id and mrm.wildfire_protection_recommendation_message is not null
+					union
+					select distinct mrm.backup_generator_recommendation_message as [message]
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
+					where mrm.customer_id= cmr.customer_id and mrm.backup_generator_recommendation_message is not null
+					UNION
+					select mrm.custom_recommendation_message_1 as [message]
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
+					where mrm.customer_id= cmr.customer_id and mrm.custom_recommendation_message_1 is not null
+					union
+					select mrm.custom_recommendation_message_2 as [message]
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
+					where mrm.customer_id= cmr.customer_id and mrm.custom_recommendation_message_2 is not null
+					union
+					select mrm.custom_recommendation_message_3 as [message]
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
+					where mrm.customer_id= cmr.customer_id and mrm.custom_recommendation_message_3 is not null
+					union
+					select mrm.custom_recommendation_message_4 as [message]
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
+					where mrm.customer_id= cmr.customer_id and mrm.custom_recommendation_message_4 is not null 
+			) as a
+			for json path, include_null_values
+			))  as custom_recommendations
+			for json path, include_null_values , without_array_wrapper
+			) as  customer_json
+		into edw_temp.customer_midterm_review_ghostdraft_feed_temp2
+		from CustomerList as cmr;
+
+		select * from INFORMATION_SCHEMA.columns where COLUMN_NAME = 'data'
+		update [target]
+		set
+			[target].[data] = [source].[customer_json],
+			midterm_review_process_in = 'Yes'
+		from
+			edw_integration.customer_midterm_review_eligibility_feed [target]
+			inner join edw_temp.customer_midterm_review_ghostdraft_feed_temp2 [source] on 
+				[target].customer_id = [source].customer_id;
 		               
         SET @rows_affected=@@ROWCOUNT;
  
