@@ -51,7 +51,7 @@ GO
 -- 08/15/24		Architha Gudimalla				27. Fixed errors for the code changes done in 23-26
 -- 02/06/25		Architha Gudimalla				28. AD8428 - Prod error due to dupes in quotes
 -- 06/13/25		Architha Gudimalla				29. AD9823 - Exclude forcast quotes
--- 10/15/25		Dinesh Bobbili					30. AD11286 - Added date logic to run the process for 3 months
+-- 10/15/25		Dinesh Bobbili					30. AD11286 - simplified the date logic 
 -- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]

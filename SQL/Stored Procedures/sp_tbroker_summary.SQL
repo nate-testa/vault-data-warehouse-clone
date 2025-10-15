@@ -63,7 +63,7 @@ GO
 -- 03/05/25		Hernando Gonzalez				34. AD8315 - Summary tables - Close Reasons
 -- 10/02/25		Dinesh Bobbili					35. AD11217 - Added new columns
 -- 10/07/25		Dinesh Bobbili					36. AD11217 - Updated the logics for non_flat_cancelled_ct, non_flat_cancelled_ct,expiring_sixty_day_written_premium_amt
--- 10/15/25		Dinesh Bobbili					37. AD11286 - simplified the date logic
+-- 10/15/25		Dinesh Bobbili					37. AD11286 - Added date logic to run the process for 3 months
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
