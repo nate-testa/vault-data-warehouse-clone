@@ -3,7 +3,7 @@
 -- Create Date: 09/13/2023
 -- Description: This procedures inserts ceded premium data
 ---------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author									 |	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 09/13/23		Yunus Mohammed				1. Created the procedure
 -- 11/15/23		Yunus Mohammed				2. Updated logic for cancelled and expired policies  
@@ -16,6 +16,7 @@
 --																				Added run_date as param for pre-run
 -- 04/25/25		Yunus Mohammed				7. AD8820 Updated logic to get risk address
 --																					Update run date logic
+-- 10/09/25		Yunus Mohammed				8. AD11288 Exclude records when both ceded and gross premium amount are 0
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_ceded_premium_feed]
@@ -181,7 +182,7 @@ BEGIN
 				WHERE
 					tpt.accouting_month_sk BETWEEN @accounting_date_begin_sk AND @accounting_date_end_sk
 					AND tp.product_cd IN('HO','CO')
-					AND ISNULL(tpt.ceded_premium_amt,0) ! = 0
+					AND (ISNULL(tpt.ceded_premium_amt,0) ! = 0 OR ISNULL(tpt.premium_amt,0) ! = 0)
 					AND tic.internal_coverage_cd in ('Cyber Protection','Service Line','System Protection','Systems Protection')
 				) AS temp
 				GROUP BY
