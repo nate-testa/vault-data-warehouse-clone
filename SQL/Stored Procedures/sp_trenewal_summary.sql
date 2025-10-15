@@ -51,6 +51,7 @@ GO
 -- 08/15/24		Architha Gudimalla				27. Fixed errors for the code changes done in 23-26
 -- 02/06/25		Architha Gudimalla				28. AD8428 - Prod error due to dupes in quotes
 -- 06/13/25		Architha Gudimalla				29. AD9823 - Exclude forcast quotes
+-- 10/15/25		Dinesh Bobbili					30. AD11286 - Added date logic to run the process for 3 months
 -- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -94,21 +95,17 @@ BEGIN
 		FOR  
 		select	yearmonth
 		from	edw_core.tdate
-		where	yearmonth between  (case when @in_yearmonth is not null and right(@in_yearmonth,2) in ('01','02') 
-										 then @in_yearmonth - 90 
-										 when @in_yearmonth is not null and right(@in_yearmonth,2) not in ('01','02') 
-										 then @in_yearmonth - 2
-									end) 
+		where	yearmonth between  (case when @in_yearmonth is not null 
+										  then FORMAT(DATEADD(MONTH, -2, DATEFROMPARTS(LEFT(@in_yearmonth, 4), RIGHT(@in_yearmonth, 2), 1)), 'yyyyMM')
+									 end) 
 						  and @in_yearmonth
 		group by yearmonth
 		union 
 		select	yearmonth
 		from	edw_core.tdate
-		where	yearmonth between  (case when @in_yearmonth is null and right(@last_source_yearmonth,2) in ('01','02') 
-										 then @last_source_yearmonth - 90 
-										 when @in_yearmonth is null and right(@last_source_yearmonth,2) not in ('01','02') 
-										 then @last_source_yearmonth - 2
-									end) 
+		where	yearmonth between  (case when @in_yearmonth is  null 
+										  then FORMAT(DATEADD(MONTH, -2, DATEFROMPARTS(LEFT(@last_source_yearmonth, 4), RIGHT(@last_source_yearmonth, 2), 1)), 'yyyyMM')
+									 end)
 						  and @last_source_yearmonth
 		union 
 		select	yearmonth
