@@ -147,7 +147,7 @@ BEGIN
 		select	yearmonth,max(calendar_year) as  year 
 		from	edw_core.tdate
 		where	yearmonth >  case when @in_yearmonth is null then @last_source_yearmonth end
-		  and   yearmonth <= case when @in_yearmonth is null then concat(datepart(yyyy,getdate()),iif(datepart(mm,getdate()) < 10,'0','') ,datepart(mm,getdate()) ) end
+		  and   yearmonth <= case when @in_yearmonth is null then FORMAT(GETDATE(), 'yyyyMM') end
 		group by yearmonth
 		order by 1; 
 		
