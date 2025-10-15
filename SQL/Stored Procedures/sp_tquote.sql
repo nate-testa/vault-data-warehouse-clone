@@ -18,6 +18,7 @@
 -- 07/10/25		Alberto Almario						13. AD10214 - Added new column renewal_cap_factor
 -- 07/10/25		Hernando Gonzalez				14. AD10220 | Added bound_by_broker_in
 -- 09/16/25		Yunus Mohammed					15. AD10892 - Added new columns renewal_quote_in and renewal_quote_review_start_dt
+-- 10/15/25		Yunus Mohammed					16 AD11341 - Added new column renewal_released_by_metal_in
 -- =========================================================================================================================== 
 
 CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -234,6 +235,10 @@ BEGIN
 				,case when tmp1.BoundByBroker = 1 then 'Yes' else 'No' end as bound_by_broker_in
 				,case when tmp1.RenewalViewShow = 1 then 'Yes' when tmp1.RenewalViewShow = 0 then 'No' end as renewal_quote_in
 				,tmp1.RenewalReviewStartDate as renewal_quote_review_start_dt
+				,case
+					when tmp1.IsReleasedByMetal = 1 then 'Yes' 
+					when tmp1.IsReleasedByMetal = 0 then 'No'
+				end as renewal_released_by_metal_in
 			FROM 
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
@@ -296,6 +301,7 @@ BEGIN
 			,bound_by_broker_in
 			,renewal_quote_in
 			,renewal_quote_review_start_dt
+			,renewal_released_by_metal_in
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -340,6 +346,7 @@ BEGIN
 				,source.bound_by_broker_in
 				,renewal_quote_in
 				,renewal_quote_review_start_dt
+				,Source.renewal_released_by_metal_in
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -383,6 +390,7 @@ BEGIN
 		Target.bound_by_broker_in = source.bound_by_broker_in
 		,Target.renewal_quote_in = source.renewal_quote_in
 		,Target.renewal_quote_review_start_dt = source.renewal_quote_review_start_dt
+		,Target.renewal_released_by_metal_in = source.renewal_released_by_metal_in
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
