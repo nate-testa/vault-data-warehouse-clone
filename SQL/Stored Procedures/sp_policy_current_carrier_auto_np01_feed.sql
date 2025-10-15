@@ -5,6 +5,7 @@
 -- Change date 				|Author						        |	Change Description
 -- ---------------------------------------------------------------------------------------------------
 -- 08/11/25					Yunus Mohammed			1. Created this procedure
+-- 10/14/25					Yunus Mohammed			2. AD-11333 Update made for international addresses		
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_current_carrier_auto_np01_feed]
 AS
@@ -107,8 +108,18 @@ BEGIN
         LEFT(TRIM(SUBSTRING(tp.mailing_address_line1, PATINDEX('%[^0-9]%', tp.mailing_address_line1), 30)), 20)  AS [PolicyHolderMailAddressStreetName],
         LEFT(tp.mailing_address_unit_no, 5) as [PolicyHolderMailAddressAptNum],
         LEFT(tp.mailing_address_city_nm,20) AS [PolicyHolderMailAddressCity],
-        LEFT(tp.mailing_address_state_cd,2) AS [PolicyHolderMailAddressState],
-		LEFT(tp.mailing_address_zip_cd,5) AS [PolicyHolderMailAddressZip],
+		CASE
+			WHEN EXISTS(select 1 from edw_core.tstate s where s.state_cd = tp.mailing_address_state_cd) THEN
+       				LEFT(tp.mailing_address_state_cd,2)
+			ELSE
+				'YY'
+		END AS [PolicyHolderMailAddressState],
+		CASE
+			WHEN EXISTS(select 1 from edw_core.tstate s where s.state_cd = tp.mailing_address_state_cd) THEN
+       				LEFT(tp.mailing_address_zip_cd,5)
+			ELSE
+					'00001'
+		END  AS [PolicyHolderMailAddressZip], -- Todo
         NULL AS [PolicyHolderMailAddressZipPlus4],        
         '' as [PolicyHolderTelephoneAreaCode],
         '' as [PolicyHolderTelephoneNumber],
