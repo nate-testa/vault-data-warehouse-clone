@@ -16,7 +16,7 @@
 --																				Added run_date as param for pre-run
 -- 04/25/25		Yunus Mohammed				7. AD8820 Updated logic to get risk address
 --																					Update run date logic
--- 10/09/25		Yunus Mohammed				8. AD11288 Include records where ceded_premium_amt is 0
+-- 10/09/25		Yunus Mohammed				8. AD11288 Exclude records when both ceded and gross premium amount are 0
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_ceded_premium_feed]
