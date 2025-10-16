@@ -145,6 +145,7 @@ BEGIN
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
 				left join edw_integration.customer_midterm_review_policy_detail p on r.existing_policy_no = p.policy_no
 				where r.product_nm not in ('Condo','Homeowners') 
+				and r.update_ts >  @last_source_extract_ts
 				group by e.customer_id,
 					e.midterm_review_year,
 					cust.customer_nm ,
@@ -262,7 +263,7 @@ BEGIN
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
 				left join edw_integration.customer_midterm_review_policy_detail p on r.existing_policy_no = p.policy_no
 				where r.product_nm in ('Condo','Homeowners')
-				--add filter timestamp
+				and r.update_ts >  @last_source_extract_ts
 		)
 		select *
 		into edw_temp.customer_midterm_review_ghostdraft_feed_temp1
@@ -333,9 +334,9 @@ BEGIN
 			--yacht_boat_message,
 			aviation_message_id,
 			--aviation_message,
-			rms_recommendation_message,
-			wildfire_protection_recommendation_message,
-			backup_generator_recommendation_message,
+			rms_recommendation,
+			wildfire_protection_recommendation,
+			backup_generator_recommendation,
 			rms_recommendation_message_1_id,
 			---rms_recommendation_message_1,
 			rms_recommendation_message_2_id,
@@ -462,7 +463,8 @@ BEGIN
 		SET f.auto_vehicle_list = v.auto_vehicle_list
 		FROM edw_integration.customer_midterm_review_ghostdraft_feed f
 		JOIN veh_list v ON f.customer_id = v.customer_id
-		where f.auto_vehicle_list is not null;
+		where f.auto_vehicle_list is not null
+		and update_ts >  @last_source_extract_ts;
 
 		--concat boat list
 		WITH boat_list AS (
@@ -477,7 +479,8 @@ BEGIN
 		SET f.yacht_boat_list = v.yacht_boat_list
 		FROM edw_integration.customer_midterm_review_ghostdraft_feed f
 		JOIN boat_list v ON f.customer_id = v.customer_id
-		where f.yacht_boat_list is not null;
+		where f.yacht_boat_list is not null
+		and update_ts >  @last_source_extract_ts;
 
 		--update generator id
 		WITH genid AS (
@@ -497,7 +500,8 @@ BEGIN
 		SET backup_generator_recommendation_message_1_id = cc.code
 		FROM edw_integration.customer_midterm_review_ghostdraft_feed  gd
 		JOIN genid cc ON gd.customer_id = cc.customer_id
-		where product_nm in ('Homeowners','Condo');
+		where product_nm in ('Homeowners','Condo')
+		and gd.update_ts >  @last_source_extract_ts;
 		 
         --- Update customer message
         update a
@@ -506,6 +510,7 @@ BEGIN
 								end
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.customer_message_id = m.message_id
+		where a.update_ts >  @last_source_extract_ts
 		 
         --- Update coll message 
         update a
@@ -515,6 +520,7 @@ BEGIN
 									end  
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.collection_message_id = m.message_id 
+		where a.update_ts >  @last_source_extract_ts
 		 
         --- Update pel message 
         update a
@@ -532,6 +538,7 @@ BEGIN
 									end 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.pel_message_id = m.message_id 
+		where a.update_ts >  @last_source_extract_ts
 		 
         --- Update au message 
         update a
@@ -540,6 +547,7 @@ BEGIN
 									end 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.auto_message_id = m.message_id 
+		where a.update_ts >  @last_source_extract_ts
 		 
         --- Update yacht message 
         update a
@@ -550,18 +558,21 @@ BEGIN
 									end
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.yacht_boat_message_id = m.message_id  
+		where a.update_ts >  @last_source_extract_ts
 		 
         --- Update aviation message 
         update a
         set aviation_message =  m.message_desc 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.aviation_message_id = m.message_id 
+		where a.update_ts >  @last_source_extract_ts
 		 
         --- Update lux_on_endorsement message 
         update a
         set lux_on_endorsement_message =  m.message_desc
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.lux_on_endorsement_message_id = m.message_id
+		where a.update_ts >  @last_source_extract_ts
 		 
         --- Update water shut off reco message 
         update a
@@ -574,12 +585,14 @@ BEGIN
 					where rms_recommendation_message_1_id is not null
 					group by customer_id
 					) aa on a.customer_id = aa.customer_id 
+		where a.update_ts >  @last_source_extract_ts
 		 
         --- Update water shut off QR message 
         update a
         set rms_recommendation_message_2 =  m.message_desc 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.rms_recommendation_message_2_id = m.message_id 
+		where a.update_ts >  @last_source_extract_ts
 		 
         --- Update wildfire reco message 
         update a
@@ -592,12 +605,14 @@ BEGIN
 					where wildfire_protection_recommendation_message_1_id is not null
 					group by customer_id
 					) aa on a.customer_id = aa.customer_id 
+		where a.update_ts >  @last_source_extract_ts
 		 
         --- Update wildfire qr message 
         update a
         set wildfire_protection_recommendation_message_2 =  m.message_desc 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
-		inner join edw_stage.customer_midterm_review_message m on a.wildfire_protection_recommendation_message_2_id = m.message_id 
+		inner join edw_stage.customer_midterm_review_message m on a.wildfire_protection_recommendation_message_2_id = m.message_id
+		where a.update_ts >  @last_source_extract_ts 
 		 
         --- Update backup generator message 
         update a
@@ -605,30 +620,35 @@ BEGIN
 																	'<<CITY NAME>>', a.risk_address_city_nm ) 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.backup_generator_recommendation_message_1_id = m.message_id 
+		where a.update_ts >  @last_source_extract_ts
 		 
         --- Update au new driver message 
         update a
         set new_driver_recommendation_message_1 =  m.message_desc
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.new_driver_recommendation_message_1_id = m.message_id 
+		where a.update_ts >  @last_source_extract_ts
 		 
         --- Update primary_ho monoline message 
         update a
         set primary_ho_monoline_recommendation_message_1 =  m.message_desc
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
-		inner join edw_stage.customer_midterm_review_message m on a.primary_ho_monoline_recommendation_message_1_id = m.message_id  
+		inner join edw_stage.customer_midterm_review_message m on a.primary_ho_monoline_recommendation_message_1_id = m.message_id 
+		where a.update_ts >  @last_source_extract_ts 
 		 
         --- Update non primary_ho monoline message 
         update a
         set primary_ho_monoline_recommendation_message_1 =  m.message_desc
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
-		inner join edw_stage.customer_midterm_review_message m on a.primary_ho_monoline_recommendation_message_1_id = m.message_id    
+		inner join edw_stage.customer_midterm_review_message m on a.primary_ho_monoline_recommendation_message_1_id = m.message_id  
+		where a.update_ts >  @last_source_extract_ts  
 		 
         --- Update renovation message 
         update a
         set renovation_recommendation_message_1 =  m.message_desc
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.renovation_recommendation_message_1_id = m.message_id   
+		where a.update_ts >  @last_source_extract_ts
 		 
 		drop table if exists edw_temp.customer_midterm_review_ghostdraft_feed_temp2;
 
@@ -674,11 +694,9 @@ BEGIN
 							cmrh.risk_address_state_cd as [home.risk_address_state_cd],
 							cmrh.risk_address_zip_cd as [home.risk_address_zip_cd],
 							cmrh.risk_address as [home.risk_address]
-						from
-							edw_integration.customer_midterm_review_ghostdraft_feed cmrh
-							inner join edw_integration.customer_midterm_review_policy_detail cmrp on cmrh.policy_no = cmrp.policy_no
-						WHERE
-							cmrh.customer_id = cmr.customer_id
+						from edw_integration.customer_midterm_review_ghostdraft_feed cmrh
+						inner join edw_integration.customer_midterm_review_policy_detail cmrp on cmrh.policy_no = cmrp.policy_no
+						WHERE cmrh.customer_id = cmr.customer_id
 							and cmrh. product_nm = 'Homeowners'
 							and cmrh.existing_product_in = 'Yes'
 						order by cmrp.total_insured_value_amt
@@ -749,13 +767,28 @@ BEGIN
 						 where cmrc.customer_id = cmr.customer_id
 						 and cmrc. product_nm = 'Marine Boat & Yacht'
 						and cmrc.existing_product_in = 'Yes'
-					) as [current_coverage.message_marine]
-					--add aviation
+					) as [current_coverage.message_marine] ,
+					(
+						select top 1
+						 'Yes' 
+						 from edw_integration.customer_midterm_review_ghostdraft_feed cmrc
+						 where cmrc.customer_id = cmr.customer_id
+						 and cmrc. product_nm = 'Aviation'
+						and cmrc.existing_product_in = 'Yes'
+					) as [current_coverage.existing_aviation],
+					 (
+						select top 1
+							aviation_message
+						 from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
+						 where cmrc.customer_id = cmr.customer_id
+						 and cmrc. product_nm = 'Aviation'
+						and cmrc.existing_product_in = 'Yes'
+					) as [current_coverage.message_aviation] 
 	
 			,json_query
 			( (
 				select * from
-				( --mTCH TO THE TABLE AND ADD OTHER RECOMMENDATIONS
+				(  
 					select distinct mrm.rms_recommendation_message_1 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
 					where mrm.customer_id= cmr.customer_id and mrm.rms_recommendation_message_1 is not null
@@ -803,29 +836,19 @@ BEGIN
 
 		update [target]
 		set
-			[target].[data] 			= [source].[customer_json],
-			midterm_review_process_in 	= 'No',
-			midterm_review_completed_dt = cast(getdate() as date),
-			update_ts 					= getdate()
+			[target].[data] 						= [source].[customer_json],
+			[target].midterm_review_process_in 		= 'No',
+			[target].midterm_review_completed_dt 	= cast(getdate() as date),
+			[target].update_ts 						= getdate()
 		from edw_integration.customer_midterm_review_eligibility_feed [target]
 		inner join edw_temp.customer_midterm_review_ghostdraft_feed_temp2 [source] on [target].customer_id = [source].customer_id;
 		               
         SET @rows_affected=@@ROWCOUNT;
  
-        --set @new_last_source_extract_ts = select max(quote_create_ts) from edw_core.tquote;
+        set @new_last_source_extract_ts = getdate();
        
         --Update control table
-        --SET @new_last_source_extract_ts = COALESCE(@new_last_source_extract_ts,@last_source_extract_ts);
-		-- Yunus 09/26/2025 - modified to save last source extract date.
-
-		SET @new_last_source_extract_ts = @in_start_dt;
- 
- 
-        /*
-        if @in_start_dt is not null
-        begin
-            set @new_last_source_extract_ts= @last_source_extract_ts
-        end */
+        SET @new_last_source_extract_ts = COALESCE(@new_last_source_extract_ts,@last_source_extract_ts);
  
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
        
