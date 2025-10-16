@@ -10,7 +10,7 @@
 -- =================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
-@in_start_dt DATE = '21-sep-2025'
+@in_start_dt DATE = null
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -34,7 +34,12 @@ BEGIN
         -- Get last source extract date
         SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
            
-        sET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+        sET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) 
+
+		IF(@in_start_dt IS NULL) 
+		BEGIN
+			SET @in_start_dt = (select actual_dt from edw_core.tdate where date_sk = (select max(inforce_dt_sk) from edw_core.tdaily_inforce_policy))
+		END
  
         --reviwed customer
         drop table if exists edw_temp.customer_midterm_review_recommendation_temp_1_cust;
