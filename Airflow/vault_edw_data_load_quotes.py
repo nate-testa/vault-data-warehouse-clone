@@ -271,6 +271,8 @@ with DAG(
         quote_auto_group_items = [
             'sp_tquote_auto_vehicle_wip',
             'sp_tquote_auto_vehicle',
+            'sp_tquote_additional_interest_wip',
+            'sp_tquote_additional_interest',
             'sp_tquote_auto_garage_location_wip',
             'sp_tquote_auto_garage_location',
             'sp_tquote_auto_vehicle_coverage_wip',
@@ -315,8 +317,6 @@ with DAG(
             'sp_tquote',
             'sp_tquote_history_wip',
             'sp_tquote_history',
-            'sp_tquote_additional_interest_wip',
-            'sp_tquote_additional_interest',
             'sp_tquote_manuscript_wip',
             'sp_tquote_manuscript',
             'sp_tquote_mortgagee_wip',
