@@ -163,16 +163,14 @@ and a.PrimaryInsuredId=b.id
         from cust_review_curr a
         left join cust_primary_future b on a.customer_id = b.customer_id
         --where a.customer_id = '1234608582'
-        order by 2,1  		
-
-		print 'here1'||getdate()
+        order by 2,1  		 
  
-        --truncate table edw_integration.customer_midterm_review_eligibility_feed
+        --change this to merge, run thru all scenarios, also add renewal_quote_review_start_dt as last source 
 
         insert into edw_integration.customer_midterm_review_eligibility_feed
             (customer_id, midterm_review_year, midterm_review_process_in, reason_desc, create_ts, update_ts, etl_audit_sk)
         select distinct customer_id,
-                case when reason_desc in ('Has Home Primary','Has Home Secondary') then datepart(yyyy, getdate()) end midterm_review_year,
+                datepart(yyyy, getdate()) midterm_review_year,
                 case when reason_desc in ('Has Home Primary','Has Home Secondary') then 'Yes' Else 'No' end midterm_review_process_in,  
                 reason_desc
                , getdate() create_ts, getdate() update_ts, @etl_audit_sk etl_audit_sk
@@ -316,130 +314,7 @@ and a.PrimaryInsuredId=b.id
         and pol.customer_id  in (Select customer_id --from edw_core.tcustomer where customer_id in ('1234500995','1234686788','1234500340','1234521910','1234522128','1234509154')
                                 from edw_integration.customer_midterm_review_eligibility_feed where midterm_review_process_in = 'Yes'
         )
-            ;		
-
-		print 'here2'||getdate()
-   
-        /*
-		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_ren_quotes;
-   
-            --renewal_quotes
-        with usr as
-        (
-            --which user to use, has multiple
-            select *, rank() over (partition by first_nm + ' ' + last_nm order by phone_no desc, email) rnk
-            from edw_core.tuser
-        ),
-		quote_coll_limit as
-		(
-			 select quote_history_sk, quote_no, sum(COALESCE(scheduled_limit_amt, 0) + COALESCE(blanket_limit_amt, 0)) total_limit
-			 from edw_core.[tquote_collection_class_type]
-			 group by quote_history_sk, quote_no
-		)
-        select  case when q.quote_no is not null then q.quote_no else pol.policy_no end policy_no,
-                pol.original_policy_no, pol.risk_state_cd,
-                case when q.quote_no is not null and pol.policy_no is null then 'New Quote'  when q.quote_no is not null then 'Renewal Quote' else 'Policy' end poicy_or_quote,  
-                case when q.quote_no is not null then q.effective_dt else pol.effective_dt end renewal_effective_date,
-                case when q.quote_no is not null then q.expiration_dt else pol.expiration_dt end renewal_expiration_date,
-                isnull(replace(replace(q.uw_company_nm,'Vault Reciprocal Exchange','VRE'),'Vault E & S Insurance Company','VES'),pol.uw_company_cd) uw_company_cd,
-                pr.product_nm, isnull(q.customer_id, pol.customer_id) customer_id, cust.customer_nm, cust.email customer_email, cust.home_phone_no customer_phone_no, cust.vip_in,
-                cust.mailing_address_line1, cust.mailing_address_line2, cust.mailing_address_unit_no,
-                cust.mailing_address_city_nm, cust.mailing_address_state_cd, cust.mailing_address_zip_cd,
-                isnull(q.broker_id, pol.broker_id) broker_id, br.dba_nm, br.broker_nm, br.broker_phone_no, br.broker_email,
-                bdm.team_member_nm bdm_nm, bdm_usr.phone_no bdm_phone_no, bdm_usr.email bdm_email,  
-                un.team_member_nm new_business_underwriter_nm, un_usr.phone_no new_business_underwriter_phone_no, un_usr.email new_business_underwriter_email,
-                run.team_member_nm renewal_underwriter_nm, run_usr.phone_no renewal_underwriter_phone_no, run_usr.email renewal_underwriter_email,
-                isnull(qhol.address_line_1,pol.risk_address_line1   ) risk_address_line1,  
-                isnull(qhol.address_line_2,pol.risk_address_line2   ) risk_address_line2,  
-                isnull(qhol.unit_no       ,pol.unit_no              ) unit_no,  
-                isnull(qhol.city_nm       ,pol.risk_address_city_nm ) risk_address_city_nm,  
-                isnull(qhol.state_cd      ,pol.risk_address_state_cd) risk_address_state_cd,  
-                isnull(qhol.zip_cd        ,pol.risk_address_zip_cd  ) risk_address_zip_cd,  
-                isnull(qhc.occupancy_type ,pol.occupancy_type ) occupancy_type,  
-                case when q.quote_no is not null then qhac.water_leak_detection_system else pol.water_leak_detection_system end water_leak_detection_system,
-                isnull(qh.premium_amt,pol.renewal_premium_amt) renewal_premium_amt,
-                @etl_audit_sk etl_audit_sk,
-                getdate() create_ts,
-                getdate() update_ts,  
-                isnull(qpel.pel_limit_amt,pol.pel_limit_amt ) pel_limit_amt,
-                isnull(qpel_loc.loc_ct,pol.loc_ct   ) loc_ct,
-                isnull(qpel_wc.wc_ct,pol.wc_ct  ) wc_ct,
-                isnull(qpel_veh.veh_ct,pol.veh_ct   ) veh_ct,
-				isnull(qhc.total_insured_value_amt,pol.total_insured_value_amt) total_insured_value_amt,
-				isnull(qhac.wildfire_protection_enrollment_in,pol.wildfire_protection_enrollment_in) wildfire_protection_enrollment_in,
-				isnull(qhc.distance_to_coast,pol.distance_to_coast) distance_to_coast,
-				isnull(qhc.distance_to_shore,pol.distance_to_shore) distance_to_shore,
-				isnull(qhac.backup_generator_in,pol.backup_generator_in) backup_generator_in ,
-				isnull(qcl.total_limit,pol.total_collection_limit_amt) as total_collection_limit_amt,
-				pol.no_of_years_with_vault AS no_of_years_with_vault,
-				pol.no_of_years_with_vault_tx,
-				isnull(avl.auto_vehicle_list,pol.auto_vehicle_list) as auto_vehicle_list, --year-make-model||year-make-model||year-make-model||
-				isnull(avl.auto_vehicle_ct,pol.auto_vehicle_ct) as auto_vehicle_ct,
-				isnull(ybl.yacht_boat_list,pol.yacht_boat_list) as yacht_boat_list, --year-make-model||year-make-model||year-make-model||
-				isnull(ybl.yacht_boat_ct,pol.yacht_boat_ct	) as yacht_boat_ct
-        into edw_temp.customer_midterm_review_recommendation_temp_2_ren_quotes
-        from edw_temp.customer_midterm_review_recommendation_temp_0_inforce pol
-        left join edw_core.tquote q on q.prior_term_policy_no = pol.policy_no and q.forecast_quote_in = 'No'
-        left join edw_core.tquote_history qh on qh.quote_no = q.quote_no and qh.latest_transaction_in = 'Y'
-		left join quote_coll_limit qcl on qcl.quote_no = q.quote_no and qh.quote_history_sk = qcl.quote_history_sk
-        left join edw_core.tquote_pel_coverage qpel on qpel.quote_no = q.quote_no and qh.quote_history_sk = qpel.quote_history_sk
-        left join (select quote_no,quote_history_sk, count(location_no) loc_ct
-                     from edw_core.tquote_pel_location
-                   group by quote_no,quote_history_sk) qpel_loc on qpel_loc.quote_no = q.quote_no and qh.quote_history_sk = qpel_loc.quote_history_sk
-        left join (select quote_no,quote_history_sk, count(watercraft_no) wc_ct
-                     from edw_core.tquote_pel_watercraft
-                   group by quote_no,quote_history_sk) qpel_wc on qpel_wc.quote_no = q.quote_no and qh.quote_history_sk = qpel_wc.quote_history_sk
-        left join (select quote_no,quote_history_sk, count(vehicle_no) veh_ct
-                     from edw_core.tquote_pel_vehicle
-                   group by quote_no,quote_history_sk) qpel_veh on qpel_veh.quote_no = q.quote_no and qh.quote_history_sk = qpel_veh.quote_history_sk
-        left join edw_core.tquote_home_additional_coverage qhac on qhac.quote_no = q.quote_no and qh.quote_history_sk = qhac.quote_history_sk
-        left join edw_core.tquote_home_coverage qhc on qhc.quote_home_coverage_sk = qhac.quote_home_coverage_sk
-        left join edw_core.tquote_home_location qhol on qhol.quote_no = qhc.quote_no
-        inner join edw_core.tproduct pr on pr.product_cd = isnull(q.product_cd, pol.product_cd)
-        inner join edw_core.tcustomer cust on cust.customer_id = isnull(q.customer_id, pol.customer_id)
-        inner join edw_core.tbroker br on br.broker_id = isnull(q.broker_id, pol.broker_id)
-        left join edw_core.tbroker_vault_team bdm on br.broker_id = bdm.broker_id and bdm.product_nm = pr.product_nm and bdm.team_member_type = 'BusinessDevelopmentManager'
-                                                            AND isnull(q.program_type,pol.program_type) = bdm.program_type
-                                                            AND isnull(bdm.state_cd,isnull(q.risk_state_cd,pol.risk_state_cd))=isnull(q.risk_state_cd,pol.risk_state_cd)
-        left join usr bdm_usr on bdm_usr.first_nm + ' ' + bdm_usr.last_nm = bdm.team_member_nm and bdm_usr.rnk = 1
-        left join edw_core.tbroker_vault_team un on br.broker_id = un.broker_id and un.product_nm = pr.product_nm and un.team_member_type = 'Underwriter'
-                                                            AND isnull(q.program_type,pol.program_type) = un.program_type
-                                                            AND isnull(un.state_cd,isnull(q.risk_state_cd,pol.risk_state_cd))=isnull(q.risk_state_cd,pol.risk_state_cd)
-        left join usr un_usr on un_usr.first_nm + ' ' + un_usr.last_nm = un.team_member_nm and un_usr.rnk = 1
-        left join edw_core.tbroker_vault_team run on br.broker_id = run.broker_id and run.product_nm = pr.product_nm and run.team_member_type = 'RenewalUnderwriter'
-                                                            AND isnull(q.program_type,pol.program_type) = run.program_type
-                                                            AND isnull(run.state_cd,isnull(q.risk_state_cd,pol.risk_state_cd))=isnull(q.risk_state_cd,pol.risk_state_cd)
-        left join usr run_usr on run_usr.first_nm + ' ' + run_usr.last_nm = run.team_member_nm and run_usr.rnk = 1
-        left join
-		(
-			select qav.quote_no,qav.effective_dt,qavc.quote_history_sk,string_agg(concat_ws('-',vehicle_model_year,vehicle_make,vehicle_model),'||') as auto_vehicle_list,
-			count(qav.quote_auto_vehicle_sk) as auto_vehicle_ct
-			from edw_core.tquote_auto_vehicle qav
-			inner join edw_core.tquote_auto_vehicle_coverage qavc on qav.quote_auto_vehicle_sk = qavc.quote_auto_vehicle_sk
-			where
-				qavc.vehicle_deleted_in = 'No'
-			group by qav.quote_no,qav.effective_dt,qavc.quote_history_sk
-		) as avl on avl.quote_no = q.quote_no and avl.effective_dt = q.effective_dt and avl.quote_history_sk = qh.quote_history_sk
-		left join
-		(
-			select qmbt.quote_no,qmbt.effective_dt,qmbtc.quote_history_sk,string_agg(concat_ws('-',boat_yacht_year,boat_yacht_make,boat_yacht_model),'||') as yacht_boat_list,
-			count(qmbt.quote_marine_boat_yacht_sk) as yacht_boat_ct
-			from edw_core.tquote_marine_boat_yacht as qmbt
-			inner join edw_core.tquote_marine_boat_yacht_coverage qmbtc on qmbt.quote_marine_boat_yacht_sk = qmbtc.quote_marine_boat_yacht_sk
-			group by qmbt.quote_no,qmbt.effective_dt,qmbtc.quote_history_sk
-		) as ybl on ybl.quote_no = q.quote_no and ybl.effective_dt = q.effective_dt and ybl.quote_history_sk = qh.quote_history_sk
-		where   --pol.customer_id = '1234611984' and
-                pol.customer_id  in --(Select customer_id from edw_core.tcustomer where customer_id in ('1234500995','1234686788','1234500340','1234521910','1234522128','1234509154'))
-                                    (Select customer_id from  edw_temp.customer_midterm_review_recommendation_temp_0_inforce)
-                                    --in (Select customer_id from edw_core.tpolicy
-                                    --where expiration_dt between '01-sep-2026' and '30-sep-2026' --between getdate() and '31-dec-2025'--
-                                    --) --56515
-                                  --in (select customer_id from edw_core.tquote
-                                --  where expiration_dt between '01-sep-2026' and '30-sep-2026' and forecast_quote_in = 'No')
-        order by cust.customer_id; 
-		*/ 
-   
-        --truncate table edw_integration.customer_midterm_review_policy_detail;
+            ;		 
    
         insert into edw_integration.customer_midterm_review_policy_detail
 		(
@@ -576,10 +451,7 @@ and a.PrimaryInsuredId=b.id
         --AG commented on 9/26 - no need for new business quotes
 		--union all
         --select * from edw_temp.customer_midterm_review_recommendation_temp_1_new_quotes
-        --order by 7  
-		
-
-		print 'here3'||getdate()
+        --order by 7   
  
        
         drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_offered_state;
@@ -599,7 +471,7 @@ and a.PrimaryInsuredId=b.id
        
         insert into edw_integration.customer_midterm_review_recommendation
         select  cust.customer_id, cf.risk_state_cd,cust.mailing_address_state_cd, --cf.uw_company_cd,
-                '2025' renewal_year, --cust.mailing_address_state_cd, cf.product_nm,
+                datepart(yyyy, getdate()) renewal_year, --cust.mailing_address_state_cd, cf.product_nm,
                 case when pos.product_cd = 'Lux_on_endorsement' then pos.product_cd else pr.product_nm end product_nm,  
                 case when cf.policy_no is not null and pr.product_cd = 'ho'
                      and pos.product_cd = 'Lux_on_endorsement' and lux.quote_no is not null then 'Yes'
@@ -683,9 +555,7 @@ and a.PrimaryInsuredId=b.id
                      --     case when curr_inf.product_cd = pr.product_cd then cf.policy_no else '1' end
         --left join edw_core.tproduct_companion_credit pcc on pcc.product_cd = pr.product_cd and pcc.state_cd = cust.mailing_address_state_cd and pcc.uw_company_cd = cust.uw_company_cd
         where pr.product_category_nm = 'PersonalLines'  
-        order by 1,5,6 ;		
-
-		print 'here4'||getdate()
+        order by 1,5,6 ;		 
  
         --update primary home discount recommention if available in companion credit table
         update a
@@ -701,31 +571,6 @@ and a.PrimaryInsuredId=b.id
                     group by state_cd, product_cd --added on 09262025
 					) pcc on a.mailing_address_state_cd = pcc.state_cd and pr.product_cd = pcc.product_cd --and a.uw_company_cd = pcc.uw_company_cd 
         where product_recommendation = 'Add as primary for additional discount'
- 
-        --- take out condo recommendation
-        update edw_integration.customer_midterm_review_recommendation
-        set product_recommendation = 'Condo not Recommended'
-        where product_recommendation = 'Buy Condo;'
- 
-        --- Update Auto recommendation phrase
-        update edw_integration.customer_midterm_review_recommendation
-        set product_recommendation = 'If you have passenger, luxury, collector cars or specialty vehicles, talk to your agent about a Vault auto policy.'
-        where product_recommendation = 'Buy Auto;'
- 
-        --- Update Pel recommendation phrase
-        update edw_integration.customer_midterm_review_recommendation
-        set product_recommendation = 'If you need excess liability coverage between $0.5M - $30M to protect your assets, talk to your agent.'
-        where product_recommendation = 'Buy Excess Liability;'
- 
-        --- Update Coll recommendation phrase
-        update edw_integration.customer_midterm_review_recommendation
-        set product_recommendation = 'If you have treasured collectibles and valuables to safeguard, talk to your agent about a collections policy. '
-        where product_recommendation = 'Buy Collections;'
- 
-        --- Update AV recommendation phrase
-        update edw_integration.customer_midterm_review_recommendation
-        set product_recommendation = 'If you have corporate, charter, or personal aviation coverage needs, talk to your agent. Vault is here for you.'
-        where product_recommendation = 'Buy Aviation;'
  
         --- take out product recommendation of a DNR in the last year
         update a
@@ -767,9 +612,32 @@ and a.PrimaryInsuredId=b.id
                     and quote_status in ('Declined by Vault')
                     group by customer_id, product_cd
                    ) dec_quote on a.customer_id = dec_quote.customer_id and pr.product_cd = dec_quote.product_cd
-        where product_recommendation like 'Buy%'; 		
-
-		print 'here5-'||getdate()
+        where product_recommendation like 'Buy%'; 	
+ 
+        --- take out condo recommendation
+        update edw_integration.customer_midterm_review_recommendation
+        set product_recommendation = 'Condo not Recommended'
+        where product_recommendation = 'Buy Condo;'
+ 
+        --- Update Auto recommendation phrase
+        update edw_integration.customer_midterm_review_recommendation
+        set product_recommendation = 'If you have passenger, luxury, collector cars or specialty vehicles, talk to your agent about a Vault auto policy.'
+        where product_recommendation = 'Buy Auto;'
+ 
+        --- Update Pel recommendation phrase
+        update edw_integration.customer_midterm_review_recommendation
+        set product_recommendation = 'If you need excess liability coverage between $0.5M - $30M to protect your assets, talk to your agent.'
+        where product_recommendation = 'Buy Excess Liability;'
+ 
+        --- Update Coll recommendation phrase
+        update edw_integration.customer_midterm_review_recommendation
+        set product_recommendation = 'If you have treasured collectibles and valuables to safeguard, talk to your agent about a collections policy. '
+        where product_recommendation = 'Buy Collections;'
+ 
+        --- Update AV recommendation phrase
+        update edw_integration.customer_midterm_review_recommendation
+        set product_recommendation = 'If you have corporate, charter, or personal aviation coverage needs, talk to your agent. Vault is here for you.'
+        where product_recommendation = 'Buy Aviation;'	 
 		               
         SET @rows_affected=@@ROWCOUNT;
  

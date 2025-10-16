@@ -256,20 +256,13 @@ BEGIN
 					case when p.non_primary_home_monoline_in = 'Yes' then '026' end non_primary_ho_monoline_recommendation_message_1_id,  
 					--non_primary_ho_monoline_recommendation_message_1
 					case when r.product_nm in ('Condo','Homeowners') then '029' end renovation_recommendation_message_1_id  
-					--renovation_recommendation_message_1
-					--custom_recommendation_message_1_id,
-					--custom_recommendation_message_1,
-					--custom_recommendation_message_2_id 
-					--custom_recommendation_message_2,
-					--custom_recommendation_message_3_id,
-					--custom_recommendation_message_3,
-					--custom_recommendation_message_4_id,
-					--custom_recommendation_message_4,  
+					--renovation_recommendation_message_1 
 				from edw_integration.customer_midterm_review_eligibility_feed e
 				inner join edw_core.tcustomer cust on e.customer_id = cust.customer_id
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
 				left join edw_integration.customer_midterm_review_policy_detail p on r.existing_policy_no = p.policy_no
 				where r.product_nm in ('Condo','Homeowners')
+				--add filter timestamp
 		)
 		select *
 		into edw_temp.customer_midterm_review_ghostdraft_feed_temp1
@@ -757,15 +750,12 @@ BEGIN
 						 and cmrc. product_nm = 'Marine Boat & Yacht'
 						and cmrc.existing_product_in = 'Yes'
 					) as [current_coverage.message_marine]
+					--add aviation
 	
 			,json_query
 			( (
 				select * from
-				(
-					select distinct mrm.rms_recommendation_message as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
-					where mrm.customer_id= cmr.customer_id and mrm.rms_recommendation_message is not null
-					union
+				( --mTCH TO THE TABLE AND ADD OTHER RECOMMENDATIONS
 					select distinct mrm.rms_recommendation_message_1 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
 					where mrm.customer_id= cmr.customer_id and mrm.rms_recommendation_message_1 is not null
@@ -773,10 +763,6 @@ BEGIN
 					select distinct mrm.rms_recommendation_message_2 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
 					where mrm.customer_id= cmr.customer_id and mrm.rms_recommendation_message_2 is not null
-					union
-					select distinct mrm.wildfire_protection_recommendation_message as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
-					where mrm.customer_id= cmr.customer_id and mrm.wildfire_protection_recommendation_message is not null
 					union
 					select distinct mrm.wildfire_protection_recommendation_message_1 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
@@ -786,29 +772,9 @@ BEGIN
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
 					where mrm.customer_id= cmr.customer_id and mrm.wildfire_protection_recommendation_message_2 is not null
 					union
-					select distinct mrm.backup_generator_recommendation_message as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
-					where mrm.customer_id= cmr.customer_id and mrm.backup_generator_recommendation_message is not null
-					union
 					select distinct mrm.backup_generator_recommendation_message_1 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
-					where mrm.customer_id= cmr.customer_id and mrm.backup_generator_recommendation_message_1 is not null
-					UNION
-					select mrm.custom_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
-					where mrm.customer_id= cmr.customer_id and mrm.custom_recommendation_message_1 is not null
-					union
-					select mrm.custom_recommendation_message_2 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
-					where mrm.customer_id= cmr.customer_id and mrm.custom_recommendation_message_2 is not null
-					union
-					select mrm.custom_recommendation_message_3 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
-					where mrm.customer_id= cmr.customer_id and mrm.custom_recommendation_message_3 is not null
-					union
-					select mrm.custom_recommendation_message_4 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
-					where mrm.customer_id= cmr.customer_id and mrm.custom_recommendation_message_4 is not null 
+					where mrm.customer_id= cmr.customer_id and mrm.backup_generator_recommendation_message_1 is not null 
 					union
 					select mrm.new_driver_recommendation_message_1 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
@@ -837,12 +803,12 @@ BEGIN
 
 		update [target]
 		set
-			[target].[data] = [source].[customer_json],
-			midterm_review_process_in = 'Yes'
-		from
-			edw_integration.customer_midterm_review_eligibility_feed [target]
-			inner join edw_temp.customer_midterm_review_ghostdraft_feed_temp2 [source] on 
-				[target].customer_id = [source].customer_id;
+			[target].[data] 			= [source].[customer_json],
+			midterm_review_process_in 	= 'No',
+			midterm_review_completed_dt = cast(getdate() as date),
+			update_ts 					= getdate()
+		from edw_integration.customer_midterm_review_eligibility_feed [target]
+		inner join edw_temp.customer_midterm_review_ghostdraft_feed_temp2 [source] on [target].customer_id = [source].customer_id;
 		               
         SET @rows_affected=@@ROWCOUNT;
  
