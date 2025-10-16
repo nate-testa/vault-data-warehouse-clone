@@ -167,16 +167,38 @@ and a.PrimaryInsuredId=b.id
  
         --change this to merge, run thru all scenarios, also add renewal_quote_review_start_dt as last source 
 
-        insert into edw_integration.customer_midterm_review_eligibility_feed
-            (customer_id, midterm_review_year, midterm_review_process_in, reason_desc, create_ts, update_ts, etl_audit_sk)
-        select distinct customer_id,
+        merge  edw_integration.customer_midterm_review_eligibility_feed target
+        using
+        (
+             select distinct customer_id,
                 datepart(yyyy, getdate()) midterm_review_year,
                 case when reason_desc in ('Has Home Primary','Has Home Secondary') then 'Yes' Else 'No' end midterm_review_process_in,  
-                reason_desc
-               , getdate() create_ts, getdate() update_ts, @etl_audit_sk etl_audit_sk
-        from edw_temp.customer_midterm_review_recommendation_temp_1_cust
-        order by 3,2; 
-		 
+                reason_desc , 
+				getdate() create_ts,
+				getdate() update_ts 
+            from edw_temp.customer_midterm_review_recommendation_temp_1_cust
+        ) as SOURCE
+		ON Source.customer_id = Target.customer_id and Source.midterm_review_year = Target.midterm_review_year
+        WHEN NOT MATCHED BY Target THEN
+		INSERT 
+            (customer_id, midterm_review_year, midterm_review_process_in, reason_desc, create_ts, update_ts, etl_audit_sk) 
+		VALUES (source.customer_id,
+				source.midterm_review_year,
+				source.midterm_review_process_in,
+				source.reason_desc,
+				source.create_ts,
+				source.update_ts, 
+				@etl_audit_sk)
+		-- For Updates
+		WHEN MATCHED THEN UPDATE 
+		SET
+			target.midterm_review_process_in 	= case  when midterm_review_completed_dt is null 
+                                                        then source.midterm_review_process_in 
+                                                        else target.midterm_review_process_in 
+                                                  end
+  			,target.reason_desc 				= source.reason_desc
+  			,target.update_ts 					= source.update_ts;
+
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_inforce_detail ;
        
         --inforce data 
@@ -470,6 +492,22 @@ and a.PrimaryInsuredId=b.id
 		from edw_temp.customer_midterm_review_recommendation_temp_2_offered_state;
        
         insert into edw_integration.customer_midterm_review_recommendation
+                (customer_id,
+                risk_state_cd,
+                mailing_address_state_cd, 
+                renewal_year,
+                product_nm,
+                existing_product_in,
+                existing_policy_no,
+                occupancy_type,
+                primary_home_discount_pc, 
+                rms_recommendation,
+                wildfire_protection_recommendation, 
+                backup_generator_recommendation, 
+                product_recommendation,
+                etl_audit_sk,
+                create_ts,
+                update_ts)
         select  cust.customer_id, cf.risk_state_cd,cust.mailing_address_state_cd, --cf.uw_company_cd,
                 datepart(yyyy, getdate()) renewal_year, --cust.mailing_address_state_cd, cf.product_nm,
                 case when pos.product_cd = 'Lux_on_endorsement' then pos.product_cd else pr.product_nm end product_nm,  
