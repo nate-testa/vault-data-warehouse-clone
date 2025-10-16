@@ -32,6 +32,7 @@
 -- 09/09/25		Archtha Gudimalla			24. AD10935 - Added monoline fix
 -- 09/10/25		Archtha Gudimalla			25. AD10960 - Added customer email id fix
 -- 09/30/25		Dinesh Bobbili				26. AD10938 - Added new columns
+-- 10/16/25		Dinesh Bobbili				27. AD11382 - Added logic to Include David Tester policies
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -185,10 +186,23 @@ BEGIN
 		WHERE (greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
 		or exists (select 'x' from edw_temp.customer_hubspot_feed_temp0 a where a.policy_no = pol.policy_no)
 		)
-		and isnull(pol.insured_nm,'') not like '%test%' 
-		and isnull(cust.last_nm,'') not like '%test%'
-		and isnull(cust.first_nm,'') not like '%test%' 
-		and isnull(cust.customer_nm,'') not like '%test%' 
+		and ((
+			isnull(pol.insured_nm,'') NOT LIKE '%test%' COLLATE SQL_Latin1_General_CP1_CI_AS AND
+			isnull(cust.last_nm,'') NOT LIKE '%test%' COLLATE SQL_Latin1_General_CP1_CI_AS AND
+			isnull(cust.first_nm,'') NOT LIKE '%test%' COLLATE SQL_Latin1_General_CP1_CI_AS AND
+			isnull(cust.customer_nm,'') NOT LIKE '%test%' COLLATE SQL_Latin1_General_CP1_CI_AS
+		)
+		OR (
+			isnull(pol.insured_nm,'') LIKE '%Richard Tester%' OR
+			isnull(pol.insured_nm,'') LIKE '%Potestio%' OR
+			isnull(pol.insured_nm,'') LIKE '%Testaverde%' OR 
+			isnull(cust.last_nm,'') LIKE '%Potestio%' OR
+			isnull(cust.last_nm,'') LIKE '%Testaverde%' OR
+			isnull(cust.first_nm,'') + ' ' + isnull(cust.last_nm,'') LIKE '%Richard Tester%' OR 
+			isnull(cust.customer_nm,'') LIKE '%Richard Tester%' OR
+			isnull(cust.customer_nm,'') LIKE '%Potestio%' OR
+			isnull(cust.customer_nm,'') LIKE '%Testaverde%'
+		))
 		and pol.effective_dt >= '01-jun-2023'
 		-- and pol.product_cd <> 'BY'
 		;
