@@ -19,7 +19,7 @@ BEGIN
 		CONSTRAINT pk_product_offered_state PRIMARY KEY (product_offered_state_sk),
 		CONSTRAINT uidx_product_offered_state UNIQUE (state_cd)
 	);
-END;
+END; 
 
 IF EXISTS
 (SELECT 1 FROM edw_integration.tintegration_table_detail
