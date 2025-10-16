@@ -8,6 +8,7 @@
 -- 08/08/24         Yunus Mohammed              2. Update customer and broker joins
 -- 06/04/24         Dinesh Bobbili              3. AZ9638 - Commercial changes
 -- 07/04/24         Dinesh Bobbili              4. AZ9638 - changed db name from edw_core to edw_commercial
+-- 07/04/24         Dinesh Bobbili              5. AZ11325 - included flagged_in in merge
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tnote]
 
@@ -111,7 +112,8 @@ BEGIN
 	SET
 		Target.note_desc=Source.note_desc,
         Target.note_updated_ts = Source.note_updated_ts,
-        Target.update_ts = @current_date;
+        Target.update_ts = @current_date,
+        Target.flagged_in = flagged_in;
 		
 
 		SET @rows_affected=@@ROWCOUNT;
