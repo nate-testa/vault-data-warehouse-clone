@@ -47,7 +47,7 @@ class DocuClaimsSessionManager(UISessionManager):
         if self.UPLOADED_FILENAME_KEY not in session:
             session[self.UPLOADED_FILENAME_KEY] = None
         if self.USE_CHAT_HISTORY_KEY not in session:
-            session[self.USE_CHAT_HISTORY_KEY] = True
+            session[self.USE_CHAT_HISTORY_KEY] = False
         if self.RAG_WARNINGS_KEY not in session:
             session[self.RAG_WARNINGS_KEY] = []
     
@@ -233,7 +233,7 @@ class DocuClaimsSessionManager(UISessionManager):
                 (self.get_session_size_estimate() / self.max_cookie_size) * 100, 2
             ),
             'files_uploaded': session.get(self.FILE_UPLOADED_KEY, False),
-            'chat_history_enabled': session.get(self.USE_CHAT_HISTORY_KEY, True),
+            'chat_history_enabled': session.get(self.USE_CHAT_HISTORY_KEY, False),
             'selected_model': session.get(self.SELECTED_MODEL_KEY, None)
         }
     

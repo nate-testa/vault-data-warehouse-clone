@@ -19,7 +19,8 @@ def configure_cors_middleware(app):
         app: FastAPI application instance
     """
     # Get allowed origins from environment or use defaults
-    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5001,https://ai.vaultinsurance.com").split(",")
+    default_origins = "http://localhost:5001,http://127.0.0.1:5001,http://10.72.64.196:5012,http://127.0.0.1:8080,https://ai.vaultinsurance.com,https://ai.uat.vaultinsurance.com"
+    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", default_origins).split(",")
     logger.info(f"Configuring CORS with allowed origins: {CORS_ORIGINS}")
 
     app.add_middleware(

@@ -1,26 +1,43 @@
 {
-    "module_info": {
-      "name": "docuclaims",
-      "version": "1.0.0",
-      "description": "Document Claims RAG Module"
-    },
-    "snowflake": {
-      "warehouse": "VAULT_AI_DOCUCLAIMS_WH",
+  "module_info": {
+    "name": "docuclaims",
+    "version": "1.0.0",
+    "description": "Document Claims RAG Module"
+  },
+  "snowflake": {
+    "warehouse": "VAULT_AI_DOCUCLAIMS_WH",
       "database": "VAULT_AI",
-      "schema": "DOCUCLAIMS",
-      "stage": "DOCS",
-      "chunks_table": "DOC_CHUNKS_VECTORS"
-    },
-    "ai_models": {
-      "embedding_model": "snowflake-arctic-embed-l-v2.0",
-      "available_llm_models": [
-        "claude-4-sonnet",
-        "openai-gpt-5"
-      ],
+    "schema": "DOCUCLAIMS",
+    "stage": "DOCS",
+    "chunks_table": "DOC_CHUNKS_VECTORS"
+  },
+  "ai_models": {
+    "embedding_model": "snowflake-arctic-embed-l-v2.0",
+    "available_llm_models": [
+      "claude-4-sonnet",
+      "openai-gpt-5"
+    ],
       "cortex_search_service": "VAULT_AI.DOCUCLAIMS.DOC_CHUNK_VECTORS_SEARCH_SERVICE"
-    },
-    "search_config": {
-      "num_chunks": 200,
-      "use_cortex_search": true
-    }
-  }
+  },
+  "search_config": {
+    "num_chunks": 200,
+    "use_cortex_search": true
+  },
+  "followup_questions_config": {
+    "enable_followup_questions": true,
+    "max_history_messages": 6,
+    "generation_timeout": 10
+  },
+  "suggestion_questions": [
+    "What are the main findings in the uploaded documents?",
+    "Can you summarize the key points from the documents?",
+    "What are the most important claims mentioned?",
+    "Are there any specific dates or deadlines mentioned?",
+    "What are the financial figures or amounts discussed?",
+    "Who are the parties involved in these documents?",
+    "What are the main risks or issues identified?",
+    "Can you extract the policy details from the documents?",
+    "What are the coverage limits mentioned?",
+    "Are there any exclusions or limitations noted?"
+  ]
+}

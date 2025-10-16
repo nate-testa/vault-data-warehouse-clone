@@ -22,8 +22,8 @@ from app.modules.docuclaims.validators import (
     is_filename_valid, ALLOWED_MIME_TYPES, ALLOWED_EXTENSIONS, MAX_FILE_SIZE_MB
 )
 from app.utils.database import get_sf_conn
-from app.modules.docuclaims.schemas import RAGRequest, RAGResponse
-from app.modules.docuclaims.services import build_prompt
+from app.modules.docuclaims.schemas import RAGRequest, RAGResponse, FollowUpRequest, FollowUpResponse
+from app.modules.docuclaims.services import build_prompt, get_random_suggestion_questions, generate_followup_questions
 from app.modules.docuclaims.config_loader import get_docuclaims_config
 
 # Create the router instance
@@ -42,6 +42,20 @@ def model_options():
     return get_model_options()
 
 
+@router.get("/example_questions", response_model=list[str])
+def example_questions():
+    """
+    Return 3 random example questions from configuration.
+    """
+    try:
+        questions = get_random_suggestion_questions(count=3)
+        logger.info(f"Returning {len(questions)} example questions to client")
+        return questions
+    except Exception as e:
+        logger.error(f"Error in /example_questions endpoint: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retrieve example questions")
+
+
 @router.post("/rag_complete", response_model=RAGResponse)
 def rag_complete(request: RAGRequest) -> RAGResponse:
     """
@@ -52,13 +66,16 @@ def rag_complete(request: RAGRequest) -> RAGResponse:
 
     Then send that prompt to Snowflake Cortex via SNOWFLAKE.CORTEX.AI_COMPLETE,
     and return the generated answer as JSON.
+    
+    Optionally generates follow-up questions if include_followup=true and feature is enabled in config.
     """
     endpoint_start_time = time.time()
     question = request.question.strip()
     chat_history = request.chat_history or []
     llm_model = request.llm_model
+    include_followup = request.include_followup
     
-    logger.info(f"[RAG_REQUEST] RAG request started - Model: {llm_model}, Question: '{question[:100]}...', Chat history: {len(chat_history)} messages")
+    logger.info(f"[RAG_REQUEST] RAG request started - Model: {llm_model}, Question: '{question[:100]}...', Chat history: {len(chat_history)} messages, Include followup: {include_followup}")
     
     if not llm_model:
         logger.error("[RAG_ERROR] Request validation failed - llm_model missing")
@@ -109,7 +126,30 @@ def rag_complete(request: RAGRequest) -> RAGResponse:
                 processed_response = processed_response[1:-1]
                 
             logger.info("[RAG_PROCESS] Response processed successfully, creating RAGResponse object...")
-            response_obj = RAGResponse(answer=processed_response)
+            
+            followup_questions = None
+            config = get_docuclaims_config()
+            followup_enabled = config.get('followup_questions_config', {}).get('enable_followup_questions', False)
+            
+            if include_followup and followup_enabled:
+                logger.info("[RAG_FOLLOWUP] Follow-up questions requested and enabled in config")
+                try:
+                    followup_questions = generate_followup_questions(
+                        user_question=question,
+                        ai_response=processed_response,
+                        conversation_history=chat_history,
+                        model=llm_model
+                    )
+                    if followup_questions:
+                        logger.info(f"[RAG_FOLLOWUP] Generated {len(followup_questions)} follow-up questions")
+                    else:
+                        logger.warning("[RAG_FOLLOWUP] No follow-up questions generated")
+                except Exception as followup_error:
+                    logger.error(f"[RAG_FOLLOWUP] Error generating follow-up questions: {str(followup_error)}")
+            elif include_followup and not followup_enabled:
+                logger.info("[RAG_FOLLOWUP] Follow-up questions requested but disabled in config")
+            
+            response_obj = RAGResponse(answer=processed_response, followup_questions=followup_questions)
             
             total_duration = time.time() - endpoint_start_time
             logger.info(f"[RAG_SUCCESS] RAGResponse object created successfully - Total request duration: {total_duration:.2f}s")
@@ -321,3 +361,64 @@ def check_file_processed(file_name: str):
                 conn.close()
         except Exception as close_error:
             logger.warning(f"[{check_id}] Failed to close database connection: {str(close_error)}")
+
+
+@router.post("/suggest_followup", response_model=FollowUpResponse)
+def suggest_followup(request: FollowUpRequest) -> FollowUpResponse:
+    """
+    Generate 3 relevant follow-up questions based on conversation context.
+    
+    This endpoint uses Snowflake Cortex AI to generate contextually relevant
+    follow-up questions that help users continue their conversation about
+    uploaded documents.
+    
+    Args:
+        request: FollowUpRequest containing user_question, ai_response, 
+                conversation_history, session_id, and model
+    
+    Returns:
+        FollowUpResponse with success status and list of 3 follow-up questions
+    """
+    endpoint_start_time = time.time()
+    
+    conversation_history = request.conversation_history or []
+    session_id = request.session_id or f"followup_{int(time.time())}"
+    
+    logger.info(f"[FOLLOWUP_ENDPOINT] Request received - Session: {session_id}, Model: {request.model}")
+    logger.info(f"[FOLLOWUP_ENDPOINT] User question length: {len(request.user_question)}")
+    logger.info(f"[FOLLOWUP_ENDPOINT] AI response length: {len(request.ai_response)}")
+    logger.info(f"[FOLLOWUP_ENDPOINT] Conversation history: {len(conversation_history)} messages")
+    
+    if not request.model:
+        logger.error("[FOLLOWUP_ENDPOINT] Validation failed - model is required")
+        raise HTTPException(status_code=400, detail="Model parameter is required")
+    
+    if not request.user_question or not request.user_question.strip():
+        logger.error("[FOLLOWUP_ENDPOINT] Validation failed - user_question is empty")
+        raise HTTPException(status_code=400, detail="User question is required")
+    
+    if not request.ai_response or not request.ai_response.strip():
+        logger.error("[FOLLOWUP_ENDPOINT] Validation failed - ai_response is empty")
+        raise HTTPException(status_code=400, detail="AI response is required")
+    
+    try:
+        questions = generate_followup_questions(
+            user_question=request.user_question,
+            ai_response=request.ai_response,
+            conversation_history=conversation_history,
+            model=request.model
+        )
+        
+        total_duration = time.time() - endpoint_start_time
+        
+        if not questions or len(questions) == 0:
+            logger.warning(f"[FOLLOWUP_ENDPOINT] No questions generated after {total_duration:.2f}s")
+            return FollowUpResponse(success=False, followup_questions=[])
+        
+        logger.info(f"[FOLLOWUP_ENDPOINT] Successfully generated {len(questions)} questions in {total_duration:.2f}s")
+        return FollowUpResponse(success=True, followup_questions=questions)
+        
+    except Exception as e:
+        total_duration = time.time() - endpoint_start_time
+        logger.error(f"[FOLLOWUP_ENDPOINT] Error after {total_duration:.2f}s: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to generate follow-up questions: {str(e)}")
