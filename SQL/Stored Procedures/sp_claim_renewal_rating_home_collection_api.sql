@@ -33,80 +33,81 @@ BEGIN
 
 		DROP TABLE IF EXISTS edw_temp.claim_renewal_rating_home_collection_api_temp1
 
-		select *
-		into edw_temp.claim_renewal_rating_home_collection_api_temp1
-		from
-		(
-		SELECT ROW_NUMBER()over(partition by cl.claim_no order by (
-		 cfa.subrogation_recovery_amt + cfa.overpayment_recovery_amt + cfa.loss_paid_amt
-		) desc) as rn,
-		CASE cl.product_sk
-		WHEN 1 THEN 'Property'
-		WHEN 5 THEN 'Property'
-		WHEN 2 THEN 'Liability'
-		END AS PropertyOrLiability,
-		cl.policy_no AS [PolicyNumber],
-		cl.claim_no AS [FileNumber],
-		cl.claim_status AS [ClaimStatus],
-		NULL AS [Claimant],
-		cl.loss_dt AS [LossDate],
-		'Customer-Location Loss' AS [LossIdentifier],
-		l.cause_of_loss_desc AS LossType,
-		NULL AS [SubCauseOfLoss],
-		cl.loss_desc  AS [LossDescription],
-		p.policy_term AS PolicyType,
-		CASE
-		WHEN cl.catastrophe_sk IS NOT NULL THEN 'Yes'
-		ELSE 'No'
-		END AS [CatIndicator],
-		cat.catastrophe_nm as CatCode,
-		cl.loss_address AS AddressLine1,
-		NULL AS AddressLine2,
-		NULL AS	AddressLineUnit,
-		cl.loss_city_nm AS AddressCity,
-		cl.loss_zip_cd AS AddressZipCode,
-		cl.loss_state_cd AS	AddressState,
-		NULL AS	 AddressCounty,
-		CL.loss_country_nm AS AddressCountry,
-		cf.claim_coverage_desc AS Coverage,
-		cl.expense_reserve_amt AS ReserveExpense,
-		cl.loss_reserve_amt AS ReserveIndemnity,
-		(cl.expense_paid_amt + cl.subrogation_recovery_amt + cl.overpayment_recovery_amt) AS PaidExpense,
-		(cl.loss_paid_amt + cl.subrogation_recovery_amt + cl.overpayment_recovery_amt) AS PaidIndemnity,
-		(cl.expense_paid_amt + cl.subrogation_recovery_amt + cl.overpayment_recovery_amt + cl.loss_paid_amt) AS TotalIncurred,
-		cl.source_of_fire as SourceOfFire,
-		cl.source_of_water as SourceOfWater
-		,cfa.claim_adjuster_nm as AdjusterName
-		,cl.litigation_in as Litigation
-		,cl.litigation_complete_in as LitigationComplete
-		,cl.large_loss_in as LargeLoss,cl.loss_location_desc  as LossDescription2
-		FROM
-		edw_core.tclaim cl
-		inner join edw_core.tproduct tp on tp.product_sk=cl.product_sk
-		LEFT JOIN edw_core.tcause_of_loss l on cl.cause_of_loss_sk = l.cause_of_loss_sk 
-		Left join edw_core.tpolicy p on p.policy_no = cl.policy_no 
-		left join edw_core.tcatastrophe cat on cat.catastrophe_sk=cl.catastrophe_sk
-		INNER JOIN
-		(
-		SELECT 
-			row_number() over(partition by claim_sk order by 
-			sum(
-					clf.subrogation_recovery_amt + clf.overpayment_recovery_amt + clf.loss_paid_amt
-				) desc
-				) as row_no, 
-		claim_sk,claim_coverage_desc
-		FROM
-			edw_core.tclaim_feature clf
-		group by claim_sk,claim_coverage_desc
+	select *
+	into edw_temp.claim_renewal_rating_home_collection_api_temp1
+	from
+	(
+	SELECT ROW_NUMBER()over(partition by cl.claim_no order by (
+	cfa.loss_paid_amt + cfa.subrogation_recovery_amt + cfa.salvage_recovery_amt + cfa.overpayment_recovery_amt
+	) desc) as rn,
+	CASE cl.product_sk
+	WHEN 1 THEN 'Property'
+	WHEN 5 THEN 'Property'
+	WHEN 2 THEN 'Liability'
+	END AS PropertyOrLiability,
+	cl.policy_no AS [PolicyNumber],
+	cl.claim_no AS [FileNumber],
+	cl.claim_status AS [ClaimStatus],
+	NULL AS [Claimant],
+	cl.loss_dt AS [LossDate],
+	'Customer-Location Loss' AS [LossIdentifier],
+	l.cause_of_loss_desc AS LossType,
+	NULL AS [SubCauseOfLoss],
+	cl.loss_desc  AS [LossDescription],
+	p.policy_term AS PolicyType,
+	CASE
+	WHEN cl.catastrophe_sk IS NOT NULL THEN 'Yes'
+	ELSE 'No'
+	END AS [CatIndicator],
+	cat.catastrophe_nm as CatCode,
+	cl.loss_address AS AddressLine1,
+	NULL AS AddressLine2,
+	NULL AS AddressLineUnit,
+	cl.loss_city_nm AS AddressCity,
+	cl.loss_zip_cd AS AddressZipCode,
+	cl.loss_state_cd AS AddressState,
+	NULL AS  AddressCounty,
+	CL.loss_country_nm AS AddressCountry,
+	cf.claim_coverage_desc AS Coverage,
+	cl.expense_reserve_amt AS ReserveExpense,
+	cl.loss_reserve_amt AS ReserveIndemnity,
+	(cl.expense_paid_amt + cl.subrogation_expense_recovery_amt + cl.salvage_expense_recovery_amt + cl.overpayment_expense_recovery_amt) AS PaidExpense,
+	(cl.loss_paid_amt + cl.subrogation_recovery_amt + cl.salvage_recovery_amt + cl.overpayment_recovery_amt) AS PaidIndemnity,
+	(cl.loss_paid_amt + cl.subrogation_recovery_amt + cl.salvage_recovery_amt + cl.overpayment_recovery_amt + cl.expense_paid_amt + cl.subrogation_expense_recovery_amt + cl.salvage_expense_recovery_amt + cl.overpayment_expense_recovery_amt) AS TotalIncurred,
+	cl.source_of_fire as SourceOfFire,
+	cl.source_of_water as SourceOfWater
+	,cfa.claim_adjuster_nm as AdjusterName
+	,cl.litigation_in as Litigation
+	,cl.litigation_complete_in as LitigationComplete
+	,cl.large_loss_in as LargeLoss,cl.loss_location_desc  as LossDescription2
+	FROM
+	edw_core.tclaim cl
+	inner join edw_core.tproduct tp on tp.product_sk=cl.product_sk
+	LEFT JOIN edw_core.tcause_of_loss l on cl.cause_of_loss_sk = l.cause_of_loss_sk 
+	Left join edw_core.tpolicy p on p.policy_no = cl.policy_no 
+	left join edw_core.tcatastrophe cat on cat.catastrophe_sk=cl.catastrophe_sk
+	INNER JOIN
+	(
+	SELECT 
+	row_number() over(partition by claim_sk order by 
+	sum(
+		clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt
+		) desc
+		) as row_no, 
+	claim_sk,claim_coverage_desc
+	FROM
+	edw_core.tclaim_feature clf
+	group by claim_sk,claim_coverage_desc
 
-		) cf on cf.claim_sk= cl.claim_sk and cf.row_no = 1
-		LEFT JOIN edw_core.tclaim_feature cfa on cfa.claim_sk = cf.claim_sk and cfa.claim_coverage_desc = cf.claim_coverage_desc		
-		WHERE
-		cl.product_sk in(1,5,2)
-		) as a
-		where
-		rn = 1
-
+  ) cf on cf.claim_sk= cl.claim_sk and cf.row_no = 1
+  LEFT JOIN edw_core.tclaim_feature cfa on cfa.claim_sk = cf.claim_sk and cfa.claim_coverage_desc = cf.claim_coverage_desc  
+  WHERE
+  cl.product_sk in(1,5,2)
+  ) as a
+  where
+  rn = 1
+ 
+		
 
 	MERGE edw_integration.claim_renewal_rating_home_collection_api AS Target
 	USING edw_temp.claim_renewal_rating_home_collection_api_temp1 AS Source
