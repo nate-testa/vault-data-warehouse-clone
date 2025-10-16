@@ -13,6 +13,7 @@ create table edw_integration.customer_midterm_review_policy_detail
 	renewal_expiration_date date,
 	--uw_company_cd varchar(255),
 	product_nm varchar(255),
+	renewal_year int,
 	customer_id varchar(255),
 	customer_nm  varchar(255),
 	customer_email varchar(255),
