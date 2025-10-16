@@ -67,7 +67,7 @@ BEGIN
 		(
 		SELECT		
 		cl.claim_sk,
-		SUM(cl.loss_paid_amt + cl.subrogation_recovery_amt + cl.salvage_recovery_amt + cl.overpayment_recovery_amt + cl.expense_paid_amt + cl.subrogation_expense_recovery_amt + cl.salvage_expense_recovery_amt + cl.overpayment_expense_recovery_amt) AS TotalIncurred,
+		SUM(clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt + clf.expense_paid_amt + clf.subrogation_expense_recovery_amt + clf.salvage_expense_recovery_amt + clf.overpayment_expense_recovery_amt) AS TotalIncurred,
   SUM(clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt) as TotalPayout, 
   SUM(Case When clf.claim_coverage_desc = 'Combined Single Limits' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as BodilyInjuryPayment,
   SUM(Case When clf.claim_coverage_desc = 'Collision' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as CollisionPayment,
