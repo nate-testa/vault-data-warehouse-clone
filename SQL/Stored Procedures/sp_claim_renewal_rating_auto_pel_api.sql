@@ -67,33 +67,33 @@ BEGIN
 		(
 		SELECT		
 		cl.claim_sk,
-		SUM(cl.expense_paid_amt + cl.subrogation_recovery_amt + cl.overpayment_recovery_amt + cl.loss_paid_amt) AS TotalIncurred,
-		SUM(clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt) as TotalPayout,
-		SUM(Case When clf.claim_coverage_desc = 'Combined Single Limits' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt End) as BodilyInjuryPayment,
-		SUM(Case When clf.claim_coverage_desc = 'Collision' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt End) as CollisionPayment,
-		SUM(Case When clf.claim_coverage_desc = 'Comprehensive' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt End) as ComprehensivePayment,
-		SUM(Case When clf.claim_coverage_desc = 'Full Glass' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt End) as GlassPayment,
-		SUM(Case When clf.claim_coverage_desc = 'Medical Payments' then clf.expense_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt End) as MedicalExpensePayment,
-		SUM(Case When clf.claim_coverage_desc = 'Medical Payments' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt End) as MedicalPaymentPayment,
-		SUM(Case When clf.claim_coverage_desc = ('PD Liability Limit') then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt End) as PropertyDamagePayment,
-		SUM(Case When clf.claim_coverage_desc = 'PIP' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt End) as PersonalInjuryProtectionPayment,
-		SUM(Case When clf.claim_coverage_desc = 'Combined Single Limits' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt End) as SpousalLiabilityPayment,
-		SUM(Case When clf.claim_coverage_desc IN ('Roadside Assistance') then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt End) as TowingAndLaborPayment,
-		SUM(Case When clf.claim_coverage_desc = 'Uninsured Motorist Liablity' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt End) as UninsuredMotoristPayment,
-		SUM(Case When clf.claim_coverage_desc IN ('Uninsured / Underinsured Motorist','Underinsured Motorist')
-			then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt End) as UnderinsuredMotoristPayment, -- RS : This is not there
-		SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as ExcessLiabilityCoveragePayment,
-		SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as UninsuredLiabilityPayment,
-		SUM(CASE WHEN cl.claim_no NOT  LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as UnderinsuredLiabilityPayment,
-		SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as ExcessLiabilityDOpayment,
-		SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as EmploymentPracticesPaymentLiabilityPayment,
-		SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpExcessLiabilityCoveragePayment,
-		SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUninsuredLiabilityPayment,
-		SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUnderinsuredLiabilityPayment,
-		SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUninsuredMotoristPayment,
-		SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUnderinsuredMotoristPayment,
-		SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpExcessLiabilityDOPayment,
-		SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpEmploymentPracticesLiabilityPayment
+		SUM(cl.loss_paid_amt + cl.subrogation_recovery_amt + cl.salvage_recovery_amt + cl.overpayment_recovery_amt + cl.expense_paid_amt + cl.subrogation_expense_recovery_amt + cl.salvage_expense_recovery_amt + cl.overpayment_expense_recovery_amt) AS TotalIncurred,
+  SUM(clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt) as TotalPayout, 
+  SUM(Case When clf.claim_coverage_desc = 'Combined Single Limits' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as BodilyInjuryPayment,
+  SUM(Case When clf.claim_coverage_desc = 'Collision' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as CollisionPayment,
+  SUM(Case When clf.claim_coverage_desc = 'Comprehensive' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as ComprehensivePayment,
+  SUM(Case When clf.claim_coverage_desc = 'Full Glass' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as GlassPayment,
+  SUM(Case When clf.claim_coverage_desc = 'Medical Payments' then clf.expense_paid_amt + clf.subrogation_expense_recovery_amt + clf.salvage_expense_recovery_amt + clf.overpayment_expense_recovery_amt End) as MedicalExpensePayment,
+  SUM(Case When clf.claim_coverage_desc = 'Medical Payments' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as MedicalPaymentPayment,
+  SUM(Case When clf.claim_coverage_desc = ('PD Liability Limit') then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as PropertyDamagePayment,
+  SUM(Case When clf.claim_coverage_desc = 'PIP' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as PersonalInjuryProtectionPayment,
+  SUM(Case When clf.claim_coverage_desc = 'Combined Single Limits' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as SpousalLiabilityPayment,
+  SUM(Case When clf.claim_coverage_desc IN ('Roadside Assistance') then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as TowingAndLaborPayment,
+  SUM(Case When clf.claim_coverage_desc = 'Uninsured Motorist Liablity' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as UninsuredMotoristPayment,
+  SUM(Case When clf.claim_coverage_desc IN ('Uninsured / Underinsured Motorist','Underinsured Motorist')
+   then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as UnderinsuredMotoristPayment, -- RS : This is not there
+  SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as ExcessLiabilityCoveragePayment,
+  SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as UninsuredLiabilityPayment,
+  SUM(CASE WHEN cl.claim_no NOT  LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as UnderinsuredLiabilityPayment,
+  SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as ExcessLiabilityDOpayment,
+  SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as EmploymentPracticesPaymentLiabilityPayment,
+  SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpExcessLiabilityCoveragePayment,
+  SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUninsuredLiabilityPayment,
+  SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUnderinsuredLiabilityPayment,
+  SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUninsuredMotoristPayment,
+  SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUnderinsuredMotoristPayment,
+  SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpExcessLiabilityDOPayment,
+  SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpEmploymentPracticesLiabilityPayment
 		FROM
 		edw_core.tclaim cl
 		INNER JOIN edw_core.tclaim_feature clf on cl.claim_sk = clf.claim_sk
