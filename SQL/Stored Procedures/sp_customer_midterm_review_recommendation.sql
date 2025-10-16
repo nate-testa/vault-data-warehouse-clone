@@ -21,6 +21,7 @@ BEGIN
         DECLARE @last_source_extract_ts DATETIME2(7)
         DECLARE @etl_audit_sk INT
         DECLARE @new_last_source_extract_ts DATETIME2(7)
+        DECLARE @max_renewal_quote_review_start_dt DATE
         DECLARE @rows_affected INT
         DECLARE @process_nm VARCHAR(255)=OBJECT_NAME(@@PROCID)
         DECLARE @current_date DATETIME=GETDATE()  
@@ -85,20 +86,28 @@ and a.PrimaryInsuredId=b.id
 		into edw_temp.zip_codes
 		from
 		(
-		select '90024' as zip_code union select '90027' as zip_code union select '90046' as zip_code union select '90049' as zip_code union select '90068' as zip_code union select '90069' as zip_code union select '90077' as zip_code union select '90095' as zip_code union select '90210' as zip_code union select '90263' as zip_code union select '90265' as zip_code union select '90272' as zip_code union select '90274' as zip_code union select '90275' as zip_code union
-		select '90290' as zip_code union select '90631' as zip_code union select '91006' as zip_code union select '91008' as zip_code union select '91010' as zip_code union select '91011' as zip_code union select '91016' as zip_code union select '91024' as zip_code union select '91103' as zip_code union select '91105' as zip_code union select '91107' as zip_code union select '91108' as zip_code union select '91206' as zip_code union select '91207' as zip_code union
-		select '91208' as zip_code union select '91301' as zip_code union select '91302' as zip_code union select '91307' as zip_code union select '91311' as zip_code union select '91316' as zip_code union select '91320' as zip_code union select '91326' as zip_code union select '91344' as zip_code union select '91356' as zip_code union select '91360' as zip_code union select '91361' as zip_code union select '91362' as zip_code union select '91364' as zip_code union
-		select '91377' as zip_code union select '91403' as zip_code union select '91423' as zip_code union select '91436' as zip_code union select '91604' as zip_code union select '91709' as zip_code union select '91741' as zip_code union select '91765' as zip_code union select '92602' as zip_code union select '92603' as zip_code union select '92610' as zip_code union select '92612' as zip_code union select '92625' as zip_code union select '92629' as zip_code union
-		select '92637' as zip_code union select '92651' as zip_code union select '92653' as zip_code union select '92656' as zip_code union select '92657' as zip_code union select '92660' as zip_code union select '92676' as zip_code union select '92677' as zip_code union select '92679' as zip_code union select '92688' as zip_code union select '92691' as zip_code union select '92692' as zip_code union select '92694' as zip_code union select '92705' as zip_code union
-		select '92782' as zip_code union select '92807' as zip_code union select '92808' as zip_code union select '92821' as zip_code union select '92823' as zip_code union select '92869' as zip_code union select '92886' as zip_code union select '92887' as zip_code union select '93001' as zip_code union select '93003' as zip_code union select '93010' as zip_code union select '93012' as zip_code union select '93013' as zip_code union select '93021' as zip_code union
-		select '93023' as zip_code union select '93060' as zip_code union select '93063' as zip_code union select '93065' as zip_code union select '93066' as zip_code union select '93067' as zip_code union select '93103' as zip_code union select '93105' as zip_code union select '93108' as zip_code union select '93110' as zip_code union select '93111' as zip_code union select '93117' as zip_code union select '93441' as zip_code union select '93460' as zip_code union select '93463'  as zip_code
+            select '90024' as zip_code union select '90027' as zip_code union select '90046' as zip_code union select '90049' as zip_code union select '90068' as zip_code union select '90069' as zip_code union select '90077' as zip_code union select '90095' as zip_code union select '90210' as zip_code union select '90263' as zip_code union select '90265' as zip_code union select '90272' as zip_code union select '90274' as zip_code union select '90275' as zip_code union
+            select '90290' as zip_code union select '90631' as zip_code union select '91006' as zip_code union select '91008' as zip_code union select '91010' as zip_code union select '91011' as zip_code union select '91016' as zip_code union select '91024' as zip_code union select '91103' as zip_code union select '91105' as zip_code union select '91107' as zip_code union select '91108' as zip_code union select '91206' as zip_code union select '91207' as zip_code union
+            select '91208' as zip_code union select '91301' as zip_code union select '91302' as zip_code union select '91307' as zip_code union select '91311' as zip_code union select '91316' as zip_code union select '91320' as zip_code union select '91326' as zip_code union select '91344' as zip_code union select '91356' as zip_code union select '91360' as zip_code union select '91361' as zip_code union select '91362' as zip_code union select '91364' as zip_code union
+            select '91377' as zip_code union select '91403' as zip_code union select '91423' as zip_code union select '91436' as zip_code union select '91604' as zip_code union select '91709' as zip_code union select '91741' as zip_code union select '91765' as zip_code union select '92602' as zip_code union select '92603' as zip_code union select '92610' as zip_code union select '92612' as zip_code union select '92625' as zip_code union select '92629' as zip_code union
+            select '92637' as zip_code union select '92651' as zip_code union select '92653' as zip_code union select '92656' as zip_code union select '92657' as zip_code union select '92660' as zip_code union select '92676' as zip_code union select '92677' as zip_code union select '92679' as zip_code union select '92688' as zip_code union select '92691' as zip_code union select '92692' as zip_code union select '92694' as zip_code union select '92705' as zip_code union
+            select '92782' as zip_code union select '92807' as zip_code union select '92808' as zip_code union select '92821' as zip_code union select '92823' as zip_code union select '92869' as zip_code union select '92886' as zip_code union select '92887' as zip_code union select '93001' as zip_code union select '93003' as zip_code union select '93010' as zip_code union select '93012' as zip_code union select '93013' as zip_code union select '93021' as zip_code union
+            select '93023' as zip_code union select '93060' as zip_code union select '93063' as zip_code union select '93065' as zip_code union select '93066' as zip_code union select '93067' as zip_code union select '93103' as zip_code union select '93105' as zip_code union select '93108' as zip_code union select '93110' as zip_code union select '93111' as zip_code union select '93117' as zip_code union select '93441' as zip_code union select '93460' as zip_code union select '93463'  as zip_code
 		) as a;
 		 
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_1_cust ;
+
+        set @max_renewal_quote_review_start_dt = (select max(renewal_quote_review_start_dt) renewal_quote_review_start_dt
+                                                from edw_core.tquote
+                                                where renewal_quote_review_start_dt > --'01-jan-1999' 
+                                                                                    @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
+                                                and quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
+                                                and quote_term = 'Renewal');
 		
         with cust as
 		(
-			select customer_id from edw_core.tquote
+			select distinct customer_id 
+            from edw_core.tquote
 			where renewal_quote_review_start_dt > --'01-jan-1999' 
 												 @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
 			and quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
@@ -679,20 +688,11 @@ and a.PrimaryInsuredId=b.id
 		               
         SET @rows_affected=@@ROWCOUNT;
  
-        --set @new_last_source_extract_ts = select max(quote_create_ts) from edw_core.tquote;
+        set @new_last_source_extract_ts = @max_renewal_quote_review_start_dt;
        
         --Update control table
-        --SET @new_last_source_extract_ts = COALESCE(@new_last_source_extract_ts,@last_source_extract_ts);
-		-- Yunus 09/26/2025 - modified to save last source extract date.
-		SET @new_last_source_extract_ts = @in_start_dt;
- 
- 
-        /*
-        if @in_start_dt is not null
-        begin
-            set @new_last_source_extract_ts= @last_source_extract_ts
-        end */
- 
+        SET @new_last_source_extract_ts = COALESCE(@new_last_source_extract_ts,@last_source_extract_ts);
+		
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
        
         -- Update audit table
