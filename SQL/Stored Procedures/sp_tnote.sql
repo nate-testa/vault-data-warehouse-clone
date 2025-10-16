@@ -113,7 +113,7 @@ BEGIN
 		Target.note_desc=Source.note_desc,
         Target.note_updated_ts = Source.note_updated_ts,
         Target.update_ts = @current_date,
-        Target.flagged_in = flagged_in;
+        Target.flagged_in = Source.flagged_in;
 		
 
 		SET @rows_affected=@@ROWCOUNT;
