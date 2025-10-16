@@ -355,6 +355,7 @@ and a.PrimaryInsuredId=b.id
 			renewal_effective_date,
 			renewal_expiration_date, 
 			product_nm,
+            renewal_year,
 			customer_id,
 			customer_nm ,
 			customer_email,
@@ -420,6 +421,7 @@ and a.PrimaryInsuredId=b.id
 				effective_dt,
 				expiration_dt, 
 				product_nm,
+                datepart(yyyy, getdate()) renewal_year, 
 				customer_id,
 				customer_nm ,
 				customer_email,
@@ -563,13 +565,14 @@ and a.PrimaryInsuredId=b.id
 				
         from (select distinct a.customer_id, a.mailing_address_state_cd--, b.uw_company_cd
               from edw_core.tcustomer a, edw_integration.customer_midterm_review_policy_detail b
-              where a.customer_id = b.customer_id  
+              where a.customer_id = b.customer_id 
+              and renewal_year =  datepart(yyyy, getdate())
               ) cust
         cross join (select product_cd, product_nm, product_category_nm from edw_core.tproduct
 					union all
 					select 'AV', 'Aviation', 'PersonalLines'  
 					)pr --on pr.product_nm = cust.product_nm
-        left join edw_integration.customer_midterm_review_policy_detail cf on cust.customer_id = cf.customer_id and cf.product_nm = pr.product_nm --and cust.uw_company_cd = cf.uw_company_cd  
+        left join edw_integration.customer_midterm_review_policy_detail cf on cust.customer_id = cf.customer_id and cf.product_nm = pr.product_nm and cf.renewal_year =  datepart(yyyy, getdate())
         inner join edw_temp.customer_midterm_review_recommendation_temp_2_offered_state pos on pos.state_cd = cust.mailing_address_state_cd 
 		and pr.product_cd = (case when pos.product_cd = 'Lux_on_endorsement' then 'ho' else pos.product_cd end)
 		-- Yunus - 09/24/2025 Changes made to handle below 2 scenerios
@@ -586,7 +589,7 @@ and a.PrimaryInsuredId=b.id
 					cf1.customer_id= cust.customer_id
 					and cf1.product_nm = 'Collection'
 					and pos.product_cd = 'Lux_on_endorsement'
-				
+                    and renewal_year =  datepart(yyyy, getdate())				
 			)
 		)
         left join (select distinct quote_no from edw_core.tquote_collection_class_type) lux on lux.quote_no = cf.policy_no
@@ -597,6 +600,7 @@ and a.PrimaryInsuredId=b.id
                               ) prim on prim.customer_id = cust.customer_id
         left join (select distinct customer_id from edw_integration.customer_midterm_review_policy_detail
                                 where product_nm = 'Marine Boat & Yacht'
+                                and renewal_year =  datepart(yyyy, getdate())
                               ) marine on marine.customer_id = cust.customer_id
                      -- and case when curr_inf.product_cd = pr.product_cd then curr_inf.policy_no else '1' end =
                      --     case when curr_inf.product_cd = pr.product_cd then cf.policy_no else '1' end
@@ -618,6 +622,7 @@ and a.PrimaryInsuredId=b.id
                     group by state_cd, product_cd --added on 09262025
 					) pcc on a.mailing_address_state_cd = pcc.state_cd and pr.product_cd = pcc.product_cd --and a.uw_company_cd = pcc.uw_company_cd 
         where product_recommendation = 'Add as primary for additional discount'
+        and renewal_year =  datepart(yyyy, getdate());
  
         --- take out product recommendation of a DNR in the last year
         update a
