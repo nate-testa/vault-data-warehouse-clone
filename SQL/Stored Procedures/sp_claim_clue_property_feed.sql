@@ -15,6 +15,7 @@ GO
 -- 03-21-2025               Sandeep Gundreddy           3. Updated source_system_sk filter to include snapsheet claims
 -- 08-12-2025               Alberto Almario             4. Update logic for ClaimAmount and ClaimDisposition fields
 -- 09-16-2025               Alberto Almario             5. Add logic for new records where the claimDisposition changed on tclaim
+-- 10-17-2025               Sandeep Gundreddy           6. Added product_sk filter to include only property products
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_property_feed]
 AS
@@ -170,7 +171,7 @@ BEGIN
                     FROM edw_core.tclaim_transaction
                     GROUP BY claim_sk
                 ) AS ct ON c.claim_sk = ct.claim_sk
-            WHERE c.source_system_sk in (3,5)
+            WHERE c.source_system_sk in (3,5) and c.product_sk in (1,2,5)
             AND ( 
                     cast(ct.transaction_ts as datetime2(7)) > @last_source_extract_ts
                     OR
