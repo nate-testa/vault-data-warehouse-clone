@@ -1,0 +1,55 @@
+INSERT INTO  edw_core.tproduct_offered_state
+				 (state_cd, homeowners_in, condo_in, auto_in, pel_in, collections_in, collections_on_endorsement_in, marine_in, update_ts)  
+	SELECT isnull(s.state_cd, a.state_cd), 
+			a.homeowners_in, a.condo_in, a.auto_in, a.pel_in, a.collections_in, a.collections_on_endorsement_in, marine_in, a.update_ts
+	FROM (
+    VALUES
+			('Alabama','Yes','Yes','No','No','Yes','Yes','Yes',getdate()),
+			('Arizona','Yes','Yes','Yes','Yes','No','Yes','Yes',getdate()),
+			('Arkansas','Yes','Yes','No','No','Yes','No','Yes',getdate()),
+			('California','Yes','Yes','No','Yes','No','Yes','Yes',getdate()),
+			('Colorado','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('Connecticut','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('DC','Yes','Yes','No','No','Yes','Yes','Yes',getdate()),
+			('Delaware','Yes','Yes','No','No','Yes','Yes','Yes',getdate()),
+			('Florida','Yes','Yes','Yes','Yes','Yes','Yes','Yes',getdate()),
+			('Georgia','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('Idaho','Yes','Yes','No','No','Yes','No','Yes',getdate()),
+			('Illinois','Yes','Yes','Yes','Yes','No','Yes','Yes',getdate()),
+			('Indiana','Yes','Yes','No','No','No','No','Yes',getdate()),
+			('Kansas','Yes','No','No','No','Yes','No','Yes',getdate()),
+			('Louisiana','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('Maine','Yes','Yes','No','No','Yes','Yes','Yes',getdate()),
+			('Maryland','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('Massachusetts','Yes','Yes','No','Yes','No','Yes','Yes',getdate()),
+			('Michigan','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('Minnesota','Yes','No','No','No','No','No','Yes',getdate()),
+			('Mississippi','Yes','Yes','Yes','Yes','No','Yes','Yes',getdate()),
+			('Missouri','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('Montana','Yes','Yes','No','No','Yes','Yes','Yes',getdate()),
+			('Nevada','Yes','Yes','No','No','Yes','Yes','Yes',getdate()),
+			('New Hampshire','Yes','Yes','No','No','Yes','Yes','Yes',getdate()),
+			('New Jersey','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('New Mexico','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('New York','Yes','Yes','No','No','Yes','Yes','Yes',getdate()),
+			('North Carolina','Yes','Yes','Yes','Yes','No','Yes','Yes',getdate()),
+			('Ohio','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('Oklahoma','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('Oregon','Yes','Yes','No','No','Yes','Yes','Yes',getdate()),
+			('Pennsylvania','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('Rhode Island','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('South Carolina','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('South Dakota','Yes','Yes','No','No','Yes','No','Yes',getdate()),
+			('Tennessee','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('Texas','Yes','Yes','Yes','Yes','No','Yes','Yes',getdate()),
+			('Utah','Yes','Yes','No','No','Yes','No','Yes',getdate()),
+			('Vermont','Yes','Yes','No','No','Yes','Yes','Yes',getdate()),
+			('Virginia','Yes','Yes','Yes','No','Yes','Yes','Yes',getdate()),
+			('Washington','Yes','Yes','No','No','Yes','No','Yes',getdate()),
+			('West Virginia','Yes','Yes','No','No','No','No','Yes',getdate()),
+			('Wisconsin','Yes','Yes','No','No','No','No','Yes',getdate()),
+			('Wyoming','Yes','Yes','No','No','No','Yes','Yes',getdate())
+	) AS a(state_cd, homeowners_in, condo_in, auto_in, collections_in, collections_on_endorsement_in, pel_in, marine_in, update_ts)
+	 left join edw_core.tstate s on s.state_nm = a.state_cd ; 
+
+	
