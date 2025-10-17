@@ -62,6 +62,8 @@ GO
 -- 02/13/25		Architha Gudimalla				33. AD8573 - excluded OS claims which do not have broker
 -- 03/05/25		Hernando Gonzalez				34. AD8315 - Summary tables - Close Reasons
 -- 10/02/25		Dinesh Bobbili					35. AD11217 - Added new columns
+-- 10/07/25		Dinesh Bobbili					36. AD11217 - Updated the logics for non_flat_cancelled_ct, non_flat_cancelled_ct,expiring_sixty_day_written_premium_amt
+-- 10/15/25		Dinesh Bobbili					37. AD11286 - Added date logic to run the process for 3 months
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -119,20 +121,35 @@ BEGIN
 		DECLARE @prior_five_year INT 
 	
 		DECLARE @parameter_desc VARCHAR(255)  
+		DECLARE @last_source_yearmonth int
+		set @last_source_yearmonth = concat(datepart(yyyy,cast(@last_source_extract_ts as date)),iif(datepart(mm,cast(@last_source_extract_ts as date)) < 10,'0','') ,datepart(mm,cast(@last_source_extract_ts as date)) ); 
+		DECLARE @in_yearmonth INT
+		SET @in_yearmonth = LEFT(CONVERT(CHAR(8), @in_end_dt, 112), 6);
 		
 		DECLARE c2_rec CURSOR
 		FOR  
-		select	yearmonth, max(calendar_year) year 
+		select	yearmonth,max(calendar_year) as year 
 		from	edw_core.tdate
-		where	actual_dt = @in_end_dt 
+		where	yearmonth between  (case when @in_yearmonth is not null 
+										  then FORMAT(DATEADD(MONTH, -2, DATEFROMPARTS(LEFT(@in_yearmonth, 4), RIGHT(@in_yearmonth, 2), 1)), 'yyyyMM')
+									 end)
+						  and @in_yearmonth
 		group by yearmonth
 		union 
-		select	yearmonth, max(calendar_year) year 
+		select	yearmonth,max(calendar_year) as year 
 		from	edw_core.tdate
-		where	actual_dt >=  case when @in_end_dt is not null then @in_end_dt else @last_source_extract_ts end
-		  and   actual_dt < case when @in_end_dt is not null then @in_end_dt else cast(getdate() as date) end
+		where	yearmonth between  (case when @in_yearmonth is  null 
+										  then FORMAT(DATEADD(MONTH, -2, DATEFROMPARTS(LEFT(@last_source_yearmonth, 4), RIGHT(@last_source_yearmonth, 2), 1)), 'yyyyMM')
+									 end) 
+						  and @last_source_yearmonth
 		group by yearmonth
-		order by 1;  
+		union 
+		select	yearmonth,max(calendar_year) as  year 
+		from	edw_core.tdate
+		where	yearmonth >  case when @in_yearmonth is null then @last_source_yearmonth end
+		  and   yearmonth <= case when @in_yearmonth is null then FORMAT(GETDATE(), 'yyyyMM') end
+		group by yearmonth
+		order by 1; 
 		
 		open c2_rec; 
 		FETCH NEXT FROM c2_rec INTO @yearmonth, @year; 
@@ -411,7 +428,7 @@ BEGIN
 							sum(isnull(r.expiring_sixty_day_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) ) expiring_prm,
 							sum(case when r.renewal_non_flat_cancelled_ct = 1 then isnull(r.renewal_sixty_day_written_premium_amt,0) else 0 end) renewal_prm,
 							sum(r.non_flat_cancelled_ct) non_flat_cancelled_ct,
-							sum(isnull(r.expiring_sixty_day_written_premium_amt,0)) expiring_sixty_day_written_premium_amt
+							sum(isnull(case when non_flat_cancelled_ct = 1 THEN r.expiring_sixty_day_written_premium_amt end,0)) expiring_sixty_day_written_premium_amt
 
 					from edw_core.trenewal_summary r 
 					inner join edw_core.tpolicy pol on r.policy_sk = pol.policy_sk 
@@ -433,6 +450,8 @@ BEGIN
 						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then expiring_ct 								else 0 end) policy_expiring_ct,
 						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then renewal_prm 								else 0 end) policy_renewal_prm,   
 						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then expiring_prm 								else 0 end) policy_expiring_prm  ,
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then non_flat_cancelled_ct                         else 0 end) non_flat_cancelled_ct,
+                        sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then expiring_sixty_day_written_premium_amt      else 0 end) expiring_sixty_day_written_premium_amt,
 						--  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_accepted_ct 						   else 0 end) ytd_policy_renewal_accepted_ct,  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_ct 								   else 0 end) ytd_policy_renewal_ct,  
@@ -442,9 +461,7 @@ BEGIN
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_expiring_premium_amt else 0 end) ytd_policy_renewal_offered_expiring_premium_amt,   
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_ct 								   else 0 end) ytd_policy_expiring_ct,
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_prm 								   else 0 end) ytd_policy_renewal_prm,   
-						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_prm 							   else 0 end) ytd_policy_expiring_prm,
-						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then non_flat_cancelled_ct 						else 0 end) non_flat_cancelled_ct,
-						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_sixty_day_written_premium_amt 		else 0 end) expiring_sixty_day_written_premium_amt 
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_prm 							   else 0 end) ytd_policy_expiring_prm
 				into edw_temp.tbroker_summ_retention
 				from ren
 				group by broker_sk,product_sk, customer_sk, uwco, state_sk;

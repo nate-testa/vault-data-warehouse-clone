@@ -4,9 +4,9 @@ import shutil
 import pendulum
 from datetime import timedelta
 from airflow import DAG
-from airflow.operators.email_operator import EmailOperator
-from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.email import EmailOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import PythonOperator
 from vault_edw_HTML_format import get_sp_error_data_HTML, get_HTML_on_vault_format
 
 to_email = "itdatateam@vault.insurance"
@@ -14,7 +14,7 @@ to_email = "itdatateam@vault.insurance"
 cc_email = ""
 
 HOME_PATH = os.path.expanduser('~')
-SCHEDULE_LOG_FOLDER = HOME_PATH + "/airflow/logs/scheduler"
+LOGS_FOLDER = HOME_PATH + "/airflow/logs"
 
 def delete_old_folders(folder_path, retention_days=30):
     now = time.time()
@@ -37,11 +37,23 @@ def delete_old_folders(folder_path, retention_days=30):
 
     return folders_removed
 
-def remove_old_folders_for_schedule_log():
+def remove_old_folders_from_logs():
     
     print("**** Start clean up folders process")
-    folders_removed = delete_old_folders(SCHEDULE_LOG_FOLDER, 3)
-    print(f"folders removed in {SCHEDULE_LOG_FOLDER} : {folders_removed}")
+    total_folders_removed = 0
+    
+    # Iterate through all subdirectories in the logs folder
+    for subfolder_name in os.listdir(LOGS_FOLDER):
+        subfolder_path = os.path.join(LOGS_FOLDER, subfolder_name)
+        
+        # Check if it is a directory
+        if os.path.isdir(subfolder_path):
+            print(f"Processing subfolder: {subfolder_path}")
+            folders_removed = delete_old_folders(subfolder_path, 3)
+            print(f"folders removed in {subfolder_path} : {folders_removed}")
+            total_folders_removed += folders_removed
+    
+    print(f"Total folders removed: {total_folders_removed}")
     print("**** End clean up folders process")
 
 def on_failure_callback(context):
@@ -91,20 +103,20 @@ with DAG(
 ) as dag:
     
 
-    start = DummyOperator(
+    start = EmptyOperator(
         task_id='start',
     )
 
-    delete_schedule_log_folders = PythonOperator(
-            task_id='delete_schedule_log_folders',
-            python_callable=remove_old_folders_for_schedule_log,
+    delete_old_log_folders = PythonOperator(
+            task_id='delete_old_log_folders',
+            python_callable=remove_old_folders_from_logs,
             provide_context=True,
             dag=dag,
         )
 
-    end = DummyOperator(
+    end = EmptyOperator(
         task_id='end',
     )
 
-
-start >> delete_schedule_log_folders >> end
+start.set_downstream(delete_old_log_folders)
+delete_old_log_folders.set_downstream(end)

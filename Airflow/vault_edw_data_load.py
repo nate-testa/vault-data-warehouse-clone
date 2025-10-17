@@ -322,6 +322,7 @@ with DAG(
 
         auto_group_items = [
             'sp_tauto_vehicle',
+            'sp_tadditional_interest',
             'sp_tauto_garage_location',
             'sp_tauto_vehicle_coverage',
             'sp_tauto_vehicle_coverage_update',
@@ -586,7 +587,6 @@ with DAG(
             'sp_tpolicy_insured', 
             'sp_tpolicy_insured_update',
             'sp_tloss_history', 
-            'sp_tadditional_interest', 
             'sp_ttask_workflow',
             'sp_ttask_workflow_step',
             'sp_ttask', 

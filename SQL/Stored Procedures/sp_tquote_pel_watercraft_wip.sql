@@ -1,12 +1,13 @@
 ﻿-- =========================================================================================================================== 
 -- Description: This procedures insert and update info related to pel quote watercraft data
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date			|Author							|	Change Description
+-- Change date			|Author											  |	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
--- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
+-- 05/06/2024 			Hernando Gonzalez				   1. Created this procedure 
 -- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
 -- 05/14/2024 			Architha Gudimalla					3. Corrected errors
 -- 08/22/2024			Architha Gudimalla					4. Removed eff_dt from merge
+-- 10/13/20025		   Yunus Mohammed			        5. AD11353  - Added watercraft_unique_id
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_watercraft_wip]
 
@@ -34,7 +35,7 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,[Index],quote_history_sk,source_system_sk,
 			CreatedDate,UpdatedDate,[Year],Make,Model,[Length],HullValue,Horsepower,AnyWatercraftOwnedTrustOrLlc,AnyWatercraftCaptainOrCrew,
-			MotorType,MilesPerHour,SailboatPowerType
+			MotorType,MilesPerHour,SailboatPowerType,watercraft_unique_id
 			into edw_temp.tquote_pel_watercraft_wip_temp1
 		from
 		(
@@ -47,7 +48,7 @@ BEGIN
 			CAST(acc.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,acco.[Index],tph.quote_history_sk,
 			0 AS transaction_seq_no,acc.CreatedDate,acc.UpdatedDate,
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
-			accof.Field,accof.[Value]
+			accof.Field,accof.[Value],acco.UniqueId as watercraft_unique_id
 			from
 				(
 				    SELECT *
@@ -105,7 +106,8 @@ BEGIN
 		        @etl_audit_sk AS etl_audit_sk,
 		        MotorType AS watercraft_motor_type,
 		        MilesPerHour AS watercraft_miles_per_hr,
-		        SailboatPowerType AS watercraft_sailboat_power_type
+		        SailboatPowerType AS watercraft_sailboat_power_type,
+				watercraft_unique_id
 		    FROM
 		        edw_temp.tquote_pel_watercraft_wip_temp1 AS ttpv
 		) AS SOURCE
@@ -132,6 +134,7 @@ BEGIN
 		        TARGET.watercraft_miles_per_hr = SOURCE.watercraft_miles_per_hr,
 		        TARGET.watercraft_sailboat_power_type = SOURCE.watercraft_sailboat_power_type,
 		        TARGET.source_system_sk = SOURCE.source_system_sk,
+				TARGET.watercraft_unique_id = Source.watercraft_unique_id,
 		        TARGET.update_ts = SOURCE.update_ts,
 		        TARGET.etl_audit_sk = SOURCE.etl_audit_sk
 
@@ -141,14 +144,15 @@ BEGIN
 		        watercraft_no, watercraft_year, watercraft_make, watercraft_model, watercraft_length, watercraft_hull_value,
 		        watercraft_horsepower, vessels_owned_trust_llc_in, vessels_with_captain_crew_in,
 		        source_system_sk, create_ts, update_ts, etl_audit_sk,
-		        watercraft_motor_type, watercraft_miles_per_hr, watercraft_sailboat_power_type
+		        watercraft_motor_type, watercraft_miles_per_hr, watercraft_sailboat_power_type,watercraft_unique_id
 		    )
 		    VALUES (
 		        SOURCE.quote_no, SOURCE.effective_dt, SOURCE.expiration_dt, SOURCE.transaction_seq_no, SOURCE.quote_history_sk,
 		        SOURCE.watercraft_no, SOURCE.watercraft_year, SOURCE.watercraft_make, SOURCE.watercraft_model, SOURCE.watercraft_length, SOURCE.watercraft_hull_value,
 		        SOURCE.watercraft_horsepower, SOURCE.vessels_owned_trust_llc_in, SOURCE.vessels_with_captain_crew_in,
 		        SOURCE.source_system_sk, SOURCE.create_ts, SOURCE.update_ts, SOURCE.etl_audit_sk,
-		        SOURCE.watercraft_motor_type, SOURCE.watercraft_miles_per_hr, SOURCE.watercraft_sailboat_power_type
+		        SOURCE.watercraft_motor_type, SOURCE.watercraft_miles_per_hr, SOURCE.watercraft_sailboat_power_type,
+				Source.watercraft_unique_id
 		);
 
 		SET @rows_affected=@@ROWCOUNT;
