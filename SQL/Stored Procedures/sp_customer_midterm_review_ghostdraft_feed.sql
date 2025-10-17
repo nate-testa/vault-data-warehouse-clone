@@ -577,7 +577,8 @@ BEGIN
         --- Update water shut off reco message 
         update a
         set rms_recommendation_message_1 =  replace(m.message_desc, 
-										'<<CITY NAME >>', aa.risk_address_city_nm ) 
+													'<<CITY NAME >>', '' --aa.risk_address_city_nm 
+													) 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.rms_recommendation_message_1_id = m.message_id 
 		inner join (select customer_id, string_agg(risk_address_city_nm,'||') risk_address_city_nm
@@ -597,7 +598,8 @@ BEGIN
         --- Update wildfire reco message 
         update a
         set wildfire_protection_recommendation_message_1 =  replace(m.message_desc, 
-																	'<<CITY NAME>>', aa.risk_address_city_nm ) 
+																	'<<CITY NAME>> ', '' --aa.risk_address_city_nm 
+																	) 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.wildfire_protection_recommendation_message_1_id = m.message_id  
 		inner join (select customer_id, string_agg(risk_address_city_nm,'||') risk_address_city_nm
@@ -617,7 +619,8 @@ BEGIN
         --- Update backup generator message 
         update a
         set backup_generator_recommendation_message_1 =  replace(m.message_desc, 
-																	'<<CITY NAME>>', a.risk_address_city_nm ) 
+																	'<<CITY NAME>> ', '' --a.risk_address_city_nm 
+																	) 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.backup_generator_recommendation_message_1_id = m.message_id 
 		where a.update_ts >  @last_source_extract_ts
@@ -718,7 +721,7 @@ BEGIN
 						from edw_integration.customer_midterm_review_ghostdraft_feed cmra 
 						where cmra.customer_id = cmr.customer_id
 						and cmra. product_nm = 'Auto'
-					and cmra.existing_product_in = 'Yes'
+					--and cmra.existing_product_in = 'Yes'
 					) as [current_coverage.message_auto],
 					(
 					select top 1
@@ -734,7 +737,7 @@ BEGIN
 							from edw_integration.customer_midterm_review_ghostdraft_feed cmre 
 							where cmre.customer_id = cmr.customer_id
 							and cmre. product_nm = 'Excess Liability'
-						and cmre.existing_product_in = 'Yes'
+						--and cmre.existing_product_in = 'Yes'
 					) as [current_coverage.message_excess],
 					(
 						select top 1
@@ -750,7 +753,7 @@ BEGIN
 							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
 							where cmrc.customer_id = cmr.customer_id
 							and cmrc. product_nm = 'Collections'
-						and cmrc.existing_product_in = 'Yes'
+						--and cmrc.existing_product_in = 'Yes'
 					) as [current_coverage.message_collection],
 					(
 						select top 1
@@ -766,7 +769,7 @@ BEGIN
 							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
 							where cmrc.customer_id = cmr.customer_id
 							and cmrc. product_nm = 'Marine Boat & Yacht'
-						and cmrc.existing_product_in = 'Yes'
+						--and cmrc.existing_product_in = 'Yes'
 					) as [current_coverage.message_marine] ,
 					(
 						select top 1
@@ -782,14 +785,14 @@ BEGIN
 							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
 							where cmrc.customer_id = cmr.customer_id
 							and cmrc. product_nm = 'Aviation'
-						and cmrc.existing_product_in = 'Yes'
+						--and cmrc.existing_product_in = 'Yes'
 					) as [current_coverage.message_aviation] 
 	
 			,json_query
 			( (
 				select * from
 				(  
-					select distinct mrm.rms_recommendation_message_1_id,mrm.rms_recommendation_message_1 as [message]
+					select distinct mrm.rms_recommendation_message_1_id recommendation_message_1_id,mrm.rms_recommendation_message_1 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
 					where mrm.customer_id= cmr.customer_id and mrm.rms_recommendation_message_1 is not null
 					union

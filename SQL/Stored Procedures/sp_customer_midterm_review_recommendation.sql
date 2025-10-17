@@ -543,7 +543,7 @@ and a.PrimaryInsuredId=b.id
 				case (case when cf.policy_no is not null and pr.product_cd = 'ho'  and pos.product_cd = 'Lux_on_endorsement' and lux.quote_no is null then 'Yes'
                            when cf.policy_no is not null and pr.product_cd = 'ho' and pos.product_cd = 'Lux_on_endorsement' and lux.quote_no is not null then 'Not recommended'
                            --primary
-                           when cf.policy_no is not null and pr.product_cd = 'ho' and prim.customer_id is null then 'Primary'
+                           when cf.policy_no is not null and pr.product_cd in ('ho','co') and prim.customer_id is null then 'Primary'
                            --marine
                            when cf.policy_no is null and pos.offered_in = 'Yes' and pr.product_cd = 'by' and marine.customer_id is null then 'Marine'
                            --marine
