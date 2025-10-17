@@ -651,7 +651,7 @@ BEGIN
 		where a.update_ts >  @last_source_extract_ts
 		 
 		drop table if exists edw_temp.customer_midterm_review_ghostdraft_feed_temp2;
-
+		
 		with CustomerList as
 		(
 			select distinct
@@ -662,11 +662,11 @@ BEGIN
 			from
 			edw_integration.customer_midterm_review_ghostdraft_feed
 			where 
-			   -- customer_id in ('1234500211', '1234502277', '1234548368') and
+				--customer_id in ('1234500211', '1234502277', '1234548368') and
 				existing_product_in  = 'Yes'
 		)
 		select  
-						cmr.customer_id,
+			cmr.customer_id,
 			(
 			SELECT
 			cmr.customer_nm as insured_full_name,
@@ -682,7 +682,7 @@ BEGIN
 			cmr.mailing_address_zip_cd,
 	
 				JSON_QUERY((
-				  -- select *
+					-- select *
 				--	from
 				--	(
 						select
@@ -706,82 +706,82 @@ BEGIN
 				,
 					(
 					select top 1
-					 'Yes' 
-					 from edw_integration.customer_midterm_review_ghostdraft_feed cmra 
-					 where cmra.customer_id = cmr.customer_id
-					 and cmra. product_nm = 'Auto'
+						'Yes' 
+						from edw_integration.customer_midterm_review_ghostdraft_feed cmra 
+						where cmra.customer_id = cmr.customer_id
+						and cmra. product_nm = 'Auto'
 					and cmra.existing_product_in = 'Yes'
 					) as [current_coverage.existing_auto],
 					(
 					select top 1
 						auto_message
-					 from edw_integration.customer_midterm_review_ghostdraft_feed cmra 
-					 where cmra.customer_id = cmr.customer_id
-					 and cmra. product_nm = 'Auto'
+						from edw_integration.customer_midterm_review_ghostdraft_feed cmra 
+						where cmra.customer_id = cmr.customer_id
+						and cmra. product_nm = 'Auto'
 					and cmra.existing_product_in = 'Yes'
 					) as [current_coverage.message_auto],
 					(
 					select top 1
-					 'Yes' 
-					 from edw_integration.customer_midterm_review_ghostdraft_feed cmre
-					 where cmre.customer_id = cmr.customer_id
-					 and cmre. product_nm = 'Excess Liability'
+						'Yes' 
+						from edw_integration.customer_midterm_review_ghostdraft_feed cmre
+						where cmre.customer_id = cmr.customer_id
+						and cmre. product_nm = 'Excess Liability'
 					and cmre.existing_product_in = 'Yes'
 					) as [current_coverage.existing_excess],
-					 (
+						(
 						select top 1
 							pel_message
-						 from edw_integration.customer_midterm_review_ghostdraft_feed cmre 
-						 where cmre.customer_id = cmr.customer_id
-						 and cmre. product_nm = 'Excess Liability'
+							from edw_integration.customer_midterm_review_ghostdraft_feed cmre 
+							where cmre.customer_id = cmr.customer_id
+							and cmre. product_nm = 'Excess Liability'
 						and cmre.existing_product_in = 'Yes'
 					) as [current_coverage.message_excess],
 					(
 						select top 1
-						 'Yes' 
-						 from edw_integration.customer_midterm_review_ghostdraft_feed cmrc
-						 where cmrc.customer_id = cmr.customer_id
-						 and cmrc. product_nm = 'Collections'
+							'Yes' 
+							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc
+							where cmrc.customer_id = cmr.customer_id
+							and cmrc. product_nm = 'Collections'
 						and cmrc.existing_product_in = 'Yes'
 					) as [current_coverage.existing_collection],
-					 (
+						(
 						select top 1
 							collection_message
-						 from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
-						 where cmrc.customer_id = cmr.customer_id
-						 and cmrc. product_nm = 'Collections'
+							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
+							where cmrc.customer_id = cmr.customer_id
+							and cmrc. product_nm = 'Collections'
 						and cmrc.existing_product_in = 'Yes'
 					) as [current_coverage.message_collection],
 					(
 						select top 1
-						 'Yes' 
-						 from edw_integration.customer_midterm_review_ghostdraft_feed cmrc
-						 where cmrc.customer_id = cmr.customer_id
-						 and cmrc. product_nm = 'Marine Boat & Yacht'
+							'Yes' 
+							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc
+							where cmrc.customer_id = cmr.customer_id
+							and cmrc. product_nm = 'Marine Boat & Yacht'
 						and cmrc.existing_product_in = 'Yes'
 					) as [current_coverage.existing_marine],
-					 (
+						(
 						select top 1
 							yacht_boat_message
-						 from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
-						 where cmrc.customer_id = cmr.customer_id
-						 and cmrc. product_nm = 'Marine Boat & Yacht'
+							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
+							where cmrc.customer_id = cmr.customer_id
+							and cmrc. product_nm = 'Marine Boat & Yacht'
 						and cmrc.existing_product_in = 'Yes'
 					) as [current_coverage.message_marine] ,
 					(
 						select top 1
-						 'Yes' 
-						 from edw_integration.customer_midterm_review_ghostdraft_feed cmrc
-						 where cmrc.customer_id = cmr.customer_id
-						 and cmrc. product_nm = 'Aviation'
+							'Yes' 
+							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc
+							where cmrc.customer_id = cmr.customer_id
+							and cmrc. product_nm = 'Aviation'
 						and cmrc.existing_product_in = 'Yes'
 					) as [current_coverage.existing_aviation],
-					 (
+						(
 						select top 1
 							aviation_message
-						 from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
-						 where cmrc.customer_id = cmr.customer_id
-						 and cmrc. product_nm = 'Aviation'
+							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
+							where cmrc.customer_id = cmr.customer_id
+							and cmrc. product_nm = 'Aviation'
 						and cmrc.existing_product_in = 'Yes'
 					) as [current_coverage.message_aviation] 
 	
@@ -789,39 +789,39 @@ BEGIN
 			( (
 				select * from
 				(  
-					select distinct mrm.rms_recommendation_message_1 as [message]
+					select distinct mrm.rms_recommendation_message_1_id,mrm.rms_recommendation_message_1 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
 					where mrm.customer_id= cmr.customer_id and mrm.rms_recommendation_message_1 is not null
 					union
-					select distinct mrm.rms_recommendation_message_2 as [message]
+					select distinct mrm.rms_recommendation_message_2_id,mrm.rms_recommendation_message_2 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
 					where mrm.customer_id= cmr.customer_id and mrm.rms_recommendation_message_2 is not null
 					union
-					select distinct mrm.wildfire_protection_recommendation_message_1 as [message]
+					select distinct mrm.wildfire_protection_recommendation_message_1_id, mrm.wildfire_protection_recommendation_message_1 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
 					where mrm.customer_id= cmr.customer_id and mrm.wildfire_protection_recommendation_message_1 is not null
 					union
-					select distinct mrm.wildfire_protection_recommendation_message_2 as [message]
+					select distinct mrm.wildfire_protection_recommendation_message_2_id,mrm.wildfire_protection_recommendation_message_2 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
 					where mrm.customer_id= cmr.customer_id and mrm.wildfire_protection_recommendation_message_2 is not null
 					union
-					select distinct mrm.backup_generator_recommendation_message_1 as [message]
+					select distinct mrm.backup_generator_recommendation_message_1_id,mrm.backup_generator_recommendation_message_1 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
 					where mrm.customer_id= cmr.customer_id and mrm.backup_generator_recommendation_message_1 is not null 
 					union
-					select mrm.new_driver_recommendation_message_1 as [message]
+					select mrm.new_driver_recommendation_message_1_id,mrm.new_driver_recommendation_message_1 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
 					where mrm.customer_id= cmr.customer_id and mrm.new_driver_recommendation_message_1 is not null
 					union
-					select mrm.primary_ho_monoline_recommendation_message_1 as [message]
+					select mrm.primary_ho_monoline_recommendation_message_1_id,mrm.primary_ho_monoline_recommendation_message_1 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
 					where mrm.customer_id= cmr.customer_id and mrm.primary_ho_monoline_recommendation_message_1 is not null
 					union
-					select mrm.non_primary_ho_monoline_recommendation_message_1 as [message]
+					select mrm.non_primary_ho_monoline_recommendation_message_1_id,mrm.non_primary_ho_monoline_recommendation_message_1 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
 					where mrm.customer_id= cmr.customer_id and mrm.non_primary_ho_monoline_recommendation_message_1 is not null
 					union
-					select mrm.renovation_recommendation_message_1 as [message]
+					select mrm.renovation_recommendation_message_1_id,mrm.renovation_recommendation_message_1 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
 					where mrm.customer_id= cmr.customer_id and mrm.renovation_recommendation_message_1 is not null
 					
@@ -830,7 +830,6 @@ BEGIN
 			))  as custom_recommendations
 			for json path, include_null_values , without_array_wrapper
 			) as  customer_json
-
 		into edw_temp.customer_midterm_review_ghostdraft_feed_temp2
 		from CustomerList as cmr;
 
@@ -874,6 +873,3 @@ BEGIN
         THROW 99001,'Error occured: see tetl_audit table for more info', 1;
     END CATCH
 END
- 
- 
- 
