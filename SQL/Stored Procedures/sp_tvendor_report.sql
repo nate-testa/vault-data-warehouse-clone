@@ -1,4 +1,4 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_tvendor_report]    Script Date: 2/27/2024 10:19:04 PM ******/
+﻿/****** Object:  StoredProcedure [edw_core].[sp_tvendor_report]    Script Date: 8/20/2025 5:03:11 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -12,9 +12,10 @@ GO
 -- 07/27/23		Architha Gudimalla				1. Created this procedure  
 -- 03/08/23		Architha Gudimalla				2. Updated a label for LC360
 -- 10/11/24		Architha Gudimalla				3. Addec cache column
+-- 08/22/25		Architha Gudimalla				4. Excluded images category for LC360 
 -- ================================================================================================= 
 
-CREATE OR ALTER     PROCEDURE [edw_core].[sp_tvendor_report]
+CREATE or ALTER       PROCEDURE [edw_core].[sp_tvendor_report]
 @in_source varchar(255)
 AS
 BEGIN
@@ -79,13 +80,15 @@ BEGIN
 		DECLARE @tablename4 NVARCHAR(MAX)=''
 		DECLARE @tablename5 NVARCHAR(MAX)=''
 		DECLARE @tablename6 NVARCHAR(MAX)=''
+		DECLARE @tablename7 NVARCHAR(MAX)=''
 		DECLARE @ColumnsToPivot NVARCHAR(MAX)=''  
 		DECLARE @ColumnsToPivot1 NVARCHAR(MAX)=''  
 		DECLARE @ColumnsToPivot2 NVARCHAR(MAX)='' 
 		DECLARE @ColumnsToPivot3 NVARCHAR(MAX)=''  
 		DECLARE @ColumnsToPivot4 NVARCHAR(MAX)=''  
 		DECLARE @ColumnsToPivot5 NVARCHAR(MAX)=''  
-		DECLARE @ColumnsToPivot6 NVARCHAR(MAX)=''  
+		DECLARE @ColumnsToPivot6 NVARCHAR(MAX)='' 
+		DECLARE @ColumnsToPivot7 NVARCHAR(MAX)=''  
 		declare @i int = 0 
 
 		DECLARE c1_rec CURSOR
@@ -117,6 +120,7 @@ BEGIN
 				set @ColumnsToPivot4 = ''
 				set @ColumnsToPivot5 = '' 
 				set @ColumnsToPivot6 = '' 
+				set @ColumnsToPivot7 = '' 
 
 				SELECT
 					/*@ColumnsToPivot = ISNULL( @ColumnsToPivot + ', ', '') +  
@@ -156,6 +160,11 @@ BEGIN
 									  cast(case when Row_num between 3000 and 3500 then field_name else '' end + '=' +  
 									  case when Row_num between 3000 and 3500 then cast('max(IIF(field_name='''+ 
 									  replace(replace(field_name,'[',''),']','') + ''',[Value],null)) ' as varchar(max))   else '' end
+									  as varchar(max)),
+					@ColumnsToPivot7 = ISNULL( @ColumnsToPivot7 + ', ', '') +  
+									  cast(case when Row_num between 3501 and 4000 then field_name else '' end + '=' +  
+									  case when Row_num between 3501 and 4000 then cast('max(IIF(field_name='''+ 
+									  replace(replace(field_name,'[',''),']','') + ''',[Value],null)) ' as varchar(max))   else '' end
 									  as varchar(max))/*
 					@ColumnsToPivot2 = case when @ColumnsToPivot2 = '' then @ColumnsToPivot2 else ISNULL( @ColumnsToPivot2 + ', ', '') end  +  
 									  cast(case when Row_num between 2001 and 3000 then field_name + '=' else '' end +  
@@ -178,6 +187,7 @@ BEGIN
 											 as nvarchar(max)) as field_name 
 						FROM  edw_stage.tvendor_report_field 
 						where source = @source and reporttype = @reporttype
+						and Category <> 'Inspection Images'
 					) a 
 				) as temp 
 		print 'here4'
@@ -188,7 +198,8 @@ BEGIN
 				set @ColumnsToPivot3  = REPLACE(@ColumnsToPivot3,', =','')
 				set @ColumnsToPivot4  = REPLACE(@ColumnsToPivot4,', =','')
 				set @ColumnsToPivot5  = REPLACE(@ColumnsToPivot5,', =','') 
-				set @ColumnsToPivot6  = REPLACE(@ColumnsToPivot6,', =','') 
+				set @ColumnsToPivot6  = REPLACE(@ColumnsToPivot6,', =','')  
+				set @ColumnsToPivot7  = REPLACE(@ColumnsToPivot7,', =','') 
 				
 				/*
 				print 'ColumnsToPivot'  
@@ -206,6 +217,7 @@ BEGIN
 				set @tablename4  = ''
 				set @tablename5  = '' 
 				set @tablename6  = '' 
+				set @tablename7  = '' 
 				
 				set @tablename = 'edw_stage.tvendor_report_' + replace(@source,' ','')
 				set @tablename1 = case when LEN(@ColumnsToPivot1) > 0 
@@ -224,7 +236,10 @@ BEGIN
 										then 'edw_stage.tvendor_report_' + replace(@source,' ','') + '_5'
 								 end 
 				set @tablename6 = case when LEN(@ColumnsToPivot6) > 0 
-										then 'edw_stage.tvendor_report_' + replace(@source,' ','') + '_5'
+										then 'edw_stage.tvendor_report_' + replace(@source,' ','') + '_6'
+								 end   
+				set @tablename7 = case when LEN(@ColumnsToPivot7) > 0 
+										then 'edw_stage.tvendor_report_' + replace(@source,' ','') + '_7'
 								 end  
  
 
@@ -233,7 +248,7 @@ BEGIN
 
 				set @i = 0
 
-				while @i <= 6 and @tablename <> ''
+				while @i <= 7 and @tablename <> ''
 				begin
 					--print @ColumnsToPivot
 					--print @tablename  
@@ -342,13 +357,15 @@ BEGIN
 											  	   when @i = 4 then @ColumnsToPivot4  
 											  	   when @i = 5 then @ColumnsToPivot5  
 											  	   when @i = 6 then @ColumnsToPivot6  
+											  	   when @i = 7 then @ColumnsToPivot7  
 											  end
 						set @tablename	    = case when @i = 1 then @tablename1
 											  	   when @i = 2 then @tablename2
 											  	   when @i = 3 then @tablename3
 											  	   when @i = 4 then @tablename4
 											  	   when @i = 5 then @tablename5
-											  	   when @i = 6 then @tablename6       
+											  	   when @i = 6 then @tablename6 
+											  	   when @i = 7 then @tablename7       
 											  end  
 					end 
 				 
