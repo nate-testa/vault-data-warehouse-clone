@@ -1,9 +1,4 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_tvendor_report_stage_data]    Script Date: 5/8/2024 11:56:21 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
--- =======================================================================================================================
+﻿-- =======================================================================================================================
 -- Author:	Architha Gudimalla		
 -- Description: This procedures loads vendor reports data
 ------------------------------------------------------------------------------------------------------------------------
@@ -25,9 +20,10 @@ GO
 -- 12/17/24		Architha Gudimalla				14. Updated the label for another long label for LC360
 -- 03/05/25		Architha Gudimalla				15. Updated the label for another long label for LC360
 -- 04/14/25		Architha Gudimalla				16. Updated the label for another long label for LC360
+-- 10/18/25		Yunus Mohammed				  17. AD-11423 Updated code to resolve string truncate error in insert stmt
 -- ======================================================================================================================= 
 
-CREATE OR ALTER       PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
 @in_source varchar(255) = null
 AS
 BEGIN
@@ -150,9 +146,9 @@ BEGIN
 		--print @sql
 		EXECUTE sp_executesql @sql  
 
-		select @sql='insert into ' 
-					+  @tablename_main 
-					+ ' select	 acc.policynumber, acc.effectivedate, 
+		select @sql= cast('insert into '  as nvarchar(max))
+					+  cast(@tablename_main  as nvarchar(max))
+					+ cast( ' select	 acc.policynumber, acc.effectivedate, 
 												GREATEST(accr.UpdatedDate,accri.CreatedDate) UpdatedDate ,  accr.CreatedDate, 
 												accr.dateordered, accr.dateTimeRecieved, accr.dateTimeCompleted, accr.TransactionStatus, accr.[source], accr.reporttype, 
 												case when accri.Category = accri.[Group] or accri.Label = accri.[Group] then concat(accri.Category, '' - '',replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(accri.label,''Install Centrally Monitored Rate of Rise Heat Detectors on All Levels Provide Updated Alarm Certificate'', ''Install Centrally Monitored Rate of Rise Heat Detectors on All Levels''),''Provide Monitoring Certificate to Verify Activation of Alarm System for Main House and Carriage House'', ''Provide Monitoring Certificate to Verify Activation of Alarm System for Main House''),	''Assess Cause of Water Intrusion and Complete Necessary Repairs - Master Closet Guest Bedroom & Garage'', ''Assess Cause of Water Intrusion and Complete Necessary Repairs - Master Closet''),	''Install Automatic Water Shut Off Device in the AG Barn Round Barn River House  West Barn East Barn Adobe House & Casita'', ''Install Automatic Water Shut Off Device in the AG Barn''),''Install Leak Activated Whole House Automatic Water Shut Off Device by End of Project  (If Home Will Be a Secondary Residence)'', ''Install Leak Activated Whole House Automatic Water Shut Off Device by End of Project''),''Provide Documentation of a Leak Activated Whole House Automatic Water Shut Off Device or Install a Leak Activated Whole House Automatic Water Shut Off Device'', ''Provide Documentation of a Leak Activated Whole House Automatic Water Shut Off Device''),''Activate Temporary Central Station Fire Alarm System Replace Combination Smoke and Heat Detectors with Rate of Rise Heat (only) Detectors'', ''Activate Temporary Central Station Fire Alarm System Replace Combination Smoke Heat Detectors''),''Could not get over to dock. Odd situation. Their dock is on the neighbors side due to the neighbors tram to his dock. With lake so low, could not navigate the loose rocks in my business attire. '',''Could not get to dock as its on the neighbors side. ''),''Water Leak Detection Alarm Systems'',''Water Leak Detectn Alarm Sys''),''Could not climb back to this unit without crushing duct. Access is from the other scuttle I could not get into.'',''Cant climb back to unit without crushing duct. Access is from other scuttle I could not get into''),''Activate Leak Defense Automatic Water Shut Off Device (if the occupancy of the house is not primary)'',''Activate Leak Defense Auto Water Shut Off Device (if the occupancy of the house is not primary)''),'' Toilet Supply Lines That Have Plastic B-nut Connectors and'','' Toilet Lines having Plastic B-nut Conn and''),''when construction starts on second floor'',''construction on 2nd fl''),''180 PSI. I had client call the sprinkler service company regarding the pressure and they told her it was OK. '',''One hundred eighty PSI. I had client call the sprinkler service company regarding the pressure and they told her it was OK''),''Bar sink cabinet next to icemaker. Water in and under cab. Client called plumber while I was there.'',''Bar sink cab next to icemaker. Water in under cab. Client called plumber while I was there.''),''['','' - ''),'']'',''''),'''''''',''''))
@@ -163,8 +159,8 @@ BEGIN
 										inner join edw_stage.[AccountReport] accr on accr.AccountId=acc.Id 
 										left join edw_stage.AccountReportItem accri on accr.Id =accri.ReportId 
 										where source <> ''HazardHub'' 
-										AND GREATEST(accr.UpdatedDate,accr.CreatedDate) > '''
-					+  cast(@last_source_extract_ts as varchar(255))
+										AND GREATEST(accr.UpdatedDate,accr.CreatedDate) > ''' as nvarchar(max))
+					+  cast(@last_source_extract_ts as nvarchar(max))
 					--+ ''' and source = '''
 					--+  @in_source 
 					+ ''''
