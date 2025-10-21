@@ -2,15 +2,15 @@
 -- Author:		Architha Gudimalla
 -- Description: This procedures inserts policy insured data
 ---------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author										|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 07/31/23		Architha Gudimalla				1. Created this procedure  
--- 09/07/23		Architha Gudimalla				2. Updated the proc to refeect changes made by 
---													sandeep in the model 
--- 10/26/23		Architha Gudimalla				3. Used insuredname for LLC
--- 11/29/23		Architha Gudimalla		        4. Updated coinsured logic
--- 11/29/23		Architha Gudimalla		        5. Updated insurance score  logic
--- 02/05/24		Hernando Gonzalez		        65. Included Limits Indicator
+-- 07/31/23		Architha Gudimalla				 1. Created this procedure  
+-- 09/07/23		Architha Gudimalla				 2. Updated the proc to refeect changes made by sandeep in the model 
+-- 10/26/23		Architha Gudimalla				 3. Used insuredname for LLC
+-- 11/29/23		Architha Gudimalla		         4. Updated coinsured logic
+-- 11/29/23		Architha Gudimalla		         5. Updated insurance score  logic
+-- 02/05/24		Hernando Gonzalez		        6. Included Limits Indicator
+-- 10/21/25		Yunus Mohammed			  	   7. Removed time from SubscriberContributionEndDate
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_insured]
@@ -82,7 +82,14 @@ BEGIN
 				nullif(trim(InsuranceScoreCode2),'') InsuranceScoreCode2,
 				nullif(trim(InsuranceScoreCode3),'') InsuranceScoreCode3,
 				nullif(trim(InsuranceScoreCode4),'') InsuranceScoreCode4,
-				nullif(trim(SubscriberContributionEndDate),'') SubscriberContributionEndDate,
+				nullif(trim
+							(
+								case when SubscriberContributionEndDate is not null and len(trim(SubscriberContributionEndDate)) > 0 then
+									LEFT(SubscriberContributionEndDate, CHARINDEX(' ', SubscriberContributionEndDate + ' ') - 1)
+						else 
+							SubscriberContributionEndDate
+						end
+						),'') SubscriberContributionEndDate,
 				nullif(trim(IsCoInsured),'') IsCoInsured,
 				nullif(trim(Title),'') Title,
 				nullif(trim(NamedInsuredLimitsIndicator),'') NamedInsuredLimitsIndicator
