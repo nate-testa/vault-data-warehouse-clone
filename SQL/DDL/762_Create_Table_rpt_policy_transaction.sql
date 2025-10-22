@@ -33,3 +33,4 @@ CREATE TABLE edw_insights_ai.rpt_policy_transaction
     CONSTRAINT pk_rpt_policy_transaction PRIMARY KEY (policy_no,effective_dt,transaction_seq_no)
 )
 END
+--

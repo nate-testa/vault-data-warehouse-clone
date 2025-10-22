@@ -23,3 +23,4 @@ create table edw_insights_ai.rpt_daily_inforce_policy
     constraint pk_rpt_daily_policy_inforce primary key (actual_dt,policy_no)
 )
 end
+--
