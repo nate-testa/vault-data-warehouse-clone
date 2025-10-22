@@ -17,7 +17,9 @@ create table edw_insights_ai.rpt_daily_inforce_policy
     commission_amt decimal(15,2),
     net_premium_amt decimal(15,2),
     annual_premium_amt decimal(15,2),
+    create_ts datetime2(7),
+	update_ts datetime2(7),
+	etl_audit_sk int  
     constraint pk_rpt_daily_policy_inforce primary key (actual_dt,policy_no)
 )
 end
-
