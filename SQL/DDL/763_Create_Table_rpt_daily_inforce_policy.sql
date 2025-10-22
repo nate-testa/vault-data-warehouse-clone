@@ -1,8 +1,8 @@
 IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES 
                 WHERE TABLE_SCHEMA = 'edw_insights_ai' 
-                AND TABLE_NAME = 'rpt_daily_policy_inforce')
+                AND TABLE_NAME = 'rpt_daily_inforce_policy')
 begin
-create table rpt_daily_policy_inforce 
+create table edw_insights_ai.rpt_daily_inforce_policy 
 (
     actual_dt date,
     policy_no varchar(255),
@@ -20,3 +20,4 @@ create table rpt_daily_policy_inforce
     constraint pk_rpt_daily_policy_inforce primary key (actual_dt,policy_no)
 )
 end
+
