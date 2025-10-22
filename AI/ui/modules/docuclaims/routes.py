@@ -14,15 +14,23 @@ from modules.docuclaims.services import (
     query_document,
     check_file_processing_status,
     get_chat_history,
+    fetch_example_questions,
     PRIMARY_COLOR,
     API_BASE
 )
+from modules.docuclaims.config import ENABLE_MODEL_SELECTION, DEFAULT_MODEL, ENABLE_FOLLOWUP_QUESTIONS, ENABLE_SUGGESTION_QUESTIONS
 
 # Load environment variables (required for routes that may access env vars directly)
 load_dotenv()
 
 # Create Blueprint with template folder specification
-docuclaims_bp = Blueprint('docuclaims', __name__, template_folder='templates')
+docuclaims_bp = Blueprint(
+    'docuclaims',
+    __name__,
+    template_folder='templates',
+    static_folder='static',
+    static_url_path='/docuclaims/static'
+)
 
 # Initialize auth and session managers (same configuration as main app)
 session_manager = SessionManager()
@@ -45,21 +53,28 @@ def docuclaims():
     
     # Perform proactive session cleanup to prevent cookie overflow (inherited method)
     ui_session.cleanup_generic_session_storage()
+    
+    # Determine model selection based on configuration
+    if ENABLE_MODEL_SELECTION:
+        # Fetch model options from API
+        model_options = fetch_model_options()
         
-    # Fetch model options from API
-    model_options = fetch_model_options()
-    
-    # Log if no model options are available
-    if not model_options:
-        logger.error("No model options returned from API")
-    
-    # Only set a selected model if there are valid options and the current selection is invalid
-    current_model = ui_session.get_docuclaims_preference('selected_model')
-    if model_options and (not current_model or current_model not in model_options):
-        ui_session.set_docuclaims_preference('selected_model', model_options[0])
-    elif not model_options:
-        # If no options are available, clear any existing selection
-        ui_session.set_docuclaims_preference('selected_model', None)
+        # Log if no model options are available
+        if not model_options:
+            logger.error("No model options returned from API")
+        
+        # Only set a selected model if there are valid options and the current selection is invalid
+        current_model = ui_session.get_docuclaims_preference('selected_model')
+        if model_options and (not current_model or current_model not in model_options):
+            ui_session.set_docuclaims_preference('selected_model', model_options[0])
+        elif not model_options:
+            # If no options are available, clear any existing selection
+            ui_session.set_docuclaims_preference('selected_model', None)
+    else:
+        # Model selection is disabled, use default model
+        model_options = []
+        ui_session.set_docuclaims_preference('selected_model', DEFAULT_MODEL)
+        logger.info(f"Model selection disabled, using default model: {DEFAULT_MODEL}")
     
     # Get current user for template context
     user = session_manager.get_current_user()
@@ -72,12 +87,16 @@ def docuclaims():
         accent_color=PRIMARY_COLOR,  # Using fixed color
         model_options=model_options,
         selected_model=ui_session.get_docuclaims_preference('selected_model'),
+        enable_model_selection=ENABLE_MODEL_SELECTION,
+        enable_suggestion_questions=ENABLE_SUGGESTION_QUESTIONS,
+        enable_followup_questions=ENABLE_FOLLOWUP_QUESTIONS,
         rag_messages=ui_session.get_chat_messages(),
         file_uploaded=file_status['uploaded'],
         uploaded_filename=file_status['filenames'],
-        use_chat_history=ui_session.get_docuclaims_preference('use_chat_history', True),
+        use_chat_history=ui_session.get_docuclaims_preference('use_chat_history', False),
         debug=ui_session.get_generic_preference('debug', False),
-        user=user
+        user=user,
+        api_base=API_BASE
     )
 
 
@@ -96,6 +115,16 @@ def reset_everything():
     # Reset all DocuClaims session data
     ui_session.reset_all_docuclaims_data()
     return redirect(url_for('docuclaims.docuclaims'))
+
+
+@docuclaims_bp.route('/example_questions', methods=['GET'])
+def example_questions():
+    """
+    Return example questions from API backend.
+    Endpoint acts as a proxy using the service layer.
+    """
+    questions = fetch_example_questions()
+    return jsonify(questions)
 
 
 @docuclaims_bp.route('/upload_files', methods=['POST'])
@@ -129,6 +158,7 @@ def upload_files():
     
     # Process each file upload
     file_status = {}
+    file_errors = {}
     uploaded_filenames = []
     any_success = False
     
@@ -138,12 +168,17 @@ def upload_files():
             # Check file extension locally before sending to API
             extension = os.path.splitext(filename)[1].lower()
             if extension not in ['.pdf', '.txt', '.docx', '.doc']:
+                error_msg = f"File type '{extension}' not allowed. Only PDF, TXT, DOC, and DOCX are supported."
                 logger.warning(f"[{upload_id}] File type not allowed locally: {extension} for file {filename}")
                 file_status[filename] = "error"
+                file_errors[filename] = error_msg
                 continue
                 
-            status = handle_file_upload(file)
+            status, error_message = handle_file_upload(file)
             file_status[filename] = status
+            
+            if error_message:
+                file_errors[filename] = error_message
             
             if status == 'processed':
                 uploaded_filenames.append(filename)
@@ -156,7 +191,11 @@ def upload_files():
     else:
         logger.warning(f"[{upload_id}] No files were processed successfully. Status: {file_status}")
     
-    return jsonify({"file_status": file_status, "uploaded_files": uploaded_filenames})
+    return jsonify({
+        "file_status": file_status, 
+        "file_errors": file_errors,
+        "uploaded_files": uploaded_filenames
+    })
 
 
 @docuclaims_bp.route('/send_message', methods=['POST'])
@@ -191,16 +230,21 @@ def send_message():
     if not selected_model:
         selected_model = ui_session.get_docuclaims_preference('selected_model')
         
-        # Final fallback to first available model if no model in session
+        # If still no model, use config default or fetch from API
         if not selected_model:
-            selected_model = fetch_model_options()[0] if fetch_model_options() else "default"
-            logger.info(f"[{interaction_id}] No model in session or request, using first available: {selected_model}")
+            if ENABLE_MODEL_SELECTION:
+                model_opts = fetch_model_options()
+                selected_model = model_opts[0] if model_opts else DEFAULT_MODEL
+                logger.info(f"[{interaction_id}] No model in session or request, using first available: {selected_model}")
+            else:
+                selected_model = DEFAULT_MODEL
+                logger.info(f"[{interaction_id}] Model selection disabled, using default: {selected_model}")
     
     logger.info(f"[{interaction_id}] Using LLM model: {selected_model}")
     
     try:
         # Get chat history for context BEFORE adding the current message
-        use_history = ui_session.get_docuclaims_preference('use_chat_history', True)
+        use_history = ui_session.get_docuclaims_preference('use_chat_history', False)
         message_history = ui_session.get_chat_history_for_context() if use_history else []
         chat_context_length = len(message_history)
         logger.info(f"[{interaction_id}] Chat history context: {chat_context_length} previous messages")
@@ -328,3 +372,76 @@ def check_file_processed_endpoint(file_name):
     except Exception as e:
         logger.error(f"[{check_id}] Error checking file status for '{file_name}': {str(e)}", exc_info=True)
         return jsonify({"processed": False, "error": str(e)})
+
+
+@docuclaims_bp.route('/suggest_followup', methods=['POST'])
+@login_required
+@require_app_access('DocuClaims AI')
+def suggest_followup():
+    """
+    Generate follow-up questions based on conversation context.
+    Acts as a proxy to the API backend.
+    """
+    followup_id = f"followup_{int(time.time())}_{os.urandom(4).hex()}"
+    start_time = time.time()
+    
+    client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', 'unknown'))
+    if ',' in client_ip:
+        client_ip = client_ip.split(',')[0].strip()
+    
+    try:
+        data = request.get_json()
+        
+        if not data:
+            logger.error(f"[{followup_id}] No JSON data received from IP: {client_ip}")
+            return jsonify({"success": False, "followup_questions": []}), 400
+        
+        user_question = data.get('user_question', '')
+        ai_response = data.get('ai_response', '')
+        model = data.get('model', DEFAULT_MODEL)
+        
+        if not user_question or not ai_response:
+            logger.warning(f"[{followup_id}] Missing user_question or ai_response from IP: {client_ip}")
+            return jsonify({"success": False, "followup_questions": []}), 400
+        
+        logger.info(f"[{followup_id}] Follow-up request from IP {client_ip}, Model: {model}")
+        logger.info(f"[{followup_id}] Question length: {len(user_question)}, Response length: {len(ai_response)}")
+        
+        api_url = f"{API_BASE}/docuclaims/suggest_followup"
+        
+        payload = {
+            "user_question": user_question,
+            "ai_response": ai_response,
+            "conversation_history": data.get('conversation_history', []),
+            "session_id": data.get('session_id', followup_id),
+            "model": model
+        }
+        
+        logger.info(f"[{followup_id}] Calling API: {api_url}")
+        logger.info(f"[{followup_id}] Payload: user_question={len(user_question)} chars, ai_response={len(ai_response)} chars, history={len(payload['conversation_history'])} msgs, model={model}")
+        
+        response = requests.post(
+            api_url,
+            json=payload,
+            timeout=15
+        )
+        
+        elapsed_time = time.time() - start_time
+        
+        if response.status_code == 200:
+            result = response.json()
+            questions_count = len(result.get('followup_questions', []))
+            logger.info(f"[{followup_id}] Success: {questions_count} questions generated in {elapsed_time:.2f}s")
+            return jsonify(result)
+        else:
+            logger.error(f"[{followup_id}] API error ({response.status_code}) after {elapsed_time:.2f}s: {response.text}")
+            return jsonify({"success": False, "followup_questions": []}), response.status_code
+            
+    except requests.Timeout:
+        elapsed_time = time.time() - start_time
+        logger.error(f"[{followup_id}] Timeout after {elapsed_time:.2f}s calling API")
+        return jsonify({"success": False, "followup_questions": []}), 504
+    except Exception as e:
+        elapsed_time = time.time() - start_time
+        logger.error(f"[{followup_id}] Error after {elapsed_time:.2f}s: {str(e)}", exc_info=True)
+        return jsonify({"success": False, "followup_questions": []}), 500

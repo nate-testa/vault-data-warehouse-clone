@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 import os
 from dotenv import load_dotenv
 from utils.logging import logger
+from utils.session_config import configure_server_side_sessions, is_server_side_sessions_available
 
 # Import auth components
 from auth.sso_auth import SSOAuth
@@ -11,8 +12,9 @@ from auth.models import User
 from auth.decorators import login_required, require_app_access
 from auth.access_control import AccessControlService
 
-# Import DocuClaims blueprint
+# Import module blueprints
 from modules.docuclaims.routes import docuclaims_bp
+from modules.insights.routes import insights_bp
 
 # Load environment variables
 load_dotenv()
@@ -30,6 +32,12 @@ else:
     logger.info("[APP_INIT] Using fixed secret key for session persistence across restarts")
 
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB max upload size
+
+# Configure server-side sessions to prevent cookie overflow
+if is_server_side_sessions_available():
+    configure_server_side_sessions(app)
+else:
+    logger.warning("[APP_INIT] Flask-Session not available, using cookie-based sessions (may cause overflow)")
 
 # Log session configuration
 logger.info("[APP_INIT] Flask secret key configured for secure sessions")
@@ -53,6 +61,9 @@ logger.info("[APP_INIT] SSO authentication components and access control service
 # Register blueprints
 app.register_blueprint(docuclaims_bp)
 logger.info("[APP_INIT] DocuClaims blueprint registered")
+
+app.register_blueprint(insights_bp)
+logger.info("[APP_INIT] Insights blueprint registered")
 
 # No theme customization
 
@@ -102,30 +113,14 @@ def applications():
             'icon': 'fa-file-contract',
             'url': url_for('docuclaims.docuclaims'),
             'status': 'active'
-        },
-        # {
-        #     'id': 'vaultanalyst',
-        #     'name': 'Vault Analyst',
-        #     'description': 'Advanced data analysis and intelligence platform',
-        #     'icon': 'fa-chart-pie',
-        #     'url': url_for('vaultanalyst'),
-        #     'status': 'coming_soon'
-        # },
-        {
-            'id': 'doculegal',
-            'name': 'DocuLegal AI',
-            'description': 'Legal document analysis and compliance checking',
-            'icon': 'fa-balance-scale',
-            'url': '#',
-            'status': 'coming_soon'
-        },
-        {
-            'id': 'docufinance',
-            'name': 'DocuFinance AI',
-            'description': 'Financial document processing and analysis',
+        }
+        ,{
+            'id': 'insights',
+            'name': 'Insights AI',
+            'description': 'AI-powered analytics and actionable insights',
             'icon': 'fa-chart-line',
-            'url': '#',
-            'status': 'coming_soon'
+            'url': url_for('insights.insights'),
+            'status': 'active'
         }
     ]
     

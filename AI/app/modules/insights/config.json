@@ -1,0 +1,176 @@
+{
+  "module_info": {
+    "name": "insights",
+    "version": "1.0.0",
+    "description": "Insights AI - Semantic View Analytics Module"
+  },
+  "snowflake": {
+    "warehouse": "VAULT_AI_INSIGHTS_WH",
+    "database": "VAULT_AI_UAT",
+    "schema": "INSIGHTS", 
+    "stage": "SEMANTIC_VIEWS"
+  },
+
+  "semantic_view_domains": {
+    "policy": {
+      "name": "Policy", 
+      "description": "Insurance policy data and lifecycle analysis",
+      "models": [
+        {
+          "path": "VAULT_AI_UAT.INSIGHTS.SV_DAILY_INFORCE_POLICY",
+          "display_name": "Daily In-Force Policies",
+          "description": "Daily tracking of active insurance policies",
+          "is_default": false
+        },
+        {
+          "path": "VAULT_AI_UAT.INSIGHTS.SV_POLICY_TRANSACTIONS",
+          "display_name": "Policy Transactions",
+          "description": "Transaction-level policy processing and financial data",
+          "is_default": false
+        }
+      ],
+      "example_questions": [
+            "Which are top 5 brokers by inforce premium and break it down by company and product",
+            "Which are top 5 states by inforce premium and break it down by company and product",
+            "Give me latest inforce premium and policies by product and company"
+      ]
+    },
+    "policy_inforce": {
+      "name": "Policy Inforce",
+      "description": "Insurance policy in-force tracking and analysis",
+      "models": [
+        {
+          "path": "VAULT_AI_UAT.INSIGHTS.SV_DAILY_INFORCE_POLICY",
+          "display_name": "Daily In-Force Policies",
+          "description": "Daily tracking of active insurance policies",
+          "is_default": false
+        }
+      ],
+      "example_questions": [
+            "Which are top 5 brokers by inforce premium and break it down by company and product",
+            "Which are top 5 states by inforce premium and break it down by company and product",
+            "Give me latest inforce premium and policies by product and company"
+      ]
+    },
+    "policy_transactions": {
+      "name": "Policy Transactions",
+      "description": "Transaction-level policy processing and financial data",
+      "models": [
+        {
+          "path": "VAULT_AI_UAT.INSIGHTS.SV_POLICY_TRANSACTIONS",
+          "display_name": "Policy Transactions",
+          "description": "Transaction-level policy processing and financial data",
+          "is_default": false
+        }
+      ],
+      "example_questions": [
+            "Number of cancellations happened during last week.  Break it down by company, product and state",
+            "Number of endorsements processed during last week",
+            "New business written in last week.  Break it down by company, product and state",
+            "Top 5 brokers by new/renewal premium in last week"
+      ]
+    }
+  },
+  "domain_examples": {
+    "policy": {
+      "use_cases": [
+        "Insurance policy lifecycle analysis",
+        "Policy in-force tracking",
+        "Premium analysis and trending",
+        "Policy renewal pattern analysis",
+        "Risk assessment and underwriting insights"
+      ],
+      "example_questions": [
+        "What is the total daily in-force policy count?",
+        "Show me policy renewals by month",
+        "What are the premium trends over the last year?",
+        "Which policies are approaching renewal?",
+        "What is the average policy value by state?"
+      ],
+      "supported_analyses": [
+        "Lifecycle tracking",
+        "Renewal analysis",
+        "Premium trending",
+        "Geographic distribution",
+        "Risk profiling"
+      ]
+    },
+    "claims": {
+      "use_cases": [
+        "Claims processing efficiency analysis",
+        "Fraud detection and prevention",
+        "Claims cost analysis",
+        "Settlement pattern analysis",
+        "Claims adjuster performance tracking"
+      ],
+      "example_questions": [
+        "What is the average claim processing time?",
+        "Show me claims by severity and type",
+        "Which claims require immediate attention?",
+        "What are the top claim categories by cost?",
+        "How many claims were settled this month?"
+      ],
+      "supported_analyses": [
+        "Processing efficiency",
+        "Cost analysis",
+        "Fraud detection",
+        "Settlement patterns",
+        "Performance metrics"
+      ]
+    },
+    "others": {
+      "use_cases": [
+        "General business intelligence",
+        "Cross-domain analytics",
+        "Performance monitoring",
+        "Operational metrics tracking",
+        "Financial reporting"
+      ],
+      "example_questions": [
+        "What are our key business metrics?",
+        "Show me transaction volumes by month",
+        "What are the operational performance indicators?",
+        "How is business performance trending?",
+        "What are the financial highlights this quarter?"
+      ],
+      "supported_analyses": [
+        "Business intelligence",
+        "Performance monitoring",
+        "Financial analysis",
+        "Operational metrics",
+        "Trend analysis"
+      ]
+    }
+  },
+  "api_config": {
+    "max_history_length": 10,
+    "max_history_tokens": 32000,
+    "enable_sql_execution": true,
+    "enable_feedback": true,
+    "api_timeout_ms": 50000,
+    "conversation_id_prefix": "insights_conv_"
+  },
+  "domain_config": {
+    "policy": {
+      "default_model": "VAULT_AI_UAT.INSIGHTS.SV_POLICY_LIFECYCLE", 
+      "access_level": "public",
+      "max_query_complexity": "high",
+      "supported_operations": ["SELECT", "WITH", "SHOW", "DESCRIBE"],
+      "enable_advanced_analytics": true
+    },
+    "claims": {
+      "default_model": "VAULT_AI_UAT.INSIGHTS.SV_CLAIMS_ANALYSIS",
+      "access_level": "restricted",
+      "max_query_complexity": "medium",
+      "supported_operations": ["SELECT", "WITH", "SHOW"],
+      "enable_advanced_analytics": false
+    },
+    "others": {
+      "default_model": "VAULT_AI_UAT.INSIGHTS.SV_DAILY_INFORCE_POLICY",
+      "access_level": "public", 
+      "max_query_complexity": "medium",
+      "supported_operations": ["SELECT", "SHOW"],
+      "enable_advanced_analytics": false
+    }
+  }
+}

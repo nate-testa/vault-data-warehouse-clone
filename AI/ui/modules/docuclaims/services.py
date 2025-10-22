@@ -39,7 +39,12 @@ def fetch_model_options():
         return []
 
 def handle_file_upload(file):
-    """Upload a file to the FastAPI backend and check its processing status."""
+    """Upload a file to the FastAPI backend and check its processing status.
+    
+    Returns:
+        tuple: (status, error_message) where status is 'processed', 'processing', 'error', or 'timeout'
+               and error_message is None for success or a string describing the error
+    """
     try:
         # Upload file to API
         files = {"file": (file.filename, file.read(), file.content_type)}
@@ -51,22 +56,26 @@ def handle_file_upload(file):
             try:
                 error_detail = response.json().get("detail", "Unknown error")
                 logger.error(f"API returned error for file '{file.filename}': {response.status_code} - {error_detail}")
+                return ("error", error_detail)
             except Exception:
-                logger.error(f"API returned error for file '{file.filename}': {response.status_code} - {response.text}")
-            return "error"
+                error_text = response.text or f"HTTP {response.status_code}"
+                logger.error(f"API returned error for file '{file.filename}': {response.status_code} - {error_text}")
+                return ("error", error_text)
             
         response.raise_for_status()
         logger.info(f"File '{file.filename}' uploaded to API.")
         
         # Check processing status
         processing_status = check_file_processing_status(file.filename)
-        return processing_status
+        return (processing_status, None)
     except requests.Timeout:
+        error_msg = "Upload timeout - file too large or network issue"
         logger.error(f"Timeout while uploading file '{file.filename}'")
-        return "timeout"
+        return ("timeout", error_msg)
     except Exception as e:
-        logger.error(f"Error uploading file '{file.filename}': {str(e)}", exc_info=True)
-        return "error"
+        error_msg = str(e)
+        logger.error(f"Error uploading file '{file.filename}': {error_msg}", exc_info=True)
+        return ("error", error_msg)
 
 def check_file_processing_status(file_name, timeout=300, interval=10):
     """Poll `/docuclaims/check_file_processed` until the file is done or the timeout is reached."""
@@ -171,3 +180,34 @@ def query_document(question, message_history=None, model=None):
 def get_chat_history(slide_window=5):
     """Get the recent chat history for context."""
     return docuclaims_session.get_chat_history_for_context(slide_window)
+
+def fetch_example_questions():
+    """Fetch example questions from FastAPI backend.
+    
+    Returns:
+        list[str]: List of example questions, or empty list if error occurs
+    """
+    try:
+        api_url = f"{API_BASE}/docuclaims/example_questions"
+        logger.info(f"Fetching example questions from API: {api_url}")
+        
+        response = requests.get(api_url, timeout=5)
+        response.raise_for_status()
+        
+        questions = response.json()
+        logger.info(f"Successfully retrieved {len(questions)} example questions from API")
+        
+        if not questions:
+            logger.warning("API returned empty list of example questions")
+        
+        return questions
+        
+    except requests.Timeout:
+        logger.error("Timeout fetching example questions from API")
+        return []
+    except requests.RequestException as e:
+        logger.error(f"Request error fetching example questions: {str(e)}")
+        return []
+    except Exception as e:
+        logger.error(f"Error fetching example questions: {str(e)}", exc_info=True)
+        return []
