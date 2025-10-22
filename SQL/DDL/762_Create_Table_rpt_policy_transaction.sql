@@ -27,6 +27,10 @@ CREATE TABLE edw_insights_ai.rpt_policy_transaction
     net_premium_amt DECIMAL(15, 2),
     annual_premium_amt DECIMAL(15, 2),
     tax_fee_surcharge_amt DECIMAL(15, 2),
+    create_ts datetime2(7),
+	update_ts datetime2(7),
+	etl_audit_sk int  
     CONSTRAINT pk_rpt_policy_transaction PRIMARY KEY (policy_no,effective_dt,transaction_seq_no)
 )
 END
+--
