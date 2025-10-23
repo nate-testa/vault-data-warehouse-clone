@@ -7,21 +7,21 @@ from edw_core.tdaily_inforce_policy inf
         inner join edw_core.tcustomer cust on cust.customer_id = pol.customer_id
         inner join edw_core.tdate td on inf.inforce_dt_sk = td.date_sk and actual_dt = DATEADD(day, -1, cast(getdaTE() as date))
 where ((
-			isnull(pol.insured_nm,'''') NOT LIKE ''%test%'' COLLATE SQL_Latin1_General_CP1_CI_AS AND
-			isnull(cust.last_nm,'''') NOT LIKE ''%test%'' COLLATE SQL_Latin1_General_CP1_CI_AS AND
-			isnull(cust.first_nm,'''') NOT LIKE ''%test%'' COLLATE SQL_Latin1_General_CP1_CI_AS AND
-			isnull(cust.customer_nm,'''') NOT LIKE ''%test%'' COLLATE SQL_Latin1_General_CP1_CI_AS
+			isnull(pol.insured_nm,'''') LIKE ''%test%'' COLLATE SQL_Latin1_General_CP1_CI_AS OR
+			isnull(cust.last_nm,'''')  LIKE ''%test%'' COLLATE SQL_Latin1_General_CP1_CI_AS OR
+			isnull(cust.first_nm,'''')  LIKE ''%test%'' COLLATE SQL_Latin1_General_CP1_CI_AS OR
+			isnull(cust.customer_nm,'''')  LIKE ''%test%'' COLLATE SQL_Latin1_General_CP1_CI_AS
 		)
-		OR (
-			isnull(pol.insured_nm,'''') LIKE ''%Richard Tester%'' OR
-			isnull(pol.insured_nm,'''') LIKE ''%Potestio%'' OR
-			isnull(pol.insured_nm,'''') LIKE ''%Testaverde%'' OR 
-			isnull(cust.last_nm,'''') LIKE ''%Potestio%'' OR
-			isnull(cust.last_nm,'''') LIKE ''%Testaverde%'' OR
-			isnull(cust.first_nm,'''') + '' '' + isnull(cust.last_nm,'''') LIKE ''%Richard Tester%'' OR 
-			isnull(cust.customer_nm,'''') LIKE ''%Richard Tester%'' OR
-			isnull(cust.customer_nm,'''') LIKE ''%Potestio%'' OR
-			isnull(cust.customer_nm,'''') LIKE ''%Testaverde%''
+		AND (
+			isnull(pol.insured_nm,'''') NOT LIKE ''%Richard Tester%'' AND
+			isnull(pol.insured_nm,'''') NOT LIKE ''%Potestio%'' AND
+			isnull(pol.insured_nm,'''') NOT LIKE ''%Testaverde%'' AND 
+			isnull(cust.last_nm,'''') NOT LIKE ''%Potestio%'' AND
+			isnull(cust.last_nm,'''') NOT LIKE ''%Testaverde%'' AND
+			isnull(cust.first_nm,'''') + '' '' + isnull(cust.last_nm,'''') NOT LIKE ''%Richard Tester%'' AND 
+			isnull(cust.customer_nm,'''') NOT LIKE ''%Richard Tester%'' AND
+			isnull(cust.customer_nm,'''') NOT LIKE ''%Potestio%'' AND
+			isnull(cust.customer_nm,'''') NOT LIKE ''%Testaverde%''
 		))'  AS source_sql ,
        'select  0' AS target_sql ,
        'Y' AS active_in ,
