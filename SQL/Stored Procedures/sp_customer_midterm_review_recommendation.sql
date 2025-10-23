@@ -1,13 +1,14 @@
--- =================================================================================================
+-- ================================================================================================================================
 -- Author:      Architha Gudimalla
 -- Description: This procedures loads customer recommendation feed
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author                      |   Change Description
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
 -- 06/16/23     Architha Gudimalla          1. Created this procedure  
 -- 09/11/25     Sandeep Gundreddy           2. Added renewal_quote_review_start_dt filter
 -- 09/22/25		Yunus Mohammed				3. Added wildfire protection and backup generator customer recommendation feed
--- =================================================================================================
+-- 10/22/25		Architha Gudimalla			4. Removed code for primary_home_discount_pc
+-- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
 @in_start_dt DATE = null
@@ -510,8 +511,7 @@ and a.PrimaryInsuredId=b.id
                 product_nm,
                 existing_product_in,
                 existing_policy_no,
-                occupancy_type,
-                primary_home_discount_pc, 
+                occupancy_type, 
                 rms_recommendation,
                 wildfire_protection_recommendation, 
                 backup_generator_recommendation, 
@@ -531,7 +531,6 @@ and a.PrimaryInsuredId=b.id
                      else 'No'
                 end existing_product_in,
                 isnull(cf.policy_no,'') existing_policy_no, cf.occupancy_type,
-                null as primary_home_discount_pc, --case when cf.occupancy_type <> 'Primary' then cast(pcc.primary_home_discount_pc as varchar) end
                 case when cf.water_leak_detection_system = 'No' and pos.product_cd in ('ho','co') then 'Install water shutoff system service' end rms_recommendation,
 				
 				case when exists(select 1 from edw_temp.zip_codes z where z.zip_code = cf.risk_address_zip_cd)
@@ -602,27 +601,8 @@ and a.PrimaryInsuredId=b.id
                                 where product_nm = 'Marine Boat & Yacht'
                                 and renewal_year =  datepart(yyyy, getdate())
                               ) marine on marine.customer_id = cust.customer_id
-                     -- and case when curr_inf.product_cd = pr.product_cd then curr_inf.policy_no else '1' end =
-                     --     case when curr_inf.product_cd = pr.product_cd then cf.policy_no else '1' end
-        --left join edw_core.tproduct_companion_credit pcc on pcc.product_cd = pr.product_cd and pcc.state_cd = cust.mailing_address_state_cd and pcc.uw_company_cd = cust.uw_company_cd
         where pr.product_category_nm = 'PersonalLines'  
-        order by 1,5,6 ;		 
- 
-        --update primary home discount recommention if available in companion credit table
-        update a
-        set a.primary_home_discount_pc = pcc.primary_home_discount_pc,
-            a.product_recommendation =  case when pcc.primary_home_discount_pc is null
-                                        then 'Primary Home Discount not available'
-                                        else a.product_recommendation
-                                        end
-        from edw_integration.customer_midterm_review_recommendation  a
-        inner join edw_core.tproduct pr on a.product_nm = pr.product_nm
-        left join  (select state_cd, product_cd, max(primary_home_discount_pc) as primary_home_discount_pc
-					from edw_core.tproduct_companion_credit
-                    group by state_cd, product_cd --added on 09262025
-					) pcc on a.mailing_address_state_cd = pcc.state_cd and pr.product_cd = pcc.product_cd --and a.uw_company_cd = pcc.uw_company_cd 
-        where product_recommendation = 'Add as primary for additional discount'
-        and renewal_year =  datepart(yyyy, getdate());
+        order by 1,5,6 ; 
  
         --- take out product recommendation of a DNR in the last year
         update a

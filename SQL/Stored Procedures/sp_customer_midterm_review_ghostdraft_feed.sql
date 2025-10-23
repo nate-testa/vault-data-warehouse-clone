@@ -700,7 +700,7 @@ BEGIN
 						from edw_integration.customer_midterm_review_ghostdraft_feed cmrh
 						inner join edw_integration.customer_midterm_review_policy_detail cmrp on cmrh.policy_no = cmrp.policy_no
 						WHERE cmrh.customer_id = cmr.customer_id
-							and cmrh. product_nm = 'Homeowners'
+							and cmrh. product_nm in ('Condo','Homeowners')
 							and cmrh.existing_product_in = 'Yes'
 						order by cmrp.total_insured_value_amt
 					--) as a
