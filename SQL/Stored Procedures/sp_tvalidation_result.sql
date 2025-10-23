@@ -10,11 +10,13 @@
 -- 07/29/24		Architha Gudimalla				4. Updated the code to work when target sql is not select 0 but a defualt count
 -- 08/13/24		Architha Gudimalla				5. Updated var_actual_dt to use getdate-1 instead of getdate
 -- 05/08/25		Yunus Mohammed				 6. AD937 Updated to use frequency column and made changes for monthly frequency
+-- 10/23/25		Yunus Mohammed				 7. AD11384 Passed validation_sql_desc  to execute proc to for specific validation
 -- ========================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tvalidation_result]
 @in_process_dt DATE = null,
-@in_frequency VARCHAR(255)='Daily'
+@in_frequency VARCHAR(255)='Daily',
+@validation_sql_desc varchar(255)= null
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -40,13 +42,26 @@ BEGIN
 			SET @in_process_dt = GETDATE()
 		END
 
-		DECLARE c1_rec CURSOR
-		FOR  
-		select	validation_sql_sk,source_sql,target_sql,frequency_desc
-		from	edw_core.tvalidation_sql 
-		WHERE	active_in='Y'
-		and frequency_desc = @in_frequency
-		order by 1;  
+		IF(@validation_sql_desc IS NULL) 
+		BEGIN
+					DECLARE c1_rec CURSOR
+					FOR  
+					select	validation_sql_sk,source_sql,target_sql,frequency_desc
+					from	edw_core.tvalidation_sql 
+					WHERE	active_in='Y'
+					and frequency_desc = @in_frequency
+					order by 1  
+		END
+		ELSE
+		BEGIN
+					DECLARE c1_rec CURSOR
+					FOR  
+					select	validation_sql_sk,source_sql,target_sql,frequency_desc
+					from	edw_core.tvalidation_sql 
+					WHERE	active_in='Y'
+					and validation_sql_desc = @validation_sql_desc
+					order by 1  
+		END
 
 		DECLARE @validation_sql_sk int 
 		DECLARE @source_ct int 
