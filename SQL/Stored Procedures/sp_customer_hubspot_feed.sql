@@ -33,7 +33,7 @@
 -- 09/10/25		Archtha Gudimalla			25. AD10960 - Added customer email id fix
 -- 09/30/25		Dinesh Bobbili				26. AD10938 - Added new columns
 -- 10/16/25		Dinesh Bobbili				27. AD11382 - Added logic to Include David Tester policies
--- 10/23/25		Dinesh Bobbili				27. AD11462 - Added insured_nm and uw_company_nm 
+-- 10/23/25		Dinesh Bobbili				28. AD11462 - Added insured_nm and uw_company_nm 
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
