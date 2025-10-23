@@ -1,0 +1,19 @@
+{
+	"name": "Delete_23202025_fvp_ControlDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_UAT",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Delete_23202025_fvp_20251023"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edw_stage",
+			"table": "ControlLoadTable"
+		}
+	}
+}
