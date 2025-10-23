@@ -169,7 +169,7 @@ BEGIN
 			pol.expiration_dt,
 			pol.policy_inforce_in,
 			isnull(pol.insured_nm,'') as insured_nm,
-			br.company_nm as uw_company_nm
+			pol.uw_company_nm as uw_company_nm
 		INTO edw_temp.customer_hubspot_feed_temp1
 		FROM edw_core.tpolicy pol		
 		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
