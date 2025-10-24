@@ -1,0 +1,54 @@
+IF NOT EXISTS (
+SELECT 1
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA='edw_stage'
+AND TABLE_NAME = 'Account'
+AND COLUMN_NAME = 'NewBusinessWorkStatus'
+) 
+BEGIN 
+    ALTER TABLE edw_stage.Account ADD NewBusinessWorkStatus NVARCHAR(100) NULL 
+END 	
+
+IF NOT EXISTS (
+SELECT 1
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA='edw_stage'
+AND TABLE_NAME = 'Account'
+AND COLUMN_NAME = 'IsBrokerBindEligible'
+) 
+BEGIN 
+    ALTER TABLE edw_stage.Account ADD IsBrokerBindEligible BIT NULL
+END
+
+IF NOT EXISTS (
+SELECT 1
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA='edw_stage'
+AND TABLE_NAME = 'Account'
+AND COLUMN_NAME = 'IsBrokerOfferEligibile'
+) 
+BEGIN 
+    ALTER TABLE edw_stage.Account ADD IsBrokerOfferEligibile BIT NULL
+END
+
+IF NOT EXISTS (
+SELECT 1
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA='edw_stage'
+AND TABLE_NAME = 'Account'
+AND COLUMN_NAME = 'IsOfferTriggeredByBroker'
+) 
+BEGIN 
+    ALTER TABLE edw_stage.Account ADD IsOfferTriggeredByBroker BIT NULL
+END
+
+IF NOT EXISTS (
+SELECT 1
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA='edw_stage'
+AND TABLE_NAME = 'Account'
+AND COLUMN_NAME = 'IsQuickQuoteDisabled'
+) 
+BEGIN 
+    ALTER TABLE edw_stage.Account ADD IsQuickQuoteDisabled BIT NULL
+END
