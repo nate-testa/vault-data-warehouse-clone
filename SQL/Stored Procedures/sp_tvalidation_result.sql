@@ -27,7 +27,7 @@ BEGIN
 		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
-		DECLARE @rows_affected INT
+		DECLARE @rows_affected INT = 0
 		DECLARE @process_nm VARCHAR(255)=OBJECT_NAME(@@PROCID)
 		DECLARE @current_date DATETIME=GETDATE() 
 		DECLARE @parameter_desc VARCHAR(255)  
@@ -103,15 +103,15 @@ BEGIN
 						replace(@source_sql,'@source_ct=',''), replace(@target_sql,'@target_ct=',''),
 						@out1, @out2
 				
-				set  @i = @@IDENTITY; 
+				set  @i = SCOPE_IDENTITY(); 
 				
 				UPDATE edw_core.tvalidation_result
 				SET process_run_end_ts	= getdate(), 
 					status_desc			= CASE WHEN source_value = target_value THEN 'Success' ELSE 'Failure' END
-				WHERE @@IDENTITY = @i  
+				WHERE validation_result_sk = @i;
 				; 
 		       
-				SET @rows_affected=@@ROWCOUNT;
+				SET @rows_affected= @rows_affected + @@ROWCOUNT;
 		
 				--Update control table
 				SET @new_last_source_extract_ts = COALESCE(dateadd(day,-1,cast(getdate() as date)),@last_source_extract_ts);  
