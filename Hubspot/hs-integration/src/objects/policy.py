@@ -121,7 +121,8 @@ class Policy:
                 'policy_inforce_in': record['policy_inforce_in'],
                 'per_claim_policy_limit_amt': record['per_claim_policy_limit_amt'],
                 'per_claim_attachment_amt': record['per_claim_attachment_amt'],
-                'per_claim_retention_amt': record['per_claim_retention_amt']
+                'per_claim_retention_amt': record['per_claim_retention_amt'],
+                'uw_company_nm': record['uw_company_nm']
                 
                 # 'create_ts': record['create_ts'],
                 # 'update_ts': record['update_ts'],
