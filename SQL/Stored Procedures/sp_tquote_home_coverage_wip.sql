@@ -24,6 +24,7 @@
 -- 06/10/22				Dinesh Bobbili						18. AD-9707 Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
 -- 10/03/25				Alberto Almario					 19. AD-11140 Added new column premium_analytics_grade
 -- 10/05/25				Yunus Mohammed				20. AD-11240 Resolved runtime error (premium_analytics_grade not found)
+-- 10/24/25				Dinesh Bobbili					21. AD-11450 Added new column underwriter_required_inspection
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
 
@@ -306,6 +307,7 @@ BEGIN
 				tthc.WildfireSuppressionSystem as wildfire_suppression_system,
 				tthc.WildfireDecksBalconiesPorchesStairs as wildfire_decks_balconies_porches_stairs,
 				tthc.premium_analytics_grade,
+				tthc.UnderwriterRequiredInspection as underwriter_required_inspection,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk				
 			FROM
 				edw_temp.tquote_home_coverage_wip_temp2 AS tthc
@@ -357,7 +359,7 @@ BEGIN
 				current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
 				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
 				wildfire_suppression_system,wildfire_decks_balconies_porches_stairs,
-				premium_analytics_grade,
+				premium_analytics_grade,underwriter_required_inspection,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
@@ -404,7 +406,7 @@ BEGIN
 				newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
 				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
 				wildfire_suppression_system,wildfire_decks_balconies_porches_stairs,
-				premium_analytics_grade,
+				premium_analytics_grade,underwriter_required_inspection,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			WHEN MATCHED THEN UPDATE
@@ -564,6 +566,7 @@ BEGIN
 			[target].wildfire_suppression_system = [source].wildfire_suppression_system,
 			[target].wildfire_decks_balconies_porches_stairs = [source].wildfire_decks_balconies_porches_stairs,
 			[target].premium_analytics_grade = [source].premium_analytics_grade,
+			[target].underwriter_required_inspection = [source].underwriter_required_inspection,
 			[target].update_ts = GETDATE();
 
 			SET @rows_affected=@@ROWCOUNT; 
