@@ -42,26 +42,16 @@ BEGIN
 			SET @in_process_dt = GETDATE()
 		END
 
-		IF(@validation_sql_desc IS NULL) 
-		BEGIN
-					DECLARE c1_rec CURSOR
-					FOR  
-					select	validation_sql_sk,source_sql,target_sql,frequency_desc
-					from	edw_core.tvalidation_sql 
-					WHERE	active_in='Y'
-					and frequency_desc = @in_frequency
-					order by 1  
-		END
-		ELSE
-		BEGIN
-					DECLARE c1_rec CURSOR
-					FOR  
-					select	validation_sql_sk,source_sql,target_sql,frequency_desc
-					from	edw_core.tvalidation_sql 
-					WHERE	active_in='Y'
-					and validation_sql_desc = @validation_sql_desc
-					order by 1  
-		END
+		DECLARE c1_rec CURSOR
+		FOR
+		select	validation_sql_sk,source_sql,target_sql,frequency_desc
+		from
+			edw_core.tvalidation_sql
+		WHERE 
+			active_in='Y'
+			and frequency_desc = case when @validation_sql_desc is null then @in_frequency else frequency_desc end
+			and validation_sql_desc = case when @validation_sql_desc is null then validation_sql_desc else @validation_sql_desc end
+		order by 1	
 
 		DECLARE @validation_sql_sk int 
 		DECLARE @source_ct int 
