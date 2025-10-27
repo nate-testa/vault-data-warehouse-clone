@@ -9,7 +9,8 @@
 -- 22/04/2025           Alberto Almario				2. Change PolicyNumber to Number from Account table
 -- 06/10/2024			Yunus Mohammed		  3. Updated DENSE_RANK function
 -- 06/10/2025			Yunus Mohammed		  5. AD-9768 Updated DENSE_RANK function, added effective date in joins
--- 07/02/2025			Dinesh Bobbili		  6. AD-10129 Added condition on effective_dt
+-- 07/02/2025			Dinesh Bobbili		  		 6. AD-10129 Added condition on effective_dt
+-- 10/27/2025			Yunus Mohammed		 7. Updated DENSE_RANK function
 -- ===================================================================================================================== 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tcommercial_quote_history]
 
@@ -44,7 +45,7 @@ BEGIN
 			CAST(ins.ReferenceCode AS VARCHAR(255)) as customer_id,
 			ins.id as MasterInsuredId,
 			acct.Number as transaction_seq_no,
-			DENSE_RANK()OVER(PARTITION BY acc.Number, acc.EffectiveDate ORDER BY acct.UpdatedDate DESC, acct.Number DESC) AS rnk, 
+			DENSE_RANK()OVER(PARTITION BY acc.Number, acct.EffectiveDate ORDER BY acct.UpdatedDate DESC, acct.Number DESC) AS rnk, 
 			case when acct.TransactionEffectiveDate is null then acct.EffectiveDate else acct.TransactionEffectiveDate end TransactionEffectiveDate,
 			acct.CancellationReason, 
 			acct.CreatedDate,
