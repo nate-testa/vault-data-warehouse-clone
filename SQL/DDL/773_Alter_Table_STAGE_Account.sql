@@ -6,5 +6,5 @@ AND TABLE_NAME = 'Account'
 AND COLUMN_NAME = 'BoundByBroker'
 ) 
 BEGIN 
-    ALTER TABLE edw_stage.Account ALTER COLUMN BoundByBroker BIT NOT NULL 
+    ALTER TABLE edw_stage.Account ALTER COLUMN BoundByBroker BIT NULL 
 END
