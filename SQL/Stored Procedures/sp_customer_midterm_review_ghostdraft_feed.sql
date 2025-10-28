@@ -663,8 +663,7 @@ BEGIN
 			customer_phone_no,no_of_years_with_vault,no_of_years_with_vault_tx,
 			mailing_address_line1,mailing_address_line2,mailing_address_unit_no,mailing_address_city_nm,
 			mailing_address_state_cd,mailing_address_zip_cd,producer_id,producer_nm,producer_phone_no,producer_email
-			from
-			edw_integration.customer_midterm_review_ghostdraft_feed
+			from edw_integration.customer_midterm_review_ghostdraft_feed
 			where 
 				--customer_id in ('1234500211', '1234502277', '1234548368') and
 				existing_product_in  = 'Yes'
