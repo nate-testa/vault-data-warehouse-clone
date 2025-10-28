@@ -662,7 +662,7 @@ BEGIN
 			customer_id,customer_nm,customer_email,
 			customer_phone_no,no_of_years_with_vault,no_of_years_with_vault_tx,
 			mailing_address_line1,mailing_address_line2,mailing_address_unit_no,mailing_address_city_nm,
-			mailing_address_state_cd,mailing_address_zip_cd,broker_id,broker_nm,broker_phone_no,broker_email
+			mailing_address_state_cd,mailing_address_zip_cd,producer_id,producer_nm,producer_phone_no,producer_email
 			from
 			edw_integration.customer_midterm_review_ghostdraft_feed
 			where 
