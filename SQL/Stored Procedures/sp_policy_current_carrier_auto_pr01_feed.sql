@@ -5,6 +5,8 @@
 -- Change date 				|Author						        |	Change Description
 -- ---------------------------------------------------------------------------------------------------
 -- 08/11/25					Yunus Mohammed			1. Created this procedure
+-- 10/28/25					Yunus Mohammed			2. Made changes for CoverageType4, CoverageType9, IndividualLimit11, OccurrenceLimit11
+--																							, IndividualLimit15 and OccurrenceLimit15
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_current_carrier_auto_pr01_feed]
 AS
@@ -79,7 +81,7 @@ BEGIN
 	null as OccurrenceLimit3,
 	'' as CSL3,
 
-	case when TRIM(ISNULL(apc.combined_single_limit_amt,''))!='' then 'CSL' end as CoverageType4,
+	case when TRIM(ISNULL(apc.combined_single_limit_amt,''))!='' then 'CS' end as CoverageType4,
 	null as IndividualLimit4,
 	null as OccurrenceLimit4,
 	case when TRIM(ISNULL(apc.combined_single_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage') then 
@@ -146,7 +148,7 @@ BEGIN
 	end AS OccurrenceLimit8,
 	NULL AS CSL8,
 
-	case when TRIM(ISNULL(apc.pip_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage') then 'PR' end AS CoverageType9,
+	case when TRIM(ISNULL(apc.pip_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage') then 'PI' end AS CoverageType9,
 	NULL AS IndividualLimit9,
 	case when TRIM(ISNULL(apc.pip_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage') then 
 	REPLACE(REPLACE(apc.pip_limit_amt,',',''),'$','')
@@ -184,14 +186,17 @@ BEGIN
 	CHARINDEX('/', apc.underinsured_motorist_limit_amt, charindex('/',apc.underinsured_motorist_limit_amt) + 1) > 0 then
 	'UM' end CoverageType11,
 	NULL AS IndividualLimit11,
-	REPLACE(REPLACE(
+	/*REPLACE(REPLACE(
 		case when 
 		TRIM(ISNULL(apc.underinsured_motorist_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage') and
 		CHARINDEX('/', apc.underinsured_motorist_limit_amt, charindex('/',apc.underinsured_motorist_limit_amt) + 1) > 0 then
 		LTRIM(RTRIM(SUBSTRING(apc.uninsured_motorist_limit_amt, CHARINDEX('/', apc.uninsured_motorist_limit_amt, charindex('/',apc.uninsured_motorist_limit_amt) + 1), LEN(apc.uninsured_motorist_limit_amt)))) 
 		END,
-		',',''),'$','')	as OccurrenceLimit11,
-	NULL AS CSL11,
+		',',''),'$','')	
+	*/
+	NULL AS OccurrenceLimit11,
+	REPLACE(REPLACE(case when TRIM(ISNULL(apc.combined_uninsured_motorist_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage') 
+	then combined_uninsured_motorist_limit_amt end,',',''),'$','') AS CSL11,
 	
 	case when
 		TRIM(ISNULL(apc.combined_um_bi_policy_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage') 
@@ -220,11 +225,12 @@ BEGIN
 	case when TRIM(ISNULL(apc.combined_underinsured_motorist_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage') then 'UN' end as CoverageType14,
 	NULL as IndividualLimit14,
 	NULL as OccurrenceLimit14,
-	REPLACE(REPLACE(case when TRIM(ISNULL(apc.combined_underinsured_motorist_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage') then combined_underinsured_motorist_limit_amt end,',',''),'$','')AS CSL14,
+	REPLACE(REPLACE(case when TRIM(ISNULL(apc.combined_underinsured_motorist_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage') then combined_underinsured_motorist_limit_amt end,',',''),'$','') AS CSL14,
 	
 	case when TRIM(ISNULL(apc.um_pd_policy_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage') then 'UP' end as CoverageType15,
-	REPLACE(REPLACE(case when TRIM(ISNULL(apc.um_pd_policy_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage') then um_pd_policy_limit_amt end,',',''),'$','') as IndividualLimit15,
-	NULL as OccurrenceLimit15,
+	NULL as IndividualLimit15,
+	REPLACE(REPLACE(case when TRIM(ISNULL(apc.um_pd_policy_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage')
+	then um_pd_policy_limit_amt end,',',''),'$','') as OccurrenceLimit15,
 	NULL AS CSL15,
 	'' as Reserved3,
 	'' as PropertyIdentifier,
