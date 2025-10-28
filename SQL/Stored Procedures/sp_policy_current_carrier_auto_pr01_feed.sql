@@ -5,8 +5,9 @@
 -- Change date 				|Author						        |	Change Description
 -- ---------------------------------------------------------------------------------------------------
 -- 08/11/25					Yunus Mohammed			1. Created this procedure
--- 10/28/25					Yunus Mohammed			2. Made changes for CoverageType4, CoverageType9, IndividualLimit11, OccurrenceLimit11
+-- 10/28/25					Yunus Mohammed			2. AD11515 Made changes for CoverageType4, CoverageType9, IndividualLimit11, OccurrenceLimit11
 --																							, IndividualLimit15 and OccurrenceLimit15
+-- 10/28/25					Yunus Mohammed			3.AD11528 Removed null vin no and not registered vehicles
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_current_carrier_auto_pr01_feed]
 AS
@@ -305,6 +306,9 @@ BEGIN
 	left join edw_core.tauto_policy_coverage apc on apc.policy_history_sk = np.policy_history_sk -- and avc.policy_history_sk = ph.policy_history_sk
 	where
 	avc.vehicle_deleted_in = 'No'
+	and av.vehicle_vin is not null
+	and avc.registration_status not  in ('Not Yet Registered')
+
 	and cast(np.create_ts as date) >@last_source_extract_ts
 	
 	insert into edw_integration.policy_current_carrier_auto_pr01_feed
