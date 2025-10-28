@@ -4,7 +4,8 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date |Author                      |   Change Description
 ---------------------------------------------------------------------------------------------------
--- 09/29/23     Architha Gudimalla          1. Created this procedure  
+-- 09/29/25     Architha Gudimalla          1. Created this procedure  
+-- 10/28/25     Architha Gudimalla          2. Changed broker to producer
 -- =================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
@@ -60,10 +61,10 @@ BEGIN
 					p.[mailing_address_city_nm],
 					p.[mailing_address_state_cd],
 					p.[mailing_address_zip_cd],
-					p.broker_id,
-					p.broker_nm,
-					p.broker_phone_no,
-					p.broker_email, 
+					p.producer_id, 			-- broker_id,
+					p.producer_nm, 			-- broker_nm,
+					p.producer_phone_no, 	-- broker_phone_no,
+					p.producer_email, 		-- broker_email, 
 					null risk_address_line1,
 					null risk_address_line2,
 					null risk_address_unit_no,
