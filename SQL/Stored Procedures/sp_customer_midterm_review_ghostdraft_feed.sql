@@ -4,7 +4,8 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date |Author                      |   Change Description
 ---------------------------------------------------------------------------------------------------
--- 09/29/23     Architha Gudimalla          1. Created this procedure  
+-- 09/29/25     Architha Gudimalla          1. Created this procedure  
+-- 10/28/25     Architha Gudimalla          2. Changed broker to producer
 -- =================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
@@ -60,10 +61,10 @@ BEGIN
 					p.[mailing_address_city_nm],
 					p.[mailing_address_state_cd],
 					p.[mailing_address_zip_cd],
-					p.broker_id,
-					p.broker_nm,
-					p.broker_phone_no,
-					p.broker_email, 
+					p.producer_id, 			-- broker_id,
+					p.producer_nm, 			-- broker_nm,
+					p.producer_phone_no, 	-- broker_phone_no,
+					p.producer_email, 		-- broker_email, 
 					null risk_address_line1,
 					null risk_address_line2,
 					null risk_address_unit_no,
@@ -161,10 +162,10 @@ BEGIN
 					p.[mailing_address_city_nm],
 					p.[mailing_address_state_cd],
 					p.[mailing_address_zip_cd],
-					p.broker_id,
-					p.broker_nm,
-					p.broker_phone_no,
-					p.broker_email,   
+					p.producer_id, 			-- broker_id,
+					p.producer_nm, 			-- broker_nm,
+					p.producer_phone_no, 	-- broker_phone_no,
+					p.producer_email,   	-- broker_email,
 					p.monoline_home_in,  
 					p.no_of_years_with_vault,
 					p.no_of_years_with_vault_tx,
@@ -189,10 +190,10 @@ BEGIN
 					p.[mailing_address_city_nm],
 					p.[mailing_address_state_cd],
 					p.[mailing_address_zip_cd],
-					p.broker_id,
-					p.broker_nm,
-					p.broker_phone_no,
-					p.broker_email, 
+					p.producer_id, 			-- broker_id,
+					p.producer_nm, 			-- broker_nm,
+					p.producer_phone_no, 	-- broker_phone_no,
+					p.producer_email,		-- broker_email,
 					p.risk_address_line1,
 					p.risk_address_line2,
 					p.risk_address_unit_no,
@@ -294,11 +295,11 @@ BEGIN
 			[mailing_address_unit_no],
 			[mailing_address_city_nm],
 			[mailing_address_state_cd],
-			[mailing_address_zip_cd],
-			broker_id,
-			broker_nm,
-			broker_phone_no,
-			broker_email, 
+			[mailing_address_zip_cd], 
+			producer_id, 			-- broker_id,
+			producer_nm, 			-- broker_nm,
+			producer_phone_no, 	-- broker_phone_no,
+			producer_email,		-- broker_email,
 			risk_address_line1,
 			risk_address_line2,
 			risk_address_unit_no,
@@ -382,10 +383,10 @@ BEGIN
 				[mailing_address_city_nm],
 				[mailing_address_state_cd],
 				[mailing_address_zip_cd],
-				broker_id,
-				broker_nm,
-				broker_phone_no,
-				broker_email, 
+				producer_id, 			-- broker_id,
+				producer_nm, 			-- broker_nm,
+				producer_phone_no, 	-- broker_phone_no,
+				producer_email,		-- broker_email,
 				risk_address_line1,
 				risk_address_line2,
 				risk_address_unit_no,
@@ -661,9 +662,8 @@ BEGIN
 			customer_id,customer_nm,customer_email,
 			customer_phone_no,no_of_years_with_vault,no_of_years_with_vault_tx,
 			mailing_address_line1,mailing_address_line2,mailing_address_unit_no,mailing_address_city_nm,
-			mailing_address_state_cd,mailing_address_zip_cd,broker_id,broker_nm,broker_phone_no,broker_email
-			from
-			edw_integration.customer_midterm_review_ghostdraft_feed
+			mailing_address_state_cd,mailing_address_zip_cd,producer_id,producer_nm,producer_phone_no,producer_email
+			from edw_integration.customer_midterm_review_ghostdraft_feed
 			where 
 				--customer_id in ('1234500211', '1234502277', '1234548368') and
 				existing_product_in  = 'Yes'
@@ -674,9 +674,9 @@ BEGIN
 			SELECT
 			cmr.customer_nm as insured_full_name,
 			cmr.no_of_years_with_vault_tx as insured_message,
-			cmr.broker_nm as broker_name,
-			cmr.broker_phone_no as broker_phone,
-			cmr.broker_email,
+			cmr.producer_nm as producer_name,
+			cmr.producer_phone_no as producer_phone,
+			cmr.producer_email,
 			cmr.mailing_address_line1,
 			cmr.mailing_address_line2,
 			cmr.mailing_address_unit_no,

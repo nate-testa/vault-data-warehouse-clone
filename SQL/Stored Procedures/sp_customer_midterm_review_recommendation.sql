@@ -4,10 +4,11 @@
 -----------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author                      |   Change Description
 -----------------------------------------------------------------------------------------------------------------------------------
--- 06/16/23     Architha Gudimalla          1. Created this procedure  
+-- 06/16/25     Architha Gudimalla          1. Created this procedure  
 -- 09/11/25     Sandeep Gundreddy           2. Added renewal_quote_review_start_dt filter
 -- 09/22/25		Yunus Mohammed				3. Added wildfire protection and backup generator customer recommendation feed
 -- 10/22/25		Architha Gudimalla			4. Removed code for primary_home_discount_pc
+-- 10/28/25		Architha Gudimalla			5. Added producer to policy detail table
 -- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
@@ -228,6 +229,7 @@ and a.PrimaryInsuredId=b.id
                 cust.mailing_address_line1, cust.mailing_address_line2, cust.mailing_address_unit_no,
                 cust.mailing_address_city_nm, cust.mailing_address_state_cd, cust.mailing_address_zip_cd,
                 pol.broker_id, br.dba_nm, br.broker_nm, br.broker_phone_no, br.broker_email,
+                p.producer_id, CONCAT(p.First_nm, ' ', p.Last_nm) producer_nm, p.phone_no producer_phone_no, p.email producer_email, 
                 bdm.team_member_nm bdm_nm, bdm_usr.phone_no bdm_phone_no, bdm_usr.email bdm_email,  
                 un.team_member_nm new_business_underwriter_nm, un_usr.phone_no new_business_underwriter_phone_no, un_usr.email new_business_underwriter_email,
                 run.team_member_nm renewal_underwriter_nm, run_usr.phone_no renewal_underwriter_phone_no, run_usr.email renewal_underwriter_email,
@@ -275,6 +277,7 @@ and a.PrimaryInsuredId=b.id
         from edw_temp.customer_midterm_review_recommendation_temp_0_inforce inf
         inner join edw_core.tpolicy pol on pol.policy_sk = inf.policy_sk
         inner join edw_core.tpolicy_history ph on ph.policy_no = pol.policy_no and ph.latest_transaction_in = 'Y'
+        left join edw_core.tproducer p on p.producer_sk = ph.producer_sk
         inner join edw_core.tproduct pr on pr.product_cd = pol.product_cd
         inner join edw_core.tcustomer cust on cust.customer_id = pol.customer_id 
 		inner join edw_temp.customer_midterm_review_recommendation_temp_1_cust a on a.customer_id = cust.customer_id
@@ -373,6 +376,7 @@ and a.PrimaryInsuredId=b.id
 			broker_nm,
 			broker_phone_no,
 			broker_email,
+            producer_id, producer_nm, producer_phone_no, producer_email, 
 			bdm_nm,
 			bdm_phone_no,
 			bdm_email,
@@ -439,6 +443,7 @@ and a.PrimaryInsuredId=b.id
 				broker_nm,
 				broker_phone_no,
 				broker_email,
+                producer_id, producer_nm, producer_phone_no, producer_email, 
 				bdm_nm,
 				bdm_phone_no,
 				bdm_email,
