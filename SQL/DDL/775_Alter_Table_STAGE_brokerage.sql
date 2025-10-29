@@ -17,5 +17,7 @@ AND TABLE_NAME = 'Brokerage'
 AND COLUMN_NAME = 'IsAffiliation'
 ) 
 BEGIN 
-    ALTER TABLE edw_stage.Brokerage ADD IsAffiliation BIT NOT NULL 
+    ALTER TABLE edw_stage.Brokerage ADD IsAffiliation BIT  NULL 
 END
+
+
