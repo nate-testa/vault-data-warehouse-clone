@@ -6,7 +6,7 @@
   },
   "snowflake": {
     "warehouse": "VAULT_AI_DOCUCLAIMS_WH",
-      "database": "VAULT_AI",
+    "database": "${SNOWFLAKE_DATABASE}",
     "schema": "DOCUCLAIMS",
     "stage": "DOCS",
     "chunks_table": "DOC_CHUNKS_VECTORS"
@@ -17,7 +17,7 @@
       "claude-4-sonnet",
       "openai-gpt-5"
     ],
-      "cortex_search_service": "VAULT_AI.DOCUCLAIMS.DOC_CHUNK_VECTORS_SEARCH_SERVICE"
+    "cortex_search_service": "${SNOWFLAKE_DATABASE}.DOCUCLAIMS.DOC_CHUNK_VECTORS_SEARCH_SERVICE"
   },
   "search_config": {
     "num_chunks": 200,

@@ -14,52 +14,13 @@ body {
     border-bottom: 1px solid #e5e7eb;
 }
 
-/* Breadcrumb navigation */
-.breadcrumb-nav {
-    background: none;
-    padding: 0;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-}
+/* Breadcrumb navigation styles now centralized in /ui_v3.1/static/css/style.css */
 
-.breadcrumb-nav .breadcrumb-item {
-    color: #64748b;
-}
-
-.breadcrumb-nav .breadcrumb-item a {
-    color: #667eea;
-    text-decoration: none;
-    transition: color 0.2s ease;
-}
-
-.breadcrumb-nav .breadcrumb-item a:hover {
-    color: #4f46e5;
-    text-decoration: underline;
-}
-
-.breadcrumb-nav .breadcrumb-item.active {
-    color: #1e293b;
-    font-weight: 500;
-}
-
-.sidebar {
-    background: #ffffff;
-    border-right: 1px solid #e5e7eb;
-    border-radius: 0;
-    padding: 1.5rem;
-    padding-top: 3rem;
-    height: 100vh;
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 260px;
-    overflow-y: auto;
-    z-index: 100;
-}
+/* Sidebar styles now handled by modern-sidebar.css */
 
 .main-content {
     padding: 0;
-    margin-left: 260px;
+    margin-left: 280px;
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -627,7 +588,7 @@ input:disabled {
     animation: fadeIn 0.3s ease-out forwards;
 }
 
-/* Suggestion questions styling - similar to Insights pills */
+/* Suggestion questions styling - Uses centralized .suggestion-pill from style.css */
 #suggestionQuestionsContainer {
     max-width: 700px;
 }
@@ -639,35 +600,7 @@ input:disabled {
     letter-spacing: 0.05em;
 }
 
-.suggestion-question-btn {
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    transition: all 0.2s ease;
-    border: 1px solid #d1d5db;
-    background: #f3f4f6;
-    color: #374151;
-    display: inline-block;
-    text-align: left;
-}
-
-.suggestion-question-btn:hover {
-    background: #e5e7eb;
-    color: #1f2937;
-    border-color: #9ca3af;
-    transform: translateY(-1px);
-}
-
-.suggestion-question-btn:active {
-    transform: translateY(0);
-}
-
-.suggestion-question-btn i {
-    font-size: 12px;
-    color: #6b7280;
-}
-
-/* Follow-Up Questions Component - Suggestion Pills Style */
+/* Follow-Up Questions Component - Module-specific styles only */
 .followup-container {
     margin: 8px 0 16px 0;
     padding: 0;
@@ -694,35 +627,11 @@ input:disabled {
     font-size: 15px;
 }
 
+/* Follow-up questions use centralized .suggestion-pills and .suggestion-pill from style.css */
 .followup-questions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-}
-
-.followup-question-card {
-    background: #f3f4f6;
-    border: 1px solid #d1d5db;
-    color: #374151;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: inline-block;
-    text-decoration: none;
-    text-align: left;
-}
-
-.followup-question-card:hover {
-    background: #e5e7eb;
-    color: #1f2937;
-    border-color: #9ca3af;
-    text-decoration: none;
-}
-
-.followup-question-card:active {
-    transform: translateY(1px);
 }
 
 .followup-loading {
@@ -758,5 +667,41 @@ input:disabled {
     to {
         transform: rotate(360deg);
     }
+}
+
+/* ===== Utility Classes ===== */
+
+/* Hidden elements - used for templates and hidden inputs */
+.hidden {
+    display: none !important;
+}
+
+/* Modal backdrop styling */
+.modal-backdrop-dark {
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+}
+
+/* Upload modal container */
+.upload-modal-container {
+    z-index: 9999;
+    pointer-events: none;
+}
+
+/* Upload modal content wrapper */
+.upload-modal-content {
+    pointer-events: auto;
+    max-width: 800px;
+}
+
+/* Welcome icon styling */
+.welcome-icon {
+    font-size: 3rem;
+    opacity: 0.7;
+}
+
+/* Chat bottom spacer */
+.chat-bottom-spacer {
+    height: 150px;
 }
 

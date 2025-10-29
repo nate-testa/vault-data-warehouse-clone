@@ -5,8 +5,8 @@ Simple configuration loader for the Insights AI module.
 """
 
 import json
-import os
 from pathlib import Path
+from app.config import get_config
 
 
 def load_insights_config():
@@ -15,7 +15,13 @@ def load_insights_config():
     config_path = current_dir / "config.json"
     
     with open(config_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+        config_text = f.read()
+    
+    # Replace ${SNOWFLAKE_DATABASE} with actual value from config.py
+    snowflake_db = get_config('SNOWFLAKE_DATABASE')
+    config_text = config_text.replace('${SNOWFLAKE_DATABASE}', str(snowflake_db))
+    
+    return json.loads(config_text)
 
 
 def get_insights_config():
@@ -84,29 +90,26 @@ def get_domain_specific_config(domain):
 
 def get_complete_snowflake_config():
     """
-    Get complete Snowflake configuration combining module config with environment variables.
+    Get complete Snowflake configuration combining module config with Azure Key Vault.
     
     This function merges the module-specific Snowflake settings (warehouse, database, schema, stage)
-    with the connection settings from environment variables (account, user, password, role).
+    with the connection settings from Azure Key Vault (account, user, password, role).
     
     Returns:
         dict: Complete Snowflake configuration ready for connections
     """
-    import os
-    from dotenv import load_dotenv
-    
-    load_dotenv()
+    from app.utils.azure_keyvault import keyvault
     
     # Get module-specific config
     module_sf_config = get_snowflake_config()
     
-    # Get connection config from environment variables  
+    # Get connection config from Azure Key Vault (NO .env fallback)
     complete_config = {
-        # Connection settings from environment
-        "account": os.getenv('SF_ACCOUNT'),
-        "user": os.getenv('SF_USER'), 
-        "password": os.getenv('SF_PAT_TOKEN'),
-        "role": os.getenv('SF_ROLE'),
+        # Connection settings from Azure Key Vault
+        "account": keyvault.get_secret('vaultai-snowflake-account'),
+        "user": keyvault.get_secret('vaultai-snowflake-user'), 
+        "password": keyvault.get_secret('vaultai-snowflake-pat-token'),
+        "role": keyvault.get_secret('vaultai-snowflake-role'),
         
         # Module-specific settings from config.json
         "warehouse": module_sf_config.get("warehouse"),

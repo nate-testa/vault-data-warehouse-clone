@@ -9,6 +9,7 @@ import time
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.utils.logging import logger
+from app.config import get_config
 
 
 def configure_cors_middleware(app):
@@ -18,9 +19,8 @@ def configure_cors_middleware(app):
     Args:
         app: FastAPI application instance
     """
-    # Get allowed origins from environment or use defaults
-    default_origins = "http://localhost:5001,http://127.0.0.1:5001,http://10.72.64.196:5012,http://127.0.0.1:8080,https://ai.vaultinsurance.com,https://ai.uat.vaultinsurance.com"
-    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", default_origins).split(",")
+    # Get allowed origins from environment configuration
+    CORS_ORIGINS = get_config("CORS_ORIGINS").split(",")
     logger.info(f"Configuring CORS with allowed origins: {CORS_ORIGINS}")
 
     app.add_middleware(

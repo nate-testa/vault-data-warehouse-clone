@@ -84,20 +84,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Function to show the upload modal
         function showUploadModal() {
-            // First remove the !important style via stylesheet or inline style
-            $('#modalBackdrop, #uploadContainer').removeClass('d-none').css({
-                'cssText': 'display: block !important'
-            });
+            // Remove hidden class to show modal
+            $('#modalBackdrop, #uploadContainer').removeClass('hidden');
             // Enable polling when modal is shown
             window.shouldPollFileStatus = true;
         }
         
         // Function to hide the upload modal
         function hideUploadModal() {
-            // Hide with !important to ensure it stays hidden
-            $('#modalBackdrop, #uploadContainer').css({
-                'cssText': 'display: none !important'
-            });
+            // Add hidden class to hide modal
+            $('#modalBackdrop, #uploadContainer').addClass('hidden');
             // Stop polling when modal is hidden
             window.shouldPollFileStatus = false;
         }
@@ -669,7 +665,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (questions && questions.length > 0) {
                     questions.forEach(function(question) {
                         const button = $('<button>')
-                            .addClass('btn suggestion-question-btn')
+                            .addClass('suggestion-pill')
                             .text(question)
                             .on('click', function() {
                                 $('#messageInput').val(question);
@@ -786,7 +782,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log(`[FOLLOWUP] Processing question ${index + 1}:`, question);
             if (question && question.trim()) {
                 const questionCard = $('<button>')
-                    .addClass('followup-question-card')
+                    .addClass('suggestion-pill')
                     .attr('type', 'button')
                     .text(question.trim())
                     .on('click', function() {

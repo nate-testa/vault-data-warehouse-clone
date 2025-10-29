@@ -18,202 +18,147 @@ from app.modules.insights.config_loader import get_all_domains, get_all_semantic
 
 def get_dynamic_domain_example():
     """Get dynamic allowed domains for schema examples"""
-    try:
-        return get_all_domains()
-    except Exception:
-        # Fallback in case config is not available
-        return ["policy", "claims", "others"]
+    domains = get_all_domains()
+    if not domains:
+        raise ValueError("No domains available in configuration")
+    return domains
 
 
 def get_dynamic_semantic_view_example():
     """Get dynamic semantic view example for schema examples"""
-    try:
-        views = get_all_semantic_views()
-        return views[0] if views else "VAULT_AI_UAT.INSIGHTS.SV_DAILY_INFORCE_POLICY"
-    except Exception:
-        # Fallback in case config is not available
-        return "VAULT_AI_UAT.INSIGHTS.SV_DAILY_INFORCE_POLICY"
+    views = get_all_semantic_views()
+    if not views:
+        raise ValueError("No semantic views available in configuration")
+    return views[0]
 
 
 def get_dynamic_domain_models_example():
     """Get dynamic models example for a domain"""
-    try:
-        from app.modules.insights.config_loader import get_models_for_domain, get_semantic_view_domains
-        domains = get_all_domains()
-        if domains:
-            first_domain = domains[0]
-            models = get_models_for_domain(first_domain)
-            domain_data = get_semantic_view_domains().get(first_domain, {})
-            return {
-                "key": first_domain,
-                "name": domain_data.get("name", first_domain.title()),
-                "description": domain_data.get("description", f"{first_domain.title()} domain analysis"),
-                "model_count": len(models),
-                "models": models[:3]  # Limit to first 3 for example
-            }
-    except Exception:
-        pass
+    from app.modules.insights.config_loader import get_models_for_domain, get_semantic_view_domains
     
-    # Fallback
+    domains = get_all_domains()
+    if not domains:
+        raise ValueError("No domains available in configuration")
+    
+    first_domain = domains[0]
+    models = get_models_for_domain(first_domain)
+    domain_data = get_semantic_view_domains().get(first_domain, {})
+    
     return {
-        "key": "policy",
-        "name": "Policy Management",
-        "description": "Insurance policy data and lifecycle analysis",
-        "model_count": 2,
-        "models": [
-            "VAULT_AI_UAT.INSIGHTS.SV_POLICY_LIFECYCLE",
-            "VAULT_AI_UAT.INSIGHTS.SV_DAILY_INFORCE_POLICY"
-        ]
+        "key": first_domain,
+        "name": domain_data.get("name", first_domain.title()),
+        "description": domain_data.get("description", f"{first_domain.title()} domain analysis"),
+        "model_count": len(models),
+        "models": models[:3]  # Limit to first 3 for example
     }
 
 
 def get_dynamic_domain_response_example():
     """Get dynamic example for domain response with all domains"""
-    try:
-        from app.modules.insights.config_loader import get_models_for_domain, get_semantic_view_domains
-        domains = get_all_domains()
-        domain_configs = get_semantic_view_domains()
-        
-        domain_examples = []
-        total_models = 0
-        
-        for domain_key in domains:
-            models = get_models_for_domain(domain_key)
-            domain_data = domain_configs.get(domain_key, {})
-            
-            domain_examples.append({
-                "key": domain_key,
-                "name": domain_data.get("name", domain_key.title()),
-                "description": domain_data.get("description", f"{domain_key.title()} domain analysis"),
-                "model_count": len(models),
-                "models": models[:2]  # Limit to first 2 for example
-            })
-            total_models += len(models)
-        
-        return {
-            "domains": domain_examples,
-            "total_domains": len(domains),
-            "total_models": total_models
-        }
-    except Exception:
-        pass
+    from app.modules.insights.config_loader import get_models_for_domain, get_semantic_view_domains
     
-    # Fallback
+    domains = get_all_domains()
+    if not domains:
+        raise ValueError("No domains available in configuration")
+    
+    domain_configs = get_semantic_view_domains()
+    domain_examples = []
+    total_models = 0
+    
+    for domain_key in domains:
+        models = get_models_for_domain(domain_key)
+        domain_data = domain_configs.get(domain_key, {})
+        
+        domain_examples.append({
+            "key": domain_key,
+            "name": domain_data.get("name", domain_key.title()),
+            "description": domain_data.get("description", f"{domain_key.title()} domain analysis"),
+            "model_count": len(models),
+            "models": models[:2]  # Limit to first 2 for example
+        })
+        total_models += len(models)
+    
     return {
-        "domains": [
-            {
-                "key": "policy",
-                "name": "Policy Management", 
-                "description": "Insurance policy data and lifecycle analysis",
-                "model_count": 2,
-                "models": ["VAULT_AI_UAT.INSIGHTS.SV_POLICY_LIFECYCLE"]
-            }
-        ],
-        "total_domains": 3,
-        "total_models": 6
+        "domains": domain_examples,
+        "total_domains": len(domains),
+        "total_models": total_models
     }
 
 
 def get_dynamic_semantic_model_example():
     """Get dynamic example for semantic model info"""
-    try:
-        from app.modules.insights.config_loader import get_semantic_view_metadata, get_models_for_domain
-        domains = get_all_domains()
-        if domains:
-            first_domain = domains[0]
-            models = get_models_for_domain(first_domain)
-            if models:
-                metadata = get_semantic_view_metadata(first_domain, models[0])
-                if metadata:
-                    return {
-                        "path": metadata["path"],
-                        "name": metadata["display_name"],
-                        "description": metadata.get("description", "Semantic view analysis"),
-                        "is_default": metadata.get("is_default", False)
-                    }
-    except Exception:
-        pass
+    from app.modules.insights.config_loader import get_semantic_view_metadata, get_models_for_domain
     
-    # Fallback
+    domains = get_all_domains()
+    if not domains:
+        raise ValueError("No domains available in configuration")
+    
+    first_domain = domains[0]
+    models = get_models_for_domain(first_domain)
+    
+    if not models:
+        raise ValueError(f"No models available for domain: {first_domain}")
+    
+    metadata = get_semantic_view_metadata(first_domain, models[0])
+    if not metadata:
+        raise ValueError(f"No metadata available for model: {models[0]}")
+    
     return {
-        "path": "VAULT_AI_UAT.INSIGHTS.SV_POLICY_LIFECYCLE",
-        "name": "Policy Lifecycle Analysis",
-        "description": "Comprehensive policy lifecycle and status tracking",
-        "is_default": True
+        "path": metadata["path"],
+        "name": metadata["display_name"],
+        "description": metadata.get("description", "Semantic view analysis"),
+        "is_default": metadata.get("is_default", False)
     }
 
 
 def get_dynamic_semantic_model_response_example():
     """Get dynamic example for complete semantic model response"""
-    try:
-        from app.modules.insights.config_loader import (
-            get_semantic_view_metadata, 
-            get_models_for_domain, 
-            get_semantic_view_domains
-        )
-        domains = get_all_domains()
-        if domains:
-            first_domain = domains[0]
-            domain_configs = get_semantic_view_domains()
-            domain_data = domain_configs.get(first_domain, {})
-            models = get_models_for_domain(first_domain)
-            
-            model_examples = []
-            default_model = None
-            
-            for model_path in models[:2]:  # Limit to 2 for example
-                metadata = get_semantic_view_metadata(first_domain, model_path)
-                if metadata:
-                    model_info = {
-                        "path": metadata["path"],
-                        "name": metadata["display_name"],
-                        "description": metadata.get("description", ""),
-                        "is_default": metadata.get("is_default", False)
-                    }
-                    model_examples.append(model_info)
-                    
-                    if metadata.get("is_default", False):
-                        default_model = model_info
-            
-            return {
-                "domain": first_domain,
-                "domain_info": {
-                    "key": first_domain,
-                    "name": domain_data.get("name", first_domain.title()),
-                    "description": domain_data.get("description", f"{first_domain.title()} domain analysis"),
-                    "model_count": len(models),
-                    "models": []
-                },
-                "models": model_examples,
-                "default_model": default_model
-            }
-    except Exception:
-        pass
+    from app.modules.insights.config_loader import (
+        get_semantic_view_metadata, 
+        get_models_for_domain, 
+        get_semantic_view_domains
+    )
     
-    # Fallback
+    domains = get_all_domains()
+    if not domains:
+        raise ValueError("No domains available in configuration")
+    
+    first_domain = domains[0]
+    domain_configs = get_semantic_view_domains()
+    domain_data = domain_configs.get(first_domain, {})
+    models = get_models_for_domain(first_domain)
+    
+    if not models:
+        raise ValueError(f"No models available for domain: {first_domain}")
+    
+    model_examples = []
+    default_model = None
+    
+    for model_path in models[:2]:  # Limit to 2 for example
+        metadata = get_semantic_view_metadata(first_domain, model_path)
+        if metadata:
+            model_info = {
+                "path": metadata["path"],
+                "name": metadata["display_name"],
+                "description": metadata.get("description", ""),
+                "is_default": metadata.get("is_default", False)
+            }
+            model_examples.append(model_info)
+            
+            if metadata.get("is_default", False):
+                default_model = model_info
+    
     return {
-        "domain": "policy",
+        "domain": first_domain,
         "domain_info": {
-            "key": "policy",
-            "name": "Policy Management",
-            "description": "Insurance policy data and lifecycle analysis",
-            "model_count": 2,
+            "key": first_domain,
+            "name": domain_data.get("name", first_domain.title()),
+            "description": domain_data.get("description", f"{first_domain.title()} domain analysis"),
+            "model_count": len(models),
             "models": []
         },
-        "models": [
-            {
-                "path": "VAULT_AI_UAT.INSIGHTS.SV_POLICY_LIFECYCLE",
-                "name": "Policy Lifecycle Analysis",
-                "description": "Comprehensive policy lifecycle tracking",
-                "is_default": True
-            }
-        ],
-        "default_model": {
-            "path": "VAULT_AI_UAT.INSIGHTS.SV_POLICY_LIFECYCLE",
-            "name": "Policy Lifecycle Analysis",
-            "description": "Comprehensive policy lifecycle tracking",
-            "is_default": True
-        }
+        "models": model_examples,
+        "default_model": default_model
     }
 
 

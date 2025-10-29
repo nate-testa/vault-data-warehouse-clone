@@ -5,22 +5,28 @@
 {% block extra_css %}
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/modern-sidebar.css') }}">
 <link rel="stylesheet" href="{{ url_for('docuclaims.static', filename='css/docuclaims.css') }}">
 {% endblock %}
 
 {% block sidebar %}
 <div class="sidebar">
-    <div class="mb-5">
+    <div class="mb-5 sidebar-header-container">
         <div class="text-center mb-4">
             <img src="https://d2j09jzq254cyj.cloudfront.net/vault-logo.png" width="160px" class="mb-3">
-            <h5 class="fw-semibold text-muted mb-0">DocuClaims AI</h5>
+            <h5 class="fw-bold mb-0 module-title-docuclaims">
+                <i class="fas fa-file-invoice me-2 module-icon-docuclaims"></i>DocuClaims AI
+            </h5>
         </div>
     </div>
     
     <!-- Model picker (only shown if enabled) -->
     {% if enable_model_selection %}
     <div class="mb-4">
-        <h6 class="text-uppercase text-muted fw-semibold mb-3" style="font-size: 0.8rem; letter-spacing: 0.05em;">AI Model</h6>
+        <h6 class="text-uppercase fw-semibold mb-3 sidebar-section-title">
+            <i class="fas fa-brain"></i>
+            AI Model
+        </h6>
         <select class="form-select form-select-sm" id="modelSelect">
             {% for model in model_options %}
             <option value="{{ model }}" {% if model == selected_model %}selected{% endif %}>{{ model }}</option>
@@ -29,8 +35,11 @@
     </div>
     {% else %}
     <!-- Model selection disabled, display current model - Hidden from UI -->
-    <div class="mb-4" style="display: none;">
-        <h6 class="text-uppercase text-muted fw-semibold mb-3" style="font-size: 0.8rem; letter-spacing: 0.05em;">AI Model</h6>
+    <div class="mb-4 hidden">
+        <h6 class="text-uppercase fw-semibold mb-3 sidebar-section-title">
+            <i class="fas fa-brain"></i>
+            AI Model
+        </h6>
         <div class="p-2 bg-light rounded text-center">
             <small class="text-muted fw-medium">{{ selected_model }}</small>
         </div>
@@ -39,7 +48,10 @@
     
     <!-- Settings -->
     <div class="mb-4">
-        <h6 class="text-uppercase text-muted fw-semibold mb-3" style="font-size: 0.8rem; letter-spacing: 0.05em;">Settings</h6>
+        <h6 class="text-uppercase fw-semibold mb-3 sidebar-section-title">
+            <i class="fas fa-sliders-h"></i>
+            Settings
+        </h6>
         <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" id="chatHistoryCheck" checked>
             <label class="form-check-label" for="chatHistoryCheck">
@@ -50,7 +62,10 @@
     
     <!-- Actions -->
     <div class="mb-4">
-        <h6 class="text-uppercase text-muted fw-semibold mb-3" style="font-size: 0.8rem; letter-spacing: 0.05em;">Actions</h6>
+        <h6 class="text-uppercase fw-semibold mb-3 sidebar-section-title">
+            <i class="fas fa-bolt"></i>
+            Quick Actions
+        </h6>
         <div class="d-grid gap-2">
             <button class="btn btn-outline-secondary btn-sm" id="clearChatBtn">
                 <i class="fas fa-eraser me-2"></i>Clear Conversation
@@ -83,11 +98,11 @@
 
 <!-- Hidden file status and file list containers -->
 <!-- Modal backdrop -->
-<div id="modalBackdrop" class="position-fixed top-0 start-0 end-0 bottom-0" style="background-color: rgba(0,0,0,0.5); z-index: 9998; display: none !important;"></div>
+<div id="modalBackdrop" class="position-fixed top-0 start-0 end-0 bottom-0 modal-backdrop-dark hidden"></div>
 
 <!-- Upload Modal -->
-<div id="uploadContainer" class="position-fixed top-0 start-0 end-0 bottom-0 d-flex align-items-center justify-content-center" style="z-index: 9999; display: none !important; pointer-events: none;">
-    <div class="container" style="pointer-events: auto; max-width: 800px;">
+<div id="uploadContainer" class="position-fixed top-0 start-0 end-0 bottom-0 d-flex align-items-center justify-content-center upload-modal-container hidden">
+    <div class="container upload-modal-content">
         <div class="upload-status-container bg-white p-4 rounded border shadow-lg">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="m-0 fw-semibold">Document Upload</h5>
@@ -114,7 +129,7 @@
     {% if not rag_messages %}
     <div class="text-center my-5 py-5" id="welcomeSection">
         <div class="mb-4">
-            <i class="fa-solid fa-robot text-primary" style="font-size: 3rem; opacity: 0.7;"></i>
+            <i class="fa-solid fa-robot text-primary welcome-icon"></i>
         </div>
         <p class="text-muted col-md-8 mx-auto mb-4">
             Upload your documents and ask me questions about them. I'll help you extract insights and information using AI.
@@ -184,7 +199,7 @@
     {% endfor %}
     
     <!-- Add padding at the bottom to prevent content from being hidden behind the input box -->
-    <div style="height: 150px;"></div>
+    <div class="chat-bottom-spacer"></div>
 </div>
 
 <!-- Chat Input -->
@@ -192,7 +207,7 @@
     <button class="btn btn-light attachment-btn me-2" id="attachmentBtn" title="Upload documents">
         <i class="fas fa-paperclip"></i>
     </button>
-    <input type="file" id="fileUpload" multiple accept=".pdf,.doc,.docx" style="display: none;">
+    <input type="file" id="fileUpload" multiple accept=".pdf,.doc,.docx" class="hidden">
     <input type="text" id="messageInput" placeholder="Ask a question about your documents..." class="form-control">
     <button class="btn btn-primary ms-2" id="sendBtn" disabled>
         <i class="fas fa-paper-plane"></i>

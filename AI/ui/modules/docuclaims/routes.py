@@ -3,7 +3,6 @@ import time
 import os
 import requests
 import urllib.parse
-from dotenv import load_dotenv
 from auth.decorators import login_required, require_app_access
 from auth.session_manager import SessionManager
 from modules.docuclaims.session_manager import DocuClaimsSessionManager
@@ -19,9 +18,6 @@ from modules.docuclaims.services import (
     API_BASE
 )
 from modules.docuclaims.config import ENABLE_MODEL_SELECTION, DEFAULT_MODEL, ENABLE_FOLLOWUP_QUESTIONS, ENABLE_SUGGESTION_QUESTIONS
-
-# Load environment variables (required for routes that may access env vars directly)
-load_dotenv()
 
 # Create Blueprint with template folder specification
 docuclaims_bp = Blueprint(

@@ -14,6 +14,7 @@ from .session_manager import session_manager
 from .user_service import user_service
 from .access_control import AccessControlService
 from utils.logging import logger
+from config import get_config
 
 
 def sso_enabled() -> bool:
@@ -23,7 +24,7 @@ def sso_enabled() -> bool:
     Returns:
         bool: True if SSO is enabled, False otherwise
     """
-    return os.getenv("ENABLE_SSO", "false").lower() == "true"
+    return get_config('ENABLE_SSO')
 
 
 def login_required(f: Optional[Callable] = None, *, 
@@ -409,7 +410,7 @@ def require_app_access(app_name: str,
     Decorator to require specific application access based on user groups.
     
     This decorator checks if the current user has access to a specific application
-    based on their Azure AD group memberships and the app_roles.json configuration.
+    based on their Azure AD group memberships and the APP_ROLES configuration from config.py.
     
     Args:
         app_name (str): Name of the application to check access for
