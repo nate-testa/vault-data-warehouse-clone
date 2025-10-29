@@ -306,8 +306,12 @@ BEGIN
 	left join edw_core.tauto_policy_coverage apc on apc.policy_history_sk = np.policy_history_sk -- and avc.policy_history_sk = ph.policy_history_sk
 	where
 	avc.vehicle_deleted_in = 'No'
-	and av.vehicle_vin is not null
-	and avc.registration_status not  in ('Not Yet Registered')
+	and 
+	not 
+	(
+		av.vehicle_vin is null
+		and registration_status!='Registered'
+	)
 
 	and cast(np.create_ts as date) >@last_source_extract_ts
 	
