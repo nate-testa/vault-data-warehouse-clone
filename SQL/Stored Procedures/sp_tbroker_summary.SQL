@@ -64,6 +64,7 @@ GO
 -- 10/02/25		Dinesh Bobbili					35. AD11217 - Added new columns
 -- 10/07/25		Dinesh Bobbili					36. AD11217 - Updated the logics for non_flat_cancelled_ct, non_flat_cancelled_ct,expiring_sixty_day_written_premium_amt
 -- 10/15/25		Dinesh Bobbili					37. AD11286 - Added date logic to run the process for 3 months
+-- 10/28/25		Dinesh Bobbili					38. AD11456 - Added new columns
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -557,7 +558,9 @@ BEGIN
 							sum(case when summ.month_sk between 	  	   @month_begin_dt_sk and 	  		 @month_end_dt_sk then summ.mtd_premium_amt else 0 end) 	  mtd_written_premium_amt, 
 							sum(case when summ.month_sk between     @month_begin_dt_sk and   @month_end_dt_sk then summ.mtd_net_premium_amt else 0 end)  mtd_written_net_premium_amt,
 							sum(case when summ.month_sk between     @month_begin_dt_sk and   @month_end_dt_sk then summ.earned_premium_amt else 0 end)  mtd_earned_premium_amt,
-							sum(case when summ.month_sk between     @month_begin_dt_sk and   @month_end_dt_sk then summ.earned_net_premium_amt else 0 end)  mtd_earned_net_premium_amt,    
+							sum(case when summ.month_sk between     @prior_year_month_begin_dt_sk and @prior_year_month_end_dt_sk then summ.earned_premium_amt   else 0 end)  prior_mtd_earned_premium_amt,
+							sum(case when summ.month_sk between     @month_begin_dt_sk and   @month_end_dt_sk then summ.earned_net_premium_amt else 0 end)  mtd_earned_net_premium_amt, 
+							sum(case when summ.month_sk between     @prior_year_month_begin_dt_sk and @prior_year_month_end_dt_sk then summ.earned_net_premium_amt else 0 end)  prior_mtd_earned_net_premium_amt,   
 							--
 							sum(case when summ.month_sk > @prior_year_month_end_dt_sk 		then summ.mtd_premium_amt else 0 end) one_year_written_premium_amt,   
 							sum(case when summ.month_sk > @prior_year_three_month_end_dt_sk then summ.mtd_premium_amt else 0 end) three_year_written_premium_amt,   
@@ -665,17 +668,47 @@ BEGIN
 				select  cs.broker_sk, cs.product_sk, cs.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco, 
 							--
+							sum(case when c.loss_dt between dateadd(mm,-1,@end_dt) and @end_dt then 1 else 0 end) mtd_claim_ct, 
+							sum(case when c.loss_dt between dateadd(mm,-1,dateadd(yy,-1,@end_dt)) and dateadd(yy,-1,@end_dt) then 1 else 0 end) prior_mtd_claim_ct, 
 							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt then 1 else 0 end) one_year_claim_ct, 
+							sum(case when c.loss_dt between dateadd(mm,-1,@end_dt) and @end_dt then [itd_total_incurred_amt] else 0 end) mtd_loss_incurred_amt,
+							sum(case when c.loss_dt between dateadd(mm,-1,dateadd(yy,-1,@end_dt)) and dateadd(yy,-1,@end_dt) then [itd_total_incurred_amt] else 0 end) prior_mtd_loss_incurred_amt,
 							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt then [itd_total_incurred_amt] else 0 end) one_year_loss_incurred_amt, 
+							sum(case when c.loss_dt between dateadd(mm,-1,@end_dt) and @end_dt 
+									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
+									 else 0 end
+							) mtd_loss_incurred_capped_amt, 
+							sum(case when c.loss_dt between dateadd(mm,-1,dateadd(yy,-1,@end_dt)) and dateadd(yy,-1,@end_dt)
+									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
+									 else 0 end
+							) prior_mtd_loss_incurred_capped_amt, 
 							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt 
 									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
 									 else 0 end
 							) one_year_loss_incurred_capped_amt, 
+							sum(case when c.loss_dt between dateadd(mm,-1,@end_dt) and @end_dt and c.catastrophe_sk is null then 1 else 0 end) mtd_non_cat_claim_ct, 
+							sum(case when c.loss_dt between dateadd(mm,-1,dateadd(yy,-1,@end_dt)) and dateadd(yy,-1,@end_dt) and c.catastrophe_sk is null then 1 else 0 end) prior_mtd_non_cat_claim_ct, 
 							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt and c.catastrophe_sk is null then 1 else 0 end) one_year_non_cat_claim_ct, 
+							sum(case when c.loss_dt between dateadd(mm,-1,@end_dt) and @end_dt and c.catastrophe_sk is null 
+									 then [itd_total_incurred_amt] 
+									 else 0 
+							end) mtd_non_cat_loss_incurred_amt,
+							sum(case when c.loss_dt between dateadd(mm,-1,dateadd(yy,-1,@end_dt)) and dateadd(yy,-1,@end_dt) and c.catastrophe_sk is null 
+									 then [itd_total_incurred_amt] 
+									 else 0 
+							end) prior_mtd_non_cat_loss_incurred_amt,  
 							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt and c.catastrophe_sk is null 
 									 then [itd_total_incurred_amt] 
 									 else 0 
 							end) one_year_non_cat_loss_incurred_amt, 
+							sum(case when c.loss_dt between dateadd(mm,-1,@end_dt) and @end_dt and c.catastrophe_sk is null
+									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
+									 else 0 end
+							) mtd_non_cat_loss_incurred_capped_amt, 
+							sum(case when c.loss_dt between dateadd(mm,-1,dateadd(yy,-1,@end_dt)) and dateadd(yy,-1,@end_dt) and c.catastrophe_sk is null
+									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
+									 else 0 end
+							) prior_mtd_non_cat_loss_incurred_capped_amt, 
 							sum(case when c.loss_dt between dateadd(yy,-1,@end_dt) and @end_dt and c.catastrophe_sk is null
 									 then (case when [itd_total_incurred_amt] > 500000 then 500000 else [itd_total_incurred_amt] end) 
 									 else 0 end
@@ -881,7 +914,9 @@ BEGIN
 						--
 						sum(isnull(ps.mtd_written_net_premium_amt,0)) mtd_written_net_premium_amt,
 						sum(isnull(ps.mtd_earned_premium_amt,0)) mtd_earned_premium_amt,
+						sum(isnull(ps.prior_mtd_earned_premium_amt,0)) prior_mtd_earned_premium_amt,
 						sum(isnull(ps.mtd_earned_net_premium_amt,0)) mtd_earned_net_premium_amt,
+						sum(isnull(ps.prior_mtd_earned_net_premium_amt,0)) prior_mtd_earned_net_premium_amt,
 						sum(isnull(ps.one_year_earned_net_premium_amt,0)) one_year_earned_net_premium_amt, 
 						sum(isnull(ps.three_year_earned_net_premium_amt,0)) three_year_earned_net_premium_amt, 
 						sum(isnull(ps.one_year_earned_exposure,0)) one_year_earned_exposure, 
@@ -896,12 +931,24 @@ BEGIN
 						sum(isnull(ps2.two_year_earned_net_premium_amt,0)) two_year_non_cat_earned_net_premium_amt, 
 						sum(isnull(ps2.five_year_earned_net_premium_amt,0)) five_year_non_cat_earned_net_premium_amt,  
 						--
-						sum(isnull(cs.one_year_claim_ct,0)) one_year_claim_ct, 
+						sum(isnull(cs.mtd_claim_ct,0)) mtd_claim_ct,
+						sum(isnull(cs.prior_mtd_claim_ct,0)) prior_mtd_claim_ct,
+						sum(isnull(cs.one_year_claim_ct,0)) one_year_claim_ct,
+						sum(isnull(cs.mtd_loss_incurred_amt,0)) mtd_loss_incurred_amt,
+						sum(isnull(cs.prior_mtd_loss_incurred_amt,0)) prior_mtd_loss_incurred_amt,
 						sum(isnull(cs.one_year_loss_incurred_amt,0)) one_year_loss_incurred_amt,
+						sum(isnull(cs.mtd_loss_incurred_capped_amt,0)) mtd_loss_incurred_capped_amt,
+						sum(isnull(cs.prior_mtd_loss_incurred_capped_amt,0)) prior_mtd_loss_incurred_capped_amt,
 						sum(isnull(cs.one_year_loss_incurred_capped_amt,0)) one_year_loss_incurred_capped_amt,
-						sum(isnull(cs.one_year_non_cat_claim_ct,0)) one_year_non_cat_claim_ct, 
+						sum(isnull(cs.mtd_non_cat_claim_ct,0)) mtd_non_cat_claim_ct,
+						sum(isnull(cs.prior_mtd_non_cat_claim_ct,0)) prior_mtd_non_cat_claim_ct,
+						sum(isnull(cs.one_year_non_cat_claim_ct,0)) one_year_non_cat_claim_ct,
+						sum(isnull(cs.mtd_non_cat_loss_incurred_amt,0)) mtd_non_cat_loss_incurred_amt,
+						sum(isnull(cs.prior_mtd_non_cat_loss_incurred_amt,0)) prior_mtd_non_cat_loss_incurred_amt,
 						sum(isnull(cs.one_year_non_cat_loss_incurred_amt,0)) one_year_non_cat_loss_incurred_amt,
-						sum(isnull(cs.one_year_non_cat_loss_incurred_capped_amt,0)) one_year_non_cat_loss_incurred_capped_amt, 
+						sum(isnull(cs.mtd_non_cat_loss_incurred_capped_amt,0)) mtd_non_cat_loss_incurred_capped_amt,
+						sum(isnull(cs.prior_mtd_non_cat_loss_incurred_capped_amt,0)) prior_mtd_non_cat_loss_incurred_capped_amt,
+						sum(isnull(cs.one_year_non_cat_loss_incurred_capped_amt,0)) one_year_non_cat_loss_incurred_capped_amt,
 						--
 						sum(isnull(cs.three_year_claim_ct,0)) three_year_claim_ct, 
 						sum(isnull(cs.three_year_loss_incurred_amt,0)) three_year_loss_incurred_amt,
@@ -1057,7 +1104,9 @@ BEGIN
 						--
 						mtd_written_net_premium_amt,
 						mtd_earned_premium_amt,
+						prior_mtd_earned_premium_amt,
 						mtd_earned_net_premium_amt,
+						prior_mtd_earned_net_premium_amt,
 						one_year_earned_net_premium_amt, 
 						three_year_earned_net_premium_amt, 
 						one_year_earned_exposure, 
@@ -1066,12 +1115,24 @@ BEGIN
 						two_year_earned_net_premium_amt, 
 						five_year_earned_net_premium_amt,  
 						--
-						one_year_claim_ct, 
+						mtd_claim_ct,
+						prior_mtd_claim_ct,
+						one_year_claim_ct,
+						mtd_loss_incurred_amt,
+						prior_mtd_loss_incurred_amt,
 						one_year_loss_incurred_amt,
+						mtd_loss_incurred_capped_amt,
+						prior_mtd_loss_incurred_capped_amt,
 						one_year_loss_incurred_capped_amt,
-						one_year_non_cat_claim_ct, 
+						mtd_non_cat_claim_ct,
+						prior_mtd_non_cat_claim_ct,
+						one_year_non_cat_claim_ct,
+						mtd_non_cat_loss_incurred_amt,
+						prior_mtd_non_cat_loss_incurred_amt,
 						one_year_non_cat_loss_incurred_amt,
-						one_year_non_cat_loss_incurred_capped_amt, 
+						mtd_non_cat_loss_incurred_capped_amt,
+						prior_mtd_non_cat_loss_incurred_capped_amt,
+						one_year_non_cat_loss_incurred_capped_amt,
 						--
 						three_year_claim_ct, 
 						three_year_loss_incurred_amt,
@@ -1236,7 +1297,9 @@ BEGIN
 						--
 						sum(summ.mtd_written_net_premium_amt),
 						sum(summ.mtd_earned_premium_amt),
+						sum(summ.prior_mtd_earned_premium_amt),
 						sum(summ.mtd_earned_net_premium_amt),
+						sum(summ.prior_mtd_earned_net_premium_amt),
 						sum(summ.one_year_earned_net_premium_amt), 
 						sum(summ.three_year_earned_net_premium_amt), 
 						sum(summ.one_year_earned_exposure), 
@@ -1245,12 +1308,24 @@ BEGIN
 						sum(summ.two_year_earned_net_premium_amt), 
 						sum(summ.five_year_earned_net_premium_amt), 
 						--
+						sum(summ.mtd_claim_ct),
+						sum(summ.prior_mtd_claim_ct),
 						sum(summ.one_year_claim_ct),
-						sum(summ.one_year_loss_incurred_amt), 
-						sum(summ.one_year_loss_incurred_capped_amt), 
-						sum(summ.one_year_non_cat_claim_ct), 
-						sum(summ.one_year_non_cat_loss_incurred_amt), 
-						sum(summ.one_year_non_cat_loss_incurred_capped_amt), 
+						sum(summ.mtd_loss_incurred_amt),
+						sum(summ.prior_mtd_loss_incurred_amt),
+						sum(summ.one_year_loss_incurred_amt),
+						sum(summ.mtd_loss_incurred_capped_amt),
+						sum(summ.prior_mtd_loss_incurred_capped_amt),
+						sum(summ.one_year_loss_incurred_capped_amt),
+						sum(summ.mtd_non_cat_claim_ct),
+						sum(summ.prior_mtd_non_cat_claim_ct),
+						sum(summ.one_year_non_cat_claim_ct),
+						sum(summ.mtd_non_cat_loss_incurred_amt),
+						sum(summ.prior_mtd_non_cat_loss_incurred_amt),
+						sum(summ.one_year_non_cat_loss_incurred_amt),
+						sum(summ.mtd_non_cat_loss_incurred_capped_amt),
+						sum(summ.prior_mtd_non_cat_loss_incurred_capped_amt),
+						sum(summ.one_year_non_cat_loss_incurred_capped_amt),
 						--
 						sum(summ.three_year_claim_ct), 
 						sum(summ.three_year_loss_incurred_amt), 
