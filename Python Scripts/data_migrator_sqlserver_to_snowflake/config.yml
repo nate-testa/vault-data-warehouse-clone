@@ -1,0 +1,4 @@
+migration:
+  # Data load control
+  load_all: true  # true = load all records, false = limit records
+  record_limit: 10000  # Only used when load_all = false

@@ -1,0 +1,8 @@
+pyodbc
+pandas
+pyyaml
+snowflake-connector-python[pandas]
+snowflake-connector-python[secure-local-storage]
+azure-identity
+azure-keyvault-secrets
+python-dotenv
