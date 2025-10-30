@@ -20,7 +20,7 @@ BEGIN
     ALTER TABLE edw_stage.Brokerage ADD IsAffiliation BIT  NULL 
 END;
 
-select top 3 * from edw_stage.Brokerage
+
 
 
 
