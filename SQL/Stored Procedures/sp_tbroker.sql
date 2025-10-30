@@ -123,11 +123,7 @@ BEGIN
 				ELSE '' END AS national_agency_in
 			,bst1.broker_servicing_team_sk
 			,case when brk.CanAccessPersonalProducts=1 then 'Personal lines' when brk.CanAccessCommercialProducts=1  then 'Commercial lines' Else Null end as commercial_or_personal_business_type
-			,CASE
-				brk.IsAffiliation
-				WHEN 1 THEN 'Yes'
-				WHEN 0 THEN 'No'
-				ELSE '' END as affiliation_in
+			,CASE WHEN brk.IsAffiliation = 1 THEN 'Yes' ELSE 'No' END as affiliation_in
 			,NULLIF(brk.Affiliation,'') as broker_affiliation_nm
 		INTO edw_temp.tbroker_temp1
 		FROM
