@@ -19,9 +19,10 @@
 -- 07/10/25		Hernando Gonzalez				14. AD10220 | Added bound_by_broker_in
 -- 09/16/25		Yunus Mohammed					15. AD10892 - Added new columns renewal_quote_in and renewal_quote_review_start_dt
 -- 10/15/25		Yunus Mohammed					16 AD11341 - Added new column renewal_released_by_metal_in
+-- 10/30/25		Yunus Mohammed					17. AD-11535 Added stalled_quote_in  and new_business_work_status 
 -- =========================================================================================================================== 
 
-CREATE or ALTER  PROCEDURE [edw_core].[sp_tquote]
+CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote]
 
 AS 
 BEGIN
@@ -238,7 +239,12 @@ BEGIN
 				,case
 					when tmp1.IsReleasedByMetal = 1 then 'Yes' 
 					when tmp1.IsReleasedByMetal = 0 then 'No'
-				end as renewal_released_by_metal_in
+				end as renewal_released_by_metal_in,
+			case
+					when tmp1.NewBusinessWorkStatus = 'Stalled Incomplete Quote (Automated)' then 'Yes'
+					else 'No'
+				end as stalled_quote_in,
+				tmp1.NewBusinessWorkStatus as new_business_work_status
 			FROM 
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
@@ -302,6 +308,8 @@ BEGIN
 			,renewal_quote_in
 			,renewal_quote_review_start_dt
 			,renewal_released_by_metal_in
+			,stalled_quote_in
+			,new_business_work_status
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -347,6 +355,8 @@ BEGIN
 				,renewal_quote_in
 				,renewal_quote_review_start_dt
 				,Source.renewal_released_by_metal_in
+				,Source.stalled_quote_in
+				,Source.new_business_work_status
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -391,19 +401,19 @@ BEGIN
 		,Target.renewal_quote_in = source.renewal_quote_in
 		,Target.renewal_quote_review_start_dt = source.renewal_quote_review_start_dt
 		,Target.renewal_released_by_metal_in = source.renewal_released_by_metal_in
+		,Target.stalled_quote_in= Source.stalled_quote_in
+		,Target.new_business_work_status =Source.new_business_work_status
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
 	
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest(CreatedDate,UpdatedDate)) FROM edw_temp.tquote_temp1 t2),@last_source_extract_ts);
 		
-
         DROP TABLE IF EXISTS edw_temp.tquote_temp1;
 		DROP TABLE IF EXISTS edw_temp.tquote_temp2;
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
