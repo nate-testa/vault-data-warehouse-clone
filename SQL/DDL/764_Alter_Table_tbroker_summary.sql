@@ -108,20 +108,4 @@ IF NOT EXISTS (SELECT *
         AND LOWER(COLUMN_NAME) = 'prior_mtd_earned_net_premium_amt')
 BEGIN
     ALTER TABLE edw_core.tbroker_summary ADD prior_mtd_earned_net_premium_amt decimal(15, 4)  NULL;
-END;
-
-IF NOT EXISTS (SELECT *
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE lower(TABLE_NAME) = 'tbroker_summary'
-        AND LOWER(COLUMN_NAME) = 'prior_year_mtd_earned_premium_amt')
-BEGIN
-    ALTER TABLE edw_core.tbroker_summary ADD prior_year_mtd_earned_premium_amt decimal(15, 4)  NULL;
-END;
-
-IF NOT EXISTS (SELECT *
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE lower(TABLE_NAME) = 'tbroker_summary'
-        AND LOWER(COLUMN_NAME) = 'prior_year_earned_mtd_net_premium_amt')
-BEGIN
-    ALTER TABLE edw_core.tbroker_summary ADD prior_year_mtd_earned_net_premium_amt decimal(15, 4)  NULL;
-END;
+END; 
