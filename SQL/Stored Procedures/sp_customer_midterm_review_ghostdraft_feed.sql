@@ -7,6 +7,7 @@
 -- 09/29/25     Architha Gudimalla          1. Created this procedure  
 -- 10/28/25     Architha Gudimalla          2. Changed broker to producer
 -- 10/30/25     Architha Gudimalla          3. Updated message for au if length > 96
+-- 10/30/25     Architha Gudimalla          4. Updated to use ho producer
 -- =================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
@@ -369,7 +370,7 @@ BEGIN
 			create_ts,
 			update_ts
 		)
-		select customer_id,
+		select a.customer_id,
 				midterm_review_year,
 				customer_nm ,
 				customer_email,
@@ -384,10 +385,10 @@ BEGIN
 				[mailing_address_city_nm],
 				[mailing_address_state_cd],
 				[mailing_address_zip_cd],
-				producer_id, 			-- broker_id,
-				producer_nm, 			-- broker_nm,
-				producer_phone_no, 	-- broker_phone_no,
-				producer_email,		-- broker_email,
+				coalesce(producer_ho.producer_id, producer_condo.producer_id, producer_oth.producer_id) producer_id, 			-- broker_id,
+				CONCAT(pr.First_nm, ' ', pr.Last_nm) producer_nm, 			-- broker_nm,
+				pr.phone_no producer_phone_no, 	-- broker_phone_no,
+				pr.email producer_email,		-- broker_email, 
 				risk_address_line1,
 				risk_address_line2,
 				risk_address_unit_no,
@@ -450,7 +451,17 @@ BEGIN
                 @etl_audit_sk etl_audit_sk,
                 getdate() create_ts,
                 getdate() update_ts 
-		from edw_temp.customer_midterm_review_ghostdraft_feed_temp1;
+		from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 a
+		left join (select customer_id, max(producer_id) producer_id from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
+				   where product_nm='Homeowners'
+				   group by customer_id) producer_ho on a.customer_id = producer_ho.customer_id
+		left join (select customer_id, max(producer_id) producer_id  from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
+				   where product_nm='Condo'
+				   group by customer_id) producer_condo on a.customer_id = producer_condo.customer_id
+		left join (select customer_id, max(producer_id) producer_id  from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
+				   where product_nm not in ('Condo','Homeowners') 
+				   group by customer_id) producer_oth on a.customer_id = producer_oth.customer_id
+		left join edw_Core.tproducer pr on pr.producer_id = coalesce(producer_ho.producer_id, producer_condo.producer_id, producer_oth.producer_id);
 
 		--concat vehicle list
 		WITH veh_list AS (
