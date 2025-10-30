@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote_home_coverage  ALTER COLUMN total_finished_square_feet varchar(255);
