@@ -39,7 +39,7 @@
             {% else %}
                 <!-- User not authenticated, show sign-in button -->
                 <div class="signin-section">
-                    {% if config.get('ENABLE_SSO', '').lower() == 'true' %}
+                    {% if sso_enabled %}
                         <a href="{{ url_for('login') }}" class="btn btn-vault-primary">
                             <i class="fas fa-sign-in-alt me-2"></i>
                             Sign In

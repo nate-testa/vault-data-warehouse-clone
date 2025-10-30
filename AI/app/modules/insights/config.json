@@ -6,7 +6,7 @@
   },
   "snowflake": {
     "warehouse": "VAULT_AI_INSIGHTS_WH",
-    "database": "VAULT_AI_UAT",
+    "database": "${SNOWFLAKE_DATABASE}",
     "schema": "INSIGHTS", 
     "stage": "SEMANTIC_VIEWS"
   },
@@ -17,13 +17,13 @@
       "description": "Insurance policy data and lifecycle analysis",
       "models": [
         {
-          "path": "VAULT_AI_UAT.INSIGHTS.SV_DAILY_INFORCE_POLICY",
+          "path": "${SNOWFLAKE_DATABASE}.INSIGHTS.SV_DAILY_INFORCE_POLICY",
           "display_name": "Daily In-Force Policies",
           "description": "Daily tracking of active insurance policies",
           "is_default": false
         },
         {
-          "path": "VAULT_AI_UAT.INSIGHTS.SV_POLICY_TRANSACTIONS",
+          "path": "${SNOWFLAKE_DATABASE}.INSIGHTS.SV_POLICY_TRANSACTIONS",
           "display_name": "Policy Transactions",
           "description": "Transaction-level policy processing and financial data",
           "is_default": false
@@ -40,7 +40,7 @@
       "description": "Insurance policy in-force tracking and analysis",
       "models": [
         {
-          "path": "VAULT_AI_UAT.INSIGHTS.SV_DAILY_INFORCE_POLICY",
+          "path": "${SNOWFLAKE_DATABASE}.INSIGHTS.SV_DAILY_INFORCE_POLICY",
           "display_name": "Daily In-Force Policies",
           "description": "Daily tracking of active insurance policies",
           "is_default": false
@@ -57,7 +57,7 @@
       "description": "Transaction-level policy processing and financial data",
       "models": [
         {
-          "path": "VAULT_AI_UAT.INSIGHTS.SV_POLICY_TRANSACTIONS",
+          "path": "${SNOWFLAKE_DATABASE}.INSIGHTS.SV_POLICY_TRANSACTIONS",
           "display_name": "Policy Transactions",
           "description": "Transaction-level policy processing and financial data",
           "is_default": false
@@ -152,21 +152,21 @@
   },
   "domain_config": {
     "policy": {
-      "default_model": "VAULT_AI_UAT.INSIGHTS.SV_POLICY_LIFECYCLE", 
+      "default_model": "${SNOWFLAKE_DATABASE}.INSIGHTS.SV_POLICY_LIFECYCLE", 
       "access_level": "public",
       "max_query_complexity": "high",
       "supported_operations": ["SELECT", "WITH", "SHOW", "DESCRIBE"],
       "enable_advanced_analytics": true
     },
     "claims": {
-      "default_model": "VAULT_AI_UAT.INSIGHTS.SV_CLAIMS_ANALYSIS",
+      "default_model": "${SNOWFLAKE_DATABASE}.INSIGHTS.SV_CLAIMS_ANALYSIS",
       "access_level": "restricted",
       "max_query_complexity": "medium",
       "supported_operations": ["SELECT", "WITH", "SHOW"],
       "enable_advanced_analytics": false
     },
     "others": {
-      "default_model": "VAULT_AI_UAT.INSIGHTS.SV_DAILY_INFORCE_POLICY",
+      "default_model": "${SNOWFLAKE_DATABASE}.INSIGHTS.SV_DAILY_INFORCE_POLICY",
       "access_level": "public", 
       "max_query_complexity": "medium",
       "supported_operations": ["SELECT", "SHOW"],

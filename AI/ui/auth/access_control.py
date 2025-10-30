@@ -5,11 +5,10 @@ This module provides access control functionality to manage user permissions
 for different applications based on Azure AD group memberships.
 """
 
-import os
-import json
 from typing import Dict, List, Optional, Any, Set
 from flask import current_app
 from utils.logging import logger
+from config import get_config
 
 
 class AccessControlService:
@@ -20,47 +19,27 @@ class AccessControlService:
     check user permissions, and filter applications based on user groups.
     """
     
-    def __init__(self, config_file_path: Optional[str] = None):
+    def __init__(self):
         """
         Initialize the access control service.
         
-        Args:
-            config_file_path (Optional[str]): Path to the app roles configuration file.
-                                            Defaults to 'app_roles.json' in the UI directory.
+        Loads application roles from config.py based on the current environment.
         """
-        self.config_file_path = config_file_path or self._get_default_config_path()
         self.app_roles_config: Dict[str, Any] = {}
         self._load_app_roles()
         
-        logger.info(f"[ACCESS_CONTROL] Service initialized with config: {self.config_file_path}")
-    
-    def _get_default_config_path(self) -> str:
-        """
-        Get the default path for the app roles configuration file.
-        
-        Returns:
-            str: Path to the default app_roles.json file in the UI directory.
-        """
-        # Get the UI directory path (parent of auth directory)
-        ui_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        return os.path.join(ui_dir, 'app_roles.json')
+        logger.info("[ACCESS_CONTROL] Service initialized from config.py")
     
     def _load_app_roles(self) -> None:
         """
-        Load application roles configuration from the JSON file.
+        Load application roles configuration from config.py.
         
-        This method loads the app_roles.json configuration file and handles
-        file loading errors gracefully.
+        This method loads the APP_ROLES configuration from config.py based on
+        the current environment (DEV, UAT, PRODUCTION).
         """
         try:
-            if not os.path.exists(self.config_file_path):
-                logger.warning(f"[ACCESS_CONTROL] Configuration file not found: {self.config_file_path}")
-                logger.info("[ACCESS_CONTROL] Using empty configuration - all applications accessible to authenticated users")
-                self.app_roles_config = {}
-                return
-            
-            with open(self.config_file_path, 'r', encoding='utf-8') as file:
-                self.app_roles_config = json.load(file)
+            # Get APP_ROLES from environment-specific configuration
+            self.app_roles_config = get_config('APP_ROLES', default={})
             
             logger.info(f"[ACCESS_CONTROL] Loaded configuration for {len(self.app_roles_config)} applications")
             
@@ -69,35 +48,10 @@ class AccessControlService:
                 group_count = len(self.app_roles_config[app_name].get('required_groups', []))
                 logger.debug(f"[ACCESS_CONTROL] App '{app_name}' requires {group_count} groups")
                 
-        except json.JSONDecodeError as e:
-            logger.error(f"[ACCESS_CONTROL] Invalid JSON in configuration file: {e}")
-            logger.info("[ACCESS_CONTROL] Using empty configuration due to JSON error")
-            self.app_roles_config = {}
-            
-        except FileNotFoundError as e:
-            logger.error(f"[ACCESS_CONTROL] Configuration file not found: {e}")
-            logger.info("[ACCESS_CONTROL] Using empty configuration due to missing file")
-            self.app_roles_config = {}
-            
         except Exception as e:
-            logger.error(f"[ACCESS_CONTROL] Unexpected error loading configuration: {e}")
-            logger.info("[ACCESS_CONTROL] Using empty configuration due to unexpected error")
+            logger.error(f"[ACCESS_CONTROL] Error loading configuration from config.py: {e}")
+            logger.info("[ACCESS_CONTROL] Using empty configuration due to error")
             self.app_roles_config = {}
-    
-    def reload_config(self) -> bool:
-        """
-        Reload the application roles configuration from file.
-        
-        Returns:
-            bool: True if configuration was reloaded successfully, False otherwise.
-        """
-        try:
-            logger.info("[ACCESS_CONTROL] Reloading configuration file")
-            self._load_app_roles()
-            return True
-        except Exception as e:
-            logger.error(f"[ACCESS_CONTROL] Failed to reload configuration: {e}")
-            return False
     
     def user_has_access(self, app_name: str, user_groups: List[str]) -> bool:
         """
@@ -129,10 +83,10 @@ class AccessControlService:
             app_config = self.app_roles_config[app_name]
             required_groups = app_config.get('required_groups', [])
             
-            # If no required groups specified, allow access
+            # If required_groups is empty, DENY access (app is disabled)
             if not required_groups:
-                logger.debug(f"[ACCESS_CONTROL] App '{app_name}' has no required groups - allowing access")
-                return True
+                logger.info(f"[ACCESS_CONTROL] App '{app_name}' has empty required_groups - access DENIED (app disabled)")
+                return False
             
             # Convert user groups to set for faster lookup
             user_groups_set = set(user_groups)

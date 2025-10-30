@@ -10,7 +10,6 @@ and provides services for:
 - User feedback submission
 """
 
-import os
 import json
 import time
 import uuid
@@ -21,6 +20,7 @@ from datetime import datetime
 
 from app.utils.database import get_sf_conn
 from app.utils.logging import logger
+from app.utils.azure_keyvault import keyvault
 from app.modules.insights.config_loader import (
     get_semantic_domains, 
     get_snowflake_config, 
@@ -55,7 +55,7 @@ class InsightsService:
         self.snowflake_config = get_snowflake_config()
         self.api_config = get_api_config()
         self.domain_config = get_domain_config()
-        self.account = os.getenv('SF_ACCOUNT')
+        self.account = keyvault.get_secret('vaultai-snowflake-account')
         
         # API configuration
         self.max_history_length = self.api_config.get('max_history_length', 10)

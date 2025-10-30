@@ -65,8 +65,8 @@ const CHART_UI_CONFIG = {
 const AVAILABLE_CHART_TYPES = {
     'bar': 'Bar Chart',
     'line': 'Line Chart',
-    'pie': 'Pie Chart',
-    'multi_line': 'Multi-Line Chart'
+    'pie': 'Pie Chart'
+    // 'multi_line': 'Multi-Line Chart'  // Hidden but code remains available
 };
 
 /**
@@ -798,7 +798,7 @@ function appendAssistantMessage(content, requestId, sqlResults, sqlExecutionErro
                                 </button>
                             </div>
                         </div>
-                        <div class="sql-content" style="display: none;">${escapeHtml(item.statement)}</div>
+                        <div class="sql-content">${escapeHtml(item.statement)}</div>
                     </div>
                 `;
             }
@@ -824,12 +824,12 @@ function appendAssistantMessage(content, requestId, sqlResults, sqlExecutionErro
         
         if (suggestions.length > 0) {
             messageHtml += `
-                <div class="suggestions-section" style="margin-top: 20px;">
-                    <h4 class="suggestions-title" style="font-size: 14px; font-weight: 600; color: #d4af37; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                        <i class="fas fa-lightbulb" style="color: #f59e0b;"></i>
+                <div class="suggestions-section">
+                    <h4 class="suggestions-title">
+                        <i class="fas fa-lightbulb"></i>
                         Suggested Questions
                     </h4>
-                    <div class="suggestion-pills" style="display: flex; flex-wrap: wrap; gap: 8px;">`;
+                    <div class="suggestion-pills">`;
             suggestions.forEach(suggestion => {
                 messageHtml += `<span class="suggestion-pill" onclick="handleSuggestedReply('${escapeHtml(suggestion)}')">${escapeHtml(suggestion)}</span>`;
             });
@@ -841,7 +841,7 @@ function appendAssistantMessage(content, requestId, sqlResults, sqlExecutionErro
     
     if (requestId) {
         messageHtml += `
-            <div class="feedback-controls" style="display: flex;">
+            <div class="feedback-controls">
                 <button class="feedback-btn positive" onclick="submitQuickFeedback('${requestId}', true)" title="Helpful">
                     <i class="fas fa-thumbs-up"></i>
                 </button>
@@ -980,8 +980,8 @@ function submitQuickFeedback(requestId, positive) {
     
     // Update modal content based on feedback type
     const modalTitle = positive ? 
-        '<i class="fas fa-thumbs-up" style="color: #16a34a; margin-right: 8px;"></i>Thanks for the positive feedback!' : 
-        '<i class="fas fa-thumbs-down" style="color: #dc2626; margin-right: 8px;"></i>We\'re sorry it wasn\'t helpful';
+        '<i class="fas fa-thumbs-up feedback-icon-positive"></i>Thanks for the positive feedback!' : 
+        '<i class="fas fa-thumbs-down feedback-icon-negative"></i>We\'re sorry it wasn\'t helpful';
     
     $('#feedbackModalTitle').html(modalTitle);
     $('#feedbackModalDescription').text(
@@ -1072,11 +1072,8 @@ function performFeedbackSubmission(comment, context) {
             if (data.success) {
                 buttons.addClass('submitted');
                 const activeBtn = messageWrapper.find(`.feedback-btn.${positive ? 'positive' : 'negative'}`);
-                activeBtn.css({
-                    'background': positive ? '#dcfce7' : '#fef2f2',
-                    'color': positive ? '#16a34a' : '#dc2626',
-                    'border-color': positive ? '#16a34a' : '#dc2626'
-                });
+                // Add submitted state class instead of inline styles
+                activeBtn.addClass(positive ? 'feedback-btn-submitted-positive' : 'feedback-btn-submitted-negative');
                 
                 const thankYouMsg = comment ? 
                     'Thank you for your detailed feedback!' : 
@@ -1224,8 +1221,8 @@ function createResultsTable(sqlResult, rowCount) {
         columns.forEach(column => {
             const value = row[column];
             const cellValue = value !== null ? String(value) : 'NULL';
-            const cellStyle = value === null ? 'font-style: italic; color: #6b7280;' : '';
-            tableHtml += `<td style="${cellStyle}">${escapeHtml(cellValue)}</td>`;
+            const cellClass = value === null ? 'table-cell-null' : '';
+            tableHtml += `<td class="${cellClass}">${escapeHtml(cellValue)}</td>`;
         });
         tableHtml += '</tr>';
     });
@@ -1247,17 +1244,17 @@ function createChartContainerFromData(title, chartData) {
     
     const chartId = `chart-${Date.now()}`;
     let chartHtml = `
-        <div class="chart-container" id="${chartId}" style="margin: 20px 0; padding: 20px; border: 2px solid #e5e7eb; border-radius: 8px; background: white;">
+        <div class="chart-container chart-container-dynamic" id="${chartId}">
             <div class="chart-wrapper">
-                <div class="chart-header" style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">
-                    <h3 class="chart-title" style="margin: 0; color: #1f2937;">${escapeHtml(title)}</h3>
+                <div class="chart-header">
+                    <h3 class="chart-title">${escapeHtml(title)}</h3>
                     <div class="chart-controls">
-                        <select class="chart-type-selector" onchange="changeChartType(this)" style="margin-left: 10px; padding: 4px 8px;">
+                        <select class="chart-type-selector" onchange="changeChartType(this)">
                             ${generateChartTypeOptions()}
                         </select>
                     </div>
                 </div>
-                <div class="chart-content" style="min-height: 400px;">
+                <div class="chart-content">
                     ${chartData.html}
                 </div>
             </div>
@@ -1278,7 +1275,7 @@ function createChartContainerFromData(title, chartData) {
 function createChartRecommendationsHTML(recommendations) {
     let html = `
         <div class="chart-recommendations">
-            <span style="font-size: 12px; font-weight: 500; color: #6b7280; margin-right: 12px;">Suggested visualizations:</span>
+            <span class="chart-recommendation-label">Suggested visualizations:</span>
     `;
     
     recommendations.forEach(rec => {
@@ -1459,8 +1456,8 @@ function createDataTable(sqlResults) {
         sqlResults.columns.forEach((column, columnIndex) => {
             const value = row[columnIndex];
             const cellValue = value !== null && value !== undefined ? String(value) : 'NULL';
-            const cellStyle = (value === null || value === undefined) ? 'font-style: italic; color: #6b7280;' : '';
-            tableHtml += `<td style="${cellStyle}">${escapeHtml(cellValue)}</td>`;
+            const cellClass = (value === null || value === undefined) ? 'table-cell-null' : '';
+            tableHtml += `<td class="${cellClass}">${escapeHtml(cellValue)}</td>`;
         });
         tableHtml += '</tr>';
     });
@@ -1526,7 +1523,7 @@ function createChartContent(sqlResults) {
                         </div>
                     </div>
                     <div class="chart-content">
-                        <div id="${chartDivId}" style="width: 100%; height: 400px;"></div>
+                        <div id="${chartDivId}" class="chart-div-full"></div>
                     </div>
                 </div>
             </div>
@@ -1555,7 +1552,7 @@ function createChartContent(sqlResults) {
                             ${generateChartTypeOptions()}
                         </select>
                         <div id="${parametersContainerId}" class="chart-parameters">
-                            <span style="color: #9ca3af; font-size: 11px; font-style: italic;">Select chart type</span>
+                            <span class="chart-placeholder-text">Select chart type</span>
                         </div>
                         <button class="generate-chart-btn" onclick="generateTabChart('${chartId}')">
                             <i class="fas fa-chart-bar"></i> Generate
@@ -1884,32 +1881,18 @@ async function regenerateTabChartWithAxes(selector) {
  * Show toast notification
  */
 function showToast(message, type = 'success') {
-    const bgColor = type === 'success' ? '#10b981' : '#ef4444';
-    
     const toast = $(`
-        <div class="toast-notification" style="
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${bgColor};
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            z-index: 1000;
-            opacity: 0;
-            transform: translateY(-10px);
-            transition: all 0.3s ease;
-        ">${escapeHtml(message)}</div>
+        <div class="toast-notification toast-${type}">${escapeHtml(message)}</div>
     `);
     
     $('body').append(toast);
     
     setTimeout(() => {
-        toast.css({ opacity: 1, transform: 'translateY(0)' });
+        toast.addClass('toast-visible');
     }, 100);
     
     setTimeout(() => {
-        toast.css({ opacity: 0, transform: 'translateY(-10px)' });
+        toast.removeClass('toast-visible');
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
@@ -2133,3 +2116,234 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// ===== Chart-Related Functions (moved from inline script) =====
+
+/**
+ * Display chart in a container using Plotly
+ */
+function displayChart(chartData, container) {
+    if (!chartData || !chartData.success) {
+        container.innerHTML = '<div class="chart-error">No chart data available</div>';
+        return;
+    }
+    
+    // Create chart div and render with Plotly.newPlot
+    const chartDiv = document.createElement('div');
+    chartDiv.id = chartData.chart_id;
+    chartDiv.style.width = '100%';
+    chartDiv.style.height = '400px';
+    
+    container.innerHTML = '';
+    container.appendChild(chartDiv);
+    
+    // Render chart using Plotly.newPlot
+    if (typeof Plotly !== 'undefined') {
+        Plotly.newPlot(chartData.chart_id, chartData.data, chartData.layout, chartData.config);
+        console.log('Chart rendered successfully with Plotly.newPlot');
+    } else {
+        container.innerHTML = '<div class="chart-error">Plotly library not found. Please refresh the page.</div>';
+    }
+    
+    // Add chart recommendations if available
+    if (chartData.recommendations && chartData.recommendations.length > 0) {
+        const recommendationsEl = createChartRecommendations(chartData.recommendations);
+        container.appendChild(recommendationsEl);
+    }
+}
+
+/**
+ * Create a chart container from template
+ */
+function createChartContainer(title, chartData) {
+    const template = document.getElementById('chartContainerTemplate');
+    const container = template.cloneNode(true);
+    const uniqueId = Date.now();
+    container.id = `chart-${uniqueId}`;
+    container.classList.remove('hidden');
+    
+    const titleEl = container.querySelector('.chart-title');
+    const contentEl = container.querySelector('.chart-content');
+    const chartTypeSelector = container.querySelector('.chart-type-selector');
+    const parametersContainer = container.querySelector('.chart-parameters');
+    
+    // Assign unique ID to parameters container
+    if (parametersContainer) {
+        parametersContainer.id = `chartParameters-${uniqueId}`;
+        console.log('Created parameters container with ID:', parametersContainer.id);
+    }
+    
+    if (titleEl) titleEl.textContent = title;
+    
+    // Populate chart type selector dropdown
+    if (chartTypeSelector && typeof generateChartTypeOptions === 'function') {
+        chartTypeSelector.innerHTML = generateChartTypeOptions();
+        // Set current chart type if available
+        if (chartData && chartData.type) {
+            chartTypeSelector.value = chartData.type;
+            console.log('Chart type set to:', chartData.type, '- triggering parameter UI render');
+            // Trigger handleChartTypeChange to render parameters for this chart type
+            if (typeof handleChartTypeChange === 'function') {
+                handleChartTypeChange(chartTypeSelector);
+            }
+        }
+    }
+    
+    if (chartData) {
+        displayChart(chartData, contentEl);
+    }
+    
+    return container;
+}
+
+/**
+ * Create chart recommendations element
+ */
+function createChartRecommendations(recommendations) {
+    const template = document.getElementById('chartRecommendationsTemplate');
+    const container = template.cloneNode(true);
+    container.id = `recommendations-${Date.now()}`;
+    container.classList.remove('hidden');
+    container.style.display = 'flex';
+    
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.style.display = 'flex';
+    buttonsContainer.style.gap = '8px';
+    buttonsContainer.style.flexWrap = 'wrap';
+    
+    recommendations.forEach(rec => {
+        const button = document.createElement('button');
+        button.className = 'chart-recommendation';
+        button.innerHTML = `<i class="fas fa-chart-${getChartIcon(rec.type)}"></i> ${rec.name}`;
+        button.title = rec.description;
+        button.onclick = () => changeChartType(null, rec.type);
+        buttonsContainer.appendChild(button);
+    });
+    
+    container.appendChild(buttonsContainer);
+    return container;
+}
+
+/**
+ * Get appropriate icon for chart type
+ */
+function getChartIcon(chartType) {
+    const icons = {
+        'line': 'line',
+        'bar': 'bar',
+        'column': 'bar',
+        'pie': 'pie',
+        'scatter': 'scatter',
+        'heatmap': 'table-cells',
+        'table': 'table'
+    };
+    return icons[chartType] || 'chart-column';
+}
+
+/**
+ * Change chart type dynamically
+ */
+function changeChartType(selectElement, newChartType) {
+    // Find the current chart container
+    let container;
+    if (selectElement) {
+        container = selectElement.closest('.chart-container');
+        newChartType = selectElement.value;
+    } else {
+        container = document.querySelector('.chart-container:last-of-type');
+    }
+    
+    if (!container) return;
+    
+    const contentEl = container.querySelector('.chart-content');
+    if (!contentEl) return;
+    
+    // Show loading state
+    contentEl.innerHTML = '<div class="chart-loading">Generating chart...</div>';
+    
+    // Get the current query result data from the most recent SQL execution
+    const lastSqlResult = window.lastSqlResult;
+    if (!lastSqlResult || !lastSqlResult.data) {
+        contentEl.innerHTML = '<div class="chart-error">No data available for visualization</div>';
+        return;
+    }
+    
+    // Generate new chart with empty params to trigger auto-detection
+    // The backend's normalize_chart_params() and auto_detect_chart_params() will handle parameter selection
+    generateChartFromData(lastSqlResult, newChartType, null, null, null, {})
+        .then(chartData => {
+            displayChart(chartData, contentEl);
+        })
+        .catch(error => {
+            contentEl.innerHTML = `<div class="chart-error">Error generating chart: ${error.message}</div>`;
+        });
+}
+
+/**
+ * Generate chart from query result data
+ */
+async function generateChartFromData(queryResult, chartType = 'auto', title = 'Data Visualization', xCol = null, yCol = null, params = null) {
+    try {
+        const requestBody = {
+            query_result: queryResult,
+            chart_type: chartType,
+            title: title
+        };
+        
+        // NEW: Support params object for new parameter system
+        if (params) {
+            requestBody.params = params;
+        }
+        // LEGACY: Support old x_col/y_col format for backward compatibility
+        else if (xCol || yCol) {
+            // Convert to params format based on chart type
+            requestBody.params = {};
+            
+            if (chartType === 'pie') {
+                // Pie chart uses 'names' and 'values' instead of 'x' and 'y'
+                if (xCol) requestBody.params.names = xCol;
+                if (yCol) requestBody.params.values = yCol;
+            } else {
+                // Bar, line, and other charts use 'x' and 'y'
+                if (xCol) requestBody.params.x = xCol;
+                if (yCol) requestBody.params.y = yCol;
+            }
+        }
+        
+        console.log('Sending chart generation request:', requestBody);
+        
+        const response = await fetch(window.InsightsConfig.endpoints.generateChart, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Chart generation failed: ${response.statusText}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Error generating chart:', error);
+        throw error;
+    }
+}
+
+/**
+ * Add chart to message content automatically
+ */
+function addChartToMessage(messageContent, queryResult, title = 'Query Results') {
+    // Generate chart automatically for query results
+    generateChartFromData(queryResult, 'auto', title)
+        .then(chartData => {
+            if (chartData.success) {
+                const chartContainer = createChartContainer(title, chartData);
+                messageContent.appendChild(chartContainer);
+            }
+        })
+        .catch(error => {
+            console.warn('Failed to generate chart:', error);
+        });
+}

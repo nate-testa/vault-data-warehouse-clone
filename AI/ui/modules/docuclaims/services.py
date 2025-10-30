@@ -2,12 +2,9 @@ import os
 import requests
 import time
 import urllib.parse
-from dotenv import load_dotenv
 from utils.logging import logger
 from modules.docuclaims.session_manager import DocuClaimsSessionManager
-
-# Load environment variables
-load_dotenv()
+from config import get_config
 
 # DocuClaims session manager instance for services that need it
 # NOTE: This should be the same configuration as routes.py for consistency
@@ -17,9 +14,9 @@ docuclaims_session = DocuClaimsSessionManager(max_cookie_size=3500, max_chat_mes
 PRIMARY_COLOR = "#DC2626"  # Main accent color
 
 # API endpoint configuration
-API_BASE = os.environ.get("API_BASE_URL")
+API_BASE = get_config("API_BASE_URL")
 if not API_BASE:
-    raise RuntimeError("Missing required environment variable: API_BASE_URL")
+    raise RuntimeError("Missing required configuration: API_BASE_URL")
 
 def fetch_model_options():
     """Fetch model options from FastAPI backend."""

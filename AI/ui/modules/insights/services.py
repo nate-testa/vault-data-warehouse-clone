@@ -9,22 +9,19 @@ import os
 import requests
 import time
 from typing import Dict, List, Any, Optional, Union
-from dotenv import load_dotenv
 from utils.logging import logger
 from modules.insights.session_manager import InsightsSessionManager
 from modules.insights.schemas import ResultData, CachedResult, generate_cache_key
 from modules.insights.charts import generate_chart_from_query_result, get_chart_recommendations
-
-# Load environment variables
-load_dotenv()
+from config import get_config
 
 # Insights session manager instance for services
 insights_session = InsightsSessionManager(max_cookie_size=3500, max_chat_messages=10)
 
 # API endpoint configuration
-API_BASE = os.environ.get("API_BASE_URL")
+API_BASE = get_config("API_BASE_URL")
 if not API_BASE:
-    raise RuntimeError("Missing required environment variable: API_BASE_URL")
+    raise RuntimeError("Missing required configuration: API_BASE_URL")
 
 # API timeout configurations (connection timeout, read timeout)
 DEFAULT_TIMEOUT = (10, 30)  # 10s connection, 30s read

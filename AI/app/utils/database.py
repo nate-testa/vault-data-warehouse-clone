@@ -3,42 +3,42 @@ Database utilities for the Snowflake AI application.
 
 This module contains database connection functions and utilities
 that can be shared across different modules.
+
+All Snowflake credentials are loaded from Azure Key Vault (NO .env fallback).
 """
 
-import os
 import snowflake.connector
-from dotenv import load_dotenv
 from app.utils.logging import logger
-
-# Load environment variables
-load_dotenv()
+from app.utils.azure_keyvault import keyvault
 
 
 def get_sf_conn():
     """
-    Create a basic Snowflake connection reading configuration from environment variables.
+    Create a basic Snowflake connection using secrets from Azure Key Vault.
     
-    This function establishes a basic connection with account, user, password and role.
-    Required environment variables:
-    - SF_ACCOUNT: Snowflake account identifier
-    - SF_USER: Snowflake username
-    - SF_PAT_TOKEN: Snowflake password/token
-    - SF_ROLE: Snowflake role
+    This function establishes a connection with account, user, password and role.
+    Secrets are loaded ONLY from Azure Key Vault (NO .env fallback).
+    
+    Required secrets in Key Vault:
+    - vaultai-snowflake-account: Snowflake account identifier
+    - vaultai-snowflake-user: Snowflake username
+    - vaultai-snowflake-pat-token: Snowflake password/token
+    - vaultai-snowflake-role: Snowflake role
     
     Returns:
         tuple: (connection, cursor) objects
-    """
-    # Check required environment variables
-    required_env_vars = ["SF_ACCOUNT", "SF_USER", "SF_PAT_TOKEN", "SF_ROLE"]
-    missing_vars = [var for var in required_env_vars if not os.getenv(var)]
-    if missing_vars:
-        raise RuntimeError(f"Missing required environment variables: {', '.join(missing_vars)}")
     
-    account = os.getenv('SF_ACCOUNT')
-    user = os.getenv('SF_USER')
-    pat = os.getenv('SF_PAT_TOKEN')
-    role = os.getenv('SF_ROLE')
-
+    Raises:
+        RuntimeError: If required secrets are not found in Key Vault or
+                     if Key Vault connection fails
+    """
+    # Load secrets from Key Vault (NO .env fallback - will raise RuntimeError if not found)
+    account = keyvault.get_secret('vaultai-snowflake-account')
+    user = keyvault.get_secret('vaultai-snowflake-user')
+    pat = keyvault.get_secret('vaultai-snowflake-pat-token')
+    role = keyvault.get_secret('vaultai-snowflake-role')
+    
+    # Establish connection
     conn = snowflake.connector.connect(
         account=account,
         user=user,

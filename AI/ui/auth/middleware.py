@@ -18,6 +18,7 @@ from .models import User
 from .session_manager import SessionManager
 from .user_service import UserService
 from utils.logging import logger
+from config import get_config
 
 
 class AuthMiddleware:
@@ -86,7 +87,7 @@ class AuthMiddleware:
             return None
         
         # Check if SSO is enabled
-        sso_enabled = os.environ.get('ENABLE_SSO', 'false').lower() == 'true'
+        sso_enabled = get_config('ENABLE_SSO')
         
         if not sso_enabled:
             # SSO disabled - set anonymous user context

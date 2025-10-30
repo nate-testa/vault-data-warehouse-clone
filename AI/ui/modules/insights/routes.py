@@ -188,7 +188,7 @@ def extract_sql_from_response(response_content: List[Dict]) -> Optional[str]:
 
 @insights_bp.route('/insights')
 @login_required
-@require_app_access('Insights')
+@require_app_access('Insights AI')
 def insights():
     """
     Main Insights chat interface page.
@@ -286,7 +286,7 @@ def insights():
 
 @insights_bp.route('/insights/domains/<domain>/models', methods=['GET'])
 @login_required
-@require_app_access('Insights')
+@require_app_access('Insights AI')
 def get_domain_models_endpoint(domain):
     """
     Get available semantic models for a specific domain.
@@ -313,7 +313,7 @@ def get_domain_models_endpoint(domain):
 
 @insights_bp.route('/insights/query_v2', methods=['POST'])
 @login_required
-@require_app_access('Insights')
+@require_app_access('Insights AI')
 def process_query_v2():
     """
     Handle user question submissions via AJAX using multiple semantic models.
@@ -580,7 +580,7 @@ def process_query_v2():
 
 @insights_bp.route('/insights/query', methods=['POST'])
 @login_required
-@require_app_access('Insights')
+@require_app_access('Insights AI')
 def process_query():
     """
     Handle user question submissions via AJAX.
@@ -864,7 +864,7 @@ def process_query():
 
 @insights_bp.route('/insights/execute-sql', methods=['POST'])
 @login_required
-@require_app_access('Insights')
+@require_app_access('Insights AI')
 def execute_sql():
     """
     Handle SQL execution from generated queries.
@@ -985,7 +985,7 @@ def execute_sql():
 
 @insights_bp.route('/insights/generate-chart', methods=['POST'])
 @login_required
-@require_app_access('Insights')
+@require_app_access('Insights AI')
 def generate_chart():
     """
     Generate chart from provided data.
@@ -1110,7 +1110,7 @@ def generate_chart():
 
 @insights_bp.route('/insights/feedback', methods=['POST'])
 @login_required
-@require_app_access('Insights')
+@require_app_access('Insights AI')
 def submit_user_feedback():
     """
     Handle user feedback submissions for specific requests.
@@ -1213,7 +1213,7 @@ def submit_user_feedback():
 
 @insights_bp.route('/insights/reset', methods=['POST'])
 @login_required
-@require_app_access('Insights')
+@require_app_access('Insights AI')
 def reset_conversation():
     """
     Reset conversation session and clear history.
@@ -1292,7 +1292,7 @@ def reset_conversation():
 
 @insights_bp.route('/insights/switch-domain', methods=['POST'])
 @login_required
-@require_app_access('Insights')
+@require_app_access('Insights AI')
 def switch_domain():
     """
     Switch to a different domain and update welcome message if only welcome exists.
@@ -1390,7 +1390,7 @@ def switch_domain():
 
 @insights_bp.route('/insights/cache/stats', methods=['GET'])
 @login_required
-@require_app_access('Insights')
+@require_app_access('Insights AI')
 def get_cache_stats():
     """
     Get cache statistics and information.
@@ -1416,7 +1416,7 @@ def get_cache_stats():
 
 @insights_bp.route('/insights/cache/clear', methods=['POST'])
 @login_required
-@require_app_access('Insights')
+@require_app_access('Insights AI')
 def clear_cache():
     """
     Clear all cached results.
@@ -1442,7 +1442,7 @@ def clear_cache():
 
 @insights_bp.route('/insights/domains')
 @login_required
-@require_app_access('Insights')
+@require_app_access('Insights AI')
 def get_domains():
     """
     AJAX endpoint to get available domains.
@@ -1513,7 +1513,7 @@ def get_domains():
 
 @insights_bp.route('/insights/health')
 @login_required
-@require_app_access('Insights')
+@require_app_access('Insights AI')
 def health_check():
     """
     Health check endpoint for Insights module and API connectivity.
@@ -1572,9 +1572,9 @@ def _create_welcome_message(domain: str, domains_data: Dict[str, Any]) -> Dict[s
     
     welcome_text = f"""Welcome to Insights! 🎯
 
-I'm your AI analytics assistant. I can help you analyze your {domain_name} data using natural language questions. 
+I'm your AI analytics assistant.
 
-Currently, I have access to {models_count} semantic model{'s' if models_count != 1 else ''} in this domain.
+I can help you analyze our data using natural language questions.
 
 Try asking questions like:"""
     
