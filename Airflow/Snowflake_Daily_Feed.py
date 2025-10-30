@@ -16,7 +16,7 @@ to_email = "itdatateam@vault.insurance"
 cc_email = ""
 
 HOME_PATH = os.path.expanduser('~')
-FOLDER_PATH = HOME_PATH + "/python_scripts/data_migrator"
+FOLDER_PATH = HOME_PATH + "/python_scripts/data_migrator_sqlserver_to_snowflake"
 BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
 
 def on_failure_callback(context):

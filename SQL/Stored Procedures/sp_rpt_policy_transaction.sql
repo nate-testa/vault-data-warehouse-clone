@@ -1,11 +1,11 @@
 -- ==============================================================================================================================================
 -- Author:		Alberto Almario
--- Create Date: 2025-10-22
+-- Create Date: 2025-10-30
 -- Description: This stored procedure insert info related to rpt_policy_transaction.
 -------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 -------------------------------------------------------------------------------------------------------------------------------------------------
--- 10/22/25		Alberto Almario			    1. Created this procedure
+-- 10/30/25		Alberto Almario			    1. Created this procedure
 -- ==============================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_rpt_policy_transaction]
 AS
@@ -22,10 +22,9 @@ BEGIN
 		DECLARE @process_nm VARCHAR(255)=OBJECT_NAME(@@PROCID)
 		DECLARE @current_date DATETIME=GETDATE()
 		DECLARE @parameter_desc VARCHAR(255)
-		-- Get last source extract date
-		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+		
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
-		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+		SET @parameter_desc= 'Full load - Policy transactions'
 
 		--************Start************
 
@@ -65,8 +64,10 @@ BEGIN
         INNER JOIN edw_core.tproduct c ON a.product_sk = c.product_sk
         INNER JOIN edw_core.tbroker d ON a.broker_sk = d.broker_sk
         INNER JOIN edw_core.tcustomer e ON a.customer_sk = e.customer_sk
-        INNER JOIN edw_core.tpolicy f ON a.policy_sk = f.policy_sk
-        WHERE a.transaction_ts > @last_source_extract_ts;
+        INNER JOIN edw_core.tpolicy f ON a.policy_sk = f.policy_sk;
+
+		-- Truncate table before full load
+		TRUNCATE TABLE [edw_insights_ai].[rpt_policy_transaction];
 
 		-- Start Insert process
 		INSERT INTO [edw_insights_ai].[rpt_policy_transaction]
@@ -129,11 +130,8 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(transaction_ts) FROM [edw_temp].[rpt_policy_transaction_temp1]),@last_source_extract_ts);
-        EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		-- Update audit table
-		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+		SET @parameter_desc= @parameter_desc + ' Rows loaded: ' + CAST(@rows_affected AS VARCHAR(50))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
 		-- Drop temp table

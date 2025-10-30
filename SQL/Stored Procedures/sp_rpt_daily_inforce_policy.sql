@@ -1,11 +1,11 @@
 -- ==============================================================================================================================================
 -- Author:		Alberto Almario
--- Create Date: 2025-10-22
+-- Create Date: 2025-10-30
 -- Description: This stored procedure insert info related to rpt_daily_inforce_policy.
 -------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 -------------------------------------------------------------------------------------------------------------------------------------------------
--- 10/22/25		Alberto Almario			    1. Created this procedure
+-- 10/30/25		Alberto Almario			    1. Created this procedure
 -- ==============================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_rpt_daily_inforce_policy]
 AS
@@ -19,14 +19,12 @@ BEGIN
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
 		DECLARE @rows_affected INT
-		DECLARE @rows_deleted INT
 		DECLARE @process_nm VARCHAR(255)=OBJECT_NAME(@@PROCID)
 		DECLARE @current_date DATETIME=GETDATE()
 		DECLARE @parameter_desc VARCHAR(255)
-		-- Get last source extract date
-		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+		
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
-		SET @parameter_desc= 'Monthly inforce policy snapshot'
+		SET @parameter_desc= 'Full load - Monthly inforce policy snapshot'
 
 		--************Start************
 
@@ -77,16 +75,10 @@ BEGIN
 		INNER JOIN edw_core.tbroker d ON a.broker_sk = d.broker_sk
 		INNER JOIN edw_core.tcustomer e ON a.customer_sk = e.customer_sk
 		INNER JOIN edw_core.tpolicy f ON a.policy_sk = f.policy_sk
-		WHERE 1=1
-		AND b.actual_dt >= @last_source_extract_ts
-		AND b.actual_dt IN (SELECT actual_dt FROM MonthEndDates);
+		WHERE b.actual_dt IN (SELECT actual_dt FROM MonthEndDates);
 
-		-- Delete current month data to keep only the most recent day
-		DELETE FROM [edw_insights_ai].[rpt_daily_inforce_policy]
-		WHERE YEAR(actual_dt) = YEAR(GETDATE())
-		  AND MONTH(actual_dt) = MONTH(GETDATE());
-
-		SET @rows_deleted = @@ROWCOUNT;
+		-- Truncate table before full load
+		TRUNCATE TABLE [edw_insights_ai].[rpt_daily_inforce_policy];
 
 		-- Start Insert process
 		INSERT INTO [edw_insights_ai].[rpt_daily_inforce_policy]
@@ -131,12 +123,8 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		-- Update control table
-		SET @new_last_source_extract_ts=(DATETIMEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1, 0, 0, 0, 0)); --Set first day of the current month
-        EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-
 		-- Update audit table
-		SET @parameter_desc= @parameter_desc + ' | Rows deleted: ' + CAST(@rows_deleted AS VARCHAR(50)) + ' | Rows inserted: ' + CAST(@rows_affected AS VARCHAR(50))
+		SET @parameter_desc= @parameter_desc + ' Rows loaded: ' + CAST(@rows_affected AS VARCHAR(50))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
 		-- Drop temp table
