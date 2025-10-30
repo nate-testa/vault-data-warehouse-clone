@@ -6,6 +6,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 09/29/25     Architha Gudimalla          1. Created this procedure  
 -- 10/28/25     Architha Gudimalla          2. Changed broker to producer
+-- 10/30/25     Architha Gudimalla          3. Updated message for au if length > 96
 -- =================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
@@ -717,7 +718,10 @@ BEGIN
 					) as [current_coverage.existing_auto],
 					(
 					select top 1
-						auto_message
+						case when len(auto_message) > 96 and auto_message like '%covered vehicles%' 
+							 then LTRIM(SUBSTRING(auto_message, CHARINDEX(' and ', auto_message) + 5, LEN(auto_message)))
+							 else auto_message
+						end
 						from edw_integration.customer_midterm_review_ghostdraft_feed cmra 
 						where cmra.customer_id = cmr.customer_id
 						and cmra. product_nm = 'Auto'
