@@ -1,19 +1,19 @@
 update edw_core.tvalidation_sql
 set target_sql = 'select 1'
 where
-	validation_sql_desc = 'tclaim_transaction - missing claim payment transaction'
+	validation_sql_desc = 'tclaim_feature - aslob_sk is null but claim coverage exists'
  
 update edw_core.tvalidation_sql
 set target_sql = 'select 1'
 where
-	validation_sql_desc = 'tclaim_feature - aslob_sk is null but claim coverage exists'
+	validation_sql_desc = 'tclaim_feature - claim_coverage_desc is null'
  
 update edw_core.tvalidation_sql
 set target_sql = 'select 3'
 where
-	validation_sql_desc = 'tclaim_transaction - feature_status_sk null'
+	validation_sql_desc = 'tclaim_feature snapsheet claims - missing coverage_sk'
  
 update edw_core.tvalidation_sql
 set target_sql = 'select 0'
 where
-	validation_sql_desc = 'tbroker - null commercial_or_personal_business_type'
+	validation_sql_desc = 'Inforce customers with $0 inforce premium'
