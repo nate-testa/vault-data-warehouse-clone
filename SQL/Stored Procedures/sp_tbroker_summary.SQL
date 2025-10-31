@@ -65,6 +65,7 @@ GO
 -- 10/07/25		Dinesh Bobbili					36. AD11217 - Updated the logics for non_flat_cancelled_ct, non_flat_cancelled_ct,expiring_sixty_day_written_premium_amt
 -- 10/15/25		Dinesh Bobbili					37. AD11286 - Added date logic to run the process for 3 months
 -- 10/28/25		Dinesh Bobbili					38. AD11456 - Added new columns
+-- 10/28/25		Architha Gudimalla				39. AD11456 - Added filter on trenewal_summary - non_flat_cancelled_ct=1
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
@@ -436,7 +437,8 @@ BEGIN
 					inner join edw_core.tstate st  on pol.risk_state_cd = st.state_cd
 					left join edw_core.tquote q  on q.quote_sk = r.renewal_quote_sk
 					left join edw_core.tquote_history qh  on q.quote_sk = qh.quote_sk and qh.latest_transaction_in = 'Y'
-					where month_sk between @year_begin_dt_sk and @month_end_dt_sk  
+					where 	month_sk between @year_begin_dt_sk and @month_end_dt_sk  
+					and 	r.non_flat_cancelled_ct = 1
 					group by r.month_sk, r.broker_sk, r.product_sk, r.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				)
