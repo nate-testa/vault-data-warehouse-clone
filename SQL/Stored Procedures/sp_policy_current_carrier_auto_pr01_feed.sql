@@ -8,6 +8,7 @@
 -- 10/28/25					Yunus Mohammed			2. AD11515 Made changes for CoverageType4, CoverageType9, IndividualLimit11, OccurrenceLimit11
 --																							, IndividualLimit15 and OccurrenceLimit15
 -- 10/28/25					Yunus Mohammed			3.AD11528 Removed null vin no and not registered vehicles
+-- 10/31/25					Yunus Mohammed			4.AD11528 Updated CSL11 deductible9
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_current_carrier_auto_pr01_feed]
 AS
@@ -183,8 +184,8 @@ BEGIN
 	NULL AS CSL10,
 	
 	case when
-	TRIM(ISNULL(apc.underinsured_motorist_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage') and
-	CHARINDEX('/', apc.underinsured_motorist_limit_amt, charindex('/',apc.underinsured_motorist_limit_amt) + 1) > 0 then
+	TRIM(ISNULL(apc.combined_uninsured_motorist_limit_amt,'')) NOT IN ('','0','No Coverage','Decline Coverage') and
+	CHARINDEX('/', apc.combined_uninsured_motorist_limit_amt, charindex('/',apc.combined_uninsured_motorist_limit_amt) + 1) > 0 then
 	'UM' end CoverageType11,
 	NULL AS IndividualLimit11,
 	/*REPLACE(REPLACE(
@@ -262,7 +263,10 @@ BEGIN
 	'0' as Deductible8Perc,
 	'0' as Deductible8Amount,
 	'0' as Deductible9Perc,
-	'0' as Deductible9Amount,
+	case when TRIM(ISNULL(apc.pip_deductible,'')) NOT IN ('None') then
+		REPLACE(REPLACE(apc.pip_deductible,',',''),'$','')
+	else '0' end 
+	as Deductible9Amount,
 	'0' as Deductible10Perc,
 	'0' as Deductible10Amount,
 	'0' as Deductible11Perc,
