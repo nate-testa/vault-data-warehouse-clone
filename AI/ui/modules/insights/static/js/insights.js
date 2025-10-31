@@ -442,6 +442,17 @@ function initializeInsights() {
             sendSuggestedMessage(suggestion);
         }
     });
+    
+    // Handle feedback button clicks with event delegation
+    $(document).on('click', '.feedback-btn', function(e) {
+        e.preventDefault();
+        const requestId = $(this).attr('data-request-id');
+        const isPositive = $(this).hasClass('positive');
+        
+        if (requestId) {
+            submitQuickFeedback(requestId, isPositive);
+        }
+    });
 }
 
 /**
@@ -842,10 +853,10 @@ function appendAssistantMessage(content, requestId, sqlResults, sqlExecutionErro
     if (requestId) {
         messageHtml += `
             <div class="feedback-controls">
-                <button class="feedback-btn positive" onclick="submitQuickFeedback('${requestId}', true)" title="Helpful">
+                <button class="feedback-btn positive" data-request-id="${requestId}" title="Helpful">
                     <i class="fas fa-thumbs-up"></i>
                 </button>
-                <button class="feedback-btn negative" onclick="submitQuickFeedback('${requestId}', false)" title="Not helpful">
+                <button class="feedback-btn negative" data-request-id="${requestId}" title="Not helpful">
                     <i class="fas fa-thumbs-down"></i>
                 </button>
             </div>
@@ -963,9 +974,9 @@ window.feedbackContext = {
  * Submit quick feedback (thumbs up/down) - Shows modal for optional comment
  */
 function submitQuickFeedback(requestId, positive) {
-    console.log('[FEEDBACK] Opening feedback modal:', requestId, positive);
+    // Find message wrapper by request_id
+    const messageWrapper = $(`.message-wrapper[data-request-id="${requestId}"]`);
     
-    const messageWrapper = $(`[data-request-id="${requestId}"]`);
     if (!messageWrapper.length) {
         console.error('[FEEDBACK] Message wrapper not found for request:', requestId);
         return;
@@ -991,9 +1002,13 @@ function submitQuickFeedback(requestId, positive) {
     );
     
     // Reset and show modal
+    const modalElement = $('#feedbackModal');
     $('#feedbackCommentInput').val('');
     $('#feedbackCharCount').text('0');
-    $('#feedbackModal').fadeIn(200);
+    
+    // Remove hidden class before fadeIn (required due to CSS !important)
+    modalElement.removeClass('hidden');
+    modalElement.fadeIn(200);
     
     // Focus on textarea after animation
     setTimeout(() => {
@@ -1005,7 +1020,11 @@ function submitQuickFeedback(requestId, positive) {
  * Close feedback modal
  */
 function closeFeedbackModal() {
-    $('#feedbackModal').fadeOut(200);
+    const modalElement = $('#feedbackModal');
+    modalElement.fadeOut(200, function() {
+        // Add hidden class back after fade animation completes
+        modalElement.addClass('hidden');
+    });
     window.feedbackContext = { requestId: null, positive: null, messageWrapper: null };
 }
 

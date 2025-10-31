@@ -103,7 +103,7 @@
                     </div>
                 {% elif message.role == 'assistant' %}
                     <!-- Assistant Message -->
-                    <div class="message-wrapper assistant-message">
+                    <div class="message-wrapper assistant-message" {% if message.request_id %}data-request-id="{{ message.request_id }}"{% endif %}>
                         <div class="message-avatar assistant-avatar">
                             <i class="fas fa-robot"></i>
                         </div>
