@@ -691,7 +691,14 @@ and a.PrimaryInsuredId=b.id
         begin
             set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_start_dt AS VARCHAR(200))
         end
-        EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;  
+        EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;   
+         
+		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_0_inforce;
+		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_0_cust_monoline;
+		drop table if exists edw_temp.zip_codes;
+		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_1_cust ;
+		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_inforce_detail ; 
+        drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_offered_state;
  
     END TRY
     BEGIN CATCH
