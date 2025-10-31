@@ -97,14 +97,14 @@ and a.PrimaryInsuredId=b.id
             select '93023' as zip_code union select '93060' as zip_code union select '93063' as zip_code union select '93065' as zip_code union select '93066' as zip_code union select '93067' as zip_code union select '93103' as zip_code union select '93105' as zip_code union select '93108' as zip_code union select '93110' as zip_code union select '93111' as zip_code union select '93117' as zip_code union select '93441' as zip_code union select '93460' as zip_code union select '93463'  as zip_code
 		) as a;
 		 
-		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_1_cust ;
+		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_1_cust ; /*
 
         set @max_renewal_quote_review_start_dt = (select max(renewal_quote_review_start_dt) renewal_quote_review_start_dt
                                                 from edw_core.tquote
                                                 where renewal_quote_review_start_dt > --'01-jan-1999' 
                                                                                     @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
                                                 and quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
-                                                and quote_term = 'Renewal');
+                                                and quote_term = 'Renewal');*/
 		
         with cust as
 		(
@@ -678,7 +678,7 @@ and a.PrimaryInsuredId=b.id
 		               
         SET @rows_affected=@@ROWCOUNT;
  
-        set @new_last_source_extract_ts = @max_renewal_quote_review_start_dt;
+        set @new_last_source_extract_ts = (select getdate());
        
         --Update control table
         SET @new_last_source_extract_ts = COALESCE(@new_last_source_extract_ts,@last_source_extract_ts);

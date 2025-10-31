@@ -6,6 +6,8 @@
 ---------------------------------------------------------------------------------------------------
 -- 09/29/25     Architha Gudimalla          1. Created this procedure  
 -- 10/28/25     Architha Gudimalla          2. Changed broker to producer
+-- 10/30/25     Architha Gudimalla          3. Updated message for au if length > 96
+-- 10/30/25     Architha Gudimalla          4. Updated to use ho producer
 -- =================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
@@ -73,6 +75,8 @@ BEGIN
 					null risk_address_zip_cd,
 					null risk_address,  
 					null occupancy_type,
+					null occupancy_type_order,
+					null total_insured_value_amt,
 					p.monoline_home_in,
 					case when r.product_nm = 'Excess Liability' then sum(p.pel_limit_amt) end pel_limit_amt,
 					case when r.product_nm = 'Excess Liability' then sum(p.pel_location_ct) end pel_location_ct,
@@ -211,6 +215,11 @@ BEGIN
 							)
 						)),'  ','') AS risk_address,  
 					p.occupancy_type,
+							case p.occupancy_type
+								when 'Primary' then '1_Primary'
+								else '2_Non_Primary' 
+							end occupancy_type_order,
+					p.total_insured_value_amt,
 					p.monoline_home_in,
 					p.pel_limit_amt,
 					p.pel_location_ct,
@@ -368,7 +377,7 @@ BEGIN
 			create_ts,
 			update_ts
 		)
-		select customer_id,
+		select a.customer_id,
 				midterm_review_year,
 				customer_nm ,
 				customer_email,
@@ -383,10 +392,10 @@ BEGIN
 				[mailing_address_city_nm],
 				[mailing_address_state_cd],
 				[mailing_address_zip_cd],
-				producer_id, 			-- broker_id,
-				producer_nm, 			-- broker_nm,
-				producer_phone_no, 	-- broker_phone_no,
-				producer_email,		-- broker_email,
+				coalesce(producer_ho.producer_id, producer_oth.producer_id) producer_id, 			-- broker_id,
+				CONCAT(pr.First_nm, ' ', pr.Last_nm) producer_nm, 			-- broker_nm,
+				pr.phone_no producer_phone_no, 	-- broker_phone_no,
+				pr.email producer_email,		-- broker_email, 
 				risk_address_line1,
 				risk_address_line2,
 				risk_address_unit_no,
@@ -394,7 +403,7 @@ BEGIN
 				risk_address_state_cd,
 				risk_address_zip_cd,
 				risk_address,  
-				occupancy_type,
+				a.occupancy_type,
 				monoline_home_in,
 				pel_limit_amt,
 				pel_location_ct,
@@ -449,7 +458,21 @@ BEGIN
                 @etl_audit_sk etl_audit_sk,
                 getdate() create_ts,
                 getdate() update_ts 
-		from edw_temp.customer_midterm_review_ghostdraft_feed_temp1;
+		from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 a
+		left join ( 
+					select  customer_id, occupancy_type, occupancy_type_order, total_insured_value_amt, producer_id,
+							row_number() over (partition by customer_id order by occupancy_type_order, total_insured_value_amt desc) rn 
+					from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
+					where product_nm in ('Condo','Homeowners')  
+				   ) producer_ho on a.customer_id = producer_ho.customer_id and producer_ho.rn = 1 
+		left join (
+					select  customer_id, occupancy_type, occupancy_type_order, total_insured_value_amt, producer_id,
+							row_number() over (partition by customer_id order by occupancy_type_order, total_insured_value_amt desc) rn 
+					from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
+					where product_nm not in ('Condo','Homeowners')  
+				   ) producer_oth on a.customer_id = producer_oth.customer_id and producer_oth.rn = 1
+		left join edw_Core.tproducer pr on pr.producer_id = coalesce(producer_ho.producer_id, producer_oth.producer_id)
+		;
 
 		--concat vehicle list
 		WITH veh_list AS (
@@ -717,7 +740,10 @@ BEGIN
 					) as [current_coverage.existing_auto],
 					(
 					select top 1
-						auto_message
+						case when len(auto_message) > 96 and auto_message like '%covered vehicles%' 
+							 then LTRIM(SUBSTRING(auto_message, CHARINDEX(' and ', auto_message) + 5, LEN(auto_message)))
+							 else auto_message
+						end
 						from edw_integration.customer_midterm_review_ghostdraft_feed cmra 
 						where cmra.customer_id = cmr.customer_id
 						and cmra. product_nm = 'Auto'
