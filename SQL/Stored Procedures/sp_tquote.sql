@@ -20,6 +20,7 @@
 -- 09/16/25		Yunus Mohammed					15. AD10892 - Added new columns renewal_quote_in and renewal_quote_review_start_dt
 -- 10/15/25		Yunus Mohammed					16 AD11341 - Added new column renewal_released_by_metal_in
 -- 10/30/25		Yunus Mohammed					17. AD-11535 Added stalled_quote_in  and new_business_work_status 
+-- 10/31/25		Sandeep Gundreddy				18. AD-11560 - removed date filter to update all null EffectiveDate/ExpirationDate in Metal; added for account table backfills
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -46,8 +47,7 @@ BEGIN
 
 		update 	edw_stage.Account
 		set 	EffectiveDate = cast(createddate as date), ExpirationDate  = cast(createddate as date)
-		where 	EffectiveDate is null
-		AND 	greatest(CreatedDate,UpdatedDate)>@last_source_extract_ts;
+		where 	EffectiveDate is null;
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.tquote_temp1;
