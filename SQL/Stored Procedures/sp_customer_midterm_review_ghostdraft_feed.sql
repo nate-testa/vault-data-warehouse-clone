@@ -75,6 +75,8 @@ BEGIN
 					null risk_address_zip_cd,
 					null risk_address,  
 					null occupancy_type,
+					null occupancy_type_order,
+					null total_insured_value_amt,
 					p.monoline_home_in,
 					case when r.product_nm = 'Excess Liability' then sum(p.pel_limit_amt) end pel_limit_amt,
 					case when r.product_nm = 'Excess Liability' then sum(p.pel_location_ct) end pel_location_ct,
@@ -213,6 +215,11 @@ BEGIN
 							)
 						)),'  ','') AS risk_address,  
 					p.occupancy_type,
+							case p.occupancy_type
+								when 'Primary' then '1_Primary'
+								else '2_Non_Primary' 
+							end occupancy_type_order,
+					p.total_insured_value_amt,
 					p.monoline_home_in,
 					p.pel_limit_amt,
 					p.pel_location_ct,
@@ -385,7 +392,7 @@ BEGIN
 				[mailing_address_city_nm],
 				[mailing_address_state_cd],
 				[mailing_address_zip_cd],
-				coalesce(producer_ho.producer_id, producer_condo.producer_id, producer_oth.producer_id) producer_id, 			-- broker_id,
+				coalesce(producer_ho.producer_id, producer_oth.producer_id) producer_id, 			-- broker_id,
 				CONCAT(pr.First_nm, ' ', pr.Last_nm) producer_nm, 			-- broker_nm,
 				pr.phone_no producer_phone_no, 	-- broker_phone_no,
 				pr.email producer_email,		-- broker_email, 
@@ -396,7 +403,7 @@ BEGIN
 				risk_address_state_cd,
 				risk_address_zip_cd,
 				risk_address,  
-				occupancy_type,
+				a.occupancy_type,
 				monoline_home_in,
 				pel_limit_amt,
 				pel_location_ct,
@@ -452,16 +459,20 @@ BEGIN
                 getdate() create_ts,
                 getdate() update_ts 
 		from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 a
-		left join (select customer_id, max(producer_id) producer_id from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
-				   where product_nm='Homeowners'
-				   group by customer_id) producer_ho on a.customer_id = producer_ho.customer_id
-		left join (select customer_id, max(producer_id) producer_id  from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
-				   where product_nm='Condo'
-				   group by customer_id) producer_condo on a.customer_id = producer_condo.customer_id
-		left join (select customer_id, max(producer_id) producer_id  from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
-				   where product_nm not in ('Condo','Homeowners') 
-				   group by customer_id) producer_oth on a.customer_id = producer_oth.customer_id
-		left join edw_Core.tproducer pr on pr.producer_id = coalesce(producer_ho.producer_id, producer_condo.producer_id, producer_oth.producer_id);
+		left join ( 
+					select  customer_id, occupancy_type, occupancy_type_order, total_insured_value_amt, producer_id,
+							row_number() over (partition by customer_id order by occupancy_type_order, total_insured_value_amt desc) rn 
+					from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
+					where product_nm in ('Condo','Homeowners')  
+				   ) producer_ho on a.customer_id = producer_ho.customer_id and producer_ho.rn = 1 
+		left join (
+					select  customer_id, occupancy_type, occupancy_type_order, total_insured_value_amt, producer_id,
+							row_number() over (partition by customer_id order by occupancy_type_order, total_insured_value_amt desc) rn 
+					from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
+					where product_nm not in ('Condo','Homeowners')  
+				   ) producer_oth on a.customer_id = producer_oth.customer_id and producer_oth.rn = 1
+		left join edw_Core.tproducer pr on pr.producer_id = coalesce(producer_ho.producer_id, producer_oth.producer_id)
+		;
 
 		--concat vehicle list
 		WITH veh_list AS (
