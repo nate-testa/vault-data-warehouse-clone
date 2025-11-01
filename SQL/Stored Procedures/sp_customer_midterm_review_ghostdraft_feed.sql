@@ -725,7 +725,10 @@ BEGIN
 						WHERE cmrh.customer_id = cmr.customer_id
 							and cmrh. product_nm in ('Condo','Homeowners')
 							and cmrh.existing_product_in = 'Yes'
-						order by cmrp.total_insured_value_amt
+						order by case cmrp.occupancy_type
+									when 'Primary' then '1_Primary'
+									else '2_Non_Primary' 
+								end, cmrp.total_insured_value_amt desc
 					--) as a
 					for json path, include_null_values
 				)) as [current_coverage.home]
@@ -887,6 +890,9 @@ BEGIN
             set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_start_dt AS VARCHAR(200))
         end
         EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;  
+		
+        drop table if exists edw_temp.customer_midterm_review_ghostdraft_feed_temp1;
+		drop table if exists edw_temp.customer_midterm_review_ghostdraft_feed_temp2; 
  
     END TRY
     BEGIN CATCH
