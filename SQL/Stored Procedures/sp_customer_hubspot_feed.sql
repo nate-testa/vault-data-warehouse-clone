@@ -33,6 +33,7 @@
 -- 09/10/25		Archtha Gudimalla			25. AD10960 - Added customer email id fix
 -- 09/30/25		Dinesh Bobbili				26. AD10938 - Added new columns
 -- 10/16/25		Dinesh Bobbili				27. AD11382 - Added logic to Include David Tester policies
+-- 10/23/25		Dinesh Bobbili				28. AD11462 - Added insured_nm and uw_company_nm 
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -166,7 +167,9 @@ BEGIN
 			hc.occupancy_type,
 			pol.effective_dt,
 			pol.expiration_dt,
-			pol.policy_inforce_in
+			pol.policy_inforce_in,
+			isnull(pol.insured_nm,'') as insured_nm,
+			pol.uw_company_nm as uw_company_nm
 		INTO edw_temp.customer_hubspot_feed_temp1
 		FROM edw_core.tpolicy pol		
 		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
@@ -288,6 +291,8 @@ BEGIN
 				,effective_dt
 				,expiration_dt
 				,policy_inforce_in
+				,insured_nm
+				,uw_company_nm
 				FROM edw_temp.customer_hubspot_feed_temp1/*
 				union ALL 
 			SELECT 
@@ -352,6 +357,8 @@ BEGIN
 			,effective_dt
 			,expiration_dt
 			,policy_inforce_in
+			,insured_nm
+			,uw_company_nm
 			)
 		VALUES (source.policy_no,
 				source.first_nm,
@@ -383,7 +390,9 @@ BEGIN
 				,source.occupancy_type
 				,source.effective_dt
 				,source.expiration_dt
-				,source.policy_inforce_in)
+				,source.policy_inforce_in
+				,source.insured_nm
+				,source.uw_company_nm)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
@@ -415,6 +424,8 @@ BEGIN
 			,target.effective_dt 			= source.effective_dt
 			,target.expiration_dt 			= source.expiration_dt
 			,target.policy_inforce_in 		= source.policy_inforce_in
+			,target.insured_nm				= source.insured_nm
+			,target.uw_company_nm			= source.uw_company_nm
 		;
 
 		SET @rows_affected=@@ROWCOUNT;

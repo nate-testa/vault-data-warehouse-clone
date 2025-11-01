@@ -1,14 +1,11 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 -- =================================================================================================
 -- Description: This procedures inserts quote insured data wip
 -----------------------------------------------------------------------------------------------------------------------
--- Change date          |Author						|	Change Description
+-- Change date          |Author									|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
--- 05/09/24		        Yunus Mohammed			     1. Created the proc
--- 05/14/24				Yunus Mohammed				 2. Removed updated date from delta identifier
+-- 05/09/24		        Yunus Mohammed			  1. Created the proc
+-- 05/14/24				Yunus Mohammed			  2. Removed updated date from delta identifier
+-- 10/21/25				Yunus Mohammed			  3. Removed time from SubscriberContributionEndDate
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_insured_wip]
@@ -80,7 +77,14 @@ BEGIN
 				nullif(trim(InsuranceScoreCode2),'') InsuranceScoreCode2,
 				nullif(trim(InsuranceScoreCode3),'') InsuranceScoreCode3,
 				nullif(trim(InsuranceScoreCode4),'') InsuranceScoreCode4,
-				nullif(trim(SubscriberContributionEndDate),'') SubscriberContributionEndDate,
+				nullif(trim
+							(
+								case when SubscriberContributionEndDate is not null and len(trim(SubscriberContributionEndDate)) > 0 then
+									LEFT(SubscriberContributionEndDate, CHARINDEX(' ', SubscriberContributionEndDate + ' ') - 1)
+						else 
+							SubscriberContributionEndDate
+						end
+						),'') SubscriberContributionEndDate,
 				nullif(trim(IsCoInsured),'') IsCoInsured,
 				nullif(trim(Title),'') Title,
 				nullif(trim(NamedInsuredLimitsIndicator),'') NamedInsuredLimitsIndicator

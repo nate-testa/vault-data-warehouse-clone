@@ -1,13 +1,15 @@
--- =================================================================================================
+-- ================================================================================================================================
 -- Author:      Architha Gudimalla
 -- Description: This procedures loads customer recommendation feed
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------
 -- Change date |Author                      |   Change Description
----------------------------------------------------------------------------------------------------
--- 06/16/23     Architha Gudimalla          1. Created this procedure  
+-----------------------------------------------------------------------------------------------------------------------------------
+-- 06/16/25     Architha Gudimalla          1. Created this procedure  
 -- 09/11/25     Sandeep Gundreddy           2. Added renewal_quote_review_start_dt filter
 -- 09/22/25		Yunus Mohammed				3. Added wildfire protection and backup generator customer recommendation feed
--- =================================================================================================
+-- 10/22/25		Architha Gudimalla			4. Removed code for primary_home_discount_pc
+-- 10/28/25		Architha Gudimalla			5. Added producer to policy detail table
+-- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
 @in_start_dt DATE = null
@@ -95,14 +97,14 @@ and a.PrimaryInsuredId=b.id
             select '93023' as zip_code union select '93060' as zip_code union select '93063' as zip_code union select '93065' as zip_code union select '93066' as zip_code union select '93067' as zip_code union select '93103' as zip_code union select '93105' as zip_code union select '93108' as zip_code union select '93110' as zip_code union select '93111' as zip_code union select '93117' as zip_code union select '93441' as zip_code union select '93460' as zip_code union select '93463'  as zip_code
 		) as a;
 		 
-		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_1_cust ;
+		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_1_cust ; /*
 
         set @max_renewal_quote_review_start_dt = (select max(renewal_quote_review_start_dt) renewal_quote_review_start_dt
                                                 from edw_core.tquote
                                                 where renewal_quote_review_start_dt > --'01-jan-1999' 
                                                                                     @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
                                                 and quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
-                                                and quote_term = 'Renewal');
+                                                and quote_term = 'Renewal');*/
 		
         with cust as
 		(
@@ -227,6 +229,7 @@ and a.PrimaryInsuredId=b.id
                 cust.mailing_address_line1, cust.mailing_address_line2, cust.mailing_address_unit_no,
                 cust.mailing_address_city_nm, cust.mailing_address_state_cd, cust.mailing_address_zip_cd,
                 pol.broker_id, br.dba_nm, br.broker_nm, br.broker_phone_no, br.broker_email,
+                p.producer_id, CONCAT(p.First_nm, ' ', p.Last_nm) producer_nm, p.phone_no producer_phone_no, p.email producer_email, 
                 bdm.team_member_nm bdm_nm, bdm_usr.phone_no bdm_phone_no, bdm_usr.email bdm_email,  
                 un.team_member_nm new_business_underwriter_nm, un_usr.phone_no new_business_underwriter_phone_no, un_usr.email new_business_underwriter_email,
                 run.team_member_nm renewal_underwriter_nm, run_usr.phone_no renewal_underwriter_phone_no, run_usr.email renewal_underwriter_email,
@@ -274,6 +277,7 @@ and a.PrimaryInsuredId=b.id
         from edw_temp.customer_midterm_review_recommendation_temp_0_inforce inf
         inner join edw_core.tpolicy pol on pol.policy_sk = inf.policy_sk
         inner join edw_core.tpolicy_history ph on ph.policy_no = pol.policy_no and ph.latest_transaction_in = 'Y'
+        left join edw_core.tproducer p on p.producer_sk = ph.producer_sk
         inner join edw_core.tproduct pr on pr.product_cd = pol.product_cd
         inner join edw_core.tcustomer cust on cust.customer_id = pol.customer_id 
 		inner join edw_temp.customer_midterm_review_recommendation_temp_1_cust a on a.customer_id = cust.customer_id
@@ -372,6 +376,7 @@ and a.PrimaryInsuredId=b.id
 			broker_nm,
 			broker_phone_no,
 			broker_email,
+            producer_id, producer_nm, producer_phone_no, producer_email, 
 			bdm_nm,
 			bdm_phone_no,
 			bdm_email,
@@ -438,6 +443,7 @@ and a.PrimaryInsuredId=b.id
 				broker_nm,
 				broker_phone_no,
 				broker_email,
+                producer_id, producer_nm, producer_phone_no, producer_email, 
 				bdm_nm,
 				bdm_phone_no,
 				bdm_email,
@@ -510,8 +516,7 @@ and a.PrimaryInsuredId=b.id
                 product_nm,
                 existing_product_in,
                 existing_policy_no,
-                occupancy_type,
-                primary_home_discount_pc, 
+                occupancy_type, 
                 rms_recommendation,
                 wildfire_protection_recommendation, 
                 backup_generator_recommendation, 
@@ -531,7 +536,6 @@ and a.PrimaryInsuredId=b.id
                      else 'No'
                 end existing_product_in,
                 isnull(cf.policy_no,'') existing_policy_no, cf.occupancy_type,
-                null as primary_home_discount_pc, --case when cf.occupancy_type <> 'Primary' then cast(pcc.primary_home_discount_pc as varchar) end
                 case when cf.water_leak_detection_system = 'No' and pos.product_cd in ('ho','co') then 'Install water shutoff system service' end rms_recommendation,
 				
 				case when exists(select 1 from edw_temp.zip_codes z where z.zip_code = cf.risk_address_zip_cd)
@@ -543,7 +547,7 @@ and a.PrimaryInsuredId=b.id
 				case (case when cf.policy_no is not null and pr.product_cd = 'ho'  and pos.product_cd = 'Lux_on_endorsement' and lux.quote_no is null then 'Yes'
                            when cf.policy_no is not null and pr.product_cd = 'ho' and pos.product_cd = 'Lux_on_endorsement' and lux.quote_no is not null then 'Not recommended'
                            --primary
-                           when cf.policy_no is not null and pr.product_cd = 'ho' and prim.customer_id is null then 'Primary'
+                           when cf.policy_no is not null and pr.product_cd in ('ho','co') and prim.customer_id is null then 'Primary'
                            --marine
                            when cf.policy_no is null and pos.offered_in = 'Yes' and pr.product_cd = 'by' and marine.customer_id is null then 'Marine'
                            --marine
@@ -602,27 +606,8 @@ and a.PrimaryInsuredId=b.id
                                 where product_nm = 'Marine Boat & Yacht'
                                 and renewal_year =  datepart(yyyy, getdate())
                               ) marine on marine.customer_id = cust.customer_id
-                     -- and case when curr_inf.product_cd = pr.product_cd then curr_inf.policy_no else '1' end =
-                     --     case when curr_inf.product_cd = pr.product_cd then cf.policy_no else '1' end
-        --left join edw_core.tproduct_companion_credit pcc on pcc.product_cd = pr.product_cd and pcc.state_cd = cust.mailing_address_state_cd and pcc.uw_company_cd = cust.uw_company_cd
         where pr.product_category_nm = 'PersonalLines'  
-        order by 1,5,6 ;		 
- 
-        --update primary home discount recommention if available in companion credit table
-        update a
-        set a.primary_home_discount_pc = pcc.primary_home_discount_pc,
-            a.product_recommendation =  case when pcc.primary_home_discount_pc is null
-                                        then 'Primary Home Discount not available'
-                                        else a.product_recommendation
-                                        end
-        from edw_integration.customer_midterm_review_recommendation  a
-        inner join edw_core.tproduct pr on a.product_nm = pr.product_nm
-        left join  (select state_cd, product_cd, max(primary_home_discount_pc) as primary_home_discount_pc
-					from edw_core.tproduct_companion_credit
-                    group by state_cd, product_cd --added on 09262025
-					) pcc on a.mailing_address_state_cd = pcc.state_cd and pr.product_cd = pcc.product_cd --and a.uw_company_cd = pcc.uw_company_cd 
-        where product_recommendation = 'Add as primary for additional discount'
-        and renewal_year =  datepart(yyyy, getdate());
+        order by 1,5,6 ; 
  
         --- take out product recommendation of a DNR in the last year
         update a
@@ -693,7 +678,7 @@ and a.PrimaryInsuredId=b.id
 		               
         SET @rows_affected=@@ROWCOUNT;
  
-        set @new_last_source_extract_ts = @max_renewal_quote_review_start_dt;
+        set @new_last_source_extract_ts = (select getdate());
        
         --Update control table
         SET @new_last_source_extract_ts = COALESCE(@new_last_source_extract_ts,@last_source_extract_ts);
@@ -706,7 +691,14 @@ and a.PrimaryInsuredId=b.id
         begin
             set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_start_dt AS VARCHAR(200))
         end
-        EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;  
+        EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;   
+         
+		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_0_inforce;
+		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_0_cust_monoline;
+		drop table if exists edw_temp.zip_codes;
+		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_1_cust ;
+		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_inforce_detail ; 
+        drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_offered_state;
  
     END TRY
     BEGIN CATCH

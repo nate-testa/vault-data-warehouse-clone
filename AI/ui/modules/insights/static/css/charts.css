@@ -1,0 +1,437 @@
+/* Chart styling and responsive design for Plotly visualizations */
+
+/* Chart Container Styling */
+.chart-container {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(59,130,246,0.08);
+    margin: 16px 0;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+    border: 1px solid #e1e8ed;
+}
+
+.chart-container:hover {
+    box-shadow: 0 8px 20px rgba(59,130,246,0.12);
+}
+
+.chart-wrapper {
+    padding: 20px;
+    position: relative;
+}
+
+/* Chart Header */
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.chart-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+    flex-grow: 1;
+}
+
+.chart-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.chart-type-selector {
+    appearance: none;
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 6px 24px 6px 8px;
+    font-size: 12px;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.generate-chart-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 12px;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.15);
+    white-space: nowrap;
+}
+
+.generate-chart-btn:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59,130,246,0.2);
+}
+
+.chart-type-selector:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.chart-type-selector:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    border-color: #3b82f6;
+}
+
+/* Chart Content Area */
+.chart-content {
+    min-height: 400px;
+    position: relative;
+}
+
+/* Plotly Chart Responsive Styling */
+.plotly-graph-div {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* KPI Cards Specific Styling */
+.kpi-card {
+    text-align: center;
+    padding: 32px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    margin: 16px 0;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.kpi-value {
+    font-size: 48px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.kpi-label {
+    font-size: 18px;
+    font-weight: 500;
+    opacity: 0.9;
+}
+
+.kpi-delta {
+    font-size: 14px;
+    margin-top: 8px;
+    opacity: 0.8;
+}
+
+/* Chart Error States */
+.chart-error {
+    display: block;
+    padding: 24px;
+    text-align: left;
+    color: #dc2626;
+    background: #fef2f2;
+    border: 2px solid #fecaca;
+    border-left: 4px solid #ef4444;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 16px 0;
+    white-space: pre-wrap;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.chart-error::before {
+    content: '';
+    display: none;
+}
+
+.chart-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    text-align: center;
+    color: #6b7280;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    margin: 16px 0;
+}
+
+.chart-empty::before {
+    content: '📊';
+    font-size: 24px;
+    margin-right: 12px;
+}
+
+/* Loading States */
+.chart-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    text-align: center;
+    color: #6b7280;
+    background: #f9fafb;
+    border-radius: 8px;
+    margin: 16px 0;
+}
+
+.chart-loading i {
+    color: #3b82f6;
+    margin-bottom: 16px;
+}
+
+.chart-loading h3 {
+    margin: 8px 0;
+    color: #374151;
+}
+
+.chart-loading::before {
+    content: '';
+    width: 20px;
+    height: 20px;
+    border: 2px solid #e5e7eb;
+    border-top: 2px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 12px;
+    display: none; /* Only show when actively loading */
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Chart Recommendations */
+.chart-recommendations {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.chart-recommendation {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 12px;
+    color: #374151;
+}
+
+.chart-recommendation:hover {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.chart-recommendation.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .chart-container {
+        margin: 12px 0;
+        border-radius: 8px;
+    }
+    
+    .chart-wrapper {
+        padding: 16px;
+    }
+    
+    .chart-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .chart-controls {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .chart-title {
+        font-size: 16px;
+    }
+    
+    .chart-content {
+        min-height: 300px;
+    }
+    
+    .kpi-card {
+        padding: 24px;
+        min-height: 150px;
+    }
+    
+    .kpi-value {
+        font-size: 36px;
+    }
+    
+    .kpi-label {
+        font-size: 16px;
+    }
+    
+    .chart-recommendations {
+        flex-direction: column;
+    }
+    
+    .chart-recommendation {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .chart-wrapper {
+        padding: 12px;
+    }
+    
+    .chart-title {
+        font-size: 14px;
+    }
+    
+    .chart-content {
+        min-height: 250px;
+    }
+    
+    .kpi-card {
+        padding: 20px;
+        min-height: 120px;
+    }
+    
+    .kpi-value {
+        font-size: 28px;
+    }
+    
+    .kpi-label {
+        font-size: 14px;
+    }
+}
+
+/* High DPI Display Support */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .plotly-graph-div {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+}
+
+/* Dark Mode Support (if needed in future) */
+@media (prefers-color-scheme: dark) {
+    .chart-container {
+        background: #1f2937;
+        border: 1px solid #374151;
+    }
+    
+    .chart-title {
+        color: #f9fafb;
+    }
+    
+    .chart-header {
+        border-bottom-color: #374151;
+    }
+    
+    .chart-empty,
+    .chart-loading {
+        background: #374151;
+        border-color: #4b5563;
+        color: #d1d5db;
+    }
+    
+    .chart-recommendations {
+        background: #374151;
+        border-color: #4b5563;
+    }
+    
+    .chart-recommendation {
+        background: #1f2937;
+        border-color: #4b5563;
+        color: #d1d5db;
+    }
+}
+
+/* Axis Selectors Styles */
+.chart-axis-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.chart-axis-label {
+    font-size: 11px;
+    color: #6b7280;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.chart-axis-selector {
+    appearance: none;
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 6px 24px 6px 8px;
+    font-size: 12px;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 120px;
+}
+
+.chart-axis-selector:hover {
+    border-color: #9ca3af;
+    background: #ffffff;
+}
+
+.chart-axis-selector:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Print Styles */
+@media print {
+    .chart-container {
+        box-shadow: none;
+        border: 1px solid #000;
+        page-break-inside: avoid;
+    }
+    
+    .chart-controls {
+        display: none;
+    }
+    
+    .chart-recommendations {
+        display: none;
+    }
+}

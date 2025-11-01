@@ -1,35 +1,46 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 import os
-from dotenv import load_dotenv
 from utils.logging import logger
+from utils.session_config import configure_server_side_sessions, is_server_side_sessions_available
+from utils.azure_keyvault import keyvault
+from config import get_config
 
 # Import auth components
 from auth.sso_auth import SSOAuth
 from auth.session_manager import SessionManager
 from auth.user_service import UserService
 from auth.models import User
-from auth.decorators import login_required, require_app_access
+from auth.decorators import login_required, require_app_access, sso_enabled
 from auth.access_control import AccessControlService
 
-# Import DocuClaims blueprint
+# Import module blueprints
 from modules.docuclaims.routes import docuclaims_bp
-
-# Load environment variables
-load_dotenv()
+from modules.insights.routes import insights_bp
 
 # Initialize Flask app
 app = Flask(__name__)
 
-# Configure session security with fixed secret key
-if 'FLASK_SECRET_KEY' in os.environ:
-    app.secret_key = os.environ['FLASK_SECRET_KEY']
-    logger.info("[APP_INIT] Using FLASK_SECRET_KEY from environment")
-else:
-    # Fixed secret key for session persistence across app restarts
-    app.secret_key = 'snowflake-ai-ui-2025-session-key-64-chars-fixed-for-persistence'
-    logger.info("[APP_INIT] Using fixed secret key for session persistence across restarts")
+# Configure session security with secret key from Azure Key Vault
+try:
+    app.secret_key = keyvault.get_secret('vaultai-flask-secret-key')
+    logger.info("[APP_INIT] Using FLASK_SECRET_KEY from Azure Key Vault")
+except Exception as e:
+    logger.critical(
+        f"[APP_INIT] CRITICAL: Failed to load FLASK_SECRET_KEY from Azure Key Vault. "
+        f"Application cannot start. Error: {str(e)}"
+    )
+    raise RuntimeError(
+        "FLASK_SECRET_KEY is required for session security. "
+        "Ensure the secret 'vaultai-flask-secret-key' exists in Azure Key Vault."
+    ) from e
 
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB max upload size
+
+# Configure server-side sessions to prevent cookie overflow
+if is_server_side_sessions_available():
+    configure_server_side_sessions(app)
+else:
+    logger.warning("[APP_INIT] Flask-Session not available, using cookie-based sessions (may cause overflow)")
 
 # Log session configuration
 logger.info("[APP_INIT] Flask secret key configured for secure sessions")
@@ -54,6 +65,9 @@ logger.info("[APP_INIT] SSO authentication components and access control service
 app.register_blueprint(docuclaims_bp)
 logger.info("[APP_INIT] DocuClaims blueprint registered")
 
+app.register_blueprint(insights_bp)
+logger.info("[APP_INIT] Insights blueprint registered")
+
 # No theme customization
 
 # Compatibility route for SSOAuth which expects 'index' endpoint
@@ -75,7 +89,7 @@ def applications():
     logger.info(f"Applications page accessed by IP: {client_ip}")
     
     # Check if SSO is enabled
-    sso_enabled = os.getenv('ENABLE_SSO', 'false').lower() == 'true'
+    sso_enabled = get_config('ENABLE_SSO')
     
     # Get current user for personalization
     user = session_manager.get_current_user()
@@ -102,30 +116,14 @@ def applications():
             'icon': 'fa-file-contract',
             'url': url_for('docuclaims.docuclaims'),
             'status': 'active'
-        },
-        # {
-        #     'id': 'vaultanalyst',
-        #     'name': 'Vault Analyst',
-        #     'description': 'Advanced data analysis and intelligence platform',
-        #     'icon': 'fa-chart-pie',
-        #     'url': url_for('vaultanalyst'),
-        #     'status': 'coming_soon'
-        # },
-        {
-            'id': 'doculegal',
-            'name': 'DocuLegal AI',
-            'description': 'Legal document analysis and compliance checking',
-            'icon': 'fa-balance-scale',
-            'url': '#',
-            'status': 'coming_soon'
-        },
-        {
-            'id': 'docufinance',
-            'name': 'DocuFinance AI',
-            'description': 'Financial document processing and analysis',
+        }
+        ,{
+            'id': 'insights',
+            'name': 'Insights AI',
+            'description': 'AI-powered analytics and actionable insights',
             'icon': 'fa-chart-line',
-            'url': '#',
-            'status': 'coming_soon'
+            'url': url_for('insights.insights'),
+            'status': 'active'
         }
     ]
     
@@ -158,7 +156,7 @@ def applications():
                          user=user, 
                          first_name=first_name,
                          apps=apps,
-                         config=os.environ)
+                         sso_enabled=sso_enabled)
 
 @app.route('/favicon.ico')
 def favicon():
@@ -179,8 +177,8 @@ def home():
     # Get current user for template context
     user = session_manager.get_current_user()
     
-    # Pass config to template for SSO check
-    return render_template('home.html', user=user, config=os.environ)
+    # Pass SSO status to template
+    return render_template('home.html', user=user, sso_enabled=sso_enabled())
 
 # Theme customization removed
 
@@ -195,8 +193,8 @@ def saml_sso():
     """SAML SSO initiation endpoint"""
     try:
         # Check if SSO is enabled
-        if not os.getenv('ENABLE_SSO', 'false').lower() == 'true':
-            return "SSO is not enabled. Configure ENABLE_SSO=true in .env", 400
+        if not get_config('ENABLE_SSO'):
+            return "SSO is not enabled", 400
         
         # Call the SSO method directly (it returns a redirect response)
         return sso_auth.sso()
@@ -246,8 +244,8 @@ def saml_metadata():
 def login():
     """Convenience login route - redirects to SAML SSO"""
     try:
-        if not os.getenv('ENABLE_SSO', 'false').lower() == 'true':
-            return "SSO is not enabled. Configure ENABLE_SSO=true in .env", 400
+        if not get_config('ENABLE_SSO'):
+            return "SSO is not enabled", 400
         
         # Redirect to SAML SSO endpoint (like in working POC)
         return redirect(url_for('saml_sso'))
@@ -268,6 +266,6 @@ def logout():
         return f"Error in logout: {str(e)}", 500
 
 if __name__ == "__main__":
-    # Use debug based on environment variable
-    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    # Use debug based on environment configuration
+    debug_mode = get_config('FLASK_DEBUG')
     app.run(debug=debug_mode, host='127.0.0.1', port=5001)

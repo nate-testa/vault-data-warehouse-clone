@@ -1,0 +1,371 @@
+/* Modern Sidebar Design - Inspired by askenola.ai */
+
+.sidebar {
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
+    border-right: none !important;
+    border-radius: 0 !important;
+    padding: 2rem 1.5rem !important;
+    padding-top: 2rem !important;
+    height: 100vh !important;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 280px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    z-index: 100 !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12) !important;
+    box-sizing: border-box !important;
+}
+
+/* Prevent any child elements from overflowing */
+.sidebar * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Custom Scrollbar for Sidebar */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Logo and Branding */
+.sidebar .text-center.mb-4 img {
+    filter: brightness(0) invert(1);
+    opacity: 0.95;
+    margin-bottom: 1rem !important;
+}
+
+/* App Title Badge */
+.sidebar .text-center.mb-4 > div[style*="background: linear-gradient"] {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 12px !important;
+    padding: 0 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    backdrop-filter: blur(10px);
+}
+
+.sidebar .text-center.mb-4 > div[style*="background: linear-gradient"] > div {
+    background: transparent !important;
+    border-radius: 12px !important;
+    padding: 10px 20px !important;
+}
+
+.sidebar .text-center.mb-4 h5 {
+    background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    font-size: 1.1rem !important;
+    letter-spacing: 0.5px !important;
+    font-weight: 700 !important;
+}
+
+.sidebar .text-center.mb-4 h5 i {
+    -webkit-text-fill-color: #60a5fa !important;
+    color: #60a5fa !important;
+}
+
+/* Section Headers */
+.sidebar h6 {
+    font-size: 0.7rem !important;
+    letter-spacing: 0.1em !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    margin-bottom: 1rem !important;
+    padding-left: 0.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.sidebar h6 i {
+    color: rgba(255, 255, 255, 0.4) !important;
+    font-size: 0.85rem !important;
+}
+
+/* Form Controls - Select Dropdowns */
+.sidebar .form-select {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+    border-radius: 10px !important;
+    padding: 0.6rem 0.85rem !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+    backdrop-filter: blur(10px);
+}
+
+.sidebar .form-select:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.sidebar .form-select:focus {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15) !important;
+    outline: none !important;
+}
+
+.sidebar .form-select option {
+    background: #1e293b !important;
+    color: #ffffff !important;
+    padding: 0.5rem !important;
+}
+
+/* Form Switches - iOS Style Toggle */
+.sidebar .form-check {
+    padding-left: 0 !important;
+    margin-bottom: 0.75rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    min-height: auto !important;
+}
+
+.sidebar .form-check-input {
+    width: 3rem !important;
+    height: 1.5rem !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba(255,255,255,0.9)'/%3e%3c/svg%3e") !important;
+    background-position: left center !important;
+    background-repeat: no-repeat !important;
+    background-size: contain !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    cursor: pointer !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    transition: background-position 0.3s ease, background-color 0.3s ease, border-color 0.3s ease !important;
+    border-radius: 2rem !important;
+}
+
+.sidebar .form-check-input:checked {
+    background-color: #3b82f6 !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='white'/%3e%3c/svg%3e") !important;
+    background-position: right center !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25) !important;
+}
+
+.sidebar .form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3) !important;
+    outline: none !important;
+    border-color: #60a5fa !important;
+}
+
+.sidebar .form-check-input:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.sidebar .form-check-input:checked:hover:not(:disabled) {
+    background-color: #60a5fa !important;
+    border-color: #60a5fa !important;
+}
+
+.sidebar .form-check-label {
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.4 !important;
+    flex: 1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* Ensure form-switch container doesn't add extra padding */
+.sidebar .form-check.form-switch {
+    padding-left: 0 !important;
+    width: 100% !important;
+}
+
+.sidebar .form-switch .form-check-input {
+    margin-left: 0 !important;
+    float: none !important;
+}
+
+/* Info/Description Text */
+.sidebar .p-2.bg-light.rounded {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+    padding: 0.75rem !important;
+    backdrop-filter: blur(10px);
+}
+
+.sidebar .p-2.bg-light.rounded small {
+    color: rgba(255, 255, 255, 0.7) !important;
+    font-size: 0.85rem !important;
+}
+
+/* Action Buttons */
+.sidebar .btn {
+    border-radius: 10px !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    padding: 0.65rem 1rem !important;
+    transition: all 0.3s ease !important;
+    text-align: left !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.5rem !important;
+}
+
+.sidebar .btn-outline-secondary {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.sidebar .btn-outline-secondary:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    color: #ffffff !important;
+    transform: translateX(2px);
+}
+
+.sidebar .btn-outline-secondary:active {
+    background: rgba(255, 255, 255, 0.15) !important;
+    transform: translateX(0);
+}
+
+.sidebar .btn i {
+    opacity: 0.8;
+    font-size: 0.9rem;
+}
+
+/* Grid Gap for Button Container */
+.sidebar .d-grid {
+    gap: 0.65rem !important;
+}
+
+/* Section Spacing */
+.sidebar .mb-4 {
+    margin-bottom: 1.75rem !important;
+}
+
+.sidebar .mb-5 {
+    margin-bottom: 2.5rem !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100% !important;
+        height: auto !important;
+        position: relative !important;
+        padding: 1.5rem 1rem !important;
+    }
+}
+
+/* Alert Messages in Sidebar */
+.sidebar .alert {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    border-radius: 10px !important;
+    font-size: 0.85rem !important;
+}
+
+.sidebar .alert-success {
+    background: rgba(34, 197, 94, 0.15) !important;
+    border-color: rgba(34, 197, 94, 0.3) !important;
+}
+
+.sidebar .alert i {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Divider Lines (if any) */
+.sidebar hr {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    margin: 1.5rem 0 !important;
+}
+
+/* Badge/Tag elements */
+.sidebar .badge {
+    background: rgba(96, 165, 250, 0.2) !important;
+    color: #60a5fa !important;
+    border: 1px solid rgba(96, 165, 250, 0.3) !important;
+    font-weight: 600 !important;
+    padding: 0.35rem 0.75rem !important;
+    border-radius: 6px !important;
+    font-size: 0.75rem !important;
+}
+
+/* ===== Module-Specific Styles ===== */
+
+/* Sidebar header container */
+.sidebar-header-container {
+    margin-top: 2rem;
+}
+
+/* Module title - Insights (blue-green gradient) */
+.module-title-insights {
+    background: linear-gradient(135deg, #60a5fa 0%, #10b981 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 1.3rem;
+    letter-spacing: 0.05em;
+    filter: drop-shadow(0 0 12px rgba(96, 165, 250, 0.7)) drop-shadow(0 2px 8px rgba(16, 185, 129, 0.4));
+}
+
+/* Module icon - Insights */
+.module-icon-insights {
+    -webkit-text-fill-color: #60a5fa;
+    color: #60a5fa;
+    font-size: 1.15rem;
+    filter: drop-shadow(0 0 10px rgba(96, 165, 250, 0.8));
+}
+
+/* Sidebar section title */
+.sidebar-section-title {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Module title - DocuClaims (purple-pink gradient) */
+.module-title-docuclaims {
+    background: linear-gradient(135deg, #a78bfa 0%, #ec4899 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 1.3rem;
+    letter-spacing: 0.05em;
+    filter: drop-shadow(0 0 12px rgba(167, 139, 250, 0.7)) drop-shadow(0 2px 8px rgba(236, 72, 153, 0.4));
+}
+
+/* Module icon - DocuClaims */
+.module-icon-docuclaims {
+    -webkit-text-fill-color: #a78bfa;
+    color: #a78bfa;
+    font-size: 1.15rem;
+    filter: drop-shadow(0 0 10px rgba(167, 139, 250, 0.8));
+}

@@ -11,15 +11,13 @@ from typing import Dict, Optional, Any
 from flask import request, session, redirect, url_for, render_template, current_app
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.utils import OneLogin_Saml2_Utils
-from dotenv import load_dotenv
 
 from .models import User, Session as AuthSession
 from .session_manager import SessionManager
 from .user_service import UserService
 from utils.logging import logger
-
-# Load environment variables from .env file
-load_dotenv()
+from utils.azure_keyvault import keyvault
+from config import get_config
 
 
 class SSOAuth:
@@ -43,7 +41,7 @@ class SSOAuth:
         self.app = app
         self.session_manager = session_manager
         self.user_service = user_service
-        self.sso_enabled = os.getenv("ENABLE_SSO", "false").lower() == "true"
+        self.sso_enabled = get_config('ENABLE_SSO')
         
         if app is not None:
             self.init_app(app)
@@ -109,29 +107,40 @@ class SSOAuth:
         """
         Initialize SAML authentication object.
         
+        Loads SAML certificates from Azure Key Vault (NO .env fallback).
+        SAML URLs are loaded from environment variables (public configuration).
+        
         Args:
             req: Request object dictionary
             
         Returns:
             OneLogin_Saml2_Auth: SAML authentication object
+            
+        Raises:
+            RuntimeError: If required certificates are not found in Key Vault
         """
-        # Process certificates to remove headers and footers
-        sp_cert = self._clean_certificate(os.getenv("SAML_SP_X509_CERT"))
-        sp_key = self._clean_private_key(os.getenv("SAML_SP_PRIVATE_KEY"))
-        idp_cert = self._clean_certificate(os.getenv("SAML_IDP_X509_CERT"))
+        # Load certificates from Azure Key Vault (NO .env fallback)
+        sp_cert_raw = keyvault.get_secret('vaultai-saml-sp-cert')
+        sp_key_raw = keyvault.get_secret('vaultai-saml-sp-private-key')
+        idp_cert_raw = keyvault.get_secret('vaultai-saml-idp-cert')
         
-        # Build configuration directly from environment variables
+        # Process certificates to remove headers and footers
+        sp_cert = self._clean_certificate(sp_cert_raw)
+        sp_key = self._clean_private_key(sp_key_raw)
+        idp_cert = self._clean_certificate(idp_cert_raw)
+        
+        # Build configuration: certificates from Key Vault, URLs from config.py (public config)
         settings_data = {
             "strict": True,   # Enable strict mode now that certificate is correct
             "debug": False,   # Disable debug in production
             "sp": {
-                "entityId": os.getenv("SAML_SP_ENTITY_ID"),
+                "entityId": get_config("SAML_SP_ENTITY_ID"),
                 "assertionConsumerService": {
-                    "url": os.getenv("SAML_SP_ACS_URL"),
+                    "url": get_config("SAML_SP_ACS_URL"),
                     "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
                 },
                 "singleLogoutService": {
-                    "url": os.getenv("SAML_SP_SLO_URL"),
+                    "url": get_config("SAML_SP_SLO_URL"),
                     "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
                 },
                 "x509cert": sp_cert,
@@ -139,13 +148,13 @@ class SSOAuth:
                 "NameIDFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
             },
             "idp": {
-                "entityId": os.getenv("SAML_IDP_ENTITY_ID"),
+                "entityId": get_config("SAML_IDP_ENTITY_ID"),
                 "singleSignOnService": {
-                    "url": os.getenv("SAML_IDP_SSO_URL"),
+                    "url": get_config("SAML_IDP_SSO_URL"),
                     "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
                 },
                 "singleLogoutService": {
-                    "url": os.getenv("SAML_IDP_SLO_URL"),
+                    "url": get_config("SAML_IDP_SLO_URL"),
                     "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
                 },
                 "x509cert": idp_cert
@@ -220,7 +229,7 @@ class SSOAuth:
             https = 'on'
         elif request.headers.get('X-Forwarded-Proto') == 'https':
             https = 'on'
-        elif os.getenv('FORCE_HTTPS') == 'true':
+        elif get_config('FORCE_HTTPS'):
             https = 'on'
         else:
             https = 'off'

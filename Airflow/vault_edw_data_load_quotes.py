@@ -442,9 +442,21 @@ with DAG(
         dag=dag,
     )
 
+    exec_customer_midterm_review_daily_feed = TriggerDagRunOperator(
+        task_id="exec_customer_midterm_review_daily_feed",
+        trigger_dag_id="customer_midterm_review_daily_feed",
+        dag=dag,
+    )
+
+    exec_snowflake_daily_feed = TriggerDagRunOperator(
+        task_id="exec_snowflake_daily_feed",
+        trigger_dag_id="Snowflake_Daily_Feed",
+        dag=dag,
+    )
+
     end = DummyOperator(
         task_id='end',
     )
 
 
-start >> quote_group >> [quote_home_group , quote_PEL_group, quote_auto_group] >> quote_collection_marine >> [quote_collection_group, quote_marine_group] >> quote_transaction_group >> quote_broker_group >> exec_vault_edw_data_load_vendor_reports >> exec_metal_broker_claim_daily_feed >> end
+start >> quote_group >> [quote_home_group , quote_PEL_group, quote_auto_group] >> quote_collection_marine >> [quote_collection_group, quote_marine_group] >> quote_transaction_group >> quote_broker_group >> exec_vault_edw_data_load_vendor_reports >> exec_metal_broker_claim_daily_feed >> exec_customer_midterm_review_daily_feed >> exec_snowflake_daily_feed >> end

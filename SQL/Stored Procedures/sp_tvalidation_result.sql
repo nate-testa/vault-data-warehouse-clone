@@ -10,11 +10,13 @@
 -- 07/29/24		Architha Gudimalla				4. Updated the code to work when target sql is not select 0 but a defualt count
 -- 08/13/24		Architha Gudimalla				5. Updated var_actual_dt to use getdate-1 instead of getdate
 -- 05/08/25		Yunus Mohammed				 6. AD937 Updated to use frequency column and made changes for monthly frequency
+-- 10/23/25		Yunus Mohammed				 7. AD11384 Passed validation_sql_desc  to execute proc to for specific validation
 -- ========================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tvalidation_result]
 @in_process_dt DATE = null,
-@in_frequency VARCHAR(255)='Daily'
+@in_frequency VARCHAR(255)='Daily',
+@validation_sql_desc varchar(255)= null
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -25,7 +27,7 @@ BEGIN
 		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
-		DECLARE @rows_affected INT
+		DECLARE @rows_affected INT = 0
 		DECLARE @process_nm VARCHAR(255)=OBJECT_NAME(@@PROCID)
 		DECLARE @current_date DATETIME=GETDATE() 
 		DECLARE @parameter_desc VARCHAR(255)  
@@ -41,12 +43,15 @@ BEGIN
 		END
 
 		DECLARE c1_rec CURSOR
-		FOR  
+		FOR
 		select	validation_sql_sk,source_sql,target_sql,frequency_desc
-		from	edw_core.tvalidation_sql 
-		WHERE	active_in='Y'
-		and frequency_desc = @in_frequency
-		order by 1;  
+		from
+			edw_core.tvalidation_sql
+		WHERE 
+			active_in='Y'
+			and frequency_desc = case when @validation_sql_desc is null then @in_frequency else frequency_desc end
+			and validation_sql_desc = case when @validation_sql_desc is null then validation_sql_desc else @validation_sql_desc end
+		order by 1	
 
 		DECLARE @validation_sql_sk int 
 		DECLARE @source_ct int 
@@ -98,15 +103,15 @@ BEGIN
 						replace(@source_sql,'@source_ct=',''), replace(@target_sql,'@target_ct=',''),
 						@out1, @out2
 				
-				set  @i = @@IDENTITY; 
+				set  @i = SCOPE_IDENTITY(); 
 				
 				UPDATE edw_core.tvalidation_result
 				SET process_run_end_ts	= getdate(), 
 					status_desc			= CASE WHEN source_value = target_value THEN 'Success' ELSE 'Failure' END
-				WHERE @@IDENTITY = @i  
+				WHERE validation_result_sk = @i;
 				; 
 		       
-				SET @rows_affected=@@ROWCOUNT;
+				SET @rows_affected= @rows_affected + @@ROWCOUNT;
 		
 				--Update control table
 				SET @new_last_source_extract_ts = COALESCE(dateadd(day,-1,cast(getdate() as date)),@last_source_extract_ts);  

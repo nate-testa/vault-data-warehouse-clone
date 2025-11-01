@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+
+{% block title %}Insights - AI Analytics{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/modern-sidebar.css') }}">
+<link rel="stylesheet" href="{{ url_for('insights.static', filename='css/charts.css') }}">
+<link rel="stylesheet" href="{{ url_for('insights.static', filename='css/insights.css') }}">
+{% endblock %}
+
+{% block sidebar %}
+<div class="sidebar">
+    <div class="mb-5 sidebar-header-container">
+        <div class="text-center mb-4">
+            <img src="https://d2j09jzq254cyj.cloudfront.net/vault-logo.png" width="160px" class="mb-3">
+            <h5 class="fw-bold mb-0 module-title-insights">
+                <i class="fas fa-chart-line me-2 module-icon-insights"></i>Insights AI
+            </h5>
+        </div>
+    </div>
+    
+    <!-- Domain Selection -->
+    <div class="mb-4">
+        <h6 class="text-uppercase fw-semibold mb-3 sidebar-section-title">
+            <i class="fas fa-database"></i>
+            Data Domain
+        </h6>
+        <select class="form-select form-select-sm" id="domainSelector">
+            {% for domain_key, domain_info in domains_data.domains.items() %}
+            <option value="{{ domain_key }}" {% if domain_key == current_domain %}selected{% endif %}>
+                {{ domain_info.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <!-- Settings -->
+    <div class="mb-4">
+        <h6 class="text-uppercase fw-semibold mb-3 sidebar-section-title">
+            <i class="fas fa-sliders-h"></i>
+            Settings
+        </h6>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="chatHistoryCheck" checked>
+            <label class="form-check-label" for="chatHistoryCheck">
+                Remember chat history
+            </label>
+        </div>
+    </div>
+    
+    <!-- Actions -->
+    <div class="mb-4">
+        <h6 class="text-uppercase fw-semibold mb-3 sidebar-section-title">
+            <i class="fas fa-bolt"></i>
+            Quick Actions
+        </h6>
+        <div class="d-grid gap-2">
+            <button class="btn btn-outline-secondary btn-sm" id="resetBtn" title="Reset everything">
+                <i class="fas fa-trash-alt me-2"></i>Reset Everything
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="header">
+    <div class="max-width-900 mx-auto">
+        <!-- Breadcrumb Navigation -->
+        <nav aria-label="breadcrumb" class="breadcrumb-nav">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('applications') }}">
+                        <i class="fas fa-apps me-1"></i>Applications
+                    </a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">Insights AI</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<!-- Chat Interface -->
+<div class="chat-container" id="chatMessages">
+    <!-- Spacer to push messages down when there are few messages -->
+    <div class="chat-spacer"></div>
+        
+        {% if chat_messages %}
+            {% for message in chat_messages %}
+                {% if message.role == 'user' %}
+                    <!-- User Message -->
+                    <div class="message-wrapper user-message">
+                        <div class="user-message-content">
+                            {{ message.content }}
+                        </div>
+                        <div class="message-avatar user-avatar">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                    </div>
+                {% elif message.role == 'assistant' %}
+                    <!-- Assistant Message -->
+                    <div class="message-wrapper assistant-message" {% if message.request_id %}data-request-id="{{ message.request_id }}"{% endif %}>
+                        <div class="message-avatar assistant-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="assistant-message-content">
+                            {% if message.content is string %}
+                                <div class="message-text">{{ message.content|safe }}</div>
+                            {% else %}
+                                {% for item in message.content %}
+                                    {% if item.type == 'text' %}
+                                        <div class="message-text">{{ item.text|safe }}</div>
+                                    {% elif item.type == 'suggestions' %}
+                                        <div class="suggestion-pills">
+                                            {% for suggestion in item.suggestions %}
+                                                <button class="suggestion-pill" data-suggestion="{{ suggestion|e }}">
+                                                    {{ suggestion }}
+                                                </button>
+                                            {% endfor %}
+                                        </div>
+                                    {% elif item.type == 'sql' %}
+                                        <div class="sql-code-block">
+                                            <div class="sql-header">
+                                                <span>SQL Query</span>
+                                                <div class="sql-header-buttons">
+                                                    <button class="copy-sql-btn" onclick="copySQLQuery(this)">
+                                                        <i class="fas fa-copy"></i>
+                                                        Copy
+                                                    </button>
+                                                    {% if item.statement %}
+                                                    <button class="execute-sql-btn" 
+                                                            data-sql-statement="{{ item.statement|e }}" 
+                                                            data-request-id="{{ message.request_id or '' }}"
+                                                            onclick="executeSQLFromResponseData(this)">
+                                                        <i class="fas fa-play"></i>
+                                                        Execute
+                                                    </button>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="sql-content">{{ item.statement|e }}</div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                            {% if message.request_id and not message.get('is_welcome') and not message.get('is_error') %}
+                            <div class="feedback-controls">
+                                <button class="feedback-btn positive" data-feedback="positive" data-request-id="{{ message.request_id or '' }}">
+                                    <i class="fas fa-thumbs-up"></i>
+                                </button>
+                                <button class="feedback-btn negative" data-feedback="negative" data-request-id="{{ message.request_id or '' }}">
+                                    <i class="fas fa-thumbs-down"></i>
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <!-- Initial welcome message as assistant message -->
+            <div class="message-wrapper assistant-message">
+                <div class="message-avatar assistant-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="assistant-message-content">
+                    <div class="message-text">
+                        Welcome to Insights! 🎯<br><br>
+                        I'm your AI analytics assistant. I can help you analyze your data using natural language questions.<br><br>
+                        Feel free to ask me questions about your data and I'll help you get insights!
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+</div>
+
+<!-- Chat Input -->
+<div class="chat-input-area">
+    <textarea 
+        class="chat-input" 
+        id="messageInput" 
+        placeholder="Ask me about your data..."
+        rows="1"
+        maxlength="2000"></textarea>
+    <button class="send-btn" id="sendBtn" disabled>
+        <i class="fas fa-paper-plane"></i>
+    </button>
+</div>
+
+<!-- Domain Switch Confirmation Modal -->
+<div class="domain-switch-modal hidden" id="domainSwitchModal">
+    <div class="domain-switch-content">
+        <h3>Switch Domain?</h3>
+        <p>Switching domains will clear your current conversation. Are you sure you want to continue?</p>
+        <div class="domain-switch-buttons">
+            <button class="domain-switch-btn" id="cancelDomainSwitch">Cancel</button>
+            <button class="domain-switch-btn primary" id="confirmDomainSwitch">Switch Domain</button>
+        </div>
+    </div>
+</div>
+
+<!-- Feedback Modal -->
+<div class="feedback-modal hidden" id="feedbackModal">
+    <div class="feedback-modal-content">
+        <div class="feedback-modal-header">
+            <h3 id="feedbackModalTitle">Share Your Feedback</h3>
+            <button class="feedback-modal-close" onclick="closeFeedbackModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="feedback-modal-body">
+            <p id="feedbackModalDescription">Would you like to add any comments? (Optional)</p>
+            <textarea 
+                id="feedbackCommentInput" 
+                class="feedback-comment-input" 
+                placeholder="Tell us more... (optional)" 
+                maxlength="500"
+                rows="4"></textarea>
+            <div class="feedback-char-count">
+                <span id="feedbackCharCount">0</span> / 500 characters
+            </div>
+        </div>
+        <div class="feedback-modal-footer">
+            <button class="feedback-modal-btn secondary" onclick="closeFeedbackModal()">
+                Cancel
+            </button>
+            <button class="feedback-modal-btn primary" onclick="submitFeedbackWithComment()">
+                Submit
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Message Templates (hidden, used by JavaScript) -->
+<div id="messageTemplates" class="hidden">
+    <!-- User Message Template -->
+    <div id="userMessageTemplate" class="message-wrapper user-message">
+        <div class="user-message-content">
+            <p class="message-text"></p>
+        </div>
+        <div class="message-avatar user-avatar">
+            <i class="fa-solid fa-user"></i>
+        </div>
+    </div>
+    
+    <!-- Assistant Message Template -->
+    <div id="assistantMessageTemplate" class="message-wrapper assistant-message">
+        <div class="message-avatar assistant-avatar">
+            <i class="fas fa-robot"></i>
+        </div>
+        <div class="assistant-message-content">
+            <div class="message-text"></div>
+            <div class="suggestion-pills hidden"></div>
+            <div class="feedback-controls hidden">
+                <button class="feedback-btn positive" data-feedback="positive">
+                    <i class="fas fa-thumbs-up"></i>
+                </button>
+                <button class="feedback-btn negative" data-feedback="negative">
+                    <i class="fas fa-thumbs-down"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- SQL Code Block Template -->
+    <div id="sqlBlockTemplate" class="sql-code-block">
+        <div class="sql-header">
+            <span>SQL Query</span>
+            <div class="sql-header-buttons">
+                <button class="copy-sql-btn" onclick="copySQLQuery(this)">
+                    <i class="fas fa-copy"></i>
+                    Copy
+                </button>
+                <button class="execute-sql-btn">
+                    <i class="fas fa-play"></i>
+                    Execute
+                </button>
+            </div>
+        </div>
+        <div class="sql-content"></div>
+    </div>
+    
+    <!-- Results Table Template -->
+    <div id="resultsTableTemplate" class="results-table-container">
+        <div class="results-header">
+            <div class="results-info"></div>
+            <button class="toggle-results-btn">
+                <i class="fas fa-chevron-up"></i>
+                Collapse
+            </button>
+        </div>
+        <div class="results-body">
+            <table class="results-table">
+                <thead></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Chart Container Template -->
+    <div id="chartContainerTemplate" class="chart-container hidden">
+        <div class="chart-wrapper">
+            <div class="chart-header">
+                <h3 class="chart-title">Data Visualization</h3>
+                <div class="chart-controls">
+                    <select class="chart-type-selector" onchange="handleChartTypeChange(this)">
+                        <!-- Options populated dynamically by JavaScript -->
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Dynamic Chart Parameters UI -->
+            <div class="chart-parameters">
+                <!-- Dynamic parameters will be rendered here by JavaScript -->
+            </div>
+            
+            <div class="chart-content">
+                <!-- Plotly chart will be inserted here -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chart Recommendations Template -->
+    <div id="chartRecommendationsTemplate" class="chart-recommendations hidden">
+        <span class="chart-recommendation-label">Suggested visualizations:</span>
+        <!-- Recommendation buttons will be inserted here -->
+    </div>
+    
+    <!-- Typing Indicator Template -->
+    <div id="typingIndicatorTemplate" class="message-wrapper assistant-message typing-message">
+        <div class="message-avatar assistant-avatar">
+            <i class="fas fa-robot"></i>
+        </div>
+        <div class="assistant-message-content">
+            <div class="typing-indicator">
+                <span>AI is thinking</span>
+                <div class="loading-dots">
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+// Global configuration for Insights module (Jinja2 template variables)
+window.InsightsConfig = {
+    currentDomain: '{{ current_domain }}',
+    conversationId: '{{ conversation_id or "" }}',
+    endpoints: {
+        query: '/insights/query_v2',
+        executeSQL: '/insights/execute-sql',
+        generateChart: '/insights/generate-chart',
+        feedback: '/insights/feedback',
+        reset: '/insights/reset',
+        switchDomain: '/insights/switch-domain',
+        domains: '/insights/domains',
+        domainModels: '/insights/domains'
+    }
+};
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Plotly.js for chart generation -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<!-- Load shared utilities first -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+<!-- Load module-specific JavaScript -->
+<script src="{{ url_for('insights.static', filename='js/insights.js') }}"></script>
+{% endblock %}

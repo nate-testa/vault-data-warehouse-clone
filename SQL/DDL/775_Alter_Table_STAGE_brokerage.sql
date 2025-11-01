@@ -1,0 +1,26 @@
+IF NOT EXISTS (
+SELECT 1
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA='edw_stage'
+AND TABLE_NAME = 'Brokerage'
+AND COLUMN_NAME = 'Affiliation'
+) 
+BEGIN 
+    ALTER TABLE edw_stage.Brokerage ADD Affiliation nvarchar(500) NULL 
+END;
+
+IF NOT EXISTS (
+SELECT 1
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA='edw_stage'
+AND TABLE_NAME = 'Brokerage'
+AND COLUMN_NAME = 'IsAffiliation'
+) 
+BEGIN 
+    ALTER TABLE edw_stage.Brokerage ADD IsAffiliation BIT  NULL 
+END;
+
+
+
+
+
