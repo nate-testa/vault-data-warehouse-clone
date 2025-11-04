@@ -1,4 +1,6 @@
 """
+Version: 1.0
+
 UI Configuration Management
 Centralized configuration for different environments (DEV, UAT, PRODUCTION).
 
