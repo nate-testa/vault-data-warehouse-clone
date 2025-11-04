@@ -571,6 +571,10 @@ and a.PrimaryInsuredId=b.id
               from edw_core.tcustomer a, edw_integration.customer_midterm_review_policy_detail b
               where a.customer_id = b.customer_id 
               and renewal_year =  datepart(yyyy, getdate())
+			  and a.customer_id  in ( Select customer_id  
+									from edw_integration.customer_midterm_review_eligibility_feed 
+									where midterm_review_process_in = 'Yes'
+								)
               ) cust
         cross join (select product_cd, product_nm, product_category_nm from edw_core.tproduct
 					union all
