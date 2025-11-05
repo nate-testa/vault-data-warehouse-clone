@@ -107,12 +107,14 @@ and a.PrimaryInsuredId=b.id
                                                 and quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
                                                 and quote_term = 'Renewal');*/
 		
+        If @last_source_extract_ts = '1900-01-01'  
+        set @last_source_extract_ts = (select Dateadd(dd,-1,cast(getdate() as date)));
+       
         with cust as
 		(
 			select distinct customer_id 
             from edw_core.tquote
-			where renewal_quote_review_start_dt > --'01-jan-1999' 
-												 @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
+			where renewal_quote_review_start_dt = @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
 			and quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
 			and quote_term = 'Renewal' 
 		),
@@ -689,11 +691,11 @@ and a.PrimaryInsuredId=b.id
         set product_recommendation = 'If you have corporate, charter, or personal aviation coverage needs, talk to your agent. Vault is here for you.'
         where product_recommendation = 'Buy Aviation;'	 
 		               
-        SET @rows_affected=@@ROWCOUNT;
+        SET @rows_affected=@@ROWCOUNT; 
  
         --AG - Using  where renewal_quote_review_start_dt < getdate() becuase of a data issue in prod
-        set @new_last_source_extract_ts = (select max(renewal_quote_review_start_dt) from edw_core.tquote where renewal_quote_review_start_dt < getdate());
-       
+        set @new_last_source_extract_ts = (select Dateadd(dd,-1,cast(getdate() as date)));
+ 
         --Update control table
         SET @new_last_source_extract_ts = COALESCE(@new_last_source_extract_ts,@last_source_extract_ts);
 		
