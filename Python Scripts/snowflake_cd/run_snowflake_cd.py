@@ -11,7 +11,6 @@ from typing import Dict, List
 SCRIPT_ROOT = pathlib.Path(__file__).resolve().parent
 INPUT_SQL_PATH = SCRIPT_ROOT / "input_sql"
 
-# --- FIX 2: Added "SQL" to the execution order ---
 EXECUTION_ORDER = ["DDL", "DML", "Functions", "Stored Procedures", "SQL"]
 
 # --- Logger Setup ---
@@ -105,7 +104,7 @@ def connect_to_snowflake(config: dict, logger: logging.Logger) -> snowflake.conn
         logger.error(f"Failed to connect to Snowflake: {e}")
         raise
 
-def execute_sql_file(cursor: snowflake.connector.cursor.SnowflakeCursor, file_path: pathlib.Path, logger: logging.Logger):
+def execute_sql_file(conn: snowflake.connector.SnowflakeConnection, file_path: pathlib.Path, logger: logging.Logger):
     """
     Executes all SQL statements within a single file.
     """
@@ -118,9 +117,9 @@ def execute_sql_file(cursor: snowflake.connector.cursor.SnowflakeCursor, file_pa
             logger.warning(f"File {file_path.name} is empty. Skipping.")
             return
 
-        # Use execute_string to handle files with multiple SQL statements
-        for stmt in cursor.execute_string(sql_content):
-            logger.debug(f"Executed statement, result: {stmt.fetchone()}")
+        # The loop variable is 'cursor' because execute_string returns cursors
+        for cursor in conn.execute_string(sql_content):
+            logger.debug(f"Executed statement, result: {cursor.fetchone()}")
         
         logger.info(f"✓ Successfully executed: {file_path.name}")
         
@@ -156,7 +155,6 @@ def main():
     logger.info("=" * 40)
     
     conn = None
-    cursor = None
     
     try:
         # 1. Load Secrets
@@ -169,7 +167,6 @@ def main():
         
         # 3. Connect to Snowflake
         conn = connect_to_snowflake(sf_config, logger)
-        cursor = conn.cursor()
         
         # 4. Execute SQL in order
         total_files_executed = 0
@@ -178,7 +175,8 @@ def main():
             if files_in_category:
                 logger.info(f"\n--- Processing Category: {category} ({len(files_in_category)} files) ---")
                 for file_path in files_in_category:
-                    execute_sql_file(cursor, file_path, logger)
+
+                    execute_sql_file(conn, file_path, logger)
                     total_files_executed += 1
             else:
                 logger.info(f"\n--- No files found for category: {category}. Skipping. ---")
@@ -199,9 +197,6 @@ def main():
         sys.exit(1) # Exit with an error code
         
     finally:
-        # 6. Close connections
-        if cursor:
-            cursor.close()
         if conn:
             conn.close()
             logger.info("Snowflake connection closed.")
