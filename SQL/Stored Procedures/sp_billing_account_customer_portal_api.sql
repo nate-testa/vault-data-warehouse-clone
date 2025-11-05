@@ -4,7 +4,6 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-
 -- =============================================
 -- Author:		Hernando Gonzalez Garcia
 -- Create Date: 2023-10-05
