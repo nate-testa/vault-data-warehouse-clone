@@ -11,8 +11,6 @@ to_email = "itdatateam@vault.insurance"
 # to_email = "hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
 cc_email = ""
 
-
-
 def on_failure_callback(context):
 
     task_instance = context['task_instance']

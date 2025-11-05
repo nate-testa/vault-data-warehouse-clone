@@ -1,0 +1,19 @@
+CREATE OR REPLACE TABLE VAULT_AI.INSIGHTS.POLICY_TEST (
+	ACTUAL_DT DATE NOT NULL COMMENT 'The date on which the policy was in force.',
+	POLICY_NO VARCHAR(16777216) NOT NULL COMMENT 'Policy numbers.',
+	PRODUCT_NM VARCHAR(16777216) COMMENT 'The type of insurance product.',
+	BROKER_ID NUMBER(38,0) COMMENT 'Broker ID.',
+	BROKER_NM VARCHAR(16777216) COMMENT 'The name of the insurance broker.',
+	CUSTOMER_ID NUMBER(38,0) COMMENT 'A unique identifier assigned to each customer.',
+	CUSTOMER_NM VARCHAR(16777216) COMMENT 'The customer name.',
+	RISK_STATE_CD VARCHAR(255),
+	UW_COMPANY_NM VARCHAR(255),
+	PREMIUM_AMT NUMBER(38,2) COMMENT 'The premium amount.',
+	COMMISSION_AMT NUMBER(38,2) COMMENT 'The commission amount',
+	NET_PREMIUM_AMT NUMBER(38,2) COMMENT 'The net premium amount.',
+	ANNUAL_PREMIUM_AMT NUMBER(38,2) COMMENT 'Annual premium amount.',
+    CREATE_TS TIMESTAMP_NTZ(9),
+    UPDATE_TS TIMESTAMP_NTZ(9),
+    ETL_AUDIT_SK NUMBER(38,0),
+	constraint PK_POLICY_TEST primary key (ACTUAL_DT, POLICY_NO)
+); 
