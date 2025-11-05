@@ -690,6 +690,7 @@ BEGIN
 			where 
 				--customer_id in ('1234500211', '1234502277', '1234548368') and
 				existing_product_in  = 'Yes'
+			and update_ts >  @last_source_extract_ts
 		)
 		select  
 			cmr.customer_id,
