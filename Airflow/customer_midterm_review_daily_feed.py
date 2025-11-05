@@ -13,6 +13,9 @@ to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
 cc_email = ""
 
+HOME_PATH = os.path.expanduser('~')
+FOLDER_PATH = HOME_PATH + "/python_scripts/edw_to_metal"
+BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
 
 def on_failure_callback(context):
 
@@ -87,6 +90,11 @@ with DAG(
             )
             operators.append(operator) 
 
+        run_edw_to_metal_load = BashOperator(
+            task_id='run_edw_to_metal_load',
+            bash_command=BASH_COMMAND,
+        )
+
         send_customer_midterm_review_email = EmailOperator(
             task_id='send_customer_midterm_review_email',
             to=to_email,
@@ -97,7 +105,8 @@ with DAG(
         for i in range(len(operators) - 1):
             operators[i].set_downstream(operators[i + 1])
 
-        operators[-1].set_downstream(send_customer_midterm_review_email)
+        operators[-1].set_downstream(run_edw_to_metal_load)
+        run_edw_to_metal_load.set_downstream(send_customer_midterm_review_email)
 
 
 start.set_downstream(customer_midterm_review_group)
