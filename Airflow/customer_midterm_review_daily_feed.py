@@ -2,6 +2,7 @@ import os
 import pendulum
 from datetime import timedelta
 from airflow import DAG
+from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from airflow.providers.microsoft.mssql.operators.mssql import MsSqlOperator
 from airflow.operators.email import EmailOperator
@@ -13,9 +14,13 @@ to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
 cc_email = ""
 
+ENVIRONMENT = Variable.get("environment")
 HOME_PATH = os.path.expanduser('~')
 FOLDER_PATH = HOME_PATH + "/python_scripts/edw_to_metal"
-BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
+if ENVIRONMENT == "UAT":
+    BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
+else:
+    BASH_COMMAND = f'echo " *** EDW to Metal load skipped in {ENVIRONMENT} environment *** "'
 
 def on_failure_callback(context):
 
