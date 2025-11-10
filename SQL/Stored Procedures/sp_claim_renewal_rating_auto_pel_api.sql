@@ -12,6 +12,7 @@
 -- 05/08/2025		Yunus Mohammed				6. AD9412 Added adjuster_name
 -- 06/11/2025		Yunus Mohammed				7. AD-9744 Add Litigation Tag Indicator  (Litigation and LitigationComplete)
 -- 10/09/2025		Yunus Mohammed				8. AD-10933 Added new columns and updated definition of other columns
+-- 11/10/2025		Yunus Mohammed				9. AD-11615 Added GRPEL product sk
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_auto_pel_api]
@@ -82,23 +83,24 @@ BEGIN
   SUM(Case When clf.claim_coverage_desc = 'Uninsured Motorist Liablity' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as UninsuredMotoristPayment,
   SUM(Case When clf.claim_coverage_desc IN ('Uninsured / Underinsured Motorist','Underinsured Motorist')
    then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as UnderinsuredMotoristPayment, -- RS : This is not there
-  SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as ExcessLiabilityCoveragePayment,
-  SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as UninsuredLiabilityPayment,
-  SUM(CASE WHEN cl.claim_no NOT  LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as UnderinsuredLiabilityPayment,
-  SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as ExcessLiabilityDOpayment,
-  SUM(CASE WHEN cl.claim_no NOT LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as EmploymentPracticesPaymentLiabilityPayment,
-  SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpExcessLiabilityCoveragePayment,
-  SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUninsuredLiabilityPayment,
-  SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUnderinsuredLiabilityPayment,
-  SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUninsuredMotoristPayment,
-  SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUnderinsuredMotoristPayment,
-  SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpExcessLiabilityDOPayment,
-  SUM(CASE WHEN cl.claim_no LIKE 'NFP%' THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpEmploymentPracticesLiabilityPayment
+  SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as ExcessLiabilityCoveragePayment,
+  SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as UninsuredLiabilityPayment,
+  SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as UnderinsuredLiabilityPayment,
+  SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as ExcessLiabilityDOpayment,
+  SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as EmploymentPracticesPaymentLiabilityPayment,
+  
+  SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpExcessLiabilityCoveragePayment,
+  SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUninsuredLiabilityPayment,
+  SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUnderinsuredLiabilityPayment,
+  SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUninsuredMotoristPayment,
+  SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUnderinsuredMotoristPayment,
+  SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpExcessLiabilityDOPayment,
+  SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpEmploymentPracticesLiabilityPayment
 		FROM
 		edw_core.tclaim cl
 		INNER JOIN edw_core.tclaim_feature clf on cl.claim_sk = clf.claim_sk
 		WHERE
-		cl.product_sk in(3,4)
+		cl.product_sk in(3,4,10)
 		GROUP BY cl.claim_sk
 		) AS temp ON cl.claim_sk = temp.claim_sk
 		inner join edw_core.tclaim_feature clf on temp.claim_sk = clf.claim_sk
