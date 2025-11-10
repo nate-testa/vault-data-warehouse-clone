@@ -51,11 +51,13 @@ GO
 -- 08/15/24		Architha Gudimalla				27. Fixed errors for the code changes done in 23-26
 -- 02/06/25		Architha Gudimalla				28. AD8428 - Prod error due to dupes in quotes
 -- 06/13/25		Architha Gudimalla				29. AD9823 - Exclude forcast quotes
--- 10/15/25		Dinesh Bobbili					30. AD11286 - simplified the date logic 
+-- 10/15/25		Dinesh Bobbili					30. AD11286 - simplified the date logic
+-- 11/10/25		Dinesh Bobbili					31. AD11642 - Added source_system_sk filter for NFP process
 -- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
-@in_yearmonth int = null
+@in_yearmonth int = null,
+@in_source_system VARCHAR(10) = null
 AS 
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -91,21 +93,24 @@ BEGIN
 		DECLARE @proc_run_month_end_dt date
 		DECLARE @proc_run_month INT  
 		
+		DECLARE @param_ssk VARCHAR(50)
+		select @param_ssk=source_system_sk from edw_core.tsource_system where source_system_nm = @in_source_system;
+		
 		DECLARE c1_rec CURSOR
 		FOR  
 		select	yearmonth
 		from	edw_core.tdate
-		where	yearmonth between  (case when @in_yearmonth is not null 
+		where	yearmonth between  (case when @in_yearmonth is not null
 										  then FORMAT(DATEADD(MONTH, -2, DATEFROMPARTS(LEFT(@in_yearmonth, 4), RIGHT(@in_yearmonth, 2), 1)), 'yyyyMM')
-									 end) 
+									end) 
 						  and @in_yearmonth
 		group by yearmonth
 		union 
 		select	yearmonth
 		from	edw_core.tdate
-		where	yearmonth between  (case when @in_yearmonth is  null 
+		where	yearmonth between  (case when @in_yearmonth is  null
 										  then FORMAT(DATEADD(MONTH, -2, DATEFROMPARTS(LEFT(@last_source_yearmonth, 4), RIGHT(@last_source_yearmonth, 2), 1)), 'yyyyMM')
-									 end)
+									end) 
 						  and @last_source_yearmonth
 		union 
 		select	yearmonth
@@ -151,7 +156,8 @@ BEGIN
 				END  
 
 				delete from edw_core.trenewal_summary
-				where month_sk = @month_end_dt_sk;
+				where month_sk = @month_end_dt_sk
+				and source_system_sk = isnull(@param_ssk, source_system_sk);
 				
 				DROP TABLE IF EXISTS edw_temp.tren_summ_oth_cust_inf_temp;
 				
@@ -167,7 +173,8 @@ BEGIN
 				where inf.inforce_dt_sk = td.date_sk	
 				and inf.policy_sk  = pol.policy_sk 
 				and td.actual_dt between @begin_dt and @end_dt
-				and customer_sk is not null; 
+				and customer_sk is not null
+				and inf.source_system_sk = isnull(@param_ssk, inf.source_system_sk); 
 				
 				DROP TABLE IF EXISTS edw_temp.tren_summ_quotes;
 				
@@ -186,6 +193,7 @@ BEGIN
 					where	effective_dt between @begin_dt and @end_dt 
 					and br.broker_id = q.broker_id
 					and q.forecast_quote_in = 'No'
+					and q.source_system_sk = isnull(@param_ssk, q.source_system_sk)
 					--and quote_Status <> 'Issued'
 				),
 				n as
@@ -194,7 +202,7 @@ BEGIN
 					from edw_core.tnote nt, edw_core.tquote q1
 					where q1.quote_no = nt.policy_no
 					and object_type = 'Account' 
-					and effective_dt between @begin_dt and @end_dt  
+					and effective_dt between @begin_dt and @end_dt
 				)
 				select    q.*
 						, case when original_policy_no= prior_policy_no then 0 else 1 end pol_no_changed_in	
@@ -213,6 +221,7 @@ BEGIN
 						, non_renewal_in, pending_non_renewal_in
 				 FROM	edw_core.tpolicy
 				 where	expiration_dt between @begin_dt and @end_dt 
+				 and source_system_sk = isnull(@param_ssk, source_system_sk)
 				),
 				--customer other inf count
 				cust_oth_inf as
@@ -220,7 +229,7 @@ BEGIN
 					SELECT pol.policy_sk, count(*) oth_inf_ct--pol.policy_no, pol.expiration_dt, pol.original_policy_no, ci.*
 					FROM	edw_core.tpolicy pol
 					inner join edw_temp.tren_summ_oth_cust_inf_temp ci on pol.customer_id = ci.customer_id and pol.expiration_dt = ci.inforce_dt and pol.original_policy_no <> ci.original_policy_no
-				 	where	expiration_dt between @begin_dt and @end_dt 
+				 	where	expiration_dt between @begin_dt and @end_dt
 					group by pol.policy_sk
 				),
 				--pols renewing all in current month
@@ -239,7 +248,7 @@ BEGIN
 								  					   else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
 												  end order by policy_sk) rnk
 				 FROM	edw_core.tpolicy
-				 where	effective_dt between @begin_dt and @end_dt 
+				 where	effective_dt between @begin_dt and @end_dt
 				),
 				--pols renewing distinct in current month
 				ren_pols as
@@ -391,7 +400,7 @@ BEGIN
 								 FROM	edw_core.tpolicy_transaction
 								 where	effective_dt_sk <= @end_dt_sk
 								 --and	transaction_effective_dt_sk <= @end_dt_sk
-								 and 	(transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk < 61) 
+								 and 	(transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk < 61)
 							) sixty_day_pol_tr on tr.policy_sk = sixty_day_pol_tr.policy_sk
 				 left join edw_core.thome_coverage hoc on hoc.home_coverage_sk = tr.coverage_sk and tr.product_sk in (1,5)
 				 where	max_pol_tr.rnk = 1
@@ -402,6 +411,7 @@ BEGIN
 				 and transaction_dt_sk - expiration_dt_sk <= 60
 				 and   (pol.expiration_dt between @begin_dt and @end_dt or
 						pol.effective_dt between @begin_dt and @end_dt)
+				and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 				 group by tr.policy_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk
 				),
 				max_tr as
