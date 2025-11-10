@@ -229,26 +229,24 @@ def insights():
                 
         except Exception as e:
             logger.error(f"[INSIGHTS_ROUTES] Error loading domains: {str(e)}")
-            # Provide fallback domains if API fails
-            domains_data = {
-                'domains': {
-                    'policy': {'name': 'Policy', 'description': 'Policy data analysis', 'semantic_views': []},
-                    'sales': {'name': 'Sales', 'description': 'Sales performance analysis', 'semantic_views': []},
-                    'claims': {'name': 'Claims', 'description': 'Claims processing analysis', 'semantic_views': []},
-                    'others': {'name': 'Others', 'description': 'General business metrics', 'semantic_views': []}
-                },
-                'total_domains': 4,
-                'total_semantic_views': 0
-            }
+            raise RuntimeError(f"Cannot load Insights: No domains configured in semantic_view_domains. Please check API configuration.")
         
-        # Get current domain selection
+        # Get first available domain from API response
+        available_domains = list(domains_data.get('domains', {}).keys())
+        if not available_domains:
+            raise RuntimeError("Cannot load Insights: No domains configured in semantic_view_domains")
+        
+        first_domain = available_domains[0]
+        
+        # Get current domain selection from session
         domain_selection = insights_session.get_domain_selection()
-        current_domain = domain_selection.get('domain', 'policy')
+        current_domain = domain_selection.get('domain')
         
-        # Ensure selected domain exists in available domains
-        if current_domain not in domains_data.get('domains', {}):
-            current_domain = 'policy'
+        # If no domain in session or domain doesn't exist, use first available domain
+        if not current_domain or current_domain not in domains_data.get('domains', {}):
+            current_domain = first_domain
             insights_session.set_domain_selection(current_domain)
+            logger.info(f"[INSIGHTS_ROUTES] Set domain to first available: {current_domain}")
         
         # Get conversation messages for template
         chat_messages = insights_session.get_chat_messages()
@@ -1248,11 +1246,11 @@ def reset_conversation():
         
         logger.info(f"[{reset_id}] Resetting conversation [preserve_domain: {preserve_domain}]")
         
-        # Get current domain before reset
-        current_domain = insights_session.get_domain_selection().get('domain', 'policy')
-        
         # Clear conversation but preserve domain if requested
         insights_session.clear_conversation(preserve_domain=preserve_domain)
+        
+        # Initialize current_domain
+        current_domain = None
         
         # Add welcome message for fresh start
         try:
@@ -1262,12 +1260,28 @@ def reset_conversation():
                 domains_data = get_available_domains()
                 cache_domains(domains_data)
             
+            # Get first available domain from API
+            available_domains = list(domains_data.get('domains', {}).keys())
+            if not available_domains:
+                raise RuntimeError("No domains available")
+            
+            first_domain = available_domains[0]
+            
+            # Get current domain from session or use first available
+            current_domain = insights_session.get_domain_selection().get('domain')
+            if not current_domain or current_domain not in domains_data.get('domains', {}):
+                current_domain = first_domain
+                insights_session.set_domain_selection(current_domain)
+            
             welcome_message = _create_welcome_message(current_domain, domains_data)
             insights_session.add_chat_message(welcome_message)
             insights_session.mark_welcome_shown()
             
         except Exception as welcome_error:
             logger.warning(f"[{reset_id}] Could not create welcome message: {str(welcome_error)}")
+            # Ensure current_domain has a fallback value
+            if not current_domain:
+                current_domain = 'unknown'
         
         reset_time = time.time() - reset_start_time
         logger.info(f"[{reset_id}] Conversation reset successfully in {reset_time:.2f}s")

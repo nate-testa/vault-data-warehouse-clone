@@ -56,7 +56,7 @@ class InsightsSessionManager(UISessionManager):
             session[self.CHAT_MESSAGES_KEY] = []
             
         if self.SELECTED_DOMAIN_KEY not in session:
-            session[self.SELECTED_DOMAIN_KEY] = 'policy'  # Default domain
+            session[self.SELECTED_DOMAIN_KEY] = None  # Will be set by routes.py from API data
             
         if self.SELECTED_MODEL_KEY not in session:
             session[self.SELECTED_MODEL_KEY] = None
@@ -288,7 +288,7 @@ class InsightsSessionManager(UISessionManager):
             Dict[str, Any]: Current domain and model information
         """
         return {
-            'domain': session.get(self.SELECTED_DOMAIN_KEY, 'policy'),
+            'domain': session.get(self.SELECTED_DOMAIN_KEY),
             'model_path': session.get(self.SELECTED_MODEL_KEY),
             'available_models': session.get(self.DOMAIN_MODELS_KEY, {})
         }
@@ -447,7 +447,7 @@ class InsightsSessionManager(UISessionManager):
         session[self.CONVERSATION_CONTEXT_KEY] = context
         
         if not preserve_domain:
-            session[self.SELECTED_DOMAIN_KEY] = 'policy'
+            session[self.SELECTED_DOMAIN_KEY] = None  # Will be reset by routes.py
             session[self.SELECTED_MODEL_KEY] = None
         
         logger.info("[INSIGHTS_SESSION] Conversation cleared")
