@@ -142,6 +142,8 @@ BEGIN
 			np.written_prem_without_tax as net_premium_amt,
 			np.nfppc_commission as commission_amt,
 			np.total_collected as annual_premium_amt, 
+			np.surplus_lines_tax,
+			np.program_administrator_fees_no,
 			program_administrator_fees_no + surplus_lines_tax as tax_fee_surcharge_amt,
 			0 as item_sk,
 			uc.group_umbrella_coverage_sk as coverage_sk,
@@ -172,7 +174,7 @@ BEGIN
 			0 as state_premium_amt,
 			0 as state_annual_premium_amt
 		into edw_temp.tpolicy_transaction_nfp_temp1
-		from temp_nfp_base np 
+		from temp_nfp_base np 		
 		left join edw_core.tpolicy pol 
 			on np.insured_cert_no = pol.policy_no and cast(np.term_effective_date as date) = pol.effective_dt
 		left join edw_core.tdate dt1 
@@ -244,45 +246,44 @@ BEGIN
 			-- Yunus: 11/05/2025
 			,state_premium_amt
 			,state_annual_premium_amt
-		)
-		SELECT 
-			policy_sk
-			,effective_dt_sk
-			,expiration_dt_sk
-			,transaction_effective_dt_sk
-			,transaction_seq_no
-			,broker_sk
-			,customer_sk
-			,premium_amt
-			,net_premium_amt
-			,commission_amt
-			,annual_premium_amt
-			,tax_fee_surcharge_amt
-			,item_sk
-			,coverage_sk
-			,vehicle_coverage_sk
-			,transaction_dt_sk
-			,calendar_month_sk
-			,accounting_month_sk
-			,product_sk
-			,policy_transaction_type_sk
-			,internal_coverage_sk
-			,@ssk
-			,policy_status_sk
-			,tax_fee_surcharge_sk
-			,user_sk
-			,getdate()
-			,getdate()
-			,@etl_audit_sk
-			,ceded_premium_amt
-			,ceded_annual_premium_amt
-			,collection_class_type_sk
-			,policy_history_sk
-			-- Yunus: 11/05/2025
-			,state_premium_amt
-			,state_annual_premium_amt
-		FROM 
-			edw_temp.tpolicy_transaction_nfp_temp1
+		) 
+		select policy_sk,effective_dt_sk,expiration_dt_sk,transaction_effective_dt_sk,transaction_seq_no,broker_sk,customer_sk,
+		net_premium_amt as premium_amt,net_premium_amt as net_premium,commission_amt as comission_amt,net_premium_amt as annual_premium_amt,
+		0 as tax_fee_surcharge_amt,
+		item_sk,coverage_sk,vehicle_coverage_sk,transaction_dt_sk,
+		calendar_month_sk,accounting_month_sk,product_sk,policy_transaction_type_sk,internal_coverage_sk,@ssk as source_system_sk,policy_status_sk,tax_fee_surcharge_sk,
+		user_sk,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk,
+		ceded_premium_amt,ceded_annual_premium_amt,collection_class_type_sk,policy_history_sk,
+		state_premium_amt,state_annual_premium_amt 
+		from edw_temp.tpolicy_transaction_nfp_temp1 t1
+
+		union all
+
+		select policy_sk,effective_dt_sk,expiration_dt_sk,transaction_effective_dt_sk,transaction_seq_no,broker_sk,customer_sk,
+		surplus_lines_tax as premium_amt,0 as net_premium,0 as comission_amt,surplus_lines_tax as annual_premium_amt,
+		surplus_lines_tax as tax_fee_surcharge_amt,
+		item_sk,coverage_sk,vehicle_coverage_sk,transaction_dt_sk,
+		calendar_month_sk,accounting_month_sk,product_sk,policy_transaction_type_sk,ic.internal_coverage_sk,@ssk as source_system_sk,policy_status_sk,tax_fee_surcharge_sk,
+		user_sk,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk,
+		ceded_premium_amt,ceded_annual_premium_amt,collection_class_type_sk,policy_history_sk,
+		state_premium_amt,state_annual_premium_amt 
+		from edw_temp.tpolicy_transaction_nfp_temp1 t1
+		left join edw_core.tinternal_coverage ic on ic.internal_coverage_cd = 'Surplus Lines Tax' and ic.product_cd ='GRPEL'
+
+		union all
+
+		select policy_sk,effective_dt_sk,expiration_dt_sk,transaction_effective_dt_sk,transaction_seq_no,broker_sk,customer_sk,
+		program_administrator_fees_no as premium_amt,0 as net_premium,0 as comission_amt,program_administrator_fees_no as annual_premium_amt,
+		program_administrator_fees_no as tax_fee_surcharge_amt,
+		item_sk,coverage_sk,vehicle_coverage_sk,transaction_dt_sk,
+		calendar_month_sk,accounting_month_sk,product_sk,policy_transaction_type_sk,ic.internal_coverage_sk,@ssk as source_system_sk,policy_status_sk,
+		tax_fee_surcharge_sk,
+		user_sk,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk,
+		ceded_premium_amt,ceded_annual_premium_amt,collection_class_type_sk,policy_history_sk,
+		state_premium_amt,state_annual_premium_amt 
+		from edw_temp.tpolicy_transaction_nfp_temp1 t1
+		left join edw_core.tinternal_coverage ic on ic.internal_coverage_cd = 'Program Administrator Fees' and ic.product_cd ='GRPEL'
+
 
 		SET @rows_affected=@@ROWCOUNT;
 
