@@ -19,6 +19,7 @@
 --																					Removed cancellation logic
 -- 07/22/25		Dinesh Bobbili				10. AD10205 Added 5 PEL columns
 -- 09/25/25		Dinesh Bobbili				11. AD11102 Added scheduled_limit_amt,blanket_limit_amt columns 
+-- 11/10/25		Yunus Mohammed		12. AD11646 - Excluded NFP policies
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -211,6 +212,7 @@ BEGIN
 				AND (tic.internal_coverage_category_nm = 'Premium' OR tic.internal_coverage_desc like 'Subscriber Contribution%')
 				AND tpts.transaction_effective_dt_sk < = @acounting_date_sk
 				AND tpts.expiration_dt_sk > @acounting_date_sk
+				AND tp.product_cd != 'GRPEL'
 			) AS t
 			GROUP BY
 				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
