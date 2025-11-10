@@ -123,7 +123,8 @@ BEGIN
 				where calendar_year = @year;
 
 				delete from edw_core.titem_summary 
-				where month_sk = @month_end_dt_sk; 
+				where month_sk = @month_end_dt_sk
+				and source_system_sk = isnull(@param_ssk, source_system_sk); 
 
 				DROP TABLE IF EXISTS edw_temp.titem_summary_can_rein_temp1;
 				--insert cancels
