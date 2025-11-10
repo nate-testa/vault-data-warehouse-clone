@@ -54,6 +54,15 @@ CONSTRAINT fk_tgrpel_coverage_policy_history_sk FOREIGN KEY (policy_history_sk) 
 )
 END;
 
+
+IF EXISTS
+(SELECT 1 FROM edw_core.tedw_table_detail
+	where table_nm = 'tgrpel_coverage')
+BEGIN
+	delete FROM edw_core.tedw_table_detail
+	where table_nm = 'tgrpel_coverage' ; 
+END ; 
+
 INSERT INTO edw_core.tedw_table_detail (
     table_nm,
     table_type,
