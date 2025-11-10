@@ -11,10 +11,12 @@
 -- 07/03/24		Yunus Mohammed					4. Added policy_history_sk
 -- 07/18/24		Architha Gudimalla				5. Updated logic for @last_source_extract_ts
 -- 07/08/25		Architha Gudimalla				6. Updated EP logic
+-- 11/10/25		Dinesh Bobbili					7. AD11641 - Added source_system_sk filter for NFP process
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction_summary]
-@in_month_end_dt date = null
+@in_month_end_dt date = null,
+@in_source_system VARCHAR(10) = null
 AS 
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -46,6 +48,9 @@ BEGIN
 		DECLARE @year_begin_sk INT 
 		DECLARE @proc_run_month_end_dt date
 		DECLARE @proc_run_month INT
+		
+		DECLARE @param_ssk VARCHAR(50)
+		select @param_ssk=source_system_sk from edw_core.tsource_system where source_system_nm = @in_source_system;
 		
 		DECLARE c1_rec CURSOR
 		FOR  
@@ -95,7 +100,8 @@ BEGIN
 				END
 
 				delete from edw_core.tpolicy_transaction_summary 
-				where month_sk = @month_end_dt_sk; 
+				where month_sk = @month_end_dt_sk
+				and source_system_sk = isnull(@param_ssk, source_system_sk); 
 			
 				with
 				prm as
@@ -136,6 +142,7 @@ BEGIN
 				 and   transaction_effective_dt_sk <= @end_dt_sk
 				 and   transaction_dt_sk <= @end_dt_sk
 				 and   expiration_dt > @month_begin_dt
+				 and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 				 group by tr.policy_sk, tr.policy_history_sk, tr.item_sk, tr.internal_coverage_sk, tr.transaction_seq_no, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk,
 						tr.effective_dt_sk,
 						tr.transaction_effective_dt_sk,
