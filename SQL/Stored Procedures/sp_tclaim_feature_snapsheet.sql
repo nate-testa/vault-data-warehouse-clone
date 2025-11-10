@@ -13,6 +13,7 @@
 -- 03/03/2025               Sandeep Gundreddy			8. updated logic to use created_at/updated_at from claims table
 -- 04/02/2025				Yunus Mohammed				9. AD-9039 Updated aslob_sk and claim_coverage_desc logic for condo policies
 -- 10/13/2025				Yunus Mohammed				10. AD-11322 Added closed_reason_desc column
+-- 11/10/2025				Yunus Mohammed				21 AD-11654 Added coverage_sk for NFP policies
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet]
 AS
@@ -42,8 +43,7 @@ BEGIN
 			tcl.claim_sk,tcl.claim_no,exps.exposure_type,exps.exposure_name,
 			-- exps.coverage_premium_class as claim_coverage_cd,
 			exps.id as claim_coverage_cd,
-							case
-
+						case
 						when exps.coverage_name is not null then exps.coverage_name
 						when  exists
 							(
@@ -82,6 +82,7 @@ BEGIN
 				WHEN 'LUX' THEN tccov.collection_coverage_sk
 				WHEN 'PEL' THEN tpcov.pel_coverage_sk
 				WHEN 'AU' THEN tacov.auto_policy_coverage_sk
+				WHEN 'GRPEL' THEN gpc.group_umbrella_coverage_sk
 			END AS coverage_sk ,		
 			CASE
 				WHEN exps.external_reference_number is not null THEN 3
@@ -200,6 +201,16 @@ BEGIN
 											AND tcl.loss_dt > = tavc1.transaction_effective_dt
 										ORDER BY tavc1.transaction_seq_no DESC
 								)
+		LEFT JOIN edw_core.tgrpel_coverage gpc
+			ON gpc.group_umbrella_coverage_sk = (
+								SELECT TOP 1 gpc1.group_umbrella_coverage_sk
+								FROM
+									edw_core.tgrpel_coverage gpc1
+								WHERE
+									gpc1.policy_no = tcl.policy_no
+									AND tcl.loss_dt >= gpc1.transaction_effective_dt
+								ORDER BY gpc1.transaction_seq_no DESC
+							)
 		WHERE greatest(clm.created_at,clm.updated_at) > @last_source_extract_ts;
 
 		MERGE edw_core.tclaim_feature AS Target
