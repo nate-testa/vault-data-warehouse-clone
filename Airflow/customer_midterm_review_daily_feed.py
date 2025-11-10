@@ -3,12 +3,14 @@ import pendulum
 from datetime import timedelta
 from airflow import DAG
 from airflow.models import Variable
+from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.utils.task_group import TaskGroup
+from airflow.operators.python import PythonOperator
 from airflow.providers.microsoft.mssql.operators.mssql import MsSqlOperator
 from airflow.operators.email import EmailOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.bash import BashOperator
-from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format
+from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
 
 to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
@@ -21,6 +23,33 @@ if ENVIRONMENT == "UAT":
     BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
 else:
     BASH_COMMAND = f'echo " *** EDW to Metal load skipped in {ENVIRONMENT} environment *** "'
+
+
+def check_customer_midterm_review_data_and_send_email(**kwargs):
+    sql_qry = """
+                SELECT 'metaldb.dbo.InsuredMarketingPreferenceDocument' AS Table_Name, COUNT(1) AS Rows_Loaded from dbo.InsuredMarketingPreferenceDocument  WHERE CAST(CreatedDate AS DATE) = CAST(GETDATE() AS DATE)
+              """
+    mssql_hook = MsSqlHook(mssql_conn_id='Vault_METAL')
+    results = mssql_hook.get_records(sql_qry)
+    
+    print('*** Results from SQL query ***')
+    for row in results:
+        print(row)
+
+    total_rows_loaded = sum(int(row[1]) for row in results) 
+    print(f"Total rows loaded: {total_rows_loaded}")
+
+    if total_rows_loaded != 0:
+        email_op = EmailOperator(
+            task_id='send_customer_midterm_review_data_loaded_email',
+            to=to_email,
+            subject='Airflow - Customer Midterm Review - Data loaded report',
+            html_content=get_vault_data_HTML(sql_qry,'The Customer Midterm Review data have been loaded into MetalDB successfully. Below is the report with the rows loaded by table.'),
+            dag=kwargs['dag'],
+        )
+        email_op.execute(context=kwargs)  # type: ignore
+    else:
+        print(" *** No rows loaded. No email will be sent. ***")
 
 def on_failure_callback(context):
 
@@ -100,6 +129,13 @@ with DAG(
             bash_command=BASH_COMMAND,
         )
 
+        check_data_and_send_email = PythonOperator(
+            task_id='check_data_and_send_email',
+            python_callable=check_customer_midterm_review_data_and_send_email,
+            provide_context=True,
+            dag=dag,
+        )
+
         send_customer_midterm_review_email = EmailOperator(
             task_id='send_customer_midterm_review_email',
             to=to_email,
@@ -111,7 +147,8 @@ with DAG(
             operators[i].set_downstream(operators[i + 1])
 
         operators[-1].set_downstream(run_edw_to_metal_load)
-        run_edw_to_metal_load.set_downstream(send_customer_midterm_review_email)
+        run_edw_to_metal_load.set_downstream(check_data_and_send_email)
+        check_data_and_send_email.set_downstream(send_customer_midterm_review_email)
 
 
 start.set_downstream(customer_midterm_review_group)
