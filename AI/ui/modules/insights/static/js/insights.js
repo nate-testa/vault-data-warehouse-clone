@@ -869,6 +869,16 @@ function appendAssistantMessage(content, requestId, sqlResults, sqlExecutionErro
     `;
     
     $('#chatMessages').append(messageHtml);
+    
+    // Initialize table sorting for any newly added tables
+    setTimeout(() => {
+        const tables = document.querySelectorAll('#chatMessages .results-table');
+        if (tables.length > 0) {
+            const lastTable = tables[tables.length - 1];
+            initializeTableSorting(lastTable);
+        }
+    }, 50);
+    
     scrollToBottom();
 }
 
@@ -1159,6 +1169,18 @@ function executeSQLFromResponse(sqlStatement, requestId) {
                 
                 const resultsHtml = createResultsDisplay(data);
                 executeBtn.closest('.sql-code-block').after(resultsHtml);
+                
+                // Initialize table sorting for the newly added table
+                setTimeout(() => {
+                    const newResultsContainer = executeBtn.closest('.sql-code-block').next('.results-container');
+                    if (newResultsContainer.length > 0) {
+                        const table = newResultsContainer.find('.results-table')[0];
+                        if (table) {
+                            initializeTableSorting(table);
+                        }
+                    }
+                }, 50);
+                
                 // Auto-scroll when new results are added
                 scrollToBottom();
                 
@@ -1225,6 +1247,13 @@ function createResultsTable(sqlResult, rowCount) {
                 </button>
             </div>
             <div class="results-body">
+                <div class="table-search-bar">
+                    <input type="text" 
+                           class="table-search-input" 
+                           placeholder="🔍 Search in table..." 
+                           oninput="filterTable(this)">
+                    <span class="search-results-count"></span>
+                </div>
                 <table class="results-table">
                     <thead><tr>
     `;
@@ -1459,6 +1488,13 @@ function createDataTable(sqlResults) {
     
     let tableHtml = `
         <div class="data-table-container">
+            <div class="table-search-bar">
+                <input type="text" 
+                       class="table-search-input" 
+                       placeholder="🔍 Search in table..." 
+                       oninput="filterTable(this)">
+                <span class="search-results-count"></span>
+            </div>
             <table class="results-table">
                 <thead><tr>
     `;
@@ -1488,8 +1524,141 @@ function createDataTable(sqlResults) {
     }
     
     tableHtml += `</div>`;
-    
     return tableHtml;
+}
+
+/**
+ * Filter table rows based on search input
+ * @param {HTMLInputElement} inputElement - The search input element
+ */
+function filterTable(inputElement) {
+    const searchTerm = inputElement.value.toLowerCase();
+    const tableContainer = inputElement.closest('.data-table-container');
+    const table = tableContainer.querySelector('.results-table');
+    const tbody = table.querySelector('tbody');
+    const rows = tbody.querySelectorAll('tr');
+    const counter = tableContainer.querySelector('.search-results-count');
+    
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const isVisible = text.includes(searchTerm);
+        row.style.display = isVisible ? '' : 'none';
+        if (isVisible) visibleCount++;
+    });
+    
+    // Update counter text
+    if (searchTerm) {
+        counter.textContent = `${visibleCount} of ${rows.length} rows`;
+    } else {
+        counter.textContent = '';
+    }
+}
+
+/**
+ * Initialize sorting functionality for a table
+ * @param {HTMLTableElement} table - The table element to make sortable
+ */
+function initializeTableSorting(table) {
+    const headers = table.querySelectorAll('thead th');
+    
+    headers.forEach((header, columnIndex) => {
+        // Make header clickable
+        header.style.cursor = 'pointer';
+        header.style.userSelect = 'none';
+        
+        // Add sort icon
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-sort sort-icon';
+        header.appendChild(icon);
+        
+        // Add click handler
+        header.addEventListener('click', () => {
+            sortTableByColumn(table, columnIndex, header);
+        });
+    });
+}
+
+/**
+ * Sort table by a specific column
+ * @param {HTMLTableElement} table - The table to sort
+ * @param {number} columnIndex - Index of the column to sort by
+ * @param {HTMLElement} headerElement - The header element that was clicked
+ */
+function sortTableByColumn(table, columnIndex, headerElement) {
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Determine sort direction
+    const currentDirection = table.dataset[`sortCol${columnIndex}`] || 'none';
+    const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+    
+    // Sort rows
+    rows.sort((rowA, rowB) => {
+        const cellA = rowA.cells[columnIndex];
+        const cellB = rowB.cells[columnIndex];
+        
+        if (!cellA || !cellB) return 0;
+        
+        const aValue = cellA.textContent.trim();
+        const bValue = cellB.textContent.trim();
+        
+        // Handle NULL values - always sort to bottom
+        if (aValue === 'NULL' && bValue === 'NULL') return 0;
+        if (aValue === 'NULL') return 1;
+        if (bValue === 'NULL') return -1;
+        
+        // Try to parse as numbers
+        const aNum = parseFloat(aValue.replace(/,/g, ''));
+        const bNum = parseFloat(bValue.replace(/,/g, ''));
+        
+        let comparison = 0;
+        
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            // Numeric comparison
+            comparison = aNum - bNum;
+        } else {
+            // String comparison (case-insensitive)
+            comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+        }
+        
+        return newDirection === 'asc' ? comparison : -comparison;
+    });
+    
+    // Re-append sorted rows to tbody
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Update sort icons
+    updateSortIcons(table, columnIndex, newDirection);
+    
+    // Store sort state
+    table.dataset[`sortCol${columnIndex}`] = newDirection;
+}
+
+/**
+ * Update sort icons to reflect current sort state
+ * @param {HTMLTableElement} table - The table being sorted
+ * @param {number} activeColumnIndex - Index of the column that was sorted
+ * @param {string} direction - Sort direction ('asc' or 'desc')
+ */
+function updateSortIcons(table, activeColumnIndex, direction) {
+    const headers = table.querySelectorAll('thead th');
+    
+    headers.forEach((header, index) => {
+        const icon = header.querySelector('.sort-icon');
+        if (!icon) return;
+        
+        if (index === activeColumnIndex) {
+            // Active column - show direction
+            icon.className = direction === 'asc' 
+                ? 'fas fa-sort-up sort-icon active' 
+                : 'fas fa-sort-down sort-icon active';
+        } else {
+            // Inactive columns - show neutral sort icon
+            icon.className = 'fas fa-sort sort-icon';
+        }
+    });
 }
 
 /**
