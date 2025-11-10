@@ -10,10 +10,12 @@
 -- 03/20/24		Architha Gudimalla				4. Added commission_amt
 -- 07/03/24		Yunus Mohammed					5. Added policy_history_sk
 -- 07/18/24		Architha Gudimalla				6. Updated logic for @last_source_extract_ts
+-- 11/10/25		Dinesh Bobbili					7. AD11638 - Added source_system_sk filter for NFP process
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_titem_inforce]
-@in_inforce_dt DATETIME = null
+@in_inforce_dt DATETIME = null,
+@in_source_system VARCHAR(10) = null
 AS 
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -30,6 +32,9 @@ BEGIN
 
 		-- Get last source extract date
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm); 
+		
+		DECLARE @param_ssk VARCHAR(50)
+		select @param_ssk=source_system_sk from edw_core.tsource_system where source_system_nm = @in_source_system;
 		
 		DECLARE c1_rec CURSOR
 		FOR  
@@ -67,7 +72,8 @@ BEGIN
 				set @month_end_sk = (select max(date_sk) from edw_core.tdate where yearmonth = @yearmonth);
 
 				delete from edw_core.titem_inforce 
-				where month_sk = @month_end_sk; 
+				where month_sk = @month_end_sk
+				and source_system_sk = isnull(@param_ssk, source_system_sk); 
 				
 				with max_tr as
 				(
@@ -83,7 +89,7 @@ BEGIN
 				 FROM edw_core.tpolicy_transaction 
 				 where effective_dt_sk <= @var_date_sk
 				 and   transaction_effective_dt_sk <= @var_date_sk
-				 and   transaction_dt_sk <= @var_date_sk  
+				 and   transaction_dt_sk <= @var_date_sk
 				)
 				INSERT INTO edw_core.titem_inforce
 					( 
@@ -104,7 +110,8 @@ BEGIN
 				where tr.policy_transaction_type_sk <> 5
 				  and tr.expiration_dt_sk > @var_date_sk 
 				  and max_tr.rnk = 1
-				  and (tr.vehicle_coverage_sk = 0 or vc.vehicle_deleted_in = 'No');
+				  and (tr.vehicle_coverage_sk = 0 or vc.vehicle_deleted_in = 'No')
+				  and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk);
 
 				/*
 
