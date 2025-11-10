@@ -216,12 +216,15 @@ and a.PrimaryInsuredId=b.id
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_inforce_detail ;
        
         --inforce data 
-        with usr as
+        with 
+        /*
+        usr as
         (
             --which user to use, has multiple
             select *, rank() over (partition by first_nm + ' ' + last_nm order by phone_no desc, email) rnk
             from edw_core.tuser
-        ),coll_limit as
+        ),*/
+        coll_limit as
         (
              select policy_history_sk, policy_no, sum(COALESCE(scheduled_limit_amt, 0) + COALESCE(blanket_limit_amt, 0)) total_limit
              from edw_core.[tcollection_class_type]
@@ -694,7 +697,7 @@ and a.PrimaryInsuredId=b.id
         SET @rows_affected=@@ROWCOUNT; 
  
         --AG - Using  where renewal_quote_review_start_dt < getdate() becuase of a data issue in prod
-        set @new_last_source_extract_ts = (select Dateadd(dd,-1,cast(getdate() as date)));
+        set @new_last_source_extract_ts = (select cast(getdate() as date));
  
         --Update control table
         SET @new_last_source_extract_ts = COALESCE(@new_last_source_extract_ts,@last_source_extract_ts);
@@ -702,7 +705,7 @@ and a.PrimaryInsuredId=b.id
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
        
         -- Update audit table
-        SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+        SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@last_source_extract_ts AS VARCHAR(200))
         if @in_start_dt is not null
         begin
             set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_start_dt AS VARCHAR(200))

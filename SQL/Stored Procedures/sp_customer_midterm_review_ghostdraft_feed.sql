@@ -151,6 +151,7 @@ BEGIN
 				left join edw_integration.customer_midterm_review_policy_detail p on r.existing_policy_no = p.policy_no
 				where r.product_nm not in ('Condo','Homeowners') 
 				and r.update_ts >  @last_source_extract_ts
+				and e.midterm_review_process_in ='Yes'
 				group by e.customer_id,
 					e.midterm_review_year,
 					cust.customer_nm ,
@@ -274,6 +275,7 @@ BEGIN
 				left join edw_integration.customer_midterm_review_policy_detail p on r.existing_policy_no = p.policy_no
 				where r.product_nm in ('Condo','Homeowners')
 				and r.update_ts >  @last_source_extract_ts
+				and e.midterm_review_process_in ='Yes'
 		)
 		select *
 		into edw_temp.customer_midterm_review_ghostdraft_feed_temp1
@@ -472,39 +474,7 @@ BEGIN
 					where product_nm not in ('Condo','Homeowners')  
 				   ) producer_oth on a.customer_id = producer_oth.customer_id and producer_oth.rn = 1
 		left join edw_Core.tproducer pr on pr.producer_id = coalesce(producer_ho.producer_id, producer_oth.producer_id)
-		;
-
-		--concat vehicle list
-		WITH veh_list AS (
-				SELECT 
-					customer_id,
-					STRING_AGG(auto_vehicle_list, '||') AS auto_vehicle_list
-				FROM edw_integration.customer_midterm_review_ghostdraft_feed
-				where auto_vehicle_list is not null
-				GROUP BY customer_id
-		)
-		UPDATE f
-		SET f.auto_vehicle_list = v.auto_vehicle_list
-		FROM edw_integration.customer_midterm_review_ghostdraft_feed f
-		JOIN veh_list v ON f.customer_id = v.customer_id
-		where f.auto_vehicle_list is not null
-		and update_ts >  @last_source_extract_ts;
-
-		--concat boat list
-		WITH boat_list AS (
-				SELECT 
-					customer_id,
-					STRING_AGG(yacht_boat_list, '||') AS yacht_boat_list
-				FROM edw_integration.customer_midterm_review_ghostdraft_feed
-				where yacht_boat_list is not null
-				GROUP BY customer_id
-		)
-		UPDATE f
-		SET f.yacht_boat_list = v.yacht_boat_list
-		FROM edw_integration.customer_midterm_review_ghostdraft_feed f
-		JOIN boat_list v ON f.customer_id = v.customer_id
-		where f.yacht_boat_list is not null
-		and update_ts >  @last_source_extract_ts;
+		;  
 
 		--update generator id
 		WITH genid AS (
@@ -681,6 +651,7 @@ BEGIN
 		
 		with CustomerList as
 		(
+			--******** if in future we run eligibility for monoline Auto, make sure to update the producer logic when loading ghostdraft table
 			select distinct
 			customer_id,customer_nm,customer_email,
 			customer_phone_no,no_of_years_with_vault,no_of_years_with_vault_tx,
@@ -726,6 +697,7 @@ BEGIN
 						WHERE cmrh.customer_id = cmr.customer_id
 							and cmrh. product_nm in ('Condo','Homeowners')
 							and cmrh.existing_product_in = 'Yes'
+							and cmrh.update_ts > @last_source_extract_ts
 						order by case cmrp.occupancy_type
 									when 'Primary' then '1_Primary'
 									else '2_Non_Primary' 
@@ -740,7 +712,8 @@ BEGIN
 						from edw_integration.customer_midterm_review_ghostdraft_feed cmra 
 						where cmra.customer_id = cmr.customer_id
 						and cmra. product_nm = 'Auto'
-					and cmra.existing_product_in = 'Yes'
+						and cmra.existing_product_in = 'Yes'
+						and cmra.update_ts > @last_source_extract_ts
 					) as [current_coverage.existing_auto],
 					(
 					select top 1
@@ -751,6 +724,7 @@ BEGIN
 						from edw_integration.customer_midterm_review_ghostdraft_feed cmra 
 						where cmra.customer_id = cmr.customer_id
 						and cmra. product_nm = 'Auto'
+						and cmra.update_ts > @last_source_extract_ts
 					--and cmra.existing_product_in = 'Yes'
 					) as [current_coverage.message_auto],
 					(
@@ -759,7 +733,8 @@ BEGIN
 						from edw_integration.customer_midterm_review_ghostdraft_feed cmre
 						where cmre.customer_id = cmr.customer_id
 						and cmre. product_nm = 'Excess Liability'
-					and cmre.existing_product_in = 'Yes'
+						and cmre.existing_product_in = 'Yes'
+						and cmre.update_ts > @last_source_extract_ts
 					) as [current_coverage.existing_excess],
 						(
 						select top 1
@@ -767,6 +742,7 @@ BEGIN
 							from edw_integration.customer_midterm_review_ghostdraft_feed cmre 
 							where cmre.customer_id = cmr.customer_id
 							and cmre. product_nm = 'Excess Liability'
+							and cmre.update_ts > @last_source_extract_ts
 						--and cmre.existing_product_in = 'Yes'
 					) as [current_coverage.message_excess],
 					(
@@ -775,7 +751,8 @@ BEGIN
 							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc
 							where cmrc.customer_id = cmr.customer_id
 							and cmrc. product_nm = 'Collections'
-						and cmrc.existing_product_in = 'Yes'
+							and cmrc.existing_product_in = 'Yes'
+							and cmrc.update_ts > @last_source_extract_ts
 					) as [current_coverage.existing_collection],
 						(
 						select top 1
@@ -783,6 +760,7 @@ BEGIN
 							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
 							where cmrc.customer_id = cmr.customer_id
 							and cmrc. product_nm = 'Collections'
+							and cmrc.update_ts > @last_source_extract_ts
 						--and cmrc.existing_product_in = 'Yes'
 					) as [current_coverage.message_collection],
 					(
@@ -791,7 +769,8 @@ BEGIN
 							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc
 							where cmrc.customer_id = cmr.customer_id
 							and cmrc. product_nm = 'Marine Boat & Yacht'
-						and cmrc.existing_product_in = 'Yes'
+							and cmrc.existing_product_in = 'Yes'
+							and cmrc.update_ts > @last_source_extract_ts
 					) as [current_coverage.existing_marine],
 						(
 						select top 1
@@ -799,6 +778,7 @@ BEGIN
 							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
 							where cmrc.customer_id = cmr.customer_id
 							and cmrc. product_nm = 'Marine Boat & Yacht'
+							and cmrc.update_ts > @last_source_extract_ts
 						--and cmrc.existing_product_in = 'Yes'
 					) as [current_coverage.message_marine] ,
 					(
@@ -807,7 +787,8 @@ BEGIN
 							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc
 							where cmrc.customer_id = cmr.customer_id
 							and cmrc. product_nm = 'Aviation'
-						and cmrc.existing_product_in = 'Yes'
+							and cmrc.existing_product_in = 'Yes'
+							and cmrc.update_ts > @last_source_extract_ts
 					) as [current_coverage.existing_aviation],
 						(
 						select top 1
@@ -815,6 +796,7 @@ BEGIN
 							from edw_integration.customer_midterm_review_ghostdraft_feed cmrc 
 							where cmrc.customer_id = cmr.customer_id
 							and cmrc. product_nm = 'Aviation'
+							and cmrc.update_ts > @last_source_extract_ts
 						--and cmrc.existing_product_in = 'Yes'
 					) as [current_coverage.message_aviation] 
 	
@@ -873,7 +855,8 @@ BEGIN
 			[target].midterm_review_completed_dt 	= cast(getdate() as date),
 			[target].update_ts 						= getdate()
 		from edw_integration.customer_midterm_review_eligibility_feed [target]
-		inner join edw_temp.customer_midterm_review_ghostdraft_feed_temp2 [source] on [target].customer_id = [source].customer_id;
+		inner join edw_temp.customer_midterm_review_ghostdraft_feed_temp2 [source] on [target].customer_id = [source].customer_id
+		where [target].midterm_review_process_in = 'Yes';
 		               
         SET @rows_affected=@@ROWCOUNT;
  
