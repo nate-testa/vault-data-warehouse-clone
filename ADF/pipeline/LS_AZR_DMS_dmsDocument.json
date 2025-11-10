@@ -1,0 +1,213 @@
+{
+	"name": "LS_AZR_DMS_dmsDocument",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy dmsDocument",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [
+					{
+						"name": "Source",
+						"value": "`DmsDocument`"
+					},
+					{
+						"name": "Destination",
+						"value": "edw_stage.dms_claim_payment_estimate"
+					}
+				],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT\n    dd.aws_document_id      AS dmsDocumentId,\n    dd.claim_number         AS claimNumber,\n    ddd.type                AS document_type,\n    ddd.subType             AS subtype,\n    dd.document_name        AS documentName,\n    dd.file_name            AS document_fileName,\n    dda.name                AS attached_To,\n    dd.created_date         AS createDate,\n    dd.document_date        AS documentDate,\n    dd.created_by           AS createBy,\n    'Unknown'               AS paymentStatus,\n    GETDATE()               AS create_ts\nFROM dms_document dd\nJOIN DmsDocumentAttachTo dda\n    ON dd.aws_document_id = dda.dmsDocumentId\nJOIN DmsDocumentDetail ddd\n    ON ddd.dmsDocumentId = dda.dmsDocumentId\nWHERE ddd.type = 'Claim'\n  AND ddd.subType IN ('Estimate of Damages', 'BI/UM Demand')\nORDER BY dd.created_date DESC",
+						"queryTimeout": "02:00:00",
+						"isolationLevel": "ReadUncommitted",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "TRUNCATE TABLE edw_stage.dms_claim_payment_estimate",
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "dmsDocumentId",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "dmsDocumentId",
+									"type": "Int32",
+									"physicalType": "int"
+								}
+							},
+							{
+								"source": {
+									"name": "claimNumber",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "claimNumber",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							},
+							{
+								"source": {
+									"name": "document_type",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "document_type",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							},
+							{
+								"source": {
+									"name": "subtype",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "subtype",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							},
+							{
+								"source": {
+									"name": "documentName",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "documentName",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							},
+							{
+								"source": {
+									"name": "document_fileName",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "document_fileName",
+									"type": "String",
+									"physicalType": "nvarchar"
+								}
+							},
+							{
+								"source": {
+									"name": "attached_To",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "attached_to",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							},
+							{
+								"source": {
+									"name": "createDate",
+									"type": "DateTime",
+									"physicalType": "datetime"
+								},
+								"sink": {
+									"name": "createDate",
+									"type": "DateTime",
+									"physicalType": "datetime"
+								}
+							},
+							{
+								"source": {
+									"name": "documentDate",
+									"type": "DateTime",
+									"physicalType": "datetime"
+								},
+								"sink": {
+									"name": "documentDate",
+									"type": "DateTime",
+									"physicalType": "datetime"
+								}
+							},
+							{
+								"source": {
+									"name": "createBy",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "createBy",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							},
+							{
+								"source": {
+									"name": "paymentStatus",
+									"type": "String",
+									"physicalType": "varchar"
+								},
+								"sink": {
+									"name": "paymentStatus",
+									"type": "String",
+									"physicalType": "varchar"
+								}
+							},
+							{
+								"source": {
+									"name": "create_ts",
+									"type": "DateTime",
+									"physicalType": "datetime"
+								},
+								"sink": {
+									"name": "create_ts",
+									"type": "DateTime",
+									"physicalType": "datetime"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "Source_DMS_dmsDocument",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Target_DMS_dmsDocument",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"annotations": []
+	}
+}
