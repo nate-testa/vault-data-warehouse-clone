@@ -1,0 +1,10 @@
+{
+	"name": "azr-prod-clm-db-core01-pep02",
+	"properties": {
+		"privateLinkResourceId": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PROD-CLAIMS-DB-RG/providers/Microsoft.Sql/servers/azr-prod-clm-db-core01",
+		"groupId": "sqlServer",
+		"fqdns": [
+			"azr-prod-clm-db-core01.database.windows.net"
+		]
+	}
+}

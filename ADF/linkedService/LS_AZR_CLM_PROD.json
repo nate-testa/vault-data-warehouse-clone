@@ -1,0 +1,21 @@
+{
+	"name": "LS_AZR_CLM_PROD",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"server": "azr-prod-clm-db-core01.database.windows.net",
+			"database": "clmdb",
+			"encrypt": "mandatory",
+			"trustServerCertificate": false,
+			"authenticationType": "SQL",
+			"userName": "edwClaimsPROD",
+			"encryptedCredential": "ew0KICAiVmVyc2lvbiI6ICIyMDE3LTExLTMwIiwNCiAgIlByb3RlY3Rpb25Nb2RlIjogIktleSIsDQogICJTZWNyZXRDb250ZW50VHlwZSI6ICJQbGFpbnRleHQiLA0KICAiQ3JlZGVudGlhbElkIjogIkRBVEFGQUNUT1JZQDQ1NzI1RjBCLTRGNTItNDI4RS04ODFELTRFRTc1N0MzNEY0Q18xOGU3YjBmOS03NmExLTQ3NGItOGVlMy03MzAxZmQ3ZTkxODQiDQp9"
+		},
+		"connectVia": {
+			"referenceName": "Data-ADF-IR-via-VNet",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
