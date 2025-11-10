@@ -15,5 +15,6 @@
 			"schema": "edw_stage",
 			"table": "t_pub_user"
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
 }

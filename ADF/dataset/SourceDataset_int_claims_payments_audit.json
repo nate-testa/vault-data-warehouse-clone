@@ -14,5 +14,6 @@
 		"typeProperties": {
 			"tableName": "`int_claims_payments_audit`"
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
 }

@@ -14,5 +14,6 @@
 		"typeProperties": {
 			"tableName": "`t_pub_user`"
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
 }

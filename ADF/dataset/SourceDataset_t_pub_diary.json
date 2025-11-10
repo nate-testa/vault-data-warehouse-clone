@@ -14,5 +14,6 @@
 		"typeProperties": {
 			"tableName": "`t_pub_diary`"
 		}
-	}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
 }
