@@ -14,6 +14,7 @@
 -- 04/15/25		Yunus Mohammed				7. Removed litigation claims
 -- 04/25/25		Yunus Mohammed				8. Updated logic to get the month for which we are running the proc
 --																					Update run date logic
+-- 11/10/25		Yunus Mohammed				9. AD-11663 Updated for NFP policy claims
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_reserve_feed]
 
@@ -82,7 +83,8 @@ BEGIN
 				tcl.cause_of_loss_desc AS causeofloss,
 				tcat.catastrophe_cd AS catastrophecode,
 				tcat.catastrophe_nm AS catastrophename,
-				CASE WHEN tc.policy_no LIKE 'NFP%' THEN 'Group Umbrella'
+				CASE
+				WHEN tprd.product_nm = 'Group Personal Excess Liability' THEN 'Group Umbrella'
 				WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
 				WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
 				WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
@@ -117,10 +119,10 @@ BEGIN
 					tcr.subrogation_recovery_expense_reserve_amt + tcr.subrogation_recovery_reserve_amt +tcr.subrogation_recovery_defense_reserve_amt
 				) AS reserve_amount,
 				YEAR(tc.loss_dt) AS accident_year,
-				CASE WHEN tc.policy_no LIKE 'NFP%' THEN np.risk_state ELSE COALESCE(st.state_cd,tp.risk_state_cd) END AS risk_state,				
+				COALESCE(st.state_cd,tp.risk_state_cd) AS risk_state,				
 				tcr.claim_transaction_sk AS transaction_id,
 				@end_dt AS monthend,
-				CASE WHEN tc.policy_no like 'NFP%' THEN np.insured_nm ELSE tp.insured_nm END AS insured_nm,		
+				tp.insured_nm AS insured_nm,		
 				CAST(tasl.aslob_cd AS INT) AS aslob,		
 				tc.claim_status AS claim_status,
 				tcf.claim_feature_status AS loss_status
@@ -134,17 +136,7 @@ BEGIN
 					INNER JOIN edw_core.tclaim_transaction tcr ON tcr.claim_feature_sk=tcf.claim_feature_sk
 					LEFT JOIN edw_core.tclaim_payment tpay ON tpay.claim_feature_sk=tcf.claim_feature_sk  AND tcr.claim_payment_sk=tpay.claim_payment_sk
 					LEFT JOIN edw_core.tpolicy tp on tp.policy_no=tc.policy_no
-					LEFT JOIN edw_core.tstate st on st.state_cd=tp.risk_state_cd
-					LEFT JOIN
-					(
-						SELECT
-							ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date desc) as transaction_seq_no,
-							insured_cert_no as policy_no,CONCAT_WS(' ',insured_first_name,insured_last_name) as insured_nm,
-							risk_state,product_type
-						FROM
-							edw_stage.nfp_policy
-
-					) AS np ON tc.policy_no = np.policy_no and np.transaction_seq_no=1
+					LEFT JOIN edw_core.tstate st on st.state_cd=tp.risk_state_cd					
 				WHERE
 					tcr.transaction_dt_sk BETWEEN @begin_sk AND @end_sk
 					and tc.policy_no not like '%VRE' and tc.policy_no not like '%VES'
