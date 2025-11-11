@@ -78,7 +78,7 @@ SELECT
     'tgrpel_coverage',
     'Type-2 Dimension',
     'Base',
-    'Policy',
+    'Group Personal Excess Liability',
     'Stored Procedure',
     'Insert',
     'Monthly',
