@@ -1,41 +1,41 @@
-select TOP 10 * from edw_core.tetl_audit where process_nm like '%sp_policy_ivans_collection_feed%' order by etl_audit_sk desc;
-SELECT * FROM edw_core.tetl_control where process_nm in ('sp_policy_ivans_collection_feed');
--- update edw_core.tetl_control set last_source_extract_ts = '2000-01-01 00:00:00' where process_nm in ('sp_policy_ivans_collection_feed');
-EXEC sp_help 'edw_integration.policy_ivans_collections_feed';
+select TOP 10 * from edw_core.tetl_audit where process_nm like '%sp_policy_ivans_collection_feed%' order by etl_audit_sk desc GO
+SELECT * FROM edw_core.tetl_control where process_nm in ('sp_policy_ivans_collection_feed') GO
+-- update edw_core.tetl_control set last_source_extract_ts = '2000-01-01 00:00:00' where process_nm in ('sp_policy_ivans_collection_feed') GO
+EXEC sp_help 'edw_integration.policy_ivans_collections_feed' GO
 
-SELECT COUNT(1) FROM edw_integration.policy_ivans_collections_feed;
-SELECT * FROM edw_integration.policy_ivans_collections_feed;
--- DROP TABLE edw_integration.policy_ivans_collections_feed;
+SELECT COUNT(1) FROM edw_integration.policy_ivans_collections_feed GO
+SELECT * FROM edw_integration.policy_ivans_collections_feed GO
+-- DROP TABLE edw_integration.policy_ivans_collections_feed GO
 
--- TRUNCATE TABLE edw_integration.policy_ivans_collections_feed;
-EXEC [edw_core].[sp_policy_ivans_collection_feed];
+-- TRUNCATE TABLE edw_integration.policy_ivans_collections_feed GO
+-- EXEC [edw_core].[sp_policy_ivans_collection_feed] GO
 
-SELECT COUNT(1) FROM [edw_temp].[policy_ivans_collection_temp1];
-SELECT COUNT(1) FROM [edw_temp].[policy_ivans_collection_temp2];
-SELECT COUNT(1) FROM [edw_temp].[policy_ivans_collection_temp3];
-SELECT COUNT(1) FROM [edw_temp].[policy_ivans_collection_temp4];
-SELECT COUNT(1) FROM [edw_temp].[policy_ivans_collection_temp5];
-SELECT COUNT(1) FROM [edw_temp].[policy_ivans_collection_temp6];
-SELECT COUNT(1) FROM [edw_temp].[policy_ivans_collection_temp7];
+SELECT COUNT(1) FROM [edw_temp].[policy_ivans_collection_temp1] GO
+SELECT COUNT(1) FROM [edw_temp].[policy_ivans_collection_temp2] GO
+SELECT COUNT(1) FROM [edw_temp].[policy_ivans_collection_temp3] GO
+SELECT COUNT(1) FROM [edw_temp].[policy_ivans_collection_temp4] GO
+SELECT COUNT(1) FROM [edw_temp].[policy_ivans_collection_temp5] GO
+SELECT COUNT(1) FROM [edw_temp].[policy_ivans_collection_temp6] GO
+SELECT COUNT(1) FROM [edw_temp].[policy_ivans_collection_temp7] GO
 
-SELECT TOP 10 * FROM [edw_temp].[policy_ivans_collection_temp3] where policy_no = 'CO100122506';
-SELECT TOP 10 * FROM [edw_temp].[policy_ivans_collection_temp4] where policy_no = 'CO100122506';
-SELECT TOP 10 * FROM [edw_temp].[policy_ivans_collection_temp5] where policy_sk = (select policy_sk from edw_core.tpolicy where policy_no = 'CO100122506') AND transaction_seq_no = 1;;
-SELECT TOP 10 * FROM [edw_temp].[policy_ivans_collection_temp6] where policy_sk = (select policy_sk from edw_core.tpolicy where policy_no = 'CO100122506') AND transaction_seq_no = 1;;
+SELECT TOP 10 * FROM [edw_temp].[policy_ivans_collection_temp3] where policy_no = 'CO100122506' GO
+SELECT TOP 10 * FROM [edw_temp].[policy_ivans_collection_temp4] where policy_no = 'CO100122506' GO
+SELECT TOP 10 * FROM [edw_temp].[policy_ivans_collection_temp5] where policy_sk = (select policy_sk from edw_core.tpolicy where policy_no = 'CO100122506') AND transaction_seq_no = 1 GO GO
+SELECT TOP 10 * FROM [edw_temp].[policy_ivans_collection_temp6] where policy_sk = (select policy_sk from edw_core.tpolicy where policy_no = 'CO100122506') AND transaction_seq_no = 1 GO GO
 
-SELECT * FROM [edw_temp].[policy_ivans_collection_temp1] WHERE policy_sk = (select policy_sk from edw_core.tpolicy where policy_no = 'CO100120957') AND transaction_seq_no = 1;
-SELECT * FROM [edw_temp].[policy_ivans_collection_temp2] WHERE [053_PolicyNumber] = 'CO100122506' AND transaction_seq_no = 1;
+SELECT * FROM [edw_temp].[policy_ivans_collection_temp1] WHERE policy_sk = (select policy_sk from edw_core.tpolicy where policy_no = 'CO100120957') AND transaction_seq_no = 1 GO
+SELECT * FROM [edw_temp].[policy_ivans_collection_temp2] WHERE [053_PolicyNumber] = 'CO100122506' AND transaction_seq_no = 1 GO
 
-SELECT TOP 10 transaction_ts, * FROM [edw_core].tpolicy_history where policy_no = 'CO100122506';
--- update [edw_core].tpolicy_history set transaction_ts = '1800-01-01' where policy_no = 'CO100122506';
--- update [edw_core].tpolicy_history set transaction_ts = '2022-02-07 19:09:16.700' where policy_no = 'CO100122506' and transaction_seq_no = 0;
--- update [edw_core].tpolicy_history set transaction_ts = '2022-02-08 13:19:57.800' where policy_no = 'CO100122506' and transaction_seq_no = 1;
+SELECT TOP 10 transaction_ts, * FROM [edw_core].tpolicy_history where policy_no = 'CO100122506' GO
+-- update [edw_core].tpolicy_history set transaction_ts = '1800-01-01' where policy_no = 'CO100122506' GO
+-- update [edw_core].tpolicy_history set transaction_ts = '2022-02-07 19:09:16.700' where policy_no = 'CO100122506' and transaction_seq_no = 0 GO
+-- update [edw_core].tpolicy_history set transaction_ts = '2022-02-08 13:19:57.800' where policy_no = 'CO100122506' and transaction_seq_no = 1 GO
 
-SELECT TOP 10 [053_PolicyNumber], [034_EffectiveDt], transaction_seq_no FROM [edw_temp].[policy_ivans_collection_temp2];
-SELECT [053_PolicyNumber], [034_EffectiveDt], transaction_seq_no, COUNT(1) AS RC FROM [edw_temp].[policy_ivans_collection_temp2] GROUP BY [053_PolicyNumber], [034_EffectiveDt], transaction_seq_no HAVING COUNT(1) > 1;
+SELECT TOP 10 [053_PolicyNumber], [034_EffectiveDt], transaction_seq_no FROM [edw_temp].[policy_ivans_collection_temp2] GO
+SELECT [053_PolicyNumber], [034_EffectiveDt], transaction_seq_no, COUNT(1) AS RC FROM [edw_temp].[policy_ivans_collection_temp2] GROUP BY [053_PolicyNumber], [034_EffectiveDt], transaction_seq_no HAVING COUNT(1) > 1 GO
 
 
-select * from edw_core.tdate;
+select * from edw_core.tdate GO
 
 SELECT *
 FROM (SELECT * FROM [edw_temp].[policy_ivans_collection_temp1] WHERE policy_sk = (select policy_sk from edw_core.tpolicy where policy_no = 'CO100120957') AND transaction_seq_no = 1) pt
@@ -69,14 +69,14 @@ LEFT JOIN [edw_temp].[policy_ivans_collection_temp3] jai on p.policy_no = jai.po
 WHERE 1=1
 -- and cast(pt.transaction_ts as datetime2(7)) > @last_source_extract_ts
 AND b.ivans_y_account IS NOT NULL
-;
+ GO
 
 SELECT ai.policy_no, ai.effective_dt, ai.transaction_seq_no
 FROM
     edw_core.tadditional_interest ai
     INNER JOIN edw_core.tpolicy_history ph ON ai.policy_history_sk = ph.policy_history_sk
 WHERE ai.policy_no = 'CO100120957'
-;
+ GO
 
 select * from edw_core.tadditional_interest 
-;
+ GO
