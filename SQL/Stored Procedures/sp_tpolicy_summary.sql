@@ -194,6 +194,7 @@ BEGIN
 					where effective_dt_sk <= @end_dt_sk
 					and   transaction_effective_dt_sk <= @end_dt_sk
 					and   transaction_dt_sk <= @end_dt_sk
+					and source_system_sk = isnull(@param_ssk, source_system_sk)
 					group by policy_sk,policy_history_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 				),  
 				min_tr as
@@ -206,6 +207,7 @@ BEGIN
 					where effective_dt_sk <= @end_dt_sk
 					and   transaction_effective_dt_sk <= @end_dt_sk
 					and   transaction_dt_sk <= @end_dt_sk
+					and source_system_sk = isnull(@param_ssk, source_system_sk)
 				),  
 				xpsr_new as
 				( 
