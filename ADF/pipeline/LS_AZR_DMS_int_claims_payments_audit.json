@@ -36,6 +36,7 @@
 						"preCopyScript": "TRUNCATE TABLE edw_stage.int_claims_payments_audit",
 						"writeBehavior": "insert",
 						"sqlWriterUseTableLock": true,
+						"tableOption": "autoCreate",
 						"disableMetricsCollection": false
 					},
 					"enableStaging": false,
@@ -410,7 +411,7 @@
 				],
 				"outputs": [
 					{
-						"referenceName": "DestinationDataset_int_claims_payments_audit",
+						"referenceName": "TargetSQL_int_claims_payments_audit",
 						"type": "DatasetReference"
 					}
 				]
