@@ -21,6 +21,7 @@
 -- 10/15/25		Yunus Mohammed					16 AD11341 - Added new column renewal_released_by_metal_in
 -- 10/30/25		Yunus Mohammed					17. AD-11535 Added stalled_quote_in  and new_business_work_status 
 -- 10/31/25		Sandeep Gundreddy				18. AD-11560 - removed date filter to update all null EffectiveDate/ExpirationDate in Metal; added for account table backfills
+-- 11/11/25		Yunus Mohammed					19 AD-11316 Added broker_of_record_change_in
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -244,7 +245,11 @@ BEGIN
 					when tmp1.NewBusinessWorkStatus = 'Stalled Incomplete Quote (Automated)' then 'Yes'
 					else 'No'
 				end as stalled_quote_in,
-				tmp1.NewBusinessWorkStatus as new_business_work_status
+				tmp1.NewBusinessWorkStatus as new_business_work_status,
+				case
+					when tmp1.BrokerOfRecordChangeApplied = 1 then 'Yes'
+				else  'No' 
+				end as broker_of_record_change_in
 			FROM 
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
@@ -310,6 +315,7 @@ BEGIN
 			,renewal_released_by_metal_in
 			,stalled_quote_in
 			,new_business_work_status
+			,broker_of_record_change_in
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -357,6 +363,7 @@ BEGIN
 				,Source.renewal_released_by_metal_in
 				,Source.stalled_quote_in
 				,Source.new_business_work_status
+				,Source.broker_of_record_change_in
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -402,7 +409,8 @@ BEGIN
 		,Target.renewal_quote_review_start_dt = source.renewal_quote_review_start_dt
 		,Target.renewal_released_by_metal_in = source.renewal_released_by_metal_in
 		,Target.stalled_quote_in= Source.stalled_quote_in
-		,Target.new_business_work_status =Source.new_business_work_status
+		,Target.new_business_work_status =Source.new_business_work_status,
+		Target.broker_of_record_change_in = Source.broker_of_record_change_in
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
