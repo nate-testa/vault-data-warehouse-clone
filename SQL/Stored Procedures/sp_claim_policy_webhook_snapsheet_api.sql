@@ -1042,6 +1042,8 @@ isnull(
         -- left join edw_core.tpolicy_history tph on tph.policy_sk = tp.policy_sk and tph.transaction_seq_no = cpsa.transaction_seq_no -- Commented on 02/08/2025
         left join edw_core.tproduct prd on prd.product_sk = tph.product_sk
         left join edw_core.tbroker tbrk on tph.broker_id = tbrk.broker_id
+        WHERE  
+            prd.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability')	
 		
 	)
 
