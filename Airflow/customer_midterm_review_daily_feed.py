@@ -44,7 +44,7 @@ def check_customer_midterm_review_data_and_send_email(**kwargs):
             task_id='send_customer_midterm_review_data_loaded_email',
             to=to_email,
             subject='Airflow - Customer Midterm Review - Data loaded report',
-            html_content=get_vault_data_HTML(sql_qry,'The Customer Midterm Review data have been loaded into MetalDB successfully. Below is the report with the rows loaded by table.'),
+            html_content=get_vault_data_HTML(sql_qry,'The Customer Midterm Review data have been loaded into MetalDB successfully. Below is the report with the rows loaded by table.','Vault_METAL'),
             dag=kwargs['dag'],
         )
         email_op.execute(context=kwargs)  # type: ignore
