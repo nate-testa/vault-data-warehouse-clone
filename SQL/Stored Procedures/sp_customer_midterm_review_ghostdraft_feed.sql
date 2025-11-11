@@ -144,7 +144,8 @@ BEGIN
 					--custom_recommendation_message_3_id,
 					--custom_recommendation_message_3,
 					--custom_recommendation_message_4_id,
-					--custom_recommendation_message_4,  
+					--custom_recommendation_message_4, 
+					,null account_id 
 				from edw_integration.customer_midterm_review_eligibility_feed e
 				inner join edw_core.tcustomer cust on e.customer_id = cust.customer_id
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
@@ -269,10 +270,12 @@ BEGIN
 					--non_primary_ho_monoline_recommendation_message_1
 					case when r.product_nm in ('Condo','Homeowners') then '029' end renovation_recommendation_message_1_id  
 					--renovation_recommendation_message_1 
+					,acc.id account_id
 				from edw_integration.customer_midterm_review_eligibility_feed e
 				inner join edw_core.tcustomer cust on e.customer_id = cust.customer_id
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
 				left join edw_integration.customer_midterm_review_policy_detail p on r.existing_policy_no = p.policy_no
+				left join edw_stage.account acc on acc.policynumber = p.policy_no 
 				where r.product_nm in ('Condo','Homeowners')
 				and r.update_ts >  @last_source_extract_ts
 				and e.midterm_review_process_in ='Yes'
@@ -375,6 +378,7 @@ BEGIN
 			--custom_recommendation_message_3,
 			--custom_recommendation_message_4_id,
 			--custom_recommendation_message_4, 
+			account_id,
 			etl_audit_sk,
 			create_ts,
 			update_ts
@@ -457,7 +461,8 @@ BEGIN
 				--custom_recommendation_message_1_id,
 				--custom_recommendation_message_1,
 				--custom_recommendation_message_2_id ,
-                @etl_audit_sk etl_audit_sk,
+                account_id,
+				@etl_audit_sk etl_audit_sk,
                 getdate() create_ts,
                 getdate() update_ts 
 		from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 a
@@ -685,6 +690,7 @@ BEGIN
 				--	(
 						select
 							'Yes' [existing_home],
+							cmrh.account_id [account_primary_image],
 							cmrh.risk_address_line1 as [home.risk_address_line1],
 							cmrh.risk_address_line2 as [home.risk_address_line2],
 							cmrh.risk_address_unit_no as [home.risk_address_unit_no],
