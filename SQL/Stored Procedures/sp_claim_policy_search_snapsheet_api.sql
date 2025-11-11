@@ -9,6 +9,7 @@
 -- 02-07-2025              Yunus Mohammed               4 - Used trim for city, state, zip and country
 -- 03-13-2025				Yunus Mohammed				5 - AD-8568 Added vault litigation policies
 -- 05-07-2025				Yunus Mohammed				6 - AD-9410 Added new vault litigation policy
+-- 11-11-2025               Yunus Mohammed              7 - AD-11665 NFP policies excluded
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_search_snapsheet_api]
 AS
@@ -91,7 +92,8 @@ BEGIN
 						from
 							edw_core.tpolicy_transaction pt
 						where
-							cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+							pt.source_system_sk not in (1,6) and pt.product_sk not in (6,10)  
+							and cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts							 
 					)as pt
 					INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
 					LEFT JOIN edw_core.tauto_vehicle_coverage AS avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
