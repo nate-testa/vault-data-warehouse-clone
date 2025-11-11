@@ -7,6 +7,7 @@
 -- 06/22/23		Architha Gudimalla				1. Created this procedure 
 -- 10/17/23		Architha Gudimalla				2. Removed group by on source system 
 -- 07/18/24		Architha Gudimalla				3. Updated logic for @last_source_extract_ts
+-- 11/10/25		Dinesh Bobbili					4. Added marine_premium_amt, group_excess_premium_amt
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcustomer_summary] 
@@ -79,7 +80,9 @@ BEGIN
 				 		sum(iif(pr.product_nm='Collections',inforce_premium_amt,0)) collections_premium_amt,
 				 		sum(iif(pr.product_nm='Auto',inforce_premium_amt,0)) auto_premium_amt,
 				 		sum(iif(pr.product_nm='Excess Liability',inforce_premium_amt,0)) excess_liability_premium_amt, 
-				 		sum(iif(pr.product_nm='Condo',inforce_premium_amt,0)) condo_premium_amt 
+				 		sum(iif(pr.product_nm='Condo',inforce_premium_amt,0)) condo_premium_amt,
+						sum(iif(pr.product_nm='Marine Boat & Yacht',inforce_premium_amt,0)) marine_premium_amt,
+						sum(iif(pr.product_nm='Group Personal Excess Liability',inforce_premium_amt,0)) group_excess_premium_amt 
 				 FROM edw_core.tpolicy_summary summ, edw_core.tproduct pr 
 				 where month_sk = @month_end_dt_sk 
 				 and pr.product_sk = summ.product_sk
@@ -90,11 +93,13 @@ BEGIN
 						month_sk, customer_sk, 
 						total_premium_amt, total_annual_premium_amt, total_inforce_ct, total_line_ct, 
 						homeowners_premium_amt, collections_premium_amt, auto_premium_amt, excess_liability_premium_amt, condo_premium_amt,
+						marine_premium_amt, group_excess_premium_amt,
 						update_ts, etl_audit_sk
 			        )
 			    select 	@month_end_dt_sk, prm.customer_sk,
 				 		total_premium_amt, total_annual_premium_amt, total_inforce_ct, total_line_ct  , 
 				 		homeowners_premium_amt, collections_premium_amt, auto_premium_amt, excess_liability_premium_amt, condo_premium_amt,
+						marine_premium_amt, group_excess_premium_amt,
 						getdate(), @etl_audit_sk
 				from prm 
 				where total_premium_amt > 0;
