@@ -50,7 +50,9 @@
 									"physicalType": "int"
 								},
 								"sink": {
-									"name": "id"
+									"name": "id",
+									"type": "Int32",
+									"physicalType": "int"
 								}
 							},
 							{
@@ -60,7 +62,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "uuid"
+									"name": "uuid",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -70,7 +74,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_cr_payment_id"
+									"name": "pm_cr_payment_id",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -80,7 +86,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_ip_payment_id"
+									"name": "pm_ip_payment_id",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -92,7 +100,11 @@
 									"precision": 18
 								},
 								"sink": {
-									"name": "pm_amount"
+									"name": "pm_amount",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 2,
+									"precision": 18
 								}
 							},
 							{
@@ -102,7 +114,9 @@
 									"physicalType": "bit"
 								},
 								"sink": {
-									"name": "pm_funded"
+									"name": "pm_funded",
+									"type": "Boolean",
+									"physicalType": "bit"
 								}
 							},
 							{
@@ -112,7 +126,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_status"
+									"name": "pm_status",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -122,7 +138,9 @@
 									"physicalType": "date"
 								},
 								"sink": {
-									"name": "pm_paid_date"
+									"name": "pm_paid_date",
+									"type": "DateTime",
+									"physicalType": "datetime2"
 								}
 							},
 							{
@@ -132,7 +150,9 @@
 									"physicalType": "date"
 								},
 								"sink": {
-									"name": "pm_cleared_date"
+									"name": "pm_cleared_date",
+									"type": "DateTime",
+									"physicalType": "datetime2"
 								}
 							},
 							{
@@ -142,7 +162,9 @@
 									"physicalType": "date"
 								},
 								"sink": {
-									"name": "pm_escheat_date"
+									"name": "pm_escheat_date",
+									"type": "DateTime",
+									"physicalType": "datetime2"
 								}
 							},
 							{
@@ -152,7 +174,9 @@
 									"physicalType": "date"
 								},
 								"sink": {
-									"name": "pm_check_print_date"
+									"name": "pm_check_print_date",
+									"type": "DateTime",
+									"physicalType": "datetime2"
 								}
 							},
 							{
@@ -162,7 +186,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_check_number"
+									"name": "pm_check_number",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -172,7 +198,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_mail_tracking_number"
+									"name": "pm_mail_tracking_number",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -182,7 +210,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_method_id"
+									"name": "pm_method_id",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -192,7 +222,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_monitored"
+									"name": "pm_monitored",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -202,7 +234,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_reject_payee_id"
+									"name": "pm_reject_payee_id",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -212,7 +246,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_reject_reason"
+									"name": "pm_reject_reason",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -222,7 +258,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_new_method"
+									"name": "pm_new_method",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -232,7 +270,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_orig_method"
+									"name": "pm_orig_method",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -242,7 +282,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_selection"
+									"name": "pm_selection",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -252,7 +294,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_method_last4digit"
+									"name": "pm_method_last4digit",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -262,7 +306,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_re_issue"
+									"name": "pm_re_issue",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -272,7 +318,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_error_code"
+									"name": "pm_error_code",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -282,7 +330,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_error_message"
+									"name": "pm_error_message",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -292,7 +342,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_carrier_id"
+									"name": "pm_carrier_id",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -302,7 +354,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "pm_env"
+									"name": "pm_env",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -312,7 +366,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "request_json"
+									"name": "request_json",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -322,7 +378,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "created_by"
+									"name": "created_by",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							},
 							{
@@ -332,7 +390,9 @@
 									"physicalType": "nvarchar"
 								},
 								"sink": {
-									"name": "created_date"
+									"name": "created_date",
+									"type": "String",
+									"physicalType": "nvarchar"
 								}
 							}
 						],

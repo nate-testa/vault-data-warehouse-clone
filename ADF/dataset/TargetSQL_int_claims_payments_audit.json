@@ -10,7 +10,131 @@
 		},
 		"annotations": [],
 		"type": "AzureSqlTable",
-		"schema": [],
+		"schema": [
+			{
+				"name": "id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "uuid",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_cr_payment_id",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_ip_payment_id",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_amount",
+				"type": "decimal",
+				"precision": 18,
+				"scale": 2
+			},
+			{
+				"name": "pm_funded",
+				"type": "bit"
+			},
+			{
+				"name": "pm_status",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_paid_date",
+				"type": "datetime2",
+				"scale": 0
+			},
+			{
+				"name": "pm_cleared_date",
+				"type": "datetime2",
+				"scale": 0
+			},
+			{
+				"name": "pm_escheat_date",
+				"type": "datetime2",
+				"scale": 0
+			},
+			{
+				"name": "pm_check_print_date",
+				"type": "datetime2",
+				"scale": 0
+			},
+			{
+				"name": "pm_check_number",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_mail_tracking_number",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_method_id",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_monitored",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_reject_payee_id",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_reject_reason",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_new_method",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_orig_method",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_selection",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_method_last4digit",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_re_issue",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_error_code",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_error_message",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_carrier_id",
+				"type": "nvarchar"
+			},
+			{
+				"name": "pm_env",
+				"type": "nvarchar"
+			},
+			{
+				"name": "request_json",
+				"type": "nvarchar"
+			},
+			{
+				"name": "created_by",
+				"type": "nvarchar"
+			},
+			{
+				"name": "created_date",
+				"type": "nvarchar"
+			}
+		],
 		"typeProperties": {
 			"schema": "edw_stage",
 			"table": "int_claims_payments_audit"
