@@ -11,6 +11,7 @@
 -- 01/23/25		Architha Gudimalla			6. VI33968/AD7635 - Added uwco orig eff dt
 -- 01/23/25		Architha Gudimalla			7. VI33968/AD8770 - Updated logic for uwco orig eff dt
 -- 05/19/25		Architha Gudimalla			8. AD8770 - Updated policy status logic for cancellations
+-- 11/11/25		Dinesh Bobbili				9. AD11687 - Added condition to exclude nfp ssk
 -- ========================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_cancels]
@@ -35,11 +36,15 @@ BEGIN
 	
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))  
+
+		DECLARE @nfp_ssk VARCHAR(50)
+		select @nfp_ssk=source_system_sk from edw_core.tsource_system where source_system_nm = 'NFP';
 		
 		update edw_core.tpolicy  
 		set policy_status = 'Cancelled' 
 		from edw_core.tpolicy
-		where cancellation_effective_dt <= getdate();
+		where cancellation_effective_dt <= getdate()
+		and source_system_sk <> @nfp_ssk;
 
 		--added since collete raised a ticket - https://vaultinsurance.atlassian.net/browse/VI-30813
 		update edw_stage.dw2_oneshield_migrated
@@ -83,6 +88,7 @@ BEGIN
 		where oneshield_migrated_in = 'Yes'
 		and prior_term_policy_no is null
 		and LEFT(policy_no, CHARINDEX('-', policy_no + '-') - 1) = LEFT(prior_policy_no, CHARINDEX('-', prior_policy_no + '-') - 1)
+		and a.source_system_sk <> @nfp_ssk
 
 		--prior_policy_no cannot be same as prior_term_policy_no
 		update a
@@ -98,6 +104,7 @@ BEGIN
 							 then policy_no
 							 else left(policy_no, CHARINDEX('-',policy_no) - 1)
          				end
+					and a.source_system_sk <> @nfp_ssk
 
 		update a
 		set prior_policy_no = null, oneshield_migrated_in = null
@@ -120,6 +127,7 @@ BEGIN
 							then policy_no
 							else left(policy_no, CHARINDEX('-',policy_no) - 1)
 						end
+					and a.source_system_sk <> @nfp_ssk
 
 		--added on 3/25
 		--rewritten policies have policy term as new, update there as renewals since prior term is renewal
@@ -129,7 +137,8 @@ BEGIN
 		inner join edw_core.tpolicy pol1 on pol1.policy_no = pol.prior_policy_no 
 		where pol.policy_term = 'New' 
 		--and pol.policy_no like '%-%' 
-		and pol1.policy_term = 'Renewal';
+		and pol1.policy_term = 'Renewal'
+		and pol.source_system_sk <> @nfp_ssk;
 
 		--added on 4/25 since collete raised a ticket - https://vaultinsurance.atlassian.net/issues/VI-30719, prior pol cannot be a diff prod type
 		update edw_core.tpolicy 
@@ -157,6 +166,7 @@ BEGIN
 								 else original_policy_no  
 							end, uw_company_nm) uw_company_original_policy_effective_dt
 					from edw_core.tpolicy) pol1 on pol.policy_sk = pol1.policy_sk
+					and pol.source_system_sk <> @nfp_ssk
 		; 
 
 		SET @rows_affected=@@ROWCOUNT;
