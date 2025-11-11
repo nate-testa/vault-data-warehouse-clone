@@ -74,6 +74,7 @@ BEGIN
 				WHEN 'LUX' THEN tccov.collection_location_sk
 				WHEN 'PEL' THEN NULL
 				WHEN 'AU' THEN taveh.auto_vehicle_sk
+				WHEN 'GRPEL' THEN NULL
 			END AS item_sk,
 			CASE
 				prd.product_cd
@@ -94,6 +95,7 @@ BEGIN
 				WHEN 'LUX' THEN NULL
 				WHEN 'PEL' THEN NULL
 				WHEN 'AU' THEN tavc.auto_vehicle_coverage_sk
+				WHEN 'GRPEL' THEN NULL
 			END AS vehicle_coverage_sk,
 			exps.closed_reason_code  as closed_reason_desc,
 			greatest(clm.created_at,clm.updated_at) AS greatest_created_updated
