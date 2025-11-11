@@ -9,10 +9,12 @@
 -- 03/20/24		Architha Gudimalla				3. Added commission_amt
 -- 07/03/24		Yunus Mohammed					4. Added policy_history_sk
 -- 07/17/24		Architha Gudimalla				5. Updated logic for @last_source_extract_ts
+-- 11/10/25		Dinesh Bobbili					6. AD11635 - Added source_system_sk filter for NFP process
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tdaily_inforce_policy]
-@in_inforce_dt DATE = null
+@in_inforce_dt DATE = null,
+@in_source_system VARCHAR(10) = null
 AS 
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -29,6 +31,10 @@ BEGIN
 
 		-- Get last source extract date
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm); 
+		
+		DECLARE @param_ssk VARCHAR(50)
+		select @param_ssk=source_system_sk from edw_core.tsource_system where source_system_nm = @in_source_system;
+
 	
 		DECLARE c1_rec CURSOR
 		FOR  
@@ -59,7 +65,8 @@ BEGIN
 				sET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 		
 				delete from edw_core.tdaily_inforce_policy
-				where inforce_dt_sk = @var_date_sk; 
+				where inforce_dt_sk = @var_date_sk 
+				and source_system_sk = isnull(@param_ssk, source_system_sk); 
 				
 				with max_tr as
 				(
@@ -75,6 +82,7 @@ BEGIN
 				 where effective_dt_sk <= @var_date_sk
 				 and   transaction_effective_dt_sk <= @var_date_sk
 				 and   transaction_dt_sk <= @var_date_sk 
+				 and source_system_sk = isnull(@param_ssk, source_system_sk)
 				)
 				INSERT INTO edw_core.tdaily_inforce_policy
 					( 
@@ -94,7 +102,8 @@ BEGIN
 				  and tr.policy_transaction_sk = max_tr.policy_transaction_sk
 				  and tt.policy_transaction_type_nm <> 'Cancellation'
 				  and expiration_dt_sk > @var_date_sk
-				  and max_tr.rnk = 1;
+				  and max_tr.rnk = 1
+				  and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk);
 		       
 				SET @rows_affected=@@ROWCOUNT;
 		
