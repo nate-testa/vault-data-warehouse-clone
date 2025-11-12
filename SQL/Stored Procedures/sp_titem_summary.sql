@@ -195,6 +195,7 @@ BEGIN
 				 		net_premium_amt inforce_net_premium_amt
 				 FROM	edw_core.titem_inforce
 				 where	month_sk = @month_end_dt_sk
+				 and source_system_sk = isnull(@param_ssk, source_system_sk)
 				),
 				max_tr as
 				(
@@ -204,6 +205,7 @@ BEGIN
 				 	and  effective_dt_sk <= @end_dt_sk
 					and   transaction_effective_dt_sk <= @end_dt_sk
 					and   transaction_dt_sk <= @end_dt_sk 
+					and source_system_sk = isnull(@param_ssk, source_system_sk)
 					group by policy_sk, policy_history_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 				),  
 				min_tr as
@@ -217,6 +219,7 @@ BEGIN
 				 	and  effective_dt_sk <= @end_dt_sk
 					and   transaction_effective_dt_sk <= @end_dt_sk
 					and   transaction_dt_sk <= @end_dt_sk  
+					and source_system_sk = isnull(@param_ssk, source_system_sk)
 				),  
 				xpsr_new as
 				( 
@@ -264,6 +267,7 @@ BEGIN
 				 and   pol.expiration_dt > @month_end_dt
 				 and   tr.transaction_effective_dt_sk <= @end_dt_sk
 				 and   tr.transaction_dt_sk <= @end_dt_sk
+				 and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 				 and   tr.transaction_seq_no = (select min(tr1.transaction_seq_no) from edw_core.tpolicy_transaction tr1 
 				 								where tr1.policy_sk = tr.policy_sk and tr1.item_sk = tr.item_sk)
 				 and   tr.policy_transaction_sk = (select min(tr2.policy_transaction_sk) from edw_core.tpolicy_transaction tr2 
@@ -277,6 +281,7 @@ BEGIN
 				 FROM edw_core.tpolicy pol, edw_core.titem_inforce inf
 				 where inf.policy_sk = pol.policy_sk 
 				   and inf.month_sk = @prev_month_end_dt_sk
+				   and pol.source_system_sk = isnull(@param_ssk, pol.source_system_sk)
 				   and pol.expiration_dt between  @month_begin_dt AND @month_end_dt
 				   and not exists (select policy_sk from edw_temp.titem_summary_can_rein_temp1 c 
 				   					where inf.policy_sk = c.policy_sk and inf.item_sk = c.item_sk and c.policy_transaction_type_sk = 5)
@@ -323,6 +328,7 @@ BEGIN
 						 				where tr.policy_sk = c.policy_sk and tr.item_sk = c.item_sk and tr.transaction_seq_no = c.transaction_seq_no and c.policy_transaction_type_sk = 5)
 						 and	tr.policy_transaction_type_sk = 5   
 						 and tr.calendar_month_sk = @month_end_dt_sk
+						 and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 					) aa
 					group by policy_sk, item_sk
 												 	
@@ -361,6 +367,7 @@ BEGIN
 						 				where tr.policy_sk = r.policy_sk and tr.item_sk = r.item_sk and tr.transaction_seq_no = r.transaction_seq_no and r.policy_transaction_type_sk = 6)
 						 and	tr.policy_transaction_type_sk = 6
 						 and tr.calendar_month_sk = @month_end_dt_sk 
+						 and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 					) aa
 					group by policy_sk, item_sk
 				),
