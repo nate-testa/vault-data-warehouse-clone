@@ -153,17 +153,17 @@ with DAG(
             # parameters={"myParam": "value"},
         )
 
-        adf_etl_load_ls_aws_dms: BaseOperator = AzureDataFactoryRunPipelineOperator(
-            task_id="adf_etl_load_ls_aws_dms",
+        adf_etl_load_ls_azr_dms: BaseOperator = AzureDataFactoryRunPipelineOperator(
+            task_id="adf_etl_load_ls_azr_dms",
             azure_data_factory_conn_id='azure_data_factory_vault_data',
-            pipeline_name="LS_AWS_DMS_dmsDocument",
+            pipeline_name="LS_AZR_DMS_dmsDocument",
             # parameters={"myParam": "value"},
         )
 
-        adf_etl_load_ls_aws_vsp_claims_payments: BaseOperator = AzureDataFactoryRunPipelineOperator(
-            task_id="adf_etl_load_ls_aws_vsp_claims_payments",
+        adf_etl_load_ls_azr_dms_claims_payments: BaseOperator = AzureDataFactoryRunPipelineOperator(
+            task_id="adf_etl_load_ls_azr_dms_claims_payments",
             azure_data_factory_conn_id='azure_data_factory_vault_data',
-            pipeline_name="LS_AWS_VSP_int_claims_payments_audit",
+            pipeline_name="LS_AZR_DMS_int_claims_payments_audit",
             # parameters={"myParam": "value"},
         )        
 
