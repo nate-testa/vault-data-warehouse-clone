@@ -8,7 +8,6 @@
 -- 10/05/23		Architha Gudimalla			2. Added update statements for policy_status, latest_term_in
 -- 10/17/23		Architha Gudimalla			3. Added logic for non_renewal_in, pending_non_renewal_in, non_renewal_note_desc, non_renewal_sub_note_desc
 -- 05/03/24		Yunus Mohammed				4. Delta identifier updated
--- 11/11/25		Dinesh Bobbili				5. AD11688 - Added condition to exclude nfp ssk
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_non_renwal_billing]
@@ -32,25 +31,19 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;
 	
 		DECLARE @parameter_desc VARCHAR(255)
-		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) 
-
-		DECLARE @nfp_ssk VARCHAR(50)
-		select @nfp_ssk=source_system_sk from edw_core.tsource_system where source_system_nm = 'NFP';		
+		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) 		
 		
 		update edw_core.tpolicy
 		set policy_status = 'Expired'
-		where expiration_dt <= cast(getdate() as date)
-		and source_system_sk <> @nfp_ssk; 
+		where expiration_dt <= cast(getdate() as date); 
 
 		update edw_core.tpolicy
-		set latest_term_in = 'N'
-		where source_system_sk <> @nfp_ssk; 
+		set latest_term_in = 'N'; 
 
 		update pol
 		set latest_term_in = 'Y'
 		from edw_core.tpolicy pol
-		where effective_dt = (select max(effective_dt) from edw_core.tpolicy pol1 where pol.original_policy_no = pol1.original_policy_no)
-		and pol.source_system_sk <> @nfp_ssk;
+		where effective_dt = (select max(effective_dt) from edw_core.tpolicy pol1 where pol.original_policy_no = pol1.original_policy_no);
 
 		update a
 		set non_renewal_in 				= case when b.NonRenewalState='NonRenewed' then 'Yes' else 'No' end,
@@ -62,7 +55,7 @@ BEGIN
 		inner join (select policynumber, EffectiveDate, NonRenewalState, NonRenewalStateNote, NonRenewalStateSubNote, IsConditionalRenewal  from edw_stage.Account  acct  
 					where	UpdatedDate --CreatedDate
 							> @last_source_extract_ts
-					) b on	a.policy_no = b.policynumber and		a.effective_dt = cast(b.EffectiveDate as date) and a.source_system_sk <> @nfp_ssk;
+					) b on	a.policy_no = b.policynumber and		a.effective_dt = cast(b.EffectiveDate as date);
 
 		/*
 		update a
@@ -84,7 +77,7 @@ BEGIN
 					inner join edw_stage.BillingAccount ba on ba.id = acct.BillingAccountId
 					inner join edw_core.tbillingaccount tb on tb.billingaccount_no = ba.ReferenceCode
 					where	acct.UpdatedDate > @last_source_extract_ts
-					) b on	a.policy_no = b.policynumber and		a.effective_dt = cast(b.EffectiveDate as date) and a.source_system_sk <> @nfp_ssk;  
+					) b on	a.policy_no = b.policynumber and		a.effective_dt = cast(b.EffectiveDate as date);  
 
 		SET @rows_affected=@rows_affected+@@ROWCOUNT; 
 	
@@ -112,4 +105,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-
