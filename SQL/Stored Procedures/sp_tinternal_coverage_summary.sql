@@ -190,6 +190,7 @@ BEGIN
 				 		net_premium_amt inforce_net_premium_amt
 				 FROM	edw_core.tinternal_coverage_inforce
 				 where	month_sk = @month_end_dt_sk
+				 and source_system_sk = isnull(@param_ssk, source_system_sk)
 				), 
 				max_tr as
 				(
