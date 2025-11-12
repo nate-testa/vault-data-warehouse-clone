@@ -22,10 +22,12 @@ GO
 -- 07/03/24		Yunus Mohammed					11. Added policy_history_sk
 -- 07/18/24		Architha Gudimalla				12. Updated logic for @last_source_extract_ts
 -- 07/08/25		Architha Gudimalla				13. Updated EP logic 
+-- 11/11/25		Dinesh Bobbili					14. AD11637 - Added source_system_sk filter for NFP process
 -- ========================================================================================================================================= 
 
 create or ALTER  PROCEDURE [edw_core].[sp_tinternal_coverage_summary]
-@in_month_end_dt date = null
+@in_month_end_dt date = null,
+@in_source_system VARCHAR(10) = null
 AS 
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -58,6 +60,9 @@ BEGIN
 		DECLARE @proc_run_month_end_dt date
 		DECLARE @proc_run_month INT
 		DECLARE @parameter_desc VARCHAR(255) 
+		
+		DECLARE @param_ssk VARCHAR(50)
+		select @param_ssk=source_system_sk from edw_core.tsource_system where source_system_nm = @in_source_system;
 		
 		DECLARE c1_rec CURSOR
 		FOR  
@@ -114,7 +119,8 @@ BEGIN
 				where calendar_year = @year;
 
 				delete from edw_core.tinternal_coverage_summary 
-				where month_sk = @month_end_dt_sk; 
+				where month_sk = @month_end_dt_sk
+				and source_system_sk = isnull(@param_ssk, source_system_sk); 
 			
 				DROP TABLE IF EXISTS edw_temp.tinternal_coverage_summary_can_rein_temp1;
 				--insert cancels
@@ -126,6 +132,7 @@ BEGIN
 				 and   transaction_effective_dt_sk <> expiration_dt_sk
 				 and	calendar_month_sk = @month_end_dt_sk 
 				and   expiration_dt_sk > @month_begin_dt_sk
+				and source_system_sk = isnull(@param_ssk, source_system_sk)
 				 group by policy_sk, item_sk, internal_coverage_sk, policy_transaction_type_sk, transaction_seq_no 
 				 
 				 union all
@@ -137,6 +144,7 @@ BEGIN
 				 and   transaction_effective_dt_sk <> expiration_dt_sk
 				 and	calendar_month_sk = @month_end_dt_sk 
 				and   expiration_dt_sk > @month_begin_dt_sk
+				and source_system_sk = isnull(@param_ssk, source_system_sk)
 				 group by policy_sk, item_sk, internal_coverage_sk, policy_transaction_type_sk, transaction_seq_no ;  
 				 
 				delete a
@@ -159,6 +167,7 @@ BEGIN
 				and   transaction_effective_dt_sk <= @end_dt_sk
 				and   transaction_dt_sk <= @end_dt_sk 
 				and   expiration_dt_sk > @month_begin_dt_sk
+				and source_system_sk = isnull(@param_ssk, source_system_sk)
 				group by policy_sk, item_sk, internal_coverage_sk;
 
 				--remove the policy if the policy is issued and cancelled multiple times and the last seq no is not a rein or cancel, no need to adjust exposures
@@ -181,6 +190,7 @@ BEGIN
 				 		net_premium_amt inforce_net_premium_amt
 				 FROM	edw_core.tinternal_coverage_inforce
 				 where	month_sk = @month_end_dt_sk
+				 and source_system_sk = isnull(@param_ssk, source_system_sk)
 				), 
 				max_tr as
 				(
@@ -190,6 +200,7 @@ BEGIN
 				 	and  effective_dt_sk <= @end_dt_sk
 					and   transaction_effective_dt_sk <= @end_dt_sk
 					and   transaction_dt_sk <= @end_dt_sk 
+					and source_system_sk = isnull(@param_ssk, source_system_sk)
 					group by policy_sk, policy_history_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 				),  
 				min_tr as
@@ -202,6 +213,7 @@ BEGIN
 				 	and  effective_dt_sk <= @end_dt_sk
 					and   transaction_effective_dt_sk <= @end_dt_sk
 					and   transaction_dt_sk <= @end_dt_sk  
+					and source_system_sk = isnull(@param_ssk, source_system_sk)
 				),  
 				xpsr_new as
 				( 
@@ -254,6 +266,7 @@ BEGIN
 				 and   tr.policy_transaction_sk = (select min(tr2.policy_transaction_sk) from edw_core.tpolicy_transaction tr2 
 				 								   where tr2.policy_sk = tr.policy_sk and tr2.item_sk = tr.item_sk and tr2.internal_coverage_sk = tr.internal_coverage_sk 
 												   and tr2.transaction_seq_no = tr.transaction_seq_no) 
+				 and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 				),
 				xpsr_exp as
 				( 
@@ -267,6 +280,7 @@ BEGIN
 				   and not exists (select policy_sk from edw_temp.tinternal_coverage_summary_can_rein_temp1 c 
 									where inf.policy_sk = c.policy_sk and inf.item_sk = c.item_sk and inf.internal_coverage_sk = c.internal_coverage_sk 
 									and c.policy_transaction_type_sk = 5)
+				   and pol.source_system_sk = isnull(@param_ssk, pol.source_system_sk)
 				),
 				xpsr_cancel as
 				( 
@@ -310,6 +324,7 @@ BEGIN
 									   and c.policy_transaction_type_sk = 5)
 						 and tr.policy_transaction_type_sk = 5   
 						 and tr.calendar_month_sk = @month_end_dt_sk
+						 and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 					) aa
 					group by policy_sk, item_sk, internal_coverage_sk
 												 	
@@ -348,6 +363,7 @@ BEGIN
 										where tr.policy_sk = r.policy_sk and tr.item_sk = r.item_sk and tr.internal_coverage_sk = r.internal_coverage_sk and r.policy_transaction_type_sk = 6)
 						 and	tr.policy_transaction_type_sk = 6
 						 and tr.calendar_month_sk = @month_end_dt_sk 
+						 and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 					) aa
 					group by policy_sk, item_sk, internal_coverage_sk
 				),
@@ -483,6 +499,7 @@ BEGIN
 				 and   tr.transaction_effective_dt_sk <> tr.expiration_dt_sk
 				 and   (pol.expiration_dt > @month_begin_dt --or (tr.transaction_dt_sk - tr.expiration_dt_sk) <= 60
 						) --dateadd(month,-2,@month_begin_dt)
+				 and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 				 group by tr.policy_sk, tr.item_sk, tr.internal_coverage_sk, tr.product_sk--, tr.customer_sk, tr.broker_sk, pol.source_system_sk
 				)
 				INSERT INTO edw_core.tinternal_coverage_summary
