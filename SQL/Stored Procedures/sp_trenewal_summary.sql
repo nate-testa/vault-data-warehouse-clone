@@ -203,6 +203,7 @@ BEGIN
 					where q1.quote_no = nt.policy_no
 					and object_type = 'Account' 
 					and effective_dt between @begin_dt and @end_dt
+					and nt.source_system_sk = isnull(@param_ssk, nt.source_system_sk)
 				)
 				select    q.*
 						, case when original_policy_no= prior_policy_no then 0 else 1 end pol_no_changed_in	
@@ -249,6 +250,7 @@ BEGIN
 												  end order by policy_sk) rnk
 				 FROM	edw_core.tpolicy
 				 where	effective_dt between @begin_dt and @end_dt
+				 and source_system_sk = isnull(@param_ssk, source_system_sk)
 				),
 				--pols renewing distinct in current month
 				ren_pols as
