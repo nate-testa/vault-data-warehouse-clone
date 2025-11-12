@@ -15,6 +15,14 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'LS_AWS_VSP_UAT'"
 		},
+		"LS_AZR_CLM_UAT_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_AZR_CLM_UAT'"
+		},
+		"LS_AZR_DMS_UAT_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_AZR_DMS_UAT'"
+		},
 		"LS_EDW_UAT_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_EDW_UAT'"
@@ -66,6 +74,30 @@
 		"LS_AWS_VSP_UAT_properties_typeProperties_username": {
 			"type": "string",
 			"defaultValue": "vltDmsUserUAT"
+		},
+		"LS_AZR_CLM_UAT_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "azr-uat-clm-db-core01.database.windows.net"
+		},
+		"LS_AZR_CLM_UAT_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "clmdb"
+		},
+		"LS_AZR_CLM_UAT_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "edwClaimsUAT"
+		},
+		"LS_AZR_DMS_UAT_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "azr-uat-dms-db-core01.database.windows.net"
+		},
+		"LS_AZR_DMS_UAT_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "dmsdb"
+		},
+		"LS_AZR_DMS_UAT_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "edwDmsUAT"
 		},
 		"LS_eBao_uat_aw_uat_pub_properties_typeProperties_server": {
 			"type": "string",
@@ -130,6 +162,34 @@
 		"AWS-UAT_properties_typeProperties_linkedInfo_resourceId": {
 			"type": "string",
 			"defaultValue": "/subscriptions/6c8f1314-e2b0-43e5-87b0-0538a6a6ca04/resourcegroups/AZR-DEV-DATA-ADF/providers/Microsoft.DataFactory/factories/AZR-VD-Metal-ADF/integrationruntimes/AWS-UAT"
+		},
+		"azr-uat-clm-db-core01-pep02_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-CLAIMS-DB-RG/providers/Microsoft.Sql/servers/azr-uat-clm-db-core01"
+		},
+		"azr-uat-clm-db-core01-pep02_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr-uat-clm-db-core01-pep02_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-uat-clm-db-core01.database.windows.net"
+			]
+		},
+		"azr-uat-dms-db-core01-pep02_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-DMS-DB-RG/providers/Microsoft.Sql/servers/azr-uat-dms-db-core01"
+		},
+		"azr-uat-dms-db-core01-pep02_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr-uat-dms-db-core01-pep02_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-uat-dms-db-core01.database.windows.net"
+			]
 		},
 		"azr-uat-metal-db-core01-pep01_properties_privateLinkResourceId": {
 			"type": "string",
@@ -378,7 +438,7 @@
 					"elapsedTimeMetric": {}
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:29Z"
+				"lastPublishTime": "2025-02-05T00:56:53Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_LS_AWS_DMS_dd8_SourceDS')]",
@@ -805,11 +865,669 @@
 				"policy": {
 					"elapsedTimeMetric": {}
 				},
-				"annotations": []
+				"annotations": [],
+				"lastPublishTime": "2025-02-05T00:56:52Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/SourceDataset_int_claims_payments_audit')]",
 				"[concat(variables('factoryId'), '/datasets/DestinationDataset_int_claims_payments_audit')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_AZR_DMS_dmsDocument')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy dmsDocument",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [
+							{
+								"name": "Source",
+								"value": "`DmsDocument`"
+							},
+							{
+								"name": "Destination",
+								"value": "edw_stage.dms_claim_payment_estimate"
+							}
+						],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "SELECT\n    dd.aws_document_id      AS dmsDocumentId,\n    dd.claim_number         AS claimNumber,\n    ddd.type                AS document_type,\n    ddd.subType             AS subtype,\n    dd.document_name        AS documentName,\n    dd.file_name            AS document_fileName,\n    dda.name                AS attached_To,\n    dd.created_date         AS createDate,\n    dd.document_date        AS documentDate,\n    dd.created_by           AS createBy,\n    'Unknown'               AS paymentStatus,\n    GETDATE()               AS create_ts\nFROM dms_document dd\nJOIN DmsDocumentAttachTo dda\n    ON dd.aws_document_id = dda.dmsDocumentId\nJOIN DmsDocumentDetail ddd\n    ON ddd.dmsDocumentId = dda.dmsDocumentId\nWHERE ddd.type = 'Claim'\n  AND ddd.subType IN ('Estimate of Damages', 'BI/UM Demand')\nORDER BY dd.created_date DESC",
+								"queryTimeout": "02:00:00",
+								"isolationLevel": "ReadUncommitted",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "AzureSqlSink",
+								"preCopyScript": "TRUNCATE TABLE edw_stage.dms_claim_payment_estimate",
+								"writeBehavior": "insert",
+								"sqlWriterUseTableLock": true,
+								"disableMetricsCollection": false
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"mappings": [
+									{
+										"source": {
+											"name": "dmsDocumentId",
+											"type": "Int32",
+											"physicalType": "int"
+										},
+										"sink": {
+											"name": "dmsDocumentId",
+											"type": "Int32",
+											"physicalType": "int"
+										}
+									},
+									{
+										"source": {
+											"name": "claimNumber",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "claimNumber",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "document_type",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "document_type",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "subtype",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "subtype",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "documentName",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "documentName",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "document_fileName",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "document_fileName",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "attached_To",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "attached_to",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "createDate",
+											"type": "DateTime",
+											"physicalType": "datetime"
+										},
+										"sink": {
+											"name": "createDate",
+											"type": "DateTime",
+											"physicalType": "datetime"
+										}
+									},
+									{
+										"source": {
+											"name": "documentDate",
+											"type": "DateTime",
+											"physicalType": "datetime"
+										},
+										"sink": {
+											"name": "documentDate",
+											"type": "DateTime",
+											"physicalType": "datetime"
+										}
+									},
+									{
+										"source": {
+											"name": "createBy",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "createBy",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "paymentStatus",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "paymentStatus",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "create_ts",
+											"type": "DateTime",
+											"physicalType": "datetime"
+										},
+										"sink": {
+											"name": "create_ts",
+											"type": "DateTime",
+											"physicalType": "datetime"
+										}
+									}
+								],
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "Source_DMS_dmsDocument",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "Target_DMS_dmsDocument",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/Source_DMS_dmsDocument')]",
+				"[concat(variables('factoryId'), '/datasets/Target_DMS_dmsDocument')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_AZR_DMS_int_claims_payments_audit')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy_int_claims_payments_audit",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [
+							{
+								"name": "Source",
+								"value": "`int_claims_payments_audit`"
+							},
+							{
+								"name": "Destination",
+								"value": "edw_stage.int_claims_payments_audit"
+							}
+						],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "SELECT id, uuid, pm_cr_payment_id, pm_ip_payment_id, pm_amount, pm_funded, pm_status, pm_paid_date, pm_cleared_date, pm_escheat_date, pm_check_print_date, pm_check_number, pm_mail_tracking_number, pm_method_id, pm_monitored, pm_reject_payee_id, pm_reject_reason, pm_new_method, pm_orig_method, pm_selection, pm_method_last4digit, pm_re_issue, pm_error_code, pm_error_message, pm_carrier_id, pm_env, request_json, created_by, created_date\nFROM dbo.int_claims_payments_audit",
+								"queryTimeout": "02:00:00",
+								"isolationLevel": "ReadUncommitted",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "AzureSqlSink",
+								"preCopyScript": "TRUNCATE TABLE edw_stage.int_claims_payments_audit",
+								"writeBehavior": "insert",
+								"sqlWriterUseTableLock": true,
+								"tableOption": "autoCreate",
+								"disableMetricsCollection": false
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"mappings": [
+									{
+										"source": {
+											"name": "id",
+											"type": "Int32",
+											"physicalType": "int"
+										},
+										"sink": {
+											"name": "id",
+											"type": "Int32",
+											"physicalType": "int"
+										}
+									},
+									{
+										"source": {
+											"name": "uuid",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "uuid",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_cr_payment_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_cr_payment_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_ip_payment_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_ip_payment_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_amount",
+											"type": "Decimal",
+											"physicalType": "decimal",
+											"scale": 2,
+											"precision": 18
+										},
+										"sink": {
+											"name": "pm_amount",
+											"type": "Decimal",
+											"physicalType": "decimal",
+											"scale": 2,
+											"precision": 18
+										}
+									},
+									{
+										"source": {
+											"name": "pm_funded",
+											"type": "Boolean",
+											"physicalType": "bit"
+										},
+										"sink": {
+											"name": "pm_funded",
+											"type": "Boolean",
+											"physicalType": "bit"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_status",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_status",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_paid_date",
+											"type": "Date",
+											"physicalType": "date"
+										},
+										"sink": {
+											"name": "pm_paid_date",
+											"type": "DateTime",
+											"physicalType": "datetime2"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_cleared_date",
+											"type": "Date",
+											"physicalType": "date"
+										},
+										"sink": {
+											"name": "pm_cleared_date",
+											"type": "DateTime",
+											"physicalType": "datetime2"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_escheat_date",
+											"type": "Date",
+											"physicalType": "date"
+										},
+										"sink": {
+											"name": "pm_escheat_date",
+											"type": "DateTime",
+											"physicalType": "datetime2"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_check_print_date",
+											"type": "Date",
+											"physicalType": "date"
+										},
+										"sink": {
+											"name": "pm_check_print_date",
+											"type": "DateTime",
+											"physicalType": "datetime2"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_check_number",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_check_number",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_mail_tracking_number",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_mail_tracking_number",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_method_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_method_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_monitored",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_monitored",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_reject_payee_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_reject_payee_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_reject_reason",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_reject_reason",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_new_method",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_new_method",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_orig_method",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_orig_method",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_selection",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_selection",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_method_last4digit",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_method_last4digit",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_re_issue",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_re_issue",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_error_code",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_error_code",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_error_message",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_error_message",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_carrier_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_carrier_id",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "pm_env",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "pm_env",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "request_json",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "request_json",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "created_by",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "created_by",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									},
+									{
+										"source": {
+											"name": "created_date",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "created_date",
+											"type": "String",
+											"physicalType": "nvarchar"
+										}
+									}
+								],
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "SourceSQL_int_claims_payments_audit",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "TargetSQL_int_claims_payments_audit",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/SourceSQL_int_claims_payments_audit')]",
+				"[concat(variables('factoryId'), '/datasets/TargetSQL_int_claims_payments_audit')]"
 			]
 		},
 		{
@@ -929,7 +1647,7 @@
 					"name": "StoredProcedure EXEC"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:26Z"
+				"lastPublishTime": "2025-02-05T00:56:51Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
@@ -1025,7 +1743,7 @@
 					"name": "StoredProcedure EXEC"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:27Z"
+				"lastPublishTime": "2025-02-05T00:56:51Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
@@ -1105,7 +1823,7 @@
 					"name": "StoredProcedure EXEC"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:26Z"
+				"lastPublishTime": "2025-02-05T00:56:51Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
@@ -1227,7 +1945,7 @@
 					"name": "StoredProcedure EXEC"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:29Z"
+				"lastPublishTime": "2025-02-05T00:56:52Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/pipelines/Master_Home_Procedure')]",
@@ -1656,7 +2374,7 @@
 					"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:29Z"
+				"lastPublishTime": "2025-02-05T00:56:52Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_LS_AWS_DMS_dd8_SourceDS')]",
@@ -1779,7 +2497,7 @@
 					"name": "MetadataDrivenCopy_LS_AWS_DMS_dd8_20240605"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:30Z"
+				"lastPublishTime": "2025-02-05T00:56:53Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_LS_AWS_DMS_dd8_ControlDS')]",
@@ -1916,7 +2634,7 @@
 				"annotations": [
 					"MetadataDrivenSolution"
 				],
-				"lastPublishTime": "2024-08-30T14:32:31Z"
+				"lastPublishTime": "2025-02-05T00:56:54Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_LS_AWS_DMS_dd8_ControlDS')]",
@@ -2548,7 +3266,7 @@
 					"name": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_20230530"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:29Z"
+				"lastPublishTime": "2025-02-05T00:56:52Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_SourceDS')]",
@@ -2672,7 +3390,7 @@
 					"name": "MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_20230530"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:30Z"
+				"lastPublishTime": "2025-02-05T00:56:53Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_ControlDS')]",
@@ -2812,7 +3530,7 @@
 				"annotations": [
 					"MetadataDrivenSolution"
 				],
-				"lastPublishTime": "2024-08-30T14:32:31Z"
+				"lastPublishTime": "2025-02-05T00:56:53Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_MetalDB_to_Edw_stage_1i1_ControlDS')]",
@@ -3235,7 +3953,7 @@
 					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:29Z"
+				"lastPublishTime": "2025-02-05T00:56:52Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_SourceDS')]",
@@ -3659,7 +4377,7 @@
 					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_address"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:29Z"
+				"lastPublishTime": "2025-02-05T00:56:53Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_SourceDS_t_pub_address')]",
@@ -4083,7 +4801,7 @@
 					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_diary"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:29Z"
+				"lastPublishTime": "2025-02-05T00:56:53Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_SourceDS_t_pub_diary')]",
@@ -4206,7 +4924,7 @@
 					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:30Z"
+				"lastPublishTime": "2025-02-05T00:56:53Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS')]",
@@ -4328,7 +5046,7 @@
 					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_address"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:30Z"
+				"lastPublishTime": "2025-02-05T00:56:54Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS')]",
@@ -4450,7 +5168,7 @@
 					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_t_pub_diary"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:30Z"
+				"lastPublishTime": "2025-02-05T00:56:53Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS')]",
@@ -4587,7 +5305,7 @@
 				"annotations": [
 					"MetadataDrivenSolution"
 				],
-				"lastPublishTime": "2024-08-30T14:32:30Z"
+				"lastPublishTime": "2025-02-05T00:56:54Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS')]",
@@ -4724,7 +5442,7 @@
 				"annotations": [
 					"MetadataDrivenSolution"
 				],
-				"lastPublishTime": "2024-08-30T14:32:31Z"
+				"lastPublishTime": "2025-02-05T00:56:54Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS')]",
@@ -4861,7 +5579,7 @@
 				"annotations": [
 					"MetadataDrivenSolution"
 				],
-				"lastPublishTime": "2024-08-30T14:32:30Z"
+				"lastPublishTime": "2025-02-05T00:56:54Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS')]",
@@ -5378,7 +6096,7 @@
 					"name": "Metal_to_Vault_Manual_zue_20230705"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:29Z"
+				"lastPublishTime": "2025-02-05T00:56:52Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/Metal_to_Vault_Manual_zue_SourceDS')]",
@@ -5501,7 +6219,7 @@
 					"name": "Metal_to_Vault_Manual_zue_20230705"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:30Z"
+				"lastPublishTime": "2025-02-05T00:56:53Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/Metal_to_Vault_Manual_zue_ControlDS')]",
@@ -5638,7 +6356,7 @@
 				"annotations": [
 					"MetadataDrivenSolution"
 				],
-				"lastPublishTime": "2024-08-30T14:32:30Z"
+				"lastPublishTime": "2025-02-05T00:56:53Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/Metal_to_Vault_Manual_zue_ControlDS')]",
@@ -5703,7 +6421,8 @@
 				"policy": {
 					"elapsedTimeMetric": {}
 				},
-				"annotations": []
+				"annotations": [],
+				"lastPublishTime": "2025-02-05T00:56:52Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/SourceDataset_t_pub_diary')]",
@@ -5768,7 +6487,8 @@
 				"policy": {
 					"elapsedTimeMetric": {}
 				},
-				"annotations": []
+				"annotations": [],
+				"lastPublishTime": "2025-02-05T00:56:52Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/SourceDataset_t_pub_user')]",
@@ -6458,6 +7178,564 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/SourceSQL_int_claims_payments_audit')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_AZR_CLM_UAT",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_int_claims_payments_audit"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "uuid",
+						"type": "nvarchar"
+					},
+					{
+						"name": "created_by",
+						"type": "nvarchar"
+					},
+					{
+						"name": "created_date",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_cr_payment_id",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_ip_payment_id",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_amount",
+						"type": "decimal",
+						"precision": 18,
+						"scale": 2
+					},
+					{
+						"name": "pm_funded",
+						"type": "bit"
+					},
+					{
+						"name": "pm_status",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_paid_date",
+						"type": "date"
+					},
+					{
+						"name": "pm_cleared_date",
+						"type": "date"
+					},
+					{
+						"name": "pm_escheat_date",
+						"type": "date"
+					},
+					{
+						"name": "pm_check_print_date",
+						"type": "date"
+					},
+					{
+						"name": "pm_check_number",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_mail_tracking_number",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_method_id",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_monitored",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_reject_payee_id",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_reject_reason",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_new_method",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_orig_method",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_selection",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_method_last4digit",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_re_issue",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_error_code",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_error_message",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_carrier_id",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_env",
+						"type": "nvarchar"
+					},
+					{
+						"name": "request_json",
+						"type": "nvarchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "int_claims_payments_audit"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_AZR_CLM_UAT')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Source_DMS_dmsDocument')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_AZR_DMS_UAT",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_DMS_Document"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "dms_document_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "legacy_document_id",
+						"type": "varchar"
+					},
+					{
+						"name": "document_uuid",
+						"type": "varchar"
+					},
+					{
+						"name": "object_document_id",
+						"type": "bigint",
+						"precision": 19
+					},
+					{
+						"name": "primary_object",
+						"type": "varchar"
+					},
+					{
+						"name": "customer_id",
+						"type": "bigint",
+						"precision": 19
+					},
+					{
+						"name": "customer_name",
+						"type": "varchar"
+					},
+					{
+						"name": "partner_id",
+						"type": "bigint",
+						"precision": 19
+					},
+					{
+						"name": "agency_code",
+						"type": "varchar"
+					},
+					{
+						"name": "document_name",
+						"type": "varchar"
+					},
+					{
+						"name": "document_type",
+						"type": "varchar"
+					},
+					{
+						"name": "document_type_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "file_format",
+						"type": "varchar"
+					},
+					{
+						"name": "policy_id",
+						"type": "varchar"
+					},
+					{
+						"name": "policy_number",
+						"type": "varchar"
+					},
+					{
+						"name": "policy_transaction_id",
+						"type": "varchar"
+					},
+					{
+						"name": "policy_quote_id",
+						"type": "varchar"
+					},
+					{
+						"name": "billing_account_id",
+						"type": "bigint",
+						"precision": 19
+					},
+					{
+						"name": "billing_account_number",
+						"type": "bigint",
+						"precision": 19
+					},
+					{
+						"name": "billing_transaction_id",
+						"type": "bigint",
+						"precision": 19
+					},
+					{
+						"name": "claim_id",
+						"type": "bigint",
+						"precision": 19
+					},
+					{
+						"name": "claim_number",
+						"type": "varchar"
+					},
+					{
+						"name": "document_date",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					},
+					{
+						"name": "source_system_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "container_name",
+						"type": "varchar"
+					},
+					{
+						"name": "file_name",
+						"type": "varchar"
+					},
+					{
+						"name": "is_active",
+						"type": "bit"
+					},
+					{
+						"name": "created_date",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					},
+					{
+						"name": "created_by",
+						"type": "varchar"
+					},
+					{
+						"name": "modified_date",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					},
+					{
+						"name": "modified_by",
+						"type": "varchar"
+					},
+					{
+						"name": "archive_ind",
+						"type": "varchar"
+					},
+					{
+						"name": "client_path_info",
+						"type": "varchar"
+					},
+					{
+						"name": "client_document_id",
+						"type": "varchar"
+					},
+					{
+						"name": "dms_document_domain_uuid",
+						"type": "varchar"
+					},
+					{
+						"name": "aws_document_id",
+						"type": "int",
+						"precision": 10
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "dms_document"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_AZR_DMS_UAT')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/TargetSQL_int_claims_payments_audit')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_EDW_UAT",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_int_claims_payments_audit"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "uuid",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_cr_payment_id",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_ip_payment_id",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_amount",
+						"type": "decimal",
+						"precision": 18,
+						"scale": 2
+					},
+					{
+						"name": "pm_funded",
+						"type": "bit"
+					},
+					{
+						"name": "pm_status",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_paid_date",
+						"type": "datetime2",
+						"scale": 0
+					},
+					{
+						"name": "pm_cleared_date",
+						"type": "datetime2",
+						"scale": 0
+					},
+					{
+						"name": "pm_escheat_date",
+						"type": "datetime2",
+						"scale": 0
+					},
+					{
+						"name": "pm_check_print_date",
+						"type": "datetime2",
+						"scale": 0
+					},
+					{
+						"name": "pm_check_number",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_mail_tracking_number",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_method_id",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_monitored",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_reject_payee_id",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_reject_reason",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_new_method",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_orig_method",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_selection",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_method_last4digit",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_re_issue",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_error_code",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_error_message",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_carrier_id",
+						"type": "nvarchar"
+					},
+					{
+						"name": "pm_env",
+						"type": "nvarchar"
+					},
+					{
+						"name": "request_json",
+						"type": "nvarchar"
+					},
+					{
+						"name": "created_by",
+						"type": "nvarchar"
+					},
+					{
+						"name": "created_date",
+						"type": "nvarchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "edw_stage",
+					"table": "int_claims_payments_audit"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Target_DMS_dmsDocument')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_EDW_UAT",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_DMS_Document"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "dmsDocumentId",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "claimNumber",
+						"type": "varchar"
+					},
+					{
+						"name": "document_type",
+						"type": "varchar"
+					},
+					{
+						"name": "subtype",
+						"type": "varchar"
+					},
+					{
+						"name": "documentName",
+						"type": "varchar"
+					},
+					{
+						"name": "document_fileName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "attached_to",
+						"type": "varchar"
+					},
+					{
+						"name": "createDate",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					},
+					{
+						"name": "documentDate",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					},
+					{
+						"name": "createBy",
+						"type": "varchar"
+					},
+					{
+						"name": "paymentStatus",
+						"type": "varchar"
+					},
+					{
+						"name": "create_ts",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					}
+				],
+				"typeProperties": {
+					"schema": "edw_stage",
+					"table": "dms_claim_payment_estimate"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/LS_AWS_DMS_UAT')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
@@ -6513,6 +7791,62 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/integrationRuntimes/AWS-UAT')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_AZR_CLM_UAT')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('LS_AZR_CLM_UAT_properties_typeProperties_server')]",
+					"database": "[parameters('LS_AZR_CLM_UAT_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": false,
+					"authenticationType": "SQL",
+					"userName": "[parameters('LS_AZR_CLM_UAT_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_AZR_CLM_UAT_password')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "Data-UAT-ADF-IR-via-VNet",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/Data-UAT-ADF-IR-via-VNet')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_AZR_DMS_UAT')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('LS_AZR_DMS_UAT_properties_typeProperties_server')]",
+					"database": "[parameters('LS_AZR_DMS_UAT_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": false,
+					"authenticationType": "SQL",
+					"userName": "[parameters('LS_AZR_DMS_UAT_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_AZR_DMS_UAT_password')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "Data-UAT-ADF-IR-via-VNet",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/Data-UAT-ADF-IR-via-VNet')]"
 			]
 		},
 		{
@@ -6695,6 +8029,26 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/Trigger_5d2')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Hour",
+						"interval": 24,
+						"startTime": "2025-04-03T15:24:00Z",
+						"timeZone": "UTC"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/Trigger_dd8')]",
 			"type": "Microsoft.DataFactory/factories/triggers",
 			"apiVersion": "2018-06-01",
@@ -6778,6 +8132,32 @@
 			"apiVersion": "2018-06-01",
 			"properties": {},
 			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/azr-uat-clm-db-core01-pep02')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('azr-uat-clm-db-core01-pep02_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('azr-uat-clm-db-core01-pep02_properties_groupId')]",
+				"fqdns": "[parameters('azr-uat-clm-db-core01-pep02_properties_fqdns')]"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/azr-uat-dms-db-core01-pep02')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('azr-uat-dms-db-core01-pep02_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('azr-uat-dms-db-core01-pep02_properties_groupId')]",
+				"fqdns": "[parameters('azr-uat-dms-db-core01-pep02_properties_fqdns')]"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/default/azr-uat-metal-db-core01-pep01')]",

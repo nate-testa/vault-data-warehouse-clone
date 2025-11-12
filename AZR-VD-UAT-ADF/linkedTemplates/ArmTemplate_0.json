@@ -123,6 +123,34 @@
 			"type": "string",
 			"defaultValue": "awac_readonly"
 		},
+		"azr-uat-clm-db-core01-pep02_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-CLAIMS-DB-RG/providers/Microsoft.Sql/servers/azr-uat-clm-db-core01"
+		},
+		"azr-uat-clm-db-core01-pep02_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr-uat-clm-db-core01-pep02_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-uat-clm-db-core01.database.windows.net"
+			]
+		},
+		"azr-uat-dms-db-core01-pep02_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-DMS-DB-RG/providers/Microsoft.Sql/servers/azr-uat-dms-db-core01"
+		},
+		"azr-uat-dms-db-core01-pep02_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr-uat-dms-db-core01-pep02_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-uat-dms-db-core01.database.windows.net"
+			]
+		},
 		"azr-uat-metal-db-core01-pep01_properties_privateLinkResourceId": {
 			"type": "string",
 			"defaultValue": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-METAL-DB-RG/providers/Microsoft.Sql/servers/azr-uat-metal-db-core01"
@@ -170,6 +198,26 @@
 		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
 	},
 	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/Trigger_5d2')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Hour",
+						"interval": 24,
+						"startTime": "2025-04-03T15:24:00Z",
+						"timeZone": "UTC"
+					}
+				}
+			},
+			"dependsOn": []
+		},
 		{
 			"name": "[concat(parameters('factoryName'), '/AWS-UAT')]",
 			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
@@ -425,6 +473,32 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/default/azr-uat-clm-db-core01-pep02')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('azr-uat-clm-db-core01-pep02_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('azr-uat-clm-db-core01-pep02_properties_groupId')]",
+				"fqdns": "[parameters('azr-uat-clm-db-core01-pep02_properties_fqdns')]"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/azr-uat-dms-db-core01-pep02')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('azr-uat-dms-db-core01-pep02_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('azr-uat-dms-db-core01-pep02_properties_groupId')]",
+				"fqdns": "[parameters('azr-uat-dms-db-core01-pep02_properties_fqdns')]"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/default/azr-uat-metal-db-core01-pep01')]",
 			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
 			"apiVersion": "2018-06-01",
@@ -581,83 +655,6 @@
 						"value": "@dataset().cw_tableName",
 						"type": "Expression"
 					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_uat_aws_us_diary_uat')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_SourceDS_MySQL')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_eBao_uat_aws_us_uat_vault",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"cw_tableName": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "MetadataDrivenCopy_eBao_to_Edw_stage"
-				},
-				"annotations": [],
-				"type": "MySqlTable",
-				"schema": [],
-				"typeProperties": {
-					"tableName": {
-						"value": "@dataset().cw_tableName",
-						"type": "Expression"
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_uat_aws_us_uat_vault')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/SourceDataset_int_claims_payments_audit')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_AWS_VSP_UAT",
-					"type": "LinkedServiceReference"
-				},
-				"folder": {
-					"name": "Dataset_int_claims_payments_audit"
-				},
-				"annotations": [],
-				"type": "MySqlTable",
-				"schema": [],
-				"typeProperties": {
-					"tableName": "`int_claims_payments_audit`"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_AWS_VSP_UAT')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_diary')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_eBao_uat_aws_us_diary_uat",
-					"type": "LinkedServiceReference"
-				},
-				"folder": {
-					"name": "Dataset_t_pub_diary"
-				},
-				"annotations": [],
-				"type": "MySqlTable",
-				"schema": [],
-				"typeProperties": {
-					"tableName": "`t_pub_diary`"
 				}
 			},
 			"dependsOn": [

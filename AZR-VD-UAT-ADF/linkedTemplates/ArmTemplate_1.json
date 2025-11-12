@@ -7,6 +7,14 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "AZR-VD-UAT-ADF"
 		},
+		"LS_AZR_CLM_UAT_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_AZR_CLM_UAT'"
+		},
+		"LS_AZR_DMS_UAT_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_AZR_DMS_UAT'"
+		},
 		"LS_EDW_UAT_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_EDW_UAT'"
@@ -14,12 +22,107 @@
 		"LS_METAL_UAT_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_METAL_UAT'"
+		},
+		"LS_AZR_CLM_UAT_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "azr-uat-clm-db-core01.database.windows.net"
+		},
+		"LS_AZR_CLM_UAT_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "clmdb"
+		},
+		"LS_AZR_CLM_UAT_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "edwClaimsUAT"
+		},
+		"LS_AZR_DMS_UAT_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "azr-uat-dms-db-core01.database.windows.net"
+		},
+		"LS_AZR_DMS_UAT_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "dmsdb"
+		},
+		"LS_AZR_DMS_UAT_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "edwDmsUAT"
 		}
 	},
 	"variables": {
 		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
 	},
 	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_SourceDS_MySQL')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_uat_aws_us_uat_vault",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"cw_tableName": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "MetadataDrivenCopy_eBao_to_Edw_stage"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": {
+						"value": "@dataset().cw_tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_int_claims_payments_audit')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_AWS_VSP_UAT",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_int_claims_payments_audit"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "`int_claims_payments_audit`"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_diary')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_eBao_uat_aws_us_diary_uat",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Dataset_t_pub_diary"
+				},
+				"annotations": [],
+				"type": "MySqlTable",
+				"schema": [],
+				"typeProperties": {
+					"tableName": "`t_pub_diary`"
+				}
+			},
+			"dependsOn": []
+		},
 		{
 			"name": "[concat(parameters('factoryName'), '/SourceDataset_t_pub_user')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
@@ -37,6 +140,58 @@
 				"schema": [],
 				"typeProperties": {
 					"tableName": "`t_pub_user`"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_AZR_CLM_UAT')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('LS_AZR_CLM_UAT_properties_typeProperties_server')]",
+					"database": "[parameters('LS_AZR_CLM_UAT_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": false,
+					"authenticationType": "SQL",
+					"userName": "[parameters('LS_AZR_CLM_UAT_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_AZR_CLM_UAT_password')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "Data-UAT-ADF-IR-via-VNet",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_AZR_DMS_UAT')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('LS_AZR_DMS_UAT_properties_typeProperties_server')]",
+					"database": "[parameters('LS_AZR_DMS_UAT_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": false,
+					"authenticationType": "SQL",
+					"userName": "[parameters('LS_AZR_DMS_UAT_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('LS_AZR_DMS_UAT_password')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "Data-UAT-ADF-IR-via-VNet",
+					"type": "IntegrationRuntimeReference"
 				}
 			},
 			"dependsOn": []
@@ -192,7 +347,7 @@
 					"name": "StoredProcedure EXEC"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:26Z"
+				"lastPublishTime": "2025-02-05T00:56:51Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
@@ -288,7 +443,7 @@
 					"name": "StoredProcedure EXEC"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:27Z"
+				"lastPublishTime": "2025-02-05T00:56:51Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
@@ -368,7 +523,7 @@
 					"name": "StoredProcedure EXEC"
 				},
 				"annotations": [],
-				"lastPublishTime": "2024-08-30T14:32:26Z"
+				"lastPublishTime": "2025-02-05T00:56:51Z"
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
@@ -626,168 +781,6 @@
 				"typeProperties": {
 					"schema": "edw_stage",
 					"table": "ControlLoadTable"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_DestinationDS')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_EDW_UAT",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"cw_schema": {
-						"type": "String"
-					},
-					"cw_table": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "MetadataDrivenCopy_eBao_to_Edw_stage"
-				},
-				"annotations": [],
-				"type": "AzureSqlTable",
-				"schema": [],
-				"typeProperties": {
-					"schema": {
-						"value": "@dataset().cw_schema",
-						"type": "Expression"
-					},
-					"table": {
-						"value": "@dataset().cw_table",
-						"type": "Expression"
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_ControlDS')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_EDW_UAT",
-					"type": "LinkedServiceReference"
-				},
-				"folder": {
-					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905"
-				},
-				"annotations": [],
-				"type": "AzureSqlTable",
-				"schema": [],
-				"typeProperties": {
-					"schema": "edw_stage",
-					"table": "ControlLoadTable"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_DestinationDS')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_EDW_UAT",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"cw_schema": {
-						"type": "String"
-					},
-					"cw_table": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "MetadataDrivenCopy_eBao_to_Edw_stage_FullLoad_mqq_20230905"
-				},
-				"annotations": [],
-				"type": "AzureSqlTable",
-				"schema": [],
-				"typeProperties": {
-					"schema": {
-						"value": "@dataset().cw_schema",
-						"type": "Expression"
-					},
-					"table": {
-						"value": "@dataset().cw_table",
-						"type": "Expression"
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/Metal_to_Vault_Manual_zue_ControlDS')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_EDW_UAT",
-					"type": "LinkedServiceReference"
-				},
-				"folder": {
-					"name": "Metal_to_Vault_Manual_zue_20230705"
-				},
-				"annotations": [],
-				"type": "AzureSqlTable",
-				"schema": [],
-				"typeProperties": {
-					"schema": "edw_stage",
-					"table": "ControlLoadTable"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_EDW_UAT')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/Metal_to_Vault_Manual_zue_DestinationDS')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_EDW_UAT",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"cw_schema": {
-						"type": "String"
-					},
-					"cw_table": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "Metal_to_Vault_Manual_zue_20230705"
-				},
-				"annotations": [],
-				"type": "AzureSqlTable",
-				"schema": [],
-				"typeProperties": {
-					"schema": {
-						"value": "@dataset().cw_schema",
-						"type": "Expression"
-					},
-					"table": {
-						"value": "@dataset().cw_table",
-						"type": "Expression"
-					}
 				}
 			},
 			"dependsOn": [

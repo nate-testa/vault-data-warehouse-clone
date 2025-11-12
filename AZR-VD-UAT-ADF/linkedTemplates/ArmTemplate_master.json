@@ -15,6 +15,14 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'password' of 'LS_AWS_VSP_UAT'"
 		},
+		"LS_AZR_CLM_UAT_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_AZR_CLM_UAT'"
+		},
+		"LS_AZR_DMS_UAT_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'LS_AZR_DMS_UAT'"
+		},
 		"LS_EDW_UAT_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_EDW_UAT'"
@@ -66,6 +74,30 @@
 		"LS_AWS_VSP_UAT_properties_typeProperties_username": {
 			"type": "string",
 			"defaultValue": "vltDmsUserUAT"
+		},
+		"LS_AZR_CLM_UAT_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "azr-uat-clm-db-core01.database.windows.net"
+		},
+		"LS_AZR_CLM_UAT_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "clmdb"
+		},
+		"LS_AZR_CLM_UAT_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "edwClaimsUAT"
+		},
+		"LS_AZR_DMS_UAT_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "azr-uat-dms-db-core01.database.windows.net"
+		},
+		"LS_AZR_DMS_UAT_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "dmsdb"
+		},
+		"LS_AZR_DMS_UAT_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "edwDmsUAT"
 		},
 		"LS_eBao_uat_aw_uat_pub_properties_typeProperties_server": {
 			"type": "string",
@@ -130,6 +162,34 @@
 		"AWS-UAT_properties_typeProperties_linkedInfo_resourceId": {
 			"type": "string",
 			"defaultValue": "/subscriptions/6c8f1314-e2b0-43e5-87b0-0538a6a6ca04/resourcegroups/AZR-DEV-DATA-ADF/providers/Microsoft.DataFactory/factories/AZR-VD-Metal-ADF/integrationruntimes/AWS-UAT"
+		},
+		"azr-uat-clm-db-core01-pep02_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-CLAIMS-DB-RG/providers/Microsoft.Sql/servers/azr-uat-clm-db-core01"
+		},
+		"azr-uat-clm-db-core01-pep02_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr-uat-clm-db-core01-pep02_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-uat-clm-db-core01.database.windows.net"
+			]
+		},
+		"azr-uat-dms-db-core01-pep02_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-DMS-DB-RG/providers/Microsoft.Sql/servers/azr-uat-dms-db-core01"
+		},
+		"azr-uat-dms-db-core01-pep02_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr-uat-dms-db-core01-pep02_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-uat-dms-db-core01.database.windows.net"
+			]
 		},
 		"azr-uat-metal-db-core01-pep01_properties_privateLinkResourceId": {
 			"type": "string",
@@ -287,6 +347,24 @@
 					"LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_username": {
 						"value": "[parameters('LS_eBao_uat_aws_us_uat_vault_properties_typeProperties_username')]"
 					},
+					"azr-uat-clm-db-core01-pep02_properties_privateLinkResourceId": {
+						"value": "[parameters('azr-uat-clm-db-core01-pep02_properties_privateLinkResourceId')]"
+					},
+					"azr-uat-clm-db-core01-pep02_properties_groupId": {
+						"value": "[parameters('azr-uat-clm-db-core01-pep02_properties_groupId')]"
+					},
+					"azr-uat-clm-db-core01-pep02_properties_fqdns": {
+						"value": "[parameters('azr-uat-clm-db-core01-pep02_properties_fqdns')]"
+					},
+					"azr-uat-dms-db-core01-pep02_properties_privateLinkResourceId": {
+						"value": "[parameters('azr-uat-dms-db-core01-pep02_properties_privateLinkResourceId')]"
+					},
+					"azr-uat-dms-db-core01-pep02_properties_groupId": {
+						"value": "[parameters('azr-uat-dms-db-core01-pep02_properties_groupId')]"
+					},
+					"azr-uat-dms-db-core01-pep02_properties_fqdns": {
+						"value": "[parameters('azr-uat-dms-db-core01-pep02_properties_fqdns')]"
+					},
 					"azr-uat-metal-db-core01-pep01_properties_privateLinkResourceId": {
 						"value": "[parameters('azr-uat-metal-db-core01-pep01_properties_privateLinkResourceId')]"
 					},
@@ -332,11 +410,35 @@
 					"factoryName": {
 						"value": "[parameters('factoryName')]"
 					},
+					"LS_AZR_CLM_UAT_password": {
+						"value": "[parameters('LS_AZR_CLM_UAT_password')]"
+					},
+					"LS_AZR_DMS_UAT_password": {
+						"value": "[parameters('LS_AZR_DMS_UAT_password')]"
+					},
 					"LS_EDW_UAT_connectionString": {
 						"value": "[parameters('LS_EDW_UAT_connectionString')]"
 					},
 					"LS_METAL_UAT_connectionString": {
 						"value": "[parameters('LS_METAL_UAT_connectionString')]"
+					},
+					"LS_AZR_CLM_UAT_properties_typeProperties_server": {
+						"value": "[parameters('LS_AZR_CLM_UAT_properties_typeProperties_server')]"
+					},
+					"LS_AZR_CLM_UAT_properties_typeProperties_database": {
+						"value": "[parameters('LS_AZR_CLM_UAT_properties_typeProperties_database')]"
+					},
+					"LS_AZR_CLM_UAT_properties_typeProperties_userName": {
+						"value": "[parameters('LS_AZR_CLM_UAT_properties_typeProperties_userName')]"
+					},
+					"LS_AZR_DMS_UAT_properties_typeProperties_server": {
+						"value": "[parameters('LS_AZR_DMS_UAT_properties_typeProperties_server')]"
+					},
+					"LS_AZR_DMS_UAT_properties_typeProperties_database": {
+						"value": "[parameters('LS_AZR_DMS_UAT_properties_typeProperties_database')]"
+					},
+					"LS_AZR_DMS_UAT_properties_typeProperties_userName": {
+						"value": "[parameters('LS_AZR_DMS_UAT_properties_typeProperties_userName')]"
 					}
 				}
 			},

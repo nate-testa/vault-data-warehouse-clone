@@ -11,6 +11,12 @@
 		"LS_AWS_VSP_UAT_password": {
 			"value": ""
 		},
+		"LS_AZR_CLM_UAT_password": {
+			"value": ""
+		},
+		"LS_AZR_DMS_UAT_password": {
+			"value": ""
+		},
 		"LS_EDW_UAT_connectionString": {
 			"value": ""
 		},
@@ -49,6 +55,24 @@
 		},
 		"LS_AWS_VSP_UAT_properties_typeProperties_username": {
 			"value": "vltDmsUserUAT"
+		},
+		"LS_AZR_CLM_UAT_properties_typeProperties_server": {
+			"value": "azr-uat-clm-db-core01.database.windows.net"
+		},
+		"LS_AZR_CLM_UAT_properties_typeProperties_database": {
+			"value": "clmdb"
+		},
+		"LS_AZR_CLM_UAT_properties_typeProperties_userName": {
+			"value": "edwClaimsUAT"
+		},
+		"LS_AZR_DMS_UAT_properties_typeProperties_server": {
+			"value": "azr-uat-dms-db-core01.database.windows.net"
+		},
+		"LS_AZR_DMS_UAT_properties_typeProperties_database": {
+			"value": "dmsdb"
+		},
+		"LS_AZR_DMS_UAT_properties_typeProperties_userName": {
+			"value": "edwDmsUAT"
 		},
 		"LS_eBao_uat_aw_uat_pub_properties_typeProperties_server": {
 			"value": "aws-us-gi-uat-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
@@ -97,6 +121,28 @@
 		},
 		"AWS-UAT_properties_typeProperties_linkedInfo_resourceId": {
 			"value": "/subscriptions/6c8f1314-e2b0-43e5-87b0-0538a6a6ca04/resourcegroups/AZR-DEV-DATA-ADF/providers/Microsoft.DataFactory/factories/AZR-VD-Metal-ADF/integrationruntimes/AWS-UAT"
+		},
+		"azr-uat-clm-db-core01-pep02_properties_privateLinkResourceId": {
+			"value": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-CLAIMS-DB-RG/providers/Microsoft.Sql/servers/azr-uat-clm-db-core01"
+		},
+		"azr-uat-clm-db-core01-pep02_properties_groupId": {
+			"value": "sqlServer"
+		},
+		"azr-uat-clm-db-core01-pep02_properties_fqdns": {
+			"value": [
+				"azr-uat-clm-db-core01.database.windows.net"
+			]
+		},
+		"azr-uat-dms-db-core01-pep02_properties_privateLinkResourceId": {
+			"value": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-DMS-DB-RG/providers/Microsoft.Sql/servers/azr-uat-dms-db-core01"
+		},
+		"azr-uat-dms-db-core01-pep02_properties_groupId": {
+			"value": "sqlServer"
+		},
+		"azr-uat-dms-db-core01-pep02_properties_fqdns": {
+			"value": [
+				"azr-uat-dms-db-core01.database.windows.net"
+			]
 		},
 		"azr-uat-metal-db-core01-pep01_properties_privateLinkResourceId": {
 			"value": "/subscriptions/35ceb260-72a8-4326-93cf-f1e1e2c6fb45/resourceGroups/AZR-UAT-METAL-DB-RG/providers/Microsoft.Sql/servers/azr-uat-metal-db-core01"
