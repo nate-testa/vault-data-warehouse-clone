@@ -718,6 +718,12 @@ with DAG(
             dag=dag,
         )
 
+        exec_vault_CLUE_auto_daily_feed = TriggerDagRunOperator(
+            task_id="exec_vault_CLUE_auto_daily_feed",
+            trigger_dag_id="vault_CLUE_auto_daily_feed",
+            dag=dag,
+        )
+
         exec_Snapsheet_Financial_Transaction_Action_Daily_Feed = TriggerDagRunOperator(
             task_id="exec_Snapsheet_Financial_Transaction_Action_Daily_Feed",
             trigger_dag_id="Snapsheet_Financial_Transaction_Action_Daily_Feed",
@@ -743,7 +749,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
         )
 
-        exec_Snapsheet_Daily_Feed >> operators[0] >> operators[1] >> operators[2] >> operators[3] >> operators[4] >> exec_Ivans_Daily_Feed >> operators[5] >> generate_livevox_file >> upload_livevox_file_to_sftp >> operators[6] >> operators[7] >> operators[8] >> exec_vault_redzone_feed >> exec_vault_CLUE_property_daily_feed >> exec_Snapsheet_Financial_Transaction_Action_Daily_Feed >> exec_Honk_Daily_Feed >> exec_current_carrier_auto_daily_feed >> send_integration_email
+        exec_Snapsheet_Daily_Feed >> operators[0] >> operators[1] >> operators[2] >> operators[3] >> operators[4] >> exec_Ivans_Daily_Feed >> operators[5] >> generate_livevox_file >> upload_livevox_file_to_sftp >> operators[6] >> operators[7] >> operators[8] >> exec_vault_redzone_feed >> exec_vault_CLUE_property_daily_feed >> exec_vault_CLUE_auto_daily_feed >> exec_Snapsheet_Financial_Transaction_Action_Daily_Feed >> exec_Honk_Daily_Feed >> exec_current_carrier_auto_daily_feed >> send_integration_email
 
     exec_vault_edw_data_load_quotes = TriggerDagRunOperator(
         task_id="exec_vault_edw_data_load_quotes",
