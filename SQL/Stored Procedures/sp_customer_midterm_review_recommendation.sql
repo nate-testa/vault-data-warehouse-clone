@@ -9,6 +9,7 @@
 -- 09/22/25		Yunus Mohammed				3. Added wildfire protection and backup generator customer recommendation feed
 -- 10/22/25		Architha Gudimalla			4. Removed code for primary_home_discount_pc
 -- 10/28/25		Architha Gudimalla			5. Added producer to policy detail table
+-- 11/05/25		Architha Gudimalla			6. Removed tbroker_vault_team join
 -- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
@@ -106,12 +107,14 @@ and a.PrimaryInsuredId=b.id
                                                 and quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
                                                 and quote_term = 'Renewal');*/
 		
+        If @last_source_extract_ts = '1900-01-01'  
+        set @last_source_extract_ts = (select Dateadd(dd,-1,cast(getdate() as date)));
+       
         with cust as
 		(
 			select distinct customer_id 
             from edw_core.tquote
-			where renewal_quote_review_start_dt > --'01-jan-1999' 
-												 @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
+			where renewal_quote_review_start_dt = @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
 			and quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
 			and quote_term = 'Renewal' 
 		),
@@ -213,12 +216,15 @@ and a.PrimaryInsuredId=b.id
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_inforce_detail ;
        
         --inforce data 
-        with usr as
+        with 
+        /*
+        usr as
         (
             --which user to use, has multiple
             select *, rank() over (partition by first_nm + ' ' + last_nm order by phone_no desc, email) rnk
             from edw_core.tuser
-        ),coll_limit as
+        ),*/
+        coll_limit as
         (
              select policy_history_sk, policy_no, sum(COALESCE(scheduled_limit_amt, 0) + COALESCE(blanket_limit_amt, 0)) total_limit
              from edw_core.[tcollection_class_type]
@@ -230,9 +236,11 @@ and a.PrimaryInsuredId=b.id
                 cust.mailing_address_city_nm, cust.mailing_address_state_cd, cust.mailing_address_zip_cd,
                 pol.broker_id, br.dba_nm, br.broker_nm, br.broker_phone_no, br.broker_email,
                 p.producer_id, CONCAT(p.First_nm, ' ', p.Last_nm) producer_nm, p.phone_no producer_phone_no, p.email producer_email, 
+                /*
                 bdm.team_member_nm bdm_nm, bdm_usr.phone_no bdm_phone_no, bdm_usr.email bdm_email,  
                 un.team_member_nm new_business_underwriter_nm, un_usr.phone_no new_business_underwriter_phone_no, un_usr.email new_business_underwriter_email,
                 run.team_member_nm renewal_underwriter_nm, run_usr.phone_no renewal_underwriter_phone_no, run_usr.email renewal_underwriter_email,
+                */
                 hol.address_line_1 risk_address_line1,  
                 hol.address_line_2 risk_address_line2,  
                 hol.unit_no      unit_no,  
@@ -284,6 +292,7 @@ and a.PrimaryInsuredId=b.id
 		--left join edw_temp.customer_midterm_review_recommendation_temp_0_cust_monoline pinf on cust.customer_id = pinf.customer_id and pinf.product_cd = pol.product_cd and pinf.product_cd in ('HO','CO')
 		--left join edw_temp.customer_midterm_review_recommendation_temp_0_cust_monoline cinf on cust.customer_id = cinf.customer_id and '[Total]' = cinf.product_cd 
         inner join edw_core.tbroker br on br.broker_id = pol.broker_id
+        /*
         left join edw_core.tbroker_vault_team bdm on br.broker_id = bdm.broker_id and bdm.product_nm = pr.product_nm and bdm.team_member_type = 'BusinessDevelopmentManager'
                                                             AND pol.program_type = bdm.program_type
                                                             AND isnull(bdm.state_cd,pol.risk_state_cd)=pol.risk_state_cd
@@ -296,6 +305,7 @@ and a.PrimaryInsuredId=b.id
                                                             AND pol.program_type = run.program_type
                                                             AND isnull(run.state_cd,pol.risk_state_cd)=pol.risk_state_cd
         left join usr run_usr on run_usr.first_nm + ' ' + run_usr.last_nm = run.team_member_nm and run_usr.rnk = 1
+        */
         left join edw_core.thome_additional_coverage hac on hac.policy_no = pol.policy_no and ph.policy_history_sk = hac.policy_history_sk		
         left join coll_limit cl on cl.policy_no = pol.policy_no and cl.policy_history_sk = ph.policy_history_sk
         left join edw_core.thome_coverage hc on hc.home_coverage_sk = hac.home_coverage_sk
@@ -377,7 +387,8 @@ and a.PrimaryInsuredId=b.id
 			broker_phone_no,
 			broker_email,
             producer_id, producer_nm, producer_phone_no, producer_email, 
-			bdm_nm,
+			/*
+            bdm_nm,
 			bdm_phone_no,
 			bdm_email,
 			new_business_underwriter_nm,
@@ -386,6 +397,7 @@ and a.PrimaryInsuredId=b.id
 			renewal_underwriter_nm,
 			renewal_underwriter_email,
 			renewal_underwriter_phone_no,
+            */
 			risk_address_line1,
 			risk_address_line2,
 			risk_address_unit_no,
@@ -444,7 +456,8 @@ and a.PrimaryInsuredId=b.id
 				broker_phone_no,
 				broker_email,
                 producer_id, producer_nm, producer_phone_no, producer_email, 
-				bdm_nm,
+				/*
+                bdm_nm,
 				bdm_phone_no,
 				bdm_email,
 				new_business_underwriter_nm,
@@ -453,6 +466,7 @@ and a.PrimaryInsuredId=b.id
 				renewal_underwriter_nm,
 				renewal_underwriter_email,
 				renewal_underwriter_phone_no,
+                */
 				risk_address_line1,
 				risk_address_line2,
 				unit_no,
@@ -571,6 +585,10 @@ and a.PrimaryInsuredId=b.id
               from edw_core.tcustomer a, edw_integration.customer_midterm_review_policy_detail b
               where a.customer_id = b.customer_id 
               and renewal_year =  datepart(yyyy, getdate())
+			  and a.customer_id  in ( Select customer_id  
+									from edw_integration.customer_midterm_review_eligibility_feed 
+									where midterm_review_process_in = 'Yes'
+								)
               ) cust
         cross join (select product_cd, product_nm, product_category_nm from edw_core.tproduct
 					union all
@@ -676,17 +694,18 @@ and a.PrimaryInsuredId=b.id
         set product_recommendation = 'If you have corporate, charter, or personal aviation coverage needs, talk to your agent. Vault is here for you.'
         where product_recommendation = 'Buy Aviation;'	 
 		               
-        SET @rows_affected=@@ROWCOUNT;
+        SET @rows_affected=@@ROWCOUNT; 
  
-        set @new_last_source_extract_ts = (select getdate());
-       
+        --AG - Using  where renewal_quote_review_start_dt < getdate() becuase of a data issue in prod
+        set @new_last_source_extract_ts = (select cast(getdate() as date));
+ 
         --Update control table
         SET @new_last_source_extract_ts = COALESCE(@new_last_source_extract_ts,@last_source_extract_ts);
 		
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
        
         -- Update audit table
-        SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+        SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@last_source_extract_ts AS VARCHAR(200))
         if @in_start_dt is not null
         begin
             set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_start_dt AS VARCHAR(200))
