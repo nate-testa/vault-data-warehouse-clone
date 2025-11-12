@@ -95,6 +95,7 @@ BEGIN
 				 where effective_dt_sk <= @var_date_sk
 				 and   transaction_effective_dt_sk <= @var_date_sk
 				 and   transaction_dt_sk <= @var_date_sk 
+				 and source_system_sk = isnull(@param_ssk, source_system_sk)
 				)
 				INSERT INTO edw_core.tinternal_coverage_inforce
 					( 
