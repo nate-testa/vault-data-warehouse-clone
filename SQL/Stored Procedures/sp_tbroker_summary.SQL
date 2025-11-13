@@ -66,10 +66,12 @@ GO
 -- 10/15/25		Dinesh Bobbili					37. AD11286 - Added date logic to run the process for 3 months
 -- 10/28/25		Dinesh Bobbili					38. AD11456 - Added new columns
 -- 10/28/25		Architha Gudimalla				39. AD11456 - Added filter on trenewal_summary - non_flat_cancelled_ct=1
+-- 11/23/25		Dinesh Bobbili					40. AD11643 - Added broker_sk filter
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary] 
-@in_end_dt date = null
+@in_end_dt date = null,
+@in_broker_id varchar(255) = null
 AS 
 BEGIN
 
@@ -127,6 +129,9 @@ BEGIN
 		set @last_source_yearmonth = concat(datepart(yyyy,cast(@last_source_extract_ts as date)),iif(datepart(mm,cast(@last_source_extract_ts as date)) < 10,'0','') ,datepart(mm,cast(@last_source_extract_ts as date)) ); 
 		DECLARE @in_yearmonth INT
 		SET @in_yearmonth = LEFT(CONVERT(CHAR(8), @in_end_dt, 112), 6);
+
+		DECLARE @param_broker_sk INT
+		select @param_broker_sk = broker_sk from edw_core.tbroker where broker_id = @in_broker_id;
 		
 		DECLARE c2_rec CURSOR
 		FOR  
@@ -382,7 +387,8 @@ BEGIN
 					where  q.quote_term = 'New'
 					and (		  CAST(q.quote_create_ts AS DATE) between @prior_year_begin_dt and @end_dt 
 							or CAST(q.first_offered_quote_ts AS DATE) between @prior_year_begin_dt and @end_dt 
-							or 				  q.bind_dt between @prior_year_begin_dt and @end_dt) 
+							or 				  q.bind_dt between @prior_year_begin_dt and @end_dt)
+					and br.broker_sk = isnull(@param_broker_sk, br.broker_sk)
 					group by br.broker_sk, p.product_sk, cust.customer_sk, st.state_sk,
 							replace(replace(isnull(q.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				) a
@@ -439,6 +445,7 @@ BEGIN
 					left join edw_core.tquote_history qh  on q.quote_sk = qh.quote_sk and qh.latest_transaction_in = 'Y'
 					where 	month_sk between @year_begin_dt_sk and @month_end_dt_sk  
 					and 	r.non_flat_cancelled_ct = 1
+					and r.broker_sk = isnull(@param_broker_sk, r.broker_sk)
 					group by r.month_sk, r.broker_sk, r.product_sk, r.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				)
@@ -587,6 +594,7 @@ BEGIN
 								from edw_core.tpolicy_history
 								group by policy_sk ) min_ph on ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
 				 where	summ.month_sk between  @prior_year_five_month_end_dt_sk and  @month_end_dt_sk
+				 and ph.broker_sk = isnull(@param_broker_sk, ph.broker_sk)
 				 group by summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				 
@@ -614,6 +622,7 @@ BEGIN
 					 and 	summ.policy_sk = ph.policy_sk 
 					 and 	ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
 					 and ic.internal_coverage_sk = summ.internal_coverage_sk and ic.primary_coverage_cd not in ('Hurricane','Wildfire','Wind/Hail')
+					 and summ.broker_sk = isnull(@param_broker_sk, summ.broker_sk)
 					 group by summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 					union all
@@ -638,6 +647,7 @@ BEGIN
 					 and 	summ.policy_sk = ph.policy_sk 
 					 and pol.source_system_sk = 1
 					 and 	ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
+					 and summ.broker_sk = isnull(@param_broker_sk, summ.broker_sk)
 					 group by summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES');
 							
@@ -661,7 +671,8 @@ BEGIN
 							group by policy_sk ) min_ph on ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
 				inner join edw_core.tstate st on pol.risk_state_cd = st.state_cd
 				left join edw_core.tdaily_inforce_policy prior_inf on pol.policy_sk = prior_inf.policy_sk and prior_inf.inforce_dt_sk = @prior_year_month_end_dt_sk 
-				left join edw_core.tdaily_inforce_policy curr_inf  on pol.policy_sk =  curr_inf.policy_sk and  curr_inf.inforce_dt_sk = 		   @end_dt_sk  
+				left join edw_core.tdaily_inforce_policy curr_inf  on pol.policy_sk =  curr_inf.policy_sk and  curr_inf.inforce_dt_sk = 		   @end_dt_sk 
+				where ph.broker_sk = isnull(@param_broker_sk, ph.broker_sk)
 				group by ph.broker_sk, ph.product_sk, ph.customer_sk, st.state_sk,
 						replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				
@@ -770,6 +781,7 @@ BEGIN
 					 and 	pol.risk_state_cd = st.state_cd
 					and 	month_sk in (@month_end_dt_sk)
 					and cs.broker_sk is not null
+					and cs.broker_sk = isnull(@param_broker_sk, cs.broker_sk)
 					group by cs.broker_sk, cs.product_sk, cs.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				
@@ -983,7 +995,8 @@ BEGIN
 						  COALESCE(ps.uwco, 		ps1.uwco, 			ps2.uwco, 			cs.uwco, 		q.uwco);
 
 				delete from edw_core.tbroker_summary
-				where month_sk = @month_end_dt_sk; 
+				where month_sk = @month_end_dt_sk
+				and broker_sk = isnull(@param_broker_sk, broker_sk); 
        
 				SET @rows_affected=0;
 
@@ -1407,7 +1420,8 @@ BEGIN
 						three_year_severity 				= case when [three_year_claim_ct]						= 0 then 0 else 1.0*[three_year_loss_incurred_amt]/[three_year_claim_ct] end,
 						three_year_non_cat_severity 		= case when [three_year_non_cat_claim_ct]				= 0 then 0 else 1.0*[three_year_non_cat_loss_incurred_amt]/[three_year_non_cat_claim_ct] end  
 						--
-				where month_sk  = @month_end_dt_sk;
+				where month_sk  = @month_end_dt_sk
+				and broker_sk = isnull(@param_broker_sk, broker_sk);
 				
 				-- Update control table
 				SET @new_last_source_extract_ts=COALESCE(@end_dt,@last_source_extract_ts);	
