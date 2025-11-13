@@ -1,18 +1,24 @@
 import pendulum
-from datetime import timedelta
+from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.models import Variable
+from airflow.models import BaseOperator
+from airflow.utils.dates import days_ago
 from airflow.utils.task_group import TaskGroup
-from airflow.providers.microsoft.mssql.operators.mssql import MsSqlOperator
-from airflow.operators.email import EmailOperator
-from airflow.operators.empty import EmptyOperator
-from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format
+from airflow.hooks.mssql_hook import MsSqlHook
+from airflow.operators.mssql_operator import MsSqlOperator
+from airflow.operators.email_operator import EmailOperator
+from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.python_operator import PythonOperator
+from airflow.providers.microsoft.azure.operators.data_factory import AzureDataFactoryRunPipelineOperator
+from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
 
 to_email = "itdatateam@vault.insurance"
 # to_email = "hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
 cc_email = ""
 
 ENVIRONMENT = Variable.get("environment")
+
 
 
 def on_failure_callback(context):
@@ -63,89 +69,71 @@ with DAG(
 ) as dag:
     
 
-    start = EmptyOperator(
+    start = DummyOperator(
         task_id='start',
     )
 
-    end = EmptyOperator(
-        task_id='end',
-        trigger_rule='none_failed',
-    )
+
     
     with TaskGroup("nfp_monthly_load_group") as nfp_monthly_load_group:
 
-        nfp_monthly_load_group_config_json = {
-            "sp_nfp_policy_update": {},
-            "sp_tcustomer_nfp": {},
-            "sp_tpolicy_nfp": {},
-            "sp_tpolicy_update_nfp": {},
-            "sp_tpolicy_history_nfp": {},
-            "sp_tgrpel_coverage": {},
-            "sp_tpolicy_transaction_nfp": {},
-            "sp_tdaily_inforce_policy": {"sp_parameters": [{"name": "@in_source_system", "value": "6"}]},
-            "sp_tpolicy_update_policy_inforce_in": {},
-            "sp_tpolicy_summary": {"sp_parameters": [{"name": "@in_source_system", "value": "6"}]},
-            "sp_tpolicy_transaction_summary": {"sp_parameters": [{"name": "@in_source_system", "value": "6"}]},
-            "sp_tcustomer_summary": {"sp_parameters": [{"name": "@sk_filter", "value": "6"}]},
-            "sp_titem_inforce": {"sp_parameters": [{"name": "@in_source_system", "value": "6"}]},
-            "sp_titem_summary": {"sp_parameters": [{"name": "@in_source_system", "value": "6"}]},
-            "sp_nfp_claim_policy_search_snapsheet_api": {},
-            "sp_nfp_claim_policy_webhook_snapsheet_api": {},
-            "sp_claim_policy_webhook_snapsheet_api_update_contactinfo": {"exec_only_in_environment": "PRODUCTION"}
-        }
-
-        # Build the list of items filtering by environment
-        nfp_monthly_load_group_items = []
-        for sp_name, config in nfp_monthly_load_group_config_json.items():
-            # Skip if exec_only_in_environment is set and doesn't match current environment
-            if 'exec_only_in_environment' in config and config['exec_only_in_environment'] != ENVIRONMENT:
-                continue
-            nfp_monthly_load_group_items.append(sp_name)
+        nfp_monthly_load_group_items = [
+            'sp_nfp_claim_policy_search_api',
+            'sp_nfp_claim_policy_search_snapsheet_api',
+            'sp_nfp_claim_policy_webhook_snapsheet_api',
+            'sp_claim_policy_webhook_snapsheet_api_update_contactinfo'
+         ]
         
-        # Create operators for each stored procedure
-        operators = {}
-        item_name = ''
-        for item in nfp_monthly_load_group_items:
-            config = nfp_monthly_load_group_config_json.get(item, {})
-            
-            # Build SQL command with parameters if provided
-            sp_parameters = config.get('sp_parameters', [])
-            if sp_parameters:
-                # Build parameter string: @param1=value1, @param2=value2, ...
-                params_str = ', '.join([f"{param['name']}={param['value']}" for param in sp_parameters])
-                sql_command = f"exec edw_core.{item} {params_str}"
-                item_name = item + '__' + params_str.replace('@', '').replace('=', '_').replace(', ', '_')
-            else:
-                sql_command = f"exec edw_core.{item}"
-                item_name = item
-            
-            operator = MsSqlOperator(
-                task_id=item_name,
+        sp_nfp_claim_policy_search_api = MsSqlOperator(
+            task_id='sp_nfp_claim_policy_search_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_nfp_claim_policy_search_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_nfp_claim_policy_search_snapsheet_api = MsSqlOperator(
+            task_id='sp_nfp_claim_policy_search_snapsheet_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_nfp_claim_policy_search_snapsheet_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_nfp_claim_policy_webhook_snapsheet_api = MsSqlOperator(
+            task_id='sp_nfp_claim_policy_webhook_snapsheet_api',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_nfp_claim_policy_webhook_snapsheet_api",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        if ENVIRONMENT != 'PRODUCTION':
+
+            sp_claim_policy_webhook_snapsheet_api_update_contactinfo = MsSqlOperator(
+                task_id='sp_claim_policy_webhook_snapsheet_api_update_contactinfo',
                 mssql_conn_id='Vault_EDW',
-                sql=sql_command,
+                sql="EXEC edw_core.sp_claim_policy_webhook_snapsheet_api_update_contactinfo",
                 database="vault_edw",
                 autocommit=True,
-            )
-            operators[item] = operator
+            )       
 
         send_nfp_email = EmailOperator(
             task_id='send_nfp_email',
             to=to_email,
-            subject='Airflow - nfp monthly load executed successfully',
-            html_content=get_sp_success_data_HTML(nfp_monthly_load_group_items, 'The stored procedures executed successfully for nfp monthly load'),
+            subject='Airflow - nfp claim policy search api table loaded successfully',
+            html_content=get_sp_success_data_HTML(nfp_monthly_load_group_items, 'The stored procedures executed successfully for nfp claim policy search api table'),
         )
 
-        # Set up sequential dependencies: SP1 >> SP2 >> SP3 >> ... >> Email
-        operator_list = [operators[item] for item in nfp_monthly_load_group_items]
-        
-        if operator_list:
-            # Chain all operators sequentially
-            for i in range(len(operator_list) - 1):
-                operator_list[i].set_downstream(operator_list[i + 1])
-            
-            # Connect last operator to email
-            operator_list[-1].set_downstream(send_nfp_email)
+        if ENVIRONMENT != 'PRODUCTION':
+            sp_nfp_claim_policy_search_api >> sp_nfp_claim_policy_search_snapsheet_api >> sp_nfp_claim_policy_webhook_snapsheet_api >> sp_claim_policy_webhook_snapsheet_api_update_contactinfo >> send_nfp_email
+        else:
+            sp_nfp_claim_policy_search_api >> sp_nfp_claim_policy_search_snapsheet_api >> sp_nfp_claim_policy_webhook_snapsheet_api >> send_nfp_email
 
 
-start.set_downstream(nfp_monthly_load_group)
-nfp_monthly_load_group.set_downstream(end)
+    end = DummyOperator(
+        task_id='end',
+    )
+
+
+start >> nfp_monthly_load_group >> end
