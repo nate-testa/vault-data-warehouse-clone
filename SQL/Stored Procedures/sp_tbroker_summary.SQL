@@ -594,7 +594,7 @@ BEGIN
 								from edw_core.tpolicy_history
 								group by policy_sk ) min_ph on ph.policy_sk = min_ph.policy_sk and ph.transaction_seq_no = min_ph.transaction_seq_no
 				 where	summ.month_sk between  @prior_year_five_month_end_dt_sk and  @month_end_dt_sk
-				 and ph.broker_sk = isnull(@param_broker_sk, ph.broker_sk)
+				 and summ.broker_sk = isnull(@param_broker_sk, summ.broker_sk)
 				 group by summ.broker_sk, summ.product_sk, summ.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				 
