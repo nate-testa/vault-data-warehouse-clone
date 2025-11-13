@@ -576,13 +576,15 @@ BEGIN
         --- Update water shut off reco message 
         update a
         set rms_recommendation_message_1 =  replace(m.message_desc, 
-													'<<CITY NAME >>', '' --aa.risk_address_city_nm 
+													'<<CITY NAME >>', aa.risk_address_city_nm 
 													) 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.rms_recommendation_message_1_id = m.message_id 
-		inner join (select customer_id, string_agg(risk_address_city_nm,'||') risk_address_city_nm
-					from edw_integration.customer_midterm_review_ghostdraft_feed
-					where rms_recommendation_message_1_id is not null
+		inner join (select customer_id, string_agg(risk_address_city_nm,',') risk_address_city_nm
+					from (select distinct customer_id, risk_address_city_nm 
+						  from edw_integration.customer_midterm_review_ghostdraft_feed
+						  where rms_recommendation_message_1_id is not null
+						 ) a  
 					group by customer_id
 					) aa on a.customer_id = aa.customer_id 
 		where a.update_ts >  @last_source_extract_ts
@@ -597,13 +599,15 @@ BEGIN
         --- Update wildfire reco message 
         update a
         set wildfire_protection_recommendation_message_1 =  replace(m.message_desc, 
-																	'<<CITY NAME>> ', '' --aa.risk_address_city_nm 
+																	'<<CITY NAME>> ', aa.risk_address_city_nm 
 																	) 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.wildfire_protection_recommendation_message_1_id = m.message_id  
-		inner join (select customer_id, string_agg(risk_address_city_nm,'||') risk_address_city_nm
-					from edw_integration.customer_midterm_review_ghostdraft_feed
-					where wildfire_protection_recommendation_message_1_id is not null
+		inner join (select customer_id, string_agg(risk_address_city_nm,',') risk_address_city_nm
+					from (select distinct customer_id, risk_address_city_nm 
+						  from edw_integration.customer_midterm_review_ghostdraft_feed
+						  where wildfire_protection_recommendation_message_1_id is not null
+						 ) a 
 					group by customer_id
 					) aa on a.customer_id = aa.customer_id 
 		where a.update_ts >  @last_source_extract_ts
@@ -618,10 +622,17 @@ BEGIN
         --- Update backup generator message 
         update a
         set backup_generator_recommendation_message_1 =  replace(m.message_desc, 
-																	'<<CITY NAME>> ', '' --a.risk_address_city_nm 
+																	'<<CITY NAME>> ', aa.risk_address_city_nm 
 																	) 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.backup_generator_recommendation_message_1_id = m.message_id 
+		inner join (select customer_id, string_agg(risk_address_city_nm,',') risk_address_city_nm
+					from (select distinct customer_id, risk_address_city_nm 
+						  from edw_integration.customer_midterm_review_ghostdraft_feed
+						  where backup_generator_recommendation_message_1_id is not null
+						 ) a 
+					group by customer_id
+					) aa on a.customer_id = aa.customer_id 
 		where a.update_ts >  @last_source_extract_ts
 		 
         --- Update au new driver message 
@@ -690,7 +701,12 @@ BEGIN
 				--	(
 						select
 							'Yes' [existing_home],
-							cmrh.account_id [account_primary_image],
+							CASE WHEN ROW_NUMBER() OVER (ORDER BY
+														CASE cmrp.occupancy_type WHEN 'Primary' THEN '1_Primary' ELSE '2_Non_Primary' END,
+														cmrp.total_insured_value_amt DESC) = 1
+								THEN cmrh.account_id
+								ELSE NULL
+							END [account_primary_image], 
 							cmrh.risk_address_line1 as [home.risk_address_line1],
 							cmrh.risk_address_line2 as [home.risk_address_line2],
 							cmrh.risk_address_unit_no as [home.risk_address_unit_no],
