@@ -651,9 +651,9 @@ BEGIN
 		 
         --- Update non primary_ho monoline message 
         update a
-        set primary_ho_monoline_recommendation_message_1 =  m.message_desc
+        set non_primary_ho_monoline_recommendation_message_1 =  m.message_desc
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
-		inner join edw_stage.customer_midterm_review_message m on a.primary_ho_monoline_recommendation_message_1_id = m.message_id  
+		inner join edw_stage.customer_midterm_review_message m on a.non_primary_ho_monoline_recommendation_message_1_id = m.message_id  
 		where a.update_ts >  @last_source_extract_ts  
 		 
         --- Update renovation message 
