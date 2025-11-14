@@ -576,7 +576,7 @@ BEGIN
         --- Update water shut off reco message 
         update a
         set rms_recommendation_message_1 =  replace(m.message_desc, 
-													'<<CITY NAME >>', aa.risk_address_city_nm 
+													'<<CITY NAME >> ', aa.risk_address_city_nm 
 													) 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.rms_recommendation_message_1_id = m.message_id 
@@ -596,10 +596,10 @@ BEGIN
 		inner join edw_stage.customer_midterm_review_message m on a.rms_recommendation_message_2_id = m.message_id 
 		where a.update_ts >  @last_source_extract_ts
 		 
-        --- Update wildfire reco message 
+        --- Update wildfire/redzone reco message 
         update a
         set wildfire_protection_recommendation_message_1 =  replace(m.message_desc, 
-																	'<<CITY NAME>> ', aa.risk_address_city_nm 
+																	'<<CITY NAME>>', aa.risk_address_city_nm 
 																	) 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.wildfire_protection_recommendation_message_1_id = m.message_id  
@@ -621,18 +621,9 @@ BEGIN
 		 
         --- Update backup generator message 
         update a
-        set backup_generator_recommendation_message_1 =  replace(m.message_desc, 
-																	'<<CITY NAME>> ', aa.risk_address_city_nm 
-																	) 
+        set backup_generator_recommendation_message_1 =  m.message_desc
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
-		inner join edw_stage.customer_midterm_review_message m on a.backup_generator_recommendation_message_1_id = m.message_id 
-		inner join (select customer_id, string_agg(risk_address_city_nm,',') risk_address_city_nm
-					from (select distinct customer_id, risk_address_city_nm 
-						  from edw_integration.customer_midterm_review_ghostdraft_feed
-						  where backup_generator_recommendation_message_1_id is not null
-						 ) a 
-					group by customer_id
-					) aa on a.customer_id = aa.customer_id 
+		inner join edw_stage.customer_midterm_review_message m on a.backup_generator_recommendation_message_1_id = m.message_id  
 		where a.update_ts >  @last_source_extract_ts
 		 
         --- Update au new driver message 
@@ -861,6 +852,10 @@ BEGIN
 					select mrm.renovation_recommendation_message_1_id,mrm.renovation_recommendation_message_1 as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
 					where mrm.customer_id= cmr.customer_id and mrm.renovation_recommendation_message_1 is not null
+					union
+					select mrm.lux_on_endorsement_message_id,mrm.lux_on_endorsement_message as [message]
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
+					where mrm.customer_id= cmr.customer_id and mrm.lux_on_endorsement_message is not null
 					
 			) as a
 			for json path, include_null_values
