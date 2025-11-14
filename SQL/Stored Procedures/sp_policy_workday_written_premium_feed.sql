@@ -3,7 +3,7 @@
 -- Create Date: 09/13/2023
 -- Description: This procedures inserts written premium data
 ---------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author									|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 11/16/23		Yunus Mohammed				1. Update logic for category, subcategory columns. Removed extra space in company 
 -- 12/01/23		Yunus Mohammed				2. Updated  product name and company name
@@ -20,6 +20,7 @@
 --																					Update run date logic
 -- 07/22/25		Dinesh Bobbili				12. AD10205 Added 5 PEL columns
 -- 09/25/25		Dinesh Bobbili				13. AD11102 Added scheduled_limit_amt,blanket_limit_amt columns 
+-- 11/10/25		Yunus Mohammed		12. AD11647 - Excluded NFP policies
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
@@ -195,6 +196,7 @@ BEGIN
 			WHERE
 				tpt.accouting_month_sk=@acounting_date_sk
 				AND GREATEST(tpt.transaction_dt_sk,tpt.transaction_effective_dt_sk)<=@acounting_date_sk
+				AND tp.product_cd != 'GRPEL'
 				AND tpt.premium_amt != 0
 			) AS temp
 			GROUP BY
@@ -337,7 +339,8 @@ BEGIN
 										)
 				WHERE
 				tpt.accouting_month_sk=@acounting_date_sk
-				and tpt.commission_amt!=0
+				AND tp.product_cd != 'GRPEL'
+				AND tpt.commission_amt!=0
 				) as temp
 				GROUP BY
 				accounting_date,transaction_id,policy_number,product,transaction_sequence,company,transaction_date,

@@ -2,6 +2,7 @@ import os
 import pendulum
 from datetime import timedelta
 from airflow import DAG
+from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.providers.microsoft.mssql.operators.mssql import MsSqlOperator
@@ -17,6 +18,7 @@ cc_email = ""
 
 HOME_PATH = os.path.expanduser('~')
 FOLDER_PATH = HOME_PATH + "/airflow/tmp_files/current_carrier"
+ENVIRONMENT = Variable.get("environment")
 
 def on_failure_callback(context):
 
@@ -130,11 +132,16 @@ with DAG(
             dag=dag,
         )
 
-        # upload_current_carrier_auto_txt_to_sftp = SFTPUploadCurrentCarrierAutoFileOperator(
-        #     task_id='upload_current_carrier_auto_txt_to_sftp',
-        #     sftp_conn_id='Vault_CLUE_sftp',
-        #     dag=dag,
-        # )
+        upload_current_carrier_auto_txt_to_sftp = (
+            SFTPUploadCurrentCarrierAutoFileOperator(
+                task_id='upload_current_carrier_auto_txt_to_sftp',
+                sftp_conn_id='Vault_CLUE_sftp',
+                dag=dag,
+            ) if ENVIRONMENT == 'PRODUCTION' else EmptyOperator(
+                task_id='skip_sftp_upload',
+                dag=dag,
+            )
+        )
 
         send_current_carrier_auto_email = EmailOperator(
             task_id='send_current_carrier_auto_email',
@@ -147,9 +154,8 @@ with DAG(
             operators[i].set_downstream(operators[i + 1])
 
         operators[-1].set_downstream(generate_current_carrier_auto_txt_file)
-        # generate_current_carrier_auto_txt_file.set_downstream(upload_current_carrier_auto_txt_to_sftp)
-        # upload_current_carrier_auto_txt_to_sftp.set_downstream(send_current_carrier_auto_email)
-        generate_current_carrier_auto_txt_file.set_downstream(send_current_carrier_auto_email)
+        generate_current_carrier_auto_txt_file.set_downstream(upload_current_carrier_auto_txt_to_sftp)
+        upload_current_carrier_auto_txt_to_sftp.set_downstream(send_current_carrier_auto_email)
 
 
 start.set_downstream(current_carrier_auto_executed_today)

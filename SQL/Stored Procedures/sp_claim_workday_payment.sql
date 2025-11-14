@@ -18,6 +18,7 @@
 -- 04/15/25		Yunus Mohammed				10. Removed litigation claims
 -- 04/25/25		Yunus Mohammed				11. Updated logic to get the month for which we are running the proc
 --																					Update run date logic
+-- 11/10/25		Yunus Mohammed				12. AD-11664 Updated for NFP policy claims
 -- ================================================================================================= 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_claim_workday_payment]
@@ -86,7 +87,8 @@ BEGIN
 			tcl.cause_of_loss_desc AS causeofloss,
 			tcat.catastrophe_cd AS catastrophecode,
 			tcat.catastrophe_nm AS catastrophename,
-			CASE WHEN tc.policy_no LIKE 'NFP%' THEN 'Group Umbrella'
+			CASE
+				WHEN tprd.product_nm = 'Group Personal Excess Liability' THEN 'Group_Umbrella'
 				WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
 				WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
 				WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
@@ -98,7 +100,7 @@ BEGIN
 			ttr.amt AS paymentamount,
 			tpay.party_role_nm AS settlementtype,
 			YEAR(tc.loss_dt) AS accident_year,
-			CASE WHEN tc.policy_no LIKE 'NFP%' THEN np.risk_state ELSE COALESCE(st.state_cd,tp.risk_state_cd) END AS risk_state,
+			COALESCE(st.state_cd,tp.risk_state_cd) AS risk_state,
 			CAST(tasl.aslob_cd AS INT) AS aslob,
 			tpay.payment_no AS transaction_id,
 			@end_dt AS monthend,			
@@ -113,17 +115,7 @@ BEGIN
 			LEFT JOIN edw_core.taslob tasl ON tasl.aslob_sk=tcf.aslob_sk
 			INNER JOIN edw_core.tproduct tprd ON tprd.product_sk=tc.product_sk
 			INNER JOIN edw_core.tclaim_payment tpay ON tpay.claim_feature_sk=tcf.claim_feature_sk
-			INNER JOIN edw_core.tclaim_transaction tcr ON tcr.claim_feature_sk = tcr.claim_feature_sk AND tcr.claim_payment_sk=tpay.claim_payment_sk
-			LEFT JOIN
-							(
-								SELECT
-									ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date desc) as transaction_seq_no,
-									insured_cert_no as policy_no,CONCAT_WS(' ',insured_first_name,insured_last_name) as insured_nm,
-									risk_state,product_type
-								FROM
-									edw_stage.nfp_policy
-
-							) AS np ON tc.policy_no = np.policy_no and np.transaction_seq_no=1
+			INNER JOIN edw_core.tclaim_transaction tcr ON tcr.claim_feature_sk = tcr.claim_feature_sk AND tcr.claim_payment_sk=tpay.claim_payment_sk			
 			INNER JOIN
 			(
 				SELECT

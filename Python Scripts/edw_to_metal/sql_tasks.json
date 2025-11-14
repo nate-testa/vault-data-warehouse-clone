@@ -1,0 +1,12 @@
+{
+  "migrations": [
+    {
+      "task_name": "Midterm Review Eligibility",
+      "source_query": "select NEWID() as Id, b.Id as InsuredId, c.Id as InsuredMarketingPreferenceId, 0 as IsSent, a.data as DocumentData, a.midterm_review_year as Tag, GETDATE() as CreatedDate, GETDATE() as UpdatedDate from edw_integration.customer_midterm_review_eligibility_feed a, edw_stage.Insured b, edw_stage.InsuredMarketingPreference c where a.customer_id = b.ReferenceCode and b.Id = c.InsuredId and a.midterm_review_completed_dt = cast(GETDATE() as date) order by 1",
+      "target_database": "metaldb",
+      "target_schema": "dbo",
+      "target_table_name": "InsuredMarketingPreferenceDocument",
+      "load_strategy": "append"
+    }
+  ]
+}

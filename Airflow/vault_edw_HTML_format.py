@@ -85,9 +85,9 @@ def get_sp_error_data_HTML(process_nm_list, msg_text):
     return html_str
 
 
-def get_vault_data_HTML(sql_qry, msg_text):
+def get_vault_data_HTML(sql_qry, msg_text, conn_id="Vault_EDW"):
 
-    conn_str = MsSqlHook(mssql_conn_id="Vault_EDW")
+    conn_str = MsSqlHook(mssql_conn_id=conn_id)
 
     df = conn_str.get_pandas_df(sql_qry)
     html_tbl = df.to_html(index=False, justify='center', max_rows=1000)
