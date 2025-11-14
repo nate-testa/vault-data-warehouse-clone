@@ -4,7 +4,7 @@ VALUES (
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <span style="background-color: #9D0208; color: white; font-weight: bold; font-size: 18px; padding: 5px; display: inline-block; text-decoration: underline;">Release Summary - 11/14/2025 :</span>
+    <span style="background-color: #9D0208; color: white; font-weight: bold; font-size: 18px; padding: 5px; display: inline-block; text-decoration: underline;">Release Summary - 11/17/2025 :</span>
     <h4 style="margin-top: 0;font-style: italic;color: blue;">This release had 3 enhancements and 7 bug fix tickets.  Release details are as follows.</h4>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; }
