@@ -13,10 +13,12 @@
 -- 03/26/24		Architha Gudimalla				7. For coll, added filter on class_deleted_in
 -- 07/03/24		Yunus Mohammed					8. Added policy_history_sk
 -- 07/18/24		Architha Gudimalla				9. Updated logic for @last_source_extract_ts
+-- 11/10/25		Dinesh Bobbili					11. AD11636 - Added source_system_sk filter for NFP process
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tinternal_coverage_inforce]
-@in_inforce_dt DATETIME = null
+@in_inforce_dt DATETIME = null,
+@in_source_system VARCHAR(10) = null
 AS 
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -55,6 +57,9 @@ BEGIN
 		DECLARE @var_date_sk INT
 		DECLARE @month_end_sk INT
 		
+		DECLARE @param_ssk VARCHAR(50)
+		select @param_ssk=source_system_sk from edw_core.tsource_system where source_system_nm = @in_source_system;
+		
 		open c1_rec; 
 		FETCH NEXT FROM c1_rec INTO @yearmonth, @year, @var_date_sk, @inforce_dt; 
 		WHILE @@FETCH_STATUS = 0
@@ -70,7 +75,8 @@ BEGIN
 				set @month_end_sk = (select max(date_sk) from edw_core.tdate where yearmonth = @yearmonth);
 
 				delete from edw_core.tinternal_coverage_inforce 
-				where month_sk = @month_end_sk; 
+				where month_sk = @month_end_sk
+				and source_system_sk = isnull(@param_ssk, source_system_sk); 
 				
 				with max_tr as
 				(
@@ -89,6 +95,7 @@ BEGIN
 				 where effective_dt_sk <= @var_date_sk
 				 and   transaction_effective_dt_sk <= @var_date_sk
 				 and   transaction_dt_sk <= @var_date_sk 
+				 and source_system_sk = isnull(@param_ssk, source_system_sk)
 				)
 				INSERT INTO edw_core.tinternal_coverage_inforce
 					( 
@@ -112,7 +119,8 @@ BEGIN
 				  and tr.expiration_dt_sk > @var_date_sk
 				  and max_tr.rnk = 1
 				  and tr.internal_coverage_sk <> 0
-				  and ( (tr.vehicle_coverage_sk = 0 and tr.collection_class_type_sk = 0) or vc.vehicle_deleted_in = 'No' or cc.class_deleted_in = 'No');
+				  and ( (tr.vehicle_coverage_sk = 0 and tr.collection_class_type_sk = 0) or vc.vehicle_deleted_in = 'No' or cc.class_deleted_in = 'No')
+				  and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk);
 		       
 				SET @rows_affected=@@ROWCOUNT;
 		

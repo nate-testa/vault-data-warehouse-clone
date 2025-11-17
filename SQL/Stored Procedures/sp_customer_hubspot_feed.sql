@@ -34,6 +34,7 @@
 -- 09/30/25		Dinesh Bobbili				26. AD10938 - Added new columns
 -- 10/16/25		Dinesh Bobbili				27. AD11382 - Added logic to Include David Tester policies
 -- 10/23/25		Dinesh Bobbili				28. AD11462 - Added insured_nm and uw_company_nm 
+-- 11/14/25		Dinesh Bobbili				29. AD11742 - Added ssk filter to exclude NFP data
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -207,6 +208,7 @@ BEGIN
 			isnull(cust.customer_nm,'') LIKE '%Testaverde%'
 		))
 		and pol.effective_dt >= '01-jun-2023'
+		and pol.source_system_sk <> 6
 		-- and pol.product_cd <> 'BY'
 		;
 

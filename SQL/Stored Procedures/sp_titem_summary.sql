@@ -25,10 +25,12 @@ GO
 -- 07/03/24		Yunus Mohammed					13. Added policy_history_sk
 -- 07/18/24		Architha Gudimalla				14. Updated logic for @last_source_extract_ts
 -- 07/08/25		Architha Gudimalla				15. Updated EP logic 
+-- 11/10/25		Dinesh Bobbili					16. AD11639 - Added source_system_sk filter for NFP process
 -- ==================================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_titem_summary]
-@in_month_end_dt date = null
+@in_month_end_dt date = null,
+@in_source_system VARCHAR(10) = null
 AS 
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -62,6 +64,9 @@ BEGIN
 		DECLARE @proc_run_month_end_dt date
 		DECLARE @proc_run_month INT
 		DECLARE @parameter_desc VARCHAR(255)
+		
+		DECLARE @param_ssk VARCHAR(50)
+		select @param_ssk=source_system_sk from edw_core.tsource_system where source_system_nm = @in_source_system;
 		
 		DECLARE c1_rec CURSOR
 		FOR  
@@ -118,7 +123,8 @@ BEGIN
 				where calendar_year = @year;
 
 				delete from edw_core.titem_summary 
-				where month_sk = @month_end_dt_sk; 
+				where month_sk = @month_end_dt_sk
+				and source_system_sk = isnull(@param_ssk, source_system_sk); 
 
 				DROP TABLE IF EXISTS edw_temp.titem_summary_can_rein_temp1;
 				--insert cancels
@@ -130,6 +136,7 @@ BEGIN
 				 and   transaction_effective_dt_sk <> expiration_dt_sk
 				 and	calendar_month_sk = @month_end_dt_sk 
 				and   expiration_dt_sk > @month_begin_dt_sk
+				and source_system_sk = isnull(@param_ssk, source_system_sk)
 				 group by policy_sk, item_sk, policy_transaction_type_sk, transaction_seq_no
 				 union all
 				 SELECT policy_sk, item_sk, policy_transaction_type_sk , transaction_seq_no 
@@ -139,6 +146,7 @@ BEGIN
 				 and   transaction_effective_dt_sk <> expiration_dt_sk
 				 and	calendar_month_sk = @month_end_dt_sk 
 				and   expiration_dt_sk > @month_begin_dt_sk
+				and source_system_sk = isnull(@param_ssk, source_system_sk)
 				 group by policy_sk, item_sk, policy_transaction_type_sk, transaction_seq_no ; 
 				 
 				DROP TABLE IF EXISTS edw_temp.titem_summary_max_tr;
@@ -163,6 +171,7 @@ BEGIN
 				and   transaction_effective_dt_sk <= @end_dt_sk
 				and   transaction_dt_sk <= @end_dt_sk 
 				and   expiration_dt_sk > @month_begin_dt_sk
+				and source_system_sk = isnull(@param_ssk, source_system_sk)
 				group by policy_sk, item_sk;
 
 				--remove the policy if the policy is issued and cancelled multiple times and the last seq no is not a rein or cancel, no need to adjust exposures
@@ -186,6 +195,7 @@ BEGIN
 				 		net_premium_amt inforce_net_premium_amt
 				 FROM	edw_core.titem_inforce
 				 where	month_sk = @month_end_dt_sk
+				 and source_system_sk = isnull(@param_ssk, source_system_sk)
 				),
 				max_tr as
 				(
@@ -195,6 +205,7 @@ BEGIN
 				 	and  effective_dt_sk <= @end_dt_sk
 					and   transaction_effective_dt_sk <= @end_dt_sk
 					and   transaction_dt_sk <= @end_dt_sk 
+					and source_system_sk = isnull(@param_ssk, source_system_sk)
 					group by policy_sk, policy_history_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
 				),  
 				min_tr as
@@ -208,6 +219,7 @@ BEGIN
 				 	and  effective_dt_sk <= @end_dt_sk
 					and   transaction_effective_dt_sk <= @end_dt_sk
 					and   transaction_dt_sk <= @end_dt_sk  
+					and source_system_sk = isnull(@param_ssk, source_system_sk)
 				),  
 				xpsr_new as
 				( 
@@ -255,6 +267,7 @@ BEGIN
 				 and   pol.expiration_dt > @month_end_dt
 				 and   tr.transaction_effective_dt_sk <= @end_dt_sk
 				 and   tr.transaction_dt_sk <= @end_dt_sk
+				 and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 				 and   tr.transaction_seq_no = (select min(tr1.transaction_seq_no) from edw_core.tpolicy_transaction tr1 
 				 								where tr1.policy_sk = tr.policy_sk and tr1.item_sk = tr.item_sk)
 				 and   tr.policy_transaction_sk = (select min(tr2.policy_transaction_sk) from edw_core.tpolicy_transaction tr2 
@@ -268,6 +281,7 @@ BEGIN
 				 FROM edw_core.tpolicy pol, edw_core.titem_inforce inf
 				 where inf.policy_sk = pol.policy_sk 
 				   and inf.month_sk = @prev_month_end_dt_sk
+				   and pol.source_system_sk = isnull(@param_ssk, pol.source_system_sk)
 				   and pol.expiration_dt between  @month_begin_dt AND @month_end_dt
 				   and not exists (select policy_sk from edw_temp.titem_summary_can_rein_temp1 c 
 				   					where inf.policy_sk = c.policy_sk and inf.item_sk = c.item_sk and c.policy_transaction_type_sk = 5)
@@ -314,6 +328,7 @@ BEGIN
 						 				where tr.policy_sk = c.policy_sk and tr.item_sk = c.item_sk and tr.transaction_seq_no = c.transaction_seq_no and c.policy_transaction_type_sk = 5)
 						 and	tr.policy_transaction_type_sk = 5   
 						 and tr.calendar_month_sk = @month_end_dt_sk
+						 and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 					) aa
 					group by policy_sk, item_sk
 												 	
@@ -352,6 +367,7 @@ BEGIN
 						 				where tr.policy_sk = r.policy_sk and tr.item_sk = r.item_sk and tr.transaction_seq_no = r.transaction_seq_no and r.policy_transaction_type_sk = 6)
 						 and	tr.policy_transaction_type_sk = 6
 						 and tr.calendar_month_sk = @month_end_dt_sk 
+						 and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 					) aa
 					group by policy_sk, item_sk
 				),
@@ -485,6 +501,7 @@ BEGIN
 				 and   tr.transaction_effective_dt_sk <> tr.expiration_dt_sk
 				 and   (pol.expiration_dt > @month_begin_dt --or (tr.transaction_dt_sk - tr.expiration_dt_sk) <= 60
 						) --dateadd(month,-2,@month_begin_dt)
+				 and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 				 group by tr.policy_sk, tr.item_sk, tr.product_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, pol.source_system_sk  
 				)
 				INSERT INTO edw_core.titem_summary
