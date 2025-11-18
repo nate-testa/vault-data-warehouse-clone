@@ -254,11 +254,13 @@ BEGIN
 					r.backup_generator_recommendation backup_generator_recommendation_message,
 					IIF(r.rms_recommendation is not null, '013', null) rms_recommendation_message_1_id,
 					--rms_recommendation_message_1,
-					IIF(r.rms_recommendation is not null, '014', null) rms_recommendation_message_2_id,
+					--IIF(r.rms_recommendation is not null, '014', null) 
+					null rms_recommendation_message_2_id,
 					--rms_recommendation_message_2,
 					IIF(r.wildfire_protection_recommendation is not null, '017', null) wildfire_protection_recommendation_message_1_id,
 					--wildfire_protection_recommendation_message_1,
-					IIF(r.wildfire_protection_recommendation is not null, '018', null) wildfire_protection_recommendation_message_2_id,
+					--IIF(r.wildfire_protection_recommendation is not null, '018', null) 
+					null wildfire_protection_recommendation_message_2_id,
 					--wildfire_protection_recommendation_message_2,
 					IIF(r.backup_generator_recommendation is not null, '017', null) backup_generator_recommendation_message_1_id,
 					--backup_generator_recommendation_message_1, 
