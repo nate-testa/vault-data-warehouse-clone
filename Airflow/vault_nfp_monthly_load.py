@@ -78,19 +78,10 @@ with DAG(
     with TaskGroup("nfp_monthly_load_group") as nfp_monthly_load_group:
 
         nfp_monthly_load_group_items = [
-            'sp_nfp_claim_policy_search_api',
             'sp_nfp_claim_policy_search_snapsheet_api',
             'sp_nfp_claim_policy_webhook_snapsheet_api',
             'sp_claim_policy_webhook_snapsheet_api_update_contactinfo'
          ]
-        
-        sp_nfp_claim_policy_search_api = MsSqlOperator(
-            task_id='sp_nfp_claim_policy_search_api',
-            mssql_conn_id='Vault_EDW',
-            sql="EXEC edw_core.sp_nfp_claim_policy_search_api",
-            database="vault_edw",
-            autocommit=True,
-        )
 
         sp_nfp_claim_policy_search_snapsheet_api = MsSqlOperator(
             task_id='sp_nfp_claim_policy_search_snapsheet_api',
@@ -126,9 +117,9 @@ with DAG(
         )
 
         if ENVIRONMENT != 'PRODUCTION':
-            sp_nfp_claim_policy_search_api >> sp_nfp_claim_policy_search_snapsheet_api >> sp_nfp_claim_policy_webhook_snapsheet_api >> sp_claim_policy_webhook_snapsheet_api_update_contactinfo >> send_nfp_email
+            sp_nfp_claim_policy_search_snapsheet_api >> sp_nfp_claim_policy_webhook_snapsheet_api >> sp_claim_policy_webhook_snapsheet_api_update_contactinfo >> send_nfp_email
         else:
-            sp_nfp_claim_policy_search_api >> sp_nfp_claim_policy_search_snapsheet_api >> sp_nfp_claim_policy_webhook_snapsheet_api >> send_nfp_email
+            sp_nfp_claim_policy_search_snapsheet_api >> sp_nfp_claim_policy_webhook_snapsheet_api >> send_nfp_email
 
 
     end = DummyOperator(
