@@ -174,7 +174,7 @@ with DAG(
             html_content=get_HTML_on_vault_format('The Azure Data Factory pipelines executed successfully',''),
         )
 
-        adf_etl_load_stage >> adf_etl_load_ls_aws_dms >> adf_etl_load_ls_aws_vsp_claims_payments >> send_adf_email
+        adf_etl_load_stage >> adf_etl_load_ls_azr_dms >> adf_etl_load_ls_azr_dms_claims_payments >> send_adf_email
 
 
     with TaskGroup("home_group") as home_group:
