@@ -146,7 +146,7 @@ BEGIN
 			np.program_administrator_fees_no,
 			program_administrator_fees_no + surplus_lines_tax as tax_fee_surcharge_amt,
 			0 as item_sk,
-			uc.group_umbrella_coverage_sk as coverage_sk,
+			uc.grpel_coverage_sk as coverage_sk,
 			0 as vehicle_coverage_sk,
 			dt3.date_sk as transaction_dt_sk,
 			(select max(date_sk) from edw_core.tdate 
