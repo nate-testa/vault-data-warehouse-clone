@@ -1,3 +1,4 @@
+import os
 import pendulum
 from datetime import timedelta
 from airflow import DAG
@@ -6,6 +7,7 @@ from airflow.utils.task_group import TaskGroup
 from airflow.providers.microsoft.mssql.operators.mssql import MsSqlOperator
 from airflow.operators.email import EmailOperator
 from airflow.operators.empty import EmptyOperator
+from airflow.operators.bash import BashOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format
 
 to_email = "itdatateam@vault.insurance"
@@ -13,7 +15,20 @@ to_email = "itdatateam@vault.insurance"
 cc_email = ""
 
 ENVIRONMENT = Variable.get("environment")
+FOLDER_PATH = Variable.get("NFP_FOLDER_PATH")  # Use absolute path
+server = Variable.get("NFP_SERVER")  # Default value for server
 
+
+def run_preprocess():
+    preprocess_script = os.path.join(FOLDER_PATH, 'preProcess.py')
+    os.system(f'python3 {preprocess_script}')
+
+def run_process(server):
+    process_script = os.path.join(FOLDER_PATH, 'process.py')
+    command = f'python3 {process_script}'
+    if server:
+        command += f' --server {server}'
+    os.system(command)
 
 def on_failure_callback(context):
 
@@ -71,10 +86,30 @@ with DAG(
         task_id='end',
         trigger_rule='none_failed',
     )
-    
-    with TaskGroup("nfp_monthly_load_group") as nfp_monthly_load_group:
 
-        nfp_monthly_load_group_config_json = {
+    with TaskGroup("nfp_file_processing_group") as nfp_file_processing_group:
+
+        pre_process_task = BashOperator(
+        task_id='preprocess_task',
+        bash_command=f'python3 {FOLDER_PATH}/preProcess.py',
+        dag=dag,
+        )
+
+        process_task = BashOperator(
+            task_id='process_task',
+            bash_command=f'python3 {FOLDER_PATH}/process.py --server {server}',
+            dag=dag,
+        )
+
+        pre_process_task.set_downstream(process_task)
+
+
+    with TaskGroup("nfp_stored_procedures_group") as nfp_stored_procedures_group:
+
+        last_day_previous_month = (pendulum.now().subtract(months=1).end_of('month')).format('YYYY-MM-DD')
+        previous_month = (pendulum.now().subtract(months=1)).format('YYYYMM')
+
+        nfp_stored_procedures_group_config_json = {
             "sp_nfp_policy_update": {},
             "sp_tcustomer_nfp": {},
             "sp_tpolicy_nfp": {},
@@ -82,31 +117,34 @@ with DAG(
             "sp_tpolicy_history_nfp": {},
             "sp_tgrpel_coverage": {},
             "sp_tpolicy_transaction_nfp": {},
-            "sp_tdaily_inforce_policy": {"sp_parameters": [{"name": "@in_source_system", "value": "6"}]},
+            "sp_tdaily_inforce_policy": {"sp_parameters": [{"name": "@in_inforce_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
             "sp_tpolicy_update_policy_inforce_in": {},
-            "sp_tpolicy_summary": {"sp_parameters": [{"name": "@in_source_system", "value": "6"}]},
-            "sp_tpolicy_transaction_summary": {"sp_parameters": [{"name": "@in_source_system", "value": "6"}]},
-            "sp_tcustomer_summary": {"sp_parameters": [{"name": "@sk_filter", "value": "6"}]},
-            "sp_titem_inforce": {"sp_parameters": [{"name": "@in_source_system", "value": "6"}]},
-            "sp_titem_summary": {"sp_parameters": [{"name": "@in_source_system", "value": "6"}]},
+            "sp_tpolicy_summary": {"sp_parameters": [{"name": "@in_end_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
+            "sp_tpolicy_transaction_summary": {"sp_parameters": [{"name": "@in_month_end_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
+            "sp_tcustomer_summary": {"sp_parameters": [{"name": "@in_end_dt", "value": last_day_previous_month},{"name": "@sk_filter", "value": "NFP"}]},
+            "sp_titem_inforce": {"sp_parameters": [{"name": "@in_inforce_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
+            "sp_titem_summary": {"sp_parameters": [{"name": "@in_month_end_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
+            "sp_tinternal_coverage_inforce": {"sp_parameters": [{"name": "@in_inforce_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
+            "sp_tinternal_coverage_summary": {"sp_parameters": [{"name": "@in_month_end_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
             "sp_nfp_claim_policy_search_snapsheet_api": {},
             "sp_nfp_claim_policy_webhook_snapsheet_api": {},
-            "sp_claim_policy_webhook_snapsheet_api_update_contactinfo": {"exec_only_in_environment": "PRODUCTION"}
+            "sp_trenewal_summary": {"sp_parameters": [{"name": "@in_yearmonth", "value": previous_month},{"name": "@in_source_system", "value": "NFP"}]},
+            "sp_tbroker_summary": {"sp_parameters": [{"name": "@in_end_dt", "value": last_day_previous_month},{"name": "@in_broker_id", "value": "56601"}]},
         }
 
         # Build the list of items filtering by environment
-        nfp_monthly_load_group_items = []
-        for sp_name, config in nfp_monthly_load_group_config_json.items():
+        nfp_stored_procedures_group_items = []
+        for sp_name, config in nfp_stored_procedures_group_config_json.items():
             # Skip if exec_only_in_environment is set and doesn't match current environment
             if 'exec_only_in_environment' in config and config['exec_only_in_environment'] != ENVIRONMENT:
                 continue
-            nfp_monthly_load_group_items.append(sp_name)
+            nfp_stored_procedures_group_items.append(sp_name)
         
         # Create operators for each stored procedure
         operators = {}
         item_name = ''
-        for item in nfp_monthly_load_group_items:
-            config = nfp_monthly_load_group_config_json.get(item, {})
+        for item in nfp_stored_procedures_group_items:
+            config = nfp_stored_procedures_group_config_json.get(item, {})
             
             # Build SQL command with parameters if provided
             sp_parameters = config.get('sp_parameters', [])
@@ -132,11 +170,11 @@ with DAG(
             task_id='send_nfp_email',
             to=to_email,
             subject='Airflow - nfp monthly load executed successfully',
-            html_content=get_sp_success_data_HTML(nfp_monthly_load_group_items, 'The stored procedures executed successfully for nfp monthly load'),
+            html_content=get_sp_success_data_HTML(nfp_stored_procedures_group_items, 'The stored procedures executed successfully for nfp monthly load'),
         )
 
         # Set up sequential dependencies: SP1 >> SP2 >> SP3 >> ... >> Email
-        operator_list = [operators[item] for item in nfp_monthly_load_group_items]
+        operator_list = [operators[item] for item in nfp_stored_procedures_group_items]
         
         if operator_list:
             # Chain all operators sequentially
@@ -147,5 +185,6 @@ with DAG(
             operator_list[-1].set_downstream(send_nfp_email)
 
 
-start.set_downstream(nfp_monthly_load_group)
-nfp_monthly_load_group.set_downstream(end)
+start.set_downstream(nfp_file_processing_group)
+nfp_file_processing_group.set_downstream(nfp_stored_procedures_group)
+nfp_stored_procedures_group.set_downstream(end)
