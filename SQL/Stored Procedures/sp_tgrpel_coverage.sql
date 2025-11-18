@@ -5,7 +5,8 @@
 -- ---------------------------------------------------------------------------------------------------
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
--- 11/10/25					Dinesh Bobbili				1. Created this procedure  
+-- 11/10/25					Dinesh Bobbili				1. Created this procedure 
+-- 11/18/25					Dinesh Bobbili				2. Renamed the column name
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tgrpel_coverage]
 AS
@@ -37,7 +38,7 @@ BEGIN
 		WITH nfp_base AS (
 		SELECT 
 					np.insured_cert_no AS policy_no,
-					np.policy_no AS group_umbrella_policy_no,
+					np.policy_no AS grpel_policy_no,
 					np.term_effective_date AS effective_dt,
 					np.transaction_date AS transaction_effective_dt,
 					np.expiration_date AS expiration_dt,
@@ -144,7 +145,7 @@ BEGIN
 				and np.reporting_month > @last_source_extract_ts
 		)
 		SELECT np.policy_no                                                 
-			,np.group_umbrella_policy_no                                  
+			,np.grpel_policy_no                                  
 			,np.effective_dt                                              
 			,np.transaction_effective_dt                                  
 			,np.expiration_dt                                             
@@ -196,7 +197,7 @@ BEGIN
 		-- Start Insert process 
 		INSERT INTO edw_core.tgrpel_coverage (
 			policy_no
-			,group_umbrella_policy_no
+			,grpel_policy_no
 			,effective_dt
 			,transaction_effective_dt
 			,expiration_dt
@@ -242,7 +243,7 @@ BEGIN
 		)
 		SELECT 
 			policy_no
-			,group_umbrella_policy_no
+			,grpel_policy_no
 			,effective_dt
 			,transaction_effective_dt
 			,expiration_dt
