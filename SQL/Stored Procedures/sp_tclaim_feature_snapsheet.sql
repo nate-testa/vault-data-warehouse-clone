@@ -132,7 +132,11 @@ BEGIN
 					WHEN 'Collections' THEN 'LUX'
 					WHEN 'Marine Boat & Yacht' THEN 'BY'
 					ELSE asl.product_cd
-		END= case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
+		END= case 
+					when prd.product_cd = 'CO' then 'HO'
+					when prd.product_cd = 'GRPEL' then 'PEL'
+					else prd.product_cd 
+					end
 		-- Home Coverage
 		LEFT JOIN edw_core.thome_coverage thcov ON
 		thcov.home_coverage_sk = (
