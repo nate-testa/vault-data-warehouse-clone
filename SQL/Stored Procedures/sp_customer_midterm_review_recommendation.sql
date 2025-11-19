@@ -10,6 +10,7 @@
 -- 10/22/25		Architha Gudimalla			4. Removed code for primary_home_discount_pc
 -- 10/28/25		Architha Gudimalla			5. Added producer to policy detail table
 -- 11/05/25		Architha Gudimalla			6. Removed tbroker_vault_team join
+-- 11/19/25		Architha Gudimalla			7. Updated auto vehicle list
 -- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
@@ -269,7 +270,7 @@ and a.PrimaryInsuredId=b.id
 						'Thank you for allowing us to serve you this year. We''re glad you''re with us!'
 				end
 				as no_of_years_with_vault_tx,
-				avl.emergency_movement_coverage_in,
+				apc.emergency_movement_coverage_in,
 				avl.auto_vehicle_list, 
 				avl.auto_vehicle_ct,
 				ybl.boat_yatch_product_type,
@@ -332,19 +333,30 @@ and a.PrimaryInsuredId=b.id
 			from edw_core.tpolicy
 			group by customer_id
 		) as y on y.customer_id = pol.customer_id
+		left join edw_core.tauto_policy_coverage apc on ph.policy_no = apc.policy_no and ph.policy_history_sk = apc.policy_history_sk  
 		left join
 		(
-			select av.policy_no,av.effective_dt,avc.policy_history_sk,  apc.emergency_movement_coverage_in,
-					string_agg(concat_ws('-',vehicle_model_year,vehicle_make),'||') WITHIN GROUP (ORDER BY agreed_value_amt DESC, market_value_amt desc) as auto_vehicle_list,
-					count(av.auto_vehicle_sk) as auto_vehicle_ct 
-			from edw_core.tauto_vehicle av
-			inner join edw_core.tauto_vehicle_coverage avc on av.auto_vehicle_sk = avc.auto_vehicle_sk
-			inner join edw_core.tauto_policy_coverage apc on avc.policy_no = apc.policy_no and avc.policy_history_sk = apc.policy_history_sk 
-			where
-				avc.vehicle_deleted_in = 'No'
-			group by av.policy_no,av.effective_dt,avc.policy_history_sk, apc.emergency_movement_coverage_in   
-
-		) as avl on avl.policy_no = pol.policy_no and avl.effective_dt = pol.effective_dt and avl.policy_history_sk = ph.policy_history_sk
+            select customer_id,
+                    CONCAT(
+                        MAX(CASE WHEN rn = 1 THEN concat_ws('-',vehicle_model_year,vehicle_make) END), 
+                        MAX(CASE WHEN rn = 2 THEN ' | ' END), 
+                        MAX(CASE WHEN rn = 2 THEN concat_ws('-',vehicle_model_year,vehicle_make) END),  
+                        MAX(CASE WHEN auto_vehicle_ct > 2 THEN concat(' and ',auto_vehicle_ct - 2,' covered vehicles') END) 
+                    ) AS auto_vehicle_list,
+                    auto_vehicle_ct
+			from
+			( 
+				select pol.customer_id, vehicle_model_year,vehicle_make, agreed_value_amt, market_value_amt, 
+						ROW_NUMBER() OVER (PARTITION BY pol.customer_id ORDER BY agreed_value_amt DESC, market_value_amt desc) AS rn,
+						COUNT(*) OVER (PARTITION BY pol.customer_id) AS auto_vehicle_ct 
+				from edw_core.tauto_vehicle av
+				inner join edw_core.tpolicy pol on pol.policy_no = av.policy_no 
+				inner join edw_core.tpolicy_history ph on ph.policy_no = pol.policy_no and ph.latest_transaction_in = 'Y' 
+				inner join edw_core.tauto_vehicle_coverage avc on av.auto_vehicle_sk = avc.auto_vehicle_sk and avc.policy_history_sk = ph.policy_history_sk 
+				where avc.vehicle_deleted_in = 'No'
+			) a
+			group by customer_id
+		) as avl on pol.customer_id = avl.customer_id
 		left join
 		(
 			select mbt.policy_no,mbt.effective_dt,mbtc.policy_history_sk, mbt.boat_yatch_product_type, string_agg(concat_ws('-',boat_yacht_year,boat_yacht_make),'||') as yacht_boat_list,
