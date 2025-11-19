@@ -83,7 +83,7 @@ BEGIN
 				WHEN 'LUX' THEN tccov.collection_coverage_sk
 				WHEN 'PEL' THEN tpcov.pel_coverage_sk
 				WHEN 'AU' THEN tacov.auto_policy_coverage_sk
-				WHEN 'GRPEL' THEN gpc.group_umbrella_coverage_sk
+				WHEN 'GRPEL' THEN gpc.grpel_coverage_sk
 			END AS coverage_sk ,		
 			CASE
 				WHEN exps.external_reference_number is not null THEN 3
@@ -204,8 +204,8 @@ BEGIN
 										ORDER BY tavc1.transaction_seq_no DESC
 								)
 		LEFT JOIN edw_core.tgrpel_coverage gpc
-			ON gpc.group_umbrella_coverage_sk = (
-								SELECT TOP 1 gpc1.group_umbrella_coverage_sk
+			ON gpc.grpel_coverage_sk = (
+								SELECT TOP 1 gpc1.grpel_coverage_sk
 								FROM
 									edw_core.tgrpel_coverage gpc1
 								WHERE
