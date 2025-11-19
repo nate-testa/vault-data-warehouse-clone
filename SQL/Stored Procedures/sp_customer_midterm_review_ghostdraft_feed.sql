@@ -98,8 +98,8 @@ BEGIN
 					--lux_on_endorsement_message, 
 					p.no_of_years_with_vault,
 					p.no_of_years_with_vault_tx,  
-					case when r.product_nm = 'Auto' then STRING_AGG(p.auto_vehicle_list, '||') end auto_vehicle_list, 
-					case when r.product_nm = 'Auto' then sum(p.auto_vehicle_ct) end auto_vehicle_ct,   
+					case when r.product_nm = 'Auto' then max(p.auto_vehicle_list) end auto_vehicle_list, 
+					case when r.product_nm = 'Auto' then max(p.auto_vehicle_ct) end auto_vehicle_ct,   
 					case when r.product_nm = 'Auto' and r.existing_product_in = 'Yes' then '003' 
 						 when r.product_nm = 'Auto' and r.existing_product_in = 'No' then '010' 
 					end auto_message_id,  
