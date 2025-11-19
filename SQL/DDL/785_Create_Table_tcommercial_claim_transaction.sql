@@ -14,6 +14,8 @@ CREATE TABLE [edw_commercial].tcommercial_claim_transaction (
   commercial_claim_payment_sk int ,
   claim_transaction_type_sk int ,
   feature_status_sk int ,
+  loss_reserve_amt decimal (15, 2) NULL,
+	expense_reserve_amt decimal (15, 2) NULL,
   subrogation_recovery_reserve_amt decimal (15, 2) NULL,
   salvage_recovery_reserve_amt decimal (15, 2) NULL,
   salvage_recovery_expense_reserve_amt decimal (15, 2) NULL,
