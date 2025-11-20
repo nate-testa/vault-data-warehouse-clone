@@ -23,6 +23,7 @@
 -- 09/23/2025		Yunus Mohammed				18. AD-11092 Added loss_location_desc column to tclaim table
 -- 09/25/2025		Yunus Mohammed				19. AD-11148 Added large_loss_in column			
 -- 10/13/2025		Yunus Mohammed				20 AD-11322 Added closed_reason_desc column
+-- 11/10/2025		Yunus Mohammed				21 AD-11653 Used base tables for NFP policies
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_snapsheet]
 AS	
@@ -78,7 +79,7 @@ BEGIN
 		(
 		SELECT
 			ROW_NUMBER() OVER(PARTITION BY c.claim_number ORDER BY c.claim_number) as rn,
-			CASE WHEN c.policy_number LIKE 'NFP%'  then nfp.effective_dt else tp.effective_dt end as effective_dt,
+			tp.effective_dt as effective_dt,
 			tp.broker_id,
 			tp.customer_id,
 			c.claim_number, 
@@ -101,7 +102,7 @@ BEGIN
 				else 'Closed' 
 			END) AS claim_status,
 			cat.catastrophe_sk, 
-			CASE WHEN c.policy_number LIKE 'NFP%' THEN 4 ELSE pr.product_sk END as product_sk,
+			pr.product_sk as product_sk,
 			CONCAT(	'',
 					TRIM(c.address_address1), 
 					CASE WHEN TRIM(ISNULL(c.address_address1,''))='' THEN '' ELSE '' END,
@@ -196,13 +197,7 @@ BEGIN
 		LEFT JOIN edw_core.tcause_of_loss cl ON cl.cause_of_loss_desc = c.loss_type
 		LEFT JOIN edw_stage_snapsheet.common_incident_details cid on cid.claim_id = c.id
 		LEFT JOIN edw_stage_snapsheet.coverage_checks covc on c.id = covc.claim_id
-		LEFT JOIN  edw_stage_snapsheet.users u on covc.determined_by_user_id = u.id
-		LEFT JOIN
-		(
-			select ROW_NUMBER()OVER(partition by policy_no, insured_cert_no order by transaction_date desc, reporting_month desc) as transaction_seq_no,
-			insured_cert_no as policy_no,effective_date as effective_dt
-			from edw_stage.nfp_policy	
-		) nfp on nfp.policy_no = c.policy_number and nfp.transaction_seq_no = 1
+		LEFT JOIN  edw_stage_snapsheet.users u on covc.determined_by_user_id = u.id		
 		WHERE greatest(c.created_at,c.updated_at) > @last_source_extract_ts
 		and not exists
 			(
