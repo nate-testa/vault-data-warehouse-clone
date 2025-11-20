@@ -121,7 +121,7 @@ with DAG(
             "sp_tpolicy_update_policy_inforce_in": {},
             "sp_tpolicy_summary": {"sp_parameters": [{"name": "@in_end_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
             "sp_tpolicy_transaction_summary": {"sp_parameters": [{"name": "@in_month_end_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
-            "sp_tcustomer_summary": {"sp_parameters": [{"name": "@in_end_dt", "value": last_day_previous_month},{"name": "@sk_filter", "value": "NFP"}]},
+            "sp_tcustomer_summary": {"sp_parameters": [{"name": "@in_end_dt", "value": last_day_previous_month}]},
             "sp_titem_inforce": {"sp_parameters": [{"name": "@in_inforce_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
             "sp_titem_summary": {"sp_parameters": [{"name": "@in_month_end_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
             "sp_tinternal_coverage_inforce": {"sp_parameters": [{"name": "@in_inforce_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
@@ -132,10 +132,10 @@ with DAG(
             "sp_tbroker_summary": {"sp_parameters": [{"name": "@in_end_dt", "value": last_day_previous_month},{"name": "@in_broker_id", "value": "56601"}]},
         }
 
-        # Build the list of items filtering by environment
+        # Build the list of items filtering
         nfp_stored_procedures_group_items = []
         for sp_name, config in nfp_stored_procedures_group_config_json.items():
-            # Skip if exec_only_in_environment is set and doesn't match current environment
+            # Skip if exec_only_in_environment configuration is set and doesn't match current environment
             if 'exec_only_in_environment' in config and config['exec_only_in_environment'] != ENVIRONMENT:
                 continue
             nfp_stored_procedures_group_items.append(sp_name)
@@ -150,9 +150,9 @@ with DAG(
             sp_parameters = config.get('sp_parameters', [])
             if sp_parameters:
                 # Build parameter string: @param1=value1, @param2=value2, ...
-                params_str = ', '.join([f"{param['name']}={param['value']}" for param in sp_parameters])
+                params_str = ', '.join([f"{param['name']}='{param['value']}'" for param in sp_parameters])
                 sql_command = f"exec edw_core.{item} {params_str}"
-                item_name = item + '__' + params_str.replace('@', '').replace('=', '_').replace(', ', '_')
+                item_name = item
             else:
                 sql_command = f"exec edw_core.{item}"
                 item_name = item
