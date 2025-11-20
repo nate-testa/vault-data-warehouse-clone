@@ -355,7 +355,7 @@ and a.PrimaryInsuredId=b.id
 				inner join edw_core.tauto_vehicle_coverage avc on av.auto_vehicle_sk = avc.auto_vehicle_sk and avc.policy_history_sk = ph.policy_history_sk 
 				where avc.vehicle_deleted_in = 'No'
 			) a
-			group by customer_id
+			group by customer_id, auto_vehicle_ct
 		) as avl on pol.customer_id = avl.customer_id
 		left join
 		(
