@@ -544,7 +544,7 @@ BEGIN
         --- Update au message 
         update a
         set auto_message =  case when m.message_id = '010' then m.message_desc
-										else concat(auto_vehicle_list, ' and ', auto_vehicle_ct, ' covered vehicles' )
+										else auto_vehicle_list --concat(auto_vehicle_list, ' and ', auto_vehicle_ct, ' covered vehicles' )
 									end 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.auto_message_id = m.message_id 
