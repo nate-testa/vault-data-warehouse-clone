@@ -25,6 +25,6 @@ select * from edw_core.tedw_table_detail
 where table_nm='tcommercial_claim_tag'
 )
 begin
-INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
-    VALUES ('tcommercial_claim_tag','Type-2 Dimension','Base','Claim','Stored Procedure','Insert','Daily',getdate(),getdate())
+INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts,schema_nm) 
+    VALUES ('tcommercial_claim_tag','Type-2 Dimension','Base','Claim','Stored Procedure','Insert','Daily',getdate(),getdate(),'edw_commercial')
 end;
