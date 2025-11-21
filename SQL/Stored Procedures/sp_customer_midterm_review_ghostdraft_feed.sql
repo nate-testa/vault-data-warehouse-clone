@@ -98,8 +98,8 @@ BEGIN
 					--lux_on_endorsement_message, 
 					p.no_of_years_with_vault,
 					p.no_of_years_with_vault_tx,  
-					case when r.product_nm = 'Auto' then STRING_AGG(p.auto_vehicle_list, '||') end auto_vehicle_list, 
-					case when r.product_nm = 'Auto' then sum(p.auto_vehicle_ct) end auto_vehicle_ct,   
+					case when r.product_nm = 'Auto' then max(p.auto_vehicle_list) end auto_vehicle_list, 
+					case when r.product_nm = 'Auto' then max(p.auto_vehicle_ct) end auto_vehicle_ct,   
 					case when r.product_nm = 'Auto' and r.existing_product_in = 'Yes' then '003' 
 						 when r.product_nm = 'Auto' and r.existing_product_in = 'No' then '010' 
 					end auto_message_id,  
@@ -544,7 +544,7 @@ BEGIN
         --- Update au message 
         update a
         set auto_message =  case when m.message_id = '010' then m.message_desc
-										else concat(auto_vehicle_list, ' and ', auto_vehicle_ct, ' covered vehicles' )
+										else auto_vehicle_list --concat(auto_vehicle_list, ' and ', auto_vehicle_ct, ' covered vehicles' )
 									end 
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.auto_message_id = m.message_id 
@@ -668,7 +668,7 @@ BEGIN
 			mailing_address_state_cd,mailing_address_zip_cd,producer_id,producer_nm,producer_phone_no,producer_email
 			from edw_integration.customer_midterm_review_ghostdraft_feed
 			where 
-				--customer_id in ('1234500211', '1234502277', '1234548368') and
+				--customer_id in ('1234511937') and
 				existing_product_in  = 'Yes'
 			and update_ts >  @last_source_extract_ts
 		)
@@ -687,26 +687,37 @@ BEGIN
 			cmr.mailing_address_city_nm,
 			cmr.mailing_address_state_cd,
 			cmr.mailing_address_zip_cd,
-	
-				JSON_QUERY((
-					-- select *
-				--	from
-				--	(
-						select
-							'Yes' [existing_home],
-							CASE WHEN ROW_NUMBER() OVER (ORDER BY
+			(
+			select TOP 1 'Yes'
+			from edw_integration.customer_midterm_review_ghostdraft_feed cmrh
+						inner join edw_integration.customer_midterm_review_policy_detail cmrp on cmrh.policy_no = cmrp.policy_no
+						WHERE cmrh.customer_id = cmr.customer_id
+							and cmrh. product_nm in ('Condo','Homeowners')
+							and cmrh.existing_product_in = 'Yes'
+			) as [current_coverage.existing_home],
+			(
+			select TOP 1 CASE WHEN ROW_NUMBER() OVER (ORDER BY
 														CASE cmrp.occupancy_type WHEN 'Primary' THEN '1_Primary' ELSE '2_Non_Primary' END,
 														cmrp.total_insured_value_amt DESC) = 1
 								THEN cmrh.account_id
 								ELSE NULL
-							END [account_primary_image], 
-							cmrh.risk_address_line1 as [home.risk_address_line1],
-							cmrh.risk_address_line2 as [home.risk_address_line2],
-							cmrh.risk_address_unit_no as [home.risk_address_unit_no],
-							cmrh.risk_address_city_nm as [home.risk_address_city_nm],
-							cmrh.risk_address_state_cd as [home.risk_address_state_cd],
-							cmrh.risk_address_zip_cd as [home.risk_address_zip_cd],
-							cmrh.risk_address as [home.risk_address]
+						END [account_primary_image]   
+			from edw_integration.customer_midterm_review_ghostdraft_feed cmrh
+						inner join edw_integration.customer_midterm_review_policy_detail cmrp on cmrh.policy_no = cmrp.policy_no
+						WHERE cmrh.customer_id = cmr.customer_id
+							and cmrh. product_nm in ('Condo','Homeowners')
+							and cmrh.existing_product_in = 'Yes'
+			) as [current_coverage.account_primary_image],
+				JSON_QUERY(            
+					(	
+						select        
+						cmrh.risk_address_line1 as [risk_address_line1],
+						cmrh.risk_address_line2 as [risk_address_line2],
+						cmrh.risk_address_unit_no as [risk_address_unit_no],
+						cmrh.risk_address_city_nm as [risk_address_city_nm],
+						cmrh.risk_address_state_cd as [risk_address_state_cd],
+						cmrh.risk_address_zip_cd as [risk_address_zip_cd],
+						cmrh.risk_address as [risk_address]
 						from edw_integration.customer_midterm_review_ghostdraft_feed cmrh
 						inner join edw_integration.customer_midterm_review_policy_detail cmrp on cmrh.policy_no = cmrp.policy_no
 						WHERE cmrh.customer_id = cmr.customer_id
@@ -814,7 +825,7 @@ BEGIN
 							and cmrc.update_ts > @last_source_extract_ts
 						--and cmrc.existing_product_in = 'Yes'
 					) as [current_coverage.message_aviation] 
-	
+			
 			,json_query
 			( (
 				select * from
@@ -858,14 +869,14 @@ BEGIN
 					select mrm.lux_on_endorsement_message_id,mrm.lux_on_endorsement_message as [message]
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
 					where mrm.customer_id= cmr.customer_id and mrm.lux_on_endorsement_message is not null
-					
+							
 			) as a
 			for json path, include_null_values
 			))  as custom_recommendations
 			for json path, include_null_values , without_array_wrapper
 			) as  customer_json
 		into edw_temp.customer_midterm_review_ghostdraft_feed_temp2
-		from CustomerList as cmr;
+		from CustomerList as cmr; 
 
 		update [target]
 		set
