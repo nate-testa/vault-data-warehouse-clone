@@ -11,6 +11,7 @@
 -- 07/03/24		Yunus Mohammed					5. Added policy_history_sk
 -- 07/18/24		Architha Gudimalla				6. Updated logic for @last_source_extract_ts
 -- 11/10/25		Dinesh Bobbili					7. AD11638 - Added source_system_sk filter for NFP process
+-- 11/18/25		Dinesh Bobbili					8. AD11793 - Added item_sk filter
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_titem_inforce]
@@ -91,6 +92,7 @@ BEGIN
 				 and   transaction_effective_dt_sk <= @var_date_sk
 				 and   transaction_dt_sk <= @var_date_sk
 				 and source_system_sk = isnull(@param_ssk, source_system_sk)
+				 and isnull(item_sk,0) <> 0
 				)
 				INSERT INTO edw_core.titem_inforce
 					( 
@@ -112,7 +114,8 @@ BEGIN
 				  and tr.expiration_dt_sk > @var_date_sk 
 				  and max_tr.rnk = 1
 				  and (tr.vehicle_coverage_sk = 0 or vc.vehicle_deleted_in = 'No')
-				  and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk);
+				  and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
+				  and isnull(tr.item_sk,0) <> 0;
 
 				/*
 
