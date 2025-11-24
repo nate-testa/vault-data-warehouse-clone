@@ -351,8 +351,8 @@ and a.PrimaryInsuredId=b.id
 						COUNT(*) OVER (PARTITION BY pol.customer_id) AS auto_vehicle_ct 
 				from edw_core.tauto_vehicle av
 				inner join edw_core.tpolicy pol on pol.policy_no = av.policy_no 
-				inner join edw_core.tpolicy_history ph on ph.policy_no = pol.policy_no and ph.latest_transaction_in = 'Y' 
-				inner join edw_core.tauto_vehicle_coverage avc on av.auto_vehicle_sk = avc.auto_vehicle_sk and avc.policy_history_sk = ph.policy_history_sk 
+                inner join edw_temp.customer_midterm_review_recommendation_temp_0_inforce inf on inf.policy_sk = pol.policy_sk 
+				inner join edw_core.tauto_vehicle_coverage avc on av.auto_vehicle_sk = avc.auto_vehicle_sk and avc.policy_history_sk = inf.policy_history_sk 
 				where avc.vehicle_deleted_in = 'No'
 			) a
 			group by customer_id, auto_vehicle_ct
