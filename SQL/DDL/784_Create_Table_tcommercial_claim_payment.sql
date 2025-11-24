@@ -32,6 +32,7 @@ CREATE TABLE [edw_commercial].[tcommercial_claim_payment]
 	CONSTRAINT pk_tcommercial_claim_payment PRIMARY KEY (commercial_claim_payment_sk),
 	CONSTRAINT uidx_tcommercial_claim_payment_commercialclaimfeaturesk_paymentno_paymentsequenceno UNIQUE (payment_sequence_no),
 	CONSTRAINT fk_tcommercial_claim_payment_claim_sk FOREIGN KEY (commercial_claim_sk) REFERENCES edw_commercial.tcommercial_claim(commercial_claim_sk),
+	CONSTRAINT fk_tcommercial_claim_payment_claim_feature_sk FOREIGN KEY (commercial_claim_feature_sk) REFERENCES  edw_commercial.tcommercial_claim_feature(commercial_claim_feature_sk),
 	CONSTRAINT fk_tcommercial_claim_payment_source_system_sk FOREIGN KEY (source_system_sk) REFERENCES  edw_core.tsource_system(source_system_sk)
 )
 END
