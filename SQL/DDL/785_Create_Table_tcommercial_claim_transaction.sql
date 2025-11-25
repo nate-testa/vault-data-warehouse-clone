@@ -68,4 +68,17 @@ CREATE TABLE [edw_commercial].tcommercial_claim_transaction (
   CONSTRAINT fk_tcommercial_claim_transaction_broker_sk FOREIGN KEY (broker_sk) REFERENCES  edw_core.tbroker(broker_sk),
   CONSTRAINT fk_tcommercial_claim_transaction_customer_sk FOREIGN KEY (customer_sk) REFERENCES  edw_core.tcustomer(customer_sk)
   )
+
+INSERT [edw_core].[tedw_table_detail]([table_nm], [table_type], [table_category_nm], [domain_nm], 
+[load_method], [load_type], [load_frequency], 
+[create_ts], [update_ts], [schema_nm]) 
+VALUES ( 'tcommercial_claim_transaction', 'Fact', 'Base', 'Claim', 'Stored Procedure', 'Insert', 'Daily',
+GETDATE(), GETDATE(), 'edw_core')
+
+
+INSERT [edw_core].[tedw_table_detail] ( [table_nm], [table_type], [table_category_nm], [domain_nm], [load_method], 
+[load_type], [load_frequency], [create_ts], [update_ts], [schema_nm]) 
+VALUES ('tcommercial_claim_payment', 'Type-1 Dimension', 'Base', 'Claim', 'Stored Procedure', 'Insert/Update', 'Daily', 
+GETDATE(), GETDATE(), 'edw_core')
+
  END
