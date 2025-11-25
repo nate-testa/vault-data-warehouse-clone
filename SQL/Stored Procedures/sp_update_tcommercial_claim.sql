@@ -5,7 +5,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 11/19/2025		        Yunus Mohammed			1. Created this procedure
 -- ======================================================================================================== 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_update_tcommerical_claim]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_update_tcommercial_claim]
 AS
 BEGIN
     -- SET NOCOUNT ON added to prevent extra result sets from
