@@ -46,7 +46,7 @@ BEGIN
         set [target].feature_status_sk = [source].feature_status_sk
         from
             edw_commercial.tcommercial_claim_transaction [target]
-            inner join edw_temp. tcommercial_claim_transaction_update_temp1 [source] on [target].commercial_claim_transaction_sk = [source].commercial_claim_transaction_sk		
+            inner join edw_temp.tcommercial_claim_transaction_update_temp1 [source] on [target].commercial_claim_transaction_sk = [source].commercial_claim_transaction_sk		
 
 		SET @rows_affected=@@ROWCOUNT;
 
