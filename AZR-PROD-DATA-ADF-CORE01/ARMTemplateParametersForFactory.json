@@ -11,6 +11,12 @@
 		"LS_AWS_VSP_PROD_password": {
 			"value": ""
 		},
+		"LS_AZR_CLM_PROD_password": {
+			"value": ""
+		},
+		"LS_AZR_DMS_PROD_password": {
+			"value": ""
+		},
 		"LS_EDW_PROD_connectionString": {
 			"value": ""
 		},
@@ -49,6 +55,24 @@
 		},
 		"LS_AWS_VSP_PROD_properties_typeProperties_username": {
 			"value": "edwClaimRead"
+		},
+		"LS_AZR_CLM_PROD_properties_typeProperties_server": {
+			"value": "azr-prod-clm-db-core01.database.windows.net"
+		},
+		"LS_AZR_CLM_PROD_properties_typeProperties_database": {
+			"value": "clmdb"
+		},
+		"LS_AZR_CLM_PROD_properties_typeProperties_userName": {
+			"value": "edwClaimsPROD"
+		},
+		"LS_AZR_DMS_PROD_properties_typeProperties_server": {
+			"value": "azr-prod-dms-db-core01.database.windows.net"
+		},
+		"LS_AZR_DMS_PROD_properties_typeProperties_database": {
+			"value": "dmsdb"
+		},
+		"LS_AZR_DMS_PROD_properties_typeProperties_userName": {
+			"value": "edwDmsPROD"
 		},
 		"LS_eBao_aws_us_prod_address_properties_typeProperties_server": {
 			"value": "aws-us-gi-prod-rds.csxv0hgqnfbd.us-east-1.rds.amazonaws.com"
@@ -94,6 +118,28 @@
 		},
 		"LS_eBao_aws_us_prod_vault_properties_typeProperties_username": {
 			"value": "dms_repl_read"
+		},
+		"azr-prod-clm-db-core01-pep02_properties_privateLinkResourceId": {
+			"value": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PROD-CLAIMS-DB-RG/providers/Microsoft.Sql/servers/azr-prod-clm-db-core01"
+		},
+		"azr-prod-clm-db-core01-pep02_properties_groupId": {
+			"value": "sqlServer"
+		},
+		"azr-prod-clm-db-core01-pep02_properties_fqdns": {
+			"value": [
+				"azr-prod-clm-db-core01.database.windows.net"
+			]
+		},
+		"azr-prod-dms-db-core01-pep02_properties_privateLinkResourceId": {
+			"value": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PROD-DMS-DB-RG/providers/Microsoft.Sql/servers/azr-prod-dms-db-core01"
+		},
+		"azr-prod-dms-db-core01-pep02_properties_groupId": {
+			"value": "sqlServer"
+		},
+		"azr-prod-dms-db-core01-pep02_properties_fqdns": {
+			"value": [
+				"azr-prod-dms-db-core01.database.windows.net"
+			]
 		},
 		"azr_prod_data_core01_pep01_properties_privateLinkResourceId": {
 			"value": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PROD-DATA-DB-RG/providers/Microsoft.Sql/servers/azr-prod-data-db-core01"

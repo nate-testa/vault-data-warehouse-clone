@@ -119,6 +119,34 @@
 			"type": "string",
 			"defaultValue": "dms_repl_read"
 		},
+		"azr-prod-clm-db-core01-pep02_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PROD-CLAIMS-DB-RG/providers/Microsoft.Sql/servers/azr-prod-clm-db-core01"
+		},
+		"azr-prod-clm-db-core01-pep02_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr-prod-clm-db-core01-pep02_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-prod-clm-db-core01.database.windows.net"
+			]
+		},
+		"azr-prod-dms-db-core01-pep02_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PROD-DMS-DB-RG/providers/Microsoft.Sql/servers/azr-prod-dms-db-core01"
+		},
+		"azr-prod-dms-db-core01-pep02_properties_groupId": {
+			"type": "string",
+			"defaultValue": "sqlServer"
+		},
+		"azr-prod-dms-db-core01-pep02_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"azr-prod-dms-db-core01.database.windows.net"
+			]
+		},
 		"azr_prod_data_core01_pep01_properties_privateLinkResourceId": {
 			"type": "string",
 			"defaultValue": "/subscriptions/357ea943-a0ad-4007-a57c-22192a44c123/resourceGroups/AZR-PROD-DATA-DB-RG/providers/Microsoft.Sql/servers/azr-prod-data-db-core01"
@@ -443,6 +471,32 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/default/azr-prod-clm-db-core01-pep02')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('azr-prod-clm-db-core01-pep02_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('azr-prod-clm-db-core01-pep02_properties_groupId')]",
+				"fqdns": "[parameters('azr-prod-clm-db-core01-pep02_properties_fqdns')]"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/azr-prod-dms-db-core01-pep02')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('azr-prod-dms-db-core01-pep02_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('azr-prod-dms-db-core01-pep02_properties_groupId')]",
+				"fqdns": "[parameters('azr-prod-dms-db-core01-pep02_properties_fqdns')]"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/default/azr_prod_data_core01_pep01')]",
 			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
 			"apiVersion": "2018-06-01",
@@ -590,60 +644,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_aws_us_prod_address')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/MetadataDrivenCopy_eBao_to_Edw_stage_SourceDS_MySQL')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_eBao_aws_us_prod_vault",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"cw_tableName": {
-						"type": "String"
-					}
-				},
-				"folder": {
-					"name": "MetadataDrivenCopy_eBao_to_Edw_stage"
-				},
-				"annotations": [],
-				"type": "MySqlTable",
-				"schema": [],
-				"typeProperties": {
-					"tableName": {
-						"value": "@dataset().cw_tableName",
-						"type": "Expression"
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_eBao_aws_us_prod_vault')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/SourceDataset_int_claims_payments_audit')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_AWS_VSP_PROD",
-					"type": "LinkedServiceReference"
-				},
-				"folder": {
-					"name": "Dataset_int_claims_payments_audit"
-				},
-				"annotations": [],
-				"type": "MySqlTable",
-				"schema": [],
-				"typeProperties": {
-					"tableName": "`int_claims_payments_audit`"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/LS_AWS_VSP_PROD')]"
 			]
 		}
 	]
