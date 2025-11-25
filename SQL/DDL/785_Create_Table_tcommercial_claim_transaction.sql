@@ -73,12 +73,12 @@ INSERT [edw_core].[tedw_table_detail]([table_nm], [table_type], [table_category_
 [load_method], [load_type], [load_frequency], 
 [create_ts], [update_ts], [schema_nm]) 
 VALUES ( 'tcommercial_claim_transaction', 'Fact', 'Base', 'Claim', 'Stored Procedure', 'Insert', 'Daily',
-GETDATE(), GETDATE(), 'edw_core')
+GETDATE(), GETDATE(), 'edw_commercial')
 
 
 INSERT [edw_core].[tedw_table_detail] ( [table_nm], [table_type], [table_category_nm], [domain_nm], [load_method], 
 [load_type], [load_frequency], [create_ts], [update_ts], [schema_nm]) 
 VALUES ('tcommercial_claim_payment', 'Type-1 Dimension', 'Base', 'Claim', 'Stored Procedure', 'Insert/Update', 'Daily', 
-GETDATE(), GETDATE(), 'edw_core')
+GETDATE(), GETDATE(), 'edw_commercial')
 
  END
