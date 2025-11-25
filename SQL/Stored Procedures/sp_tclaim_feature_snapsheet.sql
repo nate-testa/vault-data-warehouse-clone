@@ -14,6 +14,7 @@
 -- 04/02/2025				Yunus Mohammed				9. AD-9039 Updated aslob_sk and claim_coverage_desc logic for condo policies
 -- 10/13/2025				Yunus Mohammed				10. AD-11322 Added closed_reason_desc column
 -- 11/10/2025				Yunus Mohammed				21 AD-11654 Added coverage_sk for NFP policies
+-- 11/25/2025				Yunus Mohammed				22. AD-11875 Update aslob_sk and claim_coverage_desc code for NFP
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet]
 AS
@@ -49,12 +50,18 @@ BEGIN
 							(
 								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
 								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
-								and mcm.product_cd = case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
+								and mcm.product_cd = case 
+									when prd.product_cd = 'CO' then 'HO' 
+									when prd.product_cd = 'GRPEL' then 'PEL'
+									else prd.product_cd end
 							) then		
 							(
 								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
 								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
-								and mcm.product_cd = case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
+								and mcm.product_cd = case 
+								when prd.product_cd = 'CO' then 'HO' 
+								when prd.product_cd = 'GRPEL' then 'PEL'
+								else prd.product_cd end
 							) 
 				end as claim_coverage_desc,
 			exps.claimant_name as claimant_nm,		
@@ -116,12 +123,19 @@ BEGIN
 							(
 								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
 								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
-								and mcm.product_cd = case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
+								and mcm.product_cd = case 
+								when prd.product_cd = 'CO' then 'HO' 
+								when prd.product_cd = 'GRPEL' then 'PEL'
+								else prd.product_cd
+								end
 							) then		
 							(
 								SELECT distinct snapsheet_coverage_nm FROM edw_stage.migration_coverage_mapping mcm 
 								where mcm.snapsheet_coverage_cd = exps.coverage_premium_class
-								and mcm.product_cd = case when prd.product_cd = 'CO' then 'HO' else prd.product_cd end
+								and mcm.product_cd = case 
+								when prd.product_cd = 'CO' then 'HO'
+								when prd.product_cd = 'GRPEL' then 'PEL'
+								else prd.product_cd end
 							) 
 				end
 		and 
