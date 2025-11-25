@@ -1,0 +1,181 @@
+{
+	"name": "Source_DMS_dmsDocument",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_AZR_DMS_PROD",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Dataset_DMS_Document"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "dms_document_id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "legacy_document_id",
+				"type": "varchar"
+			},
+			{
+				"name": "document_uuid",
+				"type": "varchar"
+			},
+			{
+				"name": "object_document_id",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "primary_object",
+				"type": "varchar"
+			},
+			{
+				"name": "customer_id",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "customer_name",
+				"type": "varchar"
+			},
+			{
+				"name": "partner_id",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "agency_code",
+				"type": "varchar"
+			},
+			{
+				"name": "document_name",
+				"type": "varchar"
+			},
+			{
+				"name": "document_type",
+				"type": "varchar"
+			},
+			{
+				"name": "document_type_id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "file_format",
+				"type": "varchar"
+			},
+			{
+				"name": "policy_id",
+				"type": "varchar"
+			},
+			{
+				"name": "policy_number",
+				"type": "varchar"
+			},
+			{
+				"name": "policy_transaction_id",
+				"type": "varchar"
+			},
+			{
+				"name": "policy_quote_id",
+				"type": "varchar"
+			},
+			{
+				"name": "billing_account_id",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "billing_account_number",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "billing_transaction_id",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "claim_id",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "claim_number",
+				"type": "varchar"
+			},
+			{
+				"name": "document_date",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "source_system_id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "container_name",
+				"type": "varchar"
+			},
+			{
+				"name": "file_name",
+				"type": "varchar"
+			},
+			{
+				"name": "is_active",
+				"type": "bit"
+			},
+			{
+				"name": "created_date",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "created_by",
+				"type": "varchar"
+			},
+			{
+				"name": "modified_date",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "modified_by",
+				"type": "varchar"
+			},
+			{
+				"name": "archive_ind",
+				"type": "varchar"
+			},
+			{
+				"name": "client_path_info",
+				"type": "varchar"
+			},
+			{
+				"name": "client_document_id",
+				"type": "varchar"
+			},
+			{
+				"name": "dms_document_domain_uuid",
+				"type": "varchar"
+			},
+			{
+				"name": "aws_document_id",
+				"type": "int",
+				"precision": 10
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "dms_document"
+		}
+	}
+}

@@ -1,0 +1,75 @@
+{
+	"name": "Target_DMS_dmsDocument",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_PROD",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Dataset_DMS_Document"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "dmsDocumentId",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "claimNumber",
+				"type": "varchar"
+			},
+			{
+				"name": "document_type",
+				"type": "varchar"
+			},
+			{
+				"name": "subtype",
+				"type": "varchar"
+			},
+			{
+				"name": "documentName",
+				"type": "varchar"
+			},
+			{
+				"name": "document_fileName",
+				"type": "nvarchar"
+			},
+			{
+				"name": "attached_to",
+				"type": "varchar"
+			},
+			{
+				"name": "createDate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "documentDate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "createBy",
+				"type": "varchar"
+			},
+			{
+				"name": "paymentStatus",
+				"type": "varchar"
+			},
+			{
+				"name": "create_ts",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			}
+		],
+		"typeProperties": {
+			"schema": "edw_stage",
+			"table": "dms_claim_payment_estimate"
+		}
+	}
+}
