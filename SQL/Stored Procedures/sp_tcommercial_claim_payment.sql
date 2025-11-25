@@ -5,7 +5,7 @@
 -----------------------------------------------------------------------------------------------------------
 -- 11/18/25				Yunus Mohammed  			1. Created this procedure 
 -- ======================================================================================================== 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommerical_claim_payment]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_claim_payment]
 
 AS
 BEGIN
@@ -30,7 +30,7 @@ BEGIN
 
 		DROP TABLE IF exists edw_temp.tcommercial_claim_payment_temp1
 
-		SELECT	c.claim_number as claim_no,
+			SELECT	c.claim_number as claim_no,
 				tc.commercial_claim_sk,
 				tf.commercial_claim_feature_sk,
 				fpi.id AS payment_sequence_no,
@@ -70,8 +70,8 @@ BEGIN
 
 		FROM
 		edw_stage_snapsheet.claims c
-		INNER JOIN 	edw_commercial.tclaim tc ON tc.claim_no=c.claim_number
-		INNER JOIN 	edw_commercial.tclaim_feature tf ON tf.claim_no = tc.claim_no
+		INNER JOIN 	edw_commercial.tcommercial_claim tc ON tc.claim_no=c.claim_number
+		INNER JOIN 	edw_commercial.tcommercial_claim_feature tf ON tf.claim_no = tc.claim_no
 		INNER JOIN  edw_stage_snapsheet.exposures e on c.id = e.claim_id and tf.claim_coverage_cd=e.id
 		INNER JOIN 	edw_stage_snapsheet.financial_payment_items fpi on fpi.claim_id = c.id and e.id = fpi.exposure_id 
 		LEFT JOIN 	edw_stage_snapsheet.financial_payment_details fpd on fpd.claim_id = c.id and fpd.financial_transaction_id = fpi.financial_transaction_id
@@ -85,7 +85,7 @@ BEGIN
 		WHERE
 			greatest(ft.created_at,ft.updated_at) > @last_source_extract_ts and ft.is_historical='false';   
 
-		MERGE edw_core.tcommercial_payment  AS Target
+		MERGE edw_commercial.tcommercial_claim_payment  AS Target
 		USING edw_temp.tcommercial_claim_payment_temp1 AS Source
 		ON  Source.commercial_claim_feature_sk=Target.commercial_claim_feature_sk AND 
 			Source.payment_no=Target.payment_no AND 
