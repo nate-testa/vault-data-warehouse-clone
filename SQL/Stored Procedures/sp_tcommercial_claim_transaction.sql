@@ -157,31 +157,7 @@ BEGIN
 	INTO edw_temp.tcommercial_claim_transaction_temp2
 	FROM edw_temp.tcommercial_claim_transaction_temp1 a
 	LEFT JOIN edw_core.tclaim_transaction_type ctt on a.claim_transaction_type_cd = ctt.claim_transaction_type_cd
-	where created_at > @last_source_extract_ts 
-	--> EXCLUDE --> Closed by Users in Snapsheet , but these transactions already exists in EDW
-	and financial_transaction_id not in (8310275,8310070,8308701,8310172,8308257,8308258,8310191,8310241,8693161,8401360,8319503,8729659,8729648,8306435,8663036,8307254,8307255,8307534,8307456,8307952,8307907,8308308)
-	--> EXCLUDE System generated records--> Closed by system, but these transactions already exists in EDW
-	and a.reserve_item_id not in 
-	(
-	select a.id from edw_stage_snapsheet.financial_reserve_items a, edw_stage_snapsheet.financial_transactions b 
-	where a.amount=0 and a.financial_transaction_id=b.id and creator_user_id is null 
-	and 
-	((a.created_at between '2025-02-07 22:00:00' and '2025-02-10 08:00:00') or
-	(a.created_at between '2025-02-10 22:00:00' and '2025-02-11 01:30:00') or 
-	(a.created_at between '2025-02-12 02:00:00' and '2025-02-12 08:00:00') or 
-	(a.created_at between '2025-02-13 03:00:00' and '2025-02-13 08:00:00') or 
-	(a.created_at between '2025-02-14 02:00:00' and '2025-02-14 08:00:00') or 
-	(a.created_at between '2025-02-15 02:00:00' and '2025-02-15 08:00:00') or 
-	(a.created_at between '2025-02-16 02:00:00' and '2025-02-16 08:00:00') or 
-	(a.created_at between '2025-02-17 01:00:00' and '2025-02-17 08:00:00') or 
-	(a.created_at between '2025-02-17 13:00:00' and '2025-02-17 17:00:00') or 
-	(a.created_at between '2025-02-18 02:00:00' and '2025-02-18 08:00:00') or 
-	(a.created_at between '2025-02-19 02:00:00' and '2025-02-19 08:00:00') or 
-	(a.created_at between '2025-03-02 18:53:00' and '2025-03-02 18:57:00')
-	)
-	) 
-	and a.source_system_sk=5-- to exclude migrated transactions
-	;
+	where created_at > @last_source_extract_ts;
 
 
 	-- *** Create temp table 3 for payment data***
