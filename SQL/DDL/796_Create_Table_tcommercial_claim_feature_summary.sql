@@ -106,3 +106,13 @@ CREATE TABLE [edw_commercial].[tcommercial_claim_feature_summary]
     CONSTRAINT fk_tcommercial_claim_feature_summary_source_system_sk FOREIGN KEY (source_system_sk) REFERENCES  edw_core.tsource_system(source_system_sk)
 )
 END
+
+
+If not exists (
+select * from edw_core.tedw_table_detail 
+where table_nm='tcommercial_claim_feature_summary'
+)
+begin
+INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts,schema_nm) 
+    VALUES ('tcommercial_claim_feature_summary','Fact','Datamart','Claim','Stored Procedure','Insert/Update','Daily',getdate(),getdate(),'edw_commercial')
+end;
