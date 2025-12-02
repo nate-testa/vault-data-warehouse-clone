@@ -113,11 +113,12 @@ and a.PrimaryInsuredId=b.id
        
         with cust as
 		(
-			select distinct customer_id 
-            from edw_core.tquote
-			where renewal_quote_review_start_dt = @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
-			and quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
-			and quote_term = 'Renewal' 
+			select  distinct customer_id 
+            from    edw_core.tquote
+			where   renewal_quote_review_start_dt > @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
+			and     renewal_quote_review_start_dt < cast(getdate() as date) 
+			and     quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
+			and     quote_term = 'Renewal' 
 		),
 		cust_review as
         (
@@ -711,7 +712,8 @@ and a.PrimaryInsuredId=b.id
         SET @rows_affected=@@ROWCOUNT; 
  
         --AG - Using  where renewal_quote_review_start_dt < getdate() becuase of a data issue in prod
-        set @new_last_source_extract_ts = (select cast(getdate() as date));
+        set @new_last_source_extract_ts = (select max(renewal_quote_review_start_dt) from edw_core.tquote 
+                                            where renewal_quote_review_start_dt < cast(getdate() as date));
  
         --Update control table
         SET @new_last_source_extract_ts = COALESCE(@new_last_source_extract_ts,@last_source_extract_ts);
