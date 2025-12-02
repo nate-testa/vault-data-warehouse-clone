@@ -743,10 +743,7 @@ BEGIN
 					) as [current_coverage.existing_auto],
 					(
 					select top 1
-						case when len(auto_message) > 96 and auto_message like '%covered vehicle%' 
-							 then LTRIM(SUBSTRING(auto_message, CHARINDEX(' and ', auto_message) + 5, LEN(auto_message)))
-							 else auto_message
-						end
+						auto_message
 						from edw_integration.customer_midterm_review_ghostdraft_feed cmra 
 						where cmra.customer_id = cmr.customer_id
 						and cmra. product_nm = 'Auto'
