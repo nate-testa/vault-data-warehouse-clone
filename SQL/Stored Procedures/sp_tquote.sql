@@ -22,6 +22,7 @@
 -- 10/30/25		Yunus Mohammed					17. AD-11535 Added stalled_quote_in  and new_business_work_status 
 -- 10/31/25		Sandeep Gundreddy				18. AD-11560 - removed date filter to update all null EffectiveDate/ExpirationDate in Metal; added for account table backfills
 -- 11/11/25		Yunus Mohammed					19 AD-11316 Added broker_of_record_change_in
+-- 12/01/25		Architha Gudimalla				20. Updated RenewalReviewStartDate to RenewalReviewStartedDate
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -236,7 +237,7 @@ BEGIN
 				,tmp1.RenewalCapFactor as renewal_cap_factor
 				,case when tmp1.BoundByBroker = 1 then 'Yes' else 'No' end as bound_by_broker_in
 				,case when tmp1.RenewalViewShow = 1 then 'Yes' when tmp1.RenewalViewShow = 0 then 'No' end as renewal_quote_in
-				,tmp1.RenewalReviewStartDate as renewal_quote_review_start_dt
+				,tmp1.RenewalReviewStartedDate as renewal_quote_review_start_dt
 				,case
 					when tmp1.IsReleasedByMetal = 1 then 'Yes' 
 					when tmp1.IsReleasedByMetal = 0 then 'No'
