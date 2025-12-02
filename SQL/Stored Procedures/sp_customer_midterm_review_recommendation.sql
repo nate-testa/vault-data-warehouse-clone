@@ -227,6 +227,7 @@ and a.PrimaryInsuredId=b.id
         inner join edw_temp.customer_midterm_review_recommendation_temp_0_inforce inf on inf.policy_sk = pol.policy_sk 
 		inner join edw_core.tauto_vehicle_coverage avc on av.auto_vehicle_sk = avc.auto_vehicle_sk and avc.policy_history_sk = inf.policy_history_sk 
 		where avc.vehicle_deleted_in = 'No'
+        and customer_id  in (Select customer_id from edw_integration.customer_midterm_review_eligibility_feed where midterm_review_process_in = 'Yes'  )
                 
         DECLARE @custID VARCHAR(255)
 		DECLARE @veh_modelyr  VARCHAR(255)
@@ -240,16 +241,16 @@ and a.PrimaryInsuredId=b.id
  
 		DECLARE c999_rec CURSOR
 		FOR  
-		SELECT distinct customer_id FROM #edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh --where customer_id = '1234500131'
+		SELECT distinct customer_id FROM edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh --where customer_id = '1234500131'
 		order by 1 
 		open c999_rec; 
 		FETCH NEXT FROM c999_rec INTO @custID; 
-		print @custID
+		--print @custID
 		WHILE @@FETCH_STATUS = 0
 			BEGIN    
 				DECLARE c888_rec CURSOR
 				FOR  
-				SELECT vehicle_model_year,vehicle_make FROM #edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh
+				SELECT vehicle_model_year,vehicle_make FROM edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh
 				where customer_id = @custID
 				order by RN 
 				open c888_rec; 
@@ -270,7 +271,7 @@ and a.PrimaryInsuredId=b.id
 						--print len('and xxx additional covered vehicles')
 						FETCH NEXT FROM c888_rec INTO @veh_modelyr, @veh_make;
 					END; 
-				print @add_veh_ct
+				--print @add_veh_ct
 				if @add_veh_ct = 0
 				begin
 					set @veh_list = substring(@veh_list,1,len(@veh_list) -2);
@@ -285,7 +286,7 @@ and a.PrimaryInsuredId=b.id
 				--print 'final-' + @veh_list 
 				--print len(@veh_list)
 
-				update #edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh set veh_list = @veh_list where customer_id = @custID
+				update edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh set veh_list = @veh_list where customer_id = @custID
 
 				set @veh_list = '' 
 				set @old_veh_list = ''
