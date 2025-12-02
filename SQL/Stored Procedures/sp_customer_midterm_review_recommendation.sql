@@ -258,7 +258,7 @@ and a.PrimaryInsuredId=b.id
 				WHILE @@FETCH_STATUS = 0
 					BEGIN 
 						set @veh_list = concat(@veh_list, concat_ws('-',@veh_modelyr,@veh_make),'||')
-						if len(@veh_list)+36-2 > 96 
+						if len(@veh_list)+len(' and xxx additional covered vehicles.')-2 > 95 
 						begin 
 							set @veh_list = @old_veh_list
 							set @add_veh_ct = @add_veh_ct + 1
@@ -280,7 +280,7 @@ and a.PrimaryInsuredId=b.id
 				else
 				begin
 					set @veh_list = substring(@veh_list,1,len(@veh_list) -2);
-					set @veh_list = concat(@veh_list, ' and ', @add_veh_ct, iif(@add_veh_ct = 1,' additional covered vehicle',' additional covered vehicles'));
+					set @veh_list = concat(@veh_list, ' and ', @add_veh_ct, iif(@add_veh_ct = 1,' additional covered vehicle.',' additional covered vehicles.'));
 					--print 'final-' @veh_list 
 				end
 				--print 'final-' + @veh_list 
@@ -786,7 +786,7 @@ and a.PrimaryInsuredId=b.id
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
        
         -- Update audit table
-        SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@last_source_extract_ts AS VARCHAR(200))
+        SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
         if @in_start_dt is not null
         begin
             set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_start_dt AS VARCHAR(200))

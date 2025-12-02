@@ -898,7 +898,7 @@ BEGIN
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
        
         -- Update audit table
-        SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+        SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts > ' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
         if @in_start_dt is not null
         begin
             set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_start_dt AS VARCHAR(200))
