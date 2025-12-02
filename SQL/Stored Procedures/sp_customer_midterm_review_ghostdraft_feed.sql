@@ -677,7 +677,7 @@ BEGIN
 			(
 			SELECT
 			cmr.customer_nm as insured_full_name,
-			cmr.no_of_years_with_vault_tx as insured_message,
+			cmr.customer_message as insured_message,
 			cmr.producer_nm as producer_name,
 			cmr.producer_phone_no as producer_phone,
 			cmr.producer_email,
@@ -743,7 +743,7 @@ BEGIN
 					) as [current_coverage.existing_auto],
 					(
 					select top 1
-						case when len(auto_message) > 96 and auto_message like '%covered vehicles%' 
+						case when len(auto_message) > 96 and auto_message like '%covered vehicle%' 
 							 then LTRIM(SUBSTRING(auto_message, CHARINDEX(' and ', auto_message) + 5, LEN(auto_message)))
 							 else auto_message
 						end

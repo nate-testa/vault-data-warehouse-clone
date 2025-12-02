@@ -341,7 +341,9 @@ and a.PrimaryInsuredId=b.id
                         MAX(CASE WHEN rn = 1 THEN concat_ws('-',vehicle_model_year,vehicle_make) END), 
                         MAX(CASE WHEN rn = 2 THEN ' | ' END), 
                         MAX(CASE WHEN rn = 2 THEN concat_ws('-',vehicle_model_year,vehicle_make) END),  
-                        MAX(CASE WHEN auto_vehicle_ct > 2 THEN concat(' and ',auto_vehicle_ct - 2,' covered vehicles') END) 
+                        MAX(CASE WHEN auto_vehicle_ct = 3 THEN concat(' and ',auto_vehicle_ct - 2,' additional covered vehicle') 
+                                 WHEN auto_vehicle_ct > 2 THEN concat(' and ',auto_vehicle_ct - 2,' additional covered vehicles') 
+                            END) 
                     ) AS auto_vehicle_list,
                     auto_vehicle_ct
 			from
