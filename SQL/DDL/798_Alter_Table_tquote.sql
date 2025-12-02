@@ -1,0 +1,1 @@
+ALTER TABLE edw_core.tquote ALTER COLUMN renewal_quote_review_start_dt DATETIME
