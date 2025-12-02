@@ -663,7 +663,7 @@ BEGIN
 			--******** if in future we run eligibility for monoline Auto, make sure to update the producer logic when loading ghostdraft table
 			select distinct
 			customer_id,customer_nm,customer_email,
-			customer_phone_no,no_of_years_with_vault,no_of_years_with_vault_tx,
+			customer_phone_no,customer_message,
 			mailing_address_line1,mailing_address_line2,mailing_address_unit_no,mailing_address_city_nm,
 			mailing_address_state_cd,mailing_address_zip_cd,producer_id,producer_nm,producer_phone_no,producer_email
 			from edw_integration.customer_midterm_review_ghostdraft_feed
