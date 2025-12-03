@@ -218,7 +218,7 @@ and a.PrimaryInsuredId=b.id
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh ;
 
         select pol.customer_id, vehicle_model_year,vehicle_make, agreed_value_amt, market_value_amt, 
-				ROW_NUMBER() OVER (PARTITION BY pol.customer_id ORDER BY agreed_value_amt DESC, market_value_amt desc) AS rn,
+				ROW_NUMBER() OVER (PARTITION BY pol.customer_id ORDER BY cast(agreed_value_amt as float) DESC, cast(market_value_amt as float) desc) AS rn,
 				COUNT(*) OVER (PARTITION BY pol.customer_id) AS auto_vehicle_ct ,
 				cast('' as varchar(255)) veh_list
 		into edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh
