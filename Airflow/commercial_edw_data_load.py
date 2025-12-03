@@ -206,6 +206,8 @@ with DAG(
             'sp_tcommercial_policy_update_policy_inforce_in',
             'sp_tcommercial_policy_summary',
             'sp_tcommercial_renewal_summary',
+            'sp_tcommercial_claim_feature_summary',
+            'sp_tcommercial_claim_summary',
             'sp_tcommercial_broker_summary'
         ]
 
