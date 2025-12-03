@@ -15,6 +15,10 @@ from app.utils.logging import logger
 from app.config import get_config
 
 
+# Allowed modules for usage logging
+ALLOWED_MODULES = {'docuclaims', 'insights', 'insights-agent', 'api-test'}
+
+
 def _extract_module_name(path: str) -> str:
     """
     Extract module name from URL path.
@@ -29,6 +33,20 @@ def _extract_module_name(path: str) -> str:
     if len(parts) > 0 and parts[0]:
         return parts[0]
     return 'unknown'
+
+
+def _is_allowed_module(path: str) -> bool:
+    """
+    Check if the request path corresponds to an allowed module.
+    
+    Args:
+        path: URL path (e.g., /docuclaims/rag_complete)
+        
+    Returns:
+        True if module is in ALLOWED_MODULES, False otherwise
+    """
+    module = _extract_module_name(path)
+    return module in ALLOWED_MODULES
 
 
 def _derive_action_type(path: str, method: str) -> str:
@@ -135,53 +153,61 @@ async def request_timing_middleware(request: Request, call_next):
     # Extract username from header (passed by UI layer)
     username = request.headers.get('X-Username', 'anonymous')
     
+    # Check if module is allowed for logging
+    is_allowed = _is_allowed_module(path)
+    
     try:
         response = await call_next(request)
         duration = time.time() - start_time
         status_code = response.status_code
         
-        if status_code >= 400:
-            logger.warning(f"[REQUEST_ERROR] [{request_id}] Request completed with error - {method} {path} - {status_code} in {duration:.2f}s")
-        else:
-            logger.info(f"[REQUEST_SUCCESS] [{request_id}] Request completed successfully - {method} {path} - {status_code} in {duration:.2f}s")
-        
-        # Capture usage event data
-        usage_data = {
-            'event_id': request_id,
-            'timestamp': datetime.now().isoformat(),
-            'username': username,
-            'module': _extract_module_name(path),
-            'endpoint': path,
-            'method': method,
-            'action': _derive_action_type(path, method),
-            'exec_time': round(duration * 1000, 2),  # Convert to milliseconds
-            'status': status_code,
-            'success': status_code < 400
-        }
-        
-        # Write to separate JSONL file
-        _write_usage_event(usage_data)
+        # Only log if it's an allowed module
+        if is_allowed:
+            if status_code >= 400:
+                logger.warning(f"[REQUEST_ERROR] [{request_id}] Request completed with error - {method} {path} - {status_code} in {duration:.2f}s")
+            else:
+                logger.info(f"[REQUEST_SUCCESS] [{request_id}] Request completed successfully - {method} {path} - {status_code} in {duration:.2f}s")
+            
+            # Capture usage event data only for allowed modules
+            usage_data = {
+                'event_id': request_id,
+                'timestamp': datetime.now().isoformat(),
+                'username': username,
+                'module': _extract_module_name(path),
+                'endpoint': path,
+                'method': method,
+                'action': _derive_action_type(path, method),
+                'exec_time': round(duration * 1000, 2),  # Convert to milliseconds
+                'status': status_code,
+                'success': status_code < 400
+            }
+            
+            # Write to separate JSONL file
+            _write_usage_event(usage_data)
         
         return response
         
     except Exception as e:
         duration = time.time() - start_time
-        logger.error(f"[REQUEST_EXCEPTION] [{request_id}] Request failed with exception - {method} {path} after {duration:.2f}s: {str(e)}", exc_info=True)
         
-        # Capture usage event even for exceptions
-        usage_data = {
-            'event_id': request_id,
-            'timestamp': datetime.now().isoformat(),
-            'username': username,
-            'module': _extract_module_name(path),
-            'endpoint': path,
-            'method': method,
-            'action': _derive_action_type(path, method),
-            'exec_time': round(duration * 1000, 2),
-            'status': 500,
-            'success': False
-        }
-        _write_usage_event(usage_data)
+        # Only log exceptions for allowed modules
+        if is_allowed:
+            logger.error(f"[REQUEST_EXCEPTION] [{request_id}] Request failed with exception - {method} {path} after {duration:.2f}s: {str(e)}", exc_info=True)
+            
+            # Capture usage event even for exceptions (only for allowed modules)
+            usage_data = {
+                'event_id': request_id,
+                'timestamp': datetime.now().isoformat(),
+                'username': username,
+                'module': _extract_module_name(path),
+                'endpoint': path,
+                'method': method,
+                'action': _derive_action_type(path, method),
+                'exec_time': round(duration * 1000, 2),
+                'status': 500,
+                'success': False
+            }
+            _write_usage_event(usage_data)
         
         # Re-raise the exception so FastAPI can handle it appropriately
         raise
