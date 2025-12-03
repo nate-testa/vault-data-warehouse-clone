@@ -94,13 +94,14 @@ BEGIN
 	( 
 		select 	'Commercial_Policy' datamart_nm, isnull(a.iss_dt, b.iss_dt) iss_dt, 
 				isnull(a.cnt,0) metal_ct, isnull(a.prm,0) metal_prm, 
-				isnull(b.cnt,0) edw_ct, isnull(b.prm,0) edw_prm
+				isnull(b.cnt,0) edw_ct, isnull(b.prm,0) edw_prm,
+                'Metal' as source_system_nm
 		from src_metal a 
 		full join src_edw b on a.iss_dt = b.iss_dt and a.ssk = b.ssk 
 	) AS Source
 	ON Target.transaction_start_dt = Source.iss_dt and Target.transaction_end_dt = Source.iss_dt 
 	and Target.datamart_nm = Source.datamart_nm 
-	
+	and Target.source_system_nm = Source.source_system_nm 
 	-- For Inserts
 	WHEN NOT MATCHED BY Target THEN
 	INSERT (
@@ -111,7 +112,8 @@ BEGIN
 		target_record_ct,
 		target_amt,
 		datamart_nm,
-		status_desc,		
+		status_desc,
+        source_system_nm,
 		create_ts,
 		update_ts
 		)
@@ -122,7 +124,8 @@ BEGIN
 			Source.edw_ct,
 			Source.edw_prm,
 			source.datamart_nm,
-			CASE WHEN source.metal_prm=source.edw_prm THEN 'Success' ELSE 'Failure' END,			
+			CASE WHEN source.metal_prm=source.edw_prm THEN 'Success' ELSE 'Failure' END,	
+            Source.source_system_nm,		
 			getdate(),
 			getdate())
 	-- For Updates
