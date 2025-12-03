@@ -14,6 +14,7 @@ from modules.insights.session_manager import InsightsSessionManager
 from modules.insights.schemas import ResultData, CachedResult, generate_cache_key
 from modules.insights.charts import generate_chart_from_query_result, get_chart_recommendations
 from config import get_config
+from auth.middleware import RequestContextManager
 
 # Insights session manager instance for services
 insights_session = InsightsSessionManager(max_cookie_size=3500, max_chat_messages=10)
@@ -27,6 +28,12 @@ if not API_BASE:
 DEFAULT_TIMEOUT = (10, 30)  # 10s connection, 30s read
 QUERY_TIMEOUT = (15, 240)   # 15s connection, 240s (4 min) read for complex BI queries with AI
 SQL_TIMEOUT = (10, 120)     # 10s connection, 120s read for SQL execution
+
+def _get_api_headers():
+    """Get common headers for API requests including username."""
+    current_user = RequestContextManager.get_current_user()
+    username = current_user.username if current_user else 'anonymous'
+    return {'X-Username': username}
 
 
 def get_available_domains() -> Dict[str, Any]:
@@ -48,6 +55,7 @@ def get_available_domains() -> Dict[str, Any]:
         
         response = requests.get(
             f"{API_BASE}/insights/domains",
+            headers=_get_api_headers(),
             timeout=DEFAULT_TIMEOUT
         )
         response.raise_for_status()
@@ -159,6 +167,7 @@ def get_domain_models(domain: str) -> List[Dict[str, Any]]:
         
         response = requests.get(
             f"{API_BASE}/insights/domains/{domain}/models",
+            headers=_get_api_headers(),
             timeout=DEFAULT_TIMEOUT
         )
         response.raise_for_status()
@@ -281,6 +290,7 @@ def send_analyst_query(
         response = requests.post(
             f"{API_BASE}/insights/query",
             json=payload,
+            headers=_get_api_headers(),
             timeout=QUERY_TIMEOUT
         )
         response.raise_for_status()
@@ -391,6 +401,7 @@ def send_analyst_query_v2(
         response = requests.post(
             f"{API_BASE}/insights/query_v2",
             json=payload,
+            headers=_get_api_headers(),
             timeout=QUERY_TIMEOUT
         )
         response.raise_for_status()
@@ -495,6 +506,7 @@ def execute_sql_query(sql: str, conversation_id: Optional[str] = None) -> Dict[s
         response = requests.post(
             f"{API_BASE}/insights/execute-sql",
             json=payload,
+            headers=_get_api_headers(),
             timeout=SQL_TIMEOUT
         )
         response.raise_for_status()
@@ -604,6 +616,7 @@ def submit_feedback(request_id: str, positive: bool, message: Optional[str] = No
         response = requests.post(
             f"{API_BASE}/insights/feedback",
             json=payload,
+            headers=_get_api_headers(),
             timeout=DEFAULT_TIMEOUT
         )
         response.raise_for_status()
@@ -671,6 +684,7 @@ def get_api_health() -> Dict[str, Any]:
         
         response = requests.get(
             f"{API_BASE}/insights/health",
+            headers=_get_api_headers(),
             timeout=(5, 10)  # Short timeout for health check
         )
         response.raise_for_status()
@@ -880,6 +894,7 @@ def get_example_questions(domain: str, count: int = 3) -> List[str]:
         response = requests.get(
             f"{API_BASE}/insights/domains/{domain}/example-questions",
             params={'count': count},
+            headers=_get_api_headers(),
             timeout=DEFAULT_TIMEOUT
         )
         response.raise_for_status()
