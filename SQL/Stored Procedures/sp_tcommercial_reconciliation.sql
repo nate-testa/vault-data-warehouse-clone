@@ -80,14 +80,14 @@ BEGIN
 	src_edw as
 	(
 		select td.actual_dt iss_dt, count(distinct pol.commercial_policy_sk+transaction_seq_no) cnt, 
-				round(sum(premium_amt),2) prm
+				round(sum(premium_amt),2) prm , tr.source_system_sk ssk
 		from 
 		edw_commercial.tcommercial_policy pol
 		inner join edw_commercial.tcommercial_policy_transaction tr on pol.commercial_policy_sk = tr.commercial_policy_sk
 		inner join edw_core.tdate td on td.date_sk = tr.transaction_dt_sk
 		where
 			td.actual_dt >= @last_source_extract_ts
-		group by td.actual_dt
+		group by td.actual_dt, tr.source_system_sk
 	) 
 	MERGE edw_commercial.tcommercial_reconciliation AS Target
 	USING 
@@ -109,7 +109,7 @@ BEGIN
 		transaction_end_dt,
 		source_record_ct,
 		source_amt,
-		target_record_ct,
+		target_record_ct, 
 		target_amt,
 		datamart_nm,
 		status_desc,
