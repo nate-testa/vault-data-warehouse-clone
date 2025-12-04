@@ -8,22 +8,18 @@
 -- 05/15/25		Architha Gudimalla				2. Updated after initial run errors
 -- 05/15/25		Architha Gudimalla				3. Added filter on tower type
 -- 05/15/25		Architha Gudimalla				4. Updated tower join
--- 09/11/25		Sandeep Gundreddy			5. Updated tower join to left join
--- 09/22/25		Yunus Mohammed				6. Updated tcommercial_policy_tower join. 
+-- 09/11/25		Sandeep Gundreddy			 5. Updated tower join to left join
+-- 09/22/25		Yunus Mohammed				 6. Updated tcommercial_policy_tower join. 
+-- 12/04/25		Yunus Mohammed				 7. Added claims code
+--																					Added filter on trenewal_summary - non_flat_cancelled_ct=1
+--																					Added date logic to run the process for 3 months					
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tcommercial_broker_summary] 
 @in_end_dt date = null
 AS 
 BEGIN
-
-    -- SET NOCOUNT ON added to prevent extra result sets from
-    -- interfering with SELECT statements. 
-	SET ANSI_WARNINGS OFF
-    SET NOCOUNT ON
-
 	BEGIN TRY
-
 		DECLARE @last_source_extract_ts DATETIME2(7)
 		DECLARE @etl_audit_sk INT
 		DECLARE @new_last_source_extract_ts DATETIME2(7)
@@ -69,19 +65,36 @@ BEGIN
 	
 		DECLARE @parameter_desc VARCHAR(255)  
 		
+		DECLARE @last_source_yearmonth int
+		set @last_source_yearmonth = concat(datepart(yyyy,cast(@last_source_extract_ts as date)),iif(datepart(mm,cast(@last_source_extract_ts as date)) < 10,'0','') ,datepart(mm,cast(@last_source_extract_ts as date)) ); 
+		DECLARE @in_yearmonth INT
+		SET @in_yearmonth = LEFT(CONVERT(CHAR(8), @in_end_dt, 112), 6);
+		
 		DECLARE c2_rec CURSOR
 		FOR  
-		select	yearmonth, max(calendar_year) year 
+		select	yearmonth,max(calendar_year) as year 
 		from	edw_core.tdate
-		where	actual_dt = @in_end_dt 
+		where	yearmonth between  (case when @in_yearmonth is not null 
+										  then FORMAT(DATEADD(MONTH, -2, DATEFROMPARTS(LEFT(@in_yearmonth, 4), RIGHT(@in_yearmonth, 2), 1)), 'yyyyMM')
+									 end)
+						  and @in_yearmonth
 		group by yearmonth
 		union 
-		select	yearmonth, max(calendar_year) year 
+		select	yearmonth,max(calendar_year) as year 
 		from	edw_core.tdate
-		where	actual_dt >=  case when @in_end_dt is not null then @in_end_dt else @last_source_extract_ts end
-		  and   actual_dt < case when @in_end_dt is not null then @in_end_dt else cast(getdate() as date) end
+		where	yearmonth between  (case when @in_yearmonth is  null 
+										  then FORMAT(DATEADD(MONTH, -2, DATEFROMPARTS(LEFT(@last_source_yearmonth, 4), RIGHT(@last_source_yearmonth, 2), 1)), 'yyyyMM')
+									 end) 
+						  and @last_source_yearmonth
 		group by yearmonth
-		order by 1;  
+		union 
+		select	yearmonth,max(calendar_year) as  year 
+		from	edw_core.tdate
+		where	yearmonth >  case when @in_yearmonth is null then @last_source_yearmonth end
+		  and   yearmonth <= case when @in_yearmonth is null then FORMAT(GETDATE(), 'yyyyMM') end
+		group by yearmonth
+		order by 1; 
+ 
 		
 		open c2_rec; 
 		FETCH NEXT FROM c2_rec INTO @yearmonth, @year; 
@@ -332,32 +345,33 @@ BEGIN
 				with ren AS
 				(
 					select 	r.month_sk,
-							r.broker_sk, 							
-						   	sum(r.renewal_non_flat_cancelled_ct) renewal_accepted_ct,  
-							sum(r.renewal_ct) renewal_ct,  
-							sum(case when renewal_commercial_policy_sk > 0 
-									or (renewal_commercial_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_quoted_commercial_quote_history_sk IS NOT NULL ) 
-									or (renewal_commercial_quote_sk > 0 and q.quote_status in ('Issued','Offered','Not taken by Insured') ) 
-									then 1 
-									else 0 
-								end) policy_renewal_offered_ct, 
-							sum(case when (renewal_commercial_policy_sk > 0 and renewal_written_premium_amt > 50000)
-									   or (renewal_commercial_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_quoted_commercial_quote_history_sk IS NOT NULL AND qh.net_premium_amt > 50000) 
-									   or (renewal_commercial_quote_sk > 0 and q.quote_status in ('Issued','Offered','Not taken by Insured')  AND qh.net_premium_amt > 50000)
-									 then 1 
-									 else 0 
-								end) policy_renewal_offered_over_50k_ct, 
-							sum(case when renewal_ct > 0 then renewal_written_premium_amt else 0 end) policy_renewal_offered_premium_amt, 
-							sum(case when renewal_ct > 0 then r.expiring_written_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,
-							sum(r.non_flat_cancelled_ct-r.mid_term_cancelled_ct) expiring_ct,
-							sum(isnull(r.expiring_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) ) expiring_prm,
-							sum(case when r.renewal_non_flat_cancelled_ct = 1 then isnull(r.renewal_written_premium_amt,0) else 0 end) renewal_prm
+					r.broker_sk, 							
+					sum(r.renewal_non_flat_cancelled_ct) renewal_accepted_ct,  
+					sum(r.renewal_ct) renewal_ct,  
+					sum(case when renewal_commercial_policy_sk > 0 
+						or (renewal_commercial_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_quoted_commercial_quote_history_sk IS NOT NULL ) 
+						or (renewal_commercial_quote_sk > 0 and q.quote_status in ('Issued','Offered','Not taken by Insured') ) 
+					then 1 
+					else 0 
+					end) policy_renewal_offered_ct, 
+					sum(case when (renewal_commercial_policy_sk > 0 and renewal_written_premium_amt > 50000)
+						or (renewal_commercial_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_quoted_commercial_quote_history_sk IS NOT NULL AND qh.net_premium_amt > 50000) 
+						or (renewal_commercial_quote_sk > 0 and q.quote_status in ('Issued','Offered','Not taken by Insured')  AND qh.net_premium_amt > 50000)
+					then 1 
+					else 0 
+					end) policy_renewal_offered_over_50k_ct, 
+					sum(case when renewal_ct > 0 then renewal_written_premium_amt else 0 end) policy_renewal_offered_premium_amt, 
+					sum(case when renewal_ct > 0 then r.expiring_written_premium_amt else 0 end) policy_renewal_offered_expiring_premium_amt,
+					sum(r.non_flat_cancelled_ct-r.mid_term_cancelled_ct) expiring_ct,
+					sum(isnull(r.expiring_written_premium_amt,0) + isnull(r.expiring_mid_term_cancelled_premium_amt,0) ) expiring_prm,
+					sum(case when r.renewal_non_flat_cancelled_ct = 1 then isnull(r.renewal_written_premium_amt,0) else 0 end) renewal_prm
 
 					from edw_commercial.tcommercial_renewal_summary r 
 					inner join edw_commercial.tcommercial_policy pol on r.commercial_policy_sk = pol.commercial_policy_sk  
 					left join edw_commercial.tcommercial_quote q  on q.commercial_quote_sk = r.renewal_commercial_quote_sk
 					left join edw_commercial.tcommercial_quote_history qh  on q.commercial_quote_sk = qh.commercial_quote_sk and qh.latest_transaction_in = 'Y'
 					where month_sk between @year_begin_dt_sk and @month_end_dt_sk  
+					and r.non_flat_cancelled_ct = 1
 					group by r.month_sk, r.broker_sk
 				)
 				select broker_sk, 
@@ -381,6 +395,7 @@ BEGIN
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_ct 								   else 0 end) ytd_policy_expiring_ct,
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_prm 								   else 0 end) ytd_policy_renewal_prm,   
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then expiring_prm 							   else 0 end) ytd_policy_expiring_prm 
+						
 				into edw_temp.tcommercial_broker_summ_retention
 				from ren
 				group by broker_sk
@@ -561,31 +576,7 @@ BEGIN
 				group by ph.broker_sk  
 				
 				--claims date
-				DROP TABLE IF EXISTS edw_temp.tcommercial_broker_summ_claims;
-				select  cs.broker_sk,  
-							
-							--
-							0 one_year_claim_ct, 
-							0 one_year_loss_incurred_amt, 
-							0 one_year_loss_incurred_capped_amt,  
-							--
-							0 three_year_claim_ct, 
-							0 three_year_loss_incurred_amt, 
-							0 three_year_loss_incurred_capped_amt,  
-							--
-							0 two_year_claim_ct, 
-							0 two_year_loss_incurred_amt, 
-							0 two_year_loss_incurred_capped_amt,  
-							--
-							0 five_year_claim_ct, 
-							0 five_year_loss_incurred_amt, 
-							0 five_year_loss_incurred_capped_amt
-					into edw_temp.tcommercial_broker_summ_claims
-					from edw_core.tbroker cs  
-					where 1 = 0
-					group by cs.broker_sk 
-
-					/*
+				DROP TABLE IF EXISTS edw_temp.tcommercial_broker_summ_claims;			
 					
 				select  cs.broker_sk,  
 							
@@ -617,15 +608,12 @@ BEGIN
 									 else 0 end
 							) five_year_loss_incurred_capped_amt 
 					into edw_temp.tcommercial_broker_summ_claims
-					from edw_core.tclaim_summary cs, edw_core.tclaim c,  edw_commercial.tcommercial_policy pol 
-					where	cs.claim_sk  = c.claim_sk
+					from edw_commercial.tcommercial_claim_summary cs, edw_commercial.tcommercial_claim c,  edw_commercial.tcommercial_policy pol 
+					where	cs.commercial_claim_sk  = c.commercial_claim_sk
 					and 	cs.commercial_policy_sk = pol.commercial_policy_sk  
 					and 	month_sk in (@month_end_dt_sk)
 					and cs.broker_sk is not null
 					group by cs.broker_sk 
-					*/
-
-					
 				
 				DROP TABLE IF EXISTS edw_temp.tcommercial_broker_summary_temp;
 				with pol_summ as
@@ -1155,9 +1143,8 @@ BEGIN
 				FETCH NEXT FROM c2_rec INTO @yearmonth, @year;
 			END; 
 		CLOSE c2_rec;
-		DEALLOCATE c2_rec;   
-
-	END TRY
+		DEALLOCATE c2_rec;      
+END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
 		SET @error_message = 'Error Number:' + ISNULL(CAST(ERROR_NUMBER() AS NVARCHAR(100)),'') + 
