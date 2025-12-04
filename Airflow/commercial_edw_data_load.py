@@ -145,8 +145,6 @@ with DAG(
         commercial_claim_group_items = [
             'sp_tcommercial_claim',
             'sp_tcommercial_claim_feature',
-            'sp_tcommercial_reconciliation_claim_snapsheet',
-            'sp_tcommercial_reconciliation_snapsheet',
             'sp_tcommercial_claim_payment',
             'sp_tcommercial_claim_transaction',
             'sp_tcommercial_claim_transaction_update',
@@ -154,7 +152,9 @@ with DAG(
             'sp_tcommercial_claim_note',
             'sp_tcommercial_claim_tag',
             'sp_update_tcommercial_claim',
-            'sp_update_tcommercial_claim_feature'
+            'sp_update_tcommercial_claim_feature',
+            'sp_tcommercial_reconciliation_claim_snapsheet',
+            'sp_tcommercial_reconciliation_snapsheet'
             ]
 
         operators = []
