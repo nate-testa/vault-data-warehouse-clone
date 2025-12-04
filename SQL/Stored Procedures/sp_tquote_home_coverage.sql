@@ -257,9 +257,9 @@ BEGIN
 
 				END AS wind_derived_deductible,
 				tthc.NumberOfMortgagees AS no_of_mortgagees,
-				tthc.PriorClaims as prior_claims_in,
-				tthc.priorClaimsFive as prior_claim_last5yr_in,
-				tthc.priorClaimsOver2500 as prior_claims_over_2500_in,
+				NULLIF(tthc.PriorClaims,'') as prior_claims_in,
+				NULLIF(tthc.priorClaimsFive,'') as prior_claim_last5yr_in,
+				NULLIF(tthc.priorClaimsOver2500,'') as prior_claims_over_2500_in,
 				tthc.PriorNonWaterClaims AS prior_nonwater_claim_ct,
 				tthc.PriorWaterClaims AS prior_water_claim_ct,
 				tthc.DistanceToCoast AS distance_to_coast,
