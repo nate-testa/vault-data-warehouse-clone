@@ -11,6 +11,7 @@
 -- 10/28/25		Architha Gudimalla			5. Added producer to policy detail table
 -- 11/05/25		Architha Gudimalla			6. Removed tbroker_vault_team join
 -- 11/19/25		Architha Gudimalla			7. Updated auto vehicle list
+-- 12/04/25		Architha Gudimalla			8. Updated yacht boat list
 -- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
@@ -359,7 +360,7 @@ and a.PrimaryInsuredId=b.id
 				apc.emergency_movement_coverage_in,
 				avl.auto_vehicle_list, 
 				avl.auto_vehicle_ct,
-				ybl.boat_yatch_product_type,
+				--ybl.boat_yatch_product_type,
 				ybl.yacht_boat_list, 
 				ybl.yacht_boat_ct,
 				/*case when pinf.customer_id is not null and pinf.inforce_ct = cinf.inforce_ct
@@ -427,13 +428,16 @@ and a.PrimaryInsuredId=b.id
 		) as avl on pol.customer_id = avl.customer_id
 		left join
 		(
-			select mbt.policy_no,mbt.effective_dt,mbtc.policy_history_sk, mbt.boat_yatch_product_type, string_agg(concat_ws('-',boat_yacht_year,boat_yacht_make),'||') as yacht_boat_list,
-			count(mbt.marine_boat_yacht_sk) as yacht_boat_ct
-			from edw_core.tmarine_boat_yacht mbt
+			select pol.customer_id, 
+                    string_agg(concat(mbt.boat_yatch_product_type,' coverage for your ',boat_yacht_year,'-',boat_yacht_make),'||') as yacht_boat_list,
+			        count(mbt.marine_boat_yacht_sk) as yacht_boat_ct
+			from    edw_core.tmarine_boat_yacht mbt
 			inner join edw_core.tmarine_boat_yacht_coverage mbtc on mbt.marine_boat_yacht_sk = mbtc.marine_boat_yacht_sk
-			
-			group by mbt.policy_no,mbt.effective_dt,mbtc.policy_history_sk, mbt.boat_yatch_product_type
-		) as ybl on ybl.policy_no = pol.policy_no and ybl.effective_dt = pol.effective_dt and ybl.policy_history_sk = ph.policy_history_sk
+			inner join edw_core.tpolicy pol on pol.policy_no = mbt.policy_no
+			inner join edw_temp.customer_midterm_review_recommendation_temp_0_inforce inf on inf.policy_sk = pol.policy_sk and inf.policy_history_sk=mbtc.policy_history_sk
+			group by pol.customer_id
+
+		) as ybl on ybl.customer_id = pol.customer_id
 
 		where   pol.non_renewal_in = 'No' --and pol.policy_no = 'AU100177549-03'-- and pol.customer_id = '1234507332'
         and pol.customer_id  in (Select customer_id --from edw_core.tcustomer where customer_id in ('1234500995','1234686788','1234500340','1234521910','1234522128','1234509154')
@@ -502,7 +506,7 @@ and a.PrimaryInsuredId=b.id
 			emergency_movement_coverage_in,
 			auto_vehicle_list, 
 			auto_vehicle_ct,
-			yatch_product_type,
+			--yatch_product_type,
 			yacht_boat_list, 
 			yacht_boat_ct,
 			--monoline_home_in,
@@ -571,7 +575,7 @@ and a.PrimaryInsuredId=b.id
 				emergency_movement_coverage_in,
 				auto_vehicle_list, 
 				auto_vehicle_ct,
-				boat_yatch_product_type,
+				--boat_yatch_product_type,
 				yacht_boat_list, 
 				yacht_boat_ct,
 				--monoline_home_in,
