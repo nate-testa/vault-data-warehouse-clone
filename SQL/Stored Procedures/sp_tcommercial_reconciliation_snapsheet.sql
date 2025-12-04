@@ -89,7 +89,7 @@ BEGIN
 		group by a.transaction_ts
         ) as [source]
         LEFT JOIN
-        (
+        ( 
         SELECT
         CAST(transaction_ts AS DATE) AS transaction_ts,
         SUM(

@@ -6,7 +6,7 @@
 -- 12/03/25				Yunus Mohammed				1. Created this procedure
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_reconciliation_claim_snapsheet]
-AS
+AS 
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
     SET @ProcedureName = OBJECT_NAME(@@PROCID)
