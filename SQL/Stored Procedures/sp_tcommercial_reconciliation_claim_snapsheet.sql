@@ -24,7 +24,7 @@ BEGIN
         EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;		
 		drop table if exists edw_temp.sp_tcommercial_reconciliation_claim_snapsheet_temp1
         drop table if exists edw_temp.sp_tcommercial_reconciliation_claim_snapsheet_temp2
-        drop table if exists edw_temp.commercial_snapsheet_edw_claim_loss_reconciliation
+        drop table if exists edw_temp.commercial_snapsheet_edw_claim_loss_reconciliation        
 
         declare @max_transaction_ts datetime2(6)
 
@@ -131,7 +131,7 @@ BEGIN
         ----########FINAL query to IDENTIFY loss incurred mismatches between SNAPSHEET AND EDW
         SELECT b.claim_no,c.commercial_claim_sk, cf.commercial_claim_feature_sk,
         a.exposure_id,a.total_loss_incurred as snapsheet_loss_incurred,b.total_loss_incurred,a.total_loss_incurred-b.total_loss_incurred as [difference]
-        INTO edw_temp.tcommercial_snapsheet_edw_claim_loss_reconciliation 
+        INTO edw_temp.commercial_snapsheet_edw_claim_loss_reconciliation 
         from
         (
         select claim_number, exposure_id,sum(total_loss_incurred) as total_loss_incurred from edw_temp.sp_tcommercial_reconciliation_claim_snapsheet_temp1 

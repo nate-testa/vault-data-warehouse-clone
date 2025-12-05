@@ -91,8 +91,8 @@ BEGIN
 	) 
 	MERGE edw_commercial.tcommercial_reconciliation AS Target
 	USING 
-	( 
-		select 	'Commercial_Policy' datamart_nm, isnull(a.iss_dt, b.iss_dt) iss_dt, 
+	(  
+		select 	'Policy' datamart_nm, isnull(a.iss_dt, b.iss_dt) iss_dt, 
 				isnull(a.cnt,0) metal_ct, isnull(a.prm,0) metal_prm, 
 				isnull(b.cnt,0) edw_ct, isnull(b.prm,0) edw_prm,
                 'Metal' as source_system_nm
