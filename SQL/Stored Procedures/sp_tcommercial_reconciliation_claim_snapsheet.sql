@@ -121,7 +121,7 @@ BEGIN
                         ct.salvage_defense_recovery_amt+ct.deductible_defense_recovery_amt+
                         ct.reinsurance_defense_recovery_amt+ct.overpayment_defense_recovery_amt
         ) as total_loss_incurred
-                    INTO edw_temp.tcommercial_sp_reconciliation_claim_snapsheet_temp2
+        INTO edw_temp.sp_tcommercial_reconciliation_claim_snapsheet_temp2
         from edw_commercial.tcommercial_claim_transaction ct, edw_commercial.tcommercial_claim b ,
         edw_commercial.tcommercial_claim_feature c
         where
