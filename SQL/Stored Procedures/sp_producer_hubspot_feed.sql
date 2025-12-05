@@ -64,7 +64,7 @@ BEGIN
 			ON p.broker_sk = br.broker_sk
 		and greatest(p.create_ts, p.update_ts) > @last_source_extract_ts
 		and not exists (select 1 from edw_integration.producer_hubspot_feed f where p.producer_id = f.producer_id)
-		and p.email not in (select  email from edw_temp.producer_hubspot_feed_producer_dupes)
+		and not exists (select 1 from edw_temp.producer_hubspot_feed_producer_dupes d where  ISNULL(d.email, '') = ISNULL(p.email, ''))
 		UNION ALL 
 		SELECT
 			p.broker_id,
@@ -94,7 +94,7 @@ BEGIN
 			OR ISNULL(p.title,'')            <> ISNULL(f.title,'')
 			OR ISNULL(p.producer_role,'')    <> ISNULL(f.producer_role,'')
 			OR ISNULL(p.producer_status,'')  <> ISNULL(f.producer_status,'')))
-		and p.email not in (select  email from edw_temp.producer_hubspot_feed_producer_dupes)
+		and not exists (select 1 from edw_temp.producer_hubspot_feed_producer_dupes d where  ISNULL(d.email, '') = ISNULL(p.email, ''))
 		UNION ALL 
 		select  p.broker_id,
 			p.producer_id,
@@ -112,7 +112,7 @@ BEGIN
 		from edw_core.tproducer p 
 		INNER JOIN edw_core.tbroker br ON p.broker_sk = br.broker_sk
 		left join edw_integration.producer_hubspot_feed f on p.producer_id = f.producer_id
-		where p.email in (select  email from edw_temp.producer_hubspot_feed_producer_dupes)
+		where exists (select 1 from edw_temp.producer_hubspot_feed_producer_dupes d where  ISNULL(d.email, '') = ISNULL(p.email, ''))
 		and (ISNULL(p.broker_id,'')        <> ISNULL(f.broker_id,'')
 		OR ISNULL(case when p.producer_status = 'Disabled'  then null else p.email end,'')            <> ISNULL(f.email,'')
 		OR ISNULL(p.first_nm,'')         <> ISNULL(f.first_nm,'')
