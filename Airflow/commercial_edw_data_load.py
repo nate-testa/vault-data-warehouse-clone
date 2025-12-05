@@ -48,6 +48,27 @@ def check_snapsheet_edw_commercial_claim_loss_reconciliation_and_send_email(**kw
             dag=kwargs['dag'],
         ).execute(context=kwargs)
 
+def check_tcommercial_validation_and_send_email(**kwargs):
+    sql_qry = """
+                SELECT tr.commercial_validation_result_sk ,ts.commercial_validation_sql_sk ,process_run_start_ts,process_run_end_ts ,ts.commercial_validation_sql_desc , tr.source_value, tr.target_value
+                FROM edw_commercial.tcommercial_validation_result AS tr
+                INNER JOIN edw_commercial.tcommercial_validation_sql AS ts
+                ON tr.commercial_validation_sql_sk = ts.commercial_validation_sql_sk
+                WHERE cast(process_run_start_ts as date) = cast(getdate() as date)
+                AND status_desc ='failure'
+                ORDER BY ts.commercial_validation_sql_desc
+              """
+    mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
+    result = mssql_hook.get_first(sql_qry)
+    if result is not None:
+        EmailOperator(
+            task_id='send_email_tcommercial_validation',
+            to=to_email,
+            subject='Airflow - Report - Commercial Validation Errors',
+            html_content=get_vault_data_HTML(sql_qry,'There are commercial validation errors. Please review the details below.'),
+            dag=kwargs['dag'],
+        ).execute(context=kwargs)
+
 def on_failure_callback(context):
 
     task_instance = context['task_instance']
@@ -285,9 +306,47 @@ with DAG(
 
         operators[-1] >> send_commercial_datamart_group_email
 
+
+    with TaskGroup("commercial_validation_result_group") as commercial_validation_result_group:
+
+        commercial_validation_result_group_items = [
+            'sp_tcommercial_validation_result'
+        ]
+
+        operators = []
+        for item in commercial_validation_result_group_items:
+            operator = MsSqlOperator(
+                task_id=item,
+                mssql_conn_id='Vault_EDW',
+                sql=f"EXEC edw_core.{item}",
+                database="vault_edw",
+                autocommit=True,
+            )
+            operators.append(operator)
+
+        tcommercial_validation_email = PythonOperator(
+            task_id='tcommercial_validation_email',
+            python_callable=check_tcommercial_validation_and_send_email,
+            provide_context=True,
+            dag=dag,
+        )
+
+        send_commercial_validation_email = EmailOperator(
+            task_id='send_commercial_validation_email',
+            to=to_email,
+            subject='Airflow - Commercial validation result tables loaded successfully',
+            html_content=get_sp_success_data_HTML(commercial_validation_result_group_items, 'All stored procedures executed successfully for all the commercial validation result tables'),
+        )
+
+        for i in range(len(operators) - 1):
+            operators[i] >> operators[i + 1]
+
+        operators[-1] >> tcommercial_validation_email >> send_commercial_validation_email
+    
+
     end = EmptyOperator(
         task_id='end',
     )
 
 
-start >> commercial_policy_group >> commercial_claim_group >> commercial_integration_group >> commercial_quote_group >> commercial_datamart_group >> end
+start >> commercial_policy_group >> commercial_claim_group >> commercial_integration_group >> commercial_quote_group >> commercial_datamart_group >> commercial_validation_result_group >> end
