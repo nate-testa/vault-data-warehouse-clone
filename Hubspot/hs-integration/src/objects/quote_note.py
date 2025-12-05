@@ -44,16 +44,34 @@ class QuoteNote:
         row['associated_deal_id'] = associated_deal_id
         row['note_desc'] = DatabaseFunctions.strip_html_tags(row['note_desc'])
 
-        hs_object_id = QuoteNote.return_quote_note_hs_id_for_update(row['quote_no'])
+        # hs_object_id = QuoteNote.return_quote_note_hs_id_for_update(row['quote_no'])
+        hs_object_id = QuoteNote.return_note_id_hs_id_for_update(row['note_id'])
 
         if hs_object_id:
-            row['hs_object_id'] = hs_object_id
-            record_payload = QuoteNote.build_payload(row, update=True)
-            return 'update', record_payload
+            #row['hs_object_id'] = hs_object_id
+            #record_payload = QuoteNote.build_payload(row, update=True)
+            #return 'update', record_payload
+            record_payload = QuoteNote.build_payload(row, update=False)
+            return 'create', record_payload  
         else:
             record_payload = QuoteNote.build_payload(row, update=False)
-            return 'create', record_payload    
+            return 'create', record_payload   
 
+
+    def return_note_id_hs_id_for_update(note_id):
+        conn = sqlite3.connect(id_map_path)
+        cursor = conn.cursor()
+        sql = f'''
+        SELECT hs_note_id FROM quote_note WHERE note_id = '{note_id}'
+        '''
+        query = cursor.execute(sql)
+        result = query.fetchall()
+        conn.close()
+
+        if result:
+            return result[0][0]
+        else:
+            return '' 
 
     def return_quote_note_hs_id_for_update(quote_no):
         conn = sqlite3.connect(id_map_path)
@@ -103,6 +121,7 @@ class QuoteNote:
                 'hs_note_body': combined_html,
                 'hs_timestamp': record['hs_timestamp'],
                 'quote_no': record['quote_no'],
+                'note_id': record['note_id'],
                 # 'note_user_nm': record['note_user_nm'],
                 'from_metal': True
             }
