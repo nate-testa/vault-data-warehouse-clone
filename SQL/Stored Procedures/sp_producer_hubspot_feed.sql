@@ -7,6 +7,7 @@
 -- 07/17/24		Hernando Gonzalez			1. Created this procedure 
 -- 07/26/24		Hernando Gonzalez			2. Updated logic for @last_source_extract_ts
 -- 11/20/25		Dinesh Bobbili				3. Update logic and changed insert to merge
+-- 12/05/25		Architha Gudimalla			4. Added Non Active With PIF to null out email
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_producer_hubspot_feed]
@@ -98,7 +99,7 @@ BEGIN
 		UNION ALL 
 		select  p.broker_id,
 			p.producer_id,
-			case when p.producer_status = 'Disabled'  then null else p.email end as email,
+			case when p.producer_status in ('Disabled','Non Active With PIF')  then null else p.email end as email,
 			p.first_nm,
 			p.last_nm,
 			p.phone_no,
@@ -114,7 +115,7 @@ BEGIN
 		left join edw_integration.producer_hubspot_feed f on p.producer_id = f.producer_id
 		where exists (select 1 from edw_temp.producer_hubspot_feed_producer_dupes d where  ISNULL(d.email, '') = ISNULL(p.email, ''))
 		and (ISNULL(p.broker_id,'')        <> ISNULL(f.broker_id,'')
-		OR ISNULL(case when p.producer_status = 'Disabled'  then null else p.email end,'')            <> ISNULL(f.email,'')
+		OR ISNULL(case when p.producer_status in ('Disabled','Non Active With PIF')  then null else p.email end,'')            <> ISNULL(f.email,'')
 		OR ISNULL(p.first_nm,'')         <> ISNULL(f.first_nm,'')
 		OR ISNULL(p.last_nm,'')          <> ISNULL(f.last_nm,'')
 		OR ISNULL(p.phone_no,'')         <> ISNULL(f.phone_no,'')
