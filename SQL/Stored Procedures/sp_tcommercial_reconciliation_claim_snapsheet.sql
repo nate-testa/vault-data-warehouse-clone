@@ -137,7 +137,7 @@ BEGIN
         select claim_number, exposure_id,sum(total_loss_incurred) as total_loss_incurred from edw_temp.sp_tcommercial_reconciliation_claim_snapsheet_temp1 
         group by claim_number, exposure_id
         )a,
-        edw_temp.tcommercial_sp_reconciliation_claim_snapsheet_temp2 b,
+        edw_temp.sp_tcommercial_reconciliation_claim_snapsheet_temp2 b,
         edw_commercial.tcommercial_claim c,
         edw_commercial.tcommercial_claim_feature cf,
         edw_stage_snapsheet.claims cl,
@@ -153,8 +153,8 @@ BEGIN
                                                                             )        
         ORDER BY claim_no desc
 
-        drop table if exists edw_temp.tcommercial_sp_reconciliation_claim_snapsheet_temp1
-        drop table if exists edw_temp.tcommercial_sp_reconciliation_claim_snapsheet_temp2
+        drop table if exists edw_temp.sp_tcommercial_reconciliation_claim_snapsheet_temp1
+        drop table if exists edw_temp.sp_tcommercial_reconciliation_claim_snapsheet_temp2
         
 		-- Update audit table
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
