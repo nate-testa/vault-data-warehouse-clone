@@ -1,6 +1,6 @@
 INSERT INTO edw_core.tvalidation_sql (validation_sql_desc , source_sql , target_sql , active_in , frequency_desc , create_ts , update_ts)
 SELECT
-'tproducer- Duplicate email for Active and pending producer' ,
+'tproducer - Duplicate email for Active and pending producer' ,
 'select count(*) from edw_core.tproducer  a  
 where exists (select  email from edw_core.tproducer b where   a.email = b.email group by email having count(*) > 1 )
 and email in (select email from edw_core.tproducer where producer_status = ''Active'' )
