@@ -41,7 +41,7 @@ BEGIN
         SELECT 
         [source].transaction_ts AS transaction_start_dt,[source].transaction_ts AS transaction_end_dt,
         NULL AS source_record_ct,[source].loss AS source_amt,NULL AS target_record_ct,[target].loss AS target_amt,
-        'Commercial_Claim' AS datamart_nm,CASE WHEN [source].loss = [target].loss THEN 'SUCCESS' ELSE 'FAILURE' END AS status_desc,
+        'Claim' AS datamart_nm,CASE WHEN [source].loss = [target].loss THEN 'SUCCESS' ELSE 'FAILURE' END AS status_desc,
         'Snapsheet' AS source_system_nm
         into edw_temp.tcommercial_reconciliation_snapsheet_temp1
         FROM
