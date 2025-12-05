@@ -53,6 +53,7 @@ GO
 -- 06/13/25		Architha Gudimalla				29. AD9823 - Exclude forcast quotes
 -- 10/15/25		Dinesh Bobbili					30. AD11286 - simplified the date logic
 -- 11/10/25		Dinesh Bobbili					31. AD11642 - Added source_system_sk filter for NFP process
+-- 12/05/25		Architha Gudimalla				32. AD9858 - Updated logic to use prior_term_policy_no instead of prior_policy_no
 -- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -188,6 +189,7 @@ BEGIN
 							end prior_policy_no 
 						    , replace(replace(q.uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd
 							, br.primary_address_state_cd
+							, q.prior_term_policy_no
 					from edw_core.tquote q
 						 , edw_core.tbroker br 
 					where	effective_dt between @begin_dt and @end_dt 
@@ -236,7 +238,7 @@ BEGIN
 				--pols renewing all in current month
 				ren_pols_all as
 				(
-				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no,
+				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no, prior_term_policy_no,
 						replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd, 
 						 case when prior_policy_no is null and original_policy_no is null then policy_no
 							  when prior_policy_no is null  							  then original_policy_no
@@ -509,9 +511,11 @@ BEGIN
 				-- join to get prms for expiring policies
 				inner join prm exp_pols_prm on exp_pols_prm.policy_sk = exp_pols.policy_sk 
 				-- join to get renewals for expiring policies
-				left join ren_pols on replace(ren_pols.prior_policy_no,'x','') = replace(exp_pols.original_policy_no,'x','') and ren_pols.effective_dt = exp_pols.expiration_dt 
+				left join ren_pols on ren_pols.prior_term_policy_no = exp_pols.policy_no 
+				--left join ren_pols on replace(ren_pols.prior_policy_no,'x','') = replace(exp_pols.original_policy_no,'x','') and ren_pols.effective_dt = exp_pols.expiration_dt 
 				-- join to get renewals quotes for expiring policies
-				left join ren_quotes on replace(ren_quotes.prior_policy_no,'x','') = replace(exp_pols.original_policy_no,'x','') and ren_quotes.effective_dt = exp_pols.expiration_dt 
+				left join ren_quotes on ren_quotes.prior_term_policy_no = exp_pols.policy_no
+				--left join ren_quotes on replace(ren_quotes.prior_policy_no,'x','') = replace(exp_pols.original_policy_no,'x','') and ren_quotes.effective_dt = exp_pols.expiration_dt 
 				-- join to get prm for renewals 
 				left join prm ren_pols_prm on ren_pols_prm.policy_sk = ren_pols.policy_sk 
 				inner join max_tr on exp_pols_prm.policy_sk = max_tr.policy_sk and exp_pols_prm.transaction_seq_no = max_tr.transaction_seq_no
