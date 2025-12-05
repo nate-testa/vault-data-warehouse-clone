@@ -73,27 +73,6 @@ def check_tvalidation_and_send_email(**kwargs):
             dag=kwargs['dag'],
         ).execute(context=kwargs)
 
-def check_tcommercial_validation_and_send_email(**kwargs):
-    sql_qry = """
-                SELECT tr.commercial_validation_result_sk ,ts.commercial_validation_sql_sk ,process_run_start_ts,process_run_end_ts ,ts.commercial_validation_sql_desc , tr.source_value, tr.target_value
-                FROM edw_commercial.tcommercial_validation_result AS tr
-                INNER JOIN edw_commercial.tcommercial_validation_sql AS ts
-                ON tr.commercial_validation_sql_sk = ts.commercial_validation_sql_sk
-                WHERE cast(process_run_start_ts as date) = cast(getdate() as date)
-                AND status_desc ='failure'
-                ORDER BY ts.commercial_validation_sql_desc
-              """
-    mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
-    result = mssql_hook.get_first(sql_qry)
-    if result is not None:
-        EmailOperator(
-            task_id='send_email_tcommercial_validation',
-            to=to_email,
-            subject='Airflow - Report - Commercial Validation Errors',
-            html_content=get_vault_data_HTML(sql_qry,'There are commercial validation errors. Please review the details below.'),
-            dag=kwargs['dag'],
-        ).execute(context=kwargs)
-
 def check_for_new_internal_coverage_cd_and_send_email(**kwargs):
     sql_qry = """
                 SELECT internal_coverage_sk, internal_coverage_cd, product_cd, aslob_cd, internal_coverage_category_nm, primary_coverage_cd
@@ -644,8 +623,7 @@ with DAG(
     with TaskGroup("validation_result_group") as validation_result_group:
 
         validation_result_group_items = [
-            'sp_tvalidation_result',
-            'sp_tcommercial_validation_result'
+            'sp_tvalidation_result'
         ]
 
         operators = []
@@ -666,13 +644,6 @@ with DAG(
             dag=dag,
         )
 
-        tcommercial_validation_email = PythonOperator(
-            task_id='tcommercial_validation_email',
-            python_callable=check_tcommercial_validation_and_send_email,
-            provide_context=True,
-            dag=dag,
-        )
-
         send_validation_email = EmailOperator(
             task_id='send_validation_email',
             to=to_email,
@@ -680,7 +651,11 @@ with DAG(
             html_content=get_sp_success_data_HTML(validation_result_group_items, 'All stored procedures executed successfully for all the validation resul tables'),
         )
 
-        operators[0] >> tvalidation_email >> operators[1] >> tcommercial_validation_email >> send_validation_email
+        for i in range(len(operators) - 1):
+            operators[i] >> operators[i + 1]
+
+        operators[-1] >> tvalidation_email >> send_validation_email
+
 
     with TaskGroup("integration_group") as integration_group:
 
