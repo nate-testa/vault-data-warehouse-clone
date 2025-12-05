@@ -38,21 +38,17 @@ class QuoteNote:
             create_records = hubspot.CreateRecordsHandler('notes', 'quote_note_create')
             create_records.dispatch(create_batch_payload)
 
-
     def process_row(row):
         associated_deal_id = Quote.return_quote_hs_id_for_update(row['quote_no'])
         row['associated_deal_id'] = associated_deal_id
+        #row['note_desc'] = json.dumps(DatabaseFunctions.strip_html_tags(row['note_desc']))
         row['note_desc'] = DatabaseFunctions.strip_html_tags(row['note_desc'])
 
         hs_object_id = QuoteNote.return_quote_note_hs_id_for_update(row['quote_no'])
 
-        if hs_object_id:
-            row['hs_object_id'] = hs_object_id
-            record_payload = QuoteNote.build_payload(row, update=True)
-            return 'update', record_payload
-        else:
-            record_payload = QuoteNote.build_payload(row, update=False)
-            return 'create', record_payload    
+        # We are treating everything as new records; this is necessary because when updating, the note is replaced with the new one and there is no history.
+        record_payload = QuoteNote.build_payload(row, update=False)
+        return 'create', record_payload  
 
 
     def return_quote_note_hs_id_for_update(quote_no):
@@ -68,8 +64,8 @@ class QuoteNote:
         if result:
             return result[0][0]
         else:
-            return '' 
-        
+            return ''
+
 
     def build_payload(record, update):
         # Convert the timestamp into milliseconds since epoch
@@ -103,11 +99,12 @@ class QuoteNote:
                 'hs_note_body': combined_html,
                 'hs_timestamp': record['hs_timestamp'],
                 'quote_no': record['quote_no'],
-                # 'note_user_nm': record['note_user_nm'],
+                'note_user_nm': record['note_user_nm'],
                 'from_metal': True
             }
         }
         if update:
             payload['id'] = record['hs_object_id']
 
-        return payload        
+        return payload
+
