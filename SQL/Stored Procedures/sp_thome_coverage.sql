@@ -27,9 +27,11 @@
 -- 03/19/25		Hernando Gonzalez				22. Added new columns wildfire_risk_score, wildfire_risk_class
 -- 04/02/25		Yunus Mohammed					23. AD-8973 roof_deck_attachment value logic updated
 -- 04/16/25		Yunus Mohammed					24. AD-9121 Corrected null values for premium mods
--- 06/10/22		Dinesh Bobbili					25. AD-9707 Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
--- 10/03/25		Alberto Almario					26. AD-11140 Added new column premium_analytics_grade
--- 10/24/25		Dinesh Bobbili					27. AD-11450 Added new column underwriter_required_inspection
+-- 06/10/22		Dinesh Bobbili						25. AD-9707 Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
+-- 10/03/25		Alberto Almario						26. AD-11140 Added new column premium_analytics_grade
+-- 10/24/25		Dinesh Bobbili						27. AD-11450 Added new column underwriter_required_inspection
+-- 11/26/25		Yunus Mohammed				28. AD-11842 Mapping updated for prior_claim_last5yr_in and added 2 new
+--																					columns for prior claims
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -169,7 +171,8 @@ BEGIN
 				home_location_sk,policy_history_sk,dwelling_limit_amt,other_structures_limit_amt,contents_limit_amt,
 				loss_of_use_limit_amt,loss_of_use_option, loss_of_use_pc, --loss_of_use_pc_derived,
 				personal_liability_limit_amt,medical_payments_limit_amt,exclude_inflation_factor_in,aop_deductible,hurricane_deductible,
-				water_deductible,wildfire_deductible,wind_derived_deductible,no_of_mortgagees,prior_claim_last5yr_in,
+				water_deductible,wildfire_deductible,wind_derived_deductible,no_of_mortgagees,
+				prior_claims_in,prior_claim_last5yr_in,prior_claims_over_2500_in,
 				prior_nonwater_claim_ct,prior_water_claim_ct, distance_to_coast,
 				distance_to_fire_hydrant_feet,distance_to_fire_station_miles,fire_protection,occupancy_type,protection_class,earthquake_zone,
 				terrain_cd,windborne_debris_region_in,windpool_eligibility_in,sinkhole_risk_level,sinkhole_distance_to_nearest_miles,
@@ -259,7 +262,10 @@ BEGIN
 					WHEN ISNULL(tthc.WindstormOrHailDeductibleManual ,'') NOT IN ('','0') THEN WindstormOrHailDeductibleManual
 				END AS wind_derived_deductible,
 				tthc.NumberOfMortgagees AS no_of_mortgagees,
-				tthc.PriorClaims AS prior_claim_last5yr_in,tthc.PriorNonWaterClaims AS prior_nonwater_claim_ct,
+				NULLIF(tthc.PriorClaims,'') as prior_claims_in,
+				NULLIF(tthc.priorClaimsFive,'') as prior_claim_last5yr_in,
+				NULLIF(tthc.priorClaimsOver2500,'') as prior_claims_over_2500_in,		
+				tthc.PriorNonWaterClaims AS prior_nonwater_claim_ct,
 				tthc.PriorWaterClaims AS prior_water_claim_ct,
 				tthc.DistanceToCoast AS distance_to_coast,
 				tthc.DistanceToHydrantFeet AS distance_to_fire_hydrant_feet,

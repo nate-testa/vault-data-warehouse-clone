@@ -153,17 +153,17 @@ with DAG(
             # parameters={"myParam": "value"},
         )
 
-        adf_etl_load_ls_aws_dms: BaseOperator = AzureDataFactoryRunPipelineOperator(
-            task_id="adf_etl_load_ls_aws_dms",
+        adf_etl_load_ls_azr_dms: BaseOperator = AzureDataFactoryRunPipelineOperator(
+            task_id="adf_etl_load_ls_azr_dms",
             azure_data_factory_conn_id='azure_data_factory_vault_data',
-            pipeline_name="LS_AWS_DMS_dmsDocument",
+            pipeline_name="LS_AZR_DMS_dmsDocument",
             # parameters={"myParam": "value"},
         )
 
-        adf_etl_load_ls_aws_vsp_claims_payments: BaseOperator = AzureDataFactoryRunPipelineOperator(
-            task_id="adf_etl_load_ls_aws_vsp_claims_payments",
+        adf_etl_load_ls_azr_dms_claims_payments: BaseOperator = AzureDataFactoryRunPipelineOperator(
+            task_id="adf_etl_load_ls_azr_dms_claims_payments",
             azure_data_factory_conn_id='azure_data_factory_vault_data',
-            pipeline_name="LS_AWS_VSP_int_claims_payments_audit",
+            pipeline_name="LS_AZR_DMS_int_claims_payments_audit",
             # parameters={"myParam": "value"},
         )        
 
@@ -174,7 +174,7 @@ with DAG(
             html_content=get_HTML_on_vault_format('The Azure Data Factory pipelines executed successfully',''),
         )
 
-        adf_etl_load_stage >> adf_etl_load_ls_aws_dms >> adf_etl_load_ls_aws_vsp_claims_payments >> send_adf_email
+        adf_etl_load_stage >> adf_etl_load_ls_azr_dms >> adf_etl_load_ls_azr_dms_claims_payments >> send_adf_email
 
 
     with TaskGroup("home_group") as home_group:
@@ -660,15 +660,12 @@ with DAG(
     with TaskGroup("integration_group") as integration_group:
 
         integration_group_items = [
-            'sp_tclaim_policy_search_api',
             'sp_policy_claim_search_dms_api',
-            'sp_tclaim_symbility_api', 
             'sp_billing_account_customer_portal_api', 
             'sp_policy_customer_portal_api',
             'sp_customer_broker_livevox_feed',
             'sp_claim_renewal_rating_home_collection_api',
-            'sp_claim_renewal_rating_auto_pel_api',
-            'sp_claim_product_search_api'
+            'sp_claim_renewal_rating_auto_pel_api'
         ]
 
         operators = []
@@ -749,7 +746,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(integration_group_items, 'All stored procedures executed successfully for all the integration tables'),
         )
 
-        exec_Snapsheet_Daily_Feed >> operators[0] >> operators[1] >> operators[2] >> operators[3] >> operators[4] >> exec_Ivans_Daily_Feed >> operators[5] >> generate_livevox_file >> upload_livevox_file_to_sftp >> operators[6] >> operators[7] >> operators[8] >> exec_vault_redzone_feed >> exec_vault_CLUE_property_daily_feed >> exec_vault_CLUE_auto_daily_feed >> exec_Snapsheet_Financial_Transaction_Action_Daily_Feed >> exec_Honk_Daily_Feed >> exec_current_carrier_auto_daily_feed >> send_integration_email
+        exec_Snapsheet_Daily_Feed >> operators[0] >> operators[1] >> operators[2] >> exec_Ivans_Daily_Feed >> operators[3] >> generate_livevox_file >> upload_livevox_file_to_sftp >> operators[4] >> operators[5] >> exec_vault_redzone_feed >> exec_vault_CLUE_property_daily_feed >> exec_vault_CLUE_auto_daily_feed >> exec_Snapsheet_Financial_Transaction_Action_Daily_Feed >> exec_Honk_Daily_Feed >> exec_current_carrier_auto_daily_feed >> send_integration_email
 
     exec_vault_edw_data_load_quotes = TriggerDagRunOperator(
         task_id="exec_vault_edw_data_load_quotes",

@@ -11,6 +11,7 @@
 -- 10/28/25		Architha Gudimalla			5. Added producer to policy detail table
 -- 11/05/25		Architha Gudimalla			6. Removed tbroker_vault_team join
 -- 11/19/25		Architha Gudimalla			7. Updated auto vehicle list
+-- 12/04/25		Architha Gudimalla			8. Updated yacht boat list
 -- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
@@ -113,11 +114,12 @@ and a.PrimaryInsuredId=b.id
        
         with cust as
 		(
-			select distinct customer_id 
-            from edw_core.tquote
-			where renewal_quote_review_start_dt = @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
-			and quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
-			and quote_term = 'Renewal' 
+			select  distinct customer_id 
+            from    edw_core.tquote
+			where   renewal_quote_review_start_dt > @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
+			and     renewal_quote_review_start_dt < cast(getdate() as date) 
+			and     quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
+			and     quote_term = 'Renewal' 
 		),
 		cust_review as
         (
@@ -214,8 +216,93 @@ and a.PrimaryInsuredId=b.id
   			,target.reason_desc 				= source.reason_desc
   			,target.update_ts 					= source.update_ts;
 
-		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_inforce_detail ;
+		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh ;
+
+        select pol.customer_id, vehicle_model_year,vehicle_make, agreed_value_amt, market_value_amt, 
+				ROW_NUMBER() OVER (PARTITION BY pol.customer_id ORDER BY cast(agreed_value_amt as float) DESC, cast(market_value_amt as float) desc) AS rn,
+				COUNT(*) OVER (PARTITION BY pol.customer_id) AS auto_vehicle_ct ,
+				cast('' as varchar(255)) veh_list
+		into edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh
+        from edw_core.tauto_vehicle av
+		inner join edw_core.tpolicy pol on pol.policy_no = av.policy_no 
+        inner join edw_temp.customer_midterm_review_recommendation_temp_0_inforce inf on inf.policy_sk = pol.policy_sk 
+		inner join edw_core.tauto_vehicle_coverage avc on av.auto_vehicle_sk = avc.auto_vehicle_sk and avc.policy_history_sk = inf.policy_history_sk 
+		where avc.vehicle_deleted_in = 'No'
+        and customer_id  in (Select customer_id from edw_integration.customer_midterm_review_eligibility_feed where midterm_review_process_in = 'Yes'  )
+                
+        DECLARE @custID VARCHAR(255)
+		DECLARE @veh_modelyr  VARCHAR(255)
+		DECLARE @veh_make  VARCHAR(255)
+		DECLARE @old_veh_list  VARCHAR(255)
+		DECLARE @veh_list  VARCHAR(255)
+		DECLARE @add_veh_ct  int = 0
+		
+		set @veh_list = '' 
+		set @old_veh_list = '' 
+ 
+		DECLARE c999_rec CURSOR
+		FOR  
+		SELECT distinct customer_id FROM edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh --where customer_id = '1234500131'
+		order by 1 
+		open c999_rec; 
+		FETCH NEXT FROM c999_rec INTO @custID; 
+		--print @custID
+		WHILE @@FETCH_STATUS = 0
+			BEGIN    
+				DECLARE c888_rec CURSOR
+				FOR  
+				SELECT vehicle_model_year,vehicle_make FROM edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh
+				where customer_id = @custID
+				order by RN 
+				open c888_rec; 
+				FETCH NEXT FROM c888_rec INTO @veh_modelyr, @veh_make;  
+				WHILE @@FETCH_STATUS = 0
+					BEGIN 
+						set @veh_list = concat(@veh_list, concat_ws('-',@veh_modelyr,@veh_make),'||')
+						if len(@veh_list)+len(' and xxx additional covered vehicles.')-2 > 95 
+						begin 
+							set @veh_list = @old_veh_list
+							set @add_veh_ct = @add_veh_ct + 1
+						end;
+						set @old_veh_list = @veh_list
+						--print @old_veh_list 
+						--print @veh_list 
+						--print @add_veh_ct
+						--print len(@veh_list )
+						--print len('and xxx additional covered vehicles')
+						FETCH NEXT FROM c888_rec INTO @veh_modelyr, @veh_make;
+					END; 
+				--print @add_veh_ct
+				if @add_veh_ct = 0
+				begin
+					set @veh_list = substring(@veh_list,1,len(@veh_list) -2);
+					--print 'final-' @veh_list 
+				end
+				else
+				begin
+					set @veh_list = substring(@veh_list,1,len(@veh_list) -2);
+					set @veh_list = concat(@veh_list, ' and ', @add_veh_ct, iif(@add_veh_ct = 1,' additional covered vehicle.',' additional covered vehicles.'));
+					--print 'final-' @veh_list 
+				end
+				--print 'final-' + @veh_list 
+				--print len(@veh_list)
+
+				update edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh set veh_list = @veh_list where customer_id = @custID
+
+				set @veh_list = '' 
+				set @old_veh_list = ''
+				set @add_veh_ct = 0
+
+				CLOSE c888_rec;
+				DEALLOCATE c888_rec;
+ 
+				FETCH NEXT FROM c999_rec INTO @custID;
+			END; 
+		CLOSE c999_rec;
+		DEALLOCATE c999_rec; 
        
+        drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_inforce_detail ;
+
         --inforce data 
         with 
         /*
@@ -273,7 +360,7 @@ and a.PrimaryInsuredId=b.id
 				apc.emergency_movement_coverage_in,
 				avl.auto_vehicle_list, 
 				avl.auto_vehicle_ct,
-				ybl.boat_yatch_product_type,
+				--ybl.boat_yatch_product_type,
 				ybl.yacht_boat_list, 
 				ybl.yacht_boat_ct,
 				/*case when pinf.customer_id is not null and pinf.inforce_ct = cinf.inforce_ct
@@ -336,36 +423,21 @@ and a.PrimaryInsuredId=b.id
 		left join edw_core.tauto_policy_coverage apc on ph.policy_no = apc.policy_no and ph.policy_history_sk = apc.policy_history_sk  
 		left join
 		(
-            select customer_id,
-                    CONCAT(
-                        MAX(CASE WHEN rn = 1 THEN concat_ws('-',vehicle_model_year,vehicle_make) END), 
-                        MAX(CASE WHEN rn = 2 THEN ' | ' END), 
-                        MAX(CASE WHEN rn = 2 THEN concat_ws('-',vehicle_model_year,vehicle_make) END),  
-                        MAX(CASE WHEN auto_vehicle_ct > 2 THEN concat(' and ',auto_vehicle_ct - 2,' covered vehicles') END) 
-                    ) AS auto_vehicle_list,
-                    auto_vehicle_ct
-			from
-			( 
-				select pol.customer_id, vehicle_model_year,vehicle_make, agreed_value_amt, market_value_amt, 
-						ROW_NUMBER() OVER (PARTITION BY pol.customer_id ORDER BY agreed_value_amt DESC, market_value_amt desc) AS rn,
-						COUNT(*) OVER (PARTITION BY pol.customer_id) AS auto_vehicle_ct 
-				from edw_core.tauto_vehicle av
-				inner join edw_core.tpolicy pol on pol.policy_no = av.policy_no 
-				inner join edw_core.tpolicy_history ph on ph.policy_no = pol.policy_no and ph.latest_transaction_in = 'Y' 
-				inner join edw_core.tauto_vehicle_coverage avc on av.auto_vehicle_sk = avc.auto_vehicle_sk and avc.policy_history_sk = ph.policy_history_sk 
-				where avc.vehicle_deleted_in = 'No'
-			) a
-			group by customer_id, auto_vehicle_ct
+            select distinct customer_id,veh_list as auto_vehicle_list, auto_vehicle_ct
+            from edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh
 		) as avl on pol.customer_id = avl.customer_id
 		left join
 		(
-			select mbt.policy_no,mbt.effective_dt,mbtc.policy_history_sk, mbt.boat_yatch_product_type, string_agg(concat_ws('-',boat_yacht_year,boat_yacht_make),'||') as yacht_boat_list,
-			count(mbt.marine_boat_yacht_sk) as yacht_boat_ct
-			from edw_core.tmarine_boat_yacht mbt
+			select pol.customer_id, 
+                    string_agg(concat(mbt.boat_yatch_product_type,' coverage for your ',boat_yacht_year,'-',boat_yacht_make),'||') as yacht_boat_list,
+			        count(mbt.marine_boat_yacht_sk) as yacht_boat_ct
+			from    edw_core.tmarine_boat_yacht mbt
 			inner join edw_core.tmarine_boat_yacht_coverage mbtc on mbt.marine_boat_yacht_sk = mbtc.marine_boat_yacht_sk
-			
-			group by mbt.policy_no,mbt.effective_dt,mbtc.policy_history_sk, mbt.boat_yatch_product_type
-		) as ybl on ybl.policy_no = pol.policy_no and ybl.effective_dt = pol.effective_dt and ybl.policy_history_sk = ph.policy_history_sk
+			inner join edw_core.tpolicy pol on pol.policy_no = mbt.policy_no
+			inner join edw_temp.customer_midterm_review_recommendation_temp_0_inforce inf on inf.policy_sk = pol.policy_sk and inf.policy_history_sk=mbtc.policy_history_sk
+			group by pol.customer_id
+
+		) as ybl on ybl.customer_id = pol.customer_id
 
 		where   pol.non_renewal_in = 'No' --and pol.policy_no = 'AU100177549-03'-- and pol.customer_id = '1234507332'
         and pol.customer_id  in (Select customer_id --from edw_core.tcustomer where customer_id in ('1234500995','1234686788','1234500340','1234521910','1234522128','1234509154')
@@ -434,7 +506,7 @@ and a.PrimaryInsuredId=b.id
 			emergency_movement_coverage_in,
 			auto_vehicle_list, 
 			auto_vehicle_ct,
-			yatch_product_type,
+			--yatch_product_type,
 			yacht_boat_list, 
 			yacht_boat_ct,
 			--monoline_home_in,
@@ -503,7 +575,7 @@ and a.PrimaryInsuredId=b.id
 				emergency_movement_coverage_in,
 				auto_vehicle_list, 
 				auto_vehicle_ct,
-				boat_yatch_product_type,
+				--boat_yatch_product_type,
 				yacht_boat_list, 
 				yacht_boat_ct,
 				--monoline_home_in,
@@ -709,7 +781,8 @@ and a.PrimaryInsuredId=b.id
         SET @rows_affected=@@ROWCOUNT; 
  
         --AG - Using  where renewal_quote_review_start_dt < getdate() becuase of a data issue in prod
-        set @new_last_source_extract_ts = (select cast(getdate() as date));
+        set @new_last_source_extract_ts = (select max(renewal_quote_review_start_dt) from edw_core.tquote 
+                                            where renewal_quote_review_start_dt < cast(getdate() as date));
  
         --Update control table
         SET @new_last_source_extract_ts = COALESCE(@new_last_source_extract_ts,@last_source_extract_ts);
@@ -717,7 +790,7 @@ and a.PrimaryInsuredId=b.id
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
        
         -- Update audit table
-        SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@last_source_extract_ts AS VARCHAR(200))
+        SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
         if @in_start_dt is not null
         begin
             set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_start_dt AS VARCHAR(200))

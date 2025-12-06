@@ -5,6 +5,7 @@ import urllib.parse
 from utils.logging import logger
 from modules.docuclaims.session_manager import DocuClaimsSessionManager
 from config import get_config
+from auth.middleware import RequestContextManager
 
 # DocuClaims session manager instance for services that need it
 # NOTE: This should be the same configuration as routes.py for consistency
@@ -18,10 +19,16 @@ API_BASE = get_config("API_BASE_URL")
 if not API_BASE:
     raise RuntimeError("Missing required configuration: API_BASE_URL")
 
+def _get_api_headers():
+    """Get common headers for API requests including username."""
+    current_user = RequestContextManager.get_current_user()
+    username = current_user.username if current_user else 'anonymous'
+    return {'X-Username': username}
+
 def fetch_model_options():
     """Fetch model options from FastAPI backend."""
     try:
-        response = requests.get(f"{API_BASE}/docuclaims/model_options", timeout=5)
+        response = requests.get(f"{API_BASE}/docuclaims/model_options", headers=_get_api_headers(), timeout=5)
         response.raise_for_status()
         
         models = response.json()
@@ -46,7 +53,7 @@ def handle_file_upload(file):
         # Upload file to API
         files = {"file": (file.filename, file.read(), file.content_type)}
         # Add timeout for large file uploads: 10 seconds for connection, 60 seconds for response
-        response = requests.post(f"{API_BASE}/docuclaims/upload_file", files=files, timeout=(10, 60))
+        response = requests.post(f"{API_BASE}/docuclaims/upload_file", files=files, headers=_get_api_headers(), timeout=(10, 60))
         
         # Log API response for debugging
         if response.status_code != 200:
@@ -86,7 +93,7 @@ def check_file_processing_status(file_name, timeout=300, interval=10):
         
         # For initial upload, make just one attempt since polling is handled by JavaScript
         # This reduces server load and prevents double-polling
-        r = requests.get(api_url, timeout=10)
+        r = requests.get(api_url, headers=_get_api_headers(), timeout=10)
         
         if r.status_code == 200:
             response_data = r.json()
@@ -130,7 +137,7 @@ def query_document(question, message_history=None, model=None):
 
         # Add timeout parameters to prevent worker hanging indefinitely
         # 90 seconds for connection timeout, 300 seconds for read timeout (increased for complex RAG queries)
-        response = requests.post(f"{API_BASE}/docuclaims/rag_complete", json=payload, timeout=(90, 300))
+        response = requests.post(f"{API_BASE}/docuclaims/rag_complete", json=payload, headers=_get_api_headers(), timeout=(90, 300))
         
         request_duration = time.time() - request_start_time
         logger.info(f"[RAG_RESPONSE] Received API response in {request_duration:.2f}s - Status: {response.status_code}")
@@ -188,7 +195,7 @@ def fetch_example_questions():
         api_url = f"{API_BASE}/docuclaims/example_questions"
         logger.info(f"Fetching example questions from API: {api_url}")
         
-        response = requests.get(api_url, timeout=5)
+        response = requests.get(api_url, headers=_get_api_headers(), timeout=5)
         response.raise_for_status()
         
         questions = response.json()

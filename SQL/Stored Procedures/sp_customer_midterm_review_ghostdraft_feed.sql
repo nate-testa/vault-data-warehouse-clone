@@ -8,6 +8,7 @@
 -- 10/28/25     Architha Gudimalla          2. Changed broker to producer
 -- 10/30/25     Architha Gudimalla          3. Updated message for au if length > 96
 -- 10/30/25     Architha Gudimalla          4. Updated to use ho producer
+-- 12/04/25		Architha Gudimalla			5. Updated yacht boat list
 -- =================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
@@ -104,9 +105,9 @@ BEGIN
 						 when r.product_nm = 'Auto' and r.existing_product_in = 'No' then '010' 
 					end auto_message_id,  
 					--auto_message,
-					case when r.product_nm = 'Marine Boat & Yacht' then STRING_AGG(p.yatch_product_type, '||') end  yatch_product_type,
-					case when r.product_nm = 'Marine Boat & Yacht' then STRING_AGG(p.yacht_boat_list, '||') end  yacht_boat_list,
-					case when r.product_nm = 'Marine Boat & Yacht' then sum(p.yacht_boat_ct) end  yacht_boat_ct,    
+					--case when r.product_nm = 'Marine Boat & Yacht' then STRING_AGG(p.yatch_product_type, '||') end  yatch_product_type,
+					case when r.product_nm = 'Marine Boat & Yacht' then max(p.yacht_boat_list) end  yacht_boat_list,
+					case when r.product_nm = 'Marine Boat & Yacht' then max(p.yacht_boat_ct) end  yacht_boat_ct,    
 					case when r.product_nm = 'Marine Boat & Yacht' and r.existing_product_in = 'Yes' then '006' 
 						 when r.product_nm = 'Marine Boat & Yacht' and r.existing_product_in = 'No' then '011' 
 					end yacht_boat_message_id,  
@@ -242,7 +243,7 @@ BEGIN
 					p.auto_vehicle_ct,   
 					null auto_message_id,  
 					--auto_message,
-					p.yatch_product_type,
+					--p.yatch_product_type,
 					p.yacht_boat_list,
 					p.yacht_boat_ct,   
 					null yacht_boat_message_id,   
@@ -344,7 +345,7 @@ BEGIN
 			auto_vehicle_ct,
 			auto_message_id,
 			--auto_message, 
-			yatch_product_type,
+			--yatch_product_type,
 			yacht_boat_list, 
 			yacht_boat_ct,
 			yacht_boat_message_id,
@@ -432,7 +433,7 @@ BEGIN
 				auto_vehicle_ct,   
 				auto_message_id,  
 				--auto_message,
-				yatch_product_type,
+				--yatch_product_type,
 				yacht_boat_list,
 				yacht_boat_ct,   
 				yacht_boat_message_id,   
@@ -553,9 +554,7 @@ BEGIN
         --- Update yacht message 
         update a
         set yacht_boat_message =  case when m.message_id = '011' then m.message_desc
-										else replace(replace(m.message_desc, 
-												 '[Essential | Premier ]', a.yatch_product_type), 
-												 '<<<Year & Make>>>', a.yacht_boat_list)
+										else a.yacht_boat_list
 									end
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.yacht_boat_message_id = m.message_id  
@@ -663,7 +662,7 @@ BEGIN
 			--******** if in future we run eligibility for monoline Auto, make sure to update the producer logic when loading ghostdraft table
 			select distinct
 			customer_id,customer_nm,customer_email,
-			customer_phone_no,no_of_years_with_vault,no_of_years_with_vault_tx,
+			customer_phone_no,customer_message,
 			mailing_address_line1,mailing_address_line2,mailing_address_unit_no,mailing_address_city_nm,
 			mailing_address_state_cd,mailing_address_zip_cd,producer_id,producer_nm,producer_phone_no,producer_email
 			from edw_integration.customer_midterm_review_ghostdraft_feed
@@ -677,7 +676,7 @@ BEGIN
 			(
 			SELECT
 			cmr.customer_nm as insured_full_name,
-			cmr.no_of_years_with_vault_tx as insured_message,
+			cmr.customer_message as insured_message,
 			cmr.producer_nm as producer_name,
 			cmr.producer_phone_no as producer_phone,
 			cmr.producer_email,
@@ -743,10 +742,7 @@ BEGIN
 					) as [current_coverage.existing_auto],
 					(
 					select top 1
-						case when len(auto_message) > 96 and auto_message like '%covered vehicles%' 
-							 then LTRIM(SUBSTRING(auto_message, CHARINDEX(' and ', auto_message) + 5, LEN(auto_message)))
-							 else auto_message
-						end
+						auto_message
 						from edw_integration.customer_midterm_review_ghostdraft_feed cmra 
 						where cmra.customer_id = cmr.customer_id
 						and cmra. product_nm = 'Auto'
@@ -898,7 +894,7 @@ BEGIN
         EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
        
         -- Update audit table
-        SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+        SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts > ' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
         if @in_start_dt is not null
         begin
             set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_start_dt AS VARCHAR(200))

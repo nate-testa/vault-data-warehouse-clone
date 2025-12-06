@@ -1,11 +1,11 @@
 ﻿-- ===========================================================================================================================
 -- Description: This procedures inserts and updates tquote 
 -----------------------------------------------------------------------------------------------------------------------------
--- Change date |Author										|	Change Description
+-- Change date |Author							|	Change Description
 -----------------------------------------------------------------------------------------------------------------------------
--- 10/23/23		Architha Gudimalla				 1. Created this procedure 
--- 11/16/23		Architha Gudimalla				 2. Updated the prior policy logic
--- 03/22/24		Rushin Shah								3. Added close_reason_desc column
+-- 10/23/23		Architha Gudimalla				1. Created this procedure 
+-- 11/16/23		Architha Gudimalla				2. Updated the prior policy logic
+-- 03/22/24		Rushin Shah						3. Added close_reason_desc column
 -- 08/29/24		Yunus Mohammed					4. Added expiration_dt in update stmt
 -- 09/04/24		Yunus Mohammed					5. Added term_no
 -- 09/18/24		Architha Gudimalla		        6. Updated term_no
@@ -13,15 +13,16 @@
 -- 03/03/25		Hernando Gonzalez		        8. AD8316 - Added competitor_carrier_nm, close_reason_other_desc
 -- 03/20/25		Hernando Gonzalez				9. Included Target_Account
 -- 05/08/25		Architha Gudimalla				10. Added forecast_quote_in 
--- 06/05/25		Yunus Mohammed					11. AD9715 - Integrate Document delivery data
--- 06/06/25		Dinesh Bobbili							12. Updated document_delivery_to logic
--- 07/10/25		Alberto Almario						13. AD10214 - Added new column renewal_cap_factor
--- 07/10/25		Hernando Gonzalez				14. AD10220 | Added bound_by_broker_in
--- 09/16/25		Yunus Mohammed					15. AD10892 - Added new columns renewal_quote_in and renewal_quote_review_start_dt
--- 10/15/25		Yunus Mohammed					16 AD11341 - Added new column renewal_released_by_metal_in
--- 10/30/25		Yunus Mohammed					17. AD-11535 Added stalled_quote_in  and new_business_work_status 
+-- 06/05/25		Yunus Mohammed					11. AD-9715 - Integrate Document delivery data
+-- 06/06/25		Dinesh Bobbili					12. Updated document_delivery_to logic
+-- 07/10/25		Alberto Almario					13. AD-10214 - Added new column renewal_cap_factor
+-- 07/10/25		Hernando Gonzalez				14. AD-10220 | Added bound_by_broker_in
+-- 09/16/25		Yunus Mohammed					15. AD-10892 - Added new columns renewal_quote_in and renewal_quote_review_start_dt
+-- 10/15/25		Yunus Mohammed					16  AD-11341 - Added new column renewal_released_by_metal_in
+-- 10/30/25		Yunus Mohammed					17. AD-11535 - Added stalled_quote_in  and new_business_work_status 
 -- 10/31/25		Sandeep Gundreddy				18. AD-11560 - removed date filter to update all null EffectiveDate/ExpirationDate in Metal; added for account table backfills
--- 11/11/25		Yunus Mohammed					19 AD-11316 Added broker_of_record_change_in
+-- 11/11/25		Yunus Mohammed					19. AD-11316 - Added broker_of_record_change_in
+-- 12/01/25		Architha Gudimalla				20. AD-11368 - Updated RenewalReviewStartDate to RenewalReviewStartedDate
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -236,7 +237,7 @@ BEGIN
 				,tmp1.RenewalCapFactor as renewal_cap_factor
 				,case when tmp1.BoundByBroker = 1 then 'Yes' else 'No' end as bound_by_broker_in
 				,case when tmp1.RenewalViewShow = 1 then 'Yes' when tmp1.RenewalViewShow = 0 then 'No' end as renewal_quote_in
-				,tmp1.RenewalReviewStartDate as renewal_quote_review_start_dt
+				,tmp1.RenewalReviewStartedDate as renewal_quote_review_start_dt
 				,case
 					when tmp1.IsReleasedByMetal = 1 then 'Yes' 
 					when tmp1.IsReleasedByMetal = 0 then 'No'
