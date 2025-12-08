@@ -8,6 +8,7 @@
 -- 05/14/2024 			Architha Gudimalla					3. Corrected errors
 -- 08/22/2024			Architha Gudimalla					4. Removed eff_dt from merge
 -- 10/13/20025		   Yunus Mohammed			        5. AD11353  - Added watercraft_unique_id
+-- 12/08/2025			Yunus Mohammed					 6. AD11963 - Merge statement join corrected.
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_watercraft_wip]
 
@@ -115,7 +116,7 @@ BEGIN
 		    TARGET.quote_no = SOURCE.quote_no AND
 		    --TARGET.effective_dt = SOURCE.effective_dt AND
 		    TARGET.transaction_seq_no = SOURCE.transaction_seq_no AND
-		    TARGET.watercraft_no = SOURCE.watercraft_no
+		    TARGET.watercraft_unique_id = SOURCE.watercraft_unique_id
 
 		WHEN MATCHED THEN
 		    UPDATE SET
