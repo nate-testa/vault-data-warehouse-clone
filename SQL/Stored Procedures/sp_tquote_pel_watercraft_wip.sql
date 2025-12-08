@@ -135,7 +135,6 @@ BEGIN
 		        TARGET.watercraft_miles_per_hr = SOURCE.watercraft_miles_per_hr,
 		        TARGET.watercraft_sailboat_power_type = SOURCE.watercraft_sailboat_power_type,
 		        TARGET.source_system_sk = SOURCE.source_system_sk,
-				TARGET.watercraft_unique_id = Source.watercraft_unique_id,
 		        TARGET.update_ts = SOURCE.update_ts,
 		        TARGET.etl_audit_sk = SOURCE.etl_audit_sk
 
