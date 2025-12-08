@@ -182,14 +182,14 @@ BEGIN
 				with q as
 				(
 					select  q.quote_sk, q.quote_no, q.effective_dt, q.original_policy_no, q.quote_Status, q.first_offered_quote_history_sk,  
-							case when q.prior_policy_no is null and q.original_policy_no is null then q.quote_no
-							 	 when q.prior_policy_no is null  							  then q.original_policy_no
-								 when CHARINDEX('-',q.prior_policy_no) = 0 					  then q.prior_policy_no 
-								else left(q.prior_policy_no, CHARINDEX('-',q.prior_policy_no) - 1) 
-							end prior_policy_no 
+							q.prior_policy_no 
 						    , replace(replace(q.uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd
 							, br.primary_address_state_cd
 							, q.prior_term_policy_no
+							, rank() over (partition by q.prior_term_policy_no 
+										   order by replace(replace(replace(quote_status,'In Progress','3_In_Progress'),'Offered','2_Offered'),'Issued','1_Issued'), 
+										   			q.quote_sk desc
+										  ) rnk
 					from edw_core.tquote q
 						 , edw_core.tbroker br 
 					where	effective_dt between @begin_dt and @end_dt 
@@ -238,18 +238,10 @@ BEGIN
 				--pols renewing all in current month
 				ren_pols_all as
 				(
-				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no, prior_term_policy_no,
+				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no, prior_term_policy_no, prior_policy_no, policy_status,
 						replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd, 
-						 case when prior_policy_no is null and original_policy_no is null then policy_no
-							  when prior_policy_no is null  							  then original_policy_no
-							  when CHARINDEX('-',prior_policy_no) = 0 					  then prior_policy_no 
-							  else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
-						end prior_policy_no,
-						rank() over (partition by case when prior_policy_no is null and original_policy_no is null then policy_no
-												 	   when prior_policy_no is null then original_policy_no
-												 	   when CHARINDEX('-',prior_policy_no) = 0 then prior_policy_no 
-								  					   else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
-												  end order by policy_sk) rnk
+						rank() over (partition by prior_term_policy_no 
+									order by replace(replace(replace(policy_status,'Expired','2_Expired'),'Cancelled','3_Cancelled'),'Active','1_Active'), policy_sk) rnk
 				 FROM	edw_core.tpolicy
 				 where	effective_dt between @begin_dt and @end_dt
 				 and source_system_sk = isnull(@param_ssk, source_system_sk)
@@ -265,13 +257,7 @@ BEGIN
 				ren_quotes as
 				(
 					select *
-					FROM
-					(
-						SELECT *, 
-								--added replace x, to remove dupes
-								rank() over (partition by replace(prior_policy_no,'x','') order by pol_no_changed_in, quote_sk) rnk  
-						from edw_temp.tren_summ_quotes
-					) A
+					from edw_temp.tren_summ_quotes 
 				 	where rnk = 1
 
 				),
