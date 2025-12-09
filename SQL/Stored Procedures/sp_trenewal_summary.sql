@@ -669,16 +669,25 @@ BEGIN
 							  and  ren_pol.first_billing_payment_dt is not null 
 						 then 1 
 						 else 0 
-						 end accepted_renewal_ct
+						 end accepted_renewal_ct --renewal is issued and paid
 						,case when a.non_flatcancel_ind = 1 
 							  and  a.renewalcount = 1 
 							  and  a.midterm_cancel_ind = 0 
-							  and  ren_pol.billing_PAID_IN is null 
-							  and  ren_pol.first_billing_payment_dt is null 
-    						  and  ren_ph.transaction_type like 'Cancel%'
+							  and  (
+									( 		ren_pol.billing_PAID_IN is null 
+										and  ren_pol.first_billing_payment_dt is null 
+										and  ren_ph.transaction_type like 'Cancel%'
+										and  ren_ph.cancellation_reason_desc not in ('Rewritten with Vault')
+										and  upper(ren_ph.cancellation_reason_desc) not in ('REWRITE WITH VAULT') 
+									)
+									or 
+										a.wip_renewal_quote_ct = 1  --khaleel will confirm to keep or not
+							  	   )
 						 then 1 
 						 else 0 
-						 end not_accepted_renewal_ct
+						 end not_accepted_renewal_ct --renewals is issued, renewal status is cancelled and renewal is not paid 
+						 							 --renewal is not issued but just in submission or quote status
+													 --if no renewal quote (in case of NR or midterm cancels), then its counted in NR bucket
 						,case when a.non_flatcancel_ind = 1 
 							  and  a.renewalcount = 1 
 							  and  a.midterm_cancel_ind = 0 
@@ -687,7 +696,7 @@ BEGIN
     						  and  ren_ph.transaction_type not like 'Cancel%'
 						 then 1 
 						 else 0 
-						 end outstanding_renewal_ct
+						 end outstanding_renewal_ct --renewals that are issued and not paid and not cancelled
 				from edw_temp.tren_summ a
 				left join ( select distinct cancellation_reason_desc, policy_sk, effective_dt 
 							FROM edw_core.tpolicy_history ph
@@ -695,11 +704,12 @@ BEGIN
 							and latest_transaction_in ='Y'
 						  ) b on a.policy_sk = b.policy_sk
 				left join edw_core.tquote_history qh on qh.quote_sk = a.renewal_quote_sk and qh.latest_transaction_in = 'Y'
+				left join edw_core.tquote q on qh.quote_sk = q.quote_sk
 				left join edw_core.tquote_home_coverage qhc on qhc.quote_no = qh.quote_no and qhc.effective_dt = qh.effective_dt 
 																and qhc.transaction_seq_no = qh.transaction_seq_no
 				left join edw_core.tproduct pr on a.product_sk = pr.product_sk
 				left join edw_core.tpolicy ren_pol on ren_pol.policy_sk = a.renewal_sk
-				left join edw_core.tpolicy_history ren_ph on a.renewal_sk = ren_ph.policy_sk and ren_ph.latest_transaction_in = 'Y';
+				left join edw_core.tpolicy_history ren_ph on a.renewal_sk = ren_ph.policy_sk and ren_ph.latest_transaction_in = 'Y'; 
 
 				SET @rows_affected=@@ROWCOUNT;
 

@@ -29,9 +29,3 @@ WHERE TABLE_SCHEMA='edw_core'
 AND TABLE_NAME = 'trenewal_summary'					
 AND COLUMN_NAME = 'offered_quote_ct'					
 ) BEGIN ALTER TABLE edw_core.trenewal_summary ADD offered_quote_ct int END ;  
-
- 
-
-
-
-
