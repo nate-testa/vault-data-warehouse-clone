@@ -477,6 +477,16 @@ BEGIN
 							       ) then 1 
 						 	  else 0 
 						 end offered_or_not_taken_quote_ct
+						,case when ren_pols.policy_sk is not null then 0 
+						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
+						 	  when exp_pols_prm.cancel_ind <> 0 then 0 
+						 	  when ren_quotes.quote_no is not null 
+							   and (ren_quotes.quote_Status in ('Offered','Not Taken by Insured')
+							   		or
+									ren_quotes.first_offered_quote_history_sk is not null
+							       ) then 1 
+						 	  else 0 
+						 end offered_quote_ct
 						,/* commented on olivia's request
 						 case when ren_pols.policy_sk is not null then 0 
 						 	  when exp_pols_prm.non_renewal_in = 'Yes' then 0 
