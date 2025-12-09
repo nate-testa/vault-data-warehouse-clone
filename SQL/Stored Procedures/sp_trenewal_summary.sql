@@ -581,6 +581,9 @@ BEGIN
 						,product_nm 
 						,renewal_quote_note_desc
 						,renewal_quote_agency_primary_location_state_cd
+						,accepted_renewal_ct
+						,not_accepted_renewal_ct
+						,outstanding_renewal_ct
 					)
 				select @month_end_dt_sk, 
 						a.policy_sk,   
@@ -658,7 +661,33 @@ BEGIN
 						,qhc.loss_of_use_limit_amt 		renewal_quote_loss_of_use_limit_amt
 						,case when pr.product_nm = 'Condo' then 'Homeowners' else pr.product_nm end product_nm 
 						,a.renewal_quote_note_desc
-						,a.renewal_quote_agency_primary_location_state_cd
+						,a.renewal_quote_agency_primary_location_state_cd 
+						,case when a.non_flatcancel_ind = 1 
+							  and  a.renewalcount = 1 
+							  and  a.midterm_cancel_ind = 0 
+							  and  ren_pol.billing_PAID_IN = 'Yes' 
+							  and  ren_pol.first_billing_payment_dt is not null 
+						 then 1 
+						 else 0 
+						 end accepted_renewal_ct
+						,case when a.non_flatcancel_ind = 1 
+							  and  a.renewalcount = 1 
+							  and  a.midterm_cancel_ind = 0 
+							  and  ren_pol.billing_PAID_IN is null 
+							  and  ren_pol.first_billing_payment_dt is null 
+    						  and  ren_ph.transaction_type like 'Cancel%'
+						 then 1 
+						 else 0 
+						 end not_accepted_renewal_ct
+						,case when a.non_flatcancel_ind = 1 
+							  and  a.renewalcount = 1 
+							  and  a.midterm_cancel_ind = 0 
+							  and  ren_pol.billing_PAID_IN is null 
+							  and  ren_pol.first_billing_payment_dt is null 
+    						  and  ren_ph.transaction_type not like 'Cancel%'
+						 then 1 
+						 else 0 
+						 end outstanding_renewal_ct
 				from edw_temp.tren_summ a
 				left join ( select distinct cancellation_reason_desc, policy_sk, effective_dt 
 							FROM edw_core.tpolicy_history ph
@@ -668,7 +697,9 @@ BEGIN
 				left join edw_core.tquote_history qh on qh.quote_sk = a.renewal_quote_sk and qh.latest_transaction_in = 'Y'
 				left join edw_core.tquote_home_coverage qhc on qhc.quote_no = qh.quote_no and qhc.effective_dt = qh.effective_dt 
 																and qhc.transaction_seq_no = qh.transaction_seq_no
-				left join edw_core.tproduct pr on a.product_sk = pr.product_sk;
+				left join edw_core.tproduct pr on a.product_sk = pr.product_sk
+				left join edw_core.tpolicy ren_pol on ren_pol.policy_sk = a.renewal_sk
+				left join edw_core.tpolicy_history ren_ph on a.renewal_sk = ren_ph.policy_sk and ren_ph.latest_transaction_in = 'Y';
 
 				SET @rows_affected=@@ROWCOUNT;
 
