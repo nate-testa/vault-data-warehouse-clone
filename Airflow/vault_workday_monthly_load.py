@@ -73,6 +73,9 @@ with DAG(
             'sp_claim_workday_payment',
             'sp_claim_workday_reserve_feed',
             'sp_claim_workday_reserve_feed_itd',
+            'sp_claim_litigation_workday_payment',
+            'sp_claim_litigation_workday_reserve_feed',
+            'sp_claim_litigation_workday_reserve_feed_itd',
             'sp_tvalidation_result'
          ]
         
@@ -124,6 +127,30 @@ with DAG(
             autocommit=True,
         )
 
+        sp_claim_litigation_workday_payment = MsSqlOperator(
+            task_id='sp_claim_litigation_workday_payment',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_claim_litigation_workday_payment",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_claim_litigation_workday_reserve_feed = MsSqlOperator(
+            task_id='sp_claim_litigation_workday_reserve_feed',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_claim_litigation_workday_reserve_feed",
+            database="vault_edw",
+            autocommit=True,
+        )
+
+        sp_claim_litigation_workday_reserve_feed_itd = MsSqlOperator(
+            task_id='sp_claim_litigation_workday_reserve_feed_itd',
+            mssql_conn_id='Vault_EDW',
+            sql="EXEC edw_core.sp_claim_litigation_workday_reserve_feed_itd",
+            database="vault_edw",
+            autocommit=True,
+        )
+
         sp_tvalidation_result = MsSqlOperator(
             task_id='sp_tvalidation_result',
             mssql_conn_id='Vault_EDW',
@@ -143,7 +170,7 @@ with DAG(
             html_content=get_sp_success_data_HTML(vault_workday_monthly_load_group_items, 'All stored procedures executed successfully for all the Workday tables'),
         )
 
-        sp_policy_workday_unearned_premium_feed >> sp_policy_workday_written_premium_feed >> sp_policy_workday_ceded_premium_feed >> sp_claim_workday_payment >> sp_claim_workday_reserve_feed >> sp_claim_workday_reserve_feed_itd >> sp_tvalidation_result >> send_workday_email
+        sp_policy_workday_unearned_premium_feed >> sp_policy_workday_written_premium_feed >> sp_policy_workday_ceded_premium_feed >> sp_claim_workday_payment >> sp_claim_workday_reserve_feed >> sp_claim_workday_reserve_feed_itd >> sp_claim_litigation_workday_payment >> sp_claim_litigation_workday_reserve_feed >> sp_claim_litigation_workday_reserve_feed_itd >> sp_tvalidation_result >> send_workday_email
 
 
 
