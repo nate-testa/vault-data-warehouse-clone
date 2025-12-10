@@ -5,6 +5,7 @@
 -- Change date     |Author						             |	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 12/03/25         Yunus Mohammed				1. Created this procedure
+-- 12/10/25         Yunus Mohammed				2. Updated status_desc
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_reconciliation_snapsheet]
@@ -41,7 +42,7 @@ BEGIN
         SELECT 
         [source].transaction_ts AS transaction_start_dt,[source].transaction_ts AS transaction_end_dt,
         NULL AS source_record_ct,[source].loss AS source_amt,NULL AS target_record_ct,[target].loss AS target_amt,
-        'Claim' AS datamart_nm,CASE WHEN [source].loss = [target].loss THEN 'SUCCESS' ELSE 'FAILURE' END AS status_desc,
+        'Claim' AS datamart_nm,CASE WHEN [source].loss = [target].loss THEN 'Success' ELSE 'Failure' END AS status_desc,
         'Snapsheet' AS source_system_nm
         into edw_temp.tcommercial_reconciliation_snapsheet_temp1
         FROM
