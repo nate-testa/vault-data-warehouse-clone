@@ -5,7 +5,7 @@
 -- Change date     |Author						             |	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 12/03/25         Yunus Mohammed				1. Created this procedure
--- 12/10/25         Yunus Mohammed				2. Updated status_desc
+-- 12/10/25         Dinesh Bobbili				2. Updated status_desc
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_reconciliation_snapsheet]
