@@ -3,7 +3,7 @@
 -- Create Date: 09/13/2023
 -- Description: This procedures inserts unearned premium data
 ---------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author									 |	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 11/15/23		Yunus Mohammed				1. Updated logic for cancelled and expired policies
 -- 12/01/23		Yunus Mohammed				2. Updated  product name and company name
@@ -13,13 +13,14 @@
 -- 11/26/24		Yunus Mohammed				6. Updated Marine Boat & Yacht to Marine_Boat&Yacht
 -- 03/11/25		Yunus Mohammed				7. Corrected proc running for past months
 --																				Added run_date as param for pre-run
--- 04/25/25		Yunus Mohammed				8. AD8820 Updated logic to get risk address
+-- 04/25/25		Yunus Mohammed				8. AD-8820 Updated logic to get risk address
 --																					Update run date logic
--- 05/07/25		Yunus Mohammed				9. AD9047 Used tdaily_inforce table to check inforce policies.
+-- 05/07/25		Yunus Mohammed				9. AD-9047 Used tdaily_inforce table to check inforce policies.
 --																					Removed cancellation logic
--- 07/22/25		Dinesh Bobbili				10. AD10205 Added 5 PEL columns
--- 09/25/25		Dinesh Bobbili				11. AD11102 Added scheduled_limit_amt,blanket_limit_amt columns 
--- 11/10/25		Yunus Mohammed		12. AD11646 - Excluded NFP policies
+-- 07/22/25		Dinesh Bobbili						10. AD-10205 Added 5 PEL columns
+-- 09/25/25		Dinesh Bobbili						11. AD-11102 Added scheduled_limit_amt,blanket_limit_amt columns 
+-- 11/10/25		Yunus Mohammed				12. AD-11646 - Excluded NFP policies
+-- 12/09/25		Yunus Mohammed				13. AD-11945 Modified stored procedure to run proc on same date again
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -46,8 +47,11 @@ BEGIN
 		select yearmonth
 		from edw_core.tdate
 		where
-		actual_dt > @last_source_extract_ts
-		and actual_dt < cast(@current_date as date)
+			actual_dt > case
+								when datediff(dd,@last_source_extract_ts,@current_date) = 1 then dateadd(dd,-1,@last_source_extract_ts)
+								else @last_source_extract_ts
+							end
+			and actual_dt < cast(@current_date as date)
 		group by yearmonth
 		order by 1; 
 
