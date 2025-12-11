@@ -14,6 +14,7 @@
 -- 02/25/25				Yunus Mohammed				9. AD-8665 - Use coaleasce for payee_nm
 -- 03/27/25				Yunus Mohammed				10 AD-9009 payee_nm null issue resolved for payee role VendorManagement::Vendor
 -- 04/11/25				Yunus Mohammed				11 AD-9044 Update payment_approver_nm logic.
+-- 12/10/25				Dinesh Bobbili				12 AD-11923 Updated payee_address logic
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_payment_snapsheet]
 
@@ -53,13 +54,16 @@ BEGIN
 				end AS payee_nm,
 				fpd.party_type AS party_role_nm, 
 				ISNULL(fpi.amount,0) AS paid_amt,
-				concat( cp.address_address1,', ',
-						cp.address_address2,', ', 
-						cp.address_city,', ', 
-						cp.address_region,', ', 
-						cp.address_postal_code,', ', 
-						cp.address_country
-				) AS payee_address,
+				LTRIM(RTRIM(
+					CONCAT(
+						CASE WHEN NULLIF(fpd.address_address_1, '') IS NOT NULL THEN fpd.address_address_1 + ', ' ELSE '' END,
+						CASE WHEN NULLIF(fpd.address_address_2, '') IS NOT NULL THEN fpd.address_address_2 + ', ' ELSE '' END,
+						CASE WHEN NULLIF(fpd.address_city, '') IS NOT NULL THEN fpd.address_city + ', ' ELSE '' END,
+						CASE WHEN NULLIF(fpd.address_region, '') IS NOT NULL THEN fpd.address_region + ', ' ELSE '' END,
+						CASE WHEN NULLIF(fpd.address_postal_code, '') IS NOT NULL THEN fpd.address_postal_code + ', ' ELSE '' END,
+						CASE WHEN NULLIF(fpd.address_country, '') IS NOT NULL THEN fpd.address_country ELSE '' END
+					)
+				)) AS payee_address,
 				fpi.note_body AS remark, 
 				u.name AS payment_submitter_nm,
 				case when ftas.Id is null then u.name else apprvu.name end as payment_approver_nm, 
@@ -84,7 +88,7 @@ BEGIN
 		INNER JOIN  edw_stage_snapsheet.exposures e on c.id = e.claim_id and tf.claim_coverage_cd=e.id
 		INNER JOIN 	edw_stage_snapsheet.financial_payment_items fpi on fpi.claim_id = c.id and e.id = fpi.exposure_id 
 		LEFT JOIN 	edw_stage_snapsheet.financial_payment_details fpd on fpd.claim_id = c.id and fpd.financial_transaction_id = fpi.financial_transaction_id
-		LEFT JOIN 	edw_stage_snapsheet.claim_parties cp on fpd.party_id = cp.id
+		--LEFT JOIN 	edw_stage_snapsheet.claim_parties cp on fpd.party_id = cp.id
 		INNER JOIN 	edw_stage_snapsheet.financial_transactions ft on ft.id = fpi.financial_transaction_id
         LEFT JOIN   edw_stage_snapsheet.financial_transaction_actions fta on ft.id = fta.financial_transaction_id and fta.code='approve'
 		LEFT JOIN   edw_stage_snapsheet.financial_transaction_actions ftas on ft.id = ftas.financial_transaction_id and ftas.code='pending_approval'
