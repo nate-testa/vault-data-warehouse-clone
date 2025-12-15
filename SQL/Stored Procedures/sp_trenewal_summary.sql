@@ -581,7 +581,7 @@ BEGIN
 						,product_nm 
 						,renewal_quote_note_desc
 						,renewal_quote_agency_primary_location_state_cd
-						,accepted_renewal_ct
+						,accepted_renewal_ct 
 						,not_accepted_renewal_ct
 						,outstanding_renewal_ct
 					)
@@ -681,13 +681,14 @@ BEGIN
 										and  upper(ren_ph.cancellation_reason_desc) not in ('REWRITE WITH VAULT') 
 									)
 									or 
-										a.wip_renewal_quote_ct = 1  --khaleel will confirm to keep or not
+										a.wip_renewal_quote_ct = 1 and q.first_offered_quote_history_sk is not null and q.quote_source_status = 'Closed'  
 							  	   )
 						 then 1 
 						 else 0 
 						 end not_accepted_renewal_ct --renewals is issued, renewal status is cancelled and renewal is not paid 
 						 							 --renewal is not issued but just in submission or quote status
 													 --if no renewal quote (in case of NR or midterm cancels), then its counted in NR bucket
+													 --if quote first offered date is not null and quote source status is closed
 						,case when a.non_flatcancel_ind = 1 
 							  and  a.renewalcount = 1 
 							  and  a.midterm_cancel_ind = 0 
@@ -697,6 +698,8 @@ BEGIN
 						 then 1 
 						 else 0 
 						 end outstanding_renewal_ct --renewals that are issued and not paid and not cancelled
+						 , in_progress_renewal_ct
+						 , closed_with_no_offer_renewal_ct
 				from edw_temp.tren_summ a
 				left join ( select distinct cancellation_reason_desc, policy_sk, effective_dt 
 							FROM edw_core.tpolicy_history ph
