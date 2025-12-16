@@ -30,8 +30,11 @@ BEGIN
 		select yearmonth
 		from edw_core.tdate
 		where
-		actual_dt > @last_source_extract_ts
-		and actual_dt < cast(@current_date as date)
+			actual_dt > case
+								when datediff(dd,@last_source_extract_ts,@current_date) = 1 then dateadd(dd,-1,@last_source_extract_ts)
+								else @last_source_extract_ts
+							end
+			and actual_dt < cast(@current_date as date)
 		group by yearmonth
 		order by 1; 
 
