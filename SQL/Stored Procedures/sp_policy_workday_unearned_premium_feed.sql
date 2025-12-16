@@ -83,7 +83,8 @@ BEGIN
 			(
 				SELECT
 				accounting_date,policy_image_id,policy_number,product,
-				company,transaction_date,transaction_sequence,effective_date,
+				company,transaction_date,transaction_effective_date,
+				transaction_ts,transaction_sequence,effective_date,
 				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,sum(amount) as amount,sum(unearned) as unearned,contribcutoffdate,
