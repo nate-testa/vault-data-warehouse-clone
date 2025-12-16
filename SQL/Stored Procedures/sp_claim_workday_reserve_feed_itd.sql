@@ -17,6 +17,7 @@
 -- 04/25/25		Yunus Mohammed				9. Updated logic to get the month for which we are running the proc
 --																					Update run date logic
 -- 11/10/25		Yunus Mohammed				10. AD-11662 Updated for NFP policy claims
+-- 12/09/25		Yunus Mohammed				11. AD-11945 Modified stored procedure to run proc on same date again
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_reserve_feed_itd]
@@ -41,8 +42,11 @@ BEGIN
 		select @year_month = yearmonth
 		from edw_core.tdate
 		where
-		actual_dt > @last_source_extract_ts
-		and actual_dt < cast(@current_date as date)
+			actual_dt > case
+								when datediff(dd,@last_source_extract_ts,@current_date) = 1 then dateadd(dd,-1,@last_source_extract_ts)
+								else @last_source_extract_ts
+							end
+			and actual_dt < cast(@current_date as date)
 		group by yearmonth
 		order by 1;	
 

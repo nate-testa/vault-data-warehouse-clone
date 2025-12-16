@@ -14,9 +14,10 @@
 --																				Corrected accounting begin date logic and delete stmt where clause.
 --																				contribcutoffdate updated
 --																				Added run_date as param for pre-run
--- 04/25/25		Yunus Mohammed				7. AD8820 Updated logic to get risk address
+-- 04/25/25		Yunus Mohammed				7. AD-8820 Updated logic to get risk address
 --																					Update run date logic
--- 10/09/25		Yunus Mohammed				8. AD11288 Exclude records when both ceded and gross premium amount are 0
+-- 10/09/25		Yunus Mohammed				8. AD-11288 Exclude records when both ceded and gross premium amount are 0
+-- 12/09/25		Yunus Mohammed				9. AD-11945 Modified stored procedure to run proc on same date again
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_ceded_premium_feed]
@@ -48,7 +49,10 @@ BEGIN
 		select yearmonth
 		from edw_core.tdate
 		where
-		actual_dt > @last_source_extract_ts
+		actual_dt > case
+								when datediff(dd,@last_source_extract_ts,@current_date) = 1 then dateadd(dd,-1,@last_source_extract_ts)
+								else @last_source_extract_ts
+							end
 		and actual_dt < cast(@current_date as date)
 		group by yearmonth
 		order by 1; 
