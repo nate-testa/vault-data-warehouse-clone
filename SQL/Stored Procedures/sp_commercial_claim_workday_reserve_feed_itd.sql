@@ -27,11 +27,14 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 
 		DECLARE @last_day_month DATE, @year_month INT;
-		select @year_month = yearmonth
+        select @year_month = yearmonth
 		from edw_core.tdate
 		where
-		actual_dt > @last_source_extract_ts
-		and actual_dt < cast(@current_date as date)
+			actual_dt > case
+								when datediff(dd,@last_source_extract_ts,@current_date) = 1 then dateadd(dd,-1,@last_source_extract_ts)
+								else @last_source_extract_ts
+							end
+			and actual_dt < cast(@current_date as date)
 		group by yearmonth
 		order by 1;	
 
