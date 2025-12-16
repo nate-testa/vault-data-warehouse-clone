@@ -67,9 +67,13 @@ BEGIN
 			edw_core.tdate
 			where
 			yearmonth=@year_month;
-			
-			DELETE FROM edw_integration.claim_workday_payment_feed WHERE transaction_date BETWEEN @begin_dt AND @end_dt;
-		
+
+			DELETE lp
+            FROM edw_integration.claim_workday_payment_feed AS lp
+            INNER JOIN edw_core.tproduct AS p ON lp.product = p.product_nm
+            WHERE transaction_date BETWEEN @begin_dt AND @end_dt
+            AND p.product_category_nm = 'PersonalLines';
+
 			WITH claim_workday_payment_feed_temp AS
 			(
 			SELECT

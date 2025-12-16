@@ -51,8 +51,12 @@ BEGIN
 		order by 1;	
 
 		SELECT @last_day_month = actual_dt FROM edw_core.tdate WHERE yearmonth = @year_month and month_end_in = 'Y';
-		
-		DELETE FROM edw_integration.claim_workday_itd_reserve_feed WHERE monthend = @last_day_month;
+
+		DELETE rpi
+        FROM edw_integration.claim_workday_itd_reserve_feed AS rpi
+        INNER JOIN edw_core.tproduct AS p ON rpi.product = p.product_nm
+        WHERE monthend = @last_day_month
+        AND p.product_category_nm = 'PersonalLines'; 
 		
 		WITH claim_reserve_itd_feed_temp AS
 		(
