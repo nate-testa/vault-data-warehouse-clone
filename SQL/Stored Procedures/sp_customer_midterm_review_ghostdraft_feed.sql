@@ -78,8 +78,8 @@ BEGIN
 					null occupancy_type,
 					null occupancy_type_order,
 					null total_insured_value_amt,
-					p.monoline_home_in,
-					case when r.product_nm = 'Excess Liability' then sum(p.pel_limit_amt) end pel_limit_amt,
+					p.monoline_home_in, 
+					FORMAT(case when r.product_nm = 'Excess Liability' then sum(p.pel_limit_amt) end, 'C0', 'en-US') pel_limit_amt,
 					case when r.product_nm = 'Excess Liability' then sum(p.pel_location_ct) end pel_location_ct,
 					case when r.product_nm = 'Excess Liability' then sum(p.pel_watercraft_ct) end pel_watercraft_ct,
 					case when r.product_nm = 'Excess Liability' then sum(p.pel_vehicle_ct) end pel_vehicle_ct, 
@@ -89,7 +89,7 @@ BEGIN
 					--pel_message, 
 					null wildfire_protection_enrollment_in, 
 					null backup_generator_in, 
-					case when r.product_nm = 'Collections' then sum(p.total_collection_limit_amt) end total_collection_limit_amt, 
+					FORMAT(case when r.product_nm = 'Collections' then sum(p.total_collection_limit_amt) end, 'C0', 'en-US') total_collection_limit_amt, 
 					case when r.product_nm = 'Collections' and r.existing_product_in = 'Yes' then '004' 
 						 when r.product_nm = 'Collections' and r.existing_product_in = 'No' then '008' 
 					end collection_message_id, 
@@ -207,24 +207,24 @@ BEGIN
 					p.risk_address_city_nm,
 					p.risk_address_state_cd,
 					p.risk_address_zip_cd,
-					replace(LTRIM(RTRIM(
+					replace( 
 							CONCAT(
-								COALESCE(p.risk_address_line1, ''), ' ',
-								COALESCE(p.risk_address_line2, ''), ' ',
-								COALESCE(p.risk_address_unit_no, ''), ' ',
-								COALESCE(p.risk_address_city_nm, ''), ' ',
-								COALESCE(p.risk_address_state_cd, ''), ' ',
-								COALESCE(p.risk_address_zip_cd, '')
-							)
-						)),'  ','') AS risk_address,  
+								isnull(       p.risk_address_line1, ''), 
+								isnull(' '  + p.risk_address_line2, ''), 
+								isnull(' '  + p.risk_address_unit_no, ''),
+								isnull(', ' + p.risk_address_city_nm, ''), 
+								isnull(', ' + p.risk_address_state_cd, ''), 
+								isnull(' '  + p.risk_address_zip_cd, '')
+							 ),'  ',''
+					) AS risk_address,  
 					p.occupancy_type,
-							case p.occupancy_type
-								when 'Primary' then '1_Primary'
-								else '2_Non_Primary' 
-							end occupancy_type_order,
+					case p.occupancy_type
+						when 'Primary' then '1_Primary'
+						else '2_Non_Primary' 
+					end occupancy_type_order,
 					p.total_insured_value_amt,
 					p.monoline_home_in,
-					p.pel_limit_amt,
+					FORMAT(p.pel_limit_amt, 'C', 'en-US') pel_limit_amt,
 					p.pel_location_ct,
 					p.pel_watercraft_ct,
 					p.pel_vehicle_ct, 
@@ -232,7 +232,7 @@ BEGIN
 					--pel_message, 
 					p.wildfire_protection_enrollment_in, 
 					p.backup_generator_in, 
-					p.total_collection_limit_amt,
+					FORMAT(p.total_collection_limit_amt, 'C', 'en-US') total_collection_limit_amt,
 					null collection_message_id, 
 					--collection_message, 
 					null lux_on_endorsement_message_id,
