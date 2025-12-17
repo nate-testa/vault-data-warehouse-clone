@@ -80,9 +80,9 @@ BEGIN
 							for json path, include_null_values
 					)) as policy_entities,
 					p.expiration_dt,
-					d2.actual_dt as transaction_effective_dt,
+					pt.transaction_effective_dt,
 					pt.transaction_seq_no,
-					ptt.policy_transaction_type_nm as transaction_type,
+					pt.transaction_type,
 					ss.source_system_nm,
 					'pending' as api_status,
 					pt.create_ts as policy_transaction_create_ts
@@ -98,11 +98,8 @@ BEGIN
 				pth.source_system_sk not in (1) --and pth.product_sk not in (6)
 				and pr.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability','Group Personal Excess Liability')
 		) AS pt
-		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk
-		--inner JOIN edw_core.tproduct AS pr ON p.product_cd = pr.product_cd
-		--LEFT JOIN edw_core.tdate AS d2 ON pt.transaction_effective_dt_sk = d2.date_sk
+		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk		
 		LEFT JOIN edw_core.tcustomer AS c ON pt.customer_sk = c.customer_sk		
-		--LEFT JOIN edw_core.tpolicy_transaction_type AS ptt ON pt.policy_transaction_type_sk = ptt.policy_transaction_type_sk
 		LEFT JOIN edw_core.tsource_system AS ss ON pt.source_system_sk = ss.source_system_sk		
 		LEFT JOIN edw_core.tpolicy_insured AS [pi] ON p.policy_no = [pi].policy_no AND p.effective_dt = [pi].effective_dt
 		AND pt.transaction_seq_no = [pi].transaction_seq_no AND pi.primary_insured_in = 'Yes'
