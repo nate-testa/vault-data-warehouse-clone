@@ -161,7 +161,7 @@ BEGIN
 				where month_sk = @month_end_dt_sk
 				and source_system_sk = isnull(@param_ssk, source_system_sk);
 				
-				DROP TABLE IF EXISTS edw_temp.tren_summ_oth_cust_inf_temp;
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_v1_temp_0_oth_cust_inf;
 				
 				select customer_id, td.actual_dt inforce_dt, 
 						case when pol.prior_policy_no is null and pol.original_policy_no is null then pol.policy_no
@@ -170,7 +170,7 @@ BEGIN
 							 else left(pol.prior_policy_no, CHARINDEX('-',pol.prior_policy_no) - 1) 
 						end original_policy_no, 
 						pol.policy_no, pol.effective_dt
-				into edw_temp.tren_summ_oth_cust_inf_temp
+				into edw_temp.trenewal_summary_v1_temp_0_oth_cust_inf
 				from edw_core.tdaily_inforce_policy inf, edw_core.tdate td, edw_core.tpolicy pol
 				where inf.inforce_dt_sk = td.date_sk	
 				and inf.policy_sk  = pol.policy_sk 
@@ -178,7 +178,7 @@ BEGIN
 				and customer_sk is not null
 				and inf.source_system_sk = isnull(@param_ssk, inf.source_system_sk); 
 				
-				DROP TABLE IF EXISTS edw_temp.tren_summ_quotes;
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_v1_temp_1_quotes;
 				
 				with q as
 				(
@@ -211,11 +211,11 @@ BEGIN
 				select    q.*
 						, case when original_policy_no= prior_policy_no then 0 else 1 end pol_no_changed_in	
 						, n.note_desc				
-				into edw_temp.tren_summ_quotes 
+				into edw_temp.trenewal_summary_v1_temp_1_quotes 
 				from q
 				left join n on q.quote_no = n.quote_no and n.rnk = 1; 
 				
-				DROP TABLE IF EXISTS edw_temp.trenewal_summary_temp_0_prm;
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_v1_temp_2_prm;
 
 				SELECT tr.policy_sk, 
 				 		--tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk, 
@@ -310,7 +310,7 @@ BEGIN
 								  then hoc.rate_on_line  
 								else 0 
 								end) as day_0_rate_on_line
-				 into edw_temp.trenewal_summary_temp_0_prm
+				 into edw_temp.trenewal_summary_v1_temp_2_prm
 				 FROM	edw_core.tpolicy_transaction tr
 				 inner join edw_core.tpolicy_transaction_type tt on tt.policy_transaction_type_sk = tr.policy_transaction_type_sk
 				 inner join edw_core.tpolicy pol on tr.policy_sk = pol.policy_sk
@@ -351,19 +351,17 @@ BEGIN
 				and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 				 group by tr.policy_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk
 				
-				DROP TABLE IF EXISTS edw_temp.trenewal_summary_temp_0_max_tr;
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_v1_temp_3_max_tr;
 
 				select policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
-				into edw_temp.trenewal_summary_temp_0_max_tr
+				into edw_temp.trenewal_summary_v1_temp_3_max_tr
 				from edw_core.tpolicy_transaction 
 				where effective_dt_sk <= @end_dt_sk
 				--and   transaction_effective_dt_sk <= @end_dt_sk
 				--and   transaction_dt_sk <= @end_dt_sk 
 				group by policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no;
 
-				DROP TABLE IF EXISTS edw_temp.tren_summ;
-
-				DROP TABLE IF EXISTS edw_temp.tren_summ_initial; 
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_v1_temp_4_initial; 
 
 				with exp_pols as
 				--pols expiration in current month
@@ -396,13 +394,13 @@ BEGIN
 				ren_quotes as
 				(
 					select *
-					from edw_temp.tren_summ_quotes 
+					from edw_temp.trenewal_summary_v1_temp_1_quotes 
 				 	where rnk = 1 
 				)
 				select exp_pols.policy_sk, exp_pols.policy_no, exp_pols.uw_company_Cd exp_uw_company_Cd,
 						ren_pols.policy_sk renewal_policy_sk, ren_pols.uw_company_Cd ren_pol_uw_company_Cd, 
 						ren_quotes.quote_sk renewal_quote_sk, ren_quotes.uw_company_Cd ren_quote_uw_company_Cd, ren_quotes.note_desc, ren_quotes.primary_address_state_cd
-				into edw_temp.tren_summ_initial
+				into edw_temp.trenewal_summary_v1_temp_4_initial
 				from exp_pols 
 				-- join to get renewals for expiring policies
 				left join ren_pols on ren_pols.prior_term_policy_no = exp_pols.policy_no 
@@ -410,7 +408,7 @@ BEGIN
 				-- join to get renewals quotes for expiring policies
 				left join ren_quotes on ren_quotes.prior_term_policy_no = exp_pols.policy_no;
 
-				drop table if exists edw_temp.tren_summ_cancel_rewrites;
+				drop table if exists edw_temp.trenewal_summary_v1_temp_5_cancel_rewrites;
 
 				with ho_address as
 				(
@@ -437,8 +435,8 @@ BEGIN
 								 when pol.product_cd='PEL' then pel_new.policy_no end as ren_pol_new , 
 							ren_pol_new.policy_sk ren_pol_new_policy_sk, ren_pol_new.policy_status 
 							, replace(replace(ren_pol_new.uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') ren_pol_new_uw_company_Cd
-				into edw_temp.tren_summ_cancel_rewrites
-				from edw_temp.tren_summ_initial exp_pol 
+				into edw_temp.trenewal_summary_v1_temp_5_cancel_rewrites
+				from edw_temp.trenewal_summary_v1_temp_4_initial exp_pol 
 				inner join edw_core.tpolicy pol on exp_pol.policy_sk = pol.policy_sk 
 				left join edw_core.tpolicy_history ph on exp_pol.policy_sk = ph.policy_sk and ph.latest_transaction_in = 'Y'
 				left join edw_core.tpolicy ren_pol on ren_pol.policy_sk = exp_pol.renewal_policy_sk
@@ -456,13 +454,15 @@ BEGIN
 				update a
 				set a.renewal_policy_sk = b.ren_pol_new_policy_sk,
 					a.ren_pol_uw_company_Cd = b.ren_pol_new_uw_company_Cd
-				from edw_temp.tren_summ_initial a
-				inner join edw_temp.tren_summ_cancel_rewrites b on a.policy_sk = b.policy_sk;
+				from edw_temp.trenewal_summary_v1_temp_4_initial a
+				inner join edw_temp.trenewal_summary_v1_temp_5_cancel_rewrites b on a.policy_sk = b.policy_sk;
+
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_v1_temp_6_final;
 
 				
 				with exp_pols as
 				(
-					select * from edw_temp.tren_summ_initial
+					select * from edw_temp.trenewal_summary_v1_temp_4_initial
 				),
 				/*
 				--pols expiration in current month
@@ -479,7 +479,7 @@ BEGIN
 				(
 					SELECT pol.policy_sk, count(*) oth_inf_ct--pol.policy_no, pol.expiration_dt, pol.original_policy_no, ci.*
 					FROM	edw_core.tpolicy pol
-					inner join edw_temp.tren_summ_oth_cust_inf_temp ci on pol.customer_id = ci.customer_id and pol.expiration_dt = ci.inforce_dt and pol.original_policy_no <> ci.original_policy_no
+					inner join edw_temp.trenewal_summary_v1_temp_0_oth_cust_inf ci on pol.customer_id = ci.customer_id and pol.expiration_dt = ci.inforce_dt and pol.original_policy_no <> ci.original_policy_no
 				 	where	expiration_dt between @begin_dt and @end_dt
 					group by pol.policy_sk
 				),
@@ -505,7 +505,7 @@ BEGIN
 				ren_quotes as
 				(
 					select *
-					from edw_temp.tren_summ_quotes 
+					from edw_temp.trenewal_summary_v1_temp_1_quotes 
 				 	where rnk = 1
 
 				),
@@ -520,11 +520,11 @@ BEGIN
 				), */
 				prm as
 				(
-					select * from edw_temp.trenewal_summary_temp_0_prm
+					select * from edw_temp.trenewal_summary_v1_temp_2_prm
 				),
 				max_tr as
 				(
-					select * from edw_temp.trenewal_summary_temp_0_max_tr
+					select * from edw_temp.trenewal_summary_v1_temp_3_max_tr
 				)
 				select 	exp_pols_prm.policy_sk, 
 						max_tr.customer_sk, max_tr.broker_sk, max_tr.product_sk, max_tr.sourcE_system_sk, 
@@ -605,7 +605,7 @@ BEGIN
 						 case when exp_pols.renewal_policy_sk is not null then ren_pols_prm.day_0_COVA else null end renewal_cova_amt,  
 						 case when exp_pols.renewal_policy_sk is not null then ren_pols_prm.day_0_rate_on_line else null end renewal_rate_on_line_amt,  
 						 case when exp_pols.renewal_policy_sk is not null then ren_pols_prm.day_0_totalsquarefeet else null end renewal_total_finished_square_feet
-				into edw_temp.tren_summ
+				into edw_temp.trenewal_summary_v1_temp_6_final
 				from exp_pols
 				left join edw_core.tpolicy pol on exp_pols.policy_sk = pol.policy_sk
 				left join edw_core.tquote q on q.quote_sk = exp_pols.renewal_quote_sk
@@ -870,7 +870,7 @@ BEGIN
 							  then qh.premium_amt 
 						 	  else 0 
 						 end offered_quote_premium_amt 
-				from edw_temp.tren_summ a
+				from edw_temp.trenewal_summary_v1_temp_6_final a
 				left join ( select distinct cancellation_reason_desc, policy_sk, effective_dt 
 							FROM edw_core.tpolicy_history ph
 							Where transaction_type  = 'Cancellation'
@@ -902,9 +902,13 @@ BEGIN
 				end 
 				EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;   
 				
-				DROP TABLE IF EXISTS edw_temp.tren_summ_oth_cust_inf_temp;
-				DROP TABLE IF EXISTS edw_temp.tren_summ;
-				DROP TABLE IF EXISTS edw_temp.tren_summ_quotes;
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_v1_temp_0_oth_cust_inf;
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_v1_temp_1_quotes;
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_v1_temp_2_prm;
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_v1_temp_3_max_tr;
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_v1_temp_4_initial;
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_v1_temp_5_cancel_rewrites;
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_v1_temp_6_final;
 				 
 				FETCH NEXT FROM c1_rec INTO @yearmonth;
 			END; 
