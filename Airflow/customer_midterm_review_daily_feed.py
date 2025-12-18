@@ -21,10 +21,7 @@ cc_email = ""
 ENVIRONMENT = Variable.get("environment")
 HOME_PATH = os.path.expanduser('~')
 FOLDER_PATH = HOME_PATH + "/python_scripts/edw_to_metal"
-if ENVIRONMENT == "UAT":
-    BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
-else:
-    BASH_COMMAND = f'echo " *** EDW to Metal load skipped in {ENVIRONMENT} environment *** "'
+BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
 
 
 def check_customer_midterm_review_data_and_send_email(**kwargs):
