@@ -53,6 +53,8 @@ GO
 -- 06/13/25		Architha Gudimalla				29. AD9823 - Exclude forcast quotes
 -- 10/15/25		Dinesh Bobbili					30. AD11286 - simplified the date logic
 -- 11/10/25		Dinesh Bobbili					31. AD11642 - Added source_system_sk filter for NFP process
+-- 12/05/25		Architha Gudimalla				32. AD9858 - Updated logic to use prior_term_policy_no instead of prior_policy_no
+
 -- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary]
@@ -181,13 +183,14 @@ BEGIN
 				with q as
 				(
 					select  q.quote_sk, q.quote_no, q.effective_dt, q.original_policy_no, q.quote_Status, q.first_offered_quote_history_sk,  
-							case when q.prior_policy_no is null and q.original_policy_no is null then q.quote_no
-							 	 when q.prior_policy_no is null  							  then q.original_policy_no
-								 when CHARINDEX('-',q.prior_policy_no) = 0 					  then q.prior_policy_no 
-								else left(q.prior_policy_no, CHARINDEX('-',q.prior_policy_no) - 1) 
-							end prior_policy_no 
+							q.prior_policy_no 
 						    , replace(replace(q.uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd
 							, br.primary_address_state_cd
+							, q.prior_term_policy_no
+							, rank() over (partition by q.prior_term_policy_no 
+										   order by replace(replace(replace(quote_status,'In Progress','3_In_Progress'),'Offered','2_Offered'),'Issued','1_Issued'), 
+										   			q.quote_sk desc
+										  ) rnk
 					from edw_core.tquote q
 						 , edw_core.tbroker br 
 					where	effective_dt between @begin_dt and @end_dt 
@@ -210,80 +213,11 @@ BEGIN
 						, n.note_desc				
 				into edw_temp.tren_summ_quotes 
 				from q
-				left join n on q.quote_no = n.quote_no and n.rnk = 1;
+				left join n on q.quote_no = n.quote_no and n.rnk = 1; 
+				
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_temp_0_prm;
 
-				DROP TABLE IF EXISTS edw_temp.tren_summ;
-
-				with exp_pols as
-				--pols expiration in current month
-				(
-				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no,
-						replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd
-						, non_renewal_in, pending_non_renewal_in
-				 FROM	edw_core.tpolicy
-				 where	expiration_dt between @begin_dt and @end_dt 
-				 and source_system_sk = isnull(@param_ssk, source_system_sk)
-				),
-				--customer other inf count
-				cust_oth_inf as
-				(
-					SELECT pol.policy_sk, count(*) oth_inf_ct--pol.policy_no, pol.expiration_dt, pol.original_policy_no, ci.*
-					FROM	edw_core.tpolicy pol
-					inner join edw_temp.tren_summ_oth_cust_inf_temp ci on pol.customer_id = ci.customer_id and pol.expiration_dt = ci.inforce_dt and pol.original_policy_no <> ci.original_policy_no
-				 	where	expiration_dt between @begin_dt and @end_dt
-					group by pol.policy_sk
-				),
-				--pols renewing all in current month
-				ren_pols_all as
-				(
-				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no,
-						replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd, 
-						 case when prior_policy_no is null and original_policy_no is null then policy_no
-							  when prior_policy_no is null  							  then original_policy_no
-							  when CHARINDEX('-',prior_policy_no) = 0 					  then prior_policy_no 
-							  else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
-						end prior_policy_no,
-						rank() over (partition by case when prior_policy_no is null and original_policy_no is null then policy_no
-												 	   when prior_policy_no is null then original_policy_no
-												 	   when CHARINDEX('-',prior_policy_no) = 0 then prior_policy_no 
-								  					   else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) 
-												  end order by policy_sk) rnk
-				 FROM	edw_core.tpolicy
-				 where	effective_dt between @begin_dt and @end_dt
-				 and source_system_sk = isnull(@param_ssk, source_system_sk)
-				),
-				--pols renewing distinct in current month
-				ren_pols as
-				(
-				 SELECT *
-				 FROM	ren_pols_all
-				 where rnk = 1
-				),
-				--pols renewing all in current month
-				ren_quotes as
-				(
-					select *
-					FROM
-					(
-						SELECT *, 
-								--added replace x, to remove dupes
-								rank() over (partition by replace(prior_policy_no,'x','') order by pol_no_changed_in, quote_sk) rnk  
-						from edw_temp.tren_summ_quotes
-					) A
-				 	where rnk = 1
-
-				),
-				/*ren_pols as
-				--pols renewing in current month
-				(
-				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no, 
-						 case when CHARINDEX('-',prior_policy_no) = 0 then prior_policy_no else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) end prior_policy_no
-				 FROM	edw_core.tpolicy
-				 where	effective_dt between @begin_dt and @end_dt 
-				), */
-				prm as
-				(
-				 SELECT tr.policy_sk, 
+				SELECT tr.policy_sk, 
 				 		--tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk, 
 				 		max(tr.transaction_seq_no) transaction_seq_no,
 		 				sum(tr.premium_amt - tr.tax_fee_surcharge_amt) premium_amt,
@@ -376,6 +310,7 @@ BEGIN
 								  then hoc.rate_on_line  
 								else 0 
 								end) as day_0_rate_on_line
+				 into edw_temp.trenewal_summary_temp_0_prm
 				 FROM	edw_core.tpolicy_transaction tr
 				 inner join edw_core.tpolicy_transaction_type tt on tt.policy_transaction_type_sk = tr.policy_transaction_type_sk
 				 inner join edw_core.tpolicy pol on tr.policy_sk = pol.policy_sk
@@ -415,15 +350,79 @@ BEGIN
 						pol.effective_dt between @begin_dt and @end_dt)
 				and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
 				 group by tr.policy_sk--, tr.customer_sk, tr.broker_sk, tr.product_sk, tr.source_system_sk
+				
+				DROP TABLE IF EXISTS edw_temp.trenewal_summary_temp_0_max_tr;
+
+				select policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
+				into edw_temp.trenewal_summary_temp_0_max_tr
+				from edw_core.tpolicy_transaction 
+				where effective_dt_sk <= @end_dt_sk
+				--and   transaction_effective_dt_sk <= @end_dt_sk
+				--and   transaction_dt_sk <= @end_dt_sk 
+				group by policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no;
+
+				DROP TABLE IF EXISTS edw_temp.tren_summ;
+
+				with exp_pols as
+				--pols expiration in current month
+				(
+				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no,
+						replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd
+						, non_renewal_in, pending_non_renewal_in
+				 FROM	edw_core.tpolicy
+				 where	expiration_dt between @begin_dt and @end_dt 
+				 and source_system_sk = isnull(@param_ssk, source_system_sk)
+				),
+				--customer other inf count
+				cust_oth_inf as
+				(
+					SELECT pol.policy_sk, count(*) oth_inf_ct--pol.policy_no, pol.expiration_dt, pol.original_policy_no, ci.*
+					FROM	edw_core.tpolicy pol
+					inner join edw_temp.tren_summ_oth_cust_inf_temp ci on pol.customer_id = ci.customer_id and pol.expiration_dt = ci.inforce_dt and pol.original_policy_no <> ci.original_policy_no
+				 	where	expiration_dt between @begin_dt and @end_dt
+					group by pol.policy_sk
+				),
+				--pols renewing all in current month
+				ren_pols_all as
+				(
+				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no, prior_term_policy_no, prior_policy_no, policy_status,
+						replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd, 
+						rank() over (partition by prior_term_policy_no 
+									order by replace(replace(replace(policy_status,'Expired','2_Expired'),'Cancelled','3_Cancelled'),'Active','1_Active'), policy_sk) rnk
+				 FROM	edw_core.tpolicy
+				 where	effective_dt between @begin_dt and @end_dt
+				 and source_system_sk = isnull(@param_ssk, source_system_sk)
+				),
+				--pols renewing distinct in current month
+				ren_pols as
+				(
+				 SELECT *
+				 FROM	ren_pols_all
+				 where rnk = 1
+				),
+				--pols renewing all in current month
+				ren_quotes as
+				(
+					select *
+					from edw_temp.tren_summ_quotes 
+				 	where rnk = 1
+
+				),
+				/*ren_pols as
+				--pols renewing in current month
+				(
+				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no, 
+						 case when CHARINDEX('-',prior_policy_no) = 0 then prior_policy_no else left(prior_policy_no, CHARINDEX('-',prior_policy_no) - 1) end prior_policy_no
+				 FROM	edw_core.tpolicy
+				 where	effective_dt between @begin_dt and @end_dt 
+				), */
+				prm as
+				(
+					select * from edw_temp.trenewal_summary_temp_0_prm
 				),
 				max_tr as
 				(
-					select policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
-					from edw_core.tpolicy_transaction 
-					where effective_dt_sk <= @end_dt_sk
-					--and   transaction_effective_dt_sk <= @end_dt_sk
-					--and   transaction_dt_sk <= @end_dt_sk 
-					group by policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no
+					select * from edw_temp.trenewal_summary_temp_0_max_tr
 				)
 				select 	exp_pols_prm.policy_sk, 
 						max_tr.customer_sk, max_tr.broker_sk, max_tr.product_sk, max_tr.sourcE_system_sk, 
@@ -509,9 +508,11 @@ BEGIN
 				-- join to get prms for expiring policies
 				inner join prm exp_pols_prm on exp_pols_prm.policy_sk = exp_pols.policy_sk 
 				-- join to get renewals for expiring policies
-				left join ren_pols on replace(ren_pols.prior_policy_no,'x','') = replace(exp_pols.original_policy_no,'x','') and ren_pols.effective_dt = exp_pols.expiration_dt 
+				left join ren_pols on ren_pols.prior_term_policy_no = exp_pols.policy_no 
+				--left join ren_pols on replace(ren_pols.prior_policy_no,'x','') = replace(exp_pols.original_policy_no,'x','') and ren_pols.effective_dt = exp_pols.expiration_dt 
 				-- join to get renewals quotes for expiring policies
-				left join ren_quotes on replace(ren_quotes.prior_policy_no,'x','') = replace(exp_pols.original_policy_no,'x','') and ren_quotes.effective_dt = exp_pols.expiration_dt 
+				left join ren_quotes on ren_quotes.prior_term_policy_no = exp_pols.policy_no
+				--left join ren_quotes on replace(ren_quotes.prior_policy_no,'x','') = replace(exp_pols.original_policy_no,'x','') and ren_quotes.effective_dt = exp_pols.expiration_dt 
 				-- join to get prm for renewals 
 				left join prm ren_pols_prm on ren_pols_prm.policy_sk = ren_pols.policy_sk 
 				inner join max_tr on exp_pols_prm.policy_sk = max_tr.policy_sk and exp_pols_prm.transaction_seq_no = max_tr.transaction_seq_no
@@ -581,6 +582,13 @@ BEGIN
 						,product_nm 
 						,renewal_quote_note_desc
 						,renewal_quote_agency_primary_location_state_cd
+						,prior_issued_ct
+						,accepted_renewal_ct 
+						,not_accepted_renewal_ct
+						,outstanding_renewal_ct
+						,in_progress_renewal_ct  
+						,closed_with_no_offer_renewal_ct  
+						,offered_quote_ct
 					)
 				select @month_end_dt_sk, 
 						a.policy_sk,   
@@ -607,7 +615,7 @@ BEGIN
 						a.expiring_rate_on_line,
 						a.flatcancel_ind, 
 						a.non_flatcancel_ind, 
-						a.midterm_cancel_ind,  
+						case when a.nonrenewal_ind = 0 then a.midterm_cancel_ind else 0 end midterm_cancel_ind,  
 						a.expiring_ind,   
 						a.nonrenewal_ind,
 						a.pending_nonrenewal_ind, 
@@ -658,17 +666,87 @@ BEGIN
 						,qhc.loss_of_use_limit_amt 		renewal_quote_loss_of_use_limit_amt
 						,case when pr.product_nm = 'Condo' then 'Homeowners' else pr.product_nm end product_nm 
 						,a.renewal_quote_note_desc
-						,a.renewal_quote_agency_primary_location_state_cd
+						,a.renewal_quote_agency_primary_location_state_cd 
+						,case when a.non_flatcancel_ind = 1  
+						 then 1 
+						 else 0 
+						 end prior_issued_ct --renewal is issued and paid
+						,case when a.non_flatcancel_ind = 1 
+							  and  a.renewalcount = 1 
+							  and  a.midterm_cancel_ind = 0 
+							  and  ren_pol.billing_PAID_IN = 'Yes' 
+							  and  ren_pol.first_billing_payment_dt is not null 
+						 then 1 
+						 else 0 
+						 end accepted_renewal_ct --renewal is issued and paid
+						,case when a.non_flatcancel_ind = 1 
+							  and  a.renewalcount = 1 
+							  and  a.midterm_cancel_ind = 0 
+							  and   ( 		ren_pol.billing_PAID_IN is null 
+										and  ren_pol.first_billing_payment_dt is null 
+										and  ren_ph.transaction_type like 'Cancel%'
+										and  ren_ph.cancellation_reason_desc not in ('Rewritten with Vault')
+										and  upper(ren_ph.cancellation_reason_desc) not in ('REWRITE WITH VAULT') 
+									)
+							  then 1 
+							  when a.non_flatcancel_ind = 1 
+							  and  a.renewalcount = 0 
+							  and  a.wip_renewal_quote_ct = 1 
+							  and q.first_offered_quote_history_sk is not null 
+							  and q.quote_source_status = 'Closed'   
+								then 1 
+								else 0 
+						 end not_accepted_renewal_ct --renewals is issued, renewal status is cancelled and renewal is not paid 
+						 							 --renewal is not issued but just in submission or quote status
+													 --if no renewal quote (in case of NR or midterm cancels), then its counted in NR bucket
+													 --if quote first offered date is not null and quote source status is closed
+						,case when a.non_flatcancel_ind = 1 
+							  and  a.renewalcount = 1 
+							  and  a.midterm_cancel_ind = 0 
+							  and  ren_pol.billing_PAID_IN is null 
+							  and  ren_pol.first_billing_payment_dt is null 
+    						  and  ren_ph.transaction_type not like 'Cancel%'
+						 then 1 
+						 else 0 
+						 end outstanding_renewal_ct --renewals that are issued and not paid and not cancelled 
+						,case when a.non_flatcancel_ind = 1 
+							  and  a.renewalcount = 0 
+							  and  a.midterm_cancel_ind = 0 
+							  and  q.quote_source_status = 'In Progress'
+							  --and  q.first_offered_quote_history_sk is not null
+						 then 1 
+						 else 0 
+						 end in_progress_renewal_ct  
+						,case when a.non_flatcancel_ind = 1 
+							  and  a.renewalcount = 0 
+							  and  a.midterm_cancel_ind = 0 
+							  and  a.nonrenewal_ind = 0
+							  and  q.quote_source_status = 'Closed'
+							  and  q.first_offered_quote_history_sk is null
+						 then 1 
+						 else 0 
+						 end closed_with_no_offer_renewal_ct  
+						 ,case when a.non_flatcancel_ind = 1 and 
+									( (q.first_offered_quote_history_sk IS NOT NULL and q.quote_status in ('In Progress')) 
+									OR q.quote_status in ( 'Not taken', 'Offered') 
+									OR a.renewalcount = 1 
+									)
+							  then 1 
+						 	  else 0 
+						 end offered_quote_ct  
 				from edw_temp.tren_summ a
 				left join ( select distinct cancellation_reason_desc, policy_sk, effective_dt 
 							FROM edw_core.tpolicy_history ph
 							Where transaction_type  = 'Cancellation'
 							and latest_transaction_in ='Y'
 						  ) b on a.policy_sk = b.policy_sk
-				left join edw_core.tquote_history qh on qh.quote_sk = a.renewal_quote_sk and qh.latest_transaction_in = 'Y'
+				left join edw_core.tquote q on q.quote_sk = a.renewal_quote_sk 
+				left join edw_core.tquote_history qh on qh.quote_sk = q.quote_sk and qh.latest_transaction_in = 'Y'
 				left join edw_core.tquote_home_coverage qhc on qhc.quote_no = qh.quote_no and qhc.effective_dt = qh.effective_dt 
 																and qhc.transaction_seq_no = qh.transaction_seq_no
-				left join edw_core.tproduct pr on a.product_sk = pr.product_sk;
+				left join edw_core.tproduct pr on a.product_sk = pr.product_sk
+				left join edw_core.tpolicy ren_pol on ren_pol.policy_sk = a.renewal_sk
+				left join edw_core.tpolicy_history ren_ph on a.renewal_sk = ren_ph.policy_sk and ren_ph.latest_transaction_in = 'Y'; 
 
 				SET @rows_affected=@@ROWCOUNT;
 
