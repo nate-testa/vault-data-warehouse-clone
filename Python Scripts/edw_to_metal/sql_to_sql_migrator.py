@@ -14,6 +14,7 @@ import sys
 import pandas as pd
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, Engine
+from sqlalchemy.types import NVARCHAR
 from config_manager import ConfigManager
 from typing import List, Dict, Any
 
@@ -166,6 +167,18 @@ class SqlToSqlMigrator:
         df = df.where(pd.notnull(df), None)
         return df
 
+    def _get_column_dtypes(self, df: pd.DataFrame) -> Dict[str, Any]:
+        """
+        Helper to map pandas dtypes to SQLAlchemy types.
+        Specifically handles string columns to ensure they bind as NVARCHAR(MAX).
+        """
+        dtypes = {}
+        for col_name, dtype in df.dtypes.items():
+            if dtype == 'object':
+                # Map all object/string columns to NVARCHAR(None), which equates to NVARCHAR(MAX)
+                dtypes[col_name] = NVARCHAR(None)
+        return dtypes
+
     def _load_to_target(self, df: pd.DataFrame, target_db: str, target_schema: str, target_table: str, load_strategy: str):
         """
         Loads the extracted DataFrame into the target (Host 2) database.
@@ -180,34 +193,35 @@ class SqlToSqlMigrator:
         log_table_name = f"{target_db}.{target_schema}.{target_table}"
         self.logger.info(f"Preparing to load {len(df)} records into {log_table_name} on Host 2...")
         
+        # Get dynamic dtypes mapping to handle MAX length strings
+        sql_dtypes = self._get_column_dtypes(df)
+
         # Use host2_engine.begin() to ensure the entire load process
         # (including truncate) is wrapped in a single transaction.
         # It will automatically commit on success or rollback on failure.
         with self.host2_engine.begin() as conn:
             try:
                 # 1. Set Database Context
-                # We must wrap raw SQL commands like 'USE' in text()
-                # to mark them as executable statements for SQLAlchemy.
                 conn.execute(text(f"USE {target_db}"))
                 self.logger.info(f"Set database context to: {target_db}")
 
                 # 2. Apply Load Strategy
                 if load_strategy == 'truncate':
                     self.logger.info(f"Truncating target table: {log_table_name}...")
-                    # Also wrap TRUNCATE in text()
                     conn.execute(text(f"TRUNCATE TABLE [{target_schema}].[{target_table}]"))
                     self.logger.info("Truncate complete.")
                 
                 # 3. Load Data
-                # Use pandas.to_sql for efficient bulk loading.
+                # NOTE: We are NOT using method='multi' here. The fast_executemany method 
+                # can cause 'String data, length mismatch' errors with variable-length 
+                # JSON/NVARCHAR(MAX) data. The default method is slower but robust.
                 df.to_sql(
                     name=target_table,
                     con=conn,
                     schema=target_schema,
                     if_exists='append',  # We always append (after an optional truncate)
                     index=False,         # Do not write the pandas index as a column
-                    chunksize=10000,     # Load data in chunks of 10k rows
-                    method='multi'       # Use 'multi' for fast bulk-insert syntax with pyodbc
+                    dtype=sql_dtypes     # Apply type mapping for NVARCHAR(MAX)
                 )
                 
                 self.logger.info(f"Successfully loaded {len(df)} records to {log_table_name}.")
@@ -286,19 +300,19 @@ class SqlToSqlMigrator:
         if successful_tasks:
             self.logger.info("\n✓ SUCCESSFUL TASKS:")
             for task in successful_tasks:
-                self.logger.info(f"  ✓ {task}")
+                self.logger.info(f"   ✓ {task}")
         
         if failed_tasks:
             self.logger.error("\n✗ FAILED TASKS:")
             for item in failed_tasks:
-                self.logger.error(f"  ✗ {item['task']}")
-                self.logger.error(f"    Error: {item['error']}")
+                self.logger.error(f"   ✗ {item['task']}")
+                self.logger.error(f"     Error: {item['error']}")
         
         if skipped_tasks:
             self.logger.warning("\n⊘ SKIPPED TASKS:")
             for item in skipped_tasks:
-                self.logger.warning(f"  ⊘ {item['task']}")
-                self.logger.warning(f"    Reason: {item['reason']}")
+                self.logger.warning(f"   ⊘ {item['task']}")
+                self.logger.warning(f"     Reason: {item['reason']}")
         
         self.logger.info("=" * 80)
         
