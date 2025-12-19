@@ -416,23 +416,26 @@ BEGIN
 				), 
 				pel_address as
 				(
-					select loc.policy_no, loc.effective_dt, loc.address_line_1, primary_location_in 
+					select loc.policy_no, loc.effective_dt, replace(loc.address_line_1,' court',' ct') address_line_1, primary_location_in 
 					from edw_core.tpel_location loc, edw_core.tpolicy_history ph 
 					where  ph.policy_no = loc.policy_no and ph.policy_history_sk = loc.policy_history_sk and ph.latest_transaction_in = 'Y'
 				) , 
 				au_address as
 				(
-					select loc.policy_no, loc.effective_dt, loc.address_line_1, primary_location_in 
-					from edw_core.tpel_location loc, edw_core.tpolicy_history ph 
-					where  ph.policy_no = loc.policy_no and ph.policy_history_sk = loc.policy_history_sk and ph.latest_transaction_in = 'Y'
+					select pol.policy_no, pol.effective_dt, pol.mailing_address_line1 
+					from edw_core.tpolicy pol 
+					where  product_cd = 'AU'
 				) 
 				select exp_pol.*, ren_pol_ph.cancellation_reason_desc, pol.expiration_dt, 
 							case when pol.product_cd='HO' then hol.address_line_1
-								 when pol.product_cd='PEL' then pel.address_line_1 end as address_old, 
+								 when pol.product_cd='PEL' then pel.address_line_1 
+								 when pol.product_cd='AU' then AU.mailing_address_line1 end as address_old, 
 							case when pol.product_cd='HO' then hol_new.address_line_1
-								 when pol.product_cd='PEL' then pel_new.address_line_1 end as address_new, 
+								 when pol.product_cd='PEL' then pel_new.address_line_1 
+								 when pol.product_cd='AU' then au_new.mailing_address_line1 end as address_new, 
 							case when pol.product_cd='HO' then hol_new.policy_no
-								 when pol.product_cd='PEL' then pel_new.policy_no end as ren_pol_new , 
+								 when pol.product_cd='PEL' then pel_new.policy_no 
+								 when pol.product_cd='PEL' then au_new.policy_no end as ren_pol_new , 
 							ren_pol_new.policy_sk ren_pol_new_policy_sk, ren_pol_new.policy_status 
 							, replace(replace(ren_pol_new.uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') ren_pol_new_uw_company_Cd
 				into edw_temp.trenewal_summary_v1_temp_5_cancel_rewrites
@@ -445,11 +448,15 @@ BEGIN
 				left join ho_address hol_new on hol.address_line_1 = hol_new.address_line_1 and hol.policy_no <> hol_new.policy_no and pol.expiration_dt = hol_new.effective_dt --and hol.effective_dt
 				left join pel_address pel on pel.policy_no = ph.policy_no  and pel.primary_location_in = 'Yes'
 				left join pel_address pel_new on pel.address_line_1 = pel_new.address_line_1 and pel.policy_no <> pel_new.policy_no and pol.expiration_dt = pel_new.effective_dt
+				left join au_address au on au.policy_no = ph.policy_no  
+				left join au_address au_new on au.mailing_address_line1 = au_new.mailing_address_line1 and au.policy_no <> au_new.policy_no and pol.expiration_dt = au_new.effective_dt
 				left join edw_core.tpolicy ren_pol_new on ren_pol_new.policy_no = case  when pol.product_cd='HO' then hol_new.policy_no
-																						when pol.product_cd='PEL' then pel_new.policy_no end 
+																						when pol.product_cd='PEL' then pel_new.policy_no
+																						when pol.product_cd='AU' then au_new.policy_no end 
 				where ren_pol.policy_status = 'Cancelled'
 				and ren_pol_ph.cancellation_reason_desc in ('Rewritten with Vault','REWRITE WITH VAULT')
-				and ren_pol_new.policy_sk <> exp_pol.renewal_policy_sk; 
+				and ren_pol_new.policy_sk <> exp_pol.renewal_policy_sk
+				and ren_pol_new.policy_status  = 'Active'; 
 
 				update a
 				set a.renewal_policy_sk = b.ren_pol_new_policy_sk,
@@ -804,8 +811,9 @@ BEGIN
 							  and   ( 		ren_pol.billing_PAID_IN is null 
 										and  ren_pol.first_billing_payment_dt is null 
 										and  ren_ph.transaction_type like 'Cancel%'
-										and  ren_ph.cancellation_reason_desc not in ('Rewritten with Vault')
-										and  upper(ren_ph.cancellation_reason_desc) not in ('REWRITE WITH VAULT') 
+										--took out below since I added logic to match on address above
+										--and  ren_ph.cancellation_reason_desc not in ('Rewritten with Vault')
+										--and  upper(ren_ph.cancellation_reason_desc) not in ('REWRITE WITH VAULT') 
 									)
 							  then 1 
 							  when a.non_flatcancel_ind = 1 
@@ -833,6 +841,7 @@ BEGIN
 						 end outstanding_renewal_ct --renewals that are issued and not paid and not cancelled 
 						,case when a.non_flatcancel_ind = 1 
 							  and  a.renewalcount = 0 
+							  and  a.nonrenewal_ind = 0 
 							  and  case when a.nonrenewal_ind = 1 then 0
 										when ren_pol.policy_sk is not null and ren_pol.policy_status in ('Active','Expired') then 0
 										else a.midterm_cancel_ind
