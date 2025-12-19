@@ -69,3 +69,11 @@ WHERE TABLE_SCHEMA='edw_core'
 AND TABLE_NAME = 'trenewal_summary'					
 AND COLUMN_NAME = 'offered_quote_premium_amt'					
 ) BEGIN ALTER TABLE edw_core.trenewal_summary ADD offered_quote_premium_amt decimal(15,2) END ;  
+
+IF NOT EXISTS (					
+SELECT 1					
+FROM INFORMATION_SCHEMA.COLUMNS					
+WHERE TABLE_SCHEMA='edw_core'					
+AND TABLE_NAME = 'trenewal_summary'					
+AND COLUMN_NAME = 'expired_with_no_submission_ct'					
+) BEGIN ALTER TABLE edw_core.trenewal_summary ADD expired_with_no_submission_ct int END ; 

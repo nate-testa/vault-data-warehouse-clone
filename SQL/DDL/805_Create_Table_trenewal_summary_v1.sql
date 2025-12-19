@@ -1,9 +1,7 @@
-/****** Object:  Table [edw_stage].[trenewal_summary_v1]    Script Date: 12/18/2025 4:55:47 AM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
+ IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES 
+               WHERE TABLE_SCHEMA = 'edw_stage' 
+               AND TABLE_NAME = 'trenewal_summary_v1')
+BEGIN
 
 CREATE TABLE [edw_stage].[trenewal_summary_v1](
 	[month_sk] [int] NOT NULL,
@@ -79,47 +77,39 @@ CREATE TABLE [edw_stage].[trenewal_summary_v1](
 	[closed_with_no_offer_renewal_ct] [int] NULL,
 	[offered_quote_premium_amt] [decimal](15, 2) NULL,
 	[prior_issued_premium_amt] [decimal](15, 2) NULL,
+	expired_with_no_submission_ct int,
  CONSTRAINT [pk_trenewal_summary_v1] PRIMARY KEY CLUSTERED 
 (
 	[month_sk] ASC,
 	[policy_sk] ASC
-)WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
-GO
+)ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY] 
 
 ALTER TABLE [edw_stage].[trenewal_summary_v1]  WITH CHECK ADD  CONSTRAINT [fk_trs_tbroker_broker_sk] FOREIGN KEY([broker_sk])
-REFERENCES [edw_core].[tbroker] ([broker_sk])
-GO
+REFERENCES [edw_core].[tbroker] ([broker_sk]) 
 
-ALTER TABLE [edw_stage].[trenewal_summary_v1] CHECK CONSTRAINT [fk_trs_tbroker_broker_sk]
-GO
+ALTER TABLE [edw_stage].[trenewal_summary_v1] CHECK CONSTRAINT [fk_trs_tbroker_broker_sk] 
 
 ALTER TABLE [edw_stage].[trenewal_summary_v1]  WITH CHECK ADD  CONSTRAINT [fk_trs_tcustomer_customer_sk] FOREIGN KEY([customer_sk])
-REFERENCES [edw_core].[tcustomer] ([customer_sk])
-GO
+REFERENCES [edw_core].[tcustomer] ([customer_sk]) 
 
-ALTER TABLE [edw_stage].[trenewal_summary_v1] CHECK CONSTRAINT [fk_trs_tcustomer_customer_sk]
-GO
+ALTER TABLE [edw_stage].[trenewal_summary_v1] CHECK CONSTRAINT [fk_trs_tcustomer_customer_sk] 
 
 ALTER TABLE [edw_stage].[trenewal_summary_v1]  WITH CHECK ADD  CONSTRAINT [fk_trs_tpolicy_policy_sk] FOREIGN KEY([policy_sk])
-REFERENCES [edw_core].[tpolicy] ([policy_sk])
-GO
+REFERENCES [edw_core].[tpolicy] ([policy_sk]) 
 
-ALTER TABLE [edw_stage].[trenewal_summary_v1] CHECK CONSTRAINT [fk_trs_tpolicy_policy_sk]
-GO
+ALTER TABLE [edw_stage].[trenewal_summary_v1] CHECK CONSTRAINT [fk_trs_tpolicy_policy_sk] 
 
 ALTER TABLE [edw_stage].[trenewal_summary_v1]  WITH CHECK ADD  CONSTRAINT [fk_trs_tproduct_product_sk] FOREIGN KEY([product_sk])
-REFERENCES [edw_core].[tproduct] ([product_sk])
-GO
+REFERENCES [edw_core].[tproduct] ([product_sk]) 
 
-ALTER TABLE [edw_stage].[trenewal_summary_v1] CHECK CONSTRAINT [fk_trs_tproduct_product_sk]
-GO
+ALTER TABLE [edw_stage].[trenewal_summary_v1] CHECK CONSTRAINT [fk_trs_tproduct_product_sk] 
 
 ALTER TABLE [edw_stage].[trenewal_summary_v1]  WITH CHECK ADD  CONSTRAINT [fk_trs_tsource_system_source_system_sk] FOREIGN KEY([source_system_sk])
-REFERENCES [edw_core].[tsource_system] ([source_system_sk])
-GO
+REFERENCES [edw_core].[tsource_system] ([source_system_sk]) 
 
-ALTER TABLE [edw_stage].[trenewal_summary_v1] CHECK CONSTRAINT [fk_trs_tsource_system_source_system_sk]
-GO
+ALTER TABLE [edw_stage].[trenewal_summary_v1] CHECK CONSTRAINT [fk_trs_tsource_system_source_system_sk] 
+
+end
 
 

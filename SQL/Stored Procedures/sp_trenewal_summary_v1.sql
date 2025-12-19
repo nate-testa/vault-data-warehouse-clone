@@ -326,7 +326,7 @@ BEGIN
 																		order by transaction_seq_no desc, policy_transaction_sk desc) rnk
 								 FROM	edw_core.tpolicy_transaction
 								 where	effective_dt_sk <= @end_dt_sk
-				 				and transaction_dt_sk - expiration_dt_sk <= 60
+				 				--and transaction_dt_sk - expiration_dt_sk <= 60
 								 --and	transaction_effective_dt_sk <= @end_dt_sk 
 							) max_pol_tr on tr.policy_sk = max_pol_tr.policy_sk
 				 --getting 60 day transaction record
@@ -699,6 +699,7 @@ BEGIN
 						,prior_issued_premium_amt
 						,accepted_renewal_ct 
 						,not_accepted_renewal_ct
+						,expired_with_no_submission_ct
 						,outstanding_renewal_ct
 						,in_progress_renewal_ct  
 						,closed_with_no_offer_renewal_ct  
@@ -735,7 +736,10 @@ BEGIN
 							 else a.midterm_cancel_ind
 						end midterm_cancel_ind,  
 						a.expiring_ind,   
-						a.nonrenewal_ind,
+						case when a.midterm_cancel_ind = 1 and a.nonrenewal_ind = 1
+							then 0
+							else a.nonrenewal_ind
+						end nonrenewal_ind,
 						a.pending_nonrenewal_ind, 
 						a.renewal_sk,
 						a.renewalcount,
@@ -823,12 +827,21 @@ BEGIN
 							  and  a.wip_renewal_quote_ct = 1 
 							  and q.first_offered_quote_history_sk is not null 
 							  and q.quote_source_status = 'Closed'   
-								then 1 
+								then 1   
 								else 0 
 						 end not_accepted_renewal_ct --renewals is issued, renewal status is cancelled and renewal is not paid 
 						 							 --renewal is not issued but just in submission or quote status
 													 --if no renewal quote (in case of NR or midterm cancels), then its counted in NR bucket
 													 --if quote first offered date is not null and quote source status is closed
+						,case 
+							  when a.non_flatcancel_ind = 1 
+							  and a.nonrenewal_ind = 0
+							  and  a.renewalcount = 0 
+							  and a.midterm_cancel_ind = 0
+							  and  a.renewal_quote_sk is null  
+								then 1 
+								else 0 
+						 end expired_with_no_submission_ct
 						,case when a.non_flatcancel_ind = 1 
 							  and  a.renewalcount = 1 
 							  and  case when a.nonrenewal_ind = 1 then 0
