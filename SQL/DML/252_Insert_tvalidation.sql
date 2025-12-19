@@ -13,7 +13,8 @@ replace(
             isnull('', '' + hl.state_cd, ''''),
             isnull('' ''  + hl.zip_cd, '''')
          ),''  '',''''
-)) > 96'  AS source_sql ,
+)) > 96
+and hl.effective_dt >= ''2025-01-01'''  AS source_sql ,
        'select  0' AS target_sql ,
        'Y' AS active_in ,
        'Daily' AS frequency_desc ,
