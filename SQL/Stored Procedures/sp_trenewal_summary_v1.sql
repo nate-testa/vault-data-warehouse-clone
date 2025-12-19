@@ -326,6 +326,7 @@ BEGIN
 																		order by transaction_seq_no desc, policy_transaction_sk desc) rnk
 								 FROM	edw_core.tpolicy_transaction
 								 where	effective_dt_sk <= @end_dt_sk
+				 				and transaction_dt_sk - expiration_dt_sk <= 60
 								 --and	transaction_effective_dt_sk <= @end_dt_sk 
 							) max_pol_tr on tr.policy_sk = max_pol_tr.policy_sk
 				 --getting 60 day transaction record
@@ -345,7 +346,7 @@ BEGIN
 				 and effective_dt_sk <= @end_dt_sk
 				 --and	transaction_dt_sk <= @end_dt_sk
 				 --and	transaction_effective_dt_sk <= @end_dt_sk
-				 and transaction_dt_sk - expiration_dt_sk <= 60
+				 --and transaction_dt_sk - expiration_dt_sk <= 60
 				 and   (pol.expiration_dt between @begin_dt and @end_dt or
 						pol.effective_dt between @begin_dt and @end_dt)
 				and tr.source_system_sk = isnull(@param_ssk, tr.source_system_sk)
@@ -359,6 +360,7 @@ BEGIN
 				where effective_dt_sk <= @end_dt_sk
 				--and   transaction_effective_dt_sk <= @end_dt_sk
 				--and   transaction_dt_sk <= @end_dt_sk 
+				--and transaction_dt_sk - expiration_dt_sk <= 60
 				group by policy_sk, customer_sk, broker_sk , product_sk, source_system_sk, transaction_seq_no;
 
 				DROP TABLE IF EXISTS edw_temp.trenewal_summary_v1_temp_4_initial; 
