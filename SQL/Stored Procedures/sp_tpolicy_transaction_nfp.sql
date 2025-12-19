@@ -6,6 +6,7 @@
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
 -- 11/10/25					Dinesh Bobbili				1. Created this procedure  
+-- 12/17/25					Dinesh Bobbili				2. Updated logic for tax_fee_surcharge_sk 
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction_nfp]
 AS
@@ -163,7 +164,7 @@ BEGIN
 			--yunus: 11/05/2025
 			ic.internal_coverage_sk,
 			case when transaction_type_2 like 'Cancel%'	then 2 else 1 end as policy_status_sk, 
-			0	as	tax_fee_surcharge_sk,
+			--0	as	tax_fee_surcharge_sk,
 			0	as	user_sk,
 			0	as	ceded_premium_amt,
 			0	as	ceded_annual_premium_amt,
@@ -251,7 +252,8 @@ BEGIN
 		net_premium_amt as premium_amt,net_premium_amt as net_premium,commission_amt as comission_amt,net_premium_amt as annual_premium_amt,
 		0 as tax_fee_surcharge_amt,
 		item_sk,coverage_sk,vehicle_coverage_sk,transaction_dt_sk,
-		calendar_month_sk,accounting_month_sk,product_sk,policy_transaction_type_sk,internal_coverage_sk,@ssk as source_system_sk,policy_status_sk,tax_fee_surcharge_sk,
+		calendar_month_sk,accounting_month_sk,product_sk,policy_transaction_type_sk,internal_coverage_sk,@ssk as source_system_sk,policy_status_sk,
+		0 as tax_fee_surcharge_sk,
 		user_sk,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk,
 		ceded_premium_amt,ceded_annual_premium_amt,collection_class_type_sk,policy_history_sk,
 		state_premium_amt,state_annual_premium_amt 
@@ -263,7 +265,8 @@ BEGIN
 		surplus_lines_tax as premium_amt,0 as net_premium,0 as comission_amt,surplus_lines_tax as annual_premium_amt,
 		surplus_lines_tax as tax_fee_surcharge_amt,
 		item_sk,coverage_sk,vehicle_coverage_sk,transaction_dt_sk,
-		calendar_month_sk,accounting_month_sk,product_sk,policy_transaction_type_sk,ic.internal_coverage_sk,@ssk as source_system_sk,policy_status_sk,tax_fee_surcharge_sk,
+		calendar_month_sk,accounting_month_sk,product_sk,policy_transaction_type_sk,ic.internal_coverage_sk,@ssk as source_system_sk,policy_status_sk,
+		case when  ic.internal_coverage_category_nm = 'Premium' then 0 else ic.internal_coverage_sk end as tax_fee_surcharge_sk,
 		user_sk,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk,
 		ceded_premium_amt,ceded_annual_premium_amt,collection_class_type_sk,policy_history_sk,
 		state_premium_amt,state_annual_premium_amt 
@@ -277,7 +280,7 @@ BEGIN
 		program_administrator_fees_no as tax_fee_surcharge_amt,
 		item_sk,coverage_sk,vehicle_coverage_sk,transaction_dt_sk,
 		calendar_month_sk,accounting_month_sk,product_sk,policy_transaction_type_sk,ic.internal_coverage_sk,@ssk as source_system_sk,policy_status_sk,
-		tax_fee_surcharge_sk,
+		case when  ic.internal_coverage_category_nm = 'Premium' then 0 else ic.internal_coverage_sk end as tax_fee_surcharge_sk,
 		user_sk,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk,
 		ceded_premium_amt,ceded_annual_premium_amt,collection_class_type_sk,policy_history_sk,
 		state_premium_amt,state_annual_premium_amt 
