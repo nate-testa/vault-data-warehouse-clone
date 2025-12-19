@@ -19,6 +19,7 @@
 -- 04/25/25		Yunus Mohammed				11. Updated logic to get the month for which we are running the proc
 --																					Update run date logic
 -- 11/10/25		Yunus Mohammed				12. AD-11664 Updated for NFP policy claims
+-- 12/09/25		Yunus Mohammed				13. AD-11945 Modified stored procedure to run proc on same date again
 -- ================================================================================================= 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_claim_workday_payment]
@@ -44,8 +45,11 @@ BEGIN
 		select yearmonth
 		from edw_core.tdate
 		where
-		actual_dt > @last_source_extract_ts
-		and actual_dt < cast(@current_date as date)
+			actual_dt > case
+								when datediff(dd,@last_source_extract_ts,@current_date) = 1 then dateadd(dd,-1,@last_source_extract_ts)
+								else @last_source_extract_ts
+							end
+			and actual_dt < cast(@current_date as date)
 		group by yearmonth
 		order by 1; 
 
@@ -63,9 +67,13 @@ BEGIN
 			edw_core.tdate
 			where
 			yearmonth=@year_month;
-			
-			DELETE FROM edw_integration.claim_workday_payment_feed WHERE transaction_date BETWEEN @begin_dt AND @end_dt;
-		
+
+			DELETE lp
+            FROM edw_integration.claim_workday_payment_feed AS lp
+            INNER JOIN edw_core.tproduct AS p ON lp.product = p.product_nm
+            WHERE transaction_date BETWEEN @begin_dt AND @end_dt
+            AND p.product_category_nm = 'PersonalLines';
+
 			WITH claim_workday_payment_feed_temp AS
 			(
 			SELECT

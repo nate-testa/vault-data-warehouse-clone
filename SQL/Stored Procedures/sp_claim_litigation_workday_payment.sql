@@ -5,6 +5,7 @@
 -- Change date                  |Author						            |	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 04/23/25		                Yunus Mohammed				1. Created this procedure
+-- 12/09/25						Yunus Mohammed				2. AD-11945 Modified stored procedure to run proc on same date again
 -- ================================================================================================= 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_claim_litigation_workday_payment]
@@ -23,16 +24,18 @@ BEGIN
 
 		-- Get last source extract date
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
-		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;		
-
+		
 		DECLARE @year_month INT,@begin_dt DATE,@end_dt DATE,@begin_sk INT,@end_sk INT
 		
 		DECLARE cur_main CURSOR FOR
 		SELECT yearmonth
 		FROM edw_core.tdate
 		WHERE
-			actual_dt >= CAST(@last_source_extract_ts AS DATE)
-			and actual_dt <= CAST(DATEADD(MONTH,-1,@current_date) AS DATE)
+				actual_dt > case
+								when datediff(dd,@last_source_extract_ts,@current_date) = 1 then dateadd(dd,-1,@last_source_extract_ts)
+								else @last_source_extract_ts
+							end
+			and actual_dt < cast(@current_date as date)
 		GROUP BY yearmonth
 		ORDER BY yearmonth
 

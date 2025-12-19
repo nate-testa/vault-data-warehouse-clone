@@ -3,7 +3,7 @@
 -- Create Date: 09/13/2023
 -- Description: This procedures inserts unearned premium data
 ---------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author									 |	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 11/15/23		Yunus Mohammed				1. Updated logic for cancelled and expired policies
 -- 12/01/23		Yunus Mohammed				2. Updated  product name and company name
@@ -13,13 +13,16 @@
 -- 11/26/24		Yunus Mohammed				6. Updated Marine Boat & Yacht to Marine_Boat&Yacht
 -- 03/11/25		Yunus Mohammed				7. Corrected proc running for past months
 --																				Added run_date as param for pre-run
--- 04/25/25		Yunus Mohammed				8. AD8820 Updated logic to get risk address
+-- 04/25/25		Yunus Mohammed				8. AD-8820 Updated logic to get risk address
 --																					Update run date logic
--- 05/07/25		Yunus Mohammed				9. AD9047 Used tdaily_inforce table to check inforce policies.
+-- 05/07/25		Yunus Mohammed				9. AD-9047 Used tdaily_inforce table to check inforce policies.
 --																					Removed cancellation logic
--- 07/22/25		Dinesh Bobbili				10. AD10205 Added 5 PEL columns
--- 09/25/25		Dinesh Bobbili				11. AD11102 Added scheduled_limit_amt,blanket_limit_amt columns 
--- 11/10/25		Yunus Mohammed		12. AD11646 - Excluded NFP policies
+-- 07/22/25		Dinesh Bobbili						10. AD-10205 Added 5 PEL columns
+-- 09/25/25		Dinesh Bobbili						11. AD-11102 Added scheduled_limit_amt,blanket_limit_amt columns 
+-- 11/10/25		Yunus Mohammed				12. AD-11646 - Excluded NFP policies
+-- 12/09/25		Yunus Mohammed				13. AD-11945 Modified stored procedure to run proc on same date again
+-- 12/11/25		Yunus Mohammed				14. AD-11946 Added transaction effective date and transaction_ts columns
+--																						Delete stmt modified to delete personal line data only
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -46,8 +49,11 @@ BEGIN
 		select yearmonth
 		from edw_core.tdate
 		where
-		actual_dt > @last_source_extract_ts
-		and actual_dt < cast(@current_date as date)
+			actual_dt > case
+								when datediff(dd,@last_source_extract_ts,@current_date) = 1 then dateadd(dd,-1,@last_source_extract_ts)
+								else @last_source_extract_ts
+							end
+			and actual_dt < cast(@current_date as date)
 		group by yearmonth
 		order by 1; 
 
@@ -77,7 +83,8 @@ BEGIN
 			(
 				SELECT
 				accounting_date,policy_image_id,policy_number,product,
-				company,transaction_date,transaction_sequence,effective_date,
+				company,transaction_date,transaction_effective_date,
+				transaction_ts,transaction_sequence,effective_date,
 				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,sum(amount) as amount,sum(unearned) as unearned,contribcutoffdate,
@@ -105,6 +112,8 @@ BEGIN
 				CASE WHEN tp.uw_company_nm='Vault E & S Insurance Company' THEN 'Vault E&S Insurance Company' 
 				ELSE tp.uw_company_nm END AS [company],
 				GREATEST(tdeff.actual_dt,tdpro.actual_dt) AS [transaction_date],
+				tdeff.actual_dt as transaction_effective_date,
+				tdpro.actual_dt as transaction_ts,
 				tpts.transaction_seq_no AS transaction_sequence,
 				tp.effective_dt AS [effective_date],
 				tp.expiration_dt AS [expiration_date],
@@ -215,23 +224,25 @@ BEGIN
 				AND tp.product_cd != 'GRPEL'
 			) AS t
 			GROUP BY
-				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
-				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
-				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
-				aslob,contribcutoffdate,do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt
+						accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_effective_date,transaction_ts,
+						transaction_sequence,effective_date,expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
+						[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
+						aslob,contribcutoffdate,do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,uninsured_underinsured_motorist_liability_amt
+
 			)	
-		
-			INSERT INTO edw_integration.policy_workday_unearned_premium_feed
+	INSERT INTO edw_integration.policy_workday_unearned_premium_feed
 			(
-				accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_sequence,effective_date,
-				expiration_date,transaction_type,producer_code,agency_name,number_of_installments,insured_name,
+				accounting_date,policy_image_id,policy_number,product,company,transaction_date,
+				transaction_effective_date,transaction_ts,transaction_sequence,effective_date,expiration_date,transaction_type,
+				producer_code,agency_name,number_of_installments,insured_name,
 				[address],county,city,risk_state,zip,fire_protection,category,subcategory,financial_category_id,financial_category_name,
 				aslob,amount,unearned,contribcutoffdate,do_limit_amt,employment_practices_liability_amt,pel_limit_amt,uninsured_underinsured_liability_amt,
 				uninsured_underinsured_motorist_liability_amt,extraction_time,create_ts,update_ts,etl_audit_sk,scheduled_limit_amt,blanket_limit_amt
 			)
 			SELECT
-				uep.accounting_date,uep.policy_image_id,uep.policy_number,uep.product,uep.company,uep.transaction_date,uep.transaction_sequence,uep.effective_date,
-				uep.expiration_date,uep.transaction_type,uep.producer_code,uep.agency_name,uep.number_of_installments,uep.insured_name,
+				uep.accounting_date,uep.policy_image_id,uep.policy_number,uep.product,uep.company,uep.transaction_date,
+				transaction_effective_date,transaction_ts,uep.transaction_sequence,uep.effective_date,uep.expiration_date,uep.transaction_type,
+				uep.producer_code,uep.agency_name,uep.number_of_installments,uep.insured_name,
 				uep.[address],uep.county,uep.city,uep.risk_state,uep.zip,uep.fire_protection,uep.category,
 				CASE WHEN  uep.subcategory IN ('Subscriber Contribution (Automobile)','Subscriber Contribution (Homeowners)')
 				THEN 'Subscriber Contribution'
@@ -258,8 +269,8 @@ BEGIN
 				on uep.policy_number = tc.policy_no 
 				and uep.effective_date = tc.effective_dt
 				and uep.transaction_sequence = tc.transaction_seq_no
-				and uep.class_type = tc.class_type;
-
+				and uep.class_type = tc.class_type;	
+				
 			SET @rows_affected=@@ROWCOUNT;
 
 			-- Update control table

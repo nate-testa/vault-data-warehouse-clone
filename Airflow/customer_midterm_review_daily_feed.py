@@ -1,11 +1,13 @@
 import os
 import pendulum
-from datetime import timedelta
+from datetime import timedelta, datetime
 from airflow import DAG
-from airflow.models import Variable
+from airflow.models import Variable, TaskInstance
+from airflow.utils.state import State
+from airflow.utils.session import provide_session
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.utils.task_group import TaskGroup
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator, ShortCircuitOperator
 from airflow.providers.microsoft.mssql.operators.mssql import MsSqlOperator
 from airflow.operators.email import EmailOperator
 from airflow.operators.empty import EmptyOperator
@@ -19,10 +21,7 @@ cc_email = ""
 ENVIRONMENT = Variable.get("environment")
 HOME_PATH = os.path.expanduser('~')
 FOLDER_PATH = HOME_PATH + "/python_scripts/edw_to_metal"
-if ENVIRONMENT == "UAT":
-    BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
-else:
-    BASH_COMMAND = f'echo " *** EDW to Metal load skipped in {ENVIRONMENT} environment *** "'
+BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
 
 
 def check_customer_midterm_review_data_and_send_email(**kwargs):
@@ -50,6 +49,32 @@ def check_customer_midterm_review_data_and_send_email(**kwargs):
         email_op.execute(context=kwargs)  # type: ignore
     else:
         print(" *** No rows loaded. No email will be sent. ***")
+
+@provide_session
+def check_history_today(session=None, **context):
+    if session is None:
+        raise ValueError("Session is None")
+    
+    ti = context['ti']
+    execution_date = context['logical_date']
+    task_id_to_check = 'customer_midterm_review_group.run_edw_to_metal_load'
+
+    start_of_day = execution_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_day = execution_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    successful_runs = session.query(TaskInstance).filter(
+        TaskInstance.dag_id == ti.dag_id,
+        TaskInstance.task_id == task_id_to_check,
+        TaskInstance.execution_date >= start_of_day,
+        TaskInstance.execution_date <= end_of_day,
+        TaskInstance.state == State.SUCCESS
+    ).count()
+    
+    if successful_runs > 0:
+        print(f" *** Task '{task_id_to_check}' has already run successfully today. Skipping execution. *** ")
+        return False
+    else:
+        return True
 
 def on_failure_callback(context):
 
@@ -124,6 +149,12 @@ with DAG(
             )
             operators.append(operator) 
 
+        check_run_edw_to_metal_load_previous_success = ShortCircuitOperator(
+            task_id='check_run_edw_to_metal_load_previous_success',
+            python_callable=check_history_today,
+            provide_context=True,
+        )
+
         run_edw_to_metal_load = BashOperator(
             task_id='run_edw_to_metal_load',
             bash_command=BASH_COMMAND,
@@ -146,7 +177,8 @@ with DAG(
         for i in range(len(operators) - 1):
             operators[i].set_downstream(operators[i + 1])
 
-        operators[-1].set_downstream(run_edw_to_metal_load)
+        operators[-1].set_downstream(check_run_edw_to_metal_load_previous_success)
+        check_run_edw_to_metal_load_previous_success.set_downstream(run_edw_to_metal_load)
         run_edw_to_metal_load.set_downstream(check_data_and_send_email)
         check_data_and_send_email.set_downstream(send_customer_midterm_review_email)
 

@@ -397,6 +397,7 @@ with DAG(
 
         quote_broker_group_items = [
             'sp_trenewal_summary',
+            'sp_trenewal_summary_v1',
             'sp_tbroker_summary'
             ]
 
