@@ -736,9 +736,8 @@ BEGIN
 							 else a.midterm_cancel_ind
 						end midterm_cancel_ind,  
 						a.expiring_ind,   
-						case when a.midterm_cancel_ind = 1 and a.nonrenewal_ind = 1
-							then 0
-							else a.nonrenewal_ind
+						case when ren_pol.policy_sk is not null and ren_pol.policy_status in ('Active','Expired') then 0
+						else a.nonrenewal_ind
 						end nonrenewal_ind,
 						a.pending_nonrenewal_ind, 
 						a.renewal_sk,
@@ -810,6 +809,7 @@ BEGIN
 						 end accepted_renewal_ct --renewal is issued and paid
 						,case when a.non_flatcancel_ind = 1 
 							  and  a.renewalcount = 1 
+							  and a.nonrenewal_ind = 0
 							  and  case when a.nonrenewal_ind = 1 then 0
 										when ren_pol.policy_sk is not null and ren_pol.policy_status in ('Active','Expired') then 0
 										else a.midterm_cancel_ind
@@ -824,6 +824,7 @@ BEGIN
 							  then 1 
 							  when a.non_flatcancel_ind = 1 
 							  and  a.renewalcount = 0 
+							  and a.nonrenewal_ind = 0
 							  and  a.wip_renewal_quote_ct = 1 
 							  and q.first_offered_quote_history_sk is not null 
 							  and q.quote_source_status = 'Closed'   
@@ -908,7 +909,12 @@ BEGIN
 				left join edw_core.tpolicy ren_pol on ren_pol.policy_sk = a.renewal_sk
 				left join edw_core.tpolicy_history ren_ph on a.renewal_sk = ren_ph.policy_sk and ren_ph.latest_transaction_in = 'Y';  
 
-				SET @rows_affected=@@ROWCOUNT;
+				SET @rows_affected=@@ROWCOUNT; 
+				
+				update edw_stage.trenewal_summary_v1
+				set  non_renewal_ct = 0
+				where month_sk = @month_end_dt_sk
+				and non_renewal_ct = 1 and accepted_renewal_ct = 1
 
 				-- Update control table
 				SET @new_last_source_extract_ts=COALESCE(@end_dt,@last_source_extract_ts);	
