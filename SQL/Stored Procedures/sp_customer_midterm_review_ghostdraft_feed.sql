@@ -9,6 +9,7 @@
 -- 10/30/25     Architha Gudimalla          3. Updated message for au if length > 96
 -- 10/30/25     Architha Gudimalla          4. Updated to use ho producer
 -- 12/04/25		Architha Gudimalla			5. Updated yacht boat list
+-- 12/19/25		Architha Gudimalla			6. Updated recommendation message list
 -- =================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
@@ -670,6 +671,73 @@ BEGIN
 				--customer_id in ('1234511937') and
 				existing_product_in  = 'Yes'
 			and update_ts >  @last_source_extract_ts
+		),
+		reco_message as
+		(
+					select distinct mrm.customer_id, mrm.rms_recommendation_message_1_id recommendation_message_1_id,mrm.rms_recommendation_message_1 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm, edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id and 
+					mrm.rms_recommendation_message_1_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.rms_recommendation_message_2_id,mrm.rms_recommendation_message_2 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm, edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id   and 
+					mrm.rms_recommendation_message_2_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.wildfire_protection_recommendation_message_1_id, mrm.wildfire_protection_recommendation_message_1 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm, edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id   and 
+					mrm.wildfire_protection_recommendation_message_1_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.wildfire_protection_recommendation_message_2_id,mrm.wildfire_protection_recommendation_message_2 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm, edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id   and 
+					mrm.wildfire_protection_recommendation_message_2_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.backup_generator_recommendation_message_1_id,mrm.backup_generator_recommendation_message_1 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm, edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id  and 
+					mrm.backup_generator_recommendation_message_1_id = m.message_id 
+					union
+					select distinct mrm.customer_id, mrm.new_driver_recommendation_message_1_id,mrm.new_driver_recommendation_message_1 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id   and 
+					mrm.new_driver_recommendation_message_1_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.primary_ho_monoline_recommendation_message_1_id,mrm.primary_ho_monoline_recommendation_message_1 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id   and 
+					mrm.primary_ho_monoline_recommendation_message_1_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.non_primary_ho_monoline_recommendation_message_1_id,mrm.non_primary_ho_monoline_recommendation_message_1 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id   and 
+					mrm.non_primary_ho_monoline_recommendation_message_1_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.renovation_recommendation_message_1_id,mrm.renovation_recommendation_message_1 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id   and 
+					mrm.renovation_recommendation_message_1_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.lux_on_endorsement_message_id,mrm.lux_on_endorsement_message as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id  and 
+					mrm.lux_on_endorsement_message_id = m.message_id
+		),
+		reco_message_order as
+		(
+			select *,  SUM(line_ct) OVER (
+						   PARTITION BY customer_id
+						   ORDER BY sequence_id
+						   ROWS UNBOUNDED PRECEDING
+					   ) AS running_line_ct
+			from reco_message
+		),
+		reco_message_order_final as
+		(
+			select * 
+			from reco_message_order
+			where running_line_ct <= 10
 		)
 		select  
 			cmr.customer_id,
@@ -824,49 +892,13 @@ BEGIN
 			
 			,json_query
 			( (
-				select * from
+				select  recommendation_message_1_id, [message] from
 				(  
-					select distinct mrm.rms_recommendation_message_1_id recommendation_message_1_id,mrm.rms_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
-					where mrm.customer_id= cmr.customer_id and mrm.rms_recommendation_message_1 is not null
-					union
-					select distinct mrm.rms_recommendation_message_2_id,mrm.rms_recommendation_message_2 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
-					where mrm.customer_id= cmr.customer_id and mrm.rms_recommendation_message_2 is not null
-					union
-					select distinct mrm.wildfire_protection_recommendation_message_1_id, mrm.wildfire_protection_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
-					where mrm.customer_id= cmr.customer_id and mrm.wildfire_protection_recommendation_message_1 is not null
-					union
-					select distinct mrm.wildfire_protection_recommendation_message_2_id,mrm.wildfire_protection_recommendation_message_2 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
-					where mrm.customer_id= cmr.customer_id and mrm.wildfire_protection_recommendation_message_2 is not null
-					union
-					select distinct mrm.backup_generator_recommendation_message_1_id,mrm.backup_generator_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
-					where mrm.customer_id= cmr.customer_id and mrm.backup_generator_recommendation_message_1 is not null 
-					union
-					select mrm.new_driver_recommendation_message_1_id,mrm.new_driver_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
-					where mrm.customer_id= cmr.customer_id and mrm.new_driver_recommendation_message_1 is not null
-					union
-					select mrm.primary_ho_monoline_recommendation_message_1_id,mrm.primary_ho_monoline_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
-					where mrm.customer_id= cmr.customer_id and mrm.primary_ho_monoline_recommendation_message_1 is not null
-					union
-					select mrm.non_primary_ho_monoline_recommendation_message_1_id,mrm.non_primary_ho_monoline_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
-					where mrm.customer_id= cmr.customer_id and mrm.non_primary_ho_monoline_recommendation_message_1 is not null
-					union
-					select mrm.renovation_recommendation_message_1_id,mrm.renovation_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
-					where mrm.customer_id= cmr.customer_id and mrm.renovation_recommendation_message_1 is not null
-					union
-					select mrm.lux_on_endorsement_message_id,mrm.lux_on_endorsement_message as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
-					where mrm.customer_id= cmr.customer_id and mrm.lux_on_endorsement_message is not null
-							
+					select recommendation_message_1_id, [message], sequence_id
+					from reco_message_order_final mrm
+					where mrm.customer_id= cmr.customer_id   			
 			) as a
+			order by sequence_id
 			for json path, include_null_values
 			))  as custom_recommendations
 			for json path, include_null_values , without_array_wrapper
