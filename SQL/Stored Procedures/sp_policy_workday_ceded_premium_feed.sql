@@ -42,7 +42,7 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 		
 		DECLARE @year_month INT
-		DECLARE @accounting_date_end_sk int,@last_end_day_month date
+		DECLARE @accounting_date_end_sk int,@last_end_day_month date,@begin_dt date
 		DECLARE @accounting_date_begin_sk int,@last_begin_day_month date
 
 		DECLARE cur_main CURSOR FOR
@@ -70,7 +70,16 @@ BEGIN
 			WHERE yearmonth=@year_month AND month_end_in='Y'
 
 			SELECT @accounting_date_begin_sk=date_sk,@last_begin_day_month=actual_dt FROM edw_core.tdate 
-			WHERE actual_dt =EOMONTH( dateadd(year,-1,@last_end_day_month)) and month_end_in='Y'
+			WHERE actual_dt =EOMONTH( dateadd(year,-1,@last_end_day_month)) and month_end_in='Y';
+
+			SELECT
+				@begin_dt = MIN(actual_dt)
+			FROM
+				edw_core.tdate
+			WHERE
+				yearmonth=@year_month;
+			
+			SET @parameter_desc= 'last_source_extract_ts >=' + CAST(@begin_dt AS VARCHAR(200));
 			
 			DELETE FROM edw_integration.policy_workday_ceded_premium_feed WHERE accounting_date = @last_end_day_month;
 			

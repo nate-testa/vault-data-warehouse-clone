@@ -42,10 +42,8 @@ BEGIN
 		OPEN cur_main
 		FETCH NEXT FROM cur_main INTO @year_month
 		WHILE @@FETCH_STATUS = 0
-		BEGIN
-			EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;  
-	
-			SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+		BEGIN 
+			EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;  	
 			
 			select @begin_dt = MIN(actual_dt),@end_dt = MAX(actual_dt), @begin_sk = MIN(date_sk),
 			@end_sk = MAX(date_sk) 
@@ -54,12 +52,14 @@ BEGIN
 			where
 			yearmonth=@year_month;
 			
+			SET @parameter_desc= 'last_source_extract_ts >=' + CAST(@begin_dt AS VARCHAR(200))
+
 			DELETE FROM edw_integration.claim_litigation_workday_payment_feed WHERE transaction_date BETWEEN @begin_dt AND @end_dt;
 		
 			WITH claim_litigation_workday_payment_feed_temp AS
 			(
 			SELECT
-		    tc.underwriting_company_nm AS company,
+			tc.underwriting_company_nm as company,
 			tc.claim_no AS claim_no,
 			tc.policy_no AS policy_no,
 			CAST(tcr.transaction_ts AS DATE) AS transaction_date,
@@ -73,7 +73,8 @@ BEGIN
 			tcl.cause_of_loss_desc AS causeofloss,
 			tcat.catastrophe_cd AS catastrophecode,
 			tcat.catastrophe_nm AS catastrophename,
-			CASE WHEN tc.policy_no LIKE 'NFP%' THEN 'Group Umbrella'
+			CASE
+				WHEN tprd.product_nm = 'Group Personal Excess Liability' THEN 'Group_Umbrella'
 				WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
 				WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
 				WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
@@ -190,7 +191,7 @@ BEGIN
 			SET @rows_affected=@@ROWCOUNT;
 
 			-- Update control table
-			SET @new_last_source_extract_ts=COALESCE(@end_dt,@last_source_extract_ts);
+			SET @new_last_source_extract_ts= dateadd(day,-1,cast(@current_date as date))
 			EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 			-- Update audit table

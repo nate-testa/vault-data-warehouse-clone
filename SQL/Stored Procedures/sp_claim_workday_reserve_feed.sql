@@ -53,9 +53,8 @@ BEGIN
 		FETCH NEXT FROM cur_main INTO @year_month
 		WHILE @@FETCH_STATUS = 0
 		BEGIN
-			EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;  
-	
-			SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+			EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT; 	
+			
 			select @begin_dt = MIN(actual_dt),@end_dt = MAX(actual_dt), @begin_sk = MIN(date_sk),
 			@end_sk = MAX(date_sk) 
 			from
@@ -63,9 +62,17 @@ BEGIN
 			where
 			yearmonth=@year_month;
 
+			SET @parameter_desc= 'last_source_extract_ts >=' + CAST(@begin_dt AS VARCHAR(200))
+
 			DELETE rp
             FROM edw_integration.claim_workday_reserve_feed AS rp
-            INNER JOIN edw_core.tproduct AS p ON rp.product = p.product_nm
+            INNER JOIN edw_core.tproduct AS p ON rp.product = CASE
+																				WHEN p.product_nm = 'Group Personal Excess Liability' THEN 'Group_Umbrella'
+																				WHEN p.product_nm = 'Auto' THEN 'Automobile'
+																				WHEN p.product_nm = 'Excess Liability' THEN 'Excess_Liability'
+																				WHEN p.product_cd = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
+																			ELSE p.product_nm 
+																		END
             WHERE transaction_date BETWEEN @begin_dt AND @end_dt
             AND p.product_category_nm = 'PersonalLines'; 
 			
