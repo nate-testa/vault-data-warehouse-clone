@@ -10,6 +10,7 @@
 -- 10/30/25     Architha Gudimalla          4. Updated to use ho producer
 -- 12/04/25		Architha Gudimalla			5. Updated yacht boat list
 -- 12/19/25		Architha Gudimalla			6. Updated recommendation message list
+-- 12/29/25		Architha Gudimalla			7. Fixed Customer message 1 years issue
 -- =================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
@@ -508,9 +509,9 @@ BEGIN
 		 
         --- Update customer message
         update a
-        set customer_message = case when m.message_id = '002' then m.message_desc
+        set customer_message = replace(case when m.message_id = '002' then m.message_desc
 									else replace(m.message_desc, '<<<X>>>', a.no_of_years_with_vault )
-								end
+								end,'Thank you for allowing us to serve you for 1 years.','Thank you for allowing us to serve you for 1 year.')
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.customer_message_id = m.message_id
 		where a.update_ts >  @last_source_extract_ts
