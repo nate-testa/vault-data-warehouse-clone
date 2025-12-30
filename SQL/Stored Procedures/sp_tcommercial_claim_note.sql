@@ -3,10 +3,11 @@
 -- Create Date: 07/17/2025
 -- Description: This procedures inserts and updates claim notes
 -----------------------------------------------------------------------------------------------------------
--- Change date		 |Author								 |	Change Description
+-- Change date		 |Author								 	|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 07/17/2025		Hernando Gonzalez			1. Created this procedure
 -- 08/06/2025		Yunus Mohammed			   2. Removed commercial line tag condition from where clause
+-- 12/19/2025		Dinesh Bobbili			   		   3. AD-11370 Calling fn_remove_html_tags to clean up content_desc
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_claim_note]
 
@@ -36,7 +37,7 @@ BEGIN
 		SELECT 
 			c.claim_number as claim_no,
 			tc.commercial_claim_sk,
-			n.body as content_desc,
+			edw_core.fn_remove_html_tags(n.body) as content_desc,
 			n.note_type,
 			u.name as note_created_by_nm,
 			n.created_at as note_created_ts,
