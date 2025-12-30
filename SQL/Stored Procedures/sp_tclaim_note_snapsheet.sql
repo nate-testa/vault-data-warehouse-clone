@@ -1,11 +1,12 @@
 ﻿-- =================================================================================================
 -- Description: This procedures inserts and updates claim notes snapsheet
 -----------------------------------------------------------------------------------------------------------
--- Change date |Author									|	Change Description
+-- Change date |Author									 |	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 10/25/24		Hernando Gonzalez			1. Created this procedure - AD7391
+-- 10/25/24		Hernando Gonzalez			 1. Created this procedure - AD7391
 -- 05/20/25		Yunus Mohammed				2. AD8750 Modified delta identifier
 -- 05/28/25		Yunus Mohammed				3. AD-9616 Modified the join on tclaim to use an inner join
+-- 12/19/25		Dinesh Bobbili			   		   4. AD-11370 Calling fn_remove_html_tags to clean up content_desc
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_note_snapsheet]
 AS
@@ -34,7 +35,7 @@ BEGIN
 		SELECT 
 			c.claim_number as claim_no,
 			tc.claim_sk,
-			n.body as content_desc,
+			edw_core.fn_remove_html_tags(n.body) as content_desc,
 			n.note_type,
 			u.name as note_created_by_nm,
 			n.created_at as note_created_ts,
