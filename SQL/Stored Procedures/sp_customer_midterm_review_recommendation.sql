@@ -12,6 +12,7 @@
 -- 11/05/25		Architha Gudimalla			6. Removed tbroker_vault_team join
 -- 11/19/25		Architha Gudimalla			7. Updated auto vehicle list
 -- 12/04/25		Architha Gudimalla			8. Updated yacht boat list
+-- 12/29/25		Architha Gudimalla			9. Fixed lux on eds join
 -- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
@@ -679,25 +680,8 @@ and a.PrimaryInsuredId=b.id
 					select 'AV', 'Aviation', 'PersonalLines'  
 					)pr --on pr.product_nm = cust.product_nm
         left join edw_integration.customer_midterm_review_policy_detail cf on cust.customer_id = cf.customer_id and cf.product_nm = pr.product_nm and cf.renewal_year =  datepart(yyyy, getdate())
-        inner join edw_temp.customer_midterm_review_recommendation_temp_2_offered_state pos on pos.state_cd = cust.mailing_address_state_cd 
-		and pr.product_cd = (case when pos.product_cd = 'Lux_on_endorsement' then 'ho' else pos.product_cd end)
-		-- Yunus - 09/24/2025 Changes made to handle below 2 scenerios
-		-- If collections is available in a state, we should not recommend Lux on endorsement, because we will have collections boilerplate in the current coverage section
-		--If account has collections, we should not recommend Lux on endorsement at all
-		and 
-		(	pos.offered_in = 'Yes'
-			and not exists
-			(
-				select 1
-				from
-					edw_integration.customer_midterm_review_policy_detail cf1
-				where
-					cf1.customer_id= cust.customer_id
-					and cf1.product_nm = 'Collection'
-					and pos.product_cd = 'Lux_on_endorsement'
-                    and renewal_year =  datepart(yyyy, getdate())				
-			)
-		)
+        left join edw_temp.customer_midterm_review_recommendation_temp_2_offered_state pos on pos.state_cd = cust.mailing_address_state_cd 
+		and pr.product_cd = (case when pos.product_cd = 'Lux_on_endorsement' then (case when cf.total_collection_limit_amt is not null then 'ho' end) else pos.product_cd end)
         left join (select distinct quote_no from edw_core.tquote_collection_class_type) lux on lux.quote_no = cf.policy_no
         left join (select distinct customer_id from edw_core.thome_coverage cov, edw_core.tpolicy pol
                                 where occupancy_type ='Primary'
@@ -708,7 +692,23 @@ and a.PrimaryInsuredId=b.id
                                 where product_nm = 'Marine Boat & Yacht'
                                 and renewal_year =  datepart(yyyy, getdate())
                               ) marine on marine.customer_id = cust.customer_id
-        where pr.product_category_nm = 'PersonalLines'  
+        where pr.product_category_nm = 'PersonalLines' 
+		and  (cf.policy_no is not null or (pos.offered_in = 'Yes'
+                                            -- Yunus - 09/24/2025 Changes made to handle below 2 scenerios
+                                            -- If collections is available in a state, we should not recommend Lux on endorsement, because we will have collections boilerplate in the current coverage section
+                                            --If account has collections, we should not recommend Lux on endorsement at all
+											and not exists
+											(
+												select 1
+												from
+													edw_integration.customer_midterm_review_policy_detail cf1
+												where
+													cf1.customer_id= cust.customer_id
+													and cf1.product_nm = 'Collection'
+													and pos.product_cd = 'Lux_on_endorsement'
+													and renewal_year =  datepart(yyyy, getdate())				
+											))
+			)  
         order by 1,5,6 ; 
  
         --- take out product recommendation of a DNR in the last year
