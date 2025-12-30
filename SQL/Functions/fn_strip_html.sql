@@ -7,7 +7,7 @@
 -- ---------------------------------------------------------------------------------------------------
 -- 12/17/25					Dinesh Bobbili				1. Created this Function
 -- ================================================================================================= 
-CREATE OR ALTER FUNCTION edw_core.fn_strip_html
+CREATE OR ALTER FUNCTION edw_core.fn_remove_html_tags
 (
     @input NVARCHAR(MAX)
 )
