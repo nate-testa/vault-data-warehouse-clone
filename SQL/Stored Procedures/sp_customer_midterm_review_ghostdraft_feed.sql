@@ -79,8 +79,7 @@ BEGIN
 					null risk_address,  
 					null occupancy_type,
 					null occupancy_type_order,
-					null total_insured_value_amt,
-					p.monoline_home_in, 
+					null total_insured_value_amt, 
 					FORMAT(case when r.product_nm = 'Excess Liability' then sum(p.pel_limit_amt) end, 'C0', 'en-US') pel_limit_amt,
 					case when r.product_nm = 'Excess Liability' then sum(p.pel_location_ct) end pel_location_ct,
 					case when r.product_nm = 'Excess Liability' then sum(p.pel_watercraft_ct) end pel_watercraft_ct,
@@ -149,6 +148,8 @@ BEGIN
 					--custom_recommendation_message_4_id,
 					--custom_recommendation_message_4, 
 					,null account_id 
+					,null primary_home_monoline_in
+					,null non_primary_home_monoline_in
 				from edw_integration.customer_midterm_review_eligibility_feed e
 				inner join edw_core.tcustomer cust on e.customer_id = cust.customer_id
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
@@ -174,8 +175,7 @@ BEGIN
 					p.producer_id, 			-- broker_id,
 					p.producer_nm, 			-- broker_nm,
 					p.producer_phone_no, 	-- broker_phone_no,
-					p.producer_email,   	-- broker_email,
-					p.monoline_home_in,  
+					p.producer_email,   	-- broker_email, 
 					p.no_of_years_with_vault,
 					p.no_of_years_with_vault_tx,
 					r.rms_recommendation,
@@ -224,8 +224,7 @@ BEGIN
 						when 'Primary' then '1_Primary'
 						else '2_Non_Primary' 
 					end occupancy_type_order,
-					p.total_insured_value_amt,
-					p.monoline_home_in,
+					p.total_insured_value_amt, 
 					FORMAT(p.pel_limit_amt, 'C', 'en-US') pel_limit_amt,
 					p.pel_location_ct,
 					p.pel_watercraft_ct,
@@ -276,6 +275,7 @@ BEGIN
 					case when r.product_nm in ('Condo','Homeowners') then '029' end renovation_recommendation_message_1_id  
 					--renovation_recommendation_message_1 
 					,acc.id account_id
+					, p.primary_home_monoline_in, p.non_primary_home_monoline_in
 				from edw_integration.customer_midterm_review_eligibility_feed e
 				inner join edw_core.tcustomer cust on e.customer_id = cust.customer_id
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
@@ -326,8 +326,7 @@ BEGIN
 			risk_address_state_cd,
 			risk_address_zip_cd,
 			risk_address,   
-			occupancy_type,
-			monoline_home_in,
+			occupancy_type, 
 			pel_limit_amt,
 			pel_location_ct,
 			pel_watercraft_ct,
@@ -414,8 +413,7 @@ BEGIN
 				risk_address_state_cd,
 				risk_address_zip_cd,
 				risk_address,  
-				a.occupancy_type,
-				monoline_home_in,
+				a.occupancy_type, 
 				pel_limit_amt,
 				pel_location_ct,
 				pel_watercraft_ct,
@@ -492,7 +490,7 @@ BEGIN
 				customer_id, 
 				CASE
 					WHEN COUNT(DISTINCT policy_no) > 1 AND SUM(CASE WHEN backup_generator_in = 'No' THEN 1 ELSE 0 END) > 0 THEN '019'
-					WHEN SUM(CASE WHEN monoline_home_in = 'Yes' and occupancy_type in ('Seasonal','Seasonal/Secondary','Seasonal (with no Vault Primary Residence)') THEN 1 ELSE 0 END) > 0 AND SUM(CASE WHEN backup_generator_in = 'No' THEN 0 ELSE 1 END) = 0  THEN '030'
+					WHEN SUM(CASE WHEN primary_home_monoline_in = 'Yes' and occupancy_type in ('Seasonal','Seasonal/Secondary','Seasonal (with no Vault Primary Residence)') THEN 1 ELSE 0 END) > 0 AND SUM(CASE WHEN backup_generator_in = 'No' THEN 0 ELSE 1 END) = 0  THEN '030'
 					WHEN SUM(CASE WHEN backup_generator_in = 'No' THEN 1 ELSE 0 END) > 0 THEN '032'
 					ELSE NULL
 				END AS code 
