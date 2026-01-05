@@ -84,3 +84,17 @@ where validation_sql_desc = 'tinternal_coverage_summary - compared to tpolicy_su
 update edw_core.tvalidation_sql
 set target_sql='select 8'
 where validation_sql_desc = 'Snapsheet Validation- Cancelled approved reserves/payments';
+
+--43 (tpolicy_transaction - Invalid HSB coverage codes)
+update edw_core.tvalidation_sql
+set target_sql='select 1'
+where validation_sql_desc = 'tpolicy_transaction - Invalid HSB coverage codes';
+
+--38 (tpolicy_transaction - negative total prmeium_amt)
+update edw_core.tvalidation_sql
+set target_sql='select 1'
+where validation_sql_desc = 'tpolicy_transaction - negative total prmeium_amt';
+
+update edw_core.tvalidation_sql
+set validation_sql_desc='tpolicy_transaction - negative total premium_amt'
+where validation_sql_desc = 'tpolicy_transaction - negative total prmeium_amt';
