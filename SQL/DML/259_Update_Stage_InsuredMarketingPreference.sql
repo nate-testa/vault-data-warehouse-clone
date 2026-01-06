@@ -1,0 +1,1 @@
+update edw_stage.InsuredMarketingPreference set Product = 'Risk Review' ;
