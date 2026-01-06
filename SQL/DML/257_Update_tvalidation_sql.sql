@@ -98,3 +98,8 @@ where validation_sql_desc = 'tpolicy_transaction - negative total prmeium_amt';
 update edw_core.tvalidation_sql
 set validation_sql_desc='tpolicy_transaction - negative total premium_amt'
 where validation_sql_desc = 'tpolicy_transaction - negative total prmeium_amt';
+
+--87 (tclaim_feature snapsheet claims - missing item_sk)
+update edw_core.tvalidation_sql
+set target_sql='select 26'
+where validation_sql_desc = 'tclaim_feature snapsheet claims - missing item_sk';
