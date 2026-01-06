@@ -22,7 +22,8 @@
 -- 10/30/25		Yunus Mohammed					17. AD-11535 - Added stalled_quote_in  and new_business_work_status 
 -- 10/31/25		Sandeep Gundreddy				18. AD-11560 - removed date filter to update all null EffectiveDate/ExpirationDate in Metal; added for account table backfills
 -- 11/11/25		Yunus Mohammed					19. AD-11316 - Added broker_of_record_change_in
--- 12/01/25		Architha Gudimalla				20. AD-11368 - Updated RenewalReviewStartDate to RenewalReviewStartedDate
+-- 12/01/25		Architha Gudimalla				20. AD-11368 - Updated RenewalReviewStartDate to RenewalReviewStartedDate non_binding_indication_offered_in
+-- 01/06/26		Dinesh Bobbili					21. AD-12155 - Added non_binding_indication_offered_in
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -250,7 +251,8 @@ BEGIN
 				case
 					when tmp1.BrokerOfRecordChangeApplied = 1 then 'Yes'
 				else  'No' 
-				end as broker_of_record_change_in
+				end as broker_of_record_change_in,
+				case when attr1.AccountId is not null then 'Yes' else 'No' end as non_binding_indication_offered_in 
 			FROM 
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
@@ -262,6 +264,12 @@ BEGIN
 				left join edw_stage.Product pr on tmp1.ProductId = pr.id
 				left join edw_temp.tquote_temp2 tmp2 on tmp2.id = tmp1.Id
 				left join edw_core.tpolicy prior_pol on  tmp1.renewalofpolicynumber = prior_pol.policy_no and cast(tmp1.effectivedate as date) = prior_pol.expiration_dt
+				left join (select distinct attr.AccountId from  edw_temp.tquote_temp1 a 
+							inner join edw_stage.Accounttransaction attr 
+							on a.id = attr.AccountId 
+							and indicationstatus = 'IndicationOffered'
+							and attr.Stage in ('QUOTE','POLICY')) attr1
+				on attr1.AccountId = tmp1.id
 				where pr.productline <> 'CommercialLines' --and tmp1.policynumber = 'CO100023657'
 		) AS Source
 		ON Source.PolicyNumber = Target.quote_no --and cast(Source.EffectiveDate as date) = cast(Target.effective_dt as date)
@@ -317,6 +325,7 @@ BEGIN
 			,stalled_quote_in
 			,new_business_work_status
 			,broker_of_record_change_in
+			,non_binding_indication_offered_in
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -365,6 +374,7 @@ BEGIN
 				,Source.stalled_quote_in
 				,Source.new_business_work_status
 				,Source.broker_of_record_change_in
+				,Source.non_binding_indication_offered_in
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -411,7 +421,8 @@ BEGIN
 		,Target.renewal_released_by_metal_in = source.renewal_released_by_metal_in
 		,Target.stalled_quote_in= Source.stalled_quote_in
 		,Target.new_business_work_status =Source.new_business_work_status,
-		Target.broker_of_record_change_in = Source.broker_of_record_change_in
+		Target.broker_of_record_change_in = Source.broker_of_record_change_in,
+		Target.non_binding_indication_offered_in = Source.non_binding_indication_offered_in
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
