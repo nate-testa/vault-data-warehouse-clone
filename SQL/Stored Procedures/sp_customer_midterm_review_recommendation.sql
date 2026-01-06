@@ -198,7 +198,7 @@ and a.PrimaryInsuredId=b.id
 				getdate() update_ts 
             from edw_temp.customer_midterm_review_recommendation_temp_1_cust
         ) as SOURCE
-		ON Source.customer_id = Target.customer_id and datediff(dd,isnull(target.midterm_review_completed_dt,'01-jan-1999'), source.create_ts) not between 0 and 365
+		ON Source.customer_id = Target.customer_id and datediff(dd,isnull(target.midterm_review_completed_dt,'01-jan-1999'), CURRENT_DATE) > 365
         WHEN NOT MATCHED BY Target THEN
 		INSERT 
             (customer_id, midterm_review_year, midterm_review_process_in, reason_desc, create_ts, update_ts, etl_audit_sk) 
