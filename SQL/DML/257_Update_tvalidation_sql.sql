@@ -99,7 +99,17 @@ update edw_core.tvalidation_sql
 set validation_sql_desc='tpolicy_transaction - negative total premium_amt'
 where validation_sql_desc = 'tpolicy_transaction - negative total prmeium_amt';
 
+-- Reverting back to 0 as this has been resolved
+update edw_core.tvalidation_sql
+set target_sql='select 0'
+where validation_sql_desc = 'tpolicy_transaction - negative total premium_amt';
+
 --87 (tclaim_feature snapsheet claims - missing item_sk)
 update edw_core.tvalidation_sql
 set target_sql='select 26'
 where validation_sql_desc = 'tclaim_feature snapsheet claims - missing item_sk';
+
+--83 (tclaim_feature - aslob_sk is null but claim coverage exists)
+update edw_core.tvalidation_sql
+set target_sql='select 0'
+where validation_sql_desc = 'tclaim_feature - aslob_sk is null but claim coverage exists';
