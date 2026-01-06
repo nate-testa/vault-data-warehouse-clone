@@ -14,6 +14,7 @@
 -- 01/05/26		Architha Gudimalla		    8. Removed monoline_home_in column
 -- 01/05/26		Architha Gudimalla		    9. Added primary and non primary monoline_home_in column
 -- 01/05/26		Architha Gudimalla		   10. Update recommendation line count to 11 from 10 
+-- 01/05/26		Architha Gudimalla		   10. Populated recommendation_message_id_seq_line_ct
 -- =================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
@@ -909,16 +910,22 @@ BEGIN
 			for json path, include_null_values
 			))  as custom_recommendations
 			for json path, include_null_values , without_array_wrapper
-			) as  customer_json
+			) as  customer_json ,
+			( 
+				select  STRING_AGG(concat(recommendation_message_1_id, '|',sequence_id, '|',line_ct), '; ') aa   
+					from reco_message_order_final mrm
+					where mrm.customer_id= cmr.customer_id  
+			) as  recommendation_message_id_seq_line_ct 
 		into edw_temp.customer_midterm_review_ghostdraft_feed_temp2
 		from CustomerList as cmr; 
 
 		update [target]
 		set
-			[target].[data] 						= [source].[customer_json],
-			[target].midterm_review_process_in 		= 'No',
-			[target].midterm_review_completed_dt 	= cast(getdate() as date),
-			[target].update_ts 						= getdate()
+			[target].[data] 									= [source].[customer_json],
+			[target].[recommendation_message_id_seq_line_ct] 	= [source].[recommendation_message_id_seq_line_ct],
+			[target].midterm_review_process_in 					= 'No',
+			[target].midterm_review_completed_dt 				= cast(getdate() as date),
+			[target].update_ts 									= getdate()
 		from edw_integration.customer_midterm_review_eligibility_feed [target]
 		inner join edw_temp.customer_midterm_review_ghostdraft_feed_temp2 [source] on [target].customer_id = [source].customer_id
 		where [target].midterm_review_process_in = 'Yes';
