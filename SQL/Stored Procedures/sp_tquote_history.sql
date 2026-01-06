@@ -15,6 +15,7 @@
 -- 04/22/25		Yunus Mohammed								10. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
 -- 05/20/25		Alberto Almario								11. Ad-9559 Added insurance_score_source
 -- 07/08/25		Dinesh Bobbili								12. Ad-10153 Added bound_by_user_nm,issued_by_user_nm
+-- 01/06/26		Dinesh Bobbili								13. Ad-12155 Added indication_status column
 -- ============================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history]
@@ -81,7 +82,8 @@ BEGIN
 				pd.producer_sk,
 				acctvprr.[Version] as premium_rater_version,
 			usr2.name as bound_by_user_nm,
-			usr3.name as issued_by_user_nm
+			usr3.name as issued_by_user_nm,
+			acct.IndicationStatus as indication_status
 		INTO edw_temp.tquote_history_temp1 --select acct.* 
 		FROM edw_stage.AccountTransaction acct 
 		INNER JOIN edw_stage.Account acc ON acct.AccountId = acc.Id 
@@ -225,6 +227,7 @@ BEGIN
 		   ,insurance_score_source
 		   ,bound_by_user_nm
 		   ,issued_by_user_nm
+		   ,indication_status
 		   )
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, 
 				Source.TransactionEffectiveDate, Source.Number, 
@@ -270,6 +273,7 @@ BEGIN
 				,source1.InsuranceScoreSource
 				,source.bound_by_user_nm
 				,source.issued_by_user_nm
+				,source.indication_status
 		FROM edw_temp.tquote_history_temp1 source
 		LEFT JOIN edw_temp.tquote_history_temp3 tfs on source.id = tfs.id
 		LEFT JOIN edw_temp.tquote_history_temp2 source1 on source.id = source1.AccountTransactionId 
