@@ -11,6 +11,9 @@
 -- 12/04/25		Architha Gudimalla			5. Updated yacht boat list
 -- 12/19/25		Architha Gudimalla			6. Updated recommendation message list
 -- 12/29/25		Architha Gudimalla			7. Fixed Customer message 1 years issue
+-- 01/05/26		Architha Gudimalla		    8. Removed monoline_home_in column
+-- 01/05/26		Architha Gudimalla		    9. Added primary and non primary monoline_home_in column
+-- 01/05/26		Architha Gudimalla		   10. Update recommendation line count to 11 from 10 
 -- =================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
@@ -386,6 +389,8 @@ BEGIN
 			etl_audit_sk,
 			create_ts,
 			update_ts
+			,primary_home_monoline_in
+			,non_primary_home_monoline_in
 		)
 		select a.customer_id,
 				midterm_review_year,
@@ -468,6 +473,8 @@ BEGIN
 				@etl_audit_sk etl_audit_sk,
                 getdate() create_ts,
                 getdate() update_ts 
+				,primary_home_monoline_in
+				,non_primary_home_monoline_in
 		from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 a
 		left join ( 
 					select  customer_id, occupancy_type, occupancy_type_order, total_insured_value_amt, producer_id,
@@ -490,12 +497,13 @@ BEGIN
 				customer_id, 
 				CASE
 					WHEN COUNT(DISTINCT policy_no) > 1 AND SUM(CASE WHEN backup_generator_in = 'No' THEN 1 ELSE 0 END) > 0 THEN '019'
-					WHEN SUM(CASE WHEN primary_home_monoline_in = 'Yes' and occupancy_type in ('Seasonal','Seasonal/Secondary','Seasonal (with no Vault Primary Residence)') THEN 1 ELSE 0 END) > 0 AND SUM(CASE WHEN backup_generator_in = 'No' THEN 0 ELSE 1 END) = 0  THEN '030'
+					WHEN SUM(CASE WHEN non_primary_home_monoline_in = 'Yes' and occupancy_type in ('Seasonal','Seasonal/Secondary','Seasonal (with no Vault Primary Residence)') THEN 1 ELSE 0 END) > 0 
+						AND SUM(CASE WHEN backup_generator_in = 'No' THEN 0 ELSE 1 END) = 0  THEN '030'
 					WHEN SUM(CASE WHEN backup_generator_in = 'No' THEN 1 ELSE 0 END) > 0 THEN '032'
 					ELSE NULL
 				END AS code 
 			FROM edw_integration.customer_midterm_review_ghostdraft_feed 
-			where product_nm in ('Homeowners','Condo')  
+			where product_nm in ('Homeowners','Condo')  and existing_product_in = 'Yes'
 			GROUP BY customer_id
 		) 
 		UPDATE gd
@@ -736,7 +744,7 @@ BEGIN
 		(
 			select * 
 			from reco_message_order
-			where running_line_ct <= 10
+			where running_line_ct <= 11
 		)
 		select  
 			cmr.customer_id,
