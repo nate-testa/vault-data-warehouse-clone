@@ -54,6 +54,7 @@ GO
 -- 10/15/25		Dinesh Bobbili					30. AD11286 - simplified the date logic
 -- 11/10/25		Dinesh Bobbili					31. AD11642 - Added source_system_sk filter for NFP process
 -- 12/05/25		Architha Gudimalla				32. AD9858 - Updated logic to use prior_term_policy_no instead of prior_policy_no
+-- 01/07/26		Dinesh Bobbili					33. AD12083 - Added logic for pending_process_ct
 
 -- ======================================================================================================================================================================= 
 
@@ -915,7 +916,16 @@ BEGIN
 				if @in_yearmonth is not null
 				begin
 					set @new_last_source_extract_ts= @last_source_extract_ts
-				end 	
+				end 
+
+				update edw_stage.trenewal_summary_v1
+				set  pending_process_ct = prior_issued_ct -
+				(isnull(expired_with_no_submission_ct,0) + mid_term_cancelled_ct
+				+ non_renewal_ct + accepted_renewal_ct
+				+ not_accepted_renewal_ct + outstanding_renewal_ct
+				+ in_progress_renewal_ct + closed_with_no_offer_renewal_ct)
+				where month_sk = @month_end_dt_sk
+
 				EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 				-- Update audit table
