@@ -430,7 +430,7 @@ BEGIN
 		,Target.new_business_work_status =Source.new_business_work_status
 		,Target.broker_of_record_change_in = Source.broker_of_record_change_in
 		,Target.non_binding_indication_offered_in = Source.non_binding_indication_offered_in
-		,current_producer_nm = Source.current_producer_nm
+		,Target.current_producer_nm = Source.current_producer_nm
 		,Target.current_underwriter_nm= Source.current_underwriter_nm
 		;
 
