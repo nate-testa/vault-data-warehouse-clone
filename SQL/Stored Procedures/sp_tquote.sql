@@ -23,7 +23,8 @@
 -- 10/31/25		Sandeep Gundreddy				18. AD-11560 - removed date filter to update all null EffectiveDate/ExpirationDate in Metal; added for account table backfills
 -- 11/11/25		Yunus Mohammed					19. AD-11316 - Added broker_of_record_change_in
 -- 12/01/25		Architha Gudimalla				20. AD-11368 - Updated RenewalReviewStartDate to RenewalReviewStartedDate non_binding_indication_offered_in
--- 01/06/26		Dinesh Bobbili					21. AD-12155 - Added non_binding_indication_offered_in
+-- 01/06/26		Dinesh Bobbili						21. AD-12155 - Added non_binding_indication_offered_in
+-- 01/07/25		Yunus Mohammed					22. AD-12169 Added new column current_producer_nm and current_underwriter_nm
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -49,8 +50,8 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
 		update 	edw_stage.Account
-		set 	EffectiveDate = cast(createddate as date), ExpirationDate  = cast(createddate as date)
-		where 	EffectiveDate is null;
+		set EffectiveDate = cast(createddate as date), ExpirationDate  = cast(createddate as date)
+		where EffectiveDate is null;
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.tquote_temp1;
@@ -252,14 +253,18 @@ BEGIN
 					when tmp1.BrokerOfRecordChangeApplied = 1 then 'Yes'
 				else  'No' 
 				end as broker_of_record_change_in,
-				case when attr1.AccountId is not null then 'Yes' else 'No' end as non_binding_indication_offered_in 
-			FROM 
+				case when attr1.AccountId is not null then 'Yes' else 'No' end as non_binding_indication_offered_in ,
+				nullif(trim(isnull(cpd.firstname,'') + ' ' + isnull(cpd.LastName,'')),'') as current_producer_nm,
+				cusr.[name] current_underwriter_nm
+			FROM
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
 				left join edw_stage.Account acc_prior on tmp1.copyofAccountId = acc_prior.Id 
 				left join edw_stage.BillingAccount ba on ba.id = tmp1.BillingAccountId
 				left join edw_core.tbillingaccount tb on tb.billingaccount_no = ba.ReferenceCode
 				left join edw_stage.Brokerage br on tmp1.BrokerageId = br.id
+				 left join edw_stage.[Broker] cpd on tmp1.BrokerId = cpd.id
+				left join edw_stage.[user] cusr on cusr.id = tmp1.UnderwriterUserId 
 				left join edw_stage.Insured ins on tmp1.PrimaryInsuredId = ins.Id
 				left join edw_stage.Product pr on tmp1.ProductId = pr.id
 				left join edw_temp.tquote_temp2 tmp2 on tmp2.id = tmp1.Id
@@ -326,6 +331,7 @@ BEGIN
 			,new_business_work_status
 			,broker_of_record_change_in
 			,non_binding_indication_offered_in
+			,current_producer_nm,current_underwriter_nm
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -375,6 +381,7 @@ BEGIN
 				,Source.new_business_work_status
 				,Source.broker_of_record_change_in
 				,Source.non_binding_indication_offered_in
+				,Source.current_producer_nm,Source.current_underwriter_nm
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -420,9 +427,11 @@ BEGIN
 		,Target.renewal_quote_review_start_dt = source.renewal_quote_review_start_dt
 		,Target.renewal_released_by_metal_in = source.renewal_released_by_metal_in
 		,Target.stalled_quote_in= Source.stalled_quote_in
-		,Target.new_business_work_status =Source.new_business_work_status,
-		Target.broker_of_record_change_in = Source.broker_of_record_change_in,
-		Target.non_binding_indication_offered_in = Source.non_binding_indication_offered_in
+		,Target.new_business_work_status =Source.new_business_work_status
+		,Target.broker_of_record_change_in = Source.broker_of_record_change_in
+		,Target.non_binding_indication_offered_in = Source.non_binding_indication_offered_in
+		,current_producer_nm = Source.current_producer_nm
+		,Target.current_underwriter_nm= Source.current_underwriter_nm
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
