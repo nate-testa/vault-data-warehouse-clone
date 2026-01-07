@@ -6,7 +6,7 @@ AND TABLE_NAME = 'tquote'
 AND COLUMN_NAME = 'current_producer_nm'
 ) 
 BEGIN 
-    ALTER TABLE edw_core.tpolicy ADD current_producer_nm  VARCHAR(255) NULL
+    ALTER TABLE edw_core.tquote ADD current_producer_nm  VARCHAR(255) NULL
 END ; 
 
 IF NOT EXISTS (
