@@ -14,7 +14,8 @@
 -- 01/05/26		Architha Gudimalla		    8. Removed monoline_home_in column
 -- 01/05/26		Architha Gudimalla		    9. Added primary and non primary monoline_home_in column
 -- 01/05/26		Architha Gudimalla		   10. Update recommendation line count to 11 from 10 
--- 01/05/26		Architha Gudimalla		   10. Populated recommendation_message_id_seq_line_ct
+-- 01/05/26		Architha Gudimalla		   11. Populated recommendation_message_id_seq_line_ct
+-- 01/07/26		Architha Gudimalla		   12. Updated to pick producer from account table
 -- =================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
@@ -203,10 +204,10 @@ BEGIN
 					p.[mailing_address_city_nm],
 					p.[mailing_address_state_cd],
 					p.[mailing_address_zip_cd],
-					p.producer_id, 			-- broker_id,
-					p.producer_nm, 			-- broker_nm,
-					p.producer_phone_no, 	-- broker_phone_no,
-					p.producer_email,		-- broker_email,
+					pd.producer_id, 
+					CONCAT(pd.First_nm, ' ', pd.Last_nm) producer_nm, 
+					pd.phone_no producer_phone_no, 
+					pd.email producer_email, 
 					p.risk_address_line1,
 					p.risk_address_line2,
 					p.risk_address_unit_no,
@@ -229,10 +230,10 @@ BEGIN
 						else '2_Non_Primary' 
 					end occupancy_type_order,
 					p.total_insured_value_amt, 
-					FORMAT(p.pel_limit_amt, 'C', 'en-US') pel_limit_amt,
-					p.pel_location_ct,
-					p.pel_watercraft_ct,
-					p.pel_vehicle_ct, 
+					null pel_limit_amt,
+					null pel_location_ct,
+					null pel_watercraft_ct,
+					null pel_vehicle_ct, 
 					null pel_message_id,
 					--pel_message, 
 					p.wildfire_protection_enrollment_in, 
@@ -244,13 +245,13 @@ BEGIN
 					--lux_on_endorsement_message, 
 					p.no_of_years_with_vault,
 					p.no_of_years_with_vault_tx,  
-					p.auto_vehicle_list, 
-					p.auto_vehicle_ct,   
+					null auto_vehicle_list, 
+					null auto_vehicle_ct,   
 					null auto_message_id,  
 					--auto_message,
 					--p.yatch_product_type,
-					p.yacht_boat_list,
-					p.yacht_boat_ct,   
+					null yacht_boat_list,
+					null yacht_boat_ct,   
 					null yacht_boat_message_id,   
 					--yacht_boat_message,
 					null aviation_message_id,
@@ -284,7 +285,8 @@ BEGIN
 				inner join edw_core.tcustomer cust on e.customer_id = cust.customer_id
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
 				left join edw_integration.customer_midterm_review_policy_detail p on r.existing_policy_no = p.policy_no
-				left join edw_stage.account acc on acc.policynumber = p.policy_no 
+				left join edw_stage.account acc on acc.policynumber = p.policy_no
+				LEFT JOIN edw_core.tproducer pd on pd.producer_id = acc.BrokerId 
 				where r.product_nm in ('Condo','Homeowners')
 				and r.update_ts >  @last_source_extract_ts
 				and e.midterm_review_process_in ='Yes'
