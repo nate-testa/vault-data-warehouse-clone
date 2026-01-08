@@ -659,13 +659,20 @@ BEGIN
 					lower(cust.email) customer_email, 
 					cust.home_phone_no customer_phone_no,
 					a.customer_message,
-					a.mailing_address_line1,a.mailing_address_line2,a.mailing_address_unit_no,a.mailing_address_city_nm,
-					a.mailing_address_state_cd,a.mailing_address_zip_cd,
-					a.producer_id,a.producer_nm,a.producer_phone_no,a.producer_email
+					edw_core.fn_Init_Cap(a.mailing_address_line1) mailing_address_line1,
+					edw_core.fn_Init_Cap(a.mailing_address_line2) mailing_address_line2,
+					a.mailing_address_unit_no,
+					edw_core.fn_Init_Cap(a.mailing_address_city_nm) mailing_address_city_nm,
+					a.mailing_address_state_cd,
+					a.mailing_address_zip_cd,
+					a.producer_id,
+					edw_core.fn_Init_Cap(a.producer_nm) producer_nm,
+					a.producer_phone_no producer_phone,
+					lower(a.producer_email) producer_email
 			from edw_integration.customer_midterm_review_ghostdraft_feed a
 			inner join edw_core.tcustomer cust on cust.customer_id = a.customer_id
 			where existing_product_in  = 'Yes'
-			and a.update_ts >  @last_source_extract_ts
+			and a.update_ts >  @last_source_extract_ts 
 		),
 		reco_message as
 		(
@@ -740,13 +747,13 @@ BEGIN
 			SELECT
 			cmr.customer_nm as insured_full_name,
 			cmr.customer_message as insured_message,
-			edw_core.fn_Init_Cap(cmr.producer_nm) producer_nm, 
-			cmr.producer_phone_no as producer_phone,
-			lower(cmr.producer_email) producer_email,
-			edw_core.fn_Init_Cap(cmr.mailing_address_line1) mailing_address_line1,
-			edw_core.fn_Init_Cap(cmr.mailing_address_line2) mailing_address_line2,
+			cmr.producer_nm, 
+			cmr.producer_phone,
+			cmr.producer_email,
+			cmr.mailing_address_line1,
+			cmr.mailing_address_line2,
 			cmr.mailing_address_unit_no,
-			edw_core.fn_Init_Cap(cmr.mailing_address_city_nm) mailing_address_city_nm,
+			cmr.mailing_address_city_nm,
 			cmr.mailing_address_state_cd,
 			cmr.mailing_address_zip_cd,
 			(
