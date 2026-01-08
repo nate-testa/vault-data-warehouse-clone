@@ -8,8 +8,8 @@
 -- 10/05/23		Architha Gudimalla			2. Added update statements for policy_status, latest_term_in
 -- 10/17/23		Architha Gudimalla			3. Added logic for non_renewal_in, pending_non_renewal_in, non_renewal_note_desc, non_renewal_sub_note_desc
 -- 05/03/24		Yunus Mohammed			4. Delta identifier updated
--- 01/07/25		Yunus Mohammed			5. Added logic to update current_producer_nm and current_underwriter_nm
--- 01/08/25		Yunus Mohammed			5. Added logic to update current_producer_sk
+-- 01/07/25		Yunus Mohammed			5. AD-12169 Added logic to update current_producer_nm and current_underwriter_nm
+-- 01/08/25		Yunus Mohammed			6. AD-12180 Added logic to update current_producer_sk
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_non_renwal_billing]
