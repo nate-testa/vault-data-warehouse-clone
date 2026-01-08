@@ -13,6 +13,8 @@
 -- 11/19/25		Architha Gudimalla			7. Updated auto vehicle list
 -- 12/04/25		Architha Gudimalla			8. Updated yacht boat list
 -- 12/29/25		Architha Gudimalla			9. Fixed lux on eds join
+-- 01/05/26		Architha Gudimalla		   10. Updated merge logic for customer_midterm_review_eligibility_feed
+-- 01/05/26		Architha Gudimalla		   11. Updated logic for primary and non primary home monoline
 -- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
@@ -146,7 +148,7 @@ and a.PrimaryInsuredId=b.id
                          when max(occupancy_type) = '8_non-Primary' then 'has_secondary'
                          when max(occupancy_type) is null then 'No_home'
                     end occupancy_type,
-					count(distinct product_cd) product_ct,
+					count(distinct replace(product_cd,'CO','HO')) product_ct,
 					count(*) policy_ct,
 					sum(case when product_cd in ('HO','CO') then 1 else 0 end) home_ct 
             from cust_review
@@ -175,8 +177,8 @@ and a.PrimaryInsuredId=b.id
                      when has_ho = 1 and occupancy_type <> 'has_primary' and b.customer_id is null then 'Has Home Secondary'  
                      when has_ho = 1 and occupancy_type <> 'has_primary' and b.customer_id is not null then 'Primary Home effective on ' + cast(b.effective_dt as varchar) 
                 end reason_desc, 
-				case when has_ho = 1 and occupancy_type = 'has_primary' and home_ct = 1 then 'Yes' else 'No' end primary_home_monoline_in, 
-				case when has_ho = 1 and occupancy_type = 'has_secondary' and product_ct = 1 then 'Yes' else 'No' end non_primary_home_monoline_in --, a.*,b.*
+				case when has_ho = 1 and occupancy_type = 'has_primary' and product_ct = 1 then 'Yes' else 'No' end primary_home_monoline_in, 
+				case when has_ho = 1 and occupancy_type = 'has_secondary'                  then 'Yes' else 'No' end non_primary_home_monoline_in --, a.*,b.*
         into edw_temp.customer_midterm_review_recommendation_temp_1_cust
         from cust_review_curr a
         left join cust_primary_future b on a.customer_id = b.customer_id
@@ -196,7 +198,7 @@ and a.PrimaryInsuredId=b.id
 				getdate() update_ts 
             from edw_temp.customer_midterm_review_recommendation_temp_1_cust
         ) as SOURCE
-		ON Source.customer_id = Target.customer_id and Source.midterm_review_year = Target.midterm_review_year
+		ON Source.customer_id = Target.customer_id and datediff(dd,isnull(target.midterm_review_completed_dt,'01-jan-1999'), CURRENT_DATE) > 365
         WHEN NOT MATCHED BY Target THEN
 		INSERT 
             (customer_id, midterm_review_year, midterm_review_process_in, reason_desc, create_ts, update_ts, etl_audit_sk) 
@@ -451,8 +453,8 @@ and a.PrimaryInsuredId=b.id
 			policy_no,
 			original_policy_no,
 			risk_state_cd, 
-			renewal_effective_date,
-			renewal_expiration_date, 
+			effective_dt,
+			expiration_dt, 
 			product_nm,
             renewal_year,
 			customer_id,
@@ -803,7 +805,7 @@ and a.PrimaryInsuredId=b.id
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_1_cust ;
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_inforce_detail ; 
         drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_offered_state;
- 
+        
     END TRY
     BEGIN CATCH
         DECLARE @error_message nvarchar(4000)
