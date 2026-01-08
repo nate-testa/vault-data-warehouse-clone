@@ -179,6 +179,36 @@ class SqlToSqlMigrator:
                 dtypes[col_name] = NVARCHAR(None)
         return dtypes
 
+    def _execute_update_query(self, update_query: str, target_db: str):
+        """
+        Executes an UPDATE query on the target (Host 2) database.
+
+        Args:
+            update_query: The SQL UPDATE statement to execute.
+            target_db: The name of the target database.
+        
+        Returns:
+            The number of rows affected by the update.
+        """
+        self.logger.info(f"Executing UPDATE query on {target_db}...")
+        
+        with self.host2_engine.begin() as conn:
+            try:
+                # Set Database Context
+                conn.execute(text(f"USE {target_db}"))
+                self.logger.info(f"Set database context to: {target_db}")
+                
+                # Execute the UPDATE query
+                result = conn.execute(text(update_query))
+                rows_affected = result.rowcount
+                
+                self.logger.info(f"UPDATE query executed successfully. Rows affected: {rows_affected}")
+                return rows_affected
+                
+            except Exception as e:
+                self.logger.error(f"Failed to execute UPDATE query: {type(e).__name__}: {e}")
+                raise
+
     def _load_to_target(self, df: pd.DataFrame, target_db: str, target_schema: str, target_table: str, load_strategy: str):
         """
         Loads the extracted DataFrame into the target (Host 2) database.
@@ -249,6 +279,66 @@ class SqlToSqlMigrator:
         for task in migration_tasks:
             # --- 1. Read and Validate Task Configuration ---
             task_name = task.get('task_name', 'Unnamed Task')
+            operation_type = task.get('operation_type', 'migrate')  # Default to 'migrate' for backward compatibility
+            
+            # Handle UPDATE operations
+            if operation_type == 'update':
+                source_query = task.get('source_query')
+                update_template = task.get('update_template')
+                target_db = task.get('target_database')
+                task_id = f"{task_name} [UPDATE] -> {target_db}"
+                
+                if not all([source_query, update_template, target_db]):
+                    self.logger.warning(f"Skipping invalid UPDATE task: {task_id}. Missing required keys (source_query, update_template, target_database).")
+                    skipped_tasks.append({"task": task_id, "reason": "Missing required keys for UPDATE operation"})
+                    continue
+                
+                # Execute UPDATE task
+                try:
+                    self.logger.info(f"--- Processing UPDATE task: {task_id} ---")
+                    
+                    # Extract data from source that contains the update values
+                    df = self._extract_from_source(source_query)
+                    
+                    if df.empty:
+                        self.logger.warning(f"Source query returned 0 records. No updates to perform.")
+                        skipped_tasks.append({"task": task_id, "reason": "Source query returned no data"})
+                        continue
+                    
+                    self.logger.info(f"Extracted {len(df)} records from source for UPDATE operation.")
+                    
+                    # Execute updates row by row using the template
+                    total_rows_affected = 0
+                    with self.host2_engine.begin() as conn:
+                        conn.execute(text(f"USE {target_db}"))
+                        
+                        for idx, row in df.iterrows():
+                            # Replace placeholders in the update template with actual values
+                            update_query = update_template
+                            for col in df.columns:
+                                value = row[col]
+                                if pd.isna(value):
+                                    value = 'NULL'
+                                elif isinstance(value, str):
+                                    # Escape single quotes for SQL
+                                    value = str(value).replace("'", "''")
+                                update_query = update_query.replace(f"{{{col}}}", str(value))
+                            
+                            # Execute the UPDATE
+                            result = conn.execute(text(update_query))
+                            total_rows_affected += result.rowcount
+                    
+                    self.logger.info(f"UPDATE task completed. Total rows affected: {total_rows_affected}")
+                    successful_tasks.append(task_id)
+                    
+                except Exception as e:
+                    error_msg = f"{type(e).__name__}: {str(e)}"
+                    self.logger.error(f"An error occurred while processing UPDATE task {task_name}: {error_msg}")
+                    failed_tasks.append({"task": task_id, "error": error_msg})
+                
+                continue  # Move to next task
+            
+            # Handle MIGRATE operations (existing logic)
             source_query = task.get('source_query')
             target_db = task.get('target_database')
             target_schema = task.get('target_schema')

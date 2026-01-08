@@ -7,6 +7,13 @@
       "target_schema": "dbo",
       "target_table_name": "InsuredMarketingPreferenceDocument",
       "load_strategy": "append"
+    },
+    {
+      "task_name": "Update InsuredMarketingPreference PrimaryAccountId",
+      "operation_type": "update",
+      "target_database": "metaldb",
+      "source_query": "select b.ReferenceCode, JSON_VALUE(a.[data],'$.current_coverage.account_primary_image') as PrimaryAccountId from edw_integration.customer_midterm_review_eligibility_feed a, edw_stage.Insured b where a.customer_id = b.ReferenceCode and a.midterm_review_completed_dt = cast(GETDATE() as date)",
+      "update_template": "UPDATE imp SET imp.PrimaryAccountId = '{PrimaryAccountId}' FROM dbo.InsuredMarketingPreference imp INNER JOIN dbo.Insured i ON i.Id = imp.InsuredId WHERE i.ReferenceCode = '{ReferenceCode}' AND imp.product = 'Risk Review' AND imp.Description = 'Mid-term Risk Review'"
     }
   ]
 }
