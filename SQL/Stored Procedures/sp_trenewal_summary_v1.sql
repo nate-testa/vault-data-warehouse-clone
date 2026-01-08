@@ -54,7 +54,7 @@ GO
 -- 10/15/25		Dinesh Bobbili					30. AD11286 - simplified the date logic
 -- 11/10/25		Dinesh Bobbili					31. AD11642 - Added source_system_sk filter for NFP process
 -- 12/05/25		Architha Gudimalla				32. AD9858 - Updated logic to use prior_term_policy_no instead of prior_policy_no
--- 01/07/26		Dinesh Bobbili					33. AD12083 - Added logic for pending_process_ct
+-- 01/07/26		Dinesh Bobbili					33. AD12083 - Added logic for pending_process_ct and risk address 
 
 -- ======================================================================================================================================================================= 
 
@@ -706,6 +706,12 @@ BEGIN
 						,closed_with_no_offer_renewal_ct  
 						,offered_quote_ct
 						,offered_quote_premium_amt
+						,risk_address_line_1
+						,risk_address_line_2
+						,risk_address_unit_no	
+						,risk_address_city_nm	
+						,risk_address_state_cd	
+						,risk_address_zip_cd
 					)
 				select @month_end_dt_sk, 
 						a.policy_sk,   
@@ -894,7 +900,55 @@ BEGIN
 									)
 							  then qh.premium_amt 
 						 	  else 0 
-						 end offered_quote_premium_amt 
+						 end offered_quote_premium_amt
+						 ,case
+						when ren_pol.product_cd in ('HO','CO') then hloc.address_line_1
+						when ren_pol.product_cd in ('LUX') then cloc.address_line_1
+						when ren_pol.product_cd in ('PEL') then ploc.address_line_1
+						when ren_pol.product_cd in ('BY') then bloc.address_line_1
+						when ren_pol.product_cd in ('AU') then ren_pol.mailing_address_line1
+						else NULL
+						end risk_address_line_1
+						,case
+						when ren_pol.product_cd in ('HO','CO') then hloc.address_line_2
+						when ren_pol.product_cd in ('LUX') then cloc.address_line_2
+						when ren_pol.product_cd in ('PEL') then ploc.address_line_2
+						when ren_pol.product_cd in ('BY') then bloc.address_line_2
+						when ren_pol.product_cd in ('AU') then ren_pol.mailing_address_line2
+						else NULL
+						end risk_address_line_2,
+						case
+						when ren_pol.product_cd in ('HO','CO') then hloc.unit_no
+						when ren_pol.product_cd in ('LUX') then cloc.unit_no
+						when ren_pol.product_cd in ('PEL') then ploc.unit_no
+						when ren_pol.product_cd in ('BY') then bloc.unit_no
+						when ren_pol.product_cd in ('AU') then ren_pol.mailing_address_unit_no
+						else NULL
+						end risk_address_unit_no,
+						case
+						when ren_pol.product_cd in ('HO','CO') then hloc.city_nm
+						when ren_pol.product_cd in ('LUX') then cloc.city_nm
+						when ren_pol.product_cd in ('PEL') then ploc.city_nm
+						when ren_pol.product_cd in ('BY') then bloc.city_nm
+						when ren_pol.product_cd in ('AU') then ren_pol.mailing_address_city_nm
+						else NULL
+						end risk_address_city_nm,
+						case
+						when ren_pol.product_cd in ('HO','CO') then hloc.state_cd
+						when ren_pol.product_cd in ('LUX') then cloc.state_cd
+						when ren_pol.product_cd in ('PEL') then ploc.state_cd
+						when ren_pol.product_cd in ('BY') then bloc.state_cd
+						when ren_pol.product_cd in ('AU') then ren_pol.mailing_address_state_cd
+						else NULL
+						end risk_address_state_cd,
+						case
+						when ren_pol.product_cd in ('HO','CO') then hloc.zip_cd
+						when ren_pol.product_cd in ('LUX') then cloc.zip_cd
+						when ren_pol.product_cd in ('PEL') then ploc.zip_cd
+						when ren_pol.product_cd in ('BY') then bloc.zip_cd
+						when ren_pol.product_cd in ('AU') then ren_pol.mailing_address_zip_cd
+						else NULL
+						end risk_address_zip_cd 
 				from edw_temp.trenewal_summary_v1_temp_6_final a
 				left join ( select distinct cancellation_reason_desc, policy_sk, effective_dt 
 							FROM edw_core.tpolicy_history ph
@@ -907,7 +961,14 @@ BEGIN
 																and qhc.transaction_seq_no = qh.transaction_seq_no
 				left join edw_core.tproduct pr on a.product_sk = pr.product_sk
 				left join edw_core.tpolicy ren_pol on ren_pol.policy_sk = a.renewal_sk
-				left join edw_core.tpolicy_history ren_ph on a.renewal_sk = ren_ph.policy_sk and ren_ph.latest_transaction_in = 'Y';  
+				left join edw_core.tpolicy_history ren_ph on a.renewal_sk = ren_ph.policy_sk and ren_ph.latest_transaction_in = 'Y'
+				LEFT JOIN edw_core.tpel_location ploc ON ren_ph.policy_history_sk = ploc.policy_history_sk and ploc.primary_location_in = 'Yes'
+				LEFT JOIN edw_core.tcollection_coverage ccov ON ren_ph.policy_history_sk = ccov.policy_history_sk
+				LEFT JOIN edw_core.tcollection_location cloc ON ccov.collection_location_sk = cloc.collection_location_sk
+				LEFT JOIN edw_core.thome_coverage hcov ON hcov.policy_history_sk = ren_ph.policy_history_sk
+				LEFT JOIN edw_core.thome_location hloc ON hcov.home_location_sk = hloc.home_location_sk
+				LEFT JOIN edw_core.tmarine_boat_yacht_coverage bcov ON bcov.policy_history_sk = ren_ph.policy_history_sk
+				LEFT JOIN edw_core.tmarine_boat_yacht_location bloc ON bcov.marine_boat_yacht_location_sk = bloc.marine_boat_yacht_location_sk;  
 
 				SET @rows_affected=@@ROWCOUNT;
 
