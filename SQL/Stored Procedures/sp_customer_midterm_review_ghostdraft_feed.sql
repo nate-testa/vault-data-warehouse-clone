@@ -655,6 +655,28 @@ BEGIN
 			--******** if in future we run eligibility for monoline Auto, make sure to update the producer logic when loading ghostdraft table
 			select distinct
 					a.customer_id,
+					cust.insured_type,
+					cust.customer_nm,
+					cust.email customer_email, 
+					cust.home_phone_no customer_phone_no,
+					a.customer_message,
+					a.mailing_address_line1,
+					a.mailing_address_line2,
+					a.mailing_address_unit_no,
+					a.mailing_address_city_nm,
+					a.mailing_address_state_cd,
+					a.mailing_address_zip_cd,
+					a.producer_id,
+					a.producer_nm,
+					a.producer_phone_no producer_phone,
+					a.producer_email
+			from edw_integration.customer_midterm_review_ghostdraft_feed a
+			inner join edw_core.tcustomer cust on cust.customer_id = a.customer_id
+			where a.existing_product_in  = 'Yes'
+			and a.update_ts >  @last_source_extract_ts 
+			/*
+			 
+					a.customer_id,
 					case when cust.insured_type <>  'Entity' then edw_core.fn_Init_Cap(cust.customer_nm) else cust.customer_nm end customer_nm , 
 					lower(cust.email) customer_email, 
 					cust.home_phone_no customer_phone_no,
@@ -668,11 +690,8 @@ BEGIN
 					a.producer_id,
 					edw_core.fn_Init_Cap(a.producer_nm) producer_nm,
 					a.producer_phone_no producer_phone,
-					lower(a.producer_email) producer_email
-			from edw_integration.customer_midterm_review_ghostdraft_feed a
-			inner join edw_core.tcustomer cust on cust.customer_id = a.customer_id
-			where existing_product_in  = 'Yes'
-			and a.update_ts >  @last_source_extract_ts 
+					lower(a.producer_email) producer_email 
+			*/
 		),
 		reco_message as
 		(
@@ -745,17 +764,17 @@ BEGIN
 			cmr.customer_id,
 			(
 			SELECT
-			cmr.customer_nm as insured_full_name,
+			case when cmr.insured_type <>  'Entity' then edw_core.fn_Init_Cap(cmr.customer_nm) else cmr.customer_nm end as insured_full_name,
 			cmr.customer_message as insured_message,
-			cmr.producer_nm, 
+			edw_core.fn_Init_Cap(cmr.producer_nm) producer_nm, 
 			cmr.producer_phone,
-			cmr.producer_email,
-			cmr.mailing_address_line1,
-			cmr.mailing_address_line2,
+			lower(cmr.producer_email) producer_email,
+			edw_core.fn_Init_Cap(cmr.mailing_address_line1) mailing_address_line1,
+			edw_core.fn_Init_Cap(cmr.mailing_address_line2) mailing_address_line2,
 			cmr.mailing_address_unit_no,
-			cmr.mailing_address_city_nm,
+			edw_core.fn_Init_Cap(cmr.mailing_address_city_nm) mailing_address_city_nm,
 			cmr.mailing_address_state_cd,
-			cmr.mailing_address_zip_cd,
+			cmr.mailing_address_zip_cd,  
 			(
 			select TOP 1 'Yes'
 			from edw_integration.customer_midterm_review_ghostdraft_feed cmrh
