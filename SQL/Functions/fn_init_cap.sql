@@ -1,3 +1,11 @@
+-- ================================================================================================= 
+-- Description: Function to InitCap text
+-- -------------------------------------------------------------------------------------------------
+-- Change date 				|Author						|	Change Description
+-- -------------------------------------------------------------------------------------------------
+-- 01/05/26					Yunus				        1. Created this Function
+-- 01/08/26					Architha Gudimalla	        2. Updated to return null, if input is null
+-- ================================================================================================= 
 CREATE OR ALTER FUNCTION [edw_core].[fn_init_cap] (@in VARCHAR(MAX))
 RETURNS VARCHAR(MAX)
 AS
@@ -28,7 +36,7 @@ BEGIN
                 SUBSTRING(@in, @i, 2) IN ('st', 'nd', 'rd', 'th'))
             BEGIN
                 SET @result += SUBSTRING(@in, @i, 2); 
-    SET @i = @i + 1;
+                SET @i = @i + 1;
             END
             ELSE
             BEGIN              
@@ -52,14 +60,18 @@ BEGIN
     -- Handle special cases (e.g., Mc, LLC)
     SET @result = REPLACE(@result, 'Mc ', 'Mc');
     SET @result = REPLACE(@result, 'Mc' + LOWER(SUBSTRING(@result, CHARINDEX('Mc', @result) + 2, 1)),
-                           'Mc' + UPPER(SUBSTRING(@result, CHARINDEX('Mc', @result) + 2, 1)));
+                                   'Mc' + UPPER(SUBSTRING(@result, CHARINDEX('Mc', @result) + 2, 1)));
 
     SET @result = REPLACE(@result, ' llc', ' LLC');
- SET @result = REPLACE(@result, ' III', ' III');
- SET @result = REPLACE(@result, ' II', ' II');
- SET @result = REPLACE(@result, ' SW ',' SW ');
- SET @result = REPLACE(@result, ' NE ',' NE ');
- SET @result = REPLACE(@result, ' SE ',' SE ');
- SET @result = REPLACE(@result, ' NW ', ' NW ');
+    SET @result = REPLACE(@result, ' III', ' III');
+    SET @result = REPLACE(@result, ' II', ' II');
+    SET @result = REPLACE(@result, ' SW ',' SW ');
+    SET @result = REPLACE(@result, ' NE ',' NE ');
+    SET @result = REPLACE(@result, ' SE ',' SE ');
+    SET @result = REPLACE(@result, ' NW ', ' NW ');
+	IF @in is null 
+        BEGIN
+            SET @result = null;
+        END
     RETURN @result;
 END;
