@@ -55,6 +55,7 @@ GO
 -- 11/10/25		Dinesh Bobbili					31. AD11642 - Added source_system_sk filter for NFP process
 -- 12/05/25		Architha Gudimalla				32. AD9858 - Updated logic to use prior_term_policy_no instead of prior_policy_no
 -- 01/07/26		Dinesh Bobbili					33. AD12083 - Added logic for pending_process_ct and risk address 
+-- 01/08/26		Dinesh Bobbili					34. AD12083 - Updated logic for nonrenewal_ind, not_accepted_renewal_ct 
 
 -- ======================================================================================================================================================================= 
 
@@ -743,10 +744,9 @@ BEGIN
 							 else a.midterm_cancel_ind
 						end midterm_cancel_ind,  
 						a.expiring_ind,   
-						case when a.midterm_cancel_ind = 1 and a.nonrenewal_ind = 1
-							then 0
-							else a.nonrenewal_ind
-						end nonrenewal_ind,
+						case when ren_pol.policy_sk is not null and ren_pol.policy_status in ('Active','Expired') then 0
+                        else a.nonrenewal_ind
+                        end nonrenewal_ind,
 						a.pending_nonrenewal_ind, 
 						a.renewal_sk,
 						a.renewalcount,
@@ -816,30 +816,29 @@ BEGIN
 						 else 0 
 						 end accepted_renewal_ct --renewal is issued and paid
 						,case when a.non_flatcancel_ind = 1 
-							  and  a.renewalcount = 1 
-							  and  case when a.nonrenewal_ind = 1 then 0
-										when ren_pol.policy_sk is not null and ren_pol.policy_status in ('Active','Expired') then 0
-										else a.midterm_cancel_ind
-									end = 0 
-							  and   ( 		ren_pol.billing_PAID_IN is null 
-										and  ren_pol.first_billing_payment_dt is null 
-										and  ren_ph.transaction_type like 'Cancel%'
-										--took out below since I added logic to match on address above
-										--and  ren_ph.cancellation_reason_desc not in ('Rewritten with Vault')
-										--and  upper(ren_ph.cancellation_reason_desc) not in ('REWRITE WITH VAULT') 
-									)
-							  then 1 
-							  when a.non_flatcancel_ind = 1 
-							  and  a.renewalcount = 0 
-							  and  a.wip_renewal_quote_ct = 1 
-							  and q.first_offered_quote_history_sk is not null 
-							  and q.quote_source_status = 'Closed'   
-								then 1   
-								else 0 
-						 end not_accepted_renewal_ct --renewals is issued, renewal status is cancelled and renewal is not paid 
-						 							 --renewal is not issued but just in submission or quote status
-													 --if no renewal quote (in case of NR or midterm cancels), then its counted in NR bucket
-													 --if quote first offered date is not null and quote source status is closed
+                              and  a.renewalcount = 1 
+                              and a.nonrenewal_ind = 0
+                              and  case when a.nonrenewal_ind = 1 then 0
+                                        when ren_pol.policy_sk is not null and ren_pol.policy_status in ('Active','Expired') then 0
+                                        else a.midterm_cancel_ind
+                                    end = 0 
+                              and   (       ren_pol.billing_PAID_IN is null 
+                                        and  ren_pol.first_billing_payment_dt is null 
+                                        and  ren_ph.transaction_type like 'Cancel%'
+                                        --took out below since I added logic to match on address above
+                                        --and  ren_ph.cancellation_reason_desc not in ('Rewritten with Vault')
+                                        --and  upper(ren_ph.cancellation_reason_desc) not in ('REWRITE WITH VAULT') 
+                                    )
+                              then 1 
+                              when a.non_flatcancel_ind = 1 
+                              and  a.renewalcount = 0 
+                              and a.nonrenewal_ind = 0
+                              and  a.wip_renewal_quote_ct = 1 
+                              and q.first_offered_quote_history_sk is not null 
+                              and q.quote_source_status = 'Closed'   
+                                then 1   
+                                else 0 
+                         end not_accepted_renewal_ct
 						,case 
 							  when a.non_flatcancel_ind = 1 
 							  and a.nonrenewal_ind = 0
@@ -978,6 +977,11 @@ BEGIN
 				begin
 					set @new_last_source_extract_ts= @last_source_extract_ts
 				end 
+
+				update edw_stage.trenewal_summary_v1
+                set  non_renewal_ct = 0
+                where month_sk = @month_end_dt_sk
+                and non_renewal_ct = 1 and accepted_renewal_ct = 1; 
 
 				update edw_stage.trenewal_summary_v1
 				set  pending_process_ct = prior_issued_ct -
