@@ -71,10 +71,10 @@ BEGIN
 					p.[mailing_address_city_nm],
 					p.[mailing_address_state_cd],
 					p.[mailing_address_zip_cd],
-					p.producer_id, 			-- broker_id,
-					p.producer_nm, 			-- broker_nm,
-					p.producer_phone_no, 	-- broker_phone_no,
-					p.producer_email, 		-- broker_email, 
+					null producer_id, 			-- broker_id,
+					null producer_nm, 			-- broker_nm,
+					null producer_phone_no, 	-- broker_phone_no,
+					null producer_email, 		-- broker_email, 
 					null risk_address_line1,
 					null risk_address_line2,
 					null risk_address_unit_no,
@@ -208,18 +208,18 @@ BEGIN
 					CONCAT(pd.First_nm, ' ', pd.Last_nm) producer_nm, 
 					pd.phone_no producer_phone_no, 
 					pd.email producer_email, 
-					p.risk_address_line1,
-					p.risk_address_line2,
+					edw_core.fn_Init_Cap(p.risk_address_line1) risk_address_line1,
+					edw_core.fn_Init_Cap(p.risk_address_line2) risk_address_line2 ,
 					p.risk_address_unit_no,
-					p.risk_address_city_nm,
+					edw_core.fn_Init_Cap(p.risk_address_city_nm) risk_address_city_nm, 
 					p.risk_address_state_cd,
 					p.risk_address_zip_cd,
 					replace( 
 							CONCAT(
-								isnull(       p.risk_address_line1, ''), 
-								isnull(' '  + p.risk_address_line2, ''), 
+								isnull(       edw_core.fn_Init_Cap(p.risk_address_line1), ''), 
+								isnull(' '  + edw_core.fn_Init_Cap(p.risk_address_line2), ''), 
 								isnull(' '  + p.risk_address_unit_no, ''),
-								isnull(', ' + p.risk_address_city_nm, ''), 
+								isnull(', ' + edw_core.fn_Init_Cap(p.risk_address_city_nm), ''), 
 								isnull(', ' + p.risk_address_state_cd, ''), 
 								isnull(' '  + p.risk_address_zip_cd, '')
 							 ),'  ',''
@@ -286,7 +286,8 @@ BEGIN
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
 				left join edw_integration.customer_midterm_review_policy_detail p on r.existing_policy_no = p.policy_no
 				left join edw_stage.account acc on acc.policynumber = p.policy_no
-				LEFT JOIN edw_core.tproducer pd on pd.producer_id = acc.BrokerId 
+				left join edw_core.tpolicy pol on acc.policynumber = pol.policy_no
+				LEFT JOIN edw_core.tproducer pd on pd.producer_sk = pol.current_producer_sk 
 				where r.product_nm in ('Condo','Homeowners')
 				and r.update_ts >  @last_source_extract_ts
 				and e.midterm_review_process_in ='Yes'
@@ -310,6 +311,11 @@ BEGIN
 			customer_nm ,
 			customer_email,
 			customer_phone_no,
+			producer_id, 			
+			producer_nm, 			
+			producer_phone_no, 	
+			producer_email,		
+			account_id,
 			product_nm,
 			existing_product_in, 
 			policy_no,
@@ -321,10 +327,6 @@ BEGIN
 			[mailing_address_city_nm],
 			[mailing_address_state_cd],
 			[mailing_address_zip_cd], 
-			producer_id, 			-- broker_id,
-			producer_nm, 			-- broker_nm,
-			producer_phone_no, 	-- broker_phone_no,
-			producer_email,		-- broker_email,
 			risk_address_line1,
 			risk_address_line2,
 			risk_address_unit_no,
@@ -388,7 +390,6 @@ BEGIN
 			--custom_recommendation_message_3,
 			--custom_recommendation_message_4_id,
 			--custom_recommendation_message_4, 
-			account_id,
 			etl_audit_sk,
 			create_ts,
 			update_ts
@@ -400,6 +401,11 @@ BEGIN
 				customer_nm ,
 				customer_email,
 				customer_phone_no,
+				producer_ho.producer_id, 			
+				producer_ho.producer_nm, 			
+				producer_ho.producer_phone_no, 
+				producer_ho.producer_email,		 
+                producer_ho.account_id,
 				product_nm,
 				existing_product_in, 
 				policy_no, 
@@ -410,10 +416,6 @@ BEGIN
 				[mailing_address_city_nm],
 				[mailing_address_state_cd],
 				[mailing_address_zip_cd],
-				coalesce(producer_ho.producer_id, producer_oth.producer_id) producer_id, 			-- broker_id,
-				CONCAT(pr.First_nm, ' ', pr.Last_nm) producer_nm, 			-- broker_nm,
-				pr.phone_no producer_phone_no, 	-- broker_phone_no,
-				pr.email producer_email,		-- broker_email, 
 				risk_address_line1,
 				risk_address_line2,
 				risk_address_unit_no,
@@ -472,7 +474,6 @@ BEGIN
 				--custom_recommendation_message_1_id,
 				--custom_recommendation_message_1,
 				--custom_recommendation_message_2_id ,
-                account_id,
 				@etl_audit_sk etl_audit_sk,
                 getdate() create_ts,
                 getdate() update_ts 
@@ -480,18 +481,12 @@ BEGIN
 				,non_primary_home_monoline_in
 		from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 a
 		left join ( 
-					select  customer_id, occupancy_type, occupancy_type_order, total_insured_value_amt, producer_id,
+					select  customer_id, account_id, producer_id, producer_nm, producer_phone_no, producer_email,
+							occupancy_type, occupancy_type_order, total_insured_value_amt, 
 							row_number() over (partition by customer_id order by occupancy_type_order, total_insured_value_amt desc) rn 
 					from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
 					where product_nm in ('Condo','Homeowners')  
-				   ) producer_ho on a.customer_id = producer_ho.customer_id and producer_ho.rn = 1 
-		left join (
-					select  customer_id, occupancy_type, occupancy_type_order, total_insured_value_amt, producer_id,
-							row_number() over (partition by customer_id order by occupancy_type_order, total_insured_value_amt desc) rn 
-					from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
-					where product_nm not in ('Condo','Homeowners')  
-				   ) producer_oth on a.customer_id = producer_oth.customer_id and producer_oth.rn = 1
-		left join edw_Core.tproducer pr on pr.producer_id = coalesce(producer_ho.producer_id, producer_oth.producer_id)
+				   ) producer_ho on a.customer_id = producer_ho.customer_id and producer_ho.rn = 1  
 		;  
 
 		--update generator id
@@ -672,14 +667,12 @@ BEGIN
 		(
 			--******** if in future we run eligibility for monoline Auto, make sure to update the producer logic when loading ghostdraft table
 			select distinct
-			customer_id,customer_nm,customer_email,
-			customer_phone_no,customer_message,
-			mailing_address_line1,mailing_address_line2,mailing_address_unit_no,mailing_address_city_nm,
-			mailing_address_state_cd,mailing_address_zip_cd,producer_id,producer_nm,producer_phone_no,producer_email
+					customer_id,customer_nm,lower(customer_email) customer_email,
+					customer_phone_no,customer_message,
+					mailing_address_line1,mailing_address_line2,mailing_address_unit_no,mailing_address_city_nm,
+					mailing_address_state_cd,mailing_address_zip_cd,producer_id,producer_nm,producer_phone_no,producer_email
 			from edw_integration.customer_midterm_review_ghostdraft_feed
-			where 
-				--customer_id in ('1234511937') and
-				existing_product_in  = 'Yes'
+			where existing_product_in  = 'Yes'
 			and update_ts >  @last_source_extract_ts
 		),
 		reco_message as
@@ -755,13 +748,13 @@ BEGIN
 			SELECT
 			cmr.customer_nm as insured_full_name,
 			cmr.customer_message as insured_message,
-			cmr.producer_nm as producer_name,
+			edw_core.fn_Init_Cap(cmr.producer_nm) producer_nm, 
 			cmr.producer_phone_no as producer_phone,
-			cmr.producer_email,
-			cmr.mailing_address_line1,
-			cmr.mailing_address_line2,
+			lower(cmr.producer_email) producer_email,
+			edw_core.fn_Init_Cap(cmr.mailing_address_line1) mailing_address_line1,
+			edw_core.fn_Init_Cap(cmr.mailing_address_line2) mailing_address_line2,
 			cmr.mailing_address_unit_no,
-			cmr.mailing_address_city_nm,
+			edw_core.fn_Init_Cap(cmr.mailing_address_city_nm) mailing_address_city_nm,
 			cmr.mailing_address_state_cd,
 			cmr.mailing_address_zip_cd,
 			(
