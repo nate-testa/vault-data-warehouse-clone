@@ -212,22 +212,22 @@ and a.PrimaryInsuredId=b.id
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-            --when midterm_review_completed_dt is not null then only update all cols
-			target.midterm_review_process_in 	= case  when midterm_review_completed_dt is null 
-                                                        then source.midterm_review_year 
-                                                        else target.midterm_review_year 
+            --only when midterm_review_completed_dt is not null, update all cols
+			target.midterm_review_process_in 	= case  when midterm_review_completed_dt is not null 
+                                                        then target.midterm_review_year 
+                                                        else source.midterm_review_year 
                                                   end
-  			,target.midterm_review_process_in 	= case  when midterm_review_completed_dt is null 
-                                                        then source.midterm_review_process_in 
-                                                        else target.midterm_review_process_in 
+  			,target.midterm_review_process_in 	= case  when midterm_review_completed_dt is not null 
+                                                        then target.midterm_review_process_in 
+                                                        else source.midterm_review_process_in 
                                                   end
-  			,target.reason_desc 				=  case  when midterm_review_completed_dt is null 
-                                                        then source.reason_desc 
-                                                        else target.reason_desc 
+  			,target.reason_desc 				=  case  when midterm_review_completed_dt is not null 
+                                                        then target.reason_desc 
+                                                        else source.reason_desc 
                                                   end 
-  			,target.update_ts 					= case  when midterm_review_completed_dt is null 
-                                                        then source.update_ts 
-                                                        else target.update_ts 
+  			,target.update_ts 					= case  when midterm_review_completed_dt is not null 
+                                                        then target.update_ts 
+                                                        else source.update_ts 
                                                   end
             ;
 
