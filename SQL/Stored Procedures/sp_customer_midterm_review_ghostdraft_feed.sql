@@ -58,8 +58,6 @@ BEGIN
     
 			 select e.customer_id,
 					e.midterm_review_year,
-					cust.email customer_email,
-					cust.home_phone_no customer_phone_no,
 					r.product_nm,
 					r.existing_product_in, 
 					STRING_AGG(p.policy_no, '||') policy_no, 
@@ -163,9 +161,7 @@ BEGIN
 				and r.update_ts >  @last_source_extract_ts
 				and e.midterm_review_process_in ='Yes'
 				group by e.customer_id,
-					e.midterm_review_year, 
-					cust.email,
-					cust.home_phone_no,
+					e.midterm_review_year,  
 					r.product_nm,
 					r.existing_product_in,  
 					case when p.no_of_years_with_vault = 0 then '002' else '001' end  ,
@@ -188,9 +184,7 @@ BEGIN
 		), 
 		ho_pols AS (
 			select e.customer_id,
-					e.midterm_review_year, 
-					cust.email customer_email,
-					cust.home_phone_no customer_phone_no,
+					e.midterm_review_year,   
 					r.product_nm,
 					r.existing_product_in, 
 					p.policy_no , 
@@ -305,9 +299,7 @@ BEGIN
         insert into edw_integration.customer_midterm_review_ghostdraft_feed
 		(
 			customer_id,
-			midterm_review_year, 
-			customer_email,
-			customer_phone_no,
+			midterm_review_year,  
 			producer_id, 			
 			producer_nm, 			
 			producer_phone_no, 	
@@ -394,9 +386,7 @@ BEGIN
 			,non_primary_home_monoline_in
 		)
 		select a.customer_id,
-				midterm_review_year, 
-				customer_email,
-				customer_phone_no,
+				midterm_review_year,   
 				producer_ho.producer_id, 			
 				producer_ho.producer_nm, 			
 				producer_ho.producer_phone_no, 
@@ -665,9 +655,10 @@ BEGIN
 			--******** if in future we run eligibility for monoline Auto, make sure to update the producer logic when loading ghostdraft table
 			select distinct
 					a.customer_id,
-					case when cust.insured_type <>  'Entity' then edw_core.fn_Init_Cap(cust.customer_nm) else cust.customer_nm end customer_nm ,
-					lower(a.customer_email) customer_email,
-					a.customer_phone_no,a.customer_message,
+					case when cust.insured_type <>  'Entity' then edw_core.fn_Init_Cap(cust.customer_nm) else cust.customer_nm end customer_nm , 
+					lower(cust.email) customer_email, 
+					cust.home_phone_no customer_phone_no,
+					a.customer_message,
 					a.mailing_address_line1,a.mailing_address_line2,a.mailing_address_unit_no,a.mailing_address_city_nm,
 					a.mailing_address_state_cd,a.mailing_address_zip_cd,
 					a.producer_id,a.producer_nm,a.producer_phone_no,a.producer_email
