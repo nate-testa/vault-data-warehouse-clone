@@ -1,4 +1,4 @@
-CREATE OR ALTER FUNCTION [edw_core].[fn_InitCap] (@in VARCHAR(MAX))
+CREATE OR ALTER FUNCTION [edw_core].[fn_init_cap] (@in VARCHAR(MAX))
 RETURNS VARCHAR(MAX)
 AS
 BEGIN
