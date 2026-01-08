@@ -255,7 +255,8 @@ BEGIN
 				end as broker_of_record_change_in,
 				case when attr1.AccountId is not null then 'Yes' else 'No' end as non_binding_indication_offered_in ,
 				nullif(trim(isnull(cpd.firstname,'') + ' ' + isnull(cpd.LastName,'')),'') as current_producer_nm,
-				cusr.[name] current_underwriter_nm
+				cusr.[name] current_underwriter_nm,
+				pd.producer_sk as current_producer_sk
 			FROM
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
@@ -263,7 +264,8 @@ BEGIN
 				left join edw_stage.BillingAccount ba on ba.id = tmp1.BillingAccountId
 				left join edw_core.tbillingaccount tb on tb.billingaccount_no = ba.ReferenceCode
 				left join edw_stage.Brokerage br on tmp1.BrokerageId = br.id
-				 left join edw_stage.[Broker] cpd on tmp1.BrokerId = cpd.id
+				left join edw_stage.[Broker] cpd on tmp1.BrokerId = cpd.id
+				left join edw_core.tproducer pd on pd.producer_id = tmp1.BrokerId
 				left join edw_stage.[user] cusr on cusr.id = tmp1.UnderwriterUserId 
 				left join edw_stage.Insured ins on tmp1.PrimaryInsuredId = ins.Id
 				left join edw_stage.Product pr on tmp1.ProductId = pr.id
@@ -331,7 +333,7 @@ BEGIN
 			,new_business_work_status
 			,broker_of_record_change_in
 			,non_binding_indication_offered_in
-			,current_producer_nm,current_underwriter_nm
+			,current_producer_nm,current_underwriter_nm,current_producer_sk
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.EffectiveDate, 
@@ -381,7 +383,7 @@ BEGIN
 				,Source.new_business_work_status
 				,Source.broker_of_record_change_in
 				,Source.non_binding_indication_offered_in
-				,Source.current_producer_nm,Source.current_underwriter_nm
+				,Source.current_producer_nm,Source.current_underwriter_nm,Source.current_producer_sk
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -432,6 +434,7 @@ BEGIN
 		,Target.non_binding_indication_offered_in = Source.non_binding_indication_offered_in
 		,Target.current_producer_nm = Source.current_producer_nm
 		,Target.current_underwriter_nm= Source.current_underwriter_nm
+		,Target.current_producer_sk = Source.current_producer_sk
 		;
 
 		SET @rows_affected=@@ROWCOUNT;

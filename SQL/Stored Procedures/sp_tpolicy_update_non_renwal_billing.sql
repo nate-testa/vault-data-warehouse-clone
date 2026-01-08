@@ -9,6 +9,7 @@
 -- 10/17/23		Architha Gudimalla			3. Added logic for non_renewal_in, pending_non_renewal_in, non_renewal_note_desc, non_renewal_sub_note_desc
 -- 05/03/24		Yunus Mohammed			4. Delta identifier updated
 -- 01/07/25		Yunus Mohammed			5. Added logic to update current_producer_nm and current_underwriter_nm
+-- 01/08/25		Yunus Mohammed			5. Added logic to update current_producer_sk
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_non_renwal_billing]
@@ -53,18 +54,21 @@ BEGIN
 			non_renewal_note_desc 		= b.NonRenewalStateNote,
 			non_renewal_sub_note_desc 	= b.NonRenewalStateSubNote,
 			current_producer_nm = b.current_producer_nm,
-			current_underwriter_nm= b.current_underwriter_nm
+			current_underwriter_nm= b.current_underwriter_nm,
+			current_producer_sk = b.current_producer_sk
 		from edw_core.tpolicy a
 		inner join 
 		(
 				select policynumber, EffectiveDate, NonRenewalState, 
 				NonRenewalStateNote, NonRenewalStateSubNote, IsConditionalRenewal,
 				nullif(trim(isnull(cpd.firstname,'') + ' ' + isnull(cpd.LastName,'')),'') as current_producer_nm,
-				cusr.[name] as current_underwriter_nm
+				cusr.[name] as current_underwriter_nm,
+				pd.producer_sk as current_producer_sk
 				from 
 					edw_stage.Account  acct  
 					left join edw_stage.[Broker] cpd on acct.BrokerId = cpd.id
 					left join edw_stage.[user] cusr on cusr.id = acct.UnderwriterUserId 
+					LEFT JOIN edw_core.tproducer pd on pd.producer_id = acct.BrokerId
 				where	acct.UpdatedDate --CreatedDate
 							> @last_source_extract_ts
 		) b on	a.policy_no = b.policynumber and		a.effective_dt = cast(b.EffectiveDate as date);
