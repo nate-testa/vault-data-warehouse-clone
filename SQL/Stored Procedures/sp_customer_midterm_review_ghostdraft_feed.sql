@@ -1,9 +1,9 @@
--- =================================================================================================
+-- =====================================================================================================================
 -- Author:      Architha Gudimalla
 -- Description: This procedures loads customer recommendation feed
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 -- Change date |Author                      |   Change Description
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 -- 09/29/25     Architha Gudimalla          1. Created this procedure  
 -- 10/28/25     Architha Gudimalla          2. Changed broker to producer
 -- 10/30/25     Architha Gudimalla          3. Updated message for au if length > 96
@@ -15,8 +15,9 @@
 -- 01/05/26		Architha Gudimalla		    9. Added primary and non primary monoline_home_in column
 -- 01/05/26		Architha Gudimalla		   10. Update recommendation line count to 11 from 10 
 -- 01/05/26		Architha Gudimalla		   11. Populated recommendation_message_id_seq_line_ct
--- 01/07/26		Architha Gudimalla		   12. Updated to pick producer from account table
--- =================================================================================================
+-- 01/07/26		Architha Gudimalla		   12. Updated to pick producer from tpolicy table
+-- 01/08/26		Architha Gudimalla		   13. Added InitCap for customer_nm, producer_nm, risk address
+-- =====================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
 @in_start_dt DATE = null
