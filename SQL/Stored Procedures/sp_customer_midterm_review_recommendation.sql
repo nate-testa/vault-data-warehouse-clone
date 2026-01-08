@@ -198,7 +198,7 @@ and a.PrimaryInsuredId=b.id
 				getdate() update_ts 
             from edw_temp.customer_midterm_review_recommendation_temp_1_cust
         ) as SOURCE
-		ON Source.customer_id = Target.customer_id and datediff(dd,isnull(target.midterm_review_completed_dt,'01-jan-1999'), CURRENT_DATE) > 365
+		ON Source.customer_id = Target.customer_id and datediff(dd,isnull(target.midterm_review_completed_dt,'01-jan-1999'), CURRENT_DATE) < 365
         WHEN NOT MATCHED BY Target THEN
 		INSERT 
             (customer_id, midterm_review_year, midterm_review_process_in, reason_desc, create_ts, update_ts, etl_audit_sk) 
@@ -212,12 +212,24 @@ and a.PrimaryInsuredId=b.id
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
+            --when midterm_review_completed_dt is not null then only update all cols
 			target.midterm_review_process_in 	= case  when midterm_review_completed_dt is null 
+                                                        then source.midterm_review_year 
+                                                        else target.midterm_review_year 
+                                                  end
+  			,target.midterm_review_process_in 	= case  when midterm_review_completed_dt is null 
                                                         then source.midterm_review_process_in 
                                                         else target.midterm_review_process_in 
                                                   end
-  			,target.reason_desc 				= source.reason_desc
-  			,target.update_ts 					= source.update_ts;
+  			,target.reason_desc 				=  case  when midterm_review_completed_dt is null 
+                                                        then source.reason_desc 
+                                                        else target.reason_desc 
+                                                  end 
+  			,target.update_ts 					= case  when midterm_review_completed_dt is null 
+                                                        then source.update_ts 
+                                                        else target.update_ts 
+                                                  end
+            ;
 
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh ;
 
