@@ -58,7 +58,6 @@ BEGIN
     
 			 select e.customer_id,
 					e.midterm_review_year,
-					cust.customer_nm ,
 					cust.email customer_email,
 					cust.home_phone_no customer_phone_no,
 					r.product_nm,
@@ -164,8 +163,7 @@ BEGIN
 				and r.update_ts >  @last_source_extract_ts
 				and e.midterm_review_process_in ='Yes'
 				group by e.customer_id,
-					e.midterm_review_year,
-					cust.customer_nm ,
+					e.midterm_review_year, 
 					cust.email,
 					cust.home_phone_no,
 					r.product_nm,
@@ -190,8 +188,7 @@ BEGIN
 		), 
 		ho_pols AS (
 			select e.customer_id,
-					e.midterm_review_year,
-					cust.customer_nm ,
+					e.midterm_review_year, 
 					cust.email customer_email,
 					cust.home_phone_no customer_phone_no,
 					r.product_nm,
@@ -308,8 +305,7 @@ BEGIN
         insert into edw_integration.customer_midterm_review_ghostdraft_feed
 		(
 			customer_id,
-			midterm_review_year,
-			customer_nm ,
+			midterm_review_year, 
 			customer_email,
 			customer_phone_no,
 			producer_id, 			
@@ -398,8 +394,7 @@ BEGIN
 			,non_primary_home_monoline_in
 		)
 		select a.customer_id,
-				midterm_review_year,
-				customer_nm ,
+				midterm_review_year, 
 				customer_email,
 				customer_phone_no,
 				producer_ho.producer_id, 			
@@ -486,7 +481,8 @@ BEGIN
 							occupancy_type, occupancy_type_order, total_insured_value_amt, 
 							row_number() over (partition by customer_id order by occupancy_type_order, total_insured_value_amt desc) rn 
 					from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
-					where product_nm in ('Condo','Homeowners')  
+					where product_nm in ('Condo','Homeowners') 
+					and existing_product_in = 'Yes' 
 				   ) producer_ho on a.customer_id = producer_ho.customer_id and producer_ho.rn = 1  
 		;  
 
@@ -668,13 +664,17 @@ BEGIN
 		(
 			--******** if in future we run eligibility for monoline Auto, make sure to update the producer logic when loading ghostdraft table
 			select distinct
-					customer_id,customer_nm,lower(customer_email) customer_email,
-					customer_phone_no,customer_message,
-					mailing_address_line1,mailing_address_line2,mailing_address_unit_no,mailing_address_city_nm,
-					mailing_address_state_cd,mailing_address_zip_cd,producer_id,producer_nm,producer_phone_no,producer_email
-			from edw_integration.customer_midterm_review_ghostdraft_feed
+					a.customer_id,
+					case when cust.insured_type <>  'Entity' then edw_core.fn_Init_Cap(cust.customer_nm) else cust.customer_nm end customer_nm ,
+					lower(a.customer_email) customer_email,
+					a.customer_phone_no,a.customer_message,
+					a.mailing_address_line1,a.mailing_address_line2,a.mailing_address_unit_no,a.mailing_address_city_nm,
+					a.mailing_address_state_cd,a.mailing_address_zip_cd,
+					a.producer_id,a.producer_nm,a.producer_phone_no,a.producer_email
+			from edw_integration.customer_midterm_review_ghostdraft_feed a
+			inner join edw_core.tcustomer cust on cust.customer_id = a.customer_id
 			where existing_product_in  = 'Yes'
-			and update_ts >  @last_source_extract_ts
+			and a.update_ts >  @last_source_extract_ts
 		),
 		reco_message as
 		(
