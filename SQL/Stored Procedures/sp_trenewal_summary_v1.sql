@@ -838,7 +838,10 @@ BEGIN
                               and q.quote_source_status = 'Closed'   
                                 then 1   
                                 else 0 
-                         end not_accepted_renewal_ct
+                         end not_accepted_renewal_ct --renewals is issued, renewal status is cancelled and renewal is not paid 
+						 							 --renewal is not issued but just in submission or quote status
+													 --if no renewal quote (in case of NR or midterm cancels), then its counted in NR bucket
+													 --if quote first offered date is not null and quote source status is closed
 						,case 
 							  when a.non_flatcancel_ind = 1 
 							  and a.nonrenewal_ind = 0
