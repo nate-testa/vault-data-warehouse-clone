@@ -25,6 +25,8 @@
 -- 12/01/25		Architha Gudimalla				20. AD-11368 - Updated RenewalReviewStartDate to RenewalReviewStartedDate non_binding_indication_offered_in
 -- 01/06/26		Dinesh Bobbili						21. AD-12155 - Added non_binding_indication_offered_in
 -- 01/07/25		Yunus Mohammed					22. AD-12169 Added new column current_producer_nm and current_underwriter_nm
+-- 01/07/25		Yunus Mohammed					23. AD-12169 Added new column current_producer_nm and current_underwriter_nm
+-- 01/08/25		Yunus Mohammed					24. AD-1280 Added new column current_producer_sk
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote]
