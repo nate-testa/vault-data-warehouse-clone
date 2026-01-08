@@ -49,12 +49,18 @@ BEGIN
 			and actual_dt < cast(@current_date as date)
 		group by yearmonth
 		order by 1;	
-
+		
 		SELECT @last_day_month = actual_dt FROM edw_core.tdate WHERE yearmonth = @year_month and month_end_in = 'Y';
 
 		DELETE rpi
         FROM edw_integration.claim_workday_itd_reserve_feed AS rpi
-        INNER JOIN edw_core.tproduct AS p ON rpi.product = p.product_nm
+        INNER JOIN edw_core.tproduct AS p ON rpi.product =  CASE
+																				WHEN p.product_nm = 'Group Personal Excess Liability' THEN 'Group_Umbrella'
+																				WHEN p.product_nm = 'Auto' THEN 'Automobile'
+																				WHEN p.product_nm = 'Excess Liability' THEN 'Excess_Liability'
+																				WHEN p.product_cd = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
+																			ELSE p.product_nm 
+																		END
         WHERE monthend = @last_day_month
         AND p.product_category_nm = 'PersonalLines'; 
 		

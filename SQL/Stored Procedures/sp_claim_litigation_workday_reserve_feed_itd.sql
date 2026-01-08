@@ -61,6 +61,7 @@ BEGIN
 			tcat.catastrophe_cd AS catastrophecode,
 			tcat.catastrophe_nm AS catastrophename,			
 			CASE
+				WHEN tprd.product_nm = 'Group Personal Excess Liability' THEN 'Group_Umbrella'
 				WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
 				WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
 				WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
