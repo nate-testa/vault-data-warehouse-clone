@@ -41,11 +41,12 @@ MONTH_END_DATE = get_month_end_date()
 USE_DATE_FILTER = load_config()
 
 # Build WHERE clauses based on configuration
+# When USE_DATE_FILTER is True, use MAX(accounting_date) or MAX(monthend) instead of hardcoded dates
 if USE_DATE_FILTER:
-    ACCOUNTING_DATE_FILTER = f"WHERE accounting_date = '{MONTH_END_DATE}'"
-    MONTHEND_FILTER = f"WHERE monthend = '{MONTH_END_DATE}'"
-    AND_ACCOUNTING_DATE = f"AND accounting_date = '{MONTH_END_DATE}'"
-    AND_MONTHEND = f"AND monthend = '{MONTH_END_DATE}'"
+    ACCOUNTING_DATE_FILTER = "WHERE accounting_date = (SELECT MAX(accounting_date) FROM edw_integration.policy_workday_written_premium_feed)"
+    MONTHEND_FILTER = "WHERE monthend = (SELECT MAX(monthend) FROM edw_integration.claim_workday_payment_feed)"
+    AND_ACCOUNTING_DATE = "AND accounting_date = (SELECT MAX(accounting_date) FROM edw_integration.policy_workday_ceded_premium_feed)"
+    AND_MONTHEND = "AND monthend = (SELECT MAX(monthend) FROM edw_integration.claim_workday_reserve_feed)"
 else:
     ACCOUNTING_DATE_FILTER = "-- Date filter disabled"
     MONTHEND_FILTER = "-- Date filter disabled"
