@@ -57,6 +57,7 @@ BEGIN
 		(
     
 			 select e.customer_id,
+					cust.customer_nm,
 					e.midterm_review_year,
 					r.product_nm,
 					r.existing_product_in, 
@@ -161,6 +162,7 @@ BEGIN
 				and r.update_ts >  @last_source_extract_ts
 				and e.midterm_review_process_in ='Yes'
 				group by e.customer_id,
+					cust.customer_nm,
 					e.midterm_review_year,  
 					r.product_nm,
 					r.existing_product_in,  
@@ -184,6 +186,7 @@ BEGIN
 		), 
 		ho_pols AS (
 			select e.customer_id,
+					cust.customer_nm,
 					e.midterm_review_year,   
 					r.product_nm,
 					r.existing_product_in, 
@@ -299,6 +302,7 @@ BEGIN
         insert into edw_integration.customer_midterm_review_ghostdraft_feed
 		(
 			customer_id,
+			customer_nm,
 			midterm_review_year,  
 			producer_id, 			
 			producer_nm, 			
@@ -386,6 +390,7 @@ BEGIN
 			,non_primary_home_monoline_in
 		)
 		select a.customer_id,
+				a.customer_nm,
 				midterm_review_year,   
 				producer_ho.producer_id, 			
 				producer_ho.producer_nm, 			
