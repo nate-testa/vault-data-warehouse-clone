@@ -1,3 +1,9 @@
+ALTER TABLE  edw_integration.customer_midterm_review_eligibility_feed
+ALTER COLUMN midterm_review_year int NOT NULL;
+
+ALTER TABLE  edw_integration.customer_midterm_review_eligibility_feed
+ALTER COLUMN customer_id varchar(255) NOT NULL;
+
 IF NOT EXISTS (
     SELECT *
     FROM sys.key_constraints kc

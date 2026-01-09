@@ -382,8 +382,6 @@ and a.PrimaryInsuredId=b.id
         inner join edw_core.tproduct pr on pr.product_cd = pol.product_cd
         inner join edw_core.tcustomer cust on cust.customer_id = pol.customer_id 
 		inner join edw_temp.customer_midterm_review_recommendation_temp_1_cust a on a.customer_id = cust.customer_id
-		--left join edw_temp.customer_midterm_review_recommendation_temp_0_cust_monoline pinf on cust.customer_id = pinf.customer_id and pinf.product_cd = pol.product_cd and pinf.product_cd in ('HO','CO')
-		--left join edw_temp.customer_midterm_review_recommendation_temp_0_cust_monoline cinf on cust.customer_id = cinf.customer_id and '[Total]' = cinf.product_cd 
         inner join edw_core.tbroker br on br.broker_id = pol.broker_id
         /*
         left join edw_core.tbroker_vault_team bdm on br.broker_id = bdm.broker_id and bdm.product_nm = pr.product_nm and bdm.team_member_type = 'BusinessDevelopmentManager'
