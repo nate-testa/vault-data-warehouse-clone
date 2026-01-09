@@ -198,7 +198,7 @@ and a.PrimaryInsuredId=b.id
 				getdate() update_ts 
             from edw_temp.customer_midterm_review_recommendation_temp_1_cust
         ) as SOURCE
-		ON Source.customer_id = Target.customer_id and datediff(dd,isnull(target.midterm_review_completed_dt,'01-jan-1999'), CURRENT_DATE) > 365
+		ON Source.customer_id = Target.customer_id and datediff(dd,isnull(target.midterm_review_completed_dt,'01-jan-1999'), CURRENT_DATE) < 365
         WHEN NOT MATCHED BY Target THEN
 		INSERT 
             (customer_id, midterm_review_year, midterm_review_process_in, reason_desc, create_ts, update_ts, etl_audit_sk) 
@@ -212,12 +212,12 @@ and a.PrimaryInsuredId=b.id
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-			target.midterm_review_process_in 	= case  when midterm_review_completed_dt is null 
-                                                        then source.midterm_review_process_in 
-                                                        else target.midterm_review_process_in 
-                                                  end
-  			,target.reason_desc 				= source.reason_desc
-  			,target.update_ts 					= source.update_ts;
+            --only when midterm_review_completed_dt is null, update all cols
+			 target.midterm_review_year      	= isnull(target.midterm_review_completed_dt, target.midterm_review_year      , source.midterm_review_year) 
+  			,target.midterm_review_process_in   = isnull(target.midterm_review_completed_dt, target.midterm_review_process_in, source.midterm_review_process_in) 
+  			,target.reason_desc      	        = isnull(target.midterm_review_completed_dt, target.reason_desc              , source.reason_desc) 
+  			,target.update_ts      	            = isnull(target.midterm_review_completed_dt, target.update_ts                , source.update_ts) 
+            ;
 
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh ;
 
