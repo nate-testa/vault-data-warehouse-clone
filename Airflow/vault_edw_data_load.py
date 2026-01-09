@@ -291,7 +291,8 @@ with DAG(
             'sp_tpel_vehicle',
             'sp_tpel_watercraft',
             'sp_tpel_coverage',
-            'sp_tpel_vehicle_rapa'
+            'sp_tpel_vehicle_rapa',
+            'sp_tpel_policy_lending_loss'
         ]
 
         operators = []
@@ -329,7 +330,8 @@ with DAG(
             'sp_tauto_policy_coverage',
             'sp_tauto_driver',
             'sp_tauto_driver_incident',
-            'sp_tauto_vehicle_coverage_rapa'
+            'sp_tauto_vehicle_coverage_rapa',
+            'sp_tauto_policy_lending_loss'
         ]
 
         operators = []

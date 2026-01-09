@@ -241,7 +241,9 @@ with DAG(
             'sp_tquote_pel_coverage_wip',
             'sp_tquote_pel_coverage',
             'sp_tquote_pel_vehicle_rapa_wip',
-            'sp_tquote_pel_vehicle_rapa'
+            'sp_tquote_pel_vehicle_rapa',
+            'sp_tquote_pel_policy_lending_loss_wip',
+            'sp_tquote_pel_policy_lending_loss'
         ]
 
         operators = []
@@ -286,7 +288,9 @@ with DAG(
             'sp_tquote_auto_driver_incident_wip',
             'sp_tquote_auto_driver_incident',
             'sp_tquote_auto_vehicle_coverage_rapa_wip',
-            'sp_tquote_auto_vehicle_coverage_rapa'
+            'sp_tquote_auto_vehicle_coverage_rapa',
+            'sp_tquote_auto_policy_lending_loss_wip',
+            'sp_tquote_auto_policy_lending_loss'
         ]
 
         operators = []
