@@ -50,6 +50,38 @@ def check_customer_midterm_review_data_and_send_email(**kwargs):
     else:
         print(" *** No rows loaded. No email will be sent. ***")
 
+def check_customer_midterm_review_data_updated_and_send_email(**kwargs):
+    sql_qry = """
+                SELECT 'metaldb.dbo.InsuredMarketingPreference' AS Table_Name, COUNT(1) AS Rows_Updated
+                FROM edw_integration.customer_midterm_review_eligibility_feed a, edw_stage.Insured b, edw_stage.InsuredMarketingPreference c  
+                WHERE a.customer_id = b.ReferenceCode
+                AND b.Id = c.InsuredId
+                AND c.product = 'Risk Review'
+                AND c.description = 'Mid-term Risk Review' 
+                AND a.midterm_review_completed_dt = cast(GETDATE() as date)
+              """
+    mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
+    results = mssql_hook.get_records(sql_qry)
+    
+    print('*** Results from SQL query ***')
+    for row in results:
+        print(row)
+
+    total_rows_updated = sum(int(row[1]) for row in results) 
+    print(f"Total rows updated: {total_rows_updated}")
+
+    if total_rows_updated != 0:
+        email_op = EmailOperator(
+            task_id='send_customer_midterm_review_data_updated_email',
+            to=to_email,
+            subject='Airflow - Customer Midterm Review - Data Updated report',
+            html_content=get_vault_data_HTML(sql_qry,'The Customer Midterm Review data have been Updated into MetalDB successfully. Below is the report with the rows updated by table.','Vault_EDW'),
+            dag=kwargs['dag'],
+        )
+        email_op.execute(context=kwargs)  # type: ignore
+    else:
+        print(" *** No rows updated. No email will be sent. ***")
+
 @provide_session
 def check_history_today(session=None, **context):
     if session is None:
@@ -167,6 +199,13 @@ with DAG(
             dag=dag,
         )
 
+        check_updated_data_and_send_email = PythonOperator(
+            task_id='check_updated_data_and_send_email',
+            python_callable=check_customer_midterm_review_data_updated_and_send_email,
+            provide_context=True,
+            dag=dag,
+        )
+
         send_customer_midterm_review_email = EmailOperator(
             task_id='send_customer_midterm_review_email',
             to=to_email,
@@ -180,7 +219,8 @@ with DAG(
         operators[-1].set_downstream(check_run_edw_to_metal_load_previous_success)
         check_run_edw_to_metal_load_previous_success.set_downstream(run_edw_to_metal_load)
         run_edw_to_metal_load.set_downstream(check_data_and_send_email)
-        check_data_and_send_email.set_downstream(send_customer_midterm_review_email)
+        check_data_and_send_email.set_downstream(check_updated_data_and_send_email)
+        check_updated_data_and_send_email.set_downstream(send_customer_midterm_review_email)
 
 
 start.set_downstream(customer_midterm_review_group)
