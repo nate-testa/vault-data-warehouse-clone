@@ -219,7 +219,7 @@ and a.PrimaryInsuredId=b.id
   			,target.update_ts      	            = iif(target.midterm_review_completed_dt is null, source.update_ts                , target.update_ts) 
             ; 
 		               
-        SET @rows_affected= select count(*) from edw_integration.customer_midterm_review_eligibility_feed where midterm_review_process_in = 'Yes'; 
+        SET @rows_affected = (select count(*) from edw_integration.customer_midterm_review_eligibility_feed where midterm_review_process_in = 'Yes'); 
 
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh ;
 
