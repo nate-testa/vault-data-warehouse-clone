@@ -213,7 +213,7 @@ and a.PrimaryInsuredId=b.id
 		WHEN MATCHED THEN UPDATE 
 		SET
             --only when midterm_review_completed_dt is not null, update all cols
-			target.midterm_review_process_in 	= case  when midterm_review_completed_dt is not null 
+			target.midterm_review_year      	= case  when midterm_review_completed_dt is not null 
                                                         then target.midterm_review_year 
                                                         else source.midterm_review_year 
                                                   end
