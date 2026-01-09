@@ -198,7 +198,7 @@ and a.PrimaryInsuredId=b.id
 				getdate() update_ts 
             from edw_temp.customer_midterm_review_recommendation_temp_1_cust
         ) as SOURCE
-		ON Source.customer_id = Target.customer_id and datediff(dd,isnull(target.midterm_review_completed_dt,'01-jan-1999'), CURRENT_DATE) < 365
+		ON Source.customer_id = Target.customer_id and datediff(dd,isnull(target.midterm_review_completed_dt,'01-jan-9999'), CURRENT_DATE) < 365
         WHEN NOT MATCHED BY Target THEN
 		INSERT 
             (customer_id, midterm_review_year, midterm_review_process_in, reason_desc, create_ts, update_ts, etl_audit_sk) 
@@ -212,12 +212,14 @@ and a.PrimaryInsuredId=b.id
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-            --only when midterm_review_completed_dt is null, update all cols
-			 target.midterm_review_year      	= iif(target.midterm_review_completed_dt is null, target.midterm_review_year      , source.midterm_review_year) 
-  			,target.midterm_review_process_in   = iif(target.midterm_review_completed_dt is null, target.midterm_review_process_in, source.midterm_review_process_in) 
-  			,target.reason_desc      	        = iif(target.midterm_review_completed_dt is null, target.reason_desc              , source.reason_desc) 
-  			,target.update_ts      	            = iif(target.midterm_review_completed_dt is null, target.update_ts                , source.update_ts) 
-            ;
+            --only when midterm_review_completed_dt is null, update all cols with new source data
+			 target.midterm_review_year      	= iif(target.midterm_review_completed_dt is null, source.midterm_review_year      , target.midterm_review_year) 
+  			,target.midterm_review_process_in   = iif(target.midterm_review_completed_dt is null, source.midterm_review_process_in, target.midterm_review_process_in) 
+  			,target.reason_desc      	        = iif(target.midterm_review_completed_dt is null, source.reason_desc              , target.reason_desc) 
+  			,target.update_ts      	            = iif(target.midterm_review_completed_dt is null, source.update_ts                , target.update_ts) 
+            ; 
+		               
+        SET @rows_affected = (select count(*) from edw_integration.customer_midterm_review_eligibility_feed where midterm_review_process_in = 'Yes'); 
 
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh ;
 
@@ -778,9 +780,7 @@ and a.PrimaryInsuredId=b.id
         --- Update AV recommendation phrase
         update edw_integration.customer_midterm_review_recommendation
         set product_recommendation = 'If you have corporate, charter, or personal aviation coverage needs, talk to your agent. Vault is here for you.'
-        where product_recommendation = 'Buy Aviation;'	 
-		               
-        SET @rows_affected=@@ROWCOUNT; 
+        where product_recommendation = 'Buy Aviation;'	
  
         --AG - Using  where renewal_quote_review_start_dt < getdate() becuase of a data issue in prod
         set @new_last_source_extract_ts = (select max(renewal_quote_review_start_dt) from edw_core.tquote 
