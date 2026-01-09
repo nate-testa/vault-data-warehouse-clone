@@ -213,22 +213,10 @@ and a.PrimaryInsuredId=b.id
 		WHEN MATCHED THEN UPDATE 
 		SET
             --only when midterm_review_completed_dt is not null, update all cols
-			target.midterm_review_year      	= case  when midterm_review_completed_dt is not null 
-                                                        then target.midterm_review_year 
-                                                        else source.midterm_review_year 
-                                                  end
-  			,target.midterm_review_process_in 	= case  when midterm_review_completed_dt is not null 
-                                                        then target.midterm_review_process_in 
-                                                        else source.midterm_review_process_in 
-                                                  end
-  			,target.reason_desc 				=  case  when midterm_review_completed_dt is not null 
-                                                        then target.reason_desc 
-                                                        else source.reason_desc 
-                                                  end 
-  			,target.update_ts 					= case  when midterm_review_completed_dt is not null 
-                                                        then target.update_ts 
-                                                        else source.update_ts 
-                                                  end
+			 target.midterm_review_year      	= isnull(target.midterm_review_completed_dt, source.midterm_review_year      , target.midterm_review_year) 
+  			,target.midterm_review_process_in   = isnull(target.midterm_review_completed_dt, source.midterm_review_process_in, target.midterm_review_process_in) 
+  			,target.reason_desc      	        = isnull(target.midterm_review_completed_dt, source.reason_desc              , target.reason_desc) 
+  			,target.update_ts      	            = isnull(target.midterm_review_completed_dt, source.update_ts                , target.update_ts) 
             ;
 
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh ;
