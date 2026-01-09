@@ -212,7 +212,7 @@ and a.PrimaryInsuredId=b.id
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-            --only when midterm_review_completed_dt is not null, update all cols
+            --only when midterm_review_completed_dt is null, update all cols
 			 target.midterm_review_year      	= isnull(target.midterm_review_completed_dt, target.midterm_review_year      , source.midterm_review_year) 
   			,target.midterm_review_process_in   = isnull(target.midterm_review_completed_dt, target.midterm_review_process_in, source.midterm_review_process_in) 
   			,target.reason_desc      	        = isnull(target.midterm_review_completed_dt, target.reason_desc              , source.reason_desc) 
