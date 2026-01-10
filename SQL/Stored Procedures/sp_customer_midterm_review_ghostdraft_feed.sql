@@ -1,15 +1,23 @@
--- =================================================================================================
+-- =====================================================================================================================
 -- Author:      Architha Gudimalla
 -- Description: This procedures loads customer recommendation feed
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 -- Change date |Author                      |   Change Description
----------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 -- 09/29/25     Architha Gudimalla          1. Created this procedure  
 -- 10/28/25     Architha Gudimalla          2. Changed broker to producer
 -- 10/30/25     Architha Gudimalla          3. Updated message for au if length > 96
 -- 10/30/25     Architha Gudimalla          4. Updated to use ho producer
 -- 12/04/25		Architha Gudimalla			5. Updated yacht boat list
--- =================================================================================================
+-- 12/19/25		Architha Gudimalla			6. Updated recommendation message list
+-- 12/29/25		Architha Gudimalla			7. Fixed Customer message 1 years issue
+-- 01/05/26		Architha Gudimalla		    8. Removed monoline_home_in column
+-- 01/05/26		Architha Gudimalla		    9. Added primary and non primary monoline_home_in column
+-- 01/05/26		Architha Gudimalla		   10. Update recommendation line count to 11 from 10 
+-- 01/05/26		Architha Gudimalla		   11. Populated recommendation_message_id_seq_line_ct
+-- 01/07/26		Architha Gudimalla		   12. Updated to pick producer from tpolicy table
+-- 01/08/26		Architha Gudimalla		   13. Added InitCap for customer_nm, producer_nm, risk address
+-- =====================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
 @in_start_dt DATE = null
@@ -49,10 +57,8 @@ BEGIN
 		(
     
 			 select e.customer_id,
+					cust.customer_nm,
 					e.midterm_review_year,
-					cust.customer_nm ,
-					cust.email customer_email,
-					cust.home_phone_no customer_phone_no,
 					r.product_nm,
 					r.existing_product_in, 
 					STRING_AGG(p.policy_no, '||') policy_no, 
@@ -64,10 +70,10 @@ BEGIN
 					p.[mailing_address_city_nm],
 					p.[mailing_address_state_cd],
 					p.[mailing_address_zip_cd],
-					p.producer_id, 			-- broker_id,
-					p.producer_nm, 			-- broker_nm,
-					p.producer_phone_no, 	-- broker_phone_no,
-					p.producer_email, 		-- broker_email, 
+					null producer_id, 			-- broker_id,
+					null producer_nm, 			-- broker_nm,
+					null producer_phone_no, 	-- broker_phone_no,
+					null producer_email, 		-- broker_email, 
 					null risk_address_line1,
 					null risk_address_line2,
 					null risk_address_unit_no,
@@ -77,8 +83,7 @@ BEGIN
 					null risk_address,  
 					null occupancy_type,
 					null occupancy_type_order,
-					null total_insured_value_amt,
-					p.monoline_home_in, 
+					null total_insured_value_amt, 
 					FORMAT(case when r.product_nm = 'Excess Liability' then sum(p.pel_limit_amt) end, 'C0', 'en-US') pel_limit_amt,
 					case when r.product_nm = 'Excess Liability' then sum(p.pel_location_ct) end pel_location_ct,
 					case when r.product_nm = 'Excess Liability' then sum(p.pel_watercraft_ct) end pel_watercraft_ct,
@@ -147,6 +152,8 @@ BEGIN
 					--custom_recommendation_message_4_id,
 					--custom_recommendation_message_4, 
 					,null account_id 
+					,null primary_home_monoline_in
+					,null non_primary_home_monoline_in
 				from edw_integration.customer_midterm_review_eligibility_feed e
 				inner join edw_core.tcustomer cust on e.customer_id = cust.customer_id
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
@@ -155,10 +162,8 @@ BEGIN
 				and r.update_ts >  @last_source_extract_ts
 				and e.midterm_review_process_in ='Yes'
 				group by e.customer_id,
-					e.midterm_review_year,
-					cust.customer_nm ,
-					cust.email,
-					cust.home_phone_no,
+					cust.customer_nm,
+					e.midterm_review_year,  
 					r.product_nm,
 					r.existing_product_in,  
 					case when p.no_of_years_with_vault = 0 then '002' else '001' end  ,
@@ -172,8 +177,7 @@ BEGIN
 					p.producer_id, 			-- broker_id,
 					p.producer_nm, 			-- broker_nm,
 					p.producer_phone_no, 	-- broker_phone_no,
-					p.producer_email,   	-- broker_email,
-					p.monoline_home_in,  
+					p.producer_email,   	-- broker_email, 
 					p.no_of_years_with_vault,
 					p.no_of_years_with_vault_tx,
 					r.rms_recommendation,
@@ -182,10 +186,8 @@ BEGIN
 		), 
 		ho_pols AS (
 			select e.customer_id,
-					e.midterm_review_year,
-					cust.customer_nm ,
-					cust.email customer_email,
-					cust.home_phone_no customer_phone_no,
+					cust.customer_nm,
+					e.midterm_review_year,   
 					r.product_nm,
 					r.existing_product_in, 
 					p.policy_no , 
@@ -197,22 +199,22 @@ BEGIN
 					p.[mailing_address_city_nm],
 					p.[mailing_address_state_cd],
 					p.[mailing_address_zip_cd],
-					p.producer_id, 			-- broker_id,
-					p.producer_nm, 			-- broker_nm,
-					p.producer_phone_no, 	-- broker_phone_no,
-					p.producer_email,		-- broker_email,
-					p.risk_address_line1,
-					p.risk_address_line2,
+					pd.producer_id, 
+					CONCAT(pd.First_nm, ' ', pd.Last_nm) producer_nm, 
+					pd.phone_no producer_phone_no, 
+					pd.email producer_email, 
+					edw_core.fn_Init_Cap(p.risk_address_line1) risk_address_line1,
+					edw_core.fn_Init_Cap(p.risk_address_line2) risk_address_line2 ,
 					p.risk_address_unit_no,
-					p.risk_address_city_nm,
+					edw_core.fn_Init_Cap(p.risk_address_city_nm) risk_address_city_nm, 
 					p.risk_address_state_cd,
 					p.risk_address_zip_cd,
 					replace( 
 							CONCAT(
-								isnull(       p.risk_address_line1, ''), 
-								isnull(' '  + p.risk_address_line2, ''), 
+								isnull(       edw_core.fn_Init_Cap(p.risk_address_line1), ''), 
+								isnull(' '  + edw_core.fn_Init_Cap(p.risk_address_line2), ''), 
 								isnull(' '  + p.risk_address_unit_no, ''),
-								isnull(', ' + p.risk_address_city_nm, ''), 
+								isnull(', ' + edw_core.fn_Init_Cap(p.risk_address_city_nm), ''), 
 								isnull(', ' + p.risk_address_state_cd, ''), 
 								isnull(' '  + p.risk_address_zip_cd, '')
 							 ),'  ',''
@@ -222,12 +224,11 @@ BEGIN
 						when 'Primary' then '1_Primary'
 						else '2_Non_Primary' 
 					end occupancy_type_order,
-					p.total_insured_value_amt,
-					p.monoline_home_in,
-					FORMAT(p.pel_limit_amt, 'C', 'en-US') pel_limit_amt,
-					p.pel_location_ct,
-					p.pel_watercraft_ct,
-					p.pel_vehicle_ct, 
+					p.total_insured_value_amt, 
+					null pel_limit_amt,
+					null pel_location_ct,
+					null pel_watercraft_ct,
+					null pel_vehicle_ct, 
 					null pel_message_id,
 					--pel_message, 
 					p.wildfire_protection_enrollment_in, 
@@ -239,13 +240,13 @@ BEGIN
 					--lux_on_endorsement_message, 
 					p.no_of_years_with_vault,
 					p.no_of_years_with_vault_tx,  
-					p.auto_vehicle_list, 
-					p.auto_vehicle_ct,   
+					null auto_vehicle_list, 
+					null auto_vehicle_ct,   
 					null auto_message_id,  
 					--auto_message,
 					--p.yatch_product_type,
-					p.yacht_boat_list,
-					p.yacht_boat_ct,   
+					null yacht_boat_list,
+					null yacht_boat_ct,   
 					null yacht_boat_message_id,   
 					--yacht_boat_message,
 					null aviation_message_id,
@@ -274,11 +275,14 @@ BEGIN
 					case when r.product_nm in ('Condo','Homeowners') then '029' end renovation_recommendation_message_1_id  
 					--renovation_recommendation_message_1 
 					,acc.id account_id
+					, p.primary_home_monoline_in, p.non_primary_home_monoline_in
 				from edw_integration.customer_midterm_review_eligibility_feed e
 				inner join edw_core.tcustomer cust on e.customer_id = cust.customer_id
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
 				left join edw_integration.customer_midterm_review_policy_detail p on r.existing_policy_no = p.policy_no
-				left join edw_stage.account acc on acc.policynumber = p.policy_no 
+				left join edw_stage.account acc on acc.policynumber = p.policy_no
+				left join edw_core.tpolicy pol on acc.policynumber = pol.policy_no
+				LEFT JOIN edw_core.tproducer pd on pd.producer_sk = pol.current_producer_sk 
 				where r.product_nm in ('Condo','Homeowners')
 				and r.update_ts >  @last_source_extract_ts
 				and e.midterm_review_process_in ='Yes'
@@ -298,10 +302,13 @@ BEGIN
         insert into edw_integration.customer_midterm_review_ghostdraft_feed
 		(
 			customer_id,
-			midterm_review_year,
-			customer_nm ,
-			customer_email,
-			customer_phone_no,
+			customer_nm,
+			midterm_review_year,  
+			producer_id, 			
+			producer_nm, 			
+			producer_phone_no, 	
+			producer_email,		
+			account_id,
 			product_nm,
 			existing_product_in, 
 			policy_no,
@@ -313,10 +320,6 @@ BEGIN
 			[mailing_address_city_nm],
 			[mailing_address_state_cd],
 			[mailing_address_zip_cd], 
-			producer_id, 			-- broker_id,
-			producer_nm, 			-- broker_nm,
-			producer_phone_no, 	-- broker_phone_no,
-			producer_email,		-- broker_email,
 			risk_address_line1,
 			risk_address_line2,
 			risk_address_unit_no,
@@ -324,8 +327,7 @@ BEGIN
 			risk_address_state_cd,
 			risk_address_zip_cd,
 			risk_address,   
-			occupancy_type,
-			monoline_home_in,
+			occupancy_type, 
 			pel_limit_amt,
 			pel_location_ct,
 			pel_watercraft_ct,
@@ -381,16 +383,20 @@ BEGIN
 			--custom_recommendation_message_3,
 			--custom_recommendation_message_4_id,
 			--custom_recommendation_message_4, 
-			account_id,
 			etl_audit_sk,
 			create_ts,
 			update_ts
+			,primary_home_monoline_in
+			,non_primary_home_monoline_in
 		)
 		select a.customer_id,
-				midterm_review_year,
-				customer_nm ,
-				customer_email,
-				customer_phone_no,
+				a.customer_nm,
+				midterm_review_year,   
+				producer_ho.producer_id, 			
+				producer_ho.producer_nm, 			
+				producer_ho.producer_phone_no, 
+				producer_ho.producer_email,		 
+                producer_ho.account_id,
 				product_nm,
 				existing_product_in, 
 				policy_no, 
@@ -401,10 +407,6 @@ BEGIN
 				[mailing_address_city_nm],
 				[mailing_address_state_cd],
 				[mailing_address_zip_cd],
-				coalesce(producer_ho.producer_id, producer_oth.producer_id) producer_id, 			-- broker_id,
-				CONCAT(pr.First_nm, ' ', pr.Last_nm) producer_nm, 			-- broker_nm,
-				pr.phone_no producer_phone_no, 	-- broker_phone_no,
-				pr.email producer_email,		-- broker_email, 
 				risk_address_line1,
 				risk_address_line2,
 				risk_address_unit_no,
@@ -412,8 +414,7 @@ BEGIN
 				risk_address_state_cd,
 				risk_address_zip_cd,
 				risk_address,  
-				a.occupancy_type,
-				monoline_home_in,
+				a.occupancy_type, 
 				pel_limit_amt,
 				pel_location_ct,
 				pel_watercraft_ct,
@@ -464,24 +465,20 @@ BEGIN
 				--custom_recommendation_message_1_id,
 				--custom_recommendation_message_1,
 				--custom_recommendation_message_2_id ,
-                account_id,
 				@etl_audit_sk etl_audit_sk,
                 getdate() create_ts,
                 getdate() update_ts 
+				,primary_home_monoline_in
+				,non_primary_home_monoline_in
 		from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 a
 		left join ( 
-					select  customer_id, occupancy_type, occupancy_type_order, total_insured_value_amt, producer_id,
+					select  customer_id, account_id, producer_id, producer_nm, producer_phone_no, producer_email,
+							occupancy_type, occupancy_type_order, total_insured_value_amt, 
 							row_number() over (partition by customer_id order by occupancy_type_order, total_insured_value_amt desc) rn 
 					from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
-					where product_nm in ('Condo','Homeowners')  
-				   ) producer_ho on a.customer_id = producer_ho.customer_id and producer_ho.rn = 1 
-		left join (
-					select  customer_id, occupancy_type, occupancy_type_order, total_insured_value_amt, producer_id,
-							row_number() over (partition by customer_id order by occupancy_type_order, total_insured_value_amt desc) rn 
-					from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 
-					where product_nm not in ('Condo','Homeowners')  
-				   ) producer_oth on a.customer_id = producer_oth.customer_id and producer_oth.rn = 1
-		left join edw_Core.tproducer pr on pr.producer_id = coalesce(producer_ho.producer_id, producer_oth.producer_id)
+					where product_nm in ('Condo','Homeowners') 
+					and existing_product_in = 'Yes' 
+				   ) producer_ho on a.customer_id = producer_ho.customer_id and producer_ho.rn = 1  
 		;  
 
 		--update generator id
@@ -490,12 +487,13 @@ BEGIN
 				customer_id, 
 				CASE
 					WHEN COUNT(DISTINCT policy_no) > 1 AND SUM(CASE WHEN backup_generator_in = 'No' THEN 1 ELSE 0 END) > 0 THEN '019'
-					WHEN SUM(CASE WHEN monoline_home_in = 'Yes' and occupancy_type in ('Seasonal','Seasonal/Secondary','Seasonal (with no Vault Primary Residence)') THEN 1 ELSE 0 END) > 0 AND SUM(CASE WHEN backup_generator_in = 'No' THEN 0 ELSE 1 END) = 0  THEN '030'
+					WHEN SUM(CASE WHEN non_primary_home_monoline_in = 'Yes' and occupancy_type in ('Seasonal','Seasonal/Secondary','Seasonal (with no Vault Primary Residence)') THEN 1 ELSE 0 END) > 0 
+						AND SUM(CASE WHEN backup_generator_in = 'No' THEN 0 ELSE 1 END) = 0  THEN '030'
 					WHEN SUM(CASE WHEN backup_generator_in = 'No' THEN 1 ELSE 0 END) > 0 THEN '032'
 					ELSE NULL
 				END AS code 
 			FROM edw_integration.customer_midterm_review_ghostdraft_feed 
-			where product_nm in ('Homeowners','Condo')  
+			where product_nm in ('Homeowners','Condo')  and existing_product_in = 'Yes'
 			GROUP BY customer_id
 		) 
 		UPDATE gd
@@ -507,9 +505,9 @@ BEGIN
 		 
         --- Update customer message
         update a
-        set customer_message = case when m.message_id = '002' then m.message_desc
+        set customer_message = replace(case when m.message_id = '002' then m.message_desc
 									else replace(m.message_desc, '<<<X>>>', a.no_of_years_with_vault )
-								end
+								end,'Thank you for allowing us to serve you for 1 years.','Thank you for allowing us to serve you for 1 year.')
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.customer_message_id = m.message_id
 		where a.update_ts >  @last_source_extract_ts
@@ -661,31 +659,127 @@ BEGIN
 		(
 			--******** if in future we run eligibility for monoline Auto, make sure to update the producer logic when loading ghostdraft table
 			select distinct
-			customer_id,customer_nm,customer_email,
-			customer_phone_no,customer_message,
-			mailing_address_line1,mailing_address_line2,mailing_address_unit_no,mailing_address_city_nm,
-			mailing_address_state_cd,mailing_address_zip_cd,producer_id,producer_nm,producer_phone_no,producer_email
-			from edw_integration.customer_midterm_review_ghostdraft_feed
-			where 
-				--customer_id in ('1234511937') and
-				existing_product_in  = 'Yes'
-			and update_ts >  @last_source_extract_ts
+					a.customer_id,
+					cust.insured_type,
+					cust.customer_nm,
+					cust.email customer_email, 
+					cust.home_phone_no customer_phone_no,
+					a.customer_message,
+					a.mailing_address_line1,
+					a.mailing_address_line2,
+					a.mailing_address_unit_no,
+					a.mailing_address_city_nm,
+					a.mailing_address_state_cd,
+					a.mailing_address_zip_cd,
+					a.producer_id,
+					a.producer_nm,
+					a.producer_phone_no producer_phone,
+					a.producer_email
+			from edw_integration.customer_midterm_review_ghostdraft_feed a
+			inner join edw_core.tcustomer cust on cust.customer_id = a.customer_id
+			where a.existing_product_in  = 'Yes'
+			and a.update_ts >  @last_source_extract_ts 
+			/*
+			 
+					a.customer_id,
+					case when cust.insured_type <>  'Entity' then edw_core.fn_Init_Cap(cust.customer_nm) else cust.customer_nm end customer_nm , 
+					lower(cust.email) customer_email, 
+					cust.home_phone_no customer_phone_no,
+					a.customer_message,
+					edw_core.fn_Init_Cap(a.mailing_address_line1) mailing_address_line1,
+					edw_core.fn_Init_Cap(a.mailing_address_line2) mailing_address_line2,
+					a.mailing_address_unit_no,
+					edw_core.fn_Init_Cap(a.mailing_address_city_nm) mailing_address_city_nm,
+					a.mailing_address_state_cd,
+					a.mailing_address_zip_cd,
+					a.producer_id,
+					edw_core.fn_Init_Cap(a.producer_nm) producer_nm,
+					a.producer_phone_no producer_phone,
+					lower(a.producer_email) producer_email 
+			*/
+		),
+		reco_message as
+		(
+					select distinct mrm.customer_id, mrm.rms_recommendation_message_1_id recommendation_message_1_id,mrm.rms_recommendation_message_1 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm, edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id and 
+					mrm.rms_recommendation_message_1_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.rms_recommendation_message_2_id,mrm.rms_recommendation_message_2 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm, edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id   and 
+					mrm.rms_recommendation_message_2_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.wildfire_protection_recommendation_message_1_id, mrm.wildfire_protection_recommendation_message_1 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm, edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id   and 
+					mrm.wildfire_protection_recommendation_message_1_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.wildfire_protection_recommendation_message_2_id,mrm.wildfire_protection_recommendation_message_2 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm, edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id   and 
+					mrm.wildfire_protection_recommendation_message_2_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.backup_generator_recommendation_message_1_id,mrm.backup_generator_recommendation_message_1 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm, edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id  and 
+					mrm.backup_generator_recommendation_message_1_id = m.message_id 
+					union
+					select distinct mrm.customer_id, mrm.new_driver_recommendation_message_1_id,mrm.new_driver_recommendation_message_1 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id   and 
+					mrm.new_driver_recommendation_message_1_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.primary_ho_monoline_recommendation_message_1_id,mrm.primary_ho_monoline_recommendation_message_1 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id   and 
+					mrm.primary_ho_monoline_recommendation_message_1_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.non_primary_ho_monoline_recommendation_message_1_id,mrm.non_primary_ho_monoline_recommendation_message_1 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id   and 
+					mrm.non_primary_ho_monoline_recommendation_message_1_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.renovation_recommendation_message_1_id,mrm.renovation_recommendation_message_1 as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id   and 
+					mrm.renovation_recommendation_message_1_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.lux_on_endorsement_message_id,mrm.lux_on_endorsement_message as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id  and 
+					mrm.lux_on_endorsement_message_id = m.message_id
+		),
+		reco_message_order as
+		(
+			select *,  SUM(line_ct) OVER (
+						   PARTITION BY customer_id
+						   ORDER BY sequence_id
+						   ROWS UNBOUNDED PRECEDING
+					   ) AS running_line_ct
+			from reco_message
+		),
+		reco_message_order_final as
+		(
+			select * 
+			from reco_message_order
+			where running_line_ct <= 11
 		)
 		select  
 			cmr.customer_id,
 			(
 			SELECT
-			cmr.customer_nm as insured_full_name,
+			case when cmr.insured_type <>  'Entity' then edw_core.fn_Init_Cap(cmr.customer_nm) else cmr.customer_nm end as insured_full_name,
 			cmr.customer_message as insured_message,
-			cmr.producer_nm as producer_name,
-			cmr.producer_phone_no as producer_phone,
-			cmr.producer_email,
-			cmr.mailing_address_line1,
-			cmr.mailing_address_line2,
+			edw_core.fn_Init_Cap(cmr.producer_nm) producer_nm, 
+			cmr.producer_phone,
+			lower(cmr.producer_email) producer_email,
+			edw_core.fn_Init_Cap(cmr.mailing_address_line1) mailing_address_line1,
+			edw_core.fn_Init_Cap(cmr.mailing_address_line2) mailing_address_line2,
 			cmr.mailing_address_unit_no,
-			cmr.mailing_address_city_nm,
+			edw_core.fn_Init_Cap(cmr.mailing_address_city_nm) mailing_address_city_nm,
 			cmr.mailing_address_state_cd,
-			cmr.mailing_address_zip_cd,
+			cmr.mailing_address_zip_cd,  
 			(
 			select TOP 1 'Yes'
 			from edw_integration.customer_midterm_review_ghostdraft_feed cmrh
@@ -824,62 +918,32 @@ BEGIN
 			
 			,json_query
 			( (
-				select * from
+				select  recommendation_message_1_id, [message] from
 				(  
-					select distinct mrm.rms_recommendation_message_1_id recommendation_message_1_id,mrm.rms_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
-					where mrm.customer_id= cmr.customer_id and mrm.rms_recommendation_message_1 is not null
-					union
-					select distinct mrm.rms_recommendation_message_2_id,mrm.rms_recommendation_message_2 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
-					where mrm.customer_id= cmr.customer_id and mrm.rms_recommendation_message_2 is not null
-					union
-					select distinct mrm.wildfire_protection_recommendation_message_1_id, mrm.wildfire_protection_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
-					where mrm.customer_id= cmr.customer_id and mrm.wildfire_protection_recommendation_message_1 is not null
-					union
-					select distinct mrm.wildfire_protection_recommendation_message_2_id,mrm.wildfire_protection_recommendation_message_2 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
-					where mrm.customer_id= cmr.customer_id and mrm.wildfire_protection_recommendation_message_2 is not null
-					union
-					select distinct mrm.backup_generator_recommendation_message_1_id,mrm.backup_generator_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm
-					where mrm.customer_id= cmr.customer_id and mrm.backup_generator_recommendation_message_1 is not null 
-					union
-					select mrm.new_driver_recommendation_message_1_id,mrm.new_driver_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
-					where mrm.customer_id= cmr.customer_id and mrm.new_driver_recommendation_message_1 is not null
-					union
-					select mrm.primary_ho_monoline_recommendation_message_1_id,mrm.primary_ho_monoline_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
-					where mrm.customer_id= cmr.customer_id and mrm.primary_ho_monoline_recommendation_message_1 is not null
-					union
-					select mrm.non_primary_ho_monoline_recommendation_message_1_id,mrm.non_primary_ho_monoline_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
-					where mrm.customer_id= cmr.customer_id and mrm.non_primary_ho_monoline_recommendation_message_1 is not null
-					union
-					select mrm.renovation_recommendation_message_1_id,mrm.renovation_recommendation_message_1 as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
-					where mrm.customer_id= cmr.customer_id and mrm.renovation_recommendation_message_1 is not null
-					union
-					select mrm.lux_on_endorsement_message_id,mrm.lux_on_endorsement_message as [message]
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm 
-					where mrm.customer_id= cmr.customer_id and mrm.lux_on_endorsement_message is not null
-							
+					select recommendation_message_1_id, [message], sequence_id
+					from reco_message_order_final mrm
+					where mrm.customer_id= cmr.customer_id   			
 			) as a
+			order by sequence_id
 			for json path, include_null_values
 			))  as custom_recommendations
 			for json path, include_null_values , without_array_wrapper
-			) as  customer_json
+			) as  customer_json ,
+			( 
+				select  STRING_AGG(concat(recommendation_message_1_id, '|',sequence_id, '|',line_ct), '; ') aa   
+					from reco_message_order_final mrm
+					where mrm.customer_id= cmr.customer_id  
+			) as  recommendation_message_id_seq_line_ct 
 		into edw_temp.customer_midterm_review_ghostdraft_feed_temp2
 		from CustomerList as cmr; 
 
 		update [target]
 		set
-			[target].[data] 						= [source].[customer_json],
-			[target].midterm_review_process_in 		= 'No',
-			[target].midterm_review_completed_dt 	= cast(getdate() as date),
-			[target].update_ts 						= getdate()
+			[target].[data] 									= [source].[customer_json],
+			[target].[recommendation_message_id_seq_line_ct] 	= [source].[recommendation_message_id_seq_line_ct],
+			[target].midterm_review_process_in 					= 'No',
+			[target].midterm_review_completed_dt 				= cast(getdate() as date),
+			[target].update_ts 									= getdate()
 		from edw_integration.customer_midterm_review_eligibility_feed [target]
 		inner join edw_temp.customer_midterm_review_ghostdraft_feed_temp2 [source] on [target].customer_id = [source].customer_id
 		where [target].midterm_review_process_in = 'Yes';

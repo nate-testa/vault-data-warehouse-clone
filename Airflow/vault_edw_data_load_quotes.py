@@ -6,6 +6,7 @@ from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.operators.mssql_operator import MsSqlOperator
 from airflow.operators.email_operator import EmailOperator
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.python_operator import PythonOperator
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
 
@@ -40,6 +41,7 @@ def check_tvalidation_and_send_email(**kwargs):
                 ON tr.validation_sql_sk = ts.validation_sql_sk
                 WHERE cast(process_run_start_ts as date) = cast(getdate() as date)
                 AND status_desc ='failure'
+                AND validation_sql_desc='trenewal_summary - retention validation failure'
                 ORDER BY ts.validation_sql_desc
               """
     mssql_hook = MsSqlHook(mssql_conn_id='Vault_EDW')
@@ -48,8 +50,8 @@ def check_tvalidation_and_send_email(**kwargs):
         EmailOperator(
             task_id='send_email_tvalidation',
             to=to_email,
-            subject='Airflow - Report - Validation Errors',
-            html_content=get_vault_data_HTML(sql_qry,'There are validation errors. Please review the details below.'),
+            subject='Airflow - Report - Validation Errors - Quotes',
+            html_content=get_vault_data_HTML(sql_qry,'There are validation errors on quotes data. Please review the details below.'),
             dag=kwargs['dag'],
         ).execute(context=kwargs)
 
@@ -239,7 +241,9 @@ with DAG(
             'sp_tquote_pel_coverage_wip',
             'sp_tquote_pel_coverage',
             'sp_tquote_pel_vehicle_rapa_wip',
-            'sp_tquote_pel_vehicle_rapa'
+            'sp_tquote_pel_vehicle_rapa',
+            'sp_tquote_pel_policy_lending_loss_wip',
+            'sp_tquote_pel_policy_lending_loss'
         ]
 
         operators = []
@@ -284,7 +288,9 @@ with DAG(
             'sp_tquote_auto_driver_incident_wip',
             'sp_tquote_auto_driver_incident',
             'sp_tquote_auto_vehicle_coverage_rapa_wip',
-            'sp_tquote_auto_vehicle_coverage_rapa'
+            'sp_tquote_auto_vehicle_coverage_rapa',
+            'sp_tquote_auto_policy_lending_loss_wip',
+            'sp_tquote_auto_policy_lending_loss'
         ]
 
         operators = []
@@ -430,6 +436,37 @@ with DAG(
 
         operators[-1] >> exec_vault_edw_data_load_hubspot >> send_quote_broker_email
 
+    
+    with TaskGroup("quote_validation_result_group") as quote_validation_result_group:
+
+        quote_validation_result_group_items = [
+            'sp_tvalidation_result'
+        ]
+
+        sp_tvalidation_result = MsSqlOperator(
+            task_id='sp_tvalidation_result',
+            mssql_conn_id='Vault_EDW',
+            sql=f"EXEC edw_core.sp_tvalidation_result @validation_sql_desc='trenewal_summary - retention validation failure'",
+            database="vault_edw",
+            autocommit=True,
+        )   
+
+        tvalidation_email = PythonOperator(
+            task_id='tvalidation_email',
+            python_callable=check_tvalidation_and_send_email,
+            provide_context=True,
+            dag=dag,
+        )
+
+        send_validation_email = EmailOperator(
+            task_id='send_validation_email',
+            to=to_email,
+            subject='Airflow - Quote validation result tables loaded successfully',
+            html_content=get_sp_success_data_HTML(quote_validation_result_group_items, 'All stored procedures executed successfully for all the quotes validation result tables'),
+        )
+
+        sp_tvalidation_result >> tvalidation_email >> send_validation_email
+
 
     exec_vault_edw_data_load_vendor_reports = TriggerDagRunOperator(
         task_id="exec_vault_edw_data_load_vendor_reports",
@@ -460,4 +497,4 @@ with DAG(
     )
 
 
-start >> quote_group >> [quote_home_group , quote_PEL_group, quote_auto_group] >> quote_collection_marine >> [quote_collection_group, quote_marine_group] >> quote_transaction_group >> quote_broker_group >> exec_vault_edw_data_load_vendor_reports >> exec_metal_broker_claim_daily_feed >> exec_customer_midterm_review_daily_feed >> exec_snowflake_daily_feed >> end
+start >> quote_group >> [quote_home_group , quote_PEL_group, quote_auto_group] >> quote_collection_marine >> [quote_collection_group, quote_marine_group] >> quote_transaction_group >> quote_broker_group >> quote_validation_result_group >> exec_vault_edw_data_load_vendor_reports >> exec_metal_broker_claim_daily_feed >> exec_customer_midterm_review_daily_feed >> exec_snowflake_daily_feed >> end

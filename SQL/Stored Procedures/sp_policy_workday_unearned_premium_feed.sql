@@ -43,7 +43,7 @@ BEGIN
 		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
 
 		DECLARE @year_month INT
-		DECLARE @acounting_date_sk int,@last_day_month date	,@end_dt_sk int
+		DECLARE @acounting_date_sk int,@last_day_month date	,@end_dt_sk int,@begin_dt DATE
 
 		DECLARE cur_main CURSOR FOR
 		select yearmonth
@@ -62,13 +62,20 @@ BEGIN
 		
 		WHILE @@FETCH_STATUS = 0
 		BEGIN
-			EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;  
-	
-			SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+			EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT; 
 
 			SELECT @acounting_date_sk=date_sk, @last_day_month=actual_dt ,@end_dt_sk = date_sk
 			FROM edw_core.tdate WHERE yearmonth=@year_month and month_end_in='Y';
-		
+
+			SELECT
+				@begin_dt = MIN(actual_dt)
+			FROM
+				edw_core.tdate
+			WHERE
+				yearmonth=@year_month;
+			
+			SET @parameter_desc= 'last_source_extract_ts >=' + CAST(@begin_dt AS VARCHAR(200));
+
 			DELETE FROM edw_integration.policy_workday_unearned_premium_feed WHERE accounting_date=@last_day_month;
 
 			IF @year_month = concat(datepart(yyyy,@current_date),iif(datepart(mm,@current_date) < 10,'0','') ,datepart(mm,@current_date) )

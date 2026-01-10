@@ -12,6 +12,9 @@
 -- 11/05/25		Architha Gudimalla			6. Removed tbroker_vault_team join
 -- 11/19/25		Architha Gudimalla			7. Updated auto vehicle list
 -- 12/04/25		Architha Gudimalla			8. Updated yacht boat list
+-- 12/29/25		Architha Gudimalla			9. Fixed lux on eds join
+-- 01/05/26		Architha Gudimalla		   10. Updated merge logic for customer_midterm_review_eligibility_feed
+-- 01/05/26		Architha Gudimalla		   11. Updated logic for primary and non primary home monoline
 -- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
@@ -145,7 +148,7 @@ and a.PrimaryInsuredId=b.id
                          when max(occupancy_type) = '8_non-Primary' then 'has_secondary'
                          when max(occupancy_type) is null then 'No_home'
                     end occupancy_type,
-					count(distinct product_cd) product_ct,
+					count(distinct replace(product_cd,'CO','HO')) product_ct,
 					count(*) policy_ct,
 					sum(case when product_cd in ('HO','CO') then 1 else 0 end) home_ct 
             from cust_review
@@ -174,8 +177,8 @@ and a.PrimaryInsuredId=b.id
                      when has_ho = 1 and occupancy_type <> 'has_primary' and b.customer_id is null then 'Has Home Secondary'  
                      when has_ho = 1 and occupancy_type <> 'has_primary' and b.customer_id is not null then 'Primary Home effective on ' + cast(b.effective_dt as varchar) 
                 end reason_desc, 
-				case when has_ho = 1 and occupancy_type = 'has_primary' and home_ct = 1 then 'Yes' else 'No' end primary_home_monoline_in, 
-				case when has_ho = 1 and occupancy_type = 'has_secondary' and product_ct = 1 then 'Yes' else 'No' end non_primary_home_monoline_in --, a.*,b.*
+				case when has_ho = 1 and occupancy_type = 'has_primary' and product_ct = 1 then 'Yes' else 'No' end primary_home_monoline_in, 
+				case when has_ho = 1 and occupancy_type = 'has_secondary'                  then 'Yes' else 'No' end non_primary_home_monoline_in --, a.*,b.*
         into edw_temp.customer_midterm_review_recommendation_temp_1_cust
         from cust_review_curr a
         left join cust_primary_future b on a.customer_id = b.customer_id
@@ -195,7 +198,7 @@ and a.PrimaryInsuredId=b.id
 				getdate() update_ts 
             from edw_temp.customer_midterm_review_recommendation_temp_1_cust
         ) as SOURCE
-		ON Source.customer_id = Target.customer_id and Source.midterm_review_year = Target.midterm_review_year
+		ON Source.customer_id = Target.customer_id and datediff(dd,isnull(target.midterm_review_completed_dt,'01-jan-9999'), CURRENT_DATE) < 365
         WHEN NOT MATCHED BY Target THEN
 		INSERT 
             (customer_id, midterm_review_year, midterm_review_process_in, reason_desc, create_ts, update_ts, etl_audit_sk) 
@@ -209,12 +212,14 @@ and a.PrimaryInsuredId=b.id
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-			target.midterm_review_process_in 	= case  when midterm_review_completed_dt is null 
-                                                        then source.midterm_review_process_in 
-                                                        else target.midterm_review_process_in 
-                                                  end
-  			,target.reason_desc 				= source.reason_desc
-  			,target.update_ts 					= source.update_ts;
+            --only when midterm_review_completed_dt is null, update all cols with new source data
+			 target.midterm_review_year      	= iif(target.midterm_review_completed_dt is null, source.midterm_review_year      , target.midterm_review_year) 
+  			,target.midterm_review_process_in   = iif(target.midterm_review_completed_dt is null, source.midterm_review_process_in, target.midterm_review_process_in) 
+  			,target.reason_desc      	        = iif(target.midterm_review_completed_dt is null, source.reason_desc              , target.reason_desc) 
+  			,target.update_ts      	            = iif(target.midterm_review_completed_dt is null, source.update_ts                , target.update_ts) 
+            ; 
+		               
+        SET @rows_affected = (select count(*) from edw_integration.customer_midterm_review_eligibility_feed where midterm_review_process_in = 'Yes'); 
 
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_3_inf_au_veh ;
 
@@ -377,8 +382,6 @@ and a.PrimaryInsuredId=b.id
         inner join edw_core.tproduct pr on pr.product_cd = pol.product_cd
         inner join edw_core.tcustomer cust on cust.customer_id = pol.customer_id 
 		inner join edw_temp.customer_midterm_review_recommendation_temp_1_cust a on a.customer_id = cust.customer_id
-		--left join edw_temp.customer_midterm_review_recommendation_temp_0_cust_monoline pinf on cust.customer_id = pinf.customer_id and pinf.product_cd = pol.product_cd and pinf.product_cd in ('HO','CO')
-		--left join edw_temp.customer_midterm_review_recommendation_temp_0_cust_monoline cinf on cust.customer_id = cinf.customer_id and '[Total]' = cinf.product_cd 
         inner join edw_core.tbroker br on br.broker_id = pol.broker_id
         /*
         left join edw_core.tbroker_vault_team bdm on br.broker_id = bdm.broker_id and bdm.product_nm = pr.product_nm and bdm.team_member_type = 'BusinessDevelopmentManager'
@@ -450,8 +453,8 @@ and a.PrimaryInsuredId=b.id
 			policy_no,
 			original_policy_no,
 			risk_state_cd, 
-			renewal_effective_date,
-			renewal_expiration_date, 
+			effective_dt,
+			expiration_dt, 
 			product_nm,
             renewal_year,
 			customer_id,
@@ -679,25 +682,8 @@ and a.PrimaryInsuredId=b.id
 					select 'AV', 'Aviation', 'PersonalLines'  
 					)pr --on pr.product_nm = cust.product_nm
         left join edw_integration.customer_midterm_review_policy_detail cf on cust.customer_id = cf.customer_id and cf.product_nm = pr.product_nm and cf.renewal_year =  datepart(yyyy, getdate())
-        inner join edw_temp.customer_midterm_review_recommendation_temp_2_offered_state pos on pos.state_cd = cust.mailing_address_state_cd 
-		and pr.product_cd = (case when pos.product_cd = 'Lux_on_endorsement' then 'ho' else pos.product_cd end)
-		-- Yunus - 09/24/2025 Changes made to handle below 2 scenerios
-		-- If collections is available in a state, we should not recommend Lux on endorsement, because we will have collections boilerplate in the current coverage section
-		--If account has collections, we should not recommend Lux on endorsement at all
-		and 
-		(	pos.offered_in = 'Yes'
-			and not exists
-			(
-				select 1
-				from
-					edw_integration.customer_midterm_review_policy_detail cf1
-				where
-					cf1.customer_id= cust.customer_id
-					and cf1.product_nm = 'Collection'
-					and pos.product_cd = 'Lux_on_endorsement'
-                    and renewal_year =  datepart(yyyy, getdate())				
-			)
-		)
+        left join edw_temp.customer_midterm_review_recommendation_temp_2_offered_state pos on pos.state_cd = cust.mailing_address_state_cd 
+		and pr.product_cd = (case when pos.product_cd = 'Lux_on_endorsement' then (case when cf.total_collection_limit_amt is not null then 'ho' end) else pos.product_cd end)
         left join (select distinct quote_no from edw_core.tquote_collection_class_type) lux on lux.quote_no = cf.policy_no
         left join (select distinct customer_id from edw_core.thome_coverage cov, edw_core.tpolicy pol
                                 where occupancy_type ='Primary'
@@ -708,7 +694,23 @@ and a.PrimaryInsuredId=b.id
                                 where product_nm = 'Marine Boat & Yacht'
                                 and renewal_year =  datepart(yyyy, getdate())
                               ) marine on marine.customer_id = cust.customer_id
-        where pr.product_category_nm = 'PersonalLines'  
+        where pr.product_category_nm = 'PersonalLines' 
+		and  (cf.policy_no is not null or (pos.offered_in = 'Yes'
+                                            -- Yunus - 09/24/2025 Changes made to handle below 2 scenerios
+                                            -- If collections is available in a state, we should not recommend Lux on endorsement, because we will have collections boilerplate in the current coverage section
+                                            --If account has collections, we should not recommend Lux on endorsement at all
+											and not exists
+											(
+												select 1
+												from
+													edw_integration.customer_midterm_review_policy_detail cf1
+												where
+													cf1.customer_id= cust.customer_id
+													and cf1.product_nm = 'Collection'
+													and pos.product_cd = 'Lux_on_endorsement'
+													and renewal_year =  datepart(yyyy, getdate())				
+											))
+			)  
         order by 1,5,6 ; 
  
         --- take out product recommendation of a DNR in the last year
@@ -776,9 +778,7 @@ and a.PrimaryInsuredId=b.id
         --- Update AV recommendation phrase
         update edw_integration.customer_midterm_review_recommendation
         set product_recommendation = 'If you have corporate, charter, or personal aviation coverage needs, talk to your agent. Vault is here for you.'
-        where product_recommendation = 'Buy Aviation;'	 
-		               
-        SET @rows_affected=@@ROWCOUNT; 
+        where product_recommendation = 'Buy Aviation;'	
  
         --AG - Using  where renewal_quote_review_start_dt < getdate() becuase of a data issue in prod
         set @new_last_source_extract_ts = (select max(renewal_quote_review_start_dt) from edw_core.tquote 
@@ -803,7 +803,7 @@ and a.PrimaryInsuredId=b.id
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_1_cust ;
 		drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_inforce_detail ; 
         drop table if exists edw_temp.customer_midterm_review_recommendation_temp_2_offered_state;
- 
+        
     END TRY
     BEGIN CATCH
         DECLARE @error_message nvarchar(4000)

@@ -1,0 +1,1 @@
+update edw_core.taslob set coverage_cd = 'UM/UIM Liability' where coverage_cd = 'UM/UIM  Liability' and aslob_cd = 171 and product_cd = 'Excess Liability'

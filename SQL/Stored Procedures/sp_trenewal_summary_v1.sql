@@ -54,6 +54,8 @@ GO
 -- 10/15/25		Dinesh Bobbili					30. AD11286 - simplified the date logic
 -- 11/10/25		Dinesh Bobbili					31. AD11642 - Added source_system_sk filter for NFP process
 -- 12/05/25		Architha Gudimalla				32. AD9858 - Updated logic to use prior_term_policy_no instead of prior_policy_no
+-- 01/07/26		Dinesh Bobbili					33. AD12083 - Added logic for pending_process_ct and risk address 
+-- 01/08/26		Dinesh Bobbili					34. AD12083 - Updated logic for nonrenewal_ind, not_accepted_renewal_ct 
 
 -- ======================================================================================================================================================================= 
 
@@ -705,6 +707,12 @@ BEGIN
 						,closed_with_no_offer_renewal_ct  
 						,offered_quote_ct
 						,offered_quote_premium_amt
+						,risk_address_line_1
+						,risk_address_line_2
+						,risk_address_unit_no	
+						,risk_address_city_nm	
+						,risk_address_state_cd	
+						,risk_address_zip_cd
 					)
 				select @month_end_dt_sk, 
 						a.policy_sk,   
@@ -736,10 +744,9 @@ BEGIN
 							 else a.midterm_cancel_ind
 						end midterm_cancel_ind,  
 						a.expiring_ind,   
-						case when a.midterm_cancel_ind = 1 and a.nonrenewal_ind = 1
-							then 0
-							else a.nonrenewal_ind
-						end nonrenewal_ind,
+						case when ren_pol.policy_sk is not null and ren_pol.policy_status in ('Active','Expired') then 0
+                        else a.nonrenewal_ind
+                        end nonrenewal_ind,
 						a.pending_nonrenewal_ind, 
 						a.renewal_sk,
 						a.renewalcount,
@@ -809,27 +816,29 @@ BEGIN
 						 else 0 
 						 end accepted_renewal_ct --renewal is issued and paid
 						,case when a.non_flatcancel_ind = 1 
-							  and  a.renewalcount = 1 
-							  and  case when a.nonrenewal_ind = 1 then 0
-										when ren_pol.policy_sk is not null and ren_pol.policy_status in ('Active','Expired') then 0
-										else a.midterm_cancel_ind
-									end = 0 
-							  and   ( 		ren_pol.billing_PAID_IN is null 
-										and  ren_pol.first_billing_payment_dt is null 
-										and  ren_ph.transaction_type like 'Cancel%'
-										--took out below since I added logic to match on address above
-										--and  ren_ph.cancellation_reason_desc not in ('Rewritten with Vault')
-										--and  upper(ren_ph.cancellation_reason_desc) not in ('REWRITE WITH VAULT') 
-									)
-							  then 1 
-							  when a.non_flatcancel_ind = 1 
-							  and  a.renewalcount = 0 
-							  and  a.wip_renewal_quote_ct = 1 
-							  and q.first_offered_quote_history_sk is not null 
-							  and q.quote_source_status = 'Closed'   
-								then 1   
-								else 0 
-						 end not_accepted_renewal_ct --renewals is issued, renewal status is cancelled and renewal is not paid 
+                              and  a.renewalcount = 1 
+                              and a.nonrenewal_ind = 0
+                              and  case when a.nonrenewal_ind = 1 then 0
+                                        when ren_pol.policy_sk is not null and ren_pol.policy_status in ('Active','Expired') then 0
+                                        else a.midterm_cancel_ind
+                                    end = 0 
+                              and   (       ren_pol.billing_PAID_IN is null 
+                                        and  ren_pol.first_billing_payment_dt is null 
+                                        and  ren_ph.transaction_type like 'Cancel%'
+                                        --took out below since I added logic to match on address above
+                                        --and  ren_ph.cancellation_reason_desc not in ('Rewritten with Vault')
+                                        --and  upper(ren_ph.cancellation_reason_desc) not in ('REWRITE WITH VAULT') 
+                                    )
+                              then 1 
+                              when a.non_flatcancel_ind = 1 
+                              and  a.renewalcount = 0 
+                              and a.nonrenewal_ind = 0
+                              and  a.wip_renewal_quote_ct = 1 
+                              and q.first_offered_quote_history_sk is not null 
+                              and q.quote_source_status = 'Closed'   
+                                then 1   
+                                else 0 
+                         end not_accepted_renewal_ct --renewals is issued, renewal status is cancelled and renewal is not paid 
 						 							 --renewal is not issued but just in submission or quote status
 													 --if no renewal quote (in case of NR or midterm cancels), then its counted in NR bucket
 													 --if quote first offered date is not null and quote source status is closed
@@ -893,7 +902,55 @@ BEGIN
 									)
 							  then qh.premium_amt 
 						 	  else 0 
-						 end offered_quote_premium_amt 
+						 end offered_quote_premium_amt
+						 ,case
+						when ren_pol.product_cd in ('HO','CO') then hloc.address_line_1
+						when ren_pol.product_cd in ('LUX') then cloc.address_line_1
+						when ren_pol.product_cd in ('PEL') then ploc.address_line_1
+						when ren_pol.product_cd in ('BY') then bloc.address_line_1
+						when ren_pol.product_cd in ('AU') then ren_pol.mailing_address_line1
+						else NULL
+						end risk_address_line_1
+						,case
+						when ren_pol.product_cd in ('HO','CO') then hloc.address_line_2
+						when ren_pol.product_cd in ('LUX') then cloc.address_line_2
+						when ren_pol.product_cd in ('PEL') then ploc.address_line_2
+						when ren_pol.product_cd in ('BY') then bloc.address_line_2
+						when ren_pol.product_cd in ('AU') then ren_pol.mailing_address_line2
+						else NULL
+						end risk_address_line_2,
+						case
+						when ren_pol.product_cd in ('HO','CO') then hloc.unit_no
+						when ren_pol.product_cd in ('LUX') then cloc.unit_no
+						when ren_pol.product_cd in ('PEL') then ploc.unit_no
+						when ren_pol.product_cd in ('BY') then bloc.unit_no
+						when ren_pol.product_cd in ('AU') then ren_pol.mailing_address_unit_no
+						else NULL
+						end risk_address_unit_no,
+						case
+						when ren_pol.product_cd in ('HO','CO') then hloc.city_nm
+						when ren_pol.product_cd in ('LUX') then cloc.city_nm
+						when ren_pol.product_cd in ('PEL') then ploc.city_nm
+						when ren_pol.product_cd in ('BY') then bloc.city_nm
+						when ren_pol.product_cd in ('AU') then ren_pol.mailing_address_city_nm
+						else NULL
+						end risk_address_city_nm,
+						case
+						when ren_pol.product_cd in ('HO','CO') then hloc.state_cd
+						when ren_pol.product_cd in ('LUX') then cloc.state_cd
+						when ren_pol.product_cd in ('PEL') then ploc.state_cd
+						when ren_pol.product_cd in ('BY') then bloc.state_cd
+						when ren_pol.product_cd in ('AU') then ren_pol.mailing_address_state_cd
+						else NULL
+						end risk_address_state_cd,
+						case
+						when ren_pol.product_cd in ('HO','CO') then hloc.zip_cd
+						when ren_pol.product_cd in ('LUX') then cloc.zip_cd
+						when ren_pol.product_cd in ('PEL') then ploc.zip_cd
+						when ren_pol.product_cd in ('BY') then bloc.zip_cd
+						when ren_pol.product_cd in ('AU') then ren_pol.mailing_address_zip_cd
+						else NULL
+						end risk_address_zip_cd 
 				from edw_temp.trenewal_summary_v1_temp_6_final a
 				left join ( select distinct cancellation_reason_desc, policy_sk, effective_dt 
 							FROM edw_core.tpolicy_history ph
@@ -906,7 +963,14 @@ BEGIN
 																and qhc.transaction_seq_no = qh.transaction_seq_no
 				left join edw_core.tproduct pr on a.product_sk = pr.product_sk
 				left join edw_core.tpolicy ren_pol on ren_pol.policy_sk = a.renewal_sk
-				left join edw_core.tpolicy_history ren_ph on a.renewal_sk = ren_ph.policy_sk and ren_ph.latest_transaction_in = 'Y';  
+				left join edw_core.tpolicy_history ren_ph on a.renewal_sk = ren_ph.policy_sk and ren_ph.latest_transaction_in = 'Y'
+				LEFT JOIN edw_core.tpel_location ploc ON ren_ph.policy_history_sk = ploc.policy_history_sk and ploc.primary_location_in = 'Yes'
+				LEFT JOIN edw_core.tcollection_coverage ccov ON ren_ph.policy_history_sk = ccov.policy_history_sk
+				LEFT JOIN edw_core.tcollection_location cloc ON ccov.collection_location_sk = cloc.collection_location_sk
+				LEFT JOIN edw_core.thome_coverage hcov ON hcov.policy_history_sk = ren_ph.policy_history_sk
+				LEFT JOIN edw_core.thome_location hloc ON hcov.home_location_sk = hloc.home_location_sk
+				LEFT JOIN edw_core.tmarine_boat_yacht_coverage bcov ON bcov.policy_history_sk = ren_ph.policy_history_sk
+				LEFT JOIN edw_core.tmarine_boat_yacht_location bloc ON bcov.marine_boat_yacht_location_sk = bloc.marine_boat_yacht_location_sk;  
 
 				SET @rows_affected=@@ROWCOUNT;
 
@@ -915,7 +979,21 @@ BEGIN
 				if @in_yearmonth is not null
 				begin
 					set @new_last_source_extract_ts= @last_source_extract_ts
-				end 	
+				end 
+
+				update edw_stage.trenewal_summary_v1
+                set  non_renewal_ct = 0
+                where month_sk = @month_end_dt_sk
+                and non_renewal_ct = 1 and accepted_renewal_ct = 1; 
+
+				update edw_stage.trenewal_summary_v1
+				set  pending_process_ct = prior_issued_ct -
+				(isnull(expired_with_no_submission_ct,0) + mid_term_cancelled_ct
+				+ non_renewal_ct + accepted_renewal_ct
+				+ not_accepted_renewal_ct + outstanding_renewal_ct
+				+ in_progress_renewal_ct + closed_with_no_offer_renewal_ct)
+				where month_sk = @month_end_dt_sk
+
 				EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 				-- Update audit table
