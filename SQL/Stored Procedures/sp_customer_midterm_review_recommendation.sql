@@ -15,6 +15,7 @@
 -- 12/29/25		Architha Gudimalla			9. Fixed lux on eds join
 -- 01/05/26		Architha Gudimalla		   10. Updated merge logic for customer_midterm_review_eligibility_feed
 -- 01/05/26		Architha Gudimalla		   11. Updated logic for primary and non primary home monoline
+-- 01/10/26		Architha Gudimalla		   12. Updated merge logic for customer_midterm_review_eligibility_feed
 -- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
@@ -198,7 +199,9 @@ and a.PrimaryInsuredId=b.id
 				getdate() update_ts 
             from edw_temp.customer_midterm_review_recommendation_temp_1_cust
         ) as SOURCE
-		ON Source.customer_id = Target.customer_id and datediff(dd,isnull(target.midterm_review_completed_dt,'01-jan-9999'), CURRENT_DATE) < 365
+		ON      Source.customer_id = Target.customer_id 
+            and Target.midterm_review_year = source.midterm_review_year
+            and datediff(dd,isnull(target.midterm_review_completed_dt,'01-jan-9999'), CURRENT_DATE) < 365
         WHEN NOT MATCHED BY Target THEN
 		INSERT 
             (customer_id, midterm_review_year, midterm_review_process_in, reason_desc, create_ts, update_ts, etl_audit_sk) 
@@ -213,8 +216,7 @@ and a.PrimaryInsuredId=b.id
 		WHEN MATCHED THEN UPDATE 
 		SET
             --only when midterm_review_completed_dt is null, update all cols with new source data
-			 target.midterm_review_year      	= iif(target.midterm_review_completed_dt is null, source.midterm_review_year      , target.midterm_review_year) 
-  			,target.midterm_review_process_in   = iif(target.midterm_review_completed_dt is null, source.midterm_review_process_in, target.midterm_review_process_in) 
+			 target.midterm_review_process_in   = iif(target.midterm_review_completed_dt is null, source.midterm_review_process_in, target.midterm_review_process_in) 
   			,target.reason_desc      	        = iif(target.midterm_review_completed_dt is null, source.reason_desc              , target.reason_desc) 
   			,target.update_ts      	            = iif(target.midterm_review_completed_dt is null, source.update_ts                , target.update_ts) 
             ; 
