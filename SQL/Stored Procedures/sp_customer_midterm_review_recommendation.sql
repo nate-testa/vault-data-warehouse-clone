@@ -194,11 +194,7 @@ and a.PrimaryInsuredId=b.id
                 ,t.midterm_review_process_in    = case when t.midterm_review_completed_dt is not null then s.midterm_review_process_in  else t.midterm_review_process_in end
                 ,t.reason_desc      	        = case when t.midterm_review_completed_dt is not null then s.reason_desc                else t.reason_desc end
                 ,t.update_ts      	            = case when t.midterm_review_completed_dt is not null then s.update_ts                  else t.update_ts end         
-        from edw_integration.customer_midterm_review_eligibility_feed t
-        inner join (
-                    select ROW_NUMBER() over(partition by customer_id order by midterm_review_year desc) rn, *
-                    from edw_integration.customer_midterm_review_eligibility_feed 
-                    ) t1 on t.customer_id = t1.customer_id and t.midterm_review_year = t1.midterm_review_year and t1.rn = 1
+        from edw_integration.customer_midterm_review_eligibility_feed t 
         inner join (
                     select distinct customer_id,
                         datepart(yyyy, getdate()) midterm_review_year,
@@ -207,7 +203,9 @@ and a.PrimaryInsuredId=b.id
                         getdate() create_ts,
                         getdate() update_ts 
                     from edw_temp.customer_midterm_review_recommendation_temp_1_cust
-                    ) s ON s.customer_id = t.customer_id and datediff(dd,CURRENT_DATE, isnull(t.midterm_review_completed_dt,'01-jan-9999')) > 365 
+                    ) s ON s.customer_id = t.customer_id 
+        where t.latest_review_in = 'Y'
+        and   datediff(dd, isnull(t.midterm_review_completed_dt,'01-jan-9999'),CURRENT_DATE) < 365
 
         --insert when a record is not found
 		INSERT into edw_integration.customer_midterm_review_eligibility_feed
@@ -219,11 +217,7 @@ and a.PrimaryInsuredId=b.id
 				s.create_ts,
 				s.update_ts, 
 				@etl_audit_sk                
-        from edw_integration.customer_midterm_review_eligibility_feed t
-        inner join (
-                    select ROW_NUMBER() over(partition by customer_id order by midterm_review_year desc) rn, *
-                    from edw_integration.customer_midterm_review_eligibility_feed 
-                    ) t1 on t.customer_id = t1.customer_id and t.midterm_review_year = t1.midterm_review_year and t1.rn = 1
+        from edw_integration.customer_midterm_review_eligibility_feed t 
         right join (
                     select distinct customer_id,
                         datepart(yyyy, getdate()) midterm_review_year,
@@ -232,8 +226,9 @@ and a.PrimaryInsuredId=b.id
                         getdate() create_ts,
                         getdate() update_ts 
                     from edw_temp.customer_midterm_review_recommendation_temp_1_cust
-                    ) s ON s.customer_id = t.customer_id and datediff(dd,isnull(t.midterm_review_completed_dt,'01-jan-9999'), CURRENT_DATE) < 365
+                    ) s ON s.customer_id = t.customer_id
         where t.customer_id is null
+         or datediff(dd, isnull(t.midterm_review_completed_dt,'01-jan-9999'),CURRENT_DATE) >= 365 
 
         /*
         merge edw_integration.customer_midterm_review_eligibility_feed target
@@ -828,7 +823,23 @@ and a.PrimaryInsuredId=b.id
         --- Update AV recommendation phrase
         update edw_integration.customer_midterm_review_recommendation
         set product_recommendation = 'If you have corporate, charter, or personal aviation coverage needs, talk to your agent. Vault is here for you.'
-        where product_recommendation = 'Buy Aviation;'	
+        where product_recommendation = 'Buy Aviation;'	  
+	
+        update edw_integration.customer_midterm_review_eligibility_feed  
+        set latest_review_in = 'N';
+        
+        WITH cust_ranked 
+        AS 
+        (
+            select ROW_NUMBER() over(partition by customer_id order by midterm_review_year desc) rn 
+                    , *
+            from edw_integration.customer_midterm_review_eligibility_feed  
+        )
+        UPDATE c
+        SET latest_review_in = 'Y'
+        FROM edw_integration.customer_midterm_review_eligibility_feed c
+        inner join cust_ranked cr ON c.customer_id = cr.customer_id and c.midterm_review_year = cr.midterm_review_year
+        where cr.rn = 1;
  
         --AG - Using  where renewal_quote_review_start_dt < getdate() becuase of a data issue in prod
         set @new_last_source_extract_ts = (select max(renewal_quote_review_start_dt) from edw_core.tquote 
@@ -843,7 +854,7 @@ and a.PrimaryInsuredId=b.id
         SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
         if @in_start_dt is not null
         begin
-            set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_start_dt AS VARCHAR(200))
+            set @parameter_desc= 'last_source_extract_ts = ' + CAST(@last_source_extract_ts AS VARCHAR(200))
         end
         EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;   
          
