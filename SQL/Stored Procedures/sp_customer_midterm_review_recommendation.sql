@@ -15,7 +15,6 @@
 -- 12/29/25		Architha Gudimalla			9. Fixed lux on eds join
 -- 01/05/26		Architha Gudimalla		   10. Updated merge logic for customer_midterm_review_eligibility_feed
 -- 01/05/26		Architha Gudimalla		   11. Updated logic for primary and non primary home monoline
--- 01/10/26		Architha Gudimalla		   12. Updated merge logic for customer_midterm_review_eligibility_feed
 -- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
@@ -124,6 +123,7 @@ and a.PrimaryInsuredId=b.id
 			and     renewal_quote_review_start_dt < cast(getdate() as date) 
 			and     quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
 			and     quote_term = 'Renewal' 
+            --and customer_id in ('1234569569', '1234571848', '1234514366', '1234573126', '1234566318', '1234676241', '1234673481', '1234575934', '1234670470', '1234674950', '1234572264', '1234676903', '1234570281', '1234625857', '1234683585', '1234675204', '1234648425', '1234676100', '1234672936', '1234515240', '1234577613', '1234575493', '1234578223', '1234676766', '1234522350', '1234651118', '1234577833', '1234569256', '1234515688', '1234547539', '1234574605', '1234535898', '1234521500', '1234584007', '1234584585', '1234520385', '1234511734') 
 		),
 		cust_review as
         (
@@ -186,9 +186,57 @@ and a.PrimaryInsuredId=b.id
         --where a.customer_id = '1234608582'
         order by 2,1  		 
  
-        --change this to merge, run thru all scenarios, also add renewal_quote_review_start_dt as last source 
+        --change this to merge, run thru all scenarios, also add renewal_quote_review_start_dt as last source  
 
-        merge  edw_integration.customer_midterm_review_eligibility_feed target
+        --update when a record is found in customer_midterm_review_eligibility_feed
+        update t
+        set      t.midterm_review_year      	= case when t.midterm_review_completed_dt is not null then s.midterm_review_year        else t.midterm_review_year end
+                ,t.midterm_review_process_in    = case when t.midterm_review_completed_dt is not null then s.midterm_review_process_in  else t.midterm_review_process_in end
+                ,t.reason_desc      	        = case when t.midterm_review_completed_dt is not null then s.reason_desc                else t.reason_desc end
+                ,t.update_ts      	            = case when t.midterm_review_completed_dt is not null then s.update_ts                  else t.update_ts end         
+        from edw_integration.customer_midterm_review_eligibility_feed t
+        inner join (
+                    select ROW_NUMBER() over(partition by customer_id order by midterm_review_year desc) rn, *
+                    from edw_integration.customer_midterm_review_eligibility_feed 
+                    ) t1 on t.customer_id = t1.customer_id and t.midterm_review_year = t1.midterm_review_year and t1.rn = 1
+        inner join (
+                    select distinct customer_id,
+                        datepart(yyyy, getdate()) midterm_review_year,
+                        case when reason_desc in ('Has Home Primary','Has Home Secondary') then 'Yes' Else 'No' end midterm_review_process_in,  
+                        reason_desc , 
+                        getdate() create_ts,
+                        getdate() update_ts 
+                    from edw_temp.customer_midterm_review_recommendation_temp_1_cust
+                    ) s ON s.customer_id = t.customer_id and datediff(dd,CURRENT_DATE, isnull(t.midterm_review_completed_dt,'01-jan-9999')) > 365 
+
+        --insert when a record is not found
+		INSERT into edw_integration.customer_midterm_review_eligibility_feed
+            (customer_id, midterm_review_year, midterm_review_process_in, reason_desc, create_ts, update_ts, etl_audit_sk) 
+		select s.customer_id,
+				s.midterm_review_year,
+				s.midterm_review_process_in,
+				s.reason_desc,
+				s.create_ts,
+				s.update_ts, 
+				@etl_audit_sk                
+        from edw_integration.customer_midterm_review_eligibility_feed t
+        inner join (
+                    select ROW_NUMBER() over(partition by customer_id order by midterm_review_year desc) rn, *
+                    from edw_integration.customer_midterm_review_eligibility_feed 
+                    ) t1 on t.customer_id = t1.customer_id and t.midterm_review_year = t1.midterm_review_year and t1.rn = 1
+        right join (
+                    select distinct customer_id,
+                        datepart(yyyy, getdate()) midterm_review_year,
+                        case when reason_desc in ('Has Home Primary','Has Home Secondary') then 'Yes' Else 'No' end midterm_review_process_in,  
+                        reason_desc , 
+                        getdate() create_ts,
+                        getdate() update_ts 
+                    from edw_temp.customer_midterm_review_recommendation_temp_1_cust
+                    ) s ON s.customer_id = t.customer_id and datediff(dd,isnull(t.midterm_review_completed_dt,'01-jan-9999'), CURRENT_DATE) < 365
+        where t.customer_id is null
+
+        /*
+        merge edw_integration.customer_midterm_review_eligibility_feed target
         using
         (
              select distinct customer_id,
@@ -199,9 +247,7 @@ and a.PrimaryInsuredId=b.id
 				getdate() update_ts 
             from edw_temp.customer_midterm_review_recommendation_temp_1_cust
         ) as SOURCE
-		ON      Source.customer_id = Target.customer_id 
-            and Target.midterm_review_year = source.midterm_review_year
-            and datediff(dd,isnull(target.midterm_review_completed_dt,'01-jan-9999'), CURRENT_DATE) < 365
+		ON Source.customer_id = Target.customer_id and datediff(dd,isnull(target.midterm_review_completed_dt,'01-jan-9999'), CURRENT_DATE) < 365
         WHEN NOT MATCHED BY Target THEN
 		INSERT 
             (customer_id, midterm_review_year, midterm_review_process_in, reason_desc, create_ts, update_ts, etl_audit_sk) 
@@ -216,10 +262,12 @@ and a.PrimaryInsuredId=b.id
 		WHEN MATCHED THEN UPDATE 
 		SET
             --only when midterm_review_completed_dt is null, update all cols with new source data
-			 target.midterm_review_process_in   = iif(target.midterm_review_completed_dt is null, source.midterm_review_process_in, target.midterm_review_process_in) 
+			 target.midterm_review_year      	= iif(target.midterm_review_completed_dt is null, source.midterm_review_year      , target.midterm_review_year) 
+  			,target.midterm_review_process_in   = iif(target.midterm_review_completed_dt is null, source.midterm_review_process_in, target.midterm_review_process_in) 
   			,target.reason_desc      	        = iif(target.midterm_review_completed_dt is null, source.reason_desc              , target.reason_desc) 
   			,target.update_ts      	            = iif(target.midterm_review_completed_dt is null, source.update_ts                , target.update_ts) 
             ; 
+        */
 		               
         SET @rows_affected = (select count(*) from edw_integration.customer_midterm_review_eligibility_feed where midterm_review_process_in = 'Yes'); 
 
