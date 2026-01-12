@@ -229,7 +229,7 @@ and a.PrimaryInsuredId=b.id
                     from edw_temp.customer_midterm_review_recommendation_temp_1_cust
                     ) s ON s.customer_id = t.customer_id
         where t.customer_id is null
-         or datediff(dd, isnull(t.midterm_review_completed_dt,'01-jan-9999'),CURRENT_DATE) >= 365 
+         or (t.latest_review_in = 'Y' and datediff(dd, isnull(t.midterm_review_completed_dt,'01-jan-9999'),CURRENT_DATE) >= 365 )
 
         /*
         merge edw_integration.customer_midterm_review_eligibility_feed target
