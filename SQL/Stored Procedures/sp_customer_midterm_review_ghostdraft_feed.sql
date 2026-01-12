@@ -771,7 +771,7 @@ BEGIN
 			SELECT
 			case when cmr.insured_type <>  'Entity' then edw_core.fn_Init_Cap(cmr.customer_nm) else cmr.customer_nm end as insured_full_name,
 			cmr.customer_message as insured_message,
-			edw_core.fn_Init_Cap(cmr.producer_nm) producer_nm, 
+			edw_core.fn_Init_Cap(cmr.producer_nm) producer_name, 
 			cmr.producer_phone,
 			lower(cmr.producer_email) producer_email,
 			edw_core.fn_Init_Cap(cmr.mailing_address_line1) mailing_address_line1,
