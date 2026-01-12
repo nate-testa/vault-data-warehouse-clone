@@ -710,7 +710,7 @@ and a.PrimaryInsuredId=b.id
                       when 'Not Offered' then 'Not Offered in State'
                       when 'Primary'	 then 'Add as primary for additional discount'
                 end product_recommendation,
-                0 etl_audit_sk,
+                @etl_audit_sk,
                 getdate() create_ts,
                 getdate() update_ts-- into edw_integration.customer_midterm_review_recommendation --select *
 				
