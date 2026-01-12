@@ -190,6 +190,8 @@ and a.PrimaryInsuredId=b.id
         --change this to merge, run thru all scenarios, also add renewal_quote_review_start_dt as last source  
 
         --update when a record is found in customer_midterm_review_eligibility_feed
+        --and midterm_review_completed_dt is null
+        --will happen mostly for sec home with a primary effective in future or for customer with 4 or more homes or au monline or 8 or more pols
         update t
         set      t.midterm_review_year      	= s.midterm_review_year
                 ,t.midterm_review_process_in    = s.midterm_review_process_in
@@ -209,7 +211,8 @@ and a.PrimaryInsuredId=b.id
         and t.midterm_review_completed_dt is null
         --and   datediff(dd, isnull(t.midterm_review_completed_dt,'01-jan-9999'),CURRENT_DATE) < 365 --commented this out since we only want to update a record when there is no midterm_review_completed_dt
 
-        --insert when a record is not found
+        --    insert when a record is not found
+        --or insert a record when latest midterm_review_completed_dt is completed more than 365 days ago
 		INSERT into edw_integration.customer_midterm_review_eligibility_feed
             (customer_id, midterm_review_year, midterm_review_process_in, reason_desc, create_ts, update_ts, etl_audit_sk) 
 		select s.customer_id,
