@@ -191,10 +191,10 @@ and a.PrimaryInsuredId=b.id
 
         --update when a record is found in customer_midterm_review_eligibility_feed
         update t
-        set      t.midterm_review_year      	= case when t.midterm_review_completed_dt is not null then s.midterm_review_year        else t.midterm_review_year end
-                ,t.midterm_review_process_in    = case when t.midterm_review_completed_dt is not null then s.midterm_review_process_in  else t.midterm_review_process_in end
-                ,t.reason_desc      	        = case when t.midterm_review_completed_dt is not null then s.reason_desc                else t.reason_desc end
-                ,t.update_ts      	            = case when t.midterm_review_completed_dt is not null then s.update_ts                  else t.update_ts end         
+        set      t.midterm_review_year      	= case when t.midterm_review_completed_dt is not null then t.midterm_review_year        else s.midterm_review_year end
+                ,t.midterm_review_process_in    = case when t.midterm_review_completed_dt is not null then t.midterm_review_process_in  else s.midterm_review_process_in end
+                ,t.reason_desc      	        = case when t.midterm_review_completed_dt is not null then t.reason_desc                else s.reason_desc end
+                ,t.update_ts      	            = case when t.midterm_review_completed_dt is not null then t.update_ts                  else s.update_ts end         
         from edw_integration.customer_midterm_review_eligibility_feed t 
         inner join (
                     select distinct customer_id,
