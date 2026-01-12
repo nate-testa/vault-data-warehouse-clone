@@ -15,6 +15,7 @@
 -- 12/29/25		Architha Gudimalla			9. Fixed lux on eds join
 -- 01/05/26		Architha Gudimalla		   10. Updated merge logic for customer_midterm_review_eligibility_feed
 -- 01/05/26		Architha Gudimalla		   11. Updated logic for primary and non primary home monoline
+-- 01/05/26		Architha Gudimalla		   12. Removed updating buy auto and others since we now use messages table
 -- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
@@ -189,11 +190,13 @@ and a.PrimaryInsuredId=b.id
         --change this to merge, run thru all scenarios, also add renewal_quote_review_start_dt as last source  
 
         --update when a record is found in customer_midterm_review_eligibility_feed
+        --and midterm_review_completed_dt is null
+        --will happen mostly for sec home with a primary effective in future or for customer with 4 or more homes or au monline or 8 or more pols
         update t
-        set      t.midterm_review_year      	= case when t.midterm_review_completed_dt is not null then s.midterm_review_year        else t.midterm_review_year end
-                ,t.midterm_review_process_in    = case when t.midterm_review_completed_dt is not null then s.midterm_review_process_in  else t.midterm_review_process_in end
-                ,t.reason_desc      	        = case when t.midterm_review_completed_dt is not null then s.reason_desc                else t.reason_desc end
-                ,t.update_ts      	            = case when t.midterm_review_completed_dt is not null then s.update_ts                  else t.update_ts end         
+        set      t.midterm_review_year      	= s.midterm_review_year
+                ,t.midterm_review_process_in    = s.midterm_review_process_in
+                ,t.reason_desc      	        = s.reason_desc
+                ,t.update_ts      	            = s.update_ts         
         from edw_integration.customer_midterm_review_eligibility_feed t 
         inner join (
                     select distinct customer_id,
@@ -205,9 +208,11 @@ and a.PrimaryInsuredId=b.id
                     from edw_temp.customer_midterm_review_recommendation_temp_1_cust
                     ) s ON s.customer_id = t.customer_id 
         where t.latest_review_in = 'Y'
-        and   datediff(dd, isnull(t.midterm_review_completed_dt,'01-jan-9999'),CURRENT_DATE) < 365
+        and t.midterm_review_completed_dt is null
+        --and   datediff(dd, isnull(t.midterm_review_completed_dt,'01-jan-9999'),CURRENT_DATE) < 365 --commented this out since we only want to update a record when there is no midterm_review_completed_dt
 
-        --insert when a record is not found
+        --    insert when a record is not found
+        --or insert a record when latest midterm_review_completed_dt is completed more than 365 days ago
 		INSERT into edw_integration.customer_midterm_review_eligibility_feed
             (customer_id, midterm_review_year, midterm_review_process_in, reason_desc, create_ts, update_ts, etl_audit_sk) 
 		select s.customer_id,
@@ -217,8 +222,7 @@ and a.PrimaryInsuredId=b.id
 				s.create_ts,
 				s.update_ts, 
 				@etl_audit_sk                
-        from edw_integration.customer_midterm_review_eligibility_feed t 
-        right join (
+        from (
                     select distinct customer_id,
                         datepart(yyyy, getdate()) midterm_review_year,
                         case when reason_desc in ('Has Home Primary','Has Home Secondary') then 'Yes' Else 'No' end midterm_review_process_in,  
@@ -226,9 +230,11 @@ and a.PrimaryInsuredId=b.id
                         getdate() create_ts,
                         getdate() update_ts 
                     from edw_temp.customer_midterm_review_recommendation_temp_1_cust
-                    ) s ON s.customer_id = t.customer_id
-        where t.customer_id is null
-         or datediff(dd, isnull(t.midterm_review_completed_dt,'01-jan-9999'),CURRENT_DATE) >= 365 
+                    ) s 
+        left join edw_integration.customer_midterm_review_eligibility_feed t ON s.customer_id = t.customer_id
+        where t.customer_id is null 
+         or (t.latest_review_in = 'Y' and t.midterm_review_completed_dt is not null and datediff(dd, t.midterm_review_completed_dt,CURRENT_DATE) >= 365 
+             )
 
         /*
         merge edw_integration.customer_midterm_review_eligibility_feed target
@@ -709,7 +715,7 @@ and a.PrimaryInsuredId=b.id
                       when 'Not Offered' then 'Not Offered in State'
                       when 'Primary'	 then 'Add as primary for additional discount'
                 end product_recommendation,
-                0 etl_audit_sk,
+                @etl_audit_sk,
                 getdate() create_ts,
                 getdate() update_ts-- into edw_integration.customer_midterm_review_recommendation --select *
 				
@@ -805,6 +811,8 @@ and a.PrimaryInsuredId=b.id
         set product_recommendation = 'Condo not Recommended'
         where product_recommendation = 'Buy Condo;'
  
+        /* --commented on 20261201 since we are now using messages table
+
         --- Update Auto recommendation phrase
         update edw_integration.customer_midterm_review_recommendation
         set product_recommendation = 'If you have passenger, luxury, collector cars or specialty vehicles, talk to your agent about a Vault auto policy.'
@@ -823,7 +831,8 @@ and a.PrimaryInsuredId=b.id
         --- Update AV recommendation phrase
         update edw_integration.customer_midterm_review_recommendation
         set product_recommendation = 'If you have corporate, charter, or personal aviation coverage needs, talk to your agent. Vault is here for you.'
-        where product_recommendation = 'Buy Aviation;'	  
+        where product_recommendation = 'Buy Aviation;'	
+        */  
 	
         update edw_integration.customer_midterm_review_eligibility_feed  
         set latest_review_in = 'N';
