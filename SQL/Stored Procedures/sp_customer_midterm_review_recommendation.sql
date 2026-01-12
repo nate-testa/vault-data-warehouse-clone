@@ -15,6 +15,7 @@
 -- 12/29/25		Architha Gudimalla			9. Fixed lux on eds join
 -- 01/05/26		Architha Gudimalla		   10. Updated merge logic for customer_midterm_review_eligibility_feed
 -- 01/05/26		Architha Gudimalla		   11. Updated logic for primary and non primary home monoline
+-- 01/05/26		Architha Gudimalla		   12. Removed updating buy auto and others since we now use messages table
 -- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
@@ -805,6 +806,8 @@ and a.PrimaryInsuredId=b.id
         set product_recommendation = 'Condo not Recommended'
         where product_recommendation = 'Buy Condo;'
  
+        /* --commented on 20261201 since we are now using messages table
+
         --- Update Auto recommendation phrase
         update edw_integration.customer_midterm_review_recommendation
         set product_recommendation = 'If you have passenger, luxury, collector cars or specialty vehicles, talk to your agent about a Vault auto policy.'
@@ -823,7 +826,8 @@ and a.PrimaryInsuredId=b.id
         --- Update AV recommendation phrase
         update edw_integration.customer_midterm_review_recommendation
         set product_recommendation = 'If you have corporate, charter, or personal aviation coverage needs, talk to your agent. Vault is here for you.'
-        where product_recommendation = 'Buy Aviation;'	  
+        where product_recommendation = 'Buy Aviation;'	
+        */  
 	
         update edw_integration.customer_midterm_review_eligibility_feed  
         set latest_review_in = 'N';
