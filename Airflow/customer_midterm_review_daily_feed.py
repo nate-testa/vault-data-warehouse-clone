@@ -162,6 +162,12 @@ with DAG(
         task_id='end',
     )
 
+    check_run_edw_to_metal_load_previous_success = ShortCircuitOperator(
+            task_id='check_run_edw_to_metal_load_previous_success',
+            python_callable=check_history_today,
+            provide_context=True,
+        )
+
 
     with TaskGroup("customer_midterm_review_group") as customer_midterm_review_group:
 
@@ -180,12 +186,6 @@ with DAG(
                 autocommit=True,
             )
             operators.append(operator) 
-
-        check_run_edw_to_metal_load_previous_success = ShortCircuitOperator(
-            task_id='check_run_edw_to_metal_load_previous_success',
-            python_callable=check_history_today,
-            provide_context=True,
-        )
 
         run_edw_to_metal_load = BashOperator(
             task_id='run_edw_to_metal_load',
@@ -216,12 +216,12 @@ with DAG(
         for i in range(len(operators) - 1):
             operators[i].set_downstream(operators[i + 1])
 
-        operators[-1].set_downstream(check_run_edw_to_metal_load_previous_success)
-        check_run_edw_to_metal_load_previous_success.set_downstream(run_edw_to_metal_load)
+        operators[-1].set_downstream(run_edw_to_metal_load)
         run_edw_to_metal_load.set_downstream(check_data_and_send_email)
         check_data_and_send_email.set_downstream(check_updated_data_and_send_email)
         check_updated_data_and_send_email.set_downstream(send_customer_midterm_review_email)
 
 
-start.set_downstream(customer_midterm_review_group)
+start.set_downstream(check_run_edw_to_metal_load_previous_success)
+check_run_edw_to_metal_load_previous_success.set_downstream(customer_midterm_review_group)
 customer_midterm_review_group.set_downstream(end)
