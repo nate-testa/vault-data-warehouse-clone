@@ -161,7 +161,7 @@ BEGIN
 				left join edw_integration.customer_midterm_review_policy_detail p on r.existing_policy_no = p.policy_no
 				where r.product_nm not in ('Condo','Homeowners') 
 				and r.update_ts >  @last_source_extract_ts
-				and r.product_recommendation not in ('Not Recommended, customer has a DNR policy in the last one year',
+				and isnull(r.product_recommendation,'') not in ('Not Recommended, customer has a DNR policy in the last one year',
 													 'Not Recommended, customer has a cancelled policy in the last three year',
 													 'Not Recommended, customer has a declined quote in the last three year')
 				and e.midterm_review_process_in ='Yes'
@@ -289,7 +289,7 @@ BEGIN
 				LEFT JOIN edw_core.tproducer pd on pd.producer_sk = pol.current_producer_sk 
 				where r.product_nm in ('Condo','Homeowners')
 				and r.update_ts >  @last_source_extract_ts
-				and r.product_recommendation not in ('Not Recommended, customer has a DNR policy in the last one year',
+				and isnull(r.product_recommendation,'') not in ('Not Recommended, customer has a DNR policy in the last one year',
 													 'Not Recommended, customer has a cancelled policy in the last three year',
 													 'Not Recommended, customer has a declined quote in the last three year')
 				and e.midterm_review_process_in ='Yes'
