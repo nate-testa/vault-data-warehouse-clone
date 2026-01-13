@@ -22,6 +22,7 @@
 -- 04/14/25		Architha Gudimalla				16. Updated the label for another long label for LC360
 -- 10/18/25		Yunus Mohammed				  17. AD-11423 Updated code to resolve string truncate error in insert stmt
 -- 01/12/26		Dinesh Bobbili				  18. AD-12215 Added logic for lc360 related columns to add them in main table
+-- 01/13/26		Dinesh Bobbili				  19. AD-12215 Specified columns list explicitely in insert
 -- ======================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tvendor_report_stage_data]
@@ -149,6 +150,7 @@ BEGIN
 
 		select @sql= cast('insert into '  as nvarchar(max))
 					+  cast(@tablename_main  as nvarchar(max))
+					+ cast(' (policynumber ,effectivedate ,UpdatedDate ,CreatedDate ,dateordered ,dateTimeRecieved ,dateTimeCompleted ,TransactionStatus ,source ,reporttype ,lc360_summ_insp_num ,lc360_insp_insp_num ,lc360_sum_req_date ,lc360_sum_req_by ,field_name ,Value ,IsReportFromCache)' as nvarchar(max))
 					+ cast( ' select	 acc.policynumber, acc.effectivedate, 
 												GREATEST(accr.UpdatedDate,accri.CreatedDate) UpdatedDate ,  accr.CreatedDate, 
 												accr.dateordered, accr.dateTimeRecieved, accr.dateTimeCompleted, accr.TransactionStatus, accr.[source], accr.reporttype,
