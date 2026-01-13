@@ -968,7 +968,7 @@ BEGIN
         SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts > ' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
         if @in_start_dt is not null
         begin
-            set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_start_dt AS VARCHAR(200))
+            set @parameter_desc= 'last_source_extract_ts = ' + CAST(@last_source_extract_ts AS VARCHAR(200))
         end
         EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;  
 		
