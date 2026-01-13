@@ -14,7 +14,7 @@ CREATE TABLE [edw_stage].[stage_majesco_notes_data_feed](
 	[attachment_filename] [varchar](255) NULL,
 	[start_date] [varchar](255) NULL,
 	[end_date] [varchar](255) NULL,
-	[create_ts] [datetime] NULL
+	[create_ts] [datetime2](7) NULL
 ) ON [PRIMARY]
 
 end

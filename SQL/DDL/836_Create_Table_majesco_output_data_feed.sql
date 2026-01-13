@@ -22,7 +22,7 @@ CREATE TABLE [edw_stage].[stage_majesco_output_data_feed](
 	[mailing_entity_system_code] [varchar](255) NULL,
 	[start_date] [varchar](255) NULL,
 	[end_date] [varchar](255) NULL,
-	[create_ts] [datetime] NULL
+	[create_ts] [datetime2](7) NULL
 ) ON [PRIMARY]
 
 end
