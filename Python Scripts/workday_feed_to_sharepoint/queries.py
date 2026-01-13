@@ -112,6 +112,7 @@ QUERIES = {
                CLAIM_STATUS, LOSS_STATUS
         FROM edw_integration.claim_workday_itd_reserve_feed
         WHERE reserve_amount != 0
+          AND claim_no NOT LIKE 'CL%'
           {AND_MONTHEND}
     """,
     
