@@ -29,6 +29,7 @@
 -- 06/05/25		        Archtha Gudimalla			24. AZ9641 - Added quote_business_type
 -- 06/24/25		        Dinesh Bobbili				25. AD9848 Added product_cd column
 -- 09/09/25		        Archtha Gudimalla			26. AD10935 - Added monoline fix
+-- 01/13/26		        Dinesh Bobbili				27. AD12200 Added column non_binding_indication_offered_in
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]  
@@ -208,6 +209,7 @@ BEGIN
 						  end as monoline_in
             ,br.primary_address_state_cd broker_state
             ,pr.product_cd
+            ,q.non_binding_indication_offered_in
         into edw_temp.quote_hubspot_feed_temp1
 
         from edw_core.tquote q
@@ -341,6 +343,7 @@ BEGIN
 						  end as monoline_in
             ,br.primary_address_state_cd broker_state
             ,pr.product_cd
+            ,null as non_binding_indication_offered_in
         into edw_temp.quote_hubspot_feed_temp2
         
         from edw_core.tpolicy q 
@@ -425,6 +428,7 @@ BEGIN
             ,broker_state
             ,quote_business_type
             ,product_cd 
+            ,non_binding_indication_offered_in
         )
         VALUES
         (
@@ -452,6 +456,7 @@ BEGIN
             ,broker_state
             ,'Personal Lines'
             ,product_cd 
+            ,non_binding_indication_offered_in
         )
         WHEN MATCHED THEN UPDATE
         SET        
@@ -512,7 +517,8 @@ BEGIN
             [target].close_reason_desc	                =	[source].close_reason_desc ,  
             [target].monoline_in	                    =	[source].monoline_in ,  
             [target].broker_state	                    =	[source].broker_state,
-            [target].product_cd	                        =	[source].product_cd
+            [target].product_cd	                        =	[source].product_cd,
+            [target].non_binding_indication_offered_in	=	[source].non_binding_indication_offered_in
             ;
         
         SET @rows_affected=@@ROWCOUNT;
