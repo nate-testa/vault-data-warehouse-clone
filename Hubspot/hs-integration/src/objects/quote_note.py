@@ -99,7 +99,6 @@ class QuoteNote:
                 'hs_note_body': combined_html,
                 'hs_timestamp': record['hs_timestamp'],
                 'quote_no': record['quote_no'],
-                'note_user_nm': record['note_user_nm'],
                 'from_metal': True
             }
         }
