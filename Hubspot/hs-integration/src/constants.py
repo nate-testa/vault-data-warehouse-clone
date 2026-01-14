@@ -1,9 +1,7 @@
 from dotenv import load_dotenv
 import os
 
-
 load_dotenv()
-
 
 policy_object_id = '2-34924470'
 hs_token = os.getenv('HSTOKEN')
@@ -22,6 +20,10 @@ DB = os.getenv('DB')
 
 hub_api = 'https://api.hubapi.com'  
 
+# Association configuration
+# Set to True to automatically replace existing associations when limit is exceeded
+# Set to False to skip and log the error (safer default)
+REPLACE_ASSOCIATIONS_ON_LIMIT = False
 
 object_map = {
     "customer": "contact",

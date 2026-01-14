@@ -181,6 +181,57 @@ class RecordsDispatcher:
             log_failure=False
         )
 
+    def get_existing_associations(self, from_object, from_id, to_object, association_id):
+        """Get existing associations of a specific type from an object."""
+        endpoint = f'{constants.hub_api}/crm/v4/objects/{from_object}/{from_id}/associations/{to_object}'
+        try:
+            res = requests.get(
+                url=endpoint,
+                headers=self.headers,
+                timeout=120
+            )
+            if res.status_code == 200:
+                results = res.json().get('results', [])
+                # Filter for the specific association type
+                matching = [
+                    r for r in results 
+                    if any(
+                        t.get('associationTypeId') == association_id 
+                        for t in r.get('associationTypes', [])
+                    )
+                ]
+                return matching
+            return []
+        except Exception as exc:
+            logger.warning(f'Failed to get existing associations: {exc}')
+            return []
+
+    def delete_association(self, from_object, from_id, to_object, to_id, association_id):
+        """Delete a specific association."""
+        endpoint = f'{constants.hub_api}/crm/v4/objects/{from_object}/{from_id}/associations/{to_object}/{to_id}'
+        data_body = [
+            {
+                'associationCategory': 'USER_DEFINED',
+                'associationTypeId': association_id,
+            },
+        ]
+        try:
+            res = requests.delete(
+                url=endpoint,
+                data=json.dumps(data_body, default=str),
+                headers=self.headers,
+                timeout=120
+            )
+            if res.status_code == 204:
+                logger.info(f'Deleted existing association: {from_object} {from_id} -> {to_object} {to_id}')
+                return True
+            else:
+                logger.warning(f'Failed to delete association. Status: {res.status_code}, Response: {res.text}')
+                return False
+        except Exception as exc:
+            logger.warning(f'Failed to delete association: {exc}')
+            return False
+
     def unit_associate_records(self, object_type, payload):
         from_object, to_object, association_id = Association.route_associations(object_type)
         data_body = [
@@ -202,6 +253,54 @@ class RecordsDispatcher:
                     headers=self.headers,
                     timeout=120
                 )
+                
+                # Check if we hit the association limit error
+                if res.status_code == 400 and 'ASSOCIATION_USER_CONFIG_LIMIT_EXCEEDED' in res.text:
+                    # Get existing associations of this type to log details
+                    existing = self.get_existing_associations(
+                        from_object, 
+                        payload["from"]["id"], 
+                        to_object, 
+                        association_id
+                    )
+                    
+                    existing_ids = [assoc.get('toObjectId') for assoc in existing]
+                    logger.warning(
+                        f'Association limit exceeded for type {association_id}. '
+                        f'From: {from_object} {payload["from"]["id"]}, '
+                        f'Attempting to add: {to_object} {payload["to"]["id"]}, '
+                        f'Existing associations to: {existing_ids}'
+                    )
+                    
+                    # Only delete and replace if configured to do so
+                    if constants.REPLACE_ASSOCIATIONS_ON_LIMIT:
+                        logger.info('REPLACE_ASSOCIATIONS_ON_LIMIT is True. Replacing existing association...')
+                        
+                        # Delete existing associations of this type
+                        for assoc in existing:
+                            old_to_id = assoc.get('toObjectId')
+                            if old_to_id and old_to_id != payload["to"]["id"]:
+                                self.delete_association(
+                                    from_object,
+                                    payload["from"]["id"],
+                                    to_object,
+                                    old_to_id,
+                                    association_id
+                                )
+                        
+                        # Retry the association creation
+                        res = requests.put(
+                            url=endpoint,
+                            data=json.dumps(data_body, default=str),
+                            headers=self.headers,
+                            timeout=120
+                        )
+                    else:
+                        logger.info(
+                            'REPLACE_ASSOCIATIONS_ON_LIMIT is False. Skipping association creation. '
+                            'Set constants.REPLACE_ASSOCIATIONS_ON_LIMIT = True to automatically replace.'
+                        )
+                
                 break
             except (RemoteDisconnected, ConnectionError, Timeout, RequestException) as exc:
                 logger.warning(
