@@ -56,7 +56,13 @@ GO
 -- 12/05/25		Architha Gudimalla				32. AD9858 - Updated logic to use prior_term_policy_no instead of prior_policy_no
 -- 01/07/26		Dinesh Bobbili					33. AD12083 - Added logic for pending_process_ct and risk address 
 -- 01/08/26		Dinesh Bobbili					34. AD12083 - Updated logic for nonrenewal_ind, not_accepted_renewal_ct 
-
+-- 01/15/26		Alberto Almario					35. AD12274 - Added new columns and included them in the update statement
+-- 														in_progress_premium_amt
+-- 														closed_with_no_offer_premium_amt
+-- 														accepted_premium_amt
+-- 														not_accepted_premium_amt
+-- 														outstanding_premium_amt
+-- 														need_attention_premium_amt
 -- ======================================================================================================================================================================= 
 
 CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary_v1]
@@ -723,10 +729,10 @@ BEGIN
 						a.initial_written_prem, 
 						a.effective_date_60_day_prem, 
 						a.effective_date_60_day_comm, 
-						a.mid_term_cancel_amount, 
+						a.expiring_premium_amount as mid_term_cancel_amount,
 						a.expiring_premium_amount, 
 						a.expiringpremiumrenewalaccepted,
-						a.non_renewal_expiring_premium_amount,
+						a.expiring_premium_amount as non_renewal_expiring_premium_amount,
 						a.pending_non_renewal_expiring_premium_amount,
 						a.totalsquarefeet,  
 						a.residencetype,
@@ -992,6 +998,12 @@ BEGIN
 				+ non_renewal_ct + accepted_renewal_ct
 				+ not_accepted_renewal_ct + outstanding_renewal_ct
 				+ in_progress_renewal_ct + closed_with_no_offer_renewal_ct)
+					,in_progress_premium_amt = offered_quote_premium_amt
+					,closed_with_no_offer_premium_amt = expiring_written_premium_amt
+					,accepted_premium_amt = renewal_initial_written_premium_amt
+					,not_accepted_premium_amt = expiring_written_premium_amt
+					,outstanding_premium_amt  = renewal_initial_written_premium_amt
+					,need_attention_premium_amt = expiring_written_premium_amt
 				where month_sk = @month_end_dt_sk
 
 				EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
