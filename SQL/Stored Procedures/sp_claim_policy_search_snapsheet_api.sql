@@ -80,30 +80,42 @@ BEGIN
 							for json path, include_null_values
 					)) as policy_entities,
 					p.expiration_dt,
-					pt.transaction_effective_dt,
+					dtxn.actual_dt as transaction_effective_dt,
 					pt.transaction_seq_no,
-					pt.transaction_type,
+					ptt.policy_transaction_type_nm as transaction_type,
 					ss.source_system_nm,
 					'pending' as api_status,
 					pt.create_ts as policy_transaction_create_ts
 		INTO [edw_temp].[claim_policy_search_snapsheet_api_temp1] 
-		FROM (
-			SELECT distinct
-				pth.policy_sk,pth.transaction_seq_no, pth.transaction_effective_dt, pth.customer_sk, pth.transaction_type,
-				pr.product_nm,pth.source_system_sk, pth.create_ts
-			FROM
-				edw_core.tpolicy_history pth
-				INNER JOIN edw_core.tproduct as pr ON pth.product_sk = pr.product_sk
-			where
-				pth.source_system_sk not in (1) --and pth.product_sk not in (6)
-				and pr.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability','Group Personal Excess Liability')
-		) AS pt
-		INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk		
-		LEFT JOIN edw_core.tcustomer AS c ON pt.customer_sk = c.customer_sk		
-		LEFT JOIN edw_core.tsource_system AS ss ON pt.source_system_sk = ss.source_system_sk		
-		LEFT JOIN edw_core.tpolicy_insured AS [pi] ON p.policy_no = [pi].policy_no AND p.effective_dt = [pi].effective_dt
-		AND pt.transaction_seq_no = [pi].transaction_seq_no AND pi.primary_insured_in = 'Yes'
-		
+FROM (
+				SELECT distinct
+					pt.policy_sk,pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk,pr.product_nm, 
+					pt.source_system_sk, pt.item_sk, pt.vehicle_coverage_sk, pt.create_ts
+					FROM
+					(
+						select
+						dense_rank() OVER(PARTITION BY pt.policy_sk ORDER BY pt.transaction_seq_no desc) AS rn,pt. *
+						from
+							edw_core.tpolicy_transaction pt
+						where
+							cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
+					)as pt
+					INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
+					LEFT JOIN edw_core.tauto_vehicle_coverage AS avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
+					WHERE
+					CASE WHEN pr.product_cd = 'AU' AND pt.item_sk = 0 THEN 0  ELSE 1 END = 1
+					AND CASE WHEN pr.product_cd = 'AU' AND avc.vehicle_deleted_in = 'Yes' THEN 0  ELSE 1 END = 1
+					and rn = 1
+					and pr.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability','Group Personal Excess Liability')	
+				) AS pt
+				LEFT JOIN edw_core.tdate AS dtxn ON pt.transaction_effective_dt_sk = dtxn.date_sk
+				LEFT JOIN edw_core.tpolicy_transaction_type AS ptt ON pt.policy_transaction_type_sk = ptt.policy_transaction_type_sk
+				INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk		
+				LEFT JOIN edw_core.tcustomer AS c ON pt.customer_sk = c.customer_sk		
+				LEFT JOIN edw_core.tsource_system AS ss ON pt.source_system_sk = ss.source_system_sk		
+				LEFT JOIN edw_core.tpolicy_insured AS [pi] ON p.policy_no = [pi].policy_no AND p.effective_dt = [pi].effective_dt
+				AND pt.transaction_seq_no = [pi].transaction_seq_no AND pi.primary_insured_in = 'Yes'
+			
 		-- Start Insert process
 		INSERT INTO [edw_integration].[claim_policy_search_snapsheet_api]
 		(
