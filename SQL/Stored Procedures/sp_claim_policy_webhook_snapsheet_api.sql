@@ -387,28 +387,7 @@ BEGIN
                             tpi.mailing_address_country_nm as country
                             for json path, include_null_values, without_array_wrapper			
                     )) as [address],
-                    json_query((
-                    SELECT *
-                    FROM
-                    (
-					SELECT
-                        'us' as country,
-                        '1' as countryCode,
---                        'true' preferredMethod,
-                        'phone' as [type],
-                       --'7272901574' as [value] 
-                        coalesce(home_phone_no,mobile_phone_no) as [value]
-                    UNION
-                     SELECT
-                        null as country,
-                        null as countryCode,
---                        'true' preferredMethod,
-                        'email' as [type],
-                       -- 'Farhad.Imam@Vault.Insurance' as [value] 
-                        email as [value]
-                    ) as a
-                    for json path, include_null_values
-                    )) as contactMethods
+                    null as contactMethods
                 from
                     edw_core.tpolicy_insured tpi
                 where
