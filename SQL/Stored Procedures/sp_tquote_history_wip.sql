@@ -1,7 +1,7 @@
 ﻿-- ===================================================================================================================== 
 -- Description: This procedures inserts into sp_tquote_history_wip
 -----------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author									|	Change Description
 -----------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------
 -- 10/23/23		Architha Gudimalla				1. Created this procedure 
@@ -9,7 +9,8 @@
 -- 05/20/24		Architha Gudimalla				3. Added update for latest_transaction_in
 -- 03/14/25		Yunus Mohammed			     	4.  Ad-8848 Added premium_rater_version
 -- 04/03/25		Yunus Mohammed			  	 	5. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
--- 05/20/25		Alberto Almario					6. Ad-9559 Added insurance_score_source
+-- 05/20/25		Alberto Almario						6. Ad-9559 Added insurance_score_source
+-- 01/16/26		Yunus Mohammed				 7. AD-12292  Added primary_home_credit_in and mapping updated for home_policy_credit_in
 -- ===================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history_wip]
@@ -109,7 +110,8 @@ BEGIN
 
 		-- Pivot Table
 		DROP TABLE IF EXISTS edw_temp.tquote_history_temp2;
-		SELECT	AccountId,  CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
+		SELECT	AccountId, 
+				CompanionCreditHomeowner,CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
 				nullif(trim(PriorResidenceAddressLine1),'') PriorResidenceAddressLine1, 
 				nullif(trim(PriorResidenceAddressLine2),'') PriorResidenceAddressLine2, 
 				nullif(trim(PriorResidenceAddressLineUnit),'') PriorResidenceAddressLineUnit,  
@@ -146,7 +148,7 @@ BEGIN
 			) t
 		PIVOT 
 			(
-				MAX(Value) FOR Field IN (CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
+				MAX(Value) FOR Field IN (CompanionCreditHomeowner,CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
 										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
 										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
@@ -174,7 +176,7 @@ BEGIN
 				comm,
 				ap,  
 				temp1.CompanionCreditCollections, temp1.CompanionCreditPersonalExcessLiability, 
-				temp1.CompanionCreditAuto, temp1.CompanionCreditPrimaryHome,
+				temp1.CompanionCreditAuto, temp1.CompanionCreditHomeowner, temp1.CompanionCreditPrimaryHome,
 				ResidenceHasPrior, PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 				PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, 
 				temp.ssk, 
@@ -242,6 +244,7 @@ BEGIN
            ,excess_liability_policy_credit_in
            ,auto_policy_credit_in
            ,home_policy_credit_in
+		   ,primary_home_credit_in
            ,prior_address_in, prior_address_line_1, prior_address_line_2, prior_address_unit_no,
            prior_address_city_nm, prior_address_state_cd, prior_address_zip_cd, prior_address_county_nm, prior_address_country_nm
            ,source_system_sk
@@ -286,7 +289,7 @@ BEGIN
 				Source.comm,
 				Source.ap,  
 				Source.CompanionCreditCollections, Source.CompanionCreditPersonalExcessLiability, 
-				Source.CompanionCreditAuto, Source.CompanionCreditPrimaryHome,
+				Source.CompanionCreditAuto, Source.CompanionCreditHomeowner, Source.CompanionCreditPrimaryHome,
 				Source.ResidenceHasPrior, Source.PriorResidenceAddressLine1, Source.PriorResidenceAddressLine2, Source.PriorResidenceAddressLineUnit, Source.PriorResidenceAddressCity, 
 				Source.PriorResidenceAddressState, Source.PriorResidenceAddressZipCode, Source.PriorResidenceAddressCounty, Source.PriorResidenceAddressCountry, 
 				Source.ssk, 
@@ -339,7 +342,8 @@ BEGIN
         Target.collection_policy_credit_in			= Source.CompanionCreditCollections, 
         Target.excess_liability_policy_credit_in	= Source.CompanionCreditPersonalExcessLiability,  
         Target.auto_policy_credit_in				= Source.CompanionCreditAuto, 
-        Target.home_policy_credit_in				= Source.CompanionCreditPrimaryHome, 
+        Target.home_policy_credit_in				= Source.CompanionCreditHomeowner,
+		Target.primary_home_credit_in  			= Source.CompanionCreditPrimaryHome, 
         Target.prior_address_in 					= Source.ResidenceHasPrior , 
         Target.prior_address_line_1 				= Source.PriorResidenceAddressLine1 , 
         Target.prior_address_line_2 				= Source.PriorResidenceAddressLine2 , 
