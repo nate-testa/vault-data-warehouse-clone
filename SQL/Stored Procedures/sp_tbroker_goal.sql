@@ -59,7 +59,7 @@ BEGIN
             getdate()
             ,@etl_audit_sk
         FROM edw_stage.stage_broker_goal s
-        LEFT JOIN edw_core.tbroker tb 
+        INNER JOIN edw_core.tbroker tb 
             ON s.broker_id = tb.broker_id
         WHERE s.update_ts > @last_source_extract_ts;
 
