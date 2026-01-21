@@ -164,7 +164,8 @@ class Quote:
                 'monoline_in': record['monoline_in'],
                 'broker_state': record['broker_state'],
                 'product_cd': record['product_cd'],
-                'broker_id_new': record['broker_id']
+                'broker_id_new': record['broker_id'],
+                'non_binding_indication_offered_in': record['non_binding_indication_offered_in']
                 
                 # 'pipeline': record['pipeline'],
                 # 'dealstage': record['dealstage'],
