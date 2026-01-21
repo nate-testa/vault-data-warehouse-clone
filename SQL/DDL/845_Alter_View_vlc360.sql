@@ -29,14 +29,14 @@ select
     ,a.[Answers - Year updated - Plumbing]
     ,a.[Endorsement Revised - Revised Coverage A]
     ,COALESCE(
-    c.lc360_summ_insp_num,
+    a.lc360_summ_insp_num,
     CASE 
         WHEN TRY_CAST(a.lc360_insp_insp_num AS INT) IS NOT NULL
             THEN a.lc360_insp_insp_num
     END
 	) AS InspectionNumber,
-	c.lc360_sum_req_date AS RequestDate, 
-	c.lc360_sum_req_by AS RequestedBy   
+	a.lc360_sum_req_date AS RequestDate, 
+	a.lc360_sum_req_by AS RequestedBy   
 from [edw_stage].[tvendor_report_LC360] a 
 ;
 GO
