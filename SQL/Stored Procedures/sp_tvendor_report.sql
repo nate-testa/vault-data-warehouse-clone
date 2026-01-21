@@ -14,6 +14,7 @@ GO
 -- 10/11/24		Architha Gudimalla				3. Addec cache column
 -- 08/22/25		Architha Gudimalla				4. Excluded images category for LC360 
 -- 01/12/26		Dinesh Bobbili				    5. AD-12215 Added logic for lc360 related columns to add them in main table
+-- 01/21/26		Dinesh Bobbili				    6. AD-12215 Fixed syntax issue
 -- ================================================================================================= 
 
 CREATE or ALTER       PROCEDURE [edw_core].[sp_tvendor_report]
@@ -263,7 +264,7 @@ BEGIN
 						end
 
 						
-						select @sql='select policynumber,effectivedate,dateordered,dateTimeRecieved,dateTimeCompleted,TransactionStatus, IsReportFromCache,[source],reporttype,lc360_summ_insp_num,lc360_insp_insp_num,lc360_sum_req_date,lc360_sum_req_by,'
+						select @sql='select policynumber,effectivedate,dateordered,dateTimeRecieved,dateTimeCompleted,TransactionStatus, IsReportFromCache,[source],reporttype,lc360_summ_insp_num,lc360_insp_insp_num,lc360_sum_req_date,lc360_sum_req_by'
 									+ @ColumnsToPivot  
 									+ ' into '
 									+  @tablename 
