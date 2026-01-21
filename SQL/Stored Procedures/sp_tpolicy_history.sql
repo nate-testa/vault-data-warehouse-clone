@@ -244,7 +244,7 @@ BEGIN
 				source1.CompanionCreditCollections as collection_policy_credit_in, 
 				source1.CompanionCreditPersonalExcessLiability as excess_liability_policy_credit_in, 
 				source1.CompanionCreditAuto as auto_policy_credit_in, 
-				source.CompanionCreditHomeowner as home_policy_credit_in,
+				source1.CompanionCreditHomeowner as home_policy_credit_in,
 				source1.CompanionCreditPrimaryHome as primary_home_credit_in,
 				ResidenceHasPrior as prior_address_in, PriorResidenceAddressLine1 as prior_address_line_1, 
 				PriorResidenceAddressLine2 as prior_address_line_2, 
