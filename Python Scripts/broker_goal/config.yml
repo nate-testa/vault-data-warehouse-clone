@@ -1,0 +1,102 @@
+# Broker Goal Loader Configuration
+
+# ============================================================================
+# CONFIGURATION MODE
+# ============================================================================
+# Set use_static_config = true to use static values below
+# Set use_static_config = false to load values from Azure Key Vault
+use_static_config: false
+
+# ============================================================================
+# STATIC CONFIGURATION (used when use_static_config = true)
+# ============================================================================
+static_config:
+  # SQL Server
+  sql_server: 
+  sql_database: 
+  sql_username: 
+  sql_password: 
+  
+  # Blob Storage (optional - can also be loaded from Key Vault)
+  storage_account: azruatdatastgacccore01
+
+# ============================================================================
+# AIRFLOW CONFIGURATION
+# ============================================================================
+airflow:
+  # Airflow connection ID for blob storage (same as NFP project)
+  # This connection must be configured in Airflow:
+  # Connection Name: azure_blob_storage
+  # Connection Type: Windows Azure Storage Blob (wasb)
+  wasb_conn_id: azure_blob_storage
+
+# ============================================================================
+# TARGET DATABASE CONFIGURATION
+# ============================================================================
+target_database:
+  schema: edw_stage
+  table: stage_broker_goal
+  
+  # Load mode: 'truncate' or 'append'
+  # - truncate: Delete all existing data before loading (TRUNCATE TABLE)
+  # - append: Add new data to existing data (INSERT only)
+  load_mode: truncate
+
+# ============================================================================
+# BLOB STORAGE CONFIGURATION
+# ============================================================================
+blob_storage:
+  # Storage account is loaded from:
+  #   - Key Vault secret (brokergoal-storage-account) when use_static_config = false
+  #   - static_config.storage_account when use_static_config = true
+  container: inbound-broker-goal
+  folder: files
+
+# ============================================================================
+# LOAD BEHAVIOR
+# ============================================================================
+load_options:
+  # Automatically determine the year from current date
+  auto_year: true
+  
+  # Override year (only used if auto_year = false)
+  year_override: 2026
+  
+  # Skip rows with missing broker_id
+  skip_invalid_rows: true
+  
+  # Validate data before loading
+  validate_data: true
+
+# ============================================================================
+# FILE ARCHIVE CONFIGURATION
+# ============================================================================
+archive:
+  # Enable archiving of processed Excel files
+  enabled: false
+  
+  # Archive folder name (created in same container)
+  folder: archived
+  
+  # Include timestamp in archived filename
+  # Example: original.xlsx -> original_20260116_103025.xlsx
+  add_timestamp: true
+
+# ============================================================================
+# NOTES
+# ============================================================================
+# BLOB STORAGE CONNECTION:
+#   - Uses Airflow connection 'azure_blob_storage' (shared with NFP project)
+#   - Connection must be configured in Airflow UI or via CLI
+#   - storage_account loaded from Key Vault or static_config (no fallback)
+#
+# When use_static_config = false (recommended for production):
+#   - SQL credentials are loaded from Azure Key Vault using Managed Identity
+#   - storage_account loaded from Key Vault (secret: brokergoal-storage-account)
+#   - Secrets must be created with 'brokergoal-' prefix
+#   - More secure and follows best practices
+#
+# When use_static_config = true (for testing/development only):
+#   - SQL credentials from static_config section above
+#   - storage_account from static_config section above
+#   - WARNING: Do not commit actual passwords to git!
