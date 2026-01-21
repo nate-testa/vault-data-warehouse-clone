@@ -32,6 +32,7 @@
 -- 04/29/25		        Archtha Gudimalla			23. VI37383/AZ9290 - Added broker_state
 -- 05/30/25		        Archtha Gudimalla			24. AZ9641 - Added broker_business_type
 -- 08/21/25		        Dinesh Bobbili  			25. Updated filter condition
+-- 01/21/26		        Dinesh Bobbili  			26. Added homeowner_2026_premium_goal_amt ,homeowner_2026_premium_actual_amt ,homeowner_2026_goal_progress_pc
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -118,6 +119,22 @@ BEGIN
             --and product_sk <> 6 
             group by broker_sk
         ),
+        pol_summ as
+        (
+            SELECT
+                broker_sk,
+                sum(case when td.yearmonth = @var_end_mn then summ.inforce_premium_amt else 0 end) as gwp_ho
+            FROM edw_core.tpolicy_summary summ
+            inner join edw_core.tdate td on td.date_sk = summ.month_sk
+            inner join edw_core.tpolicy pol on pol.policy_sk = summ.policy_sk
+            inner join (select policy_sk, YEAR(cast(min(transaction_ts) as date)) pol_year
+            from edw_core.tpolicy_history
+            group by policy_sk) ph on ph.policy_sk = summ.policy_sk and ph.pol_year = year(getdate())
+                        where td.yearmonth = @var_end_mn
+            and product_sk = 1
+            and pol.policy_term = 'New'
+                        group by broker_sk
+        ),
         comm_tier AS
         (
             select broker_id, 
@@ -200,12 +217,19 @@ BEGIN
             ,bs.ytd_new_business_yacht_premium_amt 
             ,case when rolling_12_policy_renewal_ct > 0 then round(100*cast(rolling_12_policy_renewal_accepted_ct as float)/rolling_12_policy_renewal_ct,2) else null end ytd_renewal_retention_pc
             ,tb.primary_address_state_cd
+            ,bg.ho_new_business_premium_amt as homeowner_2026_premium_goal_amt
+            ,ps.gwp_ho as homeowner_2026_premium_actual_amt
+            ,round(100*ps.gwp_ho/bg.ho_new_business_premium_amt,2) as homeowner_2026_goal_progress_pc
         into    edw_temp.broker_hubspot_feed_temp1
         FROM    edw_core.tbroker tb
+        inner join edw_core.tetl_audit e on e.etl_audit_sk = tb.etl_audit_sk
         left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
         left join br_summ as bs    on bs.broker_sk = tb.broker_sk
         left join comm_tier as ct   on ct.broker_id = tb.broker_id
-        where commercial_or_personal_business_type = 'Personal lines';
+        left join pol_summ as ps    on ps.broker_sk = tb.broker_sk
+        left join edw_stage.stage_broker_goal bg on bg.broker_id = tb.broker_id and bg.goal_year = YEAR(GETDATE())
+        where commercial_or_personal_business_type = 'Personal lines'
+        and process_nm <> 'sp_os_broker';
 
         truncate table edw_integration.broker_hubspot_feed       
     
@@ -224,6 +248,9 @@ BEGIN
             ,ytd_renewal_retention_pc
             ,primary_address_state_cd
             ,broker_business_type
+            ,homeowner_2026_premium_goal_amt
+            ,homeowner_2026_premium_actual_amt
+            ,homeowner_2026_goal_progress_pc
         )
         SELECT        
             broker_id,broker_nm + ' - ' + broker_id,mailing_address_line_1,mailing_address_line_2,mailing_address_city_nm,mailing_address_state_cd,
@@ -239,6 +266,9 @@ BEGIN
             ,ytd_renewal_retention_pc
             ,primary_address_state_cd
             ,'Personal Lines'
+            ,homeowner_2026_premium_goal_amt
+            ,homeowner_2026_premium_actual_amt
+            ,homeowner_2026_goal_progress_pc
         FROM edw_temp.broker_hubspot_feed_temp1
         
         
