@@ -8,7 +8,7 @@ All secrets are prefixed with 'brokergoal-' in the Key Vault.
 import os
 import logging
 import yaml
-from azure.identity import ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from azure.core.exceptions import AzureError
 from dotenv import load_dotenv
@@ -118,10 +118,10 @@ class ConfigManager:
             raise
     
     def _load_from_keyvault(self):
-        """Load secrets from Azure Key Vault using Managed Identity"""
+        """Load secrets from Azure Key Vault using DefaultAzureCredential"""
         try:
-            self.logger.info("Connecting to Azure Key Vault using Managed Identity...")
-            credential = ManagedIdentityCredential()
+            self.logger.info("Connecting to Azure Key Vault using DefaultAzureCredential...")
+            credential = DefaultAzureCredential()
             client = SecretClient(vault_url=self.KEY_VAULT_URI, credential=credential)
             self.logger.info(f"Successfully connected to Key Vault: {self.KEY_VAULT_URI}")
             
