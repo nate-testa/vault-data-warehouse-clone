@@ -31,7 +31,7 @@
 -- 03/29/25		        Archtha Gudimalla			22. VI36791/AZ9023 - Concat broker_id to broker_nm
 -- 04/29/25		        Archtha Gudimalla			23. VI37383/AZ9290 - Added broker_state
 -- 05/30/25		        Archtha Gudimalla			24. AZ9641 - Added broker_business_type
--- 08/21/25		        Dinesh Bobbili  			25. Updated filter condition homeowner_2026_premium_goal_amt ,homeowner_2026_premium_actual_amt ,homeowner_2026_goal_progress_pc
+-- 08/21/25		        Dinesh Bobbili  			25. Updated filter condition
 -- 01/21/26		        Dinesh Bobbili  			26. Added homeowner_2026_premium_goal_amt ,homeowner_2026_premium_actual_amt ,homeowner_2026_goal_progress_pc
 -- ================================================================================================================================
 
