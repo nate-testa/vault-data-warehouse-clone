@@ -129,12 +129,13 @@ BEGIN
             inner join edw_core.tdate td on td.date_sk = summ.month_sk
             inner join edw_core.tpolicy pol on pol.policy_sk = summ.policy_sk
             inner join (select policy_sk, YEAR(cast(min(transaction_ts) as date)) pol_year
-            from edw_core.tpolicy_history
-            group by policy_sk) ph on ph.policy_sk = summ.policy_sk and ph.pol_year = year(getdate())
-                        where td.yearmonth = @var_end_mn
-            and product_sk = 1
-            and pol.policy_term = 'New'
-                        group by broker_sk
+                        from edw_core.tpolicy_history
+                        group by policy_sk) ph 
+            on ph.policy_sk = summ.policy_sk and ph.pol_year = year(getdate())
+            where td.yearmonth = @var_end_mn
+                and product_sk = 1
+                and pol.policy_term = 'New'
+            group by broker_sk
         ),
         comm_tier AS
         (
