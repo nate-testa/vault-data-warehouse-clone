@@ -1,0 +1,12 @@
+pyodbc
+pandas
+pyyaml
+snowflake-connector-python[pandas]
+snowflake-connector-python[secure-local-storage]
+azure-identity
+azure-keyvault-secrets
+python-dotenv
+sqlalchemy
+msgraph-sdk
+psutil  # For memory monitoring
+# Office365-REST-Python-Client  # Deprecated - migrated to Microsoft Graph
