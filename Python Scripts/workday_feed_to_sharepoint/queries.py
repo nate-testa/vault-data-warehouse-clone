@@ -40,19 +40,6 @@ def load_config():
 MONTH_END_DATE = get_month_end_date()
 USE_DATE_FILTER = load_config()
 
-# Build WHERE clauses based on configuration
-# When USE_DATE_FILTER is True, use MAX(accounting_date) or MAX(monthend) instead of hardcoded dates
-if USE_DATE_FILTER:
-    ACCOUNTING_DATE_FILTER = "WHERE accounting_date = (SELECT MAX(accounting_date) FROM edw_integration.policy_workday_written_premium_feed)"
-    MONTHEND_FILTER = "WHERE monthend = (SELECT MAX(monthend) FROM edw_integration.claim_workday_payment_feed)"
-    AND_ACCOUNTING_DATE = "AND accounting_date = (SELECT MAX(accounting_date) FROM edw_integration.policy_workday_ceded_premium_feed)"
-    AND_MONTHEND = "AND monthend = (SELECT MAX(monthend) FROM edw_integration.claim_workday_reserve_feed)"
-else:
-    ACCOUNTING_DATE_FILTER = "-- Date filter disabled"
-    MONTHEND_FILTER = "-- Date filter disabled"
-    AND_ACCOUNTING_DATE = ""
-    AND_MONTHEND = ""
-
 QUERIES = {
     "Workday_Written_Premium.csv": f"""
         SELECT ACCOUNTING_DATE, policy_image_identifier_id as TRANSACTION_ID, POLICY_NUMBER, PRODUCT, COMPANY, TRANSACTION_DATE, 
@@ -62,7 +49,7 @@ QUERIES = {
                PEL_LIMIT_AMT, UNINSURED_UNDERINSURED_LIABILITY_AMT, UNINSURED_UNDERINSURED_MOTORIST_LIABILITY_AMT, 
                SCHEDULED_LIMIT_AMT, BLANKET_LIMIT_AMT
         FROM edw_integration.policy_workday_written_premium_feed
-        {ACCOUNTING_DATE_FILTER}
+        {"WHERE accounting_date = (SELECT MAX(accounting_date) FROM edw_integration.policy_workday_written_premium_feed)" if USE_DATE_FILTER else "-- Date filter disabled"}
     """,
     
     "Workday_Unearned_Premium.csv": f"""
@@ -73,7 +60,7 @@ QUERIES = {
                PEL_LIMIT_AMT, UNINSURED_UNDERINSURED_LIABILITY_AMT, UNINSURED_UNDERINSURED_MOTORIST_LIABILITY_AMT, 
                SCHEDULED_LIMIT_AMT, BLANKET_LIMIT_AMT, TRANSACTION_EFFECTIVE_DATE, TRANSACTION_TS
         FROM edw_integration.policy_workday_unearned_premium_feed
-        {ACCOUNTING_DATE_FILTER}
+        {"WHERE accounting_date = (SELECT MAX(accounting_date) FROM edw_integration.policy_workday_unearned_premium_feed)" if USE_DATE_FILTER else "-- Date filter disabled"}
     """,
     
     "Workday_Ceded_Premium.csv": f"""
@@ -83,7 +70,7 @@ QUERIES = {
                AMOUNT, GROSS_PREMIUM_AMT, contribcutoffdate as SUBSCRIBER_CONTRIBUTION_END_DT
         FROM edw_integration.policy_workday_ceded_premium_feed
         WHERE (amount != 0 OR gross_premium_amt != 0)
-          {AND_ACCOUNTING_DATE}
+          {"AND accounting_date = (SELECT MAX(accounting_date) FROM edw_integration.policy_workday_ceded_premium_feed)" if USE_DATE_FILTER else ""}
     """,
     
     "Workday_Claim_Payment.csv": f"""
@@ -92,7 +79,7 @@ QUERIES = {
                PAYMENTTYPE, PAYEENAME, PAYMENTAMOUNT, SETTLEMENTTYPE, ACCIDENT_YEAR, RISK_STATE, ASLOB, TRANSACTION_ID, 
                MONTHEND, CLAIM_STATUS, LOSS_STATUS
         FROM edw_integration.claim_workday_payment_feed
-        {MONTHEND_FILTER}
+        {"WHERE monthend = (SELECT MAX(monthend) FROM edw_integration.claim_workday_payment_feed)" if USE_DATE_FILTER else "-- Date filter disabled"}
     """,
     
     "Workday_Claim_Reserve.csv": f"""
@@ -102,7 +89,7 @@ QUERIES = {
                CLAIM_STATUS, LOSS_STATUS
         FROM edw_integration.claim_workday_reserve_feed
         WHERE reserve_amount != 0
-          {AND_MONTHEND}
+          {"AND monthend = (SELECT MAX(monthend) FROM edw_integration.claim_workday_reserve_feed)" if USE_DATE_FILTER else ""}
     """,
     
     "Workday_Claim_Reserve_ITD.csv": f"""
@@ -113,7 +100,7 @@ QUERIES = {
         FROM edw_integration.claim_workday_itd_reserve_feed
         WHERE reserve_amount != 0
           AND claim_no NOT LIKE 'CL%'
-          {AND_MONTHEND}
+          {"AND monthend = (SELECT MAX(monthend) FROM edw_integration.claim_workday_itd_reserve_feed)" if USE_DATE_FILTER else ""}
     """,
     
     "Workday_Litigation_Claim_Payment.csv": f"""
@@ -122,7 +109,7 @@ QUERIES = {
                PAYMENTTYPE, PAYEENAME, PAYMENTAMOUNT, SETTLEMENTTYPE, ACCIDENT_YEAR, RISK_STATE, ASLOB, TRANSACTION_ID, 
                MONTHEND, CLAIM_STATUS, LOSS_STATUS
         FROM edw_integration.claim_litigation_workday_payment_feed
-        {MONTHEND_FILTER}
+        {"WHERE monthend = (SELECT MAX(monthend) FROM edw_integration.claim_litigation_workday_payment_feed)" if USE_DATE_FILTER else "-- Date filter disabled"}
     """,
     
     "Workday_Litigation_Claim_Reserve.csv": f"""
@@ -132,7 +119,7 @@ QUERIES = {
                CLAIM_STATUS, LOSS_STATUS
         FROM edw_integration.claim_litigation_workday_reserve_feed
         WHERE reserve_amount != 0
-          {AND_MONTHEND}
+          {"AND monthend = (SELECT MAX(monthend) FROM edw_integration.claim_litigation_workday_reserve_feed)" if USE_DATE_FILTER else ""}
     """,
     
     "Workday_Litigation_Claim_Reserve_ITD.csv": f"""
@@ -142,6 +129,6 @@ QUERIES = {
                CLAIM_STATUS, LOSS_STATUS
         FROM edw_integration.claim_litigation_workday_itd_reserve_feed
         WHERE reserve_amount != 0
-          {AND_MONTHEND}
+          {"AND monthend = (SELECT MAX(monthend) FROM edw_integration.claim_litigation_workday_itd_reserve_feed)" if USE_DATE_FILTER else ""}
     """
 }
