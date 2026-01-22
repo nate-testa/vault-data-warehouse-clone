@@ -1,6 +1,6 @@
 migration:
   # Data load control
-  load_all: false  # true = load all records, false = limit records
+  load_all: true  # true = load all records, false = limit records
   record_limit: 100  # Only used when load_all = false
   
   # Date filtering control
