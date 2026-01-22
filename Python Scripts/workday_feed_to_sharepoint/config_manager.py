@@ -1,7 +1,7 @@
 import os
 import logging
 import yaml
-from azure.identity import ManagedIdentityCredential
+from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from azure.core.exceptions import AzureError
 from dotenv import load_dotenv
@@ -94,7 +94,7 @@ class ConfigManager:
         """Load secrets from Azure Key Vault"""
         try:
             self.logger.info(f"Connecting to Key Vault: {self.KEY_VAULT_URI}")
-            credential = ManagedIdentityCredential()
+            credential = DefaultAzureCredential()
             client = SecretClient(vault_url=self.KEY_VAULT_URI, credential=credential)
 
             # Secrets to fetch
