@@ -915,7 +915,7 @@ BEGIN
 							when ren_pol.product_cd in ('LUX')     then isnull(cloc.address_line_1, cloc2.address_line_1)
 							when ren_pol.product_cd in ('PEL')     then isnull(ploc.address_line_1, ploc2.address_line_1)
 							when ren_pol.product_cd in ('BY')      then isnull(bloc.address_line_1, bloc2.address_line_1)
-							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_line1,ren_pol2.mailing_address_line1)
+							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_line1,exp_pol.mailing_address_line1)
 							else NULL
 						end risk_address_line_1
 						,case
@@ -923,7 +923,7 @@ BEGIN
 							when ren_pol.product_cd in ('LUX')     then isnull(cloc.address_line_2, cloc2.address_line_2)
 							when ren_pol.product_cd in ('PEL')     then isnull(ploc.address_line_2, ploc2.address_line_2)
 							when ren_pol.product_cd in ('BY')      then isnull(bloc.address_line_2, bloc2.address_line_2)
-							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_line2,ren_pol2.mailing_address_line2)
+							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_line2,exp_pol.mailing_address_line2)
 							else NULL
 						end risk_address_line_2
 						,case
@@ -931,7 +931,7 @@ BEGIN
 							when ren_pol.product_cd in ('LUX')     then isnull(cloc.unit_no, cloc2.unit_no)
 							when ren_pol.product_cd in ('PEL')     then isnull(ploc.unit_no, ploc2.unit_no)
 							when ren_pol.product_cd in ('BY')      then isnull(bloc.unit_no, bloc2.unit_no)
-							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_unit_no,ren_pol2.mailing_address_unit_no)
+							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_unit_no,exp_pol.mailing_address_unit_no)
 							else NULL
 						end risk_address_unit_no
 						,case
@@ -939,7 +939,7 @@ BEGIN
 							when ren_pol.product_cd in ('LUX')     then isnull(cloc.city_nm, cloc2.city_nm)
 							when ren_pol.product_cd in ('PEL')     then isnull(ploc.city_nm, ploc2.city_nm)
 							when ren_pol.product_cd in ('BY')      then isnull(bloc.city_nm, bloc2.city_nm)
-							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_city_nm,ren_pol2.mailing_address_city_nm)
+							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_city_nm,exp_pol.mailing_address_city_nm)
 							else NULL
 						end risk_address_city_nm
 						,case
@@ -947,7 +947,7 @@ BEGIN
 							when ren_pol.product_cd in ('LUX')     then isnull(cloc.state_cd, cloc2.state_cd)
 							when ren_pol.product_cd in ('PEL')     then isnull(ploc.state_cd, ploc2.state_cd)
 							when ren_pol.product_cd in ('BY')      then isnull(bloc.state_cd, bloc2.state_cd)
-							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_state_cd,ren_pol2.mailing_address_state_cd)
+							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_state_cd,exp_pol.mailing_address_state_cd)
 							else NULL
 						end risk_address_state_cd
 						,case
@@ -955,7 +955,7 @@ BEGIN
 							when ren_pol.product_cd in ('LUX')     then isnull(cloc.zip_cd, cloc2.zip_cd)
 							when ren_pol.product_cd in ('PEL')     then isnull(ploc.zip_cd, ploc2.zip_cd)
 							when ren_pol.product_cd in ('BY')      then isnull(bloc.zip_cd, bloc2.zip_cd)
-							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_zip_cd,ren_pol2.mailing_address_zip_cd)
+							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_zip_cd,exp_pol.mailing_address_zip_cd)
 							else NULL
 						end risk_address_zip_cd
 				from edw_temp.trenewal_summary_v1_temp_6_final a
@@ -978,14 +978,14 @@ BEGIN
 				LEFT JOIN edw_core.thome_location hloc ON hcov.home_location_sk = hloc.home_location_sk
 				LEFT JOIN edw_core.tmarine_boat_yacht_coverage bcov ON bcov.policy_history_sk = ren_ph.policy_history_sk
 				LEFT JOIN edw_core.tmarine_boat_yacht_location bloc ON bcov.marine_boat_yacht_location_sk = bloc.marine_boat_yacht_location_sk
-				left join edw_core.tpolicy ren_pol2 on ren_pol2.policy_sk = a.policy_sk
-				left join edw_core.tpolicy_history ren_ph2 on a.policy_sk = ren_ph2.policy_sk and ren_ph2.latest_transaction_in = 'Y'
-				LEFT JOIN edw_core.tpel_location ploc2 ON ren_ph2.policy_history_sk = ploc2.policy_history_sk and ploc2.primary_location_in = 'Yes'
-				LEFT JOIN edw_core.tcollection_coverage ccov2 ON ren_ph2.policy_history_sk = ccov2.policy_history_sk
+				left join edw_core.tpolicy exp_pol on exp_pol.policy_sk = a.policy_sk
+				left join edw_core.tpolicy_history exp_pol_ph on a.policy_sk = exp_pol_ph.policy_sk and exp_pol_ph.latest_transaction_in = 'Y'
+				LEFT JOIN edw_core.tpel_location ploc2 ON exp_pol_ph.policy_history_sk = ploc2.policy_history_sk and ploc2.primary_location_in = 'Yes'
+				LEFT JOIN edw_core.tcollection_coverage ccov2 ON exp_pol_ph.policy_history_sk = ccov2.policy_history_sk
 				LEFT JOIN edw_core.tcollection_location cloc2 ON ccov2.collection_location_sk = cloc2.collection_location_sk
-				LEFT JOIN edw_core.thome_coverage hcov2 ON hcov2.policy_history_sk = ren_ph2.policy_history_sk
+				LEFT JOIN edw_core.thome_coverage hcov2 ON hcov2.policy_history_sk = exp_pol_ph.policy_history_sk
 				LEFT JOIN edw_core.thome_location hloc2 ON hcov2.home_location_sk = hloc2.home_location_sk
-				LEFT JOIN edw_core.tmarine_boat_yacht_coverage bcov2 ON bcov2.policy_history_sk = ren_ph2.policy_history_sk
+				LEFT JOIN edw_core.tmarine_boat_yacht_coverage bcov2 ON bcov2.policy_history_sk = exp_pol_ph.policy_history_sk
 				LEFT JOIN edw_core.tmarine_boat_yacht_location bloc2 ON bcov2.marine_boat_yacht_location_sk = bloc2.marine_boat_yacht_location_sk;  
 
 				SET @rows_affected=@@ROWCOUNT;
