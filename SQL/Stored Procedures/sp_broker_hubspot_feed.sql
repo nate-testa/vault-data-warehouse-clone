@@ -225,7 +225,7 @@ BEGIN
             ,bg.new_business_premium_amt as homeowner_2026_premium_goal_amt
             ,isnull(ps.gwp_ho,0.0) as homeowner_2026_premium_actual_amt
             ,case when isnull(bg.new_business_premium_amt,0) = 0 then null
-                  else round(isnull(ps.gwp_ho,0.0)/bg.new_business_premium_amt,2) 
+                  else round(isnull(ps.gwp_ho,0.0)/bg.new_business_premium_amt,4) 
             end as homeowner_2026_goal_progress_pc
         into    edw_temp.broker_hubspot_feed_temp1
         FROM    edw_core.tbroker tb
