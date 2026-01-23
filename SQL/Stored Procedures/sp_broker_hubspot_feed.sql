@@ -34,6 +34,7 @@
 -- 08/21/25		        Dinesh Bobbili  			25. Updated filter condition
 -- 01/21/26		        Dinesh Bobbili  			26. Added homeowner_2026_premium_goal_amt ,homeowner_2026_premium_actual_amt ,homeowner_2026_goal_progress_pc
 -- 01/21/26		        Dinesh Bobbili  			27. Updated logic to use tbroker_goal 
+-- 01/21/26		        Archtha Gudimalla  			28. Fixed broker goal errors after testing in sandbox 
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -220,8 +221,11 @@ BEGIN
             ,case when rolling_12_policy_renewal_ct > 0 then round(100*cast(rolling_12_policy_renewal_accepted_ct as float)/rolling_12_policy_renewal_ct,2) else null end ytd_renewal_retention_pc
             ,tb.primary_address_state_cd
             ,bg.new_business_premium_amt as homeowner_2026_premium_goal_amt
-            ,ps.gwp_ho as homeowner_2026_premium_actual_amt
-            ,round(100*ps.gwp_ho/bg.new_business_premium_amt,2) as homeowner_2026_goal_progress_pc
+            ,isnull(ps.gwp_ho,0.0) as homeowner_2026_premium_actual_amt
+            ,case when bg.new_business_premium_amt is null then null
+                  when bg.new_business_premium_amt = 0 then 0
+                  else round(100*isnull(ps.gwp_ho,0.0)/bg.new_business_premium_amt,2) 
+            end as homeowner_2026_goal_progress_pc
         into    edw_temp.broker_hubspot_feed_temp1
         FROM    edw_core.tbroker tb
         inner join edw_core.tetl_audit e on e.etl_audit_sk = tb.etl_audit_sk
