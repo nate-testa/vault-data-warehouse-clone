@@ -18,6 +18,7 @@ GO
 -- 04/17/24             Architha Gudimalla              8. AD9089 - Updated the query that gets data from ProductObjectFieldValueDisplay
 -- 03/15/25             Hernando Gonzalez               9. AD99483 - added consent_to_rate_otccoll
 -- 07/03/25             Dinesh Bobbili                  10. AD10146 - Added UMPDLimit column logic
+-- 01/21/26             Dinesh Bobbili                  11. AD12316 - added logic to remove $ sign
 -- ======================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_auto_policy_coverage] 
@@ -165,7 +166,7 @@ BEGIN
 
 					 set @sql =	'
                             update		avc 
-                            set			avc.' + @edw_field_nm + ' = p.Value 
+                            set			avc.' + @edw_field_nm + ' = replace(p.Value,''$'','''') 
                             from		[edw_temp].[tquote_auto_policy_coverage_temp1] avc
                             inner join	[edw_temp].[tquote_auto_policy_coverage_temp2] p on  avc.quote_no = p.quote_no and avc.effective_dt = p.effective_dt and avc.transaction_seq_no = p.transaction_seq_no
                             where		avc.' + @edw_field_nm + ' is not null 

@@ -1,0 +1,27 @@
+IF NOT EXISTS (SELECT * FROM sys.tables t JOIN sys.schemas s ON t.schema_id = s.schema_id WHERE s.name = 'edw_core' AND t.name = 'tbroker_goal')
+BEGIN
+    CREATE TABLE edw_core.tbroker_goal
+(
+broker_goal_sk            int IDENTITY(1,1) NOT NULL,
+broker_sk                 int NOT NULL,
+broker_id                 varchar(255) NOT NULL,
+product_cd                varchar(255) NOT NULL,
+goal_year                 int NOT NULL,
+goal_effective_dt         date NOT NULL,
+goal_expiration_dt        date NOT NULL,
+goal_status               varchar(255),
+new_business_premium_amt  decimal(15,2),
+create_ts                 datetime2(7) NOT NULL,
+update_ts                 datetime2(7) NOT NULL,
+etl_audit_sk              int,
+CONSTRAINT pk_tbroker_goal PRIMARY KEY (broker_goal_sk),
+CONSTRAINT fk_tbroker_goal_broker_sk FOREIGN KEY(broker_sk) REFERENCES edw_core.tbroker (broker_sk)
+);
+END
+
+IF NOT EXISTS (SELECT 1 FROM edw_core.tedw_table_detail WHERE table_nm = 'tbroker_goal')
+BEGIN
+    INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
+        VALUES ('tbroker_goal','Type-2 Dimension','Base','Broker','Stored Procedure','Insert/Update','Yearly',getdate(),getdate());
+END
+

@@ -1,10 +1,12 @@
+import os
 import pendulum
 from datetime import timedelta
 from airflow import DAG
 from airflow.utils.task_group import TaskGroup
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.operators.email import EmailOperator
 from airflow.operators.empty import EmptyOperator
+from airflow.operators.bash import BashOperator
 from airflow.providers.microsoft.mssql.operators.mssql import MsSqlOperator
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
@@ -13,6 +15,9 @@ to_email = "itdatateam@vault.insurance"
 # to_email = "hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
 cc_email = ""
 
+HOME_PATH = os.path.expanduser('~')
+FOLDER_PATH = HOME_PATH + "/python_scripts/workday_feed_to_sharepoint"
+BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
 
 def check_tvalidation_result_and_send_email(**kwargs):
     sql_qry = """
@@ -36,6 +41,9 @@ def check_tvalidation_result_and_send_email(**kwargs):
             html_content=get_vault_data_HTML(sql_qry,'There are validation errors. Please review the details below.'),
             dag=kwargs['dag'],
         ).execute(context=kwargs)
+        return 'vault_workday_monthly_load_group.skip_sharepoint_feed'
+    else:
+        return 'vault_workday_monthly_load_group.run_workday_feed_to_sharepoint_script'
 
 
 def on_failure_callback(context):
@@ -190,11 +198,20 @@ with DAG(
             autocommit=True,
         )
 
-        tvalidation_result_email = PythonOperator(
+        tvalidation_result_email = BranchPythonOperator(
             task_id='tvalidation_result_email',
             python_callable=check_tvalidation_result_and_send_email,
             provide_context=True,
             dag=dag,
+        )
+
+        run_workday_feed_to_sharepoint_script = BashOperator(
+            task_id='run_workday_feed_to_sharepoint_script',
+            bash_command=BASH_COMMAND,
+        )
+
+        skip_sharepoint_feed = EmptyOperator(
+            task_id='skip_sharepoint_feed',
         )
 
         send_workday_email = EmailOperator(
@@ -202,9 +219,12 @@ with DAG(
             to=to_email,
             subject='Airflow - Workday tables loaded successfully',
             html_content=get_sp_success_data_HTML(vault_workday_monthly_load_group_items, 'All stored procedures executed successfully for all the Workday tables'),
+            trigger_rule='none_failed_min_one_success',
         )
 
-        sp_policy_workday_unearned_premium_feed >> sp_policy_workday_written_premium_feed >> sp_policy_workday_ceded_premium_feed >> sp_claim_workday_payment >> sp_claim_workday_reserve_feed >> sp_claim_workday_reserve_feed_itd >> sp_claim_litigation_workday_payment >> sp_claim_litigation_workday_reserve_feed >> sp_claim_litigation_workday_reserve_feed_itd >> sp_tvalidation_result >> tvalidation_result_email >> send_workday_email
+        sp_policy_workday_unearned_premium_feed >> sp_policy_workday_written_premium_feed >> sp_policy_workday_ceded_premium_feed >> sp_claim_workday_payment >> sp_claim_workday_reserve_feed >> sp_claim_workday_reserve_feed_itd >> sp_claim_litigation_workday_payment >> sp_claim_litigation_workday_reserve_feed >> sp_claim_litigation_workday_reserve_feed_itd >> sp_tvalidation_result >> tvalidation_result_email
+        tvalidation_result_email >> run_workday_feed_to_sharepoint_script >> send_workday_email
+        tvalidation_result_email >> skip_sharepoint_feed >> send_workday_email
 
 
 

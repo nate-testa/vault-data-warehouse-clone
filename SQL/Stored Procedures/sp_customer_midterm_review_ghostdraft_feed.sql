@@ -17,6 +17,7 @@
 -- 01/05/26		Architha Gudimalla		   11. Populated recommendation_message_id_seq_line_ct
 -- 01/07/26		Architha Gudimalla		   12. Updated to pick producer from tpolicy table
 -- 01/08/26		Architha Gudimalla		   13. Added InitCap for customer_nm, producer_nm, risk address
+-- 01/08/26		Architha Gudimalla		   14. Excluded not recommended procs from ghostdraft
 -- =====================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
@@ -160,6 +161,9 @@ BEGIN
 				left join edw_integration.customer_midterm_review_policy_detail p on r.existing_policy_no = p.policy_no
 				where r.product_nm not in ('Condo','Homeowners') 
 				and r.update_ts >  @last_source_extract_ts
+				and isnull(r.product_recommendation,'') not in ('Not Recommended, customer has a DNR policy in the last one year',
+													 'Not Recommended, customer has a cancelled policy in the last three year',
+													 'Not Recommended, customer has a declined quote in the last three year')
 				and e.midterm_review_process_in ='Yes'
 				group by e.customer_id,
 					cust.customer_nm,
@@ -285,6 +289,9 @@ BEGIN
 				LEFT JOIN edw_core.tproducer pd on pd.producer_sk = pol.current_producer_sk 
 				where r.product_nm in ('Condo','Homeowners')
 				and r.update_ts >  @last_source_extract_ts
+				and isnull(r.product_recommendation,'') not in ('Not Recommended, customer has a DNR policy in the last one year',
+													 'Not Recommended, customer has a cancelled policy in the last three year',
+													 'Not Recommended, customer has a declined quote in the last three year')
 				and e.midterm_review_process_in ='Yes'
 		)
 		select *
@@ -771,7 +778,7 @@ BEGIN
 			SELECT
 			case when cmr.insured_type <>  'Entity' then edw_core.fn_Init_Cap(cmr.customer_nm) else cmr.customer_nm end as insured_full_name,
 			cmr.customer_message as insured_message,
-			edw_core.fn_Init_Cap(cmr.producer_nm) producer_nm, 
+			edw_core.fn_Init_Cap(cmr.producer_nm) producer_name, 
 			cmr.producer_phone,
 			lower(cmr.producer_email) producer_email,
 			edw_core.fn_Init_Cap(cmr.mailing_address_line1) mailing_address_line1,
@@ -961,7 +968,7 @@ BEGIN
         SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts > ' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
         if @in_start_dt is not null
         begin
-            set @parameter_desc= 'last_source_extract_ts = ' + CAST(@in_start_dt AS VARCHAR(200))
+            set @parameter_desc= 'last_source_extract_ts = ' + CAST(@last_source_extract_ts AS VARCHAR(200))
         end
         EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;  
 		

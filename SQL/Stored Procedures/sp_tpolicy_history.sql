@@ -23,6 +23,7 @@
 -- 04/30/25		Yunus Mohammed						17. Ad-9338 Added cancellation_sub_reason_desc
 -- 05/20/25		Alberto Almario						18. Ad-9559 Added insurance_score_source
 -- 07/08/25		Dinesh Bobbili						19. Ad-10153 Added transaction_bound_by_user_nm
+-- 01/16/26		Yunus Mohammed					20 AD-12292  Added primary_home_credit_in and mapping updated for home_policy_credit_in
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -126,7 +127,9 @@ BEGIN
 
 		-- Pivot Table
 		DROP TABLE IF EXISTS edw_temp.tpolicy_history_temp2;
-		SELECT	AccountTransactionId,  CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
+		SELECT	AccountTransactionId,  
+				CompanionCreditHomeowner,CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, 
+				CompanionCreditCollections, CompanionCreditAuto,
 				nullif(trim(PriorResidenceAddressLine1),'') PriorResidenceAddressLine1, 
 				nullif(trim(PriorResidenceAddressLine2),'') PriorResidenceAddressLine2, 
 				nullif(trim(PriorResidenceAddressLineUnit),'') PriorResidenceAddressLineUnit,  
@@ -164,7 +167,7 @@ BEGIN
 			) t
 		PIVOT 
 			(
-				MAX(Value) FOR Field IN (CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
+				MAX(Value) FOR Field IN (CompanionCreditHomeowner,CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
 										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
 										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
 										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
@@ -200,6 +203,7 @@ BEGIN
            ,excess_liability_policy_credit_in
            ,auto_policy_credit_in
            ,home_policy_credit_in
+		   ,primary_home_credit_in
            ,prior_address_in, prior_address_line_1, prior_address_line_2, prior_address_unit_no,
            prior_address_city_nm, prior_address_state_cd, prior_address_zip_cd, prior_address_county_nm, prior_address_country_nm
            ,source_system_sk
@@ -231,19 +235,26 @@ BEGIN
 		SELECT	Source.PolicyNumber, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.PolicyChangeNumber, 
 				pol.policy_sk, br.broker_sk, cust.customer_sk, br.Broker_Id, Source.customer_id, 
 				tt.policy_transaction_type_nm, Source.IssuedDate, source.note, Source.CancellationReason, Source.CancellationSubReason,
-				wp, 
-				wp-isnull(tfs.tfs,0),isnull(tfs.tfs,0),
-				comm,
-				ap, 
-				rid.Name, cid.Name, 
-				source1.CompanionCreditCollections, source1.CompanionCreditPersonalExcessLiability, 
-				source1.CompanionCreditAuto, source1.CompanionCreditPrimaryHome,
-				ResidenceHasPrior, PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
-				PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, 
+				wp as premium_amt, 
+				wp-isnull(tfs.tfs,0) as net_premium_amt,
+				isnull(tfs.tfs,0) as [tax_fee_surcharge_amt],
+				comm as commission_amt,
+				ap as annual_premium_amt,
+				rid.Name as transaction_initiated_by, cid.Name as transaction_issued_by, 
+				source1.CompanionCreditCollections as collection_policy_credit_in, 
+				source1.CompanionCreditPersonalExcessLiability as excess_liability_policy_credit_in, 
+				source1.CompanionCreditAuto as auto_policy_credit_in, 
+				source1.CompanionCreditHomeowner as home_policy_credit_in,
+				source1.CompanionCreditPrimaryHome as primary_home_credit_in,
+				ResidenceHasPrior as prior_address_in, PriorResidenceAddressLine1 as prior_address_line_1, 
+				PriorResidenceAddressLine2 as prior_address_line_2, 
+				PriorResidenceAddressLineUnit as prior_address_unit_no, PriorResidenceAddressCity as prior_address_city_nm, 
+				PriorResidenceAddressState as prior_address_state_cd, PriorResidenceAddressZipCode as prior_address_zip_cd, 
+				PriorResidenceAddressCounty as prior_address_county_nm, PriorResidenceAddressCountry as prior_address_country_nm, 
 				source.ssk, getdate(), getdate(), @etl_audit_sk
 				,source.uw_nm
 				,source.producer_nm
-				,pr.product_sk
+				,pr.product_sk 
 				,source.policychangenotes
 				,source.CommissionPercent
 				,source.CommissionPercentOverride

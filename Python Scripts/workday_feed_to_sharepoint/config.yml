@@ -1,0 +1,69 @@
+migration:
+  # Data load control
+  load_all: true  # true = load all records, false = limit records
+  record_limit: 100  # Only used when load_all = false
+  
+  # Date filtering control
+  use_date_filter: true  # true = apply WHERE date filters, false = load all dates
+
+# Secrets Management
+secrets:
+  # Secrets source: 'keyvault' or 'static'
+  # - keyvault: Fetch secrets from Azure Key Vault (requires managed identity)
+  # - static: Use static values defined below (for testing/local development)
+  source: keyvault
+  
+  # Static values (only used when source = 'static')
+  static_values:
+    tenant_id: ""
+    sp_id: ""
+    sp_secret: ""
+    db_server: ""
+    db_name: ""
+    db_user: ""
+    db_password: ""
+
+# Memory Optimization Settings
+# These settings are optimized for LOW MEMORY servers (< 1GB RAM)
+# For HIGHER MEMORY VMs, see recommended settings below
+
+memory:
+  # Chunk size for reading from database (rows per chunk)
+  chunk_size: 10000  # Process 10k rows at a time to reduce memory usage
+  
+  # Processing mode: 'streaming', 'local_persist', 'in_memory'
+  # - streaming: Write to temp file, upload, delete immediately (lowest memory)
+  # - local_persist: Write to local folder, upload, delete only on success (safest)
+  # - in_memory: Load all data in memory (fastest, highest memory)
+  processing_mode: local_persist
+  
+  # Local file settings (for local_persist mode)
+  local_output_dir: files  # Directory to save CSV files before upload
+  keep_local_on_failure: true  # Keep local files if upload fails
+  keep_local_backup: false  # Keep local files even after successful upload
+  
+  # Maximum memory usage warning threshold (MB)
+  max_memory_mb: 2048
+
+# ============================================================================
+# RECOMMENDED SETTINGS FOR DIFFERENT ENVIRONMENTS
+# ============================================================================
+# 
+# LOW MEMORY VM (< 1 GB RAM) - Current defaults above
+# - processing_mode: local_persist or streaming
+# - chunk_size: 5000-10000
+# - max_memory_mb: 256-512
+#
+# MEDIUM MEMORY VM (2-4 GB RAM) - Faster processing
+# - processing_mode: local_persist
+# - chunk_size: 50000  (5x faster data processing)
+# - max_memory_mb: 1024
+#
+# HIGH MEMORY VM (4+ GB RAM) - Maximum speed
+# - processing_mode: in_memory  (fastest, no chunking overhead)
+# - chunk_size: 100000 (only used in local_persist/streaming)
+# - max_memory_mb: 2048
+#
+# To switch modes: Just change the values above and restart the script!
+# No code changes needed.
+# ============================================================================
