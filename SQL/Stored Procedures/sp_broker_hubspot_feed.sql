@@ -35,6 +35,8 @@
 -- 01/21/26		        Dinesh Bobbili  			26. Added homeowner_2026_premium_goal_amt ,homeowner_2026_premium_actual_amt ,homeowner_2026_goal_progress_pc
 -- 01/21/26		        Dinesh Bobbili  			27. Updated logic to use tbroker_goal 
 -- 01/21/26		        Archtha Gudimalla  			28. Fixed broker goal errors after testing in sandbox 
+-- 01/23/26		        Archtha Gudimalla  			29. Fixed broker goal % by taking out the *100, FE property will add the % and *100.
+--                                                      If goal amoount is null or 0, Cait want to display it as null
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -222,9 +224,8 @@ BEGIN
             ,tb.primary_address_state_cd
             ,bg.new_business_premium_amt as homeowner_2026_premium_goal_amt
             ,isnull(ps.gwp_ho,0.0) as homeowner_2026_premium_actual_amt
-            ,case when bg.new_business_premium_amt is null then null
-                  when bg.new_business_premium_amt = 0 then 0
-                  else round(100*isnull(ps.gwp_ho,0.0)/bg.new_business_premium_amt,2) 
+            ,case when isnull(bg.new_business_premium_amt,0) = 0 then 0
+                  else round(isnull(ps.gwp_ho,0.0)/bg.new_business_premium_amt,2) 
             end as homeowner_2026_goal_progress_pc
         into    edw_temp.broker_hubspot_feed_temp1
         FROM    edw_core.tbroker tb
