@@ -37,6 +37,7 @@
 -- 01/21/26		        Archtha Gudimalla  			28. Fixed broker goal errors after testing in sandbox 
 -- 01/23/26		        Archtha Gudimalla  			29. Fixed broker goal % by taking out the *100, FE property will add the % and *100.
 --                                                      If goal amoount is null or 0, Cait want to display it as null
+-- 01/24/26		        Archtha Gudimalla  			30. Updated logic for goals gwp_ho
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -125,20 +126,15 @@ BEGIN
         ),
         pol_summ as
         (
-            SELECT
-                broker_sk,
-                sum(case when td.yearmonth = @var_end_mn then summ.inforce_premium_amt else 0 end) as gwp_ho
-            FROM edw_core.tpolicy_summary summ
-            inner join edw_core.tdate td on td.date_sk = summ.month_sk
-            inner join edw_core.tpolicy pol on pol.policy_sk = summ.policy_sk
-            inner join (select policy_sk, YEAR(cast(min(transaction_ts) as date)) pol_year
-                        from edw_core.tpolicy_history
-                        group by policy_sk) ph 
-            on ph.policy_sk = summ.policy_sk and ph.pol_year = year(getdate())
-            where td.yearmonth = @var_end_mn
-                and product_sk = 1
-                and pol.policy_term = 'New'
-            group by broker_sk
+            select pol.broker_id, sum(prm) gwp_ho 
+            from edw_core.tpolicy  pol
+            inner join (select policy_sk, YEAR(cast(min(transaction_ts) as date)) pol_year,sum(premium_amt) prm
+                          from edw_core.tpolicy_history
+                      group by policy_sk
+                      ) ph  on ph.policy_sk = pol.policy_sk and ph.pol_year = year(getdate()) 
+            where  policy_term = 'new'
+            and		product_cd = 'ho'
+            group by pol.broker_id 
         ),
         comm_tier AS
         (
@@ -233,7 +229,7 @@ BEGIN
         left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
         left join br_summ as bs    on bs.broker_sk = tb.broker_sk
         left join comm_tier as ct   on ct.broker_id = tb.broker_id
-        left join pol_summ as ps    on ps.broker_sk = tb.broker_sk
+        left join pol_summ as ps    on ps.broker_id = tb.broker_id
         left join edw_core.tbroker_goal bg on bg.broker_sk = tb.broker_sk and bg.goal_year = YEAR(GETDATE())
         where commercial_or_personal_business_type = 'Personal lines'
         and process_nm <> 'sp_os_broker';
