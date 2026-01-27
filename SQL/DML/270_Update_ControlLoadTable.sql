@@ -23,7 +23,7 @@ set CustomScript = '{
 		[CanBillToBrokerage], 
 		[CanBillToInsured], 
 		[CanBillToMortgagee], 
-		CASE WHEN [name] = ''Condo'' THEN ''CO'' WHEN ''PPEL'' THEN ''GRPEL'' ELSE [ProductCode] END AS [ProductCode], 
+		CASE WHEN [name] = ''Condo'' THEN ''CO'' WHEN [name] = ''Participant Personal Excess Liability'' THEN ''GRPEL'' ELSE [ProductCode] END AS [ProductCode], 
 		[ExternalSourceId], 
 		[IncrementPolicyNumberOnRenewal], 
 		[GeneratePolicyNumberOnCreation], 
