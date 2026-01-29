@@ -9,11 +9,9 @@ transaction_dt             date,
 transaction_seq_no         int,
 policy_history_sk          int,
 driver_no                  int,
-prefix                     varchar(255),
 first_nm                   varchar(255),
 middle_nm                  varchar(255),
 last_nm                    varchar(255),
-suffix                     varchar(255),
 birth_dt                   varchar(255),
 relationship_to_insured    varchar(255),
 has_dui_dwi_in             varchar(255),
@@ -34,7 +32,6 @@ CONSTRAINT uidx_tgrpel_driver_polno_effdt_drvno UNIQUE (policy_no,effective_dt,d
 
 INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
     VALUES ('tgrpel_driver','Type-2 Dimension','Base','Group Personal Excess Liability','Stored Procedure','Insert','Daily',getdate(),getdate());
-
 
 
 
