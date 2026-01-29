@@ -30,6 +30,7 @@
 -- 06/24/25		        Dinesh Bobbili				25. AD9848 Added product_cd column
 -- 09/09/25		        Archtha Gudimalla			26. AD10935 - Added monoline fix
 -- 01/13/26		        Dinesh Bobbili				27. AD12200 Added column non_binding_indication_offered_in
+-- 01/24/26		        Archtha Gudimalla			28. Casted non_binding_indication_offered_in as varchar 255 for null values
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]  
@@ -343,7 +344,7 @@ BEGIN
 						  end as monoline_in
             ,br.primary_address_state_cd broker_state
             ,pr.product_cd
-            ,null as non_binding_indication_offered_in
+            ,cast(null as varchar(255)) as non_binding_indication_offered_in
         into edw_temp.quote_hubspot_feed_temp2
         
         from edw_core.tpolicy q 
