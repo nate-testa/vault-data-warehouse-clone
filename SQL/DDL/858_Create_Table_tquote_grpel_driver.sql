@@ -1,6 +1,6 @@
 CREATE TABLE edw_core.tquote_grpel_driver
 (
-quote_grpel_driver_sk              int NOT NULL IDENTITY(1,1),
+quote_grpel_driver_sk     int NOT NULL IDENTITY(1,1),
 quote_no                  varchar(255),
 effective_dt               date,
 expiration_dt              date,
