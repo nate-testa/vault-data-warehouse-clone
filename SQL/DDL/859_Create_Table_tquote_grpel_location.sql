@@ -18,10 +18,8 @@ country_nm                 varchar(255),
 swimming_pool_in           varchar(255),
 is_rented_in               varchar(255),
 rental_term                varchar(255),
-short_term_rental_in       varchar(255),
-long_term_rental_in        varchar(255),
 primary_location_in        varchar(255),
-location_deleted_in        varchar(255),
+location_unique_id        varchar(255),
 source_system_sk           int,
 create_ts                  datetime,
 update_ts                  datetime,
@@ -33,3 +31,5 @@ CONSTRAINT uidx_tquote_grpel_location_qtno_effdt_locno UNIQUE (quote_no,effectiv
 INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
     VALUES ('tquote_grpel_location','Type-2 Dimension','Base','Group Personal Excess Liability','Stored Procedure','Insert','Daily',getdate(),getdate());
 
+
+DROP TABLE  edw_core.tquote_grpel_location
