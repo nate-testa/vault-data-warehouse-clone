@@ -16,7 +16,7 @@ zip_cd                     varchar(255),
 county_nm                  varchar(255), 
 country_nm                 varchar(255), 
 swimming_pool_in           varchar(255),
-is_rented_in               varchar(255),
+rented_in                  varchar(255),
 rental_term                varchar(255),
 primary_location_in        varchar(255),
 location_unique_id        varchar(255),
@@ -32,4 +32,4 @@ INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,dom
     VALUES ('tquote_grpel_location','Type-2 Dimension','Base','Group Personal Excess Liability','Stored Procedure','Insert','Daily',getdate(),getdate());
 
 
-DROP TABLE  edw_core.tquote_grpel_location
+
