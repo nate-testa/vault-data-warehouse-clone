@@ -37,21 +37,21 @@ BEGIN
 
         INSERT INTO edw_integration.broker_commission_email_api
         (
+            broker_code,
+            broker_name,
+            broker_city,
+            broker_state,
             commission_statement_email,
-            agency_code,
-            agency_name,
-            agency_city,
-            agency_state,
             create_ts,
             update_ts,
             etl_audit_sk
         )
         SELECT
+            b.broker_id AS broker_code,
+            COALESCE(b.dba_nm, b.broker_nm) AS broker_name,
+            b.primary_address_city_nm AS broker_city,
+            b.primary_address_state_cd AS broker_state,
             s.value AS commission_statement_email,
-            b.broker_id AS agency_code,
-            COALESCE(b.dba_nm, b.broker_nm) AS agency_name,
-            b.primary_address_city_nm AS agency_city,
-            b.primary_address_state_cd AS agency_state,
             getdate(),
             getdate(),
             @etl_audit_sk
