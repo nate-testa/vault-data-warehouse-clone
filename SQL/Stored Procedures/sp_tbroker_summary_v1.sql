@@ -67,6 +67,7 @@ GO
 -- 10/28/25		Dinesh Bobbili					38. AD11456 - Added new columns
 -- 10/28/25		Architha Gudimalla				39. AD11456 - Added filter on trenewal_summary - non_flat_cancelled_ct=1
 -- 11/23/25		Dinesh Bobbili					40. AD11643 - Added broker_sk filter
+-- 01/30/26		Dinesh Bobbili					41. Using accepted_renewal_ct for renewal_accepted_ct
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary_v1] 
@@ -416,7 +417,7 @@ BEGIN
 					select 	r.month_sk,
 							r.broker_sk, r.product_sk, r.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco, 
-						   	sum(r.renewal_non_flat_cancelled_ct) renewal_accepted_ct,  
+						   	sum(r.accepted_renewal_ct) renewal_accepted_ct,  
 							sum(r.renewal_ct) renewal_ct,  
 							sum(case when renewal_policy_sk > 0 
 									or (renewal_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_offered_quote_history_sk IS NOT NULL ) 
@@ -438,7 +439,7 @@ BEGIN
 							sum(r.non_flat_cancelled_ct) non_flat_cancelled_ct,
 							sum(isnull(case when non_flat_cancelled_ct = 1 THEN r.expiring_sixty_day_written_premium_amt end,0)) expiring_sixty_day_written_premium_amt
 
-					from edw_core.trenewal_summary r 
+					from edw_stage.trenewal_summary_v1 r 
 					inner join edw_core.tpolicy pol on r.policy_sk = pol.policy_sk 
 					inner join edw_core.tstate st  on pol.risk_state_cd = st.state_cd
 					left join edw_core.tquote q  on q.quote_sk = r.renewal_quote_sk
