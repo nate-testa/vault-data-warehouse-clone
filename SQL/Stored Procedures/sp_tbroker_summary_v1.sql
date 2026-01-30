@@ -67,6 +67,7 @@ GO
 -- 10/28/25		Dinesh Bobbili					38. AD11456 - Added new columns
 -- 10/28/25		Architha Gudimalla				39. AD11456 - Added filter on trenewal_summary - non_flat_cancelled_ct=1
 -- 11/23/25		Dinesh Bobbili					40. AD11643 - Added broker_sk filter
+-- 01/30/26		Dinesh Bobbili					41. Using accepted_renewal_ct for renewal_accepted_ct
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary_v1] 
@@ -416,7 +417,7 @@ BEGIN
 					select 	r.month_sk,
 							r.broker_sk, r.product_sk, r.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco, 
-						   	sum(r.renewal_non_flat_cancelled_ct) renewal_accepted_ct,  
+						   	sum(r.accepted_renewal_ct) renewal_accepted_ct,  
 							sum(r.renewal_ct) renewal_ct,  
 							sum(case when renewal_policy_sk > 0 
 									or (renewal_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_offered_quote_history_sk IS NOT NULL ) 
