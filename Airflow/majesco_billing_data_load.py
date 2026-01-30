@@ -2,11 +2,12 @@ import os
 import pendulum
 from datetime import timedelta
 from airflow import DAG
-from airflow.hooks.mssql_hook import MsSqlHook
-from airflow.operators.email_operator import EmailOperator
-from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.python_operator import PythonOperator
-from vault_edw_HTML_format import get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
+from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
+from airflow.operators.email import EmailOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import PythonOperator
+from airflow.providers.microsoft.mssql.operators.mssql import MsSqlOperator
+from vault_edw_HTML_format import get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML, get_sp_success_data_HTML
 from majesco_billing_files_processing import process_all_files
 
 to_email = "itdatateam@vault.insurance"
@@ -134,9 +135,31 @@ with DAG(
 ) as dag:
     
 
-    start = DummyOperator(
+    start = EmptyOperator(
         task_id='start',
     )
+
+    majesco_billing_group_items = [
+        'sp_tpolicy_billing_paid_in_update'
+    ]
+    
+    operators = []
+    for item in majesco_billing_group_items:
+        operator = MsSqlOperator(
+            task_id=item,
+            mssql_conn_id='Vault_EDW',
+            sql=f"EXEC edw_core.{item}",
+            database="vault_edw",
+            autocommit=True,
+        )
+        operators.append(operator)
+
+    send_majesco_billing_email = EmailOperator(
+            task_id='send_majesco_billing_email',
+            to=to_email,
+            subject='Airflow - Policy billing paid table loaded successfully',
+            html_content=get_sp_success_data_HTML(majesco_billing_group_items, 'All stored procedures executed successfully for all the Policy billing paid tables'),
+        )
         
     process_majesco_billing_files = PythonOperator(
         task_id='process_majesco_billing_files',
@@ -158,8 +181,13 @@ with DAG(
             dag=dag,
         )
 
-    end = DummyOperator(
+    end = EmptyOperator(
         task_id='end',
     )
 
-start >> process_majesco_billing_files >> check_data_and_send_email >> check_not_loaded_data_and_send_email >> end
+start.set_downstream(process_majesco_billing_files)
+process_majesco_billing_files.set_downstream(operators[-1])
+operators[-1].set_downstream(check_data_and_send_email)
+check_data_and_send_email.set_downstream(check_not_loaded_data_and_send_email)
+check_not_loaded_data_and_send_email.set_downstream(send_majesco_billing_email)
+send_majesco_billing_email.set_downstream(end)
