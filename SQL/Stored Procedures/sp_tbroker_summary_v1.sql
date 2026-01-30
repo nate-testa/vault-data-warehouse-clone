@@ -439,7 +439,7 @@ BEGIN
 							sum(r.non_flat_cancelled_ct) non_flat_cancelled_ct,
 							sum(isnull(case when non_flat_cancelled_ct = 1 THEN r.expiring_sixty_day_written_premium_amt end,0)) expiring_sixty_day_written_premium_amt
 
-					from edw_core.trenewal_summary_v1 r 
+					from edw_stage.trenewal_summary_v1 r 
 					inner join edw_core.tpolicy pol on r.policy_sk = pol.policy_sk 
 					inner join edw_core.tstate st  on pol.risk_state_cd = st.state_cd
 					left join edw_core.tquote q  on q.quote_sk = r.renewal_quote_sk
