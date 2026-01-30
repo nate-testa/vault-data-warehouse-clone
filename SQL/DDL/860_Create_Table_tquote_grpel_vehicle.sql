@@ -1,3 +1,7 @@
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES 
+               WHERE TABLE_SCHEMA = 'edw_core' 
+               AND TABLE_NAME = 'tquote_grpel_vehicle')
+BEGIN
 CREATE TABLE edw_core.tquote_grpel_vehicle
 (
 quote_grpel_vehicle_sk             int NOT NULL IDENTITY(1,1),
@@ -13,12 +17,13 @@ vehicle_model              varchar(255),
 vehicle_unique_id          varchar(255),
 vehicle_deleted_in         varchar(255),
 source_system_sk           int,
-create_ts                  datetime,
-update_ts                  datetime,
+create_ts                  datetime2(7),
+update_ts                  datetime2(7),
 etl_audit_sk               int,
 CONSTRAINT pk_tquote_grpel_vehicle PRIMARY KEY (quote_grpel_vehicle_sk),
-CONSTRAINT uidx_tquote_grpel_vehicle_qtno_effdt_vehno UNIQUE (quote_no,effective_dt,vehicle_no)
+CONSTRAINT uidx_tquote_grpel_vehicle_qtno_effdt_vehuid UNIQUE (quote_no,effective_dt,vehicle_unique_id)
 );
+END
 
 INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
     VALUES ('tquote_grpel_vehicle','Type-2 Dimension','Base','Group Personal Excess Liability','Stored Procedure','Insert','Daily',getdate(),getdate());

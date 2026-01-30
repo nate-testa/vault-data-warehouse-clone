@@ -1,4 +1,7 @@
-
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES 
+               WHERE TABLE_SCHEMA = 'edw_core' 
+               AND TABLE_NAME = 'tquote_grpel_location')
+BEGIN
 CREATE TABLE edw_core.tquote_grpel_location
 (
 quote_grpel_location_sk           int NOT NULL IDENTITY(1,1),
@@ -22,12 +25,13 @@ primary_location_in        varchar(255),
 location_unique_id         varchar(255),
 location_deleted_in        varchar(255),
 source_system_sk           int,
-create_ts                  datetime,
-update_ts                  datetime,
+create_ts                  datetime2(7),
+update_ts                  datetime2(7),
 etl_audit_sk               int,
 CONSTRAINT pk_tquote_grpel_location PRIMARY KEY (quote_grpel_location_sk),
-CONSTRAINT uidx_tquote_grpel_location_qtno_effdt_locno UNIQUE (quote_no,effective_dt,location_no)
+CONSTRAINT uidx_tquote_grpel_location_qtno_effdt_locuid UNIQUE (quote_no,effective_dt,location_unique_id)
 );
+END
 
 INSERT INTO edw_core.tedw_table_detail(table_nm,table_type,table_category_nm,domain_nm,load_method,load_type,load_frequency,create_ts,update_ts) 
     VALUES ('tquote_grpel_location','Type-2 Dimension','Base','Group Personal Excess Liability','Stored Procedure','Insert','Daily',getdate(),getdate());
