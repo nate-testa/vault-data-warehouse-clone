@@ -10,7 +10,7 @@ GO
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_broker_commission_email]
 (
-  @agencyCode varchar(255)
+  @brokerCode varchar(255)
 )
 AS
 BEGIN
@@ -19,14 +19,14 @@ BEGIN
     SET NOCOUNT ON
 
 	SELECT
-	commission_statement_email,
-	agency_code,
-	agency_name,
-	agency_city,
-	agency_state
+	broker_code,
+	broker_name,
+	broker_city,
+	broker_state,
+    commission_statement_email
     FROM
         edw_integration.broker_commission_email_api
     WHERE
-        agency_code = @agencyCode
+        broker_code = @brokerCode
 END
 GO
