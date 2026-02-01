@@ -10,8 +10,10 @@ import constants
 from shared.logger import get_logger
 from shared.id_map import IDMapFunctions
 from shared.association import Association
+from shared.error_reporter import ErrorReporter
 
 logger = get_logger(__name__)
+error_reporter = ErrorReporter()
 
 class RecordsDispatcher:
     # Batch limit according to HubSpot API documentation.
@@ -34,6 +36,15 @@ class RecordsDispatcher:
                 f'"URL": "{res.url}"'
             )
             IDMapFunctions.action_router(action_type, batch, res.json())
+            
+            # Update success statistics
+            object_base = action_type.replace('_create', '').replace('_update', '')
+            if '_create' in action_type:
+                count = len(res.json().get('results', [])) if batch else 1
+                error_reporter.update_stats(object_base, 'created', count)
+            elif '_update' in action_type:
+                count = len(res.json().get('results', [])) if batch else 1
+                error_reporter.update_stats(object_base, 'updated', count)
         else:
             if log_failure and res is not None:
                 logger.error(
@@ -43,10 +54,56 @@ class RecordsDispatcher:
                     f'"FAIL RESPONSE": "{res.text}"'
                     f'{failure_addon}'
                 )
+                
+                # Capture error in error reporter
+                error_category = self._categorize_error(res)
+                error_details = {
+                    'method': res.request.method,
+                    'status_code': res.status_code,
+                    'url': res.url,
+                    'response': res.text[:500],  # Limit response length
+                    'action_type': action_type
+                }
+                error_reporter.add_error(error_category, res.text[:200], error_details)
+                
+                # Update failure statistics
+                object_base = action_type.replace('_create', '').replace('_update', '').replace('_associations', '').replace('-association', '')
+                if 'association' in action_type:
+                    error_reporter.update_stats('associations', 'failed', 1)
+                else:
+                    error_reporter.update_stats(object_base, 'failed', 1)
             # If response is None or not successful, return None.
             res = None
 
         return res
+    
+    def _categorize_error(self, res):
+        """Categorize error based on response"""
+        if res is None:
+            return 'NETWORK_ERROR'
+        
+        text = res.text.lower()
+        
+        if 'association_user_config_limit_exceeded' in text:
+            return 'ASSOCIATION_LIMIT'
+        elif 'property' in text and 'does not exist' in text:
+            return 'PROPERTY_NOT_FOUND'
+        elif 'contact already exists' in text:
+            return 'DUPLICATE_CONTACT'
+        elif 'already has that value' in text:
+            return 'DUPLICATE_VALUE'
+        elif '"category":"validation_error"' in text:
+            return 'VALIDATION_ERROR'
+        elif res.status_code == 429:
+            return 'RATE_LIMIT'
+        elif res.status_code == 400:
+            return 'BAD_REQUEST'
+        elif res.status_code == 404:
+            return 'NOT_FOUND'
+        elif res.status_code >= 500:
+            return 'SERVER_ERROR'
+        else:
+            return 'OTHER_ERROR'
 
     def unit_create_record(self, object_type, payload):
         endpoint = f'https://api.hubapi.com/crm/v3/objects/{object_type}'
@@ -76,6 +133,7 @@ class RecordsDispatcher:
                     f'unit_create_record failed (attempt {attempt+1}) with error: {exc}. '
                     f'Retrying in {delay_seconds} seconds...'
                 )
+                error_reporter.add_warning('NETWORK_RETRY', f'Retry attempt {attempt+1} for unit_create_record: {exc}')
                 time.sleep(delay_seconds)
                 delay_seconds *= 2
 
@@ -272,6 +330,20 @@ class RecordsDispatcher:
                         f'Existing associations to: {existing_ids}'
                     )
                     
+                    # Capture in error reporter
+                    error_reporter.add_error(
+                        'ASSOCIATION_LIMIT',
+                        f'Association limit exceeded for type {association_id}',
+                        {
+                            'from_object': from_object,
+                            'from_id': payload["from"]["id"],
+                            'to_object': to_object,
+                            'to_id': payload["to"]["id"],
+                            'existing_associations': existing_ids,
+                            'association_type_id': association_id
+                        }
+                    )
+                    
                     # Only delete and replace if configured to do so
                     if constants.REPLACE_ASSOCIATIONS_ON_LIMIT:
                         logger.info('REPLACE_ASSOCIATIONS_ON_LIMIT is True. Replacing existing association...')
@@ -310,13 +382,19 @@ class RecordsDispatcher:
                 time.sleep(delay_seconds)
                 delay_seconds *= 2
 
-        return self.api_log(
+        result = self.api_log(
             res,
             201,
             self.action_type,
             batch=False,
             failure_addon=f',"PAYLOAD": {payload}'
         )
+        
+        # Track successful association
+        if result is not None:
+            error_reporter.update_stats('associations', 'created', 1)
+        
+        return result
 
     def batch_associate_records(self, object_type, payload):
         from_object, to_object, association_id = Association.route_associations(object_type)
