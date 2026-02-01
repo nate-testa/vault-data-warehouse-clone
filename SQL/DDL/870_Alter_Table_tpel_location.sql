@@ -15,7 +15,7 @@ END;
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = 'edw_core'
       AND TABLE_NAME = 'tpel_location'
-      AND COLUMN_NAME = 'trust_or_legal_entity_legal_name'
+      AND COLUMN_NAME = 'trust_or_legal_entity_legal_nm'
 )
 BEGIN
     ALTER TABLE edw_core.tpel_location
@@ -243,3 +243,5 @@ BEGIN
     ALTER TABLE edw_core.tpel_location
     ADD is_any_vault_home_for_sale_in  VARCHAR(255) NULL;
 END;
+
+

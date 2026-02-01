@@ -15,12 +15,13 @@ END;
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = 'edw_core'
       AND TABLE_NAME = 'tquote_pel_location'
-      AND COLUMN_NAME = 'trust_or_legal_entity_legal_name'
+      AND COLUMN_NAME = 'trust_or_legal_entity_legal_nm'
 )
 BEGIN
     ALTER TABLE edw_core.tquote_pel_location
-    ADD trust_or_legal_entity_legal_name  VARCHAR(255) NULL;
+    ADD trust_or_legal_entity_legal_nm  VARCHAR(255) NULL;
 END;
+
 
 
  IF NOT EXISTS (
