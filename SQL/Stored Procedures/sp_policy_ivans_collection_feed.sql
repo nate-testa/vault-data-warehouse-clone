@@ -7,6 +7,7 @@
 -- 05/06/25				Yunus Mohammed				1. Created this procedure
 -- 09/02/25				Alberto Almario				2. Add new columns Addr1_063,City_064,StateProvCd_065,PostalCode_066,Latitude_067,Longitude_068,County_069,Country_070
 -- 09/08/25				Alberto Almario				3. Use tpolicy_insured for address columns
+-- 28/01/26				Alberto Almario				4. Add filter scheduled_item_deleted_in = 'No'
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_collection_feed]
@@ -156,6 +157,7 @@ BEGIN
 							ptf.policy_no = csi.policy_no
 							AND ptf.effective_dt = csi.effective_dt
 							AND ptf.transaction_seq_no = csi.transaction_seq_no
+							AND csi.scheduled_item_deleted_in = 'No'
 					FOR JSON PATH, INCLUDE_NULL_VALUES 
 				) AS Scheduled_Items
 				FROM edw_core.tcollection_scheduled_item as ptf
