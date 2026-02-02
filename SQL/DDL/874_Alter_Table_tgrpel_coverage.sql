@@ -83,42 +83,6 @@ SELECT 1
 FROM INFORMATION_SCHEMA.COLUMNS					
 WHERE TABLE_SCHEMA='edw_core'					
 AND TABLE_NAME = 'tgrpel_coverage'					
-AND COLUMN_NAME = 'auto_underlying_limit_amt'					
-) 
-BEGIN 
-    ALTER TABLE edw_core.tgrpel_coverage ADD auto_underlying_limit_amt VARCHAR(255) NULL
-END ; 
-
-IF NOT EXISTS (					
-SELECT 1					
-FROM INFORMATION_SCHEMA.COLUMNS					
-WHERE TABLE_SCHEMA='edw_core'					
-AND TABLE_NAME = 'tgrpel_coverage'					
-AND COLUMN_NAME = 'home_underlying_limit_amt'					
-) 
-BEGIN 
-    ALTER TABLE edw_core.tgrpel_coverage ADD home_underlying_limit_amt VARCHAR(255) NULL
-END ; 
-
-
-IF NOT EXISTS (					
-SELECT 1					
-FROM INFORMATION_SCHEMA.COLUMNS					
-WHERE TABLE_SCHEMA='edw_core'					
-AND TABLE_NAME = 'tgrpel_coverage'					
-AND COLUMN_NAME = 'watercraft_underlying_limit_amt'					
-) 
-BEGIN 
-    ALTER TABLE edw_core.tgrpel_coverage ADD watercraft_underlying_limit_amt VARCHAR(255) NULL
-END ; 
-
-
-
-IF NOT EXISTS (					
-SELECT 1					
-FROM INFORMATION_SCHEMA.COLUMNS					
-WHERE TABLE_SCHEMA='edw_core'					
-AND TABLE_NAME = 'tgrpel_coverage'					
 AND COLUMN_NAME = 'auto_insurance_company'					
 ) 
 BEGIN 
@@ -149,3 +113,4 @@ AND COLUMN_NAME = 'watercraft_insurance_company'
 BEGIN 
     ALTER TABLE edw_core.tgrpel_coverage ADD watercraft_insurance_company VARCHAR(255) NULL
 END ; 
+
