@@ -1,6 +1,6 @@
 --95 (Inforce premium/Unearned Premium validation)
 update edw_core.tvalidation_sql
-set source_sql = 'select sum(tpts.premium_amt)  
+set source_sql = 'select @source_ct = sum(tpts.premium_amt)  
 from  
 edw_core.tpolicy_transaction_summary tpts
 INNER JOIN edw_core.tdaily_inforce_policy dip on dip.policy_sk = tpts.policy_sk
@@ -19,7 +19,7 @@ where validation_sql_desc = 'Inforce premium/Unearned Premium validation';
 
 --96 (Inforce count/Unearned policy count validation)
 update edw_core.tvalidation_sql
-set source_sql = 'select count(distinct dip.policy_sk)  
+set source_sql = 'select @source_ct = count(distinct dip.policy_sk)  
 from edw_core.tdate d
 INNER JOIN edw_core.tdaily_inforce_policy dip on dip.inforce_dt_sk =d.date_sk  
 WHERE d.actual_dt = ''var_actual_dt'' and product_sk <> 10'
@@ -27,7 +27,7 @@ where validation_sql_desc = 'Inforce count/Unearned policy count validation';
 
 --114 tpolicy_summary - total earned premium comparison to tpolicy_transaction_summary
 update edw_core.tvalidation_sql
-set source_sql = 'select count(*)  from
+set source_sql = 'select @source_ct=  count(*)  from
 (  
 	select summ.policy_sk, sum(summ.mtd_premium_amt) wp, sum(earned_premium_amt) ep
 	from edw_core.tpolicy_summary summ
@@ -53,3 +53,9 @@ full join
 ) b on a.policy_sk = b.policy_sk  
 where a.ep-b.ep not between -0.1 and 0.1 or a.policy_sk is null or b.policy_sk is null'
 where validation_sql_desc = 'tpolicy_summary - total earned premium comparison to tpolicy_transaction_summary';
+
+
+--147 (Claim workday ITD reserve feed - duplicate)
+update edw_core.tvalidation_sql
+set target_sql='select 84'
+where validation_sql_desc = 'Claim workday ITD reserve feed - duplicate';
