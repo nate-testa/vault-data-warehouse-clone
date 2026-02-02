@@ -72,7 +72,7 @@ BEGIN
 
         select np.reporting_month,np.policy_no,np.effective_dt,np.transaction_effective_dt,np.expiration_dt,transaction_dt,np.transaction_seq_no,ph.policy_history_sk,
         insured_spouse_first_name as first_nm,insured_spouse_last_name as last_nm,trim(concat_ws(' ',insured_spouse_first_name, insured_spouse_last_name)) as insured_nm,
-        'Individual' as insured_type,'Yes' as primary_insured_in,
+        'Individual' as insured_type,'No' as primary_insured_in,
         mailing_address_line_1,mailing_address_line_2,mailing_address_city_nm,mailing_address_state_cd,mailing_address_zip_cd
         from
         edw_temp.tpolicy_insured_nfp_temp1 np
