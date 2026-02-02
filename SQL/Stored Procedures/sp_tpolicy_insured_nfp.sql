@@ -4,7 +4,7 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date      |Author										|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 01/28/26		      Yunus Mohammed				 1. Created this procedure  
+-- 02/02/26		      Yunus Mohammed				 1. Created this procedure  
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_insured_nfp]
@@ -35,87 +35,52 @@ BEGIN
         drop table if exists edw_temp.tpolicy_insured_nfp_temp1
         drop table if exists edw_temp.tpolicy_insured_nfp_temp2
         
-        select *
-        into edw_temp.tpolicy_insured_nfp_temp1
-        from
-            edw_core.tpolicy_history tp
-        where
-            product_sk = @ssk
-            and create_ts > @last_source_extract_ts
-
-        select *
-        into edw_temp.tpolicy_insured_nfp_temp2
-        from
-        (
         SELECT
-            ROW_NUMBER() OVER (
-                PARTITION BY 
-                    np.insured_cert_no,
-                    np.term_effective_date,
-                    np.transaction_seq_no
-                ORDER BY 
-                    np.transaction_seq_no DESC
-            ) AS dup_rn,
-            tp.policy_no,
-            tp.effective_dt,
-            tp.transaction_seq_no,
-            tp.transaction_effective_dt,
-            tp.transaction_ts as transaction_dt,
-            tp.policy_history_sk,
-            concat_ws(' ',np.insured_first_name, np.insured_last_name) as insured_nm,
-            np.insured_first_name as first_nm,
-            np.insured_last_name as last_nm,
-            'Individual' as insured_type,
-            'Yes' as primary_insured_in,
+            reporting_month,
+            np.insured_cert_no AS policy_no,
+            np.term_effective_date AS effective_dt,
+            np.transaction_date AS transaction_effective_dt,
+            np.expiration_date AS expiration_dt,
+            np.transaction_date AS transaction_dt,
+            np.transaction_seq_no AS transaction_seq_no,
+            np.insured_first_name,
+            np.insured_last_name,
+            np.insured_spouse_first_name,
+            np.insured_spouse_last_name,
             np.address1 as mailing_address_line_1,
             np.address2 as mailing_address_line_2,
             np.city as mailing_address_city_nm,
             np.state as mailing_address_state_cd,
             np.zip as mailing_address_zip_cd
+            into edw_temp.tpolicy_insured_nfp_temp1
         FROM edw_stage.nfp_policy np
-        inner join edw_temp.tpolicy_insured_nfp_temp1 tp on np.insured_cert_no = tp.policy_no
-        and np.effective_date = tp.effective_dt and np.transaction_seq_no = tp.transaction_seq_no
-        where insured_cert_no is not null 
-        ) as a
-        where dup_rn = 1
+        WHERE 
+        insured_cert_no is not null 
+        and np.reporting_month > @last_source_extract_ts
+
+        select np.reporting_month,np.policy_no,np.effective_dt,np.transaction_effective_dt,np.expiration_dt,transaction_dt,np.transaction_seq_no,ph.policy_history_sk,
+        insured_first_name as first_nm,insured_last_name as last_nm,trim(concat_ws(' ',insured_first_name, insured_last_name)) as insured_nm,
+        'Individual' as insured_type,'Yes' as primary_insured_in,
+        mailing_address_line_1,mailing_address_line_2,mailing_address_city_nm,mailing_address_state_cd,mailing_address_zip_cd
+        into edw_temp.tpolicy_insured_nfp_temp2
+        from
+        edw_temp.tpolicy_insured_nfp_temp1 np
+        left join edw_core.tpolicy_history ph on np.policy_no = ph.policy_no and np.effective_dt = ph.effective_dt 
+        and np.transaction_seq_no = ph.transaction_seq_no
 
         union
 
-        select *
+        select np.reporting_month,np.policy_no,np.effective_dt,np.transaction_effective_dt,np.expiration_dt,transaction_dt,np.transaction_seq_no,ph.policy_history_sk,
+        insured_spouse_first_name as first_nm,insured_spouse_last_name as last_nm,trim(concat_ws(' ',insured_spouse_first_name, insured_spouse_last_name)) as insured_nm,
+        'Individual' as insured_type,'Yes' as primary_insured_in,
+        mailing_address_line_1,mailing_address_line_2,mailing_address_city_nm,mailing_address_state_cd,mailing_address_zip_cd
         from
-        (
-        SELECT
-            ROW_NUMBER() OVER (
-                PARTITION BY 
-                    np.insured_cert_no,
-                    np.term_effective_date,
-                    np.transaction_seq_no
-                ORDER BY 
-                    np.transaction_seq_no DESC
-            ) AS dup_rn,
-            tp.policy_no,
-            tp.effective_dt,
-            tp.transaction_seq_no,
-            tp.transaction_effective_dt,
-            tp.transaction_ts as transaction_dt,
-            tp.policy_history_sk,
-            concat_ws(' ',np.insured_spouse_first_name, np.insured_spouse_last_name) as insured_nm,
-            np.insured_spouse_first_name as first_nm,
-            np.insured_spouse_last_name as last_nm,
-            'Individual' as insured_type,
-            'No' as primary_insured_in,
-            np.address1 as mailing_address_line_1,
-            np.address2 as mailing_address_line_2,
-            np.city as mailing_address_city_nm,
-            np.state as mailing_address_state_cd,
-            np.zip as mailing_address_zip_cd
-        FROM edw_stage.nfp_policy np
-        inner join edw_temp.tpolicy_insured_nfp_temp1 tp on np.insured_cert_no = tp.policy_no
-        and np.effective_date = tp.effective_dt and np.transaction_seq_no = tp.transaction_seq_no
-        where np.insured_spouse_first_name is not null
-            or np.insured_spouse_last_name is not null
-        ) as a
-        where dup_rn = 1
+        edw_temp.tpolicy_insured_nfp_temp1 np
+        left join edw_core.tpolicy_history ph on np.policy_no = ph.policy_no and np.effective_dt = ph.effective_dt 
+        and np.transaction_seq_no = ph.transaction_seq_no
+        where
+        isnull(insured_spouse_first_name,'')!='' 
+        or isnull(insured_spouse_last_name,'')!=''
 
 		INSERT into edw_core.tpolicy_insured
 			(
@@ -144,9 +109,8 @@ BEGIN
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX((t1.IssuedDate)) FROM edw_temp.tpolicy_insured_temp1 t1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX((t1.reporting_month)) FROM edw_temp.tpolicy_insured_nfp_temp2 t1),@last_source_extract_ts)
 
-        
         drop table if exists edw_temp.tpolicy_insured_nfp_temp1
         drop table if exists edw_temp.tpolicy_insured_nfp_temp2
 		
