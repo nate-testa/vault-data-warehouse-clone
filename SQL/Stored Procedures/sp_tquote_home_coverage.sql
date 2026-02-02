@@ -28,6 +28,7 @@
 -- 10/24/25				Dinesh Bobbili				22. AD-11450 Added new column underwriter_required_inspection
 -- 11/26/25				Yunus Mohammed		23. AD-11842 Mapping updated for prior_claim_last5yr_in and added 2 new
 --																					columns for prior claims
+-- 02/02/26				Dinesh Bobbili				24. AD-12416 Added new columns high_risk_wui_property_in,effective_built_year
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage]
 
@@ -205,7 +206,7 @@ BEGIN
 				newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
 				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
 				wildfire_suppression_system,wildfire_decks_balconies_porches_stairs,
-				premium_analytics_grade,underwriter_required_inspection,
+				premium_analytics_grade,underwriter_required_inspection,high_risk_wui_property_in,effective_built_year,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)			
 			SELECT
@@ -366,6 +367,8 @@ BEGIN
 				tthc.WildfireSuppressionSystem as wildfire_suppression_system,
 				tthc.WildfireDecksBalconiesPorchesStairs as wildfire_decks_balconies_porches_stairs,
 				tthc.premium_analytics_grade,tthc.UnderwriterRequiredInspection as underwriter_required_inspection,
+				tthc.HighRiskWUIProperty as high_risk_wui_property_in,
+				tthc.EffectiveYearBuilt as effective_built_year,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.tquote_home_coverage_temp2 AS tthc
