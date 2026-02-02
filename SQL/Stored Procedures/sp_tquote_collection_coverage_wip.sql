@@ -8,6 +8,7 @@
 -- 03/06/24		Alberto Almario 				2. new column emergency_extension_notice_in
 -- 22/08/24		Hernando Gonzalez				3. Remove effective date from the merge join
 -- 01/23/25		Alberto Almario				    4. Added new column theft_or_loss_general_conditions_endorsement_in
+-- 02/02/26		Dinesh Bobbili				    5. Added new column theft_or_loss_general_conditions_approval_in
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_coverage_wip]
@@ -234,6 +235,7 @@ BEGIN
                 ,@etl_audit_sk AS [etl_audit_sk]
                 ,[EmergencyExtensionNotice] AS emergency_extension_notice_in
                 ,[TheftOrLossGeneralConditionsEndorsement] AS theft_or_loss_general_conditions_endorsement_in
+                ,[TheftOrLossGeneralConditionsApproval] AS theft_or_loss_general_conditions_approval_in
             FROM
                 edw_temp.tquote_collection_coverage_wip_temp1
         ) AS SOURCE
@@ -360,7 +362,8 @@ BEGIN
                 TARGET.update_ts = SOURCE.update_ts,
                 TARGET.etl_audit_sk = SOURCE.etl_audit_sk,
                 TARGET.emergency_extension_notice_in = SOURCE.emergency_extension_notice_in,
-                TARGET.theft_or_loss_general_conditions_endorsement_in = SOURCE.theft_or_loss_general_conditions_endorsement_in
+                TARGET.theft_or_loss_general_conditions_endorsement_in = SOURCE.theft_or_loss_general_conditions_endorsement_in,
+                TARGET.theft_or_loss_general_conditions_approval_in = SOURCE.theft_or_loss_general_conditions_approval_in
 
         WHEN NOT MATCHED BY TARGET THEN
             INSERT (
@@ -403,7 +406,7 @@ BEGIN
                 wildfire_portable_fire_break_system_in, wildfire_speciality_ember_resistant_venting_in, wildfire_threat,
                 wildfire_wood_shake_or_shingle_roof_in, couture_wearable_collectibles_class_in,
                 source_system_sk, create_ts, update_ts, etl_audit_sk,
-                emergency_extension_notice_in,theft_or_loss_general_conditions_endorsement_in
+                emergency_extension_notice_in,theft_or_loss_general_conditions_endorsement_in,theft_or_loss_general_conditions_approval_in
             )
             VALUES (
                 SOURCE.quote_no, SOURCE.effective_dt, SOURCE.expiration_dt, SOURCE.transaction_seq_no,
@@ -447,7 +450,8 @@ BEGIN
                 SOURCE.wildfire_portable_fire_break_system_in, SOURCE.wildfire_speciality_ember_resistant_venting_in, SOURCE.wildfire_threat,
                 SOURCE.wildfire_wood_shake_or_shingle_roof_in, SOURCE.couture_wearable_collectibles_class_in,
                 SOURCE.source_system_sk, SOURCE.create_ts, SOURCE.update_ts, SOURCE.etl_audit_sk,
-                SOURCE.emergency_extension_notice_in, SOURCE.theft_or_loss_general_conditions_endorsement_in
+                SOURCE.emergency_extension_notice_in, SOURCE.theft_or_loss_general_conditions_endorsement_in,
+                SOURCE.theft_or_loss_general_conditions_approval_in
         );
 
 		SET @rows_affected=@@ROWCOUNT;

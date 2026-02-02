@@ -14,6 +14,7 @@ GO
 -- 11/14/23		Sandeep Gundreddy       		2. Modified quote_collection_location_sk join
 -- 03/06/24		Alberto Almario 				3. new column emergency_extension_notice_in
 -- 01/22/25		Alberto Almario				    4. Added new column theft_or_loss_general_conditions_endorsement_in
+-- 02/02/26		Dinesh Bobbili				    5. Added new column theft_or_loss_general_conditions_approval_in
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_coverage]
@@ -237,6 +238,7 @@ BEGIN
            ,[etl_audit_sk]
            ,[emergency_extension_notice_in]
            ,[theft_or_loss_general_conditions_endorsement_in]
+           ,[theft_or_loss_general_conditions_approval_in]
 			)
 		SELECT 
 			[quote_no],[EffectiveDate],[ExpirationDate],[Number],
@@ -264,7 +266,7 @@ BEGIN
             [WildfireGutterGuards],[WildfireHazardSeverity],[WildfireNearestDistanceToPerimeter],[WildfireNumberOfOccurrencesNear],[WildfireNumberOfOccurrences],
             [WildfirePermanentlyInstalledSpraySystem],[WildfirePortableFireBreakSystem],[WildfireSpecialityEmberResistantVenting],[WildfireThreat],
             [WildfireWoodShakeOrShingleRoof],[CoutureAndWearableCollectiblesClassCouture],[source_system_sk],getdate(),getdate(), @etl_audit_sk,
-            [EmergencyExtensionNotice],[TheftOrLossGeneralConditionsEndorsement]
+            [EmergencyExtensionNotice],[TheftOrLossGeneralConditionsEndorsement],[TheftOrLossGeneralConditionsApproval]
 		FROM
 			[edw_temp].[tquote_collection_coverage_temp1] 
 

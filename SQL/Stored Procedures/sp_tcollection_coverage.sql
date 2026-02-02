@@ -233,6 +233,7 @@ BEGIN
            ,[etl_audit_sk]
            ,[emergency_extension_notice_in]
            ,[theft_or_loss_general_conditions_endorsement_in]
+           ,[theft_or_loss_general_conditions_approval_in]
 			)
 		SELECT 
 			[PolicyNumber],[EffectiveDate],[IssuedDate],[ExpirationDate],[transaction_dt],[PolicyChangeNumber],
@@ -260,7 +261,7 @@ BEGIN
             [WildfireGutterGuards],[WildfireHazardSeverity],[WildfireNearestDistanceToPerimeter],[WildfireNumberOfOccurrencesNear],[WildfireNumberOfOccurrences],
             [WildfirePermanentlyInstalledSpraySystem],[WildfirePortableFireBreakSystem],[WildfireSpecialityEmberResistantVenting],[WildfireThreat],
             [WildfireWoodShakeOrShingleRoof],[CoutureAndWearableCollectiblesClassCouture],[source_system_sk],getdate(),getdate(), @etl_audit_sk,
-            [EmergencyExtensionNotice],[TheftOrLossGeneralConditionsEndorsement]
+            [EmergencyExtensionNotice],[TheftOrLossGeneralConditionsEndorsement],[TheftOrLossGeneralConditionsApproval]
 		FROM
 			[edw_temp].[tcollection_coverage_temp1] 
 
