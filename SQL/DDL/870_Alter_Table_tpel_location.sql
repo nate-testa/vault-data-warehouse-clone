@@ -19,8 +19,9 @@ END;
 )
 BEGIN
     ALTER TABLE edw_core.tpel_location
-    ADD trust_or_legal_entity_legal_name  VARCHAR(255) NULL;
+    ADD trust_or_legal_entity_legal_nm  VARCHAR(255) NULL;
 END;
+
 
 
  IF NOT EXISTS (
