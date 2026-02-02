@@ -54,8 +54,7 @@ BEGIN
 				p.effective_dt as inception_date,
 				JSON_QUERY((
 						select
-							case
-								when product_nm = 'Group Personal Excess Liability' then p.insured_nm
+							case								
 								when [pi].insured_type = 'Entity' then [pi].insured_nm
 							end as [name],
 							case when [pi].Insured_type = 'Individual' then [pi].first_nm end as [firstName],
