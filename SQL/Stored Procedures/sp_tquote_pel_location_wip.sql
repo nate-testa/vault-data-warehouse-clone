@@ -8,6 +8,7 @@
 -- 07/03/2024			Alberto Almario						3. Added primary_location_in
 -- 08/22/2024			Architha Gudimalla					4. Removed eff_dt from merge
 -- 10/01/2024			Architha Gudimalla					5. Corrected AddressCountry
+-- 02/03/26				Dinesh Bobbii		 				6. AD12434 - Added new columns
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_location_wip]
 
@@ -37,7 +38,12 @@ BEGIN
 			CreatedDate,UpdatedDate,AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
 			NumberOfSwimmingPools,MultiFamilyDwelling,VacantOrUnoccupied,ForSale,
 			SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator
-			,primary_location_in
+			,primary_location_in,
+			OwnedByTrustLLCOrOtherEntity ,TrustOrLegalEntityLegalName ,MailingAddressTrustOrLegalEntity ,TrustOrLegalEntityPurpose ,
+			TrustOrLegalEntityAssetUseOrPossession ,TrustOrLegalEntityGrantorAndBeneficiaries ,TrustOrLegalEntityMembershipDetails ,
+			TrustOrLegalEntityOwnedHoldingsorAssets ,TrustOrLegalEntityBusinessActivities ,TrustorLegalEntityInsuranceCoverage ,
+			TrustOrLegalEntityEmployeesAndResponsibilities ,TrustOrLegalEntityIncomeDetails ,HasAdditionalOwners ,HasBusinessOperations ,
+			IsRentedOutsideOwnersFamily ,HomeType ,OccupancyType ,UnderConstructionOrRenovation ,IsVacant ,IsAnyVaultHomeForSale
 			into edw_temp.tquote_pel_location_wip_temp1
 		from
 		(
@@ -81,7 +87,12 @@ BEGIN
 				(
 					'AddressLine1','AddressLine2','AddressCity','AddressState','AddressZipCode','AddressCounty',
 					'AddressCountry','NumberOfSwimmingPools','MultiFamilyDwelling','VacantOrUnoccupied','ForSale',
-					'SquareFootage','NumberofAthleticStructures','ShortTermRental','LongTermRental','LocationsLimitsIndicator'
+					'SquareFootage','NumberofAthleticStructures','ShortTermRental','LongTermRental','LocationsLimitsIndicator',
+					'OwnedByTrustLLCOrOtherEntity' ,'TrustOrLegalEntityLegalName' ,'MailingAddressTrustOrLegalEntity' ,'TrustOrLegalEntityPurpose' ,
+					'TrustOrLegalEntityAssetUseOrPossession' ,'TrustOrLegalEntityGrantorAndBeneficiaries' ,'TrustOrLegalEntityMembershipDetails' ,
+					'TrustOrLegalEntityOwnedHoldingsorAssets' ,'TrustOrLegalEntityBusinessActivities' ,'TrustorLegalEntityInsuranceCoverage' ,
+					'TrustOrLegalEntityEmployeesAndResponsibilities' ,'TrustOrLegalEntityIncomeDetails' ,'HasAdditionalOwners' ,'HasBusinessOperations' ,
+					'IsRentedOutsideOwnersFamily' ,'HomeType' ,'OccupancyType' ,'UnderConstructionOrRenovation' ,'IsVacant' ,'IsAnyVaultHomeForSale'
 				)
 			) as t
 		) as t
@@ -90,7 +101,12 @@ BEGIN
 			max(Value) FOR Field IN (NumberOfMortgagees,[Name],MortgageeType,BillMortgagee,Email,Fax,Phone,
 					IsaoAtima,IsaoAtimaOther,LoanNumber,AddressLine1,AddressLine2,AddressCity,
 					AddressState,AddressZipCode,AddressCounty,AddressCountry,NumberOfSwimmingPools,MultiFamilyDwelling,
-					VacantOrUnoccupied,ForSale,SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator)
+					VacantOrUnoccupied,ForSale,SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator,
+					OwnedByTrustLLCOrOtherEntity ,TrustOrLegalEntityLegalName ,MailingAddressTrustOrLegalEntity ,TrustOrLegalEntityPurpose ,
+					TrustOrLegalEntityAssetUseOrPossession ,TrustOrLegalEntityGrantorAndBeneficiaries ,TrustOrLegalEntityMembershipDetails ,
+					TrustOrLegalEntityOwnedHoldingsorAssets ,TrustOrLegalEntityBusinessActivities ,TrustorLegalEntityInsuranceCoverage ,
+					TrustOrLegalEntityEmployeesAndResponsibilities ,TrustOrLegalEntityIncomeDetails ,HasAdditionalOwners ,HasBusinessOperations ,
+					IsRentedOutsideOwnersFamily ,HomeType ,OccupancyType ,UnderConstructionOrRenovation ,IsVacant ,IsAnyVaultHomeForSale)
 		) as pivottable
 		
 		MERGE INTO [edw_core].[tquote_pel_location] AS TARGET
@@ -126,6 +142,26 @@ BEGIN
 		        ttlc.LongTermRental AS long_term_rental_in,
 		        ttlc.LocationsLimitsIndicator AS location_limit_type,
 				ttlc.primary_location_in
+				,ttlc.OwnedByTrustLLCOrOtherEntity	as	owned_by_trust_llc_or_other_entity_in
+				,ttlc.TrustOrLegalEntityLegalName	as	trust_or_legal_entity_legal_nm
+				,ttlc.MailingAddressTrustOrLegalEntity	as	mailing_address_trust_or_legal_entity
+				,ttlc.TrustOrLegalEntityPurpose	as	trust_or_legal_entity_purpose
+				,ttlc.TrustOrLegalEntityAssetUseOrPossession	as	trust_or_legal_entity_asset_use_or_possession
+				,ttlc.TrustOrLegalEntityGrantorAndBeneficiaries	as	trust_or_legal_grantor_and_beneficiaries
+				,ttlc.TrustOrLegalEntityMembershipDetails	as	trust_or_legal_entity_membership_details
+				,ttlc.TrustOrLegalEntityOwnedHoldingsorAssets	as	trust_or_legal_entity_owned_holding_or_assets
+				,ttlc.TrustOrLegalEntityBusinessActivities	as	trust_or_legal_entity_business_activities
+				,ttlc.TrustorLegalEntityInsuranceCoverage	as	trust_or_legal_entity_insurance_coverage
+				,ttlc.TrustOrLegalEntityEmployeesAndResponsibilities	as	trust_or_legal_entity_employees_and_reponsibilities
+				,ttlc.TrustOrLegalEntityIncomeDetails	as	trust_or_legal_entity_income_details
+				,ttlc.HasAdditionalOwners	as	has_additional_owners_in
+				,ttlc.HasBusinessOperations	as	has_business_operations_in
+				,ttlc.IsRentedOutsideOwnersFamily	as	is_rented_outside_owners_family_in
+				,ttlc.HomeType	as	home_type
+				,ttlc.OccupancyType	as	extended_liability_occupancy_type_occupancy_type
+				,ttlc.UnderConstructionOrRenovation	as	under_construction_or_renovation_in
+				,ttlc.IsVacant	as	is_vacant_in
+				,ttlc.IsAnyVaultHomeForSale	as	is_any_vault_home_for_sale_in
 		    FROM
 		        edw_temp.tquote_pel_location_wip_temp1 AS ttlc
 		) AS SOURCE
@@ -163,6 +199,27 @@ BEGIN
 		        TARGET.long_term_rental_in = SOURCE.long_term_rental_in,
 		        TARGET.location_limit_type = SOURCE.location_limit_type,
 				TARGET.primary_location_in = SOURCE.primary_location_in
+				,TARGET.owned_by_trust_llc_or_other_entity_in = SOURCE.owned_by_trust_llc_or_other_entity_in
+				,TARGET.trust_or_legal_entity_legal_nm = SOURCE.trust_or_legal_entity_legal_nm
+				,TARGET.mailing_address_trust_or_legal_entity = SOURCE.mailing_address_trust_or_legal_entity
+				,TARGET.trust_or_legal_entity_purpose = SOURCE.trust_or_legal_entity_purpose
+				,TARGET.trust_or_legal_entity_asset_use_or_possession = SOURCE.trust_or_legal_entity_asset_use_or_possession
+				,TARGET.trust_or_legal_grantor_and_beneficiaries = SOURCE.trust_or_legal_grantor_and_beneficiaries
+				,TARGET.trust_or_legal_entity_membership_details = SOURCE.trust_or_legal_entity_membership_details
+				,TARGET.trust_or_legal_entity_owned_holding_or_assets = SOURCE.trust_or_legal_entity_owned_holding_or_assets
+				,TARGET.trust_or_legal_entity_business_activities = SOURCE.trust_or_legal_entity_business_activities
+				,TARGET.trust_or_legal_entity_insurance_coverage = SOURCE.trust_or_legal_entity_insurance_coverage
+				,TARGET.trust_or_legal_entity_employees_and_reponsibilities = SOURCE.trust_or_legal_entity_employees_and_reponsibilities
+				,TARGET.trust_or_legal_entity_income_details = SOURCE.trust_or_legal_entity_income_details
+				,TARGET.has_additional_owners_in = SOURCE.has_additional_owners_in
+				,TARGET.has_business_operations_in = SOURCE.has_business_operations_in
+				,TARGET.is_rented_outside_owners_family_in = SOURCE.is_rented_outside_owners_family_in
+				,TARGET.home_type = SOURCE.home_type
+				,TARGET.extended_liability_occupancy_type_occupancy_type = SOURCE.extended_liability_occupancy_type_occupancy_type
+				,TARGET.under_construction_or_renovation_in = SOURCE.under_construction_or_renovation_in
+				,TARGET.is_vacant_in = SOURCE.is_vacant_in
+				,TARGET.is_any_vault_home_for_sale_in = SOURCE.is_any_vault_home_for_sale_in
+
 
 		WHEN NOT MATCHED BY TARGET THEN
 		    INSERT (
