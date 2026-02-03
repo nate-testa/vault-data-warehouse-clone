@@ -83,10 +83,10 @@ SELECT 1
 FROM INFORMATION_SCHEMA.COLUMNS					
 WHERE TABLE_SCHEMA='edw_core'					
 AND TABLE_NAME = 'tgrpel_coverage'					
-AND COLUMN_NAME = 'underlying_auto_insurance_company'					
+AND COLUMN_NAME = 'underlying_auto_insurance_company_nm'					
 ) 
 BEGIN 
-    ALTER TABLE edw_core.tgrpel_coverage ADD underlying_auto_insurance_company VARCHAR(255) NULL
+    ALTER TABLE edw_core.tgrpel_coverage ADD underlying_auto_insurance_company_nm VARCHAR(255) NULL
 END ; 
 
 
@@ -95,10 +95,10 @@ SELECT 1
 FROM INFORMATION_SCHEMA.COLUMNS					
 WHERE TABLE_SCHEMA='edw_core'					
 AND TABLE_NAME = 'tgrpel_coverage'					
-AND COLUMN_NAME = 'underlying_home_insurance_company'					
+AND COLUMN_NAME = 'underlying_home_insurance_company_nm'					
 ) 
 BEGIN 
-    ALTER TABLE edw_core.tgrpel_coverage ADD underlying_home_insurance_company VARCHAR(255) NULL
+    ALTER TABLE edw_core.tgrpel_coverage ADD underlying_home_insurance_company_nm VARCHAR(255) NULL
 END ; 
 
 
@@ -108,9 +108,9 @@ SELECT 1
 FROM INFORMATION_SCHEMA.COLUMNS					
 WHERE TABLE_SCHEMA='edw_core'					
 AND TABLE_NAME = 'tgrpel_coverage'					
-AND COLUMN_NAME = 'underlying_watercraft_insurance_company'					
+AND COLUMN_NAME = 'underlying_watercraft_insurance_company_nm'					
 ) 
 BEGIN 
-    ALTER TABLE edw_core.tgrpel_coverage ADD underlying_watercraft_insurance_company VARCHAR(255) NULL
+    ALTER TABLE edw_core.tgrpel_coverage ADD underlying_watercraft_insurance_company_nm VARCHAR(255) NULL
 END ; 
 
