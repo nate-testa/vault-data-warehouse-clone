@@ -35,8 +35,8 @@ BEGIN
 			rownum as [index],
 			IssuedDate,
             AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
-            NumberOfSwimmingPools,rented_in,rental_term
-            ,primary_location_in,location_deleted_in,location_unique_id
+            HasPool,IsRented,RentalTerm,
+			primary_location_in,location_deleted_in,location_unique_id
 			into edw_temp.tgrpel_location_temp1
 		from
 		(
@@ -76,7 +76,7 @@ BEGIN
 				and atvof.Field IN 
 				(
 					'AddressLine1','AddressLine2','AddressCity','AddressState','AddressZipCode','AddressCounty',
-					'AddressCountry','NumberOfSwimmingPools','IsRented','RentalTerm'
+					'AddressCountry','HasPool','IsRented','RentalTerm'
 				)
 				and act.IssuedDate > @last_source_extract_ts
 			) as t
@@ -85,14 +85,14 @@ BEGIN
 		(
 			max(Value) FOR Field IN (
                     AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
-                    NumberOfSwimmingPools,rented_in,rental_term)
+                    HasPool,IsRented,RentalTerm)
 		) as pivottable
 
 		INSERT INTO [edw_core].[tgrpel_location]
 		(
 			policy_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no,policy_history_sk,
 			location_no,address_line_1,address_line_2,city_nm,state_cd,zip_cd,county_nm,country_nm,
-			swimming_pool_ct,rented_in,rental_term,location_unique_id,
+			swimming_pool_in,rented_in,rental_term,location_unique_id,
 			primary_location_in	,location_deleted_in,source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 		SELECT
@@ -100,7 +100,7 @@ BEGIN
 			ExpirationDate AS expiration_dt,TransactionDate AS transaction_dt,transaction_seq_no AS transaction_seq_no,policy_history_sk,
 			[index] AS location_no,AddressLine1 AS address_line_1,AddressLine2 AS address_line_2,AddressCity AS city_nm,
 			AddressState AS state_cd,AddressZipCode AS zip_cd,AddressCounty AS county_nm,AddressCountry AS country_nm,            
-			NumberOfSwimmingPools AS swimming_pool_ct,IsRented as rented_in,RentalTerm as rental_term,location_unique_id,
+			HasPool AS swimming_pool_in,IsRented as rented_in,RentalTerm as rental_term,location_unique_id,
             primary_location_in,location_deleted_in,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM

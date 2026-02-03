@@ -5,7 +5,7 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date          |Author									 |	Change Description
 ---------------------------------------------------------------------------------------------------
--- 	01/30/26            Yunus Mohammed			    1. Created this procedure
+-- 	02/03/26            Yunus Mohammed			    1. Created this procedure
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_grpel_location]
 
@@ -31,12 +31,12 @@ BEGIN
 
 		drop table if exists edw_temp.tquote_grpel_location_temp1
 		select 
-			PolicyNumber,EffectiveDate,TransactionEffectiveDate,ExpirationDate,TransactionDate,transaction_seq_no,source_system_sk,quote_history_sk,
+			PolicyNumber,EffectiveDate,ExpirationDate,transaction_seq_no,source_system_sk,quote_history_sk,
 			rownum as [index],
 			CreatedDate,
             AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
-            NumberOfSwimmingPools,rented_in,rental_term
-            ,primary_location_in,location_deleted_in,location_unique_id
+            HasPool,IsRented,RentalTerm,
+            primary_location_in,location_deleted_in,location_unique_id
 			into edw_temp.tquote_grpel_location_temp1
 		from
 		(
@@ -52,7 +52,7 @@ BEGIN
 			CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tqh.quote_history_sk,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			act.[Number] AS transaction_seq_no, act.IssuedDate as TransactionDate,atvo.[index],
-			act.IssuedDate,atvof.Field,atvof.[Value]
+			act.CreatedDate,atvof.Field,atvof.[Value]
 			,CASE WHEN atvof_2.Field = 'PrimaryLocationId' THEN 'Yes' ELSE 'No' END AS primary_location_in
 			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 OR atvo.IsDeletedOnRenewal =1 THEN 'Yes' ELSE 'No' END as location_deleted_in
             ,atvo.[UniqueId] location_unique_id
@@ -64,8 +64,8 @@ BEGIN
 				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
 				left join edw_stage.AccountTransactionVersionObjectField atvof_2 on atvof_2.ReferenceObjectId = atvo.id and atvof_2.Field = 'PrimaryLocationId'
 				left join [edw_core].[tquote_history] tqh on tqh.quote_no=act.PolicyNumber
-						and tph.effective_dt=act.EffectiveDate
-						and tph.transaction_seq_no = act.PolicyChangeNumber
+						and tqh.effective_dt=act.EffectiveDate
+						and tqh.transaction_seq_no = act.PolicyChangeNumber
 				left join edw_stage.Product pr on act.ProductId = pr.id
 			where
 			    act.PolicyNumber is not null
@@ -76,36 +76,37 @@ BEGIN
 				and atvof.Field IN 
 				(
 					'AddressLine1','AddressLine2','AddressCity','AddressState','AddressZipCode','AddressCounty',
-					'AddressCountry','NumberOfSwimmingPools','IsRented','RentalTerm'
+					'AddressCountry','HasPool','IsRented','RentalTerm'
 				)
-				and act.CreatedDate > @last_source_extract_ts
+				
 			) as t
 		) as t
 		pivot 
 		(
 			max(Value) FOR Field IN (
                     AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
-                    NumberOfSwimmingPools,rented_in,rental_term)
+                    HasPool,IsRented,RentalTerm)
 		) as pivottable
 
 		INSERT INTO [edw_core].[tquote_grpel_location]
 		(
-			quote_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no,quote_history_sk,
+			quote_no,effective_dt,expiration_dt,transaction_seq_no,quote_history_sk,
 			location_no,address_line_1,address_line_2,city_nm,state_cd,zip_cd,county_nm,country_nm,
-			swimming_pool_ct,rented_in,rental_term,location_unique_id,
+			swimming_pool_in,rented_in,rental_term,location_unique_id,
 			primary_location_in	,location_deleted_in,source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 		SELECT
-			ttlc.PolicyNumber AS quote_no,ttlc.EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
-			ExpirationDate AS expiration_dt,TransactionDate AS transaction_dt,transaction_seq_no AS transaction_seq_no,quote_history_sk,
+			PolicyNumber AS quote_no,EffectiveDate AS effective_dt,ExpirationDate AS expiration_dt,
+			transaction_seq_no AS transaction_seq_no,quote_history_sk,
 			[index] AS location_no,AddressLine1 AS address_line_1,AddressLine2 AS address_line_2,AddressCity AS city_nm,
 			AddressState AS state_cd,AddressZipCode AS zip_cd,AddressCounty AS county_nm,AddressCountry AS country_nm,            
-			NumberOfSwimmingPools AS swimming_pool_ct,IsRented as rented_in,RentalTerm as rental_term,location_unique_id,
+			HasPool AS swimming_pool_ct,IsRented as rented_in,RentalTerm as rental_term,location_unique_id,
             primary_location_in,location_deleted_in,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM
-			edw_temp.tquote_grpel_location_temp1 AS ttlc
-
+			edw_temp.tquote_grpel_location_temp1
+		WHERE
+			quote_history_sk is not null
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table

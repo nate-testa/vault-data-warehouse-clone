@@ -5,7 +5,7 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date          |Author									 |	Change Description
 ---------------------------------------------------------------------------------------------------
--- 	01/30/26            Yunus Mohammed			    1. Created this procedure
+-- 	02/03/26            Yunus Mohammed			    1. Created this procedure
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_grpel_location_wip]
 
@@ -32,9 +32,10 @@ BEGIN
 		drop table if exists edw_temp.tquote_grpel_location_wip_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,transaction_seq_no,
-            policy_history_sk,source_system_sk,CreatedDate,UpdatedDate,
+            quote_history_sk,rownum as [index],primary_location_in,
+			source_system_sk,CreatedDate,UpdatedDate,
            AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
-            NumberOfSwimmingPools,rented_in,rental_term,location_unique_id
+            HasPool,IsRented,RentalTerm,location_unique_id
 	    into edw_temp.tquote_grpel_location_wip_temp1
 		from
 		(
@@ -42,11 +43,13 @@ BEGIN
 		from
 			(
 			select
-			acc.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
+			DENSE_RANK()OVER(PARTITION BY acc.PolicyNumber, CAST(acc.EffectiveDate AS DATE) ORDER BY acco.Id) as rownum,
+			acc.PolicyNumber,CAST(acc.EffectiveDate AS DATE) AS EffectiveDate,CAST(acc.ExpirationDate AS DATE) AS ExpirationDate,
 			tqh.quote_history_sk,
 			0 AS transaction_seq_no, acco.[Index],
+			CASE WHEN accof_2.Field = 'PrimaryLocationId' THEN 'Yes' ELSE 'No' END AS primary_location_in,
 			acc.CreatedDate,acc.UpdatedDate,CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
-            acco.Field,acco.[Value],acc.UpdatedDate.[UniqueId] location_unique_id
+            accof.Field,accof.[Value],acco.[UniqueId] location_unique_id
 			from
 				(
 				    SELECT *
@@ -58,43 +61,43 @@ BEGIN
 				inner join edw_stage.Product p on p.Id=acc.ProductId
 				inner join [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
 				inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
-				left join [edw_core].[tquote_history] tph on tph.quote_no=acc.PolicyNumber
-						and tph.effective_dt=acc.EffectiveDate
-						and tph.transaction_seq_no = 0
+				left join [edw_stage].[AccountObjectField] accof_2 on accof_2.ReferenceObjectId = acco.id and accof_2.Field = 'PrimaryLocationId'
+				left join [edw_core].[tquote_history] tqh on tqh.quote_no=acc.PolicyNumber
+						and tqh.effective_dt=acc.EffectiveDate
+						and tqh.transaction_seq_no = 0
 				left join edw_stage.Product pr on acc.ProductId = pr.id
 			where
-				acc.PolicyNumber is not null
-				and act.[Stage] IN ('QUOTE','POLICY')
+				acc.PolicyNumber is not null				
 				and p.[Name]='Participant Personal Excess Liability'
 				and acco.ObjectType='Location'
 				and pr.ProductLine = 'PersonalLines'
 				and accof.Field IN 
 				(
 					'AddressLine1','AddressLine2','AddressCity','AddressState','AddressZipCode','AddressCounty',
-					'AddressCountry','NumberOfSwimmingPools','IsRented','RentalTerm'
+					'AddressCountry','HasPool','IsRented','RentalTerm'
 				)
 			) as t
 		) as t
 		pivot 
 		(
 			max(Value) FOR Field IN (
-            		FirstName,MiddleName,LastName,Birthdate,RelationshipToInsured,HasDUIDWI,LicenseStatus,
-                    LicenseCountry,LicenseState,LicenseYear,LicenseNumber
+            		AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,
+					AddressCountry,HasPool,IsRented,RentalTerm
                 )
 		) as pivottable
 			
-		MERGE INTO [edw_core].[tquote_grpel_location] AS TARGtargetET
+		MERGE INTO [edw_core].[tquote_grpel_location] AS target
 		USING (
 		    SELECT
-                ttlc.PolicyNumber AS quote_no,ttlc.EffectiveDate AS effective_dt,
-                ExpirationDate AS expiration_dt,TransactionDate AS transaction_dt,transaction_seq_no AS transaction_seq_no,quote_history_sk,
+                PolicyNumber AS quote_no,EffectiveDate AS effective_dt,
+                ExpirationDate AS expiration_dt,transaction_seq_no AS transaction_seq_no,quote_history_sk,
                 [index] AS location_no,AddressLine1 AS address_line_1,AddressLine2 AS address_line_2,AddressCity AS city_nm,
                 AddressState AS state_cd,AddressZipCode AS zip_cd,AddressCounty AS county_nm,AddressCountry AS country_nm,            
-                NumberOfSwimmingPools AS swimming_pool_ct,IsRented as rented_in,RentalTerm as rental_term,location_unique_id,
-                primary_location_in,location_deleted_in,
+                HasPool AS swimming_pool_in,IsRented as rented_in,RentalTerm as rental_term,location_unique_id,
+                primary_location_in,
                 source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		    FROM
-		        edw_temp.tquote_grpel_location_wip_temp1 AS ttlc
+		        edw_temp.tquote_grpel_location_wip_temp1
 		) AS source
 		ON
 		    target.quote_no = source.quote_no AND
@@ -116,7 +119,7 @@ BEGIN
                 target.zip_cd = source.zip_cd,
                 target.county_nm = source.county_nm,
                 target.country_nm = source.country_nm,
-                target.swimming_pool_ct = source.swimming_pool_ct,
+                target.swimming_pool_in = source.swimming_pool_in,
                 target.rented_in =source. rented_in,
                 target.rental_term = source.rental_term,
                 target.primary_location_in = source.primary_location_in	,
@@ -126,16 +129,16 @@ BEGIN
 
 		WHEN NOT MATCHED BY TARGET THEN
 		    INSERT (
-		    		quote_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_seq_no,quote_history_sk,
-                    driver_no,first_nm ,middle_nm,last_nm ,birth_dt ,relationship_to_insured,has_dui_dwi_in ,license_status,license_country_nm,
-                    license_state_cd,license_year,license_no,driver_unique_id,source_system_sk ,create_ts ,update_ts,etl_audit_sk  
+						quote_no,effective_dt,expiration_dt,transaction_seq_no,quote_history_sk,
+						location_no,address_line_1,address_line_2,city_nm,state_cd,zip_cd,county_nm,country_nm,
+						swimming_pool_in,rented_in,rental_term,location_unique_id,
+						primary_location_in	,source_system_sk,create_ts,update_ts,etl_audit_sk
 		    )
 		    VALUES (
-                source.quote_no,source.effective_dt,source.transaction_effective_dt,source.expiration_dt,source.transaction_seq_no,source.quote_history_sk,
-                source.driver_no,first_nm ,source.middle_nm,source.last_nm ,source.birth_dt ,source.relationship_to_insured,source.has_dui_dwi_in,
-                source.license_status,source.license_country_nm,
-                source.license_state_cd,source.license_year,source.license_no,source.driver_unique_id,
-                source.source_system_sk ,source.create_ts  ,source.update_ts,source.etl_audit_sk  
+ 						source.quote_no,source.effective_dt,source.expiration_dt,source.transaction_seq_no,source.quote_history_sk,
+						source.location_no,source.address_line_1,source.address_line_2,source.city_nm,source.state_cd,source.zip_cd,source.county_nm,source.country_nm,
+						source.swimming_pool_in,source.rented_in,source.rental_term,source.location_unique_id,
+						source.primary_location_in,source.source_system_sk,source.create_ts,source.update_ts,source.etl_audit_sk
 		);
 
 		SET @rows_affected=@@ROWCOUNT;
