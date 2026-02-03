@@ -93,7 +93,7 @@ BEGIN
 			vehicle_unique_id,vehicle_deleted_in,			
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM
-			edw_temp.tgrpel_vehicle_temp1 AS ttpv
+			edw_temp.tgrpel_vehicle_temp1
 
 		SET @rows_affected=@@ROWCOUNT;
 

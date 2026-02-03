@@ -1,15 +1,11 @@
 -- =========================================================================================================================== 
--- Description: This procedures insert and update info related to pel quote vehicle data
+-- Description: This procedures insert and update info related to grpel WIP quote vehicle data
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date			|Author							|	Change Description
+-- Change date			   |Author							            |	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
--- 05/06/2024 			Hernando Gonzalez					1. Created this procedure 
--- 05/08/2024 			Architha Gudimalla					2. Updated @new_last_source_extract_ts 
--- 05/14/2024 			Architha Gudimalla					3. Corrected errors
--- 07/31/2024 			Alberto Almario						4. Add new column vehicle_unique_id
--- 08/22/2024			Architha Gudimalla					54. Removed eff_dt from merge
+-- 02/03/26 			   Yunus Mohammed					1. Created this procedure
 -- =========================================================================================================================== 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_vehicle_wip]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_grpel_vehicle_wip]
 
 AS
 BEGIN
@@ -43,7 +39,7 @@ BEGIN
 			(
 			select
 			acc.PolicyNumber,CAST(acc.EffectiveDate AS DATE) AS EffectiveDate,CAST(acc.ExpirationDate AS DATE) AS ExpirationDate,
-			CAST(acc.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.quote_history_sk ,
+			CAST(acc.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tqh.quote_history_sk ,
 			0 AS transaction_seq_no,acco.[Index],
 			acc.CreatedDate,acc.UpdatedDate,
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
@@ -60,9 +56,9 @@ BEGIN
 				inner join edw_stage.Product p on p.Id=acc.ProductId
 				inner join [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
 				inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
-				left join [edw_core].[tquote_history] tph on tph.quote_no=acc.PolicyNumber
-						and tph.effective_dt=acc.EffectiveDate
-						and tph.transaction_seq_no = 0
+				left join [edw_core].[tquote_history] tqh on tqh.quote_no=acc.PolicyNumber
+						and tqh.effective_dt=acc.EffectiveDate
+						and tqh.transaction_seq_no = 0
 				left join edw_stage.Product pr on acc.ProductId = pr.id
 			where
 				acc.PolicyNumber is not null
@@ -102,6 +98,7 @@ BEGIN
 				,vehicle_unique_id
 		    FROM
 		        edw_temp.tquote_grpel_vehicle_wip_temp1 AS ttpv
+                where quote_history_sk is not null
 		) AS SOURCE
 		ON
 		    TARGET.quote_no = SOURCE.quote_no AND
@@ -123,14 +120,13 @@ BEGIN
 
 		WHEN NOT MATCHED BY TARGET THEN
 		    INSERT (
-                    policy_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no,policy_history_sk,
-                    vehicle_no,vehicle_year,vehicle_make,vehicle_model,vehicle_unique_id,vehicle_deleted_in,
-                    source_system_sk,create_ts,update_ts,etl_audit_sk
+                   quote_no,effective_dt,expiration_dt,transaction_seq_no,quote_history_sk,
+			vehicle_no,vehicle_year,vehicle_make,vehicle_model,vehicle_unique_id,
+			source_system_sk,create_ts,update_ts,etl_audit_sk
 		    )
 		    VALUES (
-		       SOURCE.policy_no,SOURCE.effective_dt,SOURCE.transaction_effective_dt,SOURCE.expiration_dt,
-               SOURCE.transaction_dt,SOURCE.transaction_seq_no,SOURCE.policy_history_sk,
-                SOURCE.vehicle_no,SOURCE.vehicle_year,SOURCE.vehicle_make,SOURCE.vehicle_model,SOURCE.vehicle_unique_id,SOURCE.vehicle_deleted_in,
+		       SOURCE.quote_no,SOURCE.effective_dt,SOURCE.expiration_dt, SOURCE.transaction_seq_no,SOURCE.quote_history_sk,
+                SOURCE.vehicle_no,SOURCE.vehicle_year,SOURCE.vehicle_make,SOURCE.vehicle_model,SOURCE.vehicle_unique_id,
                 SOURCE.source_system_sk,SOURCE.create_ts,SOURCE.update_ts,SOURCE.etl_audit_sk
 		);
 

@@ -30,8 +30,7 @@ BEGIN
 
 		drop table if exists edw_temp.tquote_grpel_vehicle_temp1
 		select 
-			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,
-			transaction_seq_no,policy_history_sk,source_system_sk,CreatedDate, 
+			PolicyNumber,EffectiveDate,ExpirationDate,transaction_seq_no,quote_history_sk,source_system_sk,CreatedDate, 
 			[Index],[ModelYear],Make,Model,vehicle_unique_id,vehicle_deleted_in
 		into edw_temp.tquote_grpel_vehicle_temp1
 		from
@@ -42,8 +41,8 @@ BEGIN
 			 
 			select
 			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
-			CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.policy_history_sk,
-			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,atvo.[Index],
+			CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tqh.quote_history_sk,
+			act.[Number] AS transaction_seq_no, atvo.[Index],
 			act.CreatedDate,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			atvof.Field,atvof.[Value]
@@ -55,9 +54,9 @@ BEGIN
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
 				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
-				left join [edw_core].[tpolicy_history] tph on tph.policy_no=act.PolicyNumber
-						and tph.effective_dt=act.EffectiveDate
-						and tph.transaction_seq_no = act.policychangenumber
+				left join [edw_core].[tquote_history] tqh on tqh.quote_no=act.PolicyNumber
+						and tqh.effective_dt=act.EffectiveDate
+						and tqh.transaction_seq_no = act.[Number]
 				left join edw_stage.Product pr on act.ProductId = pr.id
 			where
 				act.PolicyNumber is not null
@@ -80,15 +79,15 @@ BEGIN
 			)
 		) as pivottable
 
-		INSERT INTO [edw_core].[tgrpel_vehicle]
+		INSERT INTO [edw_core].[tquote_grpel_vehicle]
 		(
-			policy_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no,policy_history_sk,
+			quote_no,effective_dt,expiration_dt,transaction_seq_no,quote_history_sk,
 			vehicle_no,vehicle_year,vehicle_make,vehicle_model,vehicle_unique_id,vehicle_deleted_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 		SELECT
-			PolicyNumber AS policy_no,EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
-			ExpirationDate AS expiration_dt,TransactionDate AS transaction_dt,transaction_seq_no AS transaction_seq_no,policy_history_sk,
+			PolicyNumber AS quote_no,EffectiveDate AS effective_dt,ExpirationDate AS expiration_dt,transaction_seq_no AS transaction_seq_no,
+            quote_history_sk,
 			[Index] AS vehicle_no, [ModelYear] AS vehicle_year,Make AS vehicle_make,Model AS vehicle_model,
 			vehicle_unique_id,vehicle_deleted_in,			
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
