@@ -21,7 +21,9 @@ class SharePointUploader:
         self.site_path = "/sites/IT"
         self.site_url = f'https://{self.site_hostname}{self.site_path}'
         # TEST FOLDER - Change to "00_Month-End" for production
-        self.base_folder_path = "Data Warehouse/Workday/Vault IT Data Files/Test_Folder"
+        #self.base_folder_path = "Data Warehouse/Workday/Vault IT Data Files/Test_Folder"
+        # PRODUCTION FOLDER
+        self.base_folder_path = "Data Warehouse/Workday/Vault IT Data Files/00_Month-End"
         
         # Memory optimization settings
         memory_config = self.cfg.config.get('memory', {})
@@ -115,7 +117,7 @@ class SharePointUploader:
             process = "Preclose"
             target_date = today
             
-        return target_date.strftime("%Y"), target_date.strftime("01 %b %Y"), "CSV", process
+        return target_date.strftime("%Y"), target_date.strftime("01 %b %Y"), process, "CSV"
 
     def run(self):
         """Main entry point - runs async workflow"""
