@@ -1070,6 +1070,14 @@ BEGIN
 				set  closed_with_no_offer_pending_process_renewal_ct = closed_with_no_offer_renewal_ct + pending_process_ct 
 				where month_sk = @month_end_dt_sk
 
+				update edw_stage.trenewal_summary_v1
+				set  outstanding_in_progress_renewal_ct = outstanding_renewal_ct + in_progress_renewal_ct 
+				where month_sk = @month_end_dt_sk
+
+				update edw_stage.trenewal_summary_v1
+				set  closed_with_no_offer_pending_process_renewal_ct = closed_with_no_offer_renewal_ct + pending_process_ct 
+				where month_sk = @month_end_dt_sk
+
 				EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 				-- Update audit table
