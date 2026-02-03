@@ -7,8 +7,9 @@
 -- ---------------------------------------------------------------------------------------------------
 -- 11/10/25					Dinesh Bobbili				1. Created this procedure 
 -- 11/18/25					Dinesh Bobbili				2. Renamed the column name
+-- 02/03/26					Yunus Mohammed		3. Renamed procedure
 -- ================================================================================================= 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tgrpel_coverage]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tgrpel_coverage_nfp]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
