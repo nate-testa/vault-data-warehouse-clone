@@ -105,8 +105,7 @@ BEGIN
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM
 			edw_temp.tquote_grpel_location_temp1
-		WHERE
-			quote_history_sk is not null
+		
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
