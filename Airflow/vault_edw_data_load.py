@@ -667,7 +667,8 @@ with DAG(
             'sp_policy_customer_portal_api',
             'sp_customer_broker_livevox_feed',
             'sp_claim_renewal_rating_home_collection_api',
-            'sp_claim_renewal_rating_auto_pel_api'
+            'sp_claim_renewal_rating_auto_pel_api',
+            'sp_broker_commission_email_api'
         ]
 
         operators = []
