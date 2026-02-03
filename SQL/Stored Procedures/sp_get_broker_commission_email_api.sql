@@ -8,7 +8,7 @@ GO
 -- Create Date: 2026-01-30
 -- Description: This stored search data related to Broker Commission
 -- ================================================================================================= 
-CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_broker_commission_email]
+CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_broker_commission_email_api]
 (
   @brokerId varchar(255)
 )
