@@ -10,8 +10,9 @@ GO
 -- Change date          |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------------------------------
 -- 01/30/26             Dinesh Bobbili              1. Created this procedure
+-- 02/03/26             Dinesh Bobbili              2. Renamed the procedure
 -- ================================================================================================================================
-CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_commission_email]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_commission_email_api]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
