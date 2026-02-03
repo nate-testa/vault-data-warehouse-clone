@@ -1,11 +1,12 @@
 -- ================================================================================================= 
 -- Description: Function to InitCap text
 -- -------------------------------------------------------------------------------------------------
--- Change date    |  Author                             |  Change Description
+-- Change date    |  Author                                |  Change Description
 -- -------------------------------------------------------------------------------------------------
 -- 01/05/26          Yunus                                  1. Created this Function
 -- 01/08/26          Architha Gudimalla       2. Updated to return null, if input is null
 -- 01/30/26          Architha Gudimalla       3. Updated after further testing
+-- 02/03/26          Architha Gudimalla       4. Added more exceptions
 -- ================================================================================================= 
 CREATE OR ALTER FUNCTION [edw_core].[fn_init_cap] (@in VARCHAR(MAX))
 RETURNS VARCHAR(MAX)
@@ -22,6 +23,22 @@ BEGIN
         @isOrdinal BIT = 0,
     @fullWord VARCHAR(2000);
 
+  IF  @in is null
+  BEGIN
+    return @in;
+  END
+
+ set @in = replace(@in, '  ',' ');
+ 
+    SELECT @in = REPLACE(@in, '.','. ')
+      WHERE @in LIKE '%.%' and @in not LIKE '%. %'; 
+ 
+    SELECT @in =  SUBSTRING(@in, 3, LEN(@in)) 
+      WHERE @in LIKE '  %' 
+ 
+    SELECT @in =  SUBSTRING(@in, 2, LEN(@in)) 
+      WHERE @in LIKE ' %' 
+
   IF EXISTS 
   (
     SELECT  1
@@ -33,17 +50,15 @@ BEGIN
   BEGIN
     return @in;
   END
-
   IF EXISTS 
   (
     SELECT  1
       where
-        @in like '% CIC' or  @in like '% &%' or @in like '%LLC%' or @in like '% lc%' or @in like '%LLP%' or @in like '%LTD%' or @in like '%TRUST%' or @in like '% inc%' or @in like '% limited%' or @in like '% partner%' 
+        @in like '% den %' or  @in like '% der %' or  @in like '% van %' or  @in like '% CIC' or  @in like '% &%' or @in like '%LLC%' or @in like '% lc%' or @in like '%LLP%' or @in like '%LTD%' or @in like '%TRUST%' or @in like '% inc%' or @in like '% limited%' or @in like '% partner%' 
   ) 
   BEGIN
     return @in;
   END
-
   IF EXISTS 
   (
     SELECT  1
@@ -54,7 +69,6 @@ BEGIN
   BEGIN
     return @in;
   END
-
   IF EXISTS 
   (
     SELECT  1
@@ -68,25 +82,21 @@ BEGIN
   BEGIN
     return @in;
   END
-
   /*
   IF (PATINDEX('%[A-Za-z].[A-Za-z]%', @in) > 0)
   BEGIN
     return upper(@in);
   END
   */
-
     -- Convert input string to lowercase initially
     SET @in = LOWER(@in);
   SET @fullWord = '';
-
     WHILE @i <= @len
     BEGIN
         SET @char = SUBSTRING(@in, @i, 1);
     SET @fullWord = @fullWord + @char;
         SET @prevChar = IIF(@i = 1, ' ', SUBSTRING(@in, @i - 1, 1));
         SET @nextChar = IIF(@i = @len, ' ', SUBSTRING(@in, @i + 1, 1));
-
         IF @make_capital = 1 AND @char LIKE '[a-z]'
         BEGIN
             IF @prevChar LIKE '[0-9]' AND
@@ -117,11 +127,9 @@ BEGIN
         BEGIN
             SET @result += @char;
         END
-
         IF @char IN (' ', '-', '''', '’')
         BEGIN
             SET @make_capital = 1;
-
      /* IF @fullWord IN ('I','II','III','IV','V','VI','VII','VIII','IX','X','XI')
       BEGIN      
       SET @result = REPLACE(@result, @fullWord, UPPER(@fullWord))
@@ -129,35 +137,35 @@ BEGIN
     */
       SET @fullWord = ''
         END
-
         SET @i = @i + 1;
     END
   IF @fullWord IN ('I','II','III','IV','V','VI','VII','VIII','IX','X','XI')
   BEGIN
     SET @result = REPLACE(@result, @fullWord, UPPER(@fullWord))
   END
-
     -- Handle special cases (e.g., Mc, LLC)
     SET @result = REPLACE(@result, ' Mc', ' Mc');
     SELECT @result = REPLACE(@result, ' Mc' + LOWER(SUBSTRING(@result, CHARINDEX(' Mc', @result) + 2, 1)), 
   ' Mc' + UPPER(SUBSTRING(@result, CHARINDEX(' Mc', @result) + 2, 1)))
   WHERE @result LIKE 'mc%';
-
     SET @result = REPLACE(@result, ' llc', ' LLC');
   SET @result = REPLACE(@result, ' pllc', ' PLLC');
   SET @result = REPLACE(@result, ' lp', ' LP');
   SET @result = REPLACE(@result, ' ltd', ' LTD')
-
-    SET @result = REPLACE(REPLACE(@result, ' II', ' II'), ' III', ' III');
+    SET @result = REPLACE(REPLACE(@result, ' II', ' II'), ' III', ' III'); 
     --SET @result = REPLACE(@result, ' II', ' II');
     SET @result = REPLACE(@result, ' SW ',' SW ');
-    SET @result = REPLACE(@result, ' SW',' SW');
-    SET @result = REPLACE(@result, ' NE ',' NE ');
-    SET @result = REPLACE(@result, ' NE',' NE');
+    SELECT @result = REPLACE(@result, ' SW',' SW')
+      WHERE @result LIKE '% SW';
     SET @result = REPLACE(@result, ' SE ',' SE ');
-    SET @result = REPLACE(@result, ' SE',' SE');
+    SELECT @result = REPLACE(@result, ' SE',' SE')
+      WHERE @result LIKE '% SE';
+    SET @result = REPLACE(@result, ' NE ',' NE ');
+    SELECT @result = REPLACE(@result, ' NE',' NE')
+      WHERE @result LIKE '% NE';
     SET @result = REPLACE(@result, ' NW ', ' NW ');
-    SET @result = REPLACE(@result, ' NW', ' NW');
+    SELECT @result = REPLACE(@result, ' NW', ' NW')
+      WHERE @result LIKE '% NW';
   SELECT @result = REPLACE(@result, ' TWP', ' TWP')
       WHERE @result LIKE '% TWP';
   SELECT @result = REPLACE(@result, ' RM ', ' RM ')
@@ -186,16 +194,21 @@ BEGIN
       WHERE @result LIKE '%Mchenry';
   SELECT @result = REPLACE(@result, 'Mckenna', 'McKenna')
       WHERE @result LIKE '%Mckenna';  
+  SELECT @result = REPLACE(@result, 'Ocallahan', 'OCallahan')
+      WHERE @result LIKE '%Ocallahan';  
+  SELECT @result = REPLACE(@result, 'Oconnor', 'OConnor')
+      WHERE @result LIKE '%Oconnor';  
+  SELECT @result = REPLACE(@result, 'Oconnell', 'OConnell')
+      WHERE @result LIKE '%Oconnell';    
+
   SELECT @result = REPLACE(@result, ' US ', ' US ')
       WHERE @result LIKE '% US %';  
-
   SET @result = REPLACE(@result, ' and ', ' and ')
   SET @result = REPLACE(@result, ' the ', ' the ')
   SET @result = REPLACE(@result, ' of ', ' of ')
-
   IF @in is null 
         BEGIN
             SET @result = null;
         END
     RETURN @result;
-END; 
+END;     
