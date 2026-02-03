@@ -1,12 +1,12 @@
 -- ===============================================================================
 -- Author:		Yunus Mohammed
--- Description: This procedures insert grpel vehicle data
+-- Description: This procedures insert grpel vehicle data for quotes
 ------------------------------------------------------------------------------------------------------------------------------
 -- Change date			|Author							|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
 -- 02/03/26 			Yunus Mohammed					1. Created this procedure
 -- =============================================================================== 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tgrpel_vehicle]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_grpel_vehicle]
 
 AS
 BEGIN
@@ -28,12 +28,12 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-		drop table if exists edw_temp.tgrpel_vehicle_temp1
+		drop table if exists edw_temp.tquote_grpel_vehicle_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,
-			transaction_seq_no,policy_history_sk,source_system_sk,IssuedDate, 
+			transaction_seq_no,policy_history_sk,source_system_sk,CreatedDate, 
 			[Index],[ModelYear],Make,Model,vehicle_unique_id,vehicle_deleted_in
-		into edw_temp.tgrpel_vehicle_temp1
+		into edw_temp.tquote_grpel_vehicle_temp1
 		from
 		(
 		select * 
@@ -44,7 +44,7 @@ BEGIN
 			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
 			CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.policy_history_sk,
 			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,atvo.[Index],
-			act.IssuedDate,
+			act.CreatedDate,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			atvof.Field,atvof.[Value]
 			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 OR atvo.IsDeletedOnRenewal = 1 THEN 'Yes' ELSE 'No' END AS vehicle_deleted_in
@@ -60,8 +60,8 @@ BEGIN
 						and tph.transaction_seq_no = act.policychangenumber
 				left join edw_stage.Product pr on act.ProductId = pr.id
 			where
-				act.PolicyNumber is not null and
-				act.[State] ='ISSUED'
+				act.PolicyNumber is not null
+				and act.[Stage] IN ('QUOTE','POLICY')
 				and p.[Name]='Participant Personal Excess Liability'
 				and pr.ProductLine = 'PersonalLines'
 				and atvo.ObjectType='Vehicle'
@@ -69,7 +69,7 @@ BEGIN
 				(
 					'ModelYear','Make','Model'
 				)
-				and IssuedDate > @last_source_extract_ts
+				and act.CreatedDate > @last_source_extract_ts
 			) as t
 		) as t
 		pivot 
@@ -93,12 +93,12 @@ BEGIN
 			vehicle_unique_id,vehicle_deleted_in,			
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM
-			edw_temp.tgrpel_vehicle_temp1 AS ttpv
+			edw_temp.tquote_grpel_vehicle_temp1 AS ttpv
 
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(IssuedDate) FROM edw_temp.tgrpel_vehicle_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(CreatedDate) FROM edw_temp.tquote_grpel_vehicle_temp1),@last_source_extract_ts)
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts
 
 		-- Update audit table
@@ -106,7 +106,7 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
 		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tgrpel_vehicle_temp1
+		DROP TABLE IF EXISTS edw_temp.tquote_grpel_vehicle_temp1
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
