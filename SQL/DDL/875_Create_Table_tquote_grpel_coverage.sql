@@ -3,7 +3,7 @@ and TABLE_name = 'tquote_grpel_coverage')
 BEGIN
 CREATE TABLE edw_core.tquote_grpel_coverage
 (
-grpel_master_policy_sk                         int NOT NULL IDENTITY(1,1),  
+quote_grpel_coverage_sk                         int NOT NULL IDENTITY(1,1),  
 quote_no                                       varchar(255) NOT NULL,
 grpel_quote_no                                 varchar(255) NOT NULL,
 effective_dt                                   date NOT NULL,
@@ -24,14 +24,14 @@ no_of_high_performance_vehicles                varchar(255),
 no_of_recreational_vehicles                    varchar(255),
 no_of_boats_yachts                             varchar(255),
 no_of_personal_watercraft                      varchar(255),
-underlying_auto_insurance_company              varchar(255),
-underlying_home_insurance_company              varchar(255),
-underlying_watercraft_insurance_company        varchar(255),
+underlying_auto_insurance_company_nm              varchar(255),
+underlying_home_insurance_company_nm              varchar(255),
+underlying_watercraft_insurance_company_nm        varchar(255),
 source_system_sk                               int NOT NULL,
 create_ts                                      datetime,
 update_ts                                      datetime,
 etl_audit_sk                                   int,
-CONSTRAINT pk_tquote_grpel_coverage PRIMARY KEY (grpel_master_policy_sk),
+CONSTRAINT pk_tquote_grpel_coverage PRIMARY KEY (quote_grpel_coverage_sk),
 CONSTRAINT uidx_tquote_grpel_coverage_qtno_effdt_transeq UNIQUE (quote_no,effective_dt,transaction_seq_no),
 CONSTRAINT fk_tquote_grpel_coverage_quote_history_sk FOREIGN KEY (quote_history_sk) REFERENCES  edw_core.tquote_history(quote_history_sk)
 )
