@@ -1,4 +1,4 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_trenewal_summary]    Script Date: 11/16/2023 10:55:23 PM ******/
+﻿/****** Object:  StoredProcedure [edw_core].[sp_trenewal_summary_v1]    Script Date: 2/3/2026 6:48:26 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -67,7 +67,7 @@ GO
 -- 01/30/26     Architha Gudimalla              37. AD12428 - updated to take out the 60 day calc for flat and midterm cancels
 -- ======================================================================================================================================================================= 
 
-CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary_v1]
+CREATE OR ALTER       PROCEDURE [edw_core].[sp_trenewal_summary_v1]
 @in_yearmonth int = null,
 @in_source_system VARCHAR(10) = null
 AS 
@@ -1050,18 +1050,17 @@ BEGIN
                 and non_renewal_ct = 1 and accepted_renewal_ct = 1; 
 
 				update edw_stage.trenewal_summary_v1
-				set  pending_process_ct = prior_issued_ct -
-				(isnull(expired_with_no_submission_ct,0) + mid_term_cancelled_ct
-				+ non_renewal_ct + accepted_renewal_ct
-				+ not_accepted_renewal_ct + outstanding_renewal_ct
-				+ in_progress_renewal_ct + closed_with_no_offer_renewal_ct)
+				set pending_process_ct = prior_issued_ct - (isnull(expired_with_no_submission_ct,0) + mid_term_cancelled_ct
+															+ non_renewal_ct + accepted_renewal_ct
+															+ not_accepted_renewal_ct + outstanding_renewal_ct
+															+ in_progress_renewal_ct + closed_with_no_offer_renewal_ct)
 					,in_progress_premium_amt = offered_quote_premium_amt
 					,closed_with_no_offer_premium_amt = expiring_written_premium_amt
 					,accepted_premium_amt = renewal_initial_written_premium_amt
 					,not_accepted_premium_amt = expiring_written_premium_amt
 					,outstanding_premium_amt  = renewal_initial_written_premium_amt
 					,need_attention_premium_amt = expiring_written_premium_amt
-				where month_sk = @month_end_dt_sk
+				where month_sk = @month_end_dt_sk; 
 
 				update edw_stage.trenewal_summary_v1
 				set  outstanding_in_progress_renewal_ct = outstanding_renewal_ct + in_progress_renewal_ct 
