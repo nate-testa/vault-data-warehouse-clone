@@ -128,7 +128,7 @@ BEGIN
 			[index] AS location_no,AddressLine1 AS address_line_1,AddressLine2 AS address_line_2,NULL AS unit_no,AddressCity AS city_nm,
 			AddressState AS state_cd,AddressZipCode AS zip_cd,AddressCounty AS county_nm,AddressCountry AS country_nm,NULL AS longitude,NULL AS latitude,
 			NumberOfSwimmingPools AS swimming_pool_ct,MultiFamilyDwelling AS multi_family_dwelling_in,
-			IsVacant AS vacant_unoccupied_in,IsAnyVaultHomeForSale AS for_sale_in,
+			COALESCE(NULLIF(IsVacant, ''), VacantOrUnoccupied) AS vacant_unoccupied_in,COALESCE(NULLIF(IsAnyVaultHomeForSale, ''), ForSale) AS for_sale_in,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,
 			SquareFootage AS square_feet,NumberofAthleticStructures AS no_of_athletic_structures,ShortTermRental AS short_term_rental_in,LongTermRental AS long_term_rental_in,LocationsLimitsIndicator as location_limit_type
 			,primary_location_in
