@@ -9,7 +9,7 @@ CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_grpel_vehicle_wip]
 
 AS
 BEGIN
-    -- SET NOCOUNT ON added to prevent extra result sets from
+    -- SET NOCOUNT ON ad ded to prevent extra result sets from
     -- interfering with SELECT statements.
     SET NOCOUNT ON
 
@@ -30,7 +30,7 @@ BEGIN
 		drop table if exists edw_temp.tquote_grpel_vehicle_wip_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,quote_history_sk,source_system_sk,
-			CreatedDate,UpdatedDate,[Index],ModelYear,Make,Model,vehicle_unique_id
+			CreatedDate,UpdatedDate,rownum as [Index],ModelYear,Make,Model,vehicle_unique_id
 		into edw_temp.tquote_grpel_vehicle_wip_temp1
 		from
 		(
@@ -38,9 +38,10 @@ BEGIN
 		from
 			(
 			select
+            DENSE_RANK()OVER(PARTITION BY acc.PolicyNumber, CAST(acc.EffectiveDate AS DATE) ORDER BY acco.Id) as rownum,
 			acc.PolicyNumber,CAST(acc.EffectiveDate AS DATE) AS EffectiveDate,CAST(acc.ExpirationDate AS DATE) AS ExpirationDate,
 			CAST(acc.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tqh.quote_history_sk ,
-			0 AS transaction_seq_no,acco.[Index],
+			0 AS transaction_seq_no,
 			acc.CreatedDate,acc.UpdatedDate,
 			CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			accof.Field,accof.[Value]

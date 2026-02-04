@@ -31,18 +31,18 @@ BEGIN
 		drop table if exists edw_temp.tquote_grpel_vehicle_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,transaction_seq_no,quote_history_sk,source_system_sk,CreatedDate, 
-			[Index],[ModelYear],Make,Model,vehicle_unique_id,vehicle_deleted_in
+			rownum as [Index],[ModelYear],Make,Model,vehicle_unique_id,vehicle_deleted_in
 		into edw_temp.tquote_grpel_vehicle_temp1
 		from
 		(
 		select * 
-		from
-			(
-			 
+		from 
+			(			 
 			select
+            DENSE_RANK()OVER(PARTITION BY act.PolicyNumber, CAST(act.EffectiveDate AS DATE), act.[Number] ORDER BY atvo.Id) as rownum,
 			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
 			CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tqh.quote_history_sk,
-			act.[Number] AS transaction_seq_no, atvo.[Index],
+			act.[Number] AS transaction_seq_no,
 			act.CreatedDate,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			atvof.Field,atvof.[Value]
