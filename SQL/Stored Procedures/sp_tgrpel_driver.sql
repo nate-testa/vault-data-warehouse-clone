@@ -32,7 +32,7 @@ BEGIN
 		drop table if exists edw_temp.tgrpel_driver_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,transaction_seq_no,
-            policy_history_sk,source_system_sk,IssuedDate,
+            policy_history_sk,source_system_sk,IssuedDate,rownum as [Index],
             FirstName,MiddleName,LastName,Birthdate,RelationshipToInsured,HasDUIDWI,LicenseStatus,
             LicenseCountry,LicenseState,LicenseYear,LicenseNumber,
 			CASE
@@ -47,9 +47,10 @@ BEGIN
 			(
 			 
 			select
+			DENSE_RANK()OVER(PARTITION BY act.PolicyNumber, CAST(act.EffectiveDate AS DATE), act.PolicyChangeNumber ORDER BY atvo.Id) as rownum,
 			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
 			CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.policy_history_sk,
-			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,atvo.[Index],
+			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,
 			act.IssuedDate,CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value],
 			atvo.IsDeletedOnPolicyChange
 			,atvo.IsDeletedOnRenewal
@@ -89,7 +90,7 @@ BEGIN
 		INSERT INTO [edw_core].[tgrpel_driver]
 		(
 		policy_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no,policy_history_sk,
-		driver_no,first_nm ,middle_nm,last_nm ,birth_dt ,relationship_to_insured,has_dui_dwi_in ,license_status,license_country_nm,
+		driver_no,first_nm ,middle_nm,last_nm ,birth_dt ,relationship_to_insured,dui_dwi_in ,license_status,license_country_nm,
 		license_state_cd,license_year,license_no,driver_unique_id,driver_deleted_in,source_system_sk ,create_ts  ,update_ts,etl_audit_sk  
 		)
 		SELECT
@@ -97,7 +98,7 @@ BEGIN
 			ExpirationDate AS expiration_dt,TransactionDate AS transaction_dt,transaction_seq_no AS transaction_seq_no,policy_history_sk,
 			[Index] AS driver_no,
             FirstName AS first_nm,MiddleName AS middle_nm,LastName AS last_nm,Birthdate AS birth_dt,
-			RelationshipToInsured  AS relationship_to_insured,HasDUIDWI AS has_dui_dwi_in,LicenseStatus AS license_status,
+			RelationshipToInsured  AS relationship_to_insured,HasDUIDWI AS dui_dwi_in,LicenseStatus AS license_status,
             LicenseCountry AS license_country_nm,LicenseState AS license_state_cd,LicenseYear AS license_year,
 			LicenseNumber AS license_no,driver_unique_id,IsDeletedOnPolicyChange AS driver_deleted_in,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk

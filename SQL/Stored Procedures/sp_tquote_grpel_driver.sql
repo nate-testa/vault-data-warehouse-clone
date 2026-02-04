@@ -32,13 +32,13 @@ BEGIN
 		drop table if exists edw_temp.tquote_grpel_driver_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,transaction_seq_no,
-            quote_history_sk,source_system_sk,CreatedDate,[Index],
+            quote_history_sk,source_system_sk,CreatedDate,rownum as [Index],
             FirstName,MiddleName,LastName,Birthdate,RelationshipToInsured,HasDUIDWI,LicenseStatus,
             LicenseCountry,LicenseState,LicenseYear,LicenseNumber,
 			CASE
 				WHEN IsDeletedOnPolicyChange =1 OR IsDeletedOnRenewal =1  THEN 'Yes'
 				ELSE 'No' END AS IsDeletedOnPolicyChange,		
-			driver_unique_id			
+			driver_unique_id
 	    into edw_temp.tquote_grpel_driver_temp1
 		from
 		(
@@ -46,9 +46,10 @@ BEGIN
 		from
 			(			 
 			select
+			DENSE_RANK()OVER(PARTITION BY act.PolicyNumber, CAST(act.EffectiveDate AS DATE), act.[Number] ORDER BY atvo.Id) as rownum,
 			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
 			tqh.quote_history_sk,
-			act.[Number] AS transaction_seq_no, atvo.[Index],
+			act.[Number] AS transaction_seq_no, 
 			act.CreatedDate,CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,atvof.Field,atvof.[Value],
 			atvo.IsDeletedOnPolicyChange
 			,atvo.IsDeletedOnRenewal

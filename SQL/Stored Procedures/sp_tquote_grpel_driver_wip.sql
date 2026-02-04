@@ -32,7 +32,7 @@ BEGIN
 		drop table if exists edw_temp.tquote_grpel_driver_wip_temp1
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,transaction_seq_no,
-            quote_history_sk,source_system_sk,CreatedDate,UpdatedDate,[Index],
+            quote_history_sk,source_system_sk,CreatedDate,UpdatedDate,rownum as [Index],
             FirstName,MiddleName,LastName,Birthdate,RelationshipToInsured,HasDUIDWI,LicenseStatus,
             LicenseCountry,LicenseState,LicenseYear,LicenseNumber,driver_unique_id			
 	    into edw_temp.tquote_grpel_driver_wip_temp1
@@ -42,9 +42,10 @@ BEGIN
 		from
 			(
 			select
+			DENSE_RANK()OVER(PARTITION BY acc.PolicyNumber, CAST(acc.EffectiveDate AS DATE) ORDER BY acco.Id) as rownum,
 			acc.PolicyNumber,CAST(acc.EffectiveDate AS DATE) AS EffectiveDate,CAST(acc.ExpirationDate AS DATE) AS ExpirationDate,
 			tqh.quote_history_sk,
-			0 AS transaction_seq_no, acco.[Index],
+			0 AS transaction_seq_no, 
 			acc.CreatedDate,acc.UpdatedDate,CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
             accof.Field,accof.[Value],acco.[UniqueId] driver_unique_id
 			from
