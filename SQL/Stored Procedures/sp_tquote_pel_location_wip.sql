@@ -130,8 +130,8 @@ BEGIN
 		        NULL AS latitude,
 		        ttlc.NumberOfSwimmingPools AS swimming_pool_ct,
 		        ttlc.MultiFamilyDwelling AS multi_family_dwelling_in,
-		        ttlc.VacantOrUnoccupied AS vacant_unoccupied_in,
-		        ttlc.ForSale AS for_sale_in,
+		        ttlc.IsVacant AS vacant_unoccupied_in,
+		        ttlc.IsAnyVaultHomeForSale AS for_sale_in,
 		        ttlc.source_system_sk AS source_system_sk,
 		        GETDATE() AS create_ts,
 		        GETDATE() AS update_ts,
@@ -144,7 +144,7 @@ BEGIN
 				ttlc.primary_location_in
 				,ttlc.OwnedByTrustLLCOrOtherEntity	as	owned_by_trust_llc_or_other_entity_in
 				,ttlc.TrustOrLegalEntityLegalName	as	trust_or_legal_entity_legal_nm
-				,ttlc.MailingAddressTrustOrLegalEntity	as	mailing_address_trust_or_legal_entity
+				,ttlc.MailingAddressTrustOrLegalEntity	as	trust_or_legal_entity_mailing_address
 				,ttlc.TrustOrLegalEntityPurpose	as	trust_or_legal_entity_purpose
 				,ttlc.TrustOrLegalEntityAssetUseOrPossession	as	trust_or_legal_entity_asset_use_or_possession
 				,ttlc.TrustOrLegalEntityGrantorAndBeneficiaries	as	trust_or_legal_grantor_and_beneficiaries
@@ -155,13 +155,11 @@ BEGIN
 				,ttlc.TrustOrLegalEntityEmployeesAndResponsibilities	as	trust_or_legal_entity_employees_and_reponsibilities
 				,ttlc.TrustOrLegalEntityIncomeDetails	as	trust_or_legal_entity_income_details
 				,ttlc.HasAdditionalOwners	as	has_additional_owners_in
-				,ttlc.HasBusinessOperations	as	has_business_operations_in
-				,ttlc.IsRentedOutsideOwnersFamily	as	is_rented_outside_owners_family_in
+				,ttlc.HasBusinessOperations	as	business_operations_in
+				,ttlc.IsRentedOutsideOwnersFamily	as	additional_owners_in
 				,ttlc.HomeType	as	home_type
-				,ttlc.OccupancyType	as	extended_liability_occupancy_type_occupancy_type
+				,ttlc.OccupancyType	as	occupancy_type
 				,ttlc.UnderConstructionOrRenovation	as	under_construction_or_renovation_in
-				,ttlc.IsVacant	as	is_vacant_in
-				,ttlc.IsAnyVaultHomeForSale	as	is_any_vault_home_for_sale_in
 		    FROM
 		        edw_temp.tquote_pel_location_wip_temp1 AS ttlc
 		) AS SOURCE
@@ -201,7 +199,7 @@ BEGIN
 				TARGET.primary_location_in = SOURCE.primary_location_in
 				,TARGET.owned_by_trust_llc_or_other_entity_in = SOURCE.owned_by_trust_llc_or_other_entity_in
 				,TARGET.trust_or_legal_entity_legal_nm = SOURCE.trust_or_legal_entity_legal_nm
-				,TARGET.mailing_address_trust_or_legal_entity = SOURCE.mailing_address_trust_or_legal_entity
+				,TARGET.trust_or_legal_entity_mailing_address = SOURCE.trust_or_legal_entity_mailing_address
 				,TARGET.trust_or_legal_entity_purpose = SOURCE.trust_or_legal_entity_purpose
 				,TARGET.trust_or_legal_entity_asset_use_or_possession = SOURCE.trust_or_legal_entity_asset_use_or_possession
 				,TARGET.trust_or_legal_grantor_and_beneficiaries = SOURCE.trust_or_legal_grantor_and_beneficiaries
@@ -212,13 +210,11 @@ BEGIN
 				,TARGET.trust_or_legal_entity_employees_and_reponsibilities = SOURCE.trust_or_legal_entity_employees_and_reponsibilities
 				,TARGET.trust_or_legal_entity_income_details = SOURCE.trust_or_legal_entity_income_details
 				,TARGET.has_additional_owners_in = SOURCE.has_additional_owners_in
-				,TARGET.has_business_operations_in = SOURCE.has_business_operations_in
-				,TARGET.is_rented_outside_owners_family_in = SOURCE.is_rented_outside_owners_family_in
+				,TARGET.business_operations_in = SOURCE.business_operations_in
+				,TARGET.additional_owners_in = SOURCE.additional_owners_in
 				,TARGET.home_type = SOURCE.home_type
-				,TARGET.extended_liability_occupancy_type_occupancy_type = SOURCE.extended_liability_occupancy_type_occupancy_type
+				,TARGET.occupancy_type = SOURCE.occupancy_type
 				,TARGET.under_construction_or_renovation_in = SOURCE.under_construction_or_renovation_in
-				,TARGET.is_vacant_in = SOURCE.is_vacant_in
-				,TARGET.is_any_vault_home_for_sale_in = SOURCE.is_any_vault_home_for_sale_in
 
 
 		WHEN NOT MATCHED BY TARGET THEN
@@ -227,14 +223,24 @@ BEGIN
 		        location_no, address_line_1, address_line_2, unit_no, city_nm, state_cd, zip_cd, county_nm, country_nm, longitude, latitude,
 		        swimming_pool_ct, multi_family_dwelling_in, vacant_unoccupied_in, for_sale_in, source_system_sk, create_ts, update_ts, etl_audit_sk,
 		        square_feet, no_of_athletic_structures, short_term_rental_in, long_term_rental_in, location_limit_type,
-				primary_location_in
+				primary_location_in,owned_by_trust_llc_or_other_entity_in ,trust_or_legal_entity_legal_nm ,trust_or_legal_entity_mailing_address ,
+				trust_or_legal_entity_purpose ,trust_or_legal_entity_asset_use_or_possession ,trust_or_legal_grantor_and_beneficiaries ,
+				trust_or_legal_entity_membership_details ,trust_or_legal_entity_owned_holding_or_assets ,trust_or_legal_entity_business_activities ,
+				trust_or_legal_entity_insurance_coverage ,trust_or_legal_entity_employees_and_reponsibilities ,trust_or_legal_entity_income_details ,
+				has_additional_owners_in ,business_operations_in ,additional_owners_in ,home_type ,occupancy_type ,
+				under_construction_or_renovation_in
 		    )
 		    VALUES (
 		        SOURCE.quote_no, SOURCE.effective_dt, SOURCE.expiration_dt, SOURCE.transaction_seq_no, SOURCE.quote_history_sk,
 		        SOURCE.location_no, SOURCE.address_line_1, SOURCE.address_line_2, SOURCE.unit_no, SOURCE.city_nm, SOURCE.state_cd, SOURCE.zip_cd, SOURCE.county_nm, SOURCE.country_nm, SOURCE.longitude, SOURCE.latitude,
 		        SOURCE.swimming_pool_ct, SOURCE.multi_family_dwelling_in, SOURCE.vacant_unoccupied_in, SOURCE.for_sale_in, SOURCE.source_system_sk, SOURCE.create_ts, SOURCE.update_ts, SOURCE.etl_audit_sk,
 		        SOURCE.square_feet, SOURCE.no_of_athletic_structures, SOURCE.short_term_rental_in, SOURCE.long_term_rental_in, SOURCE.location_limit_type,
-				SOURCE.primary_location_in
+				SOURCE.primary_location_in,SOURCE.owned_by_trust_llc_or_other_entity_in, SOURCE.trust_or_legal_entity_legal_nm, SOURCE.trust_or_legal_entity_mailing_address, SOURCE.trust_or_legal_entity_purpose, 
+				SOURCE.trust_or_legal_entity_asset_use_or_possession, SOURCE.trust_or_legal_grantor_and_beneficiaries, SOURCE.trust_or_legal_entity_membership_details, 
+				SOURCE.trust_or_legal_entity_owned_holding_or_assets, SOURCE.trust_or_legal_entity_business_activities, SOURCE.trust_or_legal_entity_insurance_coverage, 
+				SOURCE.trust_or_legal_entity_employees_and_reponsibilities, SOURCE.trust_or_legal_entity_income_details, SOURCE.has_additional_owners_in, 
+				SOURCE.business_operations_in, SOURCE.additional_owners_in, SOURCE.home_type, SOURCE.occupancy_type, 
+				SOURCE.under_construction_or_renovation_in
 		);
 
 		SET @rows_affected=@@ROWCOUNT;
