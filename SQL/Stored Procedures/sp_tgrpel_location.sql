@@ -1,12 +1,13 @@
--- ===============================================================================
+-- =============================================
 -- Author:		Yunus Mohammed
--- Description: This procedures insert grpel vehicle data
-------------------------------------------------------------------------------------------------------------------------------
--- Change date			|Author							|	Change Description
-------------------------------------------------------------------------------------------------------------------------------
--- 02/03/26 			Yunus Mohammed					1. Created this procedure
--- =============================================================================== 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tgrpel_vehicle]
+-- Description: This procedures insert Participant Personal Excess Liability location data
+-- =============================================
+---------------------------------------------------------------------------------------------------
+-- Change date          |Author									 |	Change Description
+---------------------------------------------------------------------------------------------------
+-- 	01/30/26            Yunus Mohammed			    1. Created this procedure
+-- ================================================================================================= 
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tgrpel_location]
 
 AS
 BEGIN
@@ -28,78 +29,87 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@current_date,@etl_audit_sk=@etl_audit_sk OUTPUT;
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-		drop table if exists edw_temp.tgrpel_vehicle_temp1
+		drop table if exists edw_temp.tgrpel_location_temp1
 		select 
-			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,
-			transaction_seq_no,policy_history_sk,source_system_sk,IssuedDate, 
-			rownum as [Index],[ModelYear],Make,Model,vehicle_unique_id,vehicle_deleted_in
-		into edw_temp.tgrpel_vehicle_temp1
+			PolicyNumber,EffectiveDate,TransactionEffectiveDate,ExpirationDate,TransactionDate,transaction_seq_no,source_system_sk,policy_history_sk,
+			rownum as [index],
+			IssuedDate,
+            AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
+            HasPool,IsRented,RentalTerm,
+			primary_location_in,location_deleted_in,location_unique_id
+			into edw_temp.tgrpel_location_temp1
 		from
 		(
 		select * 
 		from
 			(
-			 
+			-- We are generating rownum becase atvo.[index] is 1 for every row of a policy and we are using it as location_no but we should 
+			-- have different location_no for different location of a policy number.
+			-- This rownum is used as location no
 			select
 			DENSE_RANK()OVER(PARTITION BY act.PolicyNumber, CAST(act.EffectiveDate AS DATE), act.PolicyChangeNumber ORDER BY atvo.Id) as rownum,
 			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
 			CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.policy_history_sk,
-			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,
-			act.IssuedDate,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
-			atvof.Field,atvof.[Value]
-			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 OR atvo.IsDeletedOnRenewal = 1 THEN 'Yes' ELSE 'No' END AS vehicle_deleted_in
-			,atvo.[UniqueId] as vehicle_unique_id
+			act.PolicyChangeNumber AS transaction_seq_no, act.IssuedDate as TransactionDate,atvo.[index],
+			act.IssuedDate,atvof.Field,atvof.[Value]
+			,CASE WHEN atvof_2.Field = 'PrimaryLocationId' THEN 'Yes' ELSE 'No' END AS primary_location_in
+			,CASE WHEN atvo.IsdeletedOnPolicyChange = 1 OR atvo.IsDeletedOnRenewal =1 THEN 'Yes' ELSE 'No' END as location_deleted_in
+            ,atvo.[UniqueId] location_unique_id
 			from
 				edw_stage.AccountTransaction act
 				inner join edw_stage.Product p on p.Id=act.ProductId
 				inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
 				inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
 				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
+				left join edw_stage.AccountTransactionVersionObjectField atvof_2 on atvof_2.ReferenceObjectId = atvo.id and atvof_2.Field = 'PrimaryLocationId'
 				left join [edw_core].[tpolicy_history] tph on tph.policy_no=act.PolicyNumber
 						and tph.effective_dt=act.EffectiveDate
 						and tph.transaction_seq_no = act.policychangenumber
 				left join edw_stage.Product pr on act.ProductId = pr.id
 			where
-				act.PolicyNumber is not null and
+			    act.PolicyNumber is not null and
 				act.[State] ='ISSUED'
 				and p.[Name]='Participant Personal Excess Liability'
 				and pr.ProductLine = 'PersonalLines'
-				and atvo.ObjectType='Vehicle'
+				and atvo.ObjectType='Location'
 				and atvof.Field IN 
 				(
-					'ModelYear','Make','Model'
+					'AddressLine1','AddressLine2','AddressCity','AddressState','AddressZipCode','AddressCounty',
+					'AddressCountry','HasPool','IsRented','RentalTerm'
 				)
-				and IssuedDate > @last_source_extract_ts
+				and act.IssuedDate > @last_source_extract_ts
 			) as t
 		) as t
 		pivot 
 		(
-			max([Value]) FOR Field IN 
-			(
-				ModelYear,Make,Model
-			)
+			max(Value) FOR Field IN (
+                    AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
+                    HasPool,IsRented,RentalTerm)
 		) as pivottable
 
-		INSERT INTO [edw_core].[tgrpel_vehicle]
+		INSERT INTO [edw_core].[tgrpel_location]
 		(
 			policy_no,effective_dt,transaction_effective_dt,expiration_dt,transaction_dt,transaction_seq_no,policy_history_sk,
-			vehicle_no,vehicle_year,vehicle_make,vehicle_model,vehicle_unique_id,vehicle_deleted_in,
-			source_system_sk,create_ts,update_ts,etl_audit_sk
+			location_no,address_line_1,address_line_2,city_nm,state_cd,zip_cd,county_nm,country_nm,
+			swimming_pool_in,rented_in,rental_term,location_unique_id,
+			primary_location_in	,location_deleted_in,source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 		SELECT
-			PolicyNumber AS policy_no,EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
+			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,TransactionEffectiveDate AS transaction_effective_dt,
 			ExpirationDate AS expiration_dt,TransactionDate AS transaction_dt,transaction_seq_no AS transaction_seq_no,policy_history_sk,
-			[Index] AS vehicle_no, [ModelYear] AS vehicle_year,Make AS vehicle_make,Model AS vehicle_model,
-			vehicle_unique_id,vehicle_deleted_in,			
+			[index] AS location_no,AddressLine1 AS address_line_1,AddressLine2 AS address_line_2,AddressCity AS city_nm,
+			AddressState AS state_cd,AddressZipCode AS zip_cd,AddressCounty AS county_nm,AddressCountry AS country_nm,            
+			HasPool AS swimming_pool_in,IsRented as rented_in,RentalTerm as rental_term,location_unique_id,
+            primary_location_in,location_deleted_in,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM
-			edw_temp.tgrpel_vehicle_temp1
+			edw_temp.tgrpel_location_temp1 AS ttlc
 
 		SET @rows_affected=@@ROWCOUNT;
 
 		-- Update control table
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(IssuedDate) FROM edw_temp.tgrpel_vehicle_temp1),@last_source_extract_ts)
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(IssuedDate) FROM edw_temp.tgrpel_location_temp1),@last_source_extract_ts)	
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts
 
 		-- Update audit table
@@ -107,7 +117,7 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
 		-- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tgrpel_vehicle_temp1
+		DROP TABLE IF EXISTS edw_temp.tgrpel_location_temp1
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
