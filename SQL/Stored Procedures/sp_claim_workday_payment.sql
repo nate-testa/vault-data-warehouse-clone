@@ -20,6 +20,7 @@
 --																					Update run date logic
 -- 11/10/25		Yunus Mohammed				12. AD-11664 Updated for NFP policy claims
 -- 12/09/25		Yunus Mohammed				13. AD-11945 Modified stored procedure to run proc on same date again
+-- 02/04/26		Yunus Mohammed				14. AD-12461 Used product_nm for 'Marine Boat & Yacht' instead of product_cd
 -- ================================================================================================= 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_claim_workday_payment]
@@ -75,7 +76,7 @@ BEGIN
 																				WHEN p.product_nm = 'Group Personal Excess Liability' THEN 'Group_Umbrella'
 																				WHEN p.product_nm = 'Auto' THEN 'Automobile'
 																				WHEN p.product_nm = 'Excess Liability' THEN 'Excess_Liability'
-																				WHEN p.product_cd = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
+																				WHEN p.product_nm = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
 																			ELSE p.product_nm 
 																		END
             WHERE transaction_date BETWEEN @begin_dt AND @end_dt
@@ -107,7 +108,7 @@ BEGIN
 				WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
 				WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
 				WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
-				WHEN tprd.product_cd = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
+				WHEN tprd.product_nm = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
 			ELSE tprd.product_nm END AS product,
 			tcf.claim_coverage_desc AS policycoveragetype,
 			ttr.cat_name AS paymenttype,
