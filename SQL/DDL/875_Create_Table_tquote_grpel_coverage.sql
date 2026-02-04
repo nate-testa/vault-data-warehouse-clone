@@ -58,13 +58,13 @@ INSERT INTO edw_core.tedw_table_detail (
     update_ts
 )
 SELECT
-    'tgrpel_coverage',
+    'tquote_grpel_coverage',
     'Type-2 Dimension',
     'Base',
     'Group Personal Excess Liability',
     'Stored Procedure',
     'Insert',
-    'Monthly',
+    'Daily',
     GETDATE(),
     GETDATE()
 WHERE NOT EXISTS (
