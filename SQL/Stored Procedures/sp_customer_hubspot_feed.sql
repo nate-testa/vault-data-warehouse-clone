@@ -35,7 +35,7 @@
 -- 10/16/25		Dinesh Bobbili				27. AD11382 - Added logic to Include David Tester policies
 -- 10/23/25		Dinesh Bobbili				28. AD11462 - Added insured_nm and uw_company_nm 
 -- 11/14/25		Dinesh Bobbili				29. AD11742 - Added ssk filter to exclude NFP data
--- 02/04/26		Dinesh Bobbili				30. AD12455 - Added inforce_net_premium_amt column
+-- 02/04/26		Dinesh Bobbili				30. AD12455 - Added total_policy_premium_amt column
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -134,9 +134,8 @@ BEGIN
 		--for policies
 		with pol_prm as
 		(
-		select policy_sk, sum(premium_amt) as inforce_net_premium_amt  
+		select policy_sk, sum(premium_amt) as total_policy_premium_amt  
 		from edw_core.tpolicy_history
-		where transaction_type in ('Renewal','New')
 		group by policy_sk
 		)
 		SELECT
@@ -179,7 +178,7 @@ BEGIN
 			pol.policy_inforce_in,
 			isnull(pol.insured_nm,'') as insured_nm,
 			pol.uw_company_nm as uw_company_nm,
-			prm.inforce_net_premium_amt
+			prm.total_policy_premium_amt
 		INTO edw_temp.customer_hubspot_feed_temp1
 		FROM edw_core.tpolicy pol	
 		INNER JOIN pol_prm prm ON pol.policy_sk = prm.policy_sk	
@@ -305,7 +304,7 @@ BEGIN
 				,policy_inforce_in
 				,insured_nm
 				,uw_company_nm
-				,inforce_net_premium_amt
+				,total_policy_premium_amt
 				FROM edw_temp.customer_hubspot_feed_temp1/*
 				union ALL 
 			SELECT 
@@ -372,7 +371,7 @@ BEGIN
 			,policy_inforce_in
 			,insured_nm
 			,uw_company_nm
-			,inforce_net_premium_amt
+			,total_policy_premium_amt
 			)
 		VALUES (source.policy_no,
 				source.first_nm,
@@ -407,7 +406,7 @@ BEGIN
 				,source.policy_inforce_in
 				,source.insured_nm
 				,source.uw_company_nm
-				,source.inforce_net_premium_amt)
+				,source.total_policy_premium_amt)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
@@ -441,7 +440,7 @@ BEGIN
 			,target.policy_inforce_in 		= source.policy_inforce_in
 			,target.insured_nm				= source.insured_nm
 			,target.uw_company_nm			= source.uw_company_nm
-			,target.inforce_net_premium_amt			= source.inforce_net_premium_amt
+			,target.total_policy_premium_amt			= source.total_policy_premium_amt
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
