@@ -154,9 +154,9 @@ BEGIN
 				,ttlc.TrustorLegalEntityInsuranceCoverage	as	trust_or_legal_entity_insurance_coverage
 				,ttlc.TrustOrLegalEntityEmployeesAndResponsibilities	as	trust_or_legal_entity_employees_and_reponsibilities
 				,ttlc.TrustOrLegalEntityIncomeDetails	as	trust_or_legal_entity_income_details
-				,ttlc.HasAdditionalOwners	as	has_additional_owners_in
+				,ttlc.HasAdditionalOwners	as	additional_owners_in
 				,ttlc.HasBusinessOperations	as	business_operations_in
-				,ttlc.IsRentedOutsideOwnersFamily	as	additional_owners_in
+				,ttlc.IsRentedOutsideOwnersFamily	as	rented_outside_owners_family_in
 				,ttlc.HomeType	as	home_type
 				,ttlc.OccupancyType	as	occupancy_type
 				,ttlc.UnderConstructionOrRenovation	as	under_construction_or_renovation_in
@@ -209,9 +209,9 @@ BEGIN
 				,TARGET.trust_or_legal_entity_insurance_coverage = SOURCE.trust_or_legal_entity_insurance_coverage
 				,TARGET.trust_or_legal_entity_employees_and_reponsibilities = SOURCE.trust_or_legal_entity_employees_and_reponsibilities
 				,TARGET.trust_or_legal_entity_income_details = SOURCE.trust_or_legal_entity_income_details
-				,TARGET.has_additional_owners_in = SOURCE.has_additional_owners_in
-				,TARGET.business_operations_in = SOURCE.business_operations_in
 				,TARGET.additional_owners_in = SOURCE.additional_owners_in
+				,TARGET.business_operations_in = SOURCE.business_operations_in
+				,TARGET.rented_outside_owners_family_in = SOURCE.rented_outside_owners_family_in
 				,TARGET.home_type = SOURCE.home_type
 				,TARGET.occupancy_type = SOURCE.occupancy_type
 				,TARGET.under_construction_or_renovation_in = SOURCE.under_construction_or_renovation_in
@@ -227,7 +227,7 @@ BEGIN
 				trust_or_legal_entity_purpose ,trust_or_legal_entity_asset_use_or_possession ,trust_or_legal_grantor_and_beneficiaries ,
 				trust_or_legal_entity_membership_details ,trust_or_legal_entity_owned_holding_or_assets ,trust_or_legal_entity_business_activities ,
 				trust_or_legal_entity_insurance_coverage ,trust_or_legal_entity_employees_and_reponsibilities ,trust_or_legal_entity_income_details ,
-				has_additional_owners_in ,business_operations_in ,additional_owners_in ,home_type ,occupancy_type ,
+				additional_owners_in ,business_operations_in ,rented_outside_owners_family_in ,home_type ,occupancy_type ,
 				under_construction_or_renovation_in
 		    )
 		    VALUES (
@@ -238,8 +238,8 @@ BEGIN
 				SOURCE.primary_location_in,SOURCE.owned_by_trust_llc_or_other_entity_in, SOURCE.trust_or_legal_entity_legal_nm, SOURCE.trust_or_legal_entity_mailing_address, SOURCE.trust_or_legal_entity_purpose, 
 				SOURCE.trust_or_legal_entity_asset_use_or_possession, SOURCE.trust_or_legal_grantor_and_beneficiaries, SOURCE.trust_or_legal_entity_membership_details, 
 				SOURCE.trust_or_legal_entity_owned_holding_or_assets, SOURCE.trust_or_legal_entity_business_activities, SOURCE.trust_or_legal_entity_insurance_coverage, 
-				SOURCE.trust_or_legal_entity_employees_and_reponsibilities, SOURCE.trust_or_legal_entity_income_details, SOURCE.has_additional_owners_in, 
-				SOURCE.business_operations_in, SOURCE.additional_owners_in, SOURCE.home_type, SOURCE.occupancy_type, 
+				SOURCE.trust_or_legal_entity_employees_and_reponsibilities, SOURCE.trust_or_legal_entity_income_details, SOURCE.additional_owners_in, 
+				SOURCE.business_operations_in, SOURCE.rented_outside_owners_family_in, SOURCE.home_type, SOURCE.occupancy_type, 
 				SOURCE.under_construction_or_renovation_in
 		);
 

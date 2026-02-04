@@ -119,7 +119,7 @@ BEGIN
 			trust_or_legal_entity_purpose ,trust_or_legal_entity_asset_use_or_possession ,trust_or_legal_grantor_and_beneficiaries ,
 			trust_or_legal_entity_membership_details ,trust_or_legal_entity_owned_holding_or_assets ,trust_or_legal_entity_business_activities ,
 			trust_or_legal_entity_insurance_coverage ,trust_or_legal_entity_employees_and_reponsibilities ,trust_or_legal_entity_income_details ,
-			has_additional_owners_in ,business_operations_in ,additional_owners_in ,home_type ,occupancy_type ,
+			additional_owners_in ,business_operations_in ,rented_outside_owners_family_in ,home_type ,occupancy_type ,
 			under_construction_or_renovation_in
 		)
 		SELECT
@@ -144,9 +144,9 @@ BEGIN
 			,TrustorLegalEntityInsuranceCoverage	as	trust_or_legal_entity_insurance_coverage
 			,TrustOrLegalEntityEmployeesAndResponsibilities	as	trust_or_legal_entity_employees_and_reponsibilities
 			,TrustOrLegalEntityIncomeDetails	as	trust_or_legal_entity_income_details
-			,HasAdditionalOwners	as	has_additional_owners_in
+			,HasAdditionalOwners	as	additional_owners_in
 			,HasBusinessOperations	as	business_operations_in
-			,IsRentedOutsideOwnersFamily	as	additional_owners_in
+			,IsRentedOutsideOwnersFamily	as	rented_outside_owners_family_in
 			,HomeType	as	home_type
 			,OccupancyType	as	occupancy_type
 			,UnderConstructionOrRenovation	as	under_construction_or_renovation_in
