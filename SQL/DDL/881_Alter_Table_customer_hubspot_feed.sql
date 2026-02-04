@@ -6,4 +6,4 @@ IF NOT EXISTS (
       AND COLUMN_NAME = 'total_policy_premium_amt'					
 ) 
 BEGIN 
-ALTER TABLE edw_integration.customer_hubspot_feed ADD total_policy_premium_amt int END ;
+ALTER TABLE edw_integration.customer_hubspot_feed ADD total_policy_premium_amt decimal(15,2) END ;
