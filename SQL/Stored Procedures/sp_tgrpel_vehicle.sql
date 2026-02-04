@@ -32,7 +32,7 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,TransactionDate,
 			transaction_seq_no,policy_history_sk,source_system_sk,IssuedDate, 
-			[Index],[ModelYear],Make,Model,vehicle_unique_id,vehicle_deleted_in
+			rownum as [Index],[ModelYear],Make,Model,vehicle_unique_id,vehicle_deleted_in
 		into edw_temp.tgrpel_vehicle_temp1
 		from
 		(
@@ -41,9 +41,10 @@ BEGIN
 			(
 			 
 			select
+			DENSE_RANK()OVER(PARTITION BY act.PolicyNumber, CAST(act.EffectiveDate AS DATE), act.PolicyChangeNumber ORDER BY atvo.Id) as rownum,
 			act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
 			CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.policy_history_sk,
-			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,atvo.[Index],
+			act.policychangenumber AS transaction_seq_no, act.IssuedDate as TransactionDate,
 			act.IssuedDate,
 			CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
 			atvof.Field,atvof.[Value]
