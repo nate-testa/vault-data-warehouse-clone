@@ -9,6 +9,7 @@
 -- 10/09/23		Sandeep Gundreddy				3. renamed temp table name
 -- 03/06/24		Alberto Almario 				4. new column emergency_extension_notice_in
 -- 01/22/25		Alberto Almario				    5. Added new column theft_or_loss_general_conditions_endorsement_in
+-- 02/04/26		Dinesh Bobbili				    6. Added new column theft_or_loss_general_conditions_approval_in
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcollection_coverage]
