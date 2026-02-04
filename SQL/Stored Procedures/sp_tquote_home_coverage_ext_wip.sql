@@ -11,6 +11,7 @@ GO
 -- 09/12/24		        Alberto Almario			    1. Created this procedure  
 -- 09/24/24		        Architha Gudimalla			2. Added UniqueId, ObjectGroupIdentifier  
 -- 09/24/24		        Architha Gudimalla		    3. Updated Merge join condition
+-- 02/03/26		        Dinesh Bobbili  			4. Added ExtendedLiabilityLocation objecttype
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_tquote_home_coverage_ext_wip 
@@ -64,7 +65,8 @@ BEGIN
                                         'ChangeInTermsSummary',
                                         'CoverageBDetails',
                                         'ExtendedLiabilityLocation',
-                                        'SpecificNamedStructuresPropertyAndLiabilityExclusion'
+                                        'SpecificNamedStructuresPropertyAndLiabilityExclusion',
+                                        'ExtendedLiabilityLocation'
                                     ) ;
 
 		
