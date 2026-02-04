@@ -263,7 +263,7 @@ BEGIN
             group by policy_history_sk
         )
         select
-            q.policy_no,q.effective_dt,q.expiration_dt,h.transaction_type,q.[current_producer_nm] as producer_nm,pd.producer_id,
+            q.policy_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,pd.producer_id,
             q.customer_id,
             br.broker_id, br.broker_nm, br.broker_tier, br.national_agency_in,
             bvt.team_member_nm as bdm_nm,cust.vip_in,i.first_nm as insured_first_nm, 
