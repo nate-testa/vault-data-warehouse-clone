@@ -13,6 +13,7 @@
 -- 02/05/24				Hernando Gonzalez				5. Added Limits Indicator
 -- 07/03/24				Alberto Almario					6. Added primary_location_in
 -- 10/01/2024			Architha Gudimalla				7. Corrected AddressCountry
+-- 02/03/26				Dinesh Bobbii		 			8. AD12434 - Added new columns
 -- =========================================================================================================================== 
 CREATE or alter  PROCEDURE [edw_core].[sp_tquote_pel_location]
 
@@ -41,7 +42,12 @@ BEGIN
 			rownum as [index],
 			CreatedDate,AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
 			NumberOfSwimmingPools,MultiFamilyDwelling,VacantOrUnoccupied,ForSale,
-			SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator,primary_location_in
+			SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator,primary_location_in,
+			OwnedByTrustLLCOrOtherEntity ,TrustOrLegalEntityLegalName ,MailingAddressTrustOrLegalEntity ,TrustOrLegalEntityPurpose ,
+			TrustOrLegalEntityAssetUseOrPossession ,TrustOrLegalEntityGrantorAndBeneficiaries ,TrustOrLegalEntityMembershipDetails ,
+			TrustOrLegalEntityOwnedHoldingsorAssets ,TrustOrLegalEntityBusinessActivities ,TrustorLegalEntityInsuranceCoverage ,
+			TrustOrLegalEntityEmployeesAndResponsibilities ,TrustOrLegalEntityIncomeDetails ,HasAdditionalOwners ,HasBusinessOperations ,
+			IsRentedOutsideOwnersFamily ,HomeType ,OccupancyType ,UnderConstructionOrRenovation ,IsVacant ,IsAnyVaultHomeForSale
 			into edw_temp.tquote_pel_location_temp1
 		from
 		(
@@ -80,7 +86,12 @@ BEGIN
 				(
 					'AddressLine1','AddressLine2','AddressCity','AddressState','AddressZipCode','AddressCounty',
 					'AddressCountry','NumberOfSwimmingPools','MultiFamilyDwelling','VacantOrUnoccupied','ForSale',
-					'SquareFootage','NumberofAthleticStructures','ShortTermRental','LongTermRental','LocationsLimitsIndicator'
+					'SquareFootage','NumberofAthleticStructures','ShortTermRental','LongTermRental','LocationsLimitsIndicator',
+					'OwnedByTrustLLCOrOtherEntity' ,'TrustOrLegalEntityLegalName' ,'MailingAddressTrustOrLegalEntity' ,'TrustOrLegalEntityPurpose' ,
+					'TrustOrLegalEntityAssetUseOrPossession' ,'TrustOrLegalEntityGrantorAndBeneficiaries' ,'TrustOrLegalEntityMembershipDetails' ,
+					'TrustOrLegalEntityOwnedHoldingsorAssets' ,'TrustOrLegalEntityBusinessActivities' ,'TrustorLegalEntityInsuranceCoverage' ,
+					'TrustOrLegalEntityEmployeesAndResponsibilities' ,'TrustOrLegalEntityIncomeDetails' ,'HasAdditionalOwners' ,'HasBusinessOperations' ,
+					'IsRentedOutsideOwnersFamily' ,'HomeType' ,'OccupancyType' ,'UnderConstructionOrRenovation' ,'IsVacant' ,'IsAnyVaultHomeForSale'
 				)
 				and act.CreatedDate > @last_source_extract_ts
 			) as t
@@ -90,7 +101,12 @@ BEGIN
 			max(Value) FOR Field IN (NumberOfMortgagees,[Name],MortgageeType,BillMortgagee,Email,Fax,Phone,
 					IsaoAtima,IsaoAtimaOther,LoanNumber,AddressLine1,AddressLine2,AddressCity,
 					AddressState,AddressZipCode,AddressCounty,AddressCountry,NumberOfSwimmingPools,MultiFamilyDwelling,
-					VacantOrUnoccupied,ForSale,SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator)
+					VacantOrUnoccupied,ForSale,SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator,
+					OwnedByTrustLLCOrOtherEntity ,TrustOrLegalEntityLegalName ,MailingAddressTrustOrLegalEntity ,TrustOrLegalEntityPurpose ,
+					TrustOrLegalEntityAssetUseOrPossession ,TrustOrLegalEntityGrantorAndBeneficiaries ,TrustOrLegalEntityMembershipDetails ,
+					TrustOrLegalEntityOwnedHoldingsorAssets ,TrustOrLegalEntityBusinessActivities ,TrustorLegalEntityInsuranceCoverage ,
+					TrustOrLegalEntityEmployeesAndResponsibilities ,TrustOrLegalEntityIncomeDetails ,HasAdditionalOwners ,HasBusinessOperations ,
+					IsRentedOutsideOwnersFamily ,HomeType ,OccupancyType ,UnderConstructionOrRenovation ,IsVacant ,IsAnyVaultHomeForSale)
 		) as pivottable
 
 		INSERT INTO [edw_core].[tquote_pel_location]
@@ -98,7 +114,13 @@ BEGIN
 			quote_no,effective_dt,expiration_dt,transaction_seq_no,quote_history_sk,
 			location_no,address_line_1,address_line_2,unit_no,city_nm,state_cd,zip_cd,county_nm,country_nm,longitude,latitude,
 			swimming_pool_ct,multi_family_dwelling_in,vacant_unoccupied_in,for_sale_in,source_system_sk,create_ts,update_ts,etl_audit_sk,
-			square_feet,no_of_athletic_structures,short_term_rental_in,long_term_rental_in,location_limit_type,primary_location_in
+			square_feet,no_of_athletic_structures,short_term_rental_in,long_term_rental_in,location_limit_type,primary_location_in,
+			owned_by_trust_llc_or_other_entity_in ,trust_or_legal_entity_legal_nm ,trust_or_legal_entity_mailing_address ,
+			trust_or_legal_entity_purpose ,trust_or_legal_entity_asset_use_or_possession ,trust_or_legal_grantor_and_beneficiaries ,
+			trust_or_legal_entity_membership_details ,trust_or_legal_entity_owned_holding_or_assets ,trust_or_legal_entity_business_activities ,
+			trust_or_legal_entity_insurance_coverage ,trust_or_legal_entity_employees_and_reponsibilities ,trust_or_legal_entity_income_details ,
+			additional_owners_in ,business_operations_in ,rented_outside_owners_family_in ,home_type ,occupancy_type ,
+			under_construction_or_renovation_in
 		)
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,
@@ -106,10 +128,28 @@ BEGIN
 			[index] AS location_no,AddressLine1 AS address_line_1,AddressLine2 AS address_line_2,NULL AS unit_no,AddressCity AS city_nm,
 			AddressState AS state_cd,AddressZipCode AS zip_cd,AddressCounty AS county_nm,AddressCountry AS country_nm,NULL AS longitude,NULL AS latitude,
 			NumberOfSwimmingPools AS swimming_pool_ct,MultiFamilyDwelling AS multi_family_dwelling_in,
-			VacantOrUnoccupied AS vacant_unoccupied_in,ForSale AS for_sale_in,
+			COALESCE(NULLIF(IsVacant, ''), VacantOrUnoccupied) AS vacant_unoccupied_in,COALESCE(NULLIF(IsAnyVaultHomeForSale, ''), ForSale) AS for_sale_in,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk,
 			SquareFootage AS square_feet,NumberofAthleticStructures AS no_of_athletic_structures,ShortTermRental AS short_term_rental_in,LongTermRental AS long_term_rental_in,LocationsLimitsIndicator as location_limit_type
 			,primary_location_in
+			,OwnedByTrustLLCOrOtherEntity	as	owned_by_trust_llc_or_other_entity_in
+			,TrustOrLegalEntityLegalName	as	trust_or_legal_entity_legal_nm
+			,MailingAddressTrustOrLegalEntity	as	trust_or_legal_entity_mailing_address
+			,TrustOrLegalEntityPurpose	as	trust_or_legal_entity_purpose
+			,TrustOrLegalEntityAssetUseOrPossession	as	trust_or_legal_entity_asset_use_or_possession
+			,TrustOrLegalEntityGrantorAndBeneficiaries	as	trust_or_legal_grantor_and_beneficiaries
+			,TrustOrLegalEntityMembershipDetails	as	trust_or_legal_entity_membership_details
+			,TrustOrLegalEntityOwnedHoldingsorAssets	as	trust_or_legal_entity_owned_holding_or_assets
+			,TrustOrLegalEntityBusinessActivities	as	trust_or_legal_entity_business_activities
+			,TrustorLegalEntityInsuranceCoverage	as	trust_or_legal_entity_insurance_coverage
+			,TrustOrLegalEntityEmployeesAndResponsibilities	as	trust_or_legal_entity_employees_and_reponsibilities
+			,TrustOrLegalEntityIncomeDetails	as	trust_or_legal_entity_income_details
+			,HasAdditionalOwners	as	additional_owners_in
+			,HasBusinessOperations	as	business_operations_in
+			,IsRentedOutsideOwnersFamily	as	rented_outside_owners_family_in
+			,HomeType	as	home_type
+			,OccupancyType	as	occupancy_type
+			,UnderConstructionOrRenovation	as	under_construction_or_renovation_in
 		FROM
 			edw_temp.tquote_pel_location_temp1 AS ttlc
 
