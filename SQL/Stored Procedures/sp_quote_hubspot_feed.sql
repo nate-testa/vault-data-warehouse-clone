@@ -215,7 +215,7 @@ BEGIN
         into edw_temp.quote_hubspot_feed_temp1
 
         from edw_core.tquote q
-        inner join edw_core.tproducer pd on pd.producer_sk = q.current_producer_sk
+        left join edw_core.tproducer pd on pd.producer_sk = q.current_producer_sk
         left join edw_core.tpolicy p on q.prior_term_policy_no = p.policy_no
         inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
         inner join edw_core.tquote_history h on h.quote_sk = q.quote_sk
@@ -353,7 +353,7 @@ BEGIN
 		--left join edw_core.tquote q1 on q1.quote_no = q.policy_no
         inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
         inner join edw_core.tpolicy_history h on h.policy_sk = q.policy_sk and h.latest_transaction_in = 'Y'
-        inner join edw_core.tproducer pd on pd.producer_sk = h.producer_sk
+        left join edw_core.tproducer pd on pd.producer_sk = h.producer_sk
         left join edw_core.tpolicy_insured i	on i.policy_history_sk = h.policy_history_sk and i.primary_insured_in = 'Yes'
         left join edw_core.tcustomer cust on cust.customer_id = q.customer_id
         left join edw_core.tbroker br on br.broker_id = q.broker_id
