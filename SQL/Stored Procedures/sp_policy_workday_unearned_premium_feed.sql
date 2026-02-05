@@ -23,6 +23,7 @@
 -- 12/09/25		Yunus Mohammed				13. AD-11945 Modified stored procedure to run proc on same date again
 -- 12/11/25		Yunus Mohammed				14. AD-11946 Added transaction effective date and transaction_ts columns
 --																						Delete stmt modified to delete personal line data only
+-- 02/04/26		Yunus Mohammed				15. AD-12461 Used product_nm for 'Marine Boat & Yacht' instead of product_cd
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -113,7 +114,7 @@ BEGIN
 					WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
 					WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
 					WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
-					WHEN tprd.product_cd = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
+					WHEN tprd.product_nm = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
 					ELSE tprd.product_nm
 				END AS [product],
 				CASE WHEN tp.uw_company_nm='Vault E & S Insurance Company' THEN 'Vault E&S Insurance Company' 
