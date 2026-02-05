@@ -13,6 +13,7 @@
 -- 17/07/25		Alberto Almario					6. New Column location_deleted_in
 -- 09/09/25		Yunus Mohammed		 		7. AD10907 - Added logic to use IsDeletedOnRenewal
 -- 02/03/26		Dinesh Bobbii		 		8. AD12434 - Added new columns
+-- 02/05/26		Dinesh Bobbii		 		9. AD12434 - Updated column names
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpel_location]
 
@@ -117,8 +118,8 @@ BEGIN
 			swimming_pool_ct,multi_family_dwelling_in,vacant_unoccupied_in,for_sale_in,source_system_sk,create_ts,update_ts,etl_audit_sk,
 			square_feet,no_of_athletic_structures,short_term_rental_in,long_term_rental_in,location_limit_type,primary_location_in
 			,location_deleted_in,owned_by_trust_llc_or_other_entity_in ,trust_or_legal_entity_legal_nm ,trust_or_legal_entity_mailing_address ,
-			trust_or_legal_entity_purpose ,trust_or_legal_entity_asset_use_or_possession ,trust_or_legal_grantor_and_beneficiaries ,
-			trust_or_legal_entity_membership_details ,trust_or_legal_entity_owned_holding_or_assets ,trust_or_legal_entity_business_activities ,
+			trust_or_legal_entity_purpose ,trust_or_legal_entity_asset_use_or_possession ,trust_or_legal_entity_grantor_and_beneficiaries ,
+			trust_or_legal_entity_membership_details ,trust_or_legal_entity_owned_holdings_or_assets ,trust_or_legal_entity_business_activities ,
 			trust_or_legal_entity_insurance_coverage ,trust_or_legal_entity_employees_and_reponsibilities ,trust_or_legal_entity_income_details ,
 			additional_owners_in ,business_operations_in ,rented_outside_owners_family_in ,home_type ,occupancy_type ,
 			under_construction_or_renovation_in
@@ -139,9 +140,9 @@ BEGIN
 			,MailingAddressTrustOrLegalEntity	as	trust_or_legal_entity_mailing_address
 			,TrustOrLegalEntityPurpose	as	trust_or_legal_entity_purpose
 			,TrustOrLegalEntityAssetUseOrPossession	as	trust_or_legal_entity_asset_use_or_possession
-			,TrustOrLegalEntityGrantorAndBeneficiaries	as	trust_or_legal_grantor_and_beneficiaries
+			,TrustOrLegalEntityGrantorAndBeneficiaries	as	trust_or_legal_entity_grantor_and_beneficiaries
 			,TrustOrLegalEntityMembershipDetails	as	trust_or_legal_entity_membership_details
-			,TrustOrLegalEntityOwnedHoldingsorAssets	as	trust_or_legal_entity_owned_holding_or_assets
+			,TrustOrLegalEntityOwnedHoldingsorAssets	as	trust_or_legal_entity_owned_holdings_or_assets
 			,TrustOrLegalEntityBusinessActivities	as	trust_or_legal_entity_business_activities
 			,TrustorLegalEntityInsuranceCoverage	as	trust_or_legal_entity_insurance_coverage
 			,TrustOrLegalEntityEmployeesAndResponsibilities	as	trust_or_legal_entity_employees_and_reponsibilities
