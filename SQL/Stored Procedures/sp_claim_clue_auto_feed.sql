@@ -132,10 +132,10 @@ BEGIN
             SELECT 
                 customer_id,
                 insured_type,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(first_nm, '''', ' '), '`', ' '), '’', ' '), ',', ' '), 20) AS first_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(last_nm, '''', ' '), '`', ' '), '’', ' '), ',', ' '), 20) AS last_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(middle_nm, '''', ' '), '`', ' '), '’', ' '), ',', ' '), 15) AS middle_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(customer_nm, '''', ' '), '`', ' '), '’', ' '), ',', ' '), 15) AS customer_nm,
+                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(first_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS first_nm,
+                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(last_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS last_nm,
+                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(middle_nm, '''', ''), '`', ''), '’', ''), ',', ''), 15) AS middle_nm,
+                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(customer_nm, '''', ''), '`', ''), '’', ''), ',', ''), 15) AS customer_nm,
                 birth_dt,
                 RIGHT(REPLACE(TRANSLATE(home_phone_no, '+-/()#', '      '), ' ', ''), 10) AS home_phone_no
             FROM edw_core.tcustomer
@@ -146,10 +146,10 @@ BEGIN
                 pi.policy_no,
                 pi.prefix,
                 pi.suffix,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.first_nm, '''', ' '), '`', ' '), '’', ' '), ',', ' '), 20) AS first_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.last_nm, '''', ' '), '`', ' '), '’', ' '), ',', ' '), 20) AS last_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.middle_nm, '''', ' '), '`', ' '), '’', ' '), ',', ' '), 20) AS middle_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.insured_nm, '''', ' '), '`', ' '), '’', ' '), ',', ' '), 20) AS insured_nm,
+                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.first_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS first_nm,
+                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.last_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS last_nm,
+                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.middle_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS middle_nm,
+                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.insured_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS insured_nm,
                 pi.birth_dt  
             FROM edw_core.tpolicy_insured AS pi
             INNER JOIN 
