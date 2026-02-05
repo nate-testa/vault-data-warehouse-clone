@@ -15,6 +15,7 @@
 -- 07/10/25		Dinesh Bobbili					11. AD10149 Added commercial_or_personal_business_type
 -- 10/30/25		Dinesh Bobbili					12. AD11519 Added affiliation_in, broker_affiliation_nm
 -- 11/19/25		Dinesh Bobbili					13. AD11802 Added allow_communication_to_customer_in
+-- 02/05/26		Dinesh Bobbili					14. AD12475 Added california_dba_nm
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbroker]
@@ -127,6 +128,7 @@ BEGIN
 			,CASE WHEN brk.IsAffiliation = 1 THEN 'Yes' ELSE 'No' END as affiliation_in
 			,NULLIF(brk.Affiliation,'') as broker_affiliation_nm
 			,CASE WHEN brk.AllowSendingMarketingCommunicationsToCustomers = 1 THEN 'Yes' ELSE 'No' END as allow_communication_to_customer_in
+			,brk.DbaForCA as california_dba_nm
 		INTO edw_temp.tbroker_temp1
 		FROM
 			edw_stage.Brokerage brk
@@ -159,7 +161,7 @@ BEGIN
 				insurance_policy_limit_amt,insurance_policy_effective_dt,insurance_policy_expiration_dt,company_nm,bank_nm,routing_no,account_no,
 				accounting_type,token_id,commission_statement_email,broker_tier,broker_terminated_dt,contract_dt,national_agency_in,
 				create_ts,update_ts,etl_audit_sk, broker_servicing_team_sk, commercial_or_personal_business_type, affiliation_in, broker_affiliation_nm,
-				allow_communication_to_customer_in
+				allow_communication_to_customer_in,california_dba_nm
 			)
 		VALUES
 			(
@@ -177,7 +179,7 @@ BEGIN
 				insurance_policy_limit_amt,insurance_policy_effective_dt,insurance_policy_expiration_dt,company_nm,bank_nm,routing_no,account_no,
 				accounting_type,token_id,commission_statement_email,broker_tier,TerminatedDate,contract_dt,national_agency_in,
 				getdate(),getdate(),@etl_audit_sk, broker_servicing_team_sk, commercial_or_personal_business_type, affiliation_in, broker_affiliation_nm,
-				allow_communication_to_customer_in
+				allow_communication_to_customer_in,california_dba_nm
 			)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -257,7 +259,8 @@ BEGIN
 		Target.commercial_or_personal_business_type = Source.commercial_or_personal_business_type,
 		Target.affiliation_in = Source.affiliation_in,
 		Target.broker_affiliation_nm = Source.broker_affiliation_nm,
-		Target.allow_communication_to_customer_in = Source.allow_communication_to_customer_in
+		Target.allow_communication_to_customer_in = Source.allow_communication_to_customer_in,
+		Target.california_dba_nm = Source.california_dba_nm
 		;
 		
 		SET @rows_affected=@@ROWCOUNT;
