@@ -9,6 +9,7 @@
 -- 08/22/2024			Architha Gudimalla					4. Removed eff_dt from merge
 -- 10/01/2024			Architha Gudimalla					5. Corrected AddressCountry
 -- 02/03/26				Dinesh Bobbii		 				6. AD12434 - Added new columns
+-- 02/05/26				Dinesh Bobbii		 				7. AD12434 - Updated column names
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_location_wip]
 
@@ -147,9 +148,9 @@ BEGIN
 				,ttlc.MailingAddressTrustOrLegalEntity	as	trust_or_legal_entity_mailing_address
 				,ttlc.TrustOrLegalEntityPurpose	as	trust_or_legal_entity_purpose
 				,ttlc.TrustOrLegalEntityAssetUseOrPossession	as	trust_or_legal_entity_asset_use_or_possession
-				,ttlc.TrustOrLegalEntityGrantorAndBeneficiaries	as	trust_or_legal_grantor_and_beneficiaries
+				,ttlc.TrustOrLegalEntityGrantorAndBeneficiaries	as	trust_or_legal_entity_grantor_and_beneficiaries
 				,ttlc.TrustOrLegalEntityMembershipDetails	as	trust_or_legal_entity_membership_details
-				,ttlc.TrustOrLegalEntityOwnedHoldingsorAssets	as	trust_or_legal_entity_owned_holding_or_assets
+				,ttlc.TrustOrLegalEntityOwnedHoldingsorAssets	as	trust_or_legal_entity_owned_holdings_or_assets
 				,ttlc.TrustOrLegalEntityBusinessActivities	as	trust_or_legal_entity_business_activities
 				,ttlc.TrustorLegalEntityInsuranceCoverage	as	trust_or_legal_entity_insurance_coverage
 				,ttlc.TrustOrLegalEntityEmployeesAndResponsibilities	as	trust_or_legal_entity_employees_and_reponsibilities
@@ -202,9 +203,9 @@ BEGIN
 				,TARGET.trust_or_legal_entity_mailing_address = SOURCE.trust_or_legal_entity_mailing_address
 				,TARGET.trust_or_legal_entity_purpose = SOURCE.trust_or_legal_entity_purpose
 				,TARGET.trust_or_legal_entity_asset_use_or_possession = SOURCE.trust_or_legal_entity_asset_use_or_possession
-				,TARGET.trust_or_legal_grantor_and_beneficiaries = SOURCE.trust_or_legal_grantor_and_beneficiaries
+				,TARGET.trust_or_legal_entity_grantor_and_beneficiaries = SOURCE.trust_or_legal_entity_grantor_and_beneficiaries
 				,TARGET.trust_or_legal_entity_membership_details = SOURCE.trust_or_legal_entity_membership_details
-				,TARGET.trust_or_legal_entity_owned_holding_or_assets = SOURCE.trust_or_legal_entity_owned_holding_or_assets
+				,TARGET.trust_or_legal_entity_owned_holdings_or_assets = SOURCE.trust_or_legal_entity_owned_holdings_or_assets
 				,TARGET.trust_or_legal_entity_business_activities = SOURCE.trust_or_legal_entity_business_activities
 				,TARGET.trust_or_legal_entity_insurance_coverage = SOURCE.trust_or_legal_entity_insurance_coverage
 				,TARGET.trust_or_legal_entity_employees_and_reponsibilities = SOURCE.trust_or_legal_entity_employees_and_reponsibilities
@@ -224,8 +225,8 @@ BEGIN
 		        swimming_pool_ct, multi_family_dwelling_in, vacant_unoccupied_in, for_sale_in, source_system_sk, create_ts, update_ts, etl_audit_sk,
 		        square_feet, no_of_athletic_structures, short_term_rental_in, long_term_rental_in, location_limit_type,
 				primary_location_in,owned_by_trust_llc_or_other_entity_in ,trust_or_legal_entity_legal_nm ,trust_or_legal_entity_mailing_address ,
-				trust_or_legal_entity_purpose ,trust_or_legal_entity_asset_use_or_possession ,trust_or_legal_grantor_and_beneficiaries ,
-				trust_or_legal_entity_membership_details ,trust_or_legal_entity_owned_holding_or_assets ,trust_or_legal_entity_business_activities ,
+				trust_or_legal_entity_purpose ,trust_or_legal_entity_asset_use_or_possession ,trust_or_legal_entity_grantor_and_beneficiaries ,
+				trust_or_legal_entity_membership_details ,trust_or_legal_entity_owned_holdings_or_assets ,trust_or_legal_entity_business_activities ,
 				trust_or_legal_entity_insurance_coverage ,trust_or_legal_entity_employees_and_reponsibilities ,trust_or_legal_entity_income_details ,
 				additional_owners_in ,business_operations_in ,rented_outside_owners_family_in ,home_type ,occupancy_type ,
 				under_construction_or_renovation_in
@@ -236,8 +237,8 @@ BEGIN
 		        SOURCE.swimming_pool_ct, SOURCE.multi_family_dwelling_in, SOURCE.vacant_unoccupied_in, SOURCE.for_sale_in, SOURCE.source_system_sk, SOURCE.create_ts, SOURCE.update_ts, SOURCE.etl_audit_sk,
 		        SOURCE.square_feet, SOURCE.no_of_athletic_structures, SOURCE.short_term_rental_in, SOURCE.long_term_rental_in, SOURCE.location_limit_type,
 				SOURCE.primary_location_in,SOURCE.owned_by_trust_llc_or_other_entity_in, SOURCE.trust_or_legal_entity_legal_nm, SOURCE.trust_or_legal_entity_mailing_address, SOURCE.trust_or_legal_entity_purpose, 
-				SOURCE.trust_or_legal_entity_asset_use_or_possession, SOURCE.trust_or_legal_grantor_and_beneficiaries, SOURCE.trust_or_legal_entity_membership_details, 
-				SOURCE.trust_or_legal_entity_owned_holding_or_assets, SOURCE.trust_or_legal_entity_business_activities, SOURCE.trust_or_legal_entity_insurance_coverage, 
+				SOURCE.trust_or_legal_entity_asset_use_or_possession, SOURCE.trust_or_legal_entity_grantor_and_beneficiaries, SOURCE.trust_or_legal_entity_membership_details, 
+				SOURCE.trust_or_legal_entity_owned_holdings_or_assets, SOURCE.trust_or_legal_entity_business_activities, SOURCE.trust_or_legal_entity_insurance_coverage, 
 				SOURCE.trust_or_legal_entity_employees_and_reponsibilities, SOURCE.trust_or_legal_entity_income_details, SOURCE.additional_owners_in, 
 				SOURCE.business_operations_in, SOURCE.rented_outside_owners_family_in, SOURCE.home_type, SOURCE.occupancy_type, 
 				SOURCE.under_construction_or_renovation_in
