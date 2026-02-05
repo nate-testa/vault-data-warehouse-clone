@@ -12,6 +12,7 @@ GO
 -- 09/24/24		        Architha Gudimalla			2. Added UniqueId, ObjectGroupIdentifier  
 -- 09/24/24		        Architha Gudimalla		    3. Updated Merge join condition
 -- 02/03/26		        Dinesh Bobbili  			4. Added ExtendedLiabilityLocation objecttype
+-- 02/05/26		        Dinesh Bobbili  			5. Added AdditionalInsured objecttype
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_tquote_home_coverage_ext_wip 
@@ -66,7 +67,8 @@ BEGIN
                                         'CoverageBDetails',
                                         'ExtendedLiabilityLocation',
                                         'SpecificNamedStructuresPropertyAndLiabilityExclusion',
-                                        'ExtendedLiabilityLocation'
+                                        'ExtendedLiabilityLocation',
+                                        'AdditionalInsured'
                                     ) ;
 
 		

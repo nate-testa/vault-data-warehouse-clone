@@ -11,6 +11,7 @@ GO
 -- 08/30/24		        Architha Gudimalla			    1. Created this procedure   
 -- 09/24/24		        Architha Gudimalla			    2. Added UniqueId, ObjectGroupIdentifier
 -- 02/03/26		        Dinesh Bobbili  			    3. Added ExtendedLiabilityLocation objecttype
+-- 02/05/26		        Dinesh Bobbili  			    3. Added AdditionalInsured objecttype 
 -- ===================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_thome_coverage_ext 
@@ -74,7 +75,8 @@ BEGIN
                                                 'CoverageBDetails',
                                                 'ExtendedLiabilityLocation',
                                                 'SpecificNamedStructuresPropertyAndLiabilityExclusion',
-                                                'ExtendedLiabilityLocation'
+                                                'ExtendedLiabilityLocation',
+                                                'AdditionalInsured'
                                             ) ;
         
 		
