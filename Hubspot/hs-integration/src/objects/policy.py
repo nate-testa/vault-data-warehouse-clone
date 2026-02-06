@@ -122,7 +122,8 @@ class Policy:
                 'per_claim_policy_limit_amt': record['per_claim_policy_limit_amt'],
                 'per_claim_attachment_amt': record['per_claim_attachment_amt'],
                 'per_claim_retention_amt': record['per_claim_retention_amt'],
-                'uw_company_nm': record['uw_company_nm']
+                'uw_company_nm': record['uw_company_nm'],
+                'total_policy_premium_amt': record['total_policy_premium_amt']
                 
                 # 'create_ts': record['create_ts'],
                 # 'update_ts': record['update_ts'],
