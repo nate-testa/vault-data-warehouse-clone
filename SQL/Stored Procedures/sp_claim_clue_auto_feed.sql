@@ -22,7 +22,6 @@ GO
 -- 10-01-2025               Alberto Almario             10.  AD11173-Set Date of births to 0 for default Birthdate
 -- 10-09-2025               Alberto Almario             11.  AD11296-Change logic for PolicyHolderNameLast, PolicyHolderNameFirst, and PolicyHolderNameMiddle
 -- 10-27-2025               Alberto Almario             12. AD11505-Add else statement for PolicyHolderNameLast and PolicyHolderNameFirst
--- 02-04-2026               Alberto Almario             13. AD12462-Add replace function to remove special characters from name fields.
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
@@ -132,10 +131,10 @@ BEGIN
             SELECT 
                 customer_id,
                 insured_type,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(first_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS first_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(last_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS last_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(middle_nm, '''', ''), '`', ''), '’', ''), ',', ''), 15) AS middle_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(customer_nm, '''', ''), '`', ''), '’', ''), ',', ''), 15) AS customer_nm,
+                LEFT(first_nm,20) AS first_nm,
+                LEFT(last_nm,20) AS last_nm,
+                LEFT(middle_nm,15) AS middle_nm,
+                LEFT(customer_nm,15) AS customer_nm,
                 birth_dt,
                 RIGHT(REPLACE(TRANSLATE(home_phone_no, '+-/()#', '      '), ' ', ''), 10) AS home_phone_no
             FROM edw_core.tcustomer
@@ -146,10 +145,10 @@ BEGIN
                 pi.policy_no,
                 pi.prefix,
                 pi.suffix,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.first_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS first_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.last_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS last_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.middle_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS middle_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.insured_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS insured_nm,
+                LEFT(pi.first_nm,20) AS first_nm,
+                LEFT(pi.last_nm,20) AS last_nm,
+                LEFT(pi.middle_nm,20) AS middle_nm,
+                LEFT(pi.insured_nm,20) AS insured_nm,
                 pi.birth_dt  
             FROM edw_core.tpolicy_insured AS pi
             INNER JOIN 

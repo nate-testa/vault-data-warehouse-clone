@@ -16,7 +16,6 @@ GO
 -- 08-12-2025               Alberto Almario             4. Update logic for ClaimAmount and ClaimDisposition fields
 -- 09-16-2025               Alberto Almario             5. Add logic for new records where the claimDisposition changed on tclaim
 -- 10-17-2025               Sandeep Gundreddy           6. Added product_sk filter to include only property products
--- 02-04-2026               Alberto Almario             7. AD12462-Add replace function to remove special characters from name fields.
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_property_feed]
 AS
@@ -115,9 +114,9 @@ BEGIN
             SELECT 
                 customer_id,
                 insured_type,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(first_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS first_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(last_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS last_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(customer_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS customer_nm,
+                LEFT(first_nm,20) AS first_nm,
+                LEFT(last_nm,20) AS last_nm,
+                LEFT(customer_nm,20) AS customer_nm,
                 birth_dt,
                 RIGHT(REPLACE(TRANSLATE(home_phone_no, '+-/()#', '      '), ' ', ''), 10) AS home_phone_no
             FROM edw_core.tcustomer
@@ -126,9 +125,9 @@ BEGIN
             SELECT 
                 pi.policy_insured_sk,
                 pi.policy_no,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.first_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS first_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.last_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS last_nm,
-                LEFT(REPLACE(REPLACE(REPLACE(REPLACE(pi.insured_nm, '''', ''), '`', ''), '’', ''), ',', ''), 20) AS insured_nm,
+                LEFT(pi.first_nm,20) AS first_nm,
+                LEFT(pi.last_nm,20) AS last_nm,
+                LEFT(pi.insured_nm,20) AS insured_nm,
                 pi.birth_dt  
             FROM edw_core.tpolicy_insured AS pi
             INNER JOIN 
