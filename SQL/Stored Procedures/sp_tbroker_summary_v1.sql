@@ -67,7 +67,8 @@ GO
 -- 10/28/25		Dinesh Bobbili					38. AD11456 - Added new columns
 -- 10/28/25		Architha Gudimalla				39. AD11456 - Added filter on trenewal_summary - non_flat_cancelled_ct=1
 -- 11/23/25		Dinesh Bobbili					40. AD11643 - Added broker_sk filter
--- 01/30/26		Dinesh Bobbili					41. Using accepted_renewal_ct for renewal_accepted_ct
+-- 01/30/26		Dinesh Bobbili					41. AD12403 - Using accepted_renewal_ct for renewal_accepted_ct
+-- 02/06/26		Architha Gudimalla				42. AD12403 - added prior_issued ct and prm, and accepted prm for ren summ
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary_v1] 
@@ -418,6 +419,9 @@ BEGIN
 							r.broker_sk, r.product_sk, r.customer_sk, st.state_sk,
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES') uwco, 
 						   	sum(r.accepted_renewal_ct) renewal_accepted_ct,  
+							sum(r.prior_issued_ct) prior_issued_ct,  
+							sum(r.accepted_premium_amt) accepted_premium_amt,  
+							sum(r.prior_issued_premium_amt) prior_issued_premium_amt,  
 							sum(r.renewal_ct) renewal_ct,  
 							sum(case when renewal_policy_sk > 0 
 									or (renewal_quote_sk > 0 and q.quote_status = 'In Progress' and q.first_offered_quote_history_sk IS NOT NULL ) 
@@ -451,7 +455,10 @@ BEGIN
 							replace(replace(isnull(pol.uw_company_nm,'Other'), 'Vault Reciprocal Exchange', 'VRE'), 'Vault E & S Insurance Company', 'VES')
 				)
 				select broker_sk,product_sk, customer_sk, uwco, state_sk,
-						--  
+						--   
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then prior_issued_ct 							else 0 end) prior_issued_ct,  
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then accepted_premium_amt 						else 0 end) accepted_premium_amt,  
+						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then prior_issued_premium_amt 					else 0 end) prior_issued_premium_amt,  
 						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then renewal_accepted_ct 						else 0 end) policy_renewal_accepted_ct,  
 						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then renewal_ct 									else 0 end) policy_renewal_ct,  
 						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_ct 					else 0 end) policy_renewal_offered_ct,  
@@ -464,6 +471,9 @@ BEGIN
 						sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then non_flat_cancelled_ct                         else 0 end) non_flat_cancelled_ct,
                         sum(case when month_sk between @month_begin_dt_sk and @month_end_dt_sk then expiring_sixty_day_written_premium_amt      else 0 end) expiring_sixty_day_written_premium_amt,
 						--  
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then prior_issued_ct 								else 0 end) ytd_prior_issued_ct,  
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then accepted_premium_amt 						else 0 end) ytd_accepted_premium_amt,  
+						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then prior_issued_premium_amt 					else 0 end) ytd_prior_issued_premium_amt,  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_accepted_ct 						   else 0 end) ytd_policy_renewal_accepted_ct,  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then renewal_ct 								   else 0 end) ytd_policy_renewal_ct,  
 						sum(case when month_sk between @year_begin_dt_sk and @month_end_dt_sk then policy_renewal_offered_ct 				   else 0 end) ytd_policy_renewal_offered_ct,  
@@ -1167,6 +1177,9 @@ BEGIN
 						five_year_non_cat_claim_ct, 
 						five_year_non_cat_loss_incurred_amt,  
 						--
+						prior_issued_ct,  
+						accepted_premium_amt,  
+						prior_issued_premium_amt, 
 						policy_expiring_ct,
 						policy_renewal_accepted_ct,
 						policy_renewal_ct,
@@ -1179,6 +1192,9 @@ BEGIN
 						expiring_sixty_day_written_premium_amt, 
 						policy_renewal_premium_amt,						
 						--
+						ytd_prior_issued_ct,  
+						ytd_accepted_premium_amt,  
+						ytd_prior_issued_premium_amt, 
 						ytd_policy_expiring_ct,
 						ytd_policy_renewal_accepted_ct,
 						ytd_policy_renewal_ct,
@@ -1360,6 +1376,9 @@ BEGIN
 						sum(summ.five_year_non_cat_claim_ct), 
 						sum(summ.five_year_non_cat_loss_incurred_amt),  
 						--
+						sum(isnull(r.prior_issued_ct							,0)) prior_issued_ct,
+						sum(isnull(r.accepted_premium_amt						,0)) accepted_premium_amt,
+						sum(isnull(r.prior_issued_premium_amt					,0)) prior_issued_premium_amt,
 						sum(isnull(r.policy_expiring_ct							,0)) policy_expiring_ct,
 						sum(isnull(r.policy_renewal_accepted_ct					,0)) policy_renewal_accepted_ct,
 						sum(isnull(r.policy_renewal_ct							,0)) policy_renewal_ct,
@@ -1371,7 +1390,10 @@ BEGIN
 						sum(isnull(r.non_flat_cancelled_ct ,0)) non_flat_cancelled_ct,
 						sum(isnull(r.expiring_sixty_day_written_premium_amt ,0)) expiring_sixty_day_written_premium_amt,
 						sum(isnull(r.policy_renewal_prm							,0)) policy_renewal_premium_amt,
-						--
+						-- 
+						sum(isnull(r.ytd_prior_issued_ct							,0)) ytd_prior_issued_ct,
+						sum(isnull(r.ytd_accepted_premium_amt						,0)) ytd_accepted_premium_amt,
+						sum(isnull(r.ytd_prior_issued_premium_amt					,0)) ytd_prior_issued_premium_amt,
 						sum(isnull(r.ytd_policy_expiring_ct							,0)) ytd_policy_expiring_ct,
 						sum(isnull(r.ytd_policy_renewal_accepted_ct					,0)) ytd_policy_renewal_accepted_ct,
 						sum(isnull(r.ytd_policy_renewal_ct							,0)) ytd_policy_renewal_ct,
