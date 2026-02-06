@@ -34,7 +34,8 @@ and internal_coverage_sk not in
 		''Automobile Death Indemnity and Disability Income'', 
 		''Auto Death Disability'',''Emergency Living Expense'',''Equipment Manufacturer Parts Enhancement'',
 		''Full Glass Coverage Enhancement'',''Multiple Policy Deductible Enhancement'',''Stated Value Enhancement'')
-)'
+)',
+target_sql = 'select 0'
 where
 	validation_sql_desc= 'tpolicy_transaction - policies having vehicle_coverage_sk = 0 for AU'
 
@@ -54,7 +55,7 @@ and
 	product_sk = 2  or (a.source_system_sk = 4 and product_sk in (1,5) 
 	and ic.internal_coverage_cd = ''Lux'')  
 ) and pol.migrated_in = ''No''
-and pol.effective_dt > ''2025-01-01''',
+and pol.effective_dt >= ''2025-01-01''',
 target_sql = 'select 0'
 where
 	validation_sql_desc= 'tpolicy_transaction - LUX - collection_class_type_sk = 0'
