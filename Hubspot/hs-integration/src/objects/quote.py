@@ -114,6 +114,7 @@ class Quote:
                 'broker_name': record['broker_nm'],
                 'effective_date': record['effective_dt'],
                 'expiration_date': record['expiration_dt'],
+                'producer_id': record['producer_id'],
                 'producer_nm': record['producer_nm'],
                 'bdm_nm': record['bdm_nm'],
                 'insured_first_nm': record['insured_first_nm'],
