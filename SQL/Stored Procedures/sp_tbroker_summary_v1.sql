@@ -68,6 +68,7 @@ GO
 -- 10/28/25		Architha Gudimalla				39. AD11456 - Added filter on trenewal_summary - non_flat_cancelled_ct=1
 -- 11/23/25		Dinesh Bobbili					40. AD11643 - Added broker_sk filter
 -- 01/30/26		Dinesh Bobbili					41. AD12403 - Using accepted_renewal_ct for renewal_accepted_ct
+-- 02/06/26		Architha Gudimalla				42. AD12403 - added prior_issued ct and prm, and accepted prm for ren summ
 -- ================================================================================================================================================== 
 
 CREATE OR ALTER     PROCEDURE [edw_core].[sp_tbroker_summary_v1] 
