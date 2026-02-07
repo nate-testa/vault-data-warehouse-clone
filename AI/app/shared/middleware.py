@@ -97,7 +97,7 @@ def _write_usage_event(event_data: dict):
         event_data: Dictionary containing usage event data
     """
     try:
-        usage_dir = Path('/home/azureuser/python_scripts/snowflake_ai/app/logs/usage')
+        usage_dir = Path.home() / 'python_scripts/snowflake_ai/app/logs/usage'
         usage_dir.mkdir(parents=True, exist_ok=True)
         
         date_str = datetime.now().strftime('%Y%m%d')

@@ -14,6 +14,8 @@ GO
 -- 11/14/23		Sandeep Gundreddy       		2. Modified quote_collection_location_sk join
 -- 03/06/24		Alberto Almario 				3. new column emergency_extension_notice_in
 -- 01/22/25		Alberto Almario				    4. Added new column theft_or_loss_general_conditions_endorsement_in
+-- 02/02/26		Dinesh Bobbili				    5. Added new column theft_or_loss_general_conditions_approval_in
+-- 02/05/26		Dinesh Bobbili				    6. Fixed the column selection issue
 -- ======================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_collection_coverage]
@@ -68,7 +70,7 @@ BEGIN
 			--,4 as [source_system_sk] --20230717 removed
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
-            ,EmergencyExtensionNotice,TheftOrLossGeneralConditionsEndorsement
+            ,EmergencyExtensionNotice,TheftOrLossGeneralConditionsEndorsement,TheftOrLossGeneralConditionsApproval
 			INTO [edw_temp].[tquote_collection_coverage_temp1]
 			FROM
 			(
@@ -104,7 +106,7 @@ BEGIN
 			PIVOT 
 			(
 				max(Value) FOR Field IN (UnoccupiedMoreThanThreeMonths,NumberOfLossesLastThreeYears,ProtectionClass,Terrain,DistanceToCoast,RoofGeometry,RoofCovering,RoofCoverDeck,RoofDeckAttachment,RoofWallAttachment,HailResistantRating,SecondaryWaterResistance,ConstructionType,YearBuilt,FireProtection,OpeningProtection,NumberOfStories,CentralReportingFireAlarm,CentralReportingBurglarAlarm,HomeSafe,FulltimeLiveInCaretaker,BackupGenerator,ResidentialSprinklerSystem,MarketValueScheduledItems,MarketScheduledClassBankVaultedJewelry,MarketScheduledClassCoins,MarketScheduledClassCollectibles,MarketScheduledClassFineArts,MarketScheduledClassFurs,MarketScheduledClassGuns,MarketScheduledClassWorldwideJewelry,MarketScheduledClassMiscellaneous,MarketScheduledClassMusicalInstruments,MarketScheduledClassSilver,MarketScheduledClassStamps,MarketScheduledClassWearableCollectibles,MarketScheduledClassWine,MinimumEarnedPremiumEndorsement,MinimumEarnedPremiumEndorsementLimit,WardrobeLossPrevention,CompanionCreditHomeowner,AgreedValue,AgreedValueSpecifiedClass,AgreedValueSpecifiedClassBankVaultedJewelry,AgreedValueSpecifiedClassCoins,AgreedValueSpecifiedClassCollectibles,AgreedValueSpecifiedClassFineArts,AgreedValueSpecifiedClassFurs,AgreedValueSpecifiedClassGuns,AgreedValueSpecifiedClassWorldwideJewelry,AgreedValueSpecifiedClassMiscellaneous,AgreedValueSpecifiedClassMusicalInstruments,AgreedValueSpecifiedClassSilver,AgreedValueSpecifiedClassStamps,AgreedValueSpecifiedClassWearableCollectibles,AgreedValueSpecifiedClassWine,AgreedValueSpecifiedItems,AlarmWarranty,BreakageExclusion,TerrorismLimitation,TerrorismLimitationAmount,TheftMysteriousDisappearanceExclusion,TransitLimit,TransitLimitAmount,HurricaneLossExclusion,HurricaneLossLimitation,HurricaneLossLimitationAmount,OutdoorFineArtHurricaneExclusion,TerrorismExclusion,DeletionofCosmeticMarringExclusion,EarthquakeExclusion,EarthquakeDeductibleLossLimitation,EarthquakeDeductibleLossLimitationLimit,HotelMotelExclusion,JewelryOffPremisesLossLimitation,SpoilageExclusion,ChangeinTermsSummary,ChangeinTermsOptions,Manuscript,CoverageDeductible,CoverageDeductibleAmount,HurricaneDeductible,HurricaneDeductibleType,HurricaneDeductibleLimit,EarthquakeDeductible,EarthquakeDeductibleAmount,WildfireDeductible,WildfireDeductibleType,WildfireDeductibleAmount,WildfireBarkMulchWithinTenFeetofAnyStructure,WildfireCombustibleDeckOrAttachedStructure,WildfireCombustibleWoodSiding,WildfireDefensibleSpace,WildfireDistanceToHighFuelFeet,WildfireDistanceToModerateFuelFeet,WildfireDistanceToVeryHighFuelFeet,WildfireEavesorEnclosedEaves,WildfireExteriorWildfireSprinklers,WildfireFireWoodOrCombustiblesStoredAgainstHome,WildfireFlammableVegetationWithinTenFeetofAnyStructure,WildfireGutterGuards,WildfireHazardSeverity,WildfireNearestDistanceToPerimeter,WildfireNumberOfOccurrencesNear,WildfireNumberOfOccurrences,WildfirePermanentlyInstalledSpraySystem,WildfirePortableFireBreakSystem,WildfireSpecialityEmberResistantVenting,WildfireThreat,WildfireWoodShakeOrShingleRoof,CoutureAndWearableCollectiblesClassCouture
-                                        ,EmergencyExtensionNotice,TheftOrLossGeneralConditionsEndorsement
+                                        ,EmergencyExtensionNotice,TheftOrLossGeneralConditionsEndorsement,TheftOrLossGeneralConditionsApproval
                                         )
 			) AS pivottable
 			'
@@ -237,6 +239,7 @@ BEGIN
            ,[etl_audit_sk]
            ,[emergency_extension_notice_in]
            ,[theft_or_loss_general_conditions_endorsement_in]
+           ,[theft_or_loss_general_conditions_approval_in]
 			)
 		SELECT 
 			[quote_no],[EffectiveDate],[ExpirationDate],[Number],
@@ -264,7 +267,7 @@ BEGIN
             [WildfireGutterGuards],[WildfireHazardSeverity],[WildfireNearestDistanceToPerimeter],[WildfireNumberOfOccurrencesNear],[WildfireNumberOfOccurrences],
             [WildfirePermanentlyInstalledSpraySystem],[WildfirePortableFireBreakSystem],[WildfireSpecialityEmberResistantVenting],[WildfireThreat],
             [WildfireWoodShakeOrShingleRoof],[CoutureAndWearableCollectiblesClassCouture],[source_system_sk],getdate(),getdate(), @etl_audit_sk,
-            [EmergencyExtensionNotice],[TheftOrLossGeneralConditionsEndorsement]
+            [EmergencyExtensionNotice],[TheftOrLossGeneralConditionsEndorsement],[TheftOrLossGeneralConditionsApproval]
 		FROM
 			[edw_temp].[tquote_collection_coverage_temp1] 
 

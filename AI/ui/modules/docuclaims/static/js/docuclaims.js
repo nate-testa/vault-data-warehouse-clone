@@ -44,10 +44,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     $(document).ready(function() {
-        // Force hide modal and backdrop on page load with !important rules
-        $('#uploadContainer').hide().attr('style', 'display: none !important');
-        $('#modalBackdrop').hide().attr('style', 'display: none !important');
-        
         // Global flag to track if we should continue polling
         window.shouldPollFileStatus = false;
         
@@ -150,9 +146,6 @@ document.addEventListener('DOMContentLoaded', function() {
             fileListHTML += '</ul></div>';
             $('#fileList').html(fileListHTML);
             
-            // Show upload modal only (no need for the small upload badge anymore)
-            showUploadModal();
-            
             // Upload files automatically
             const formData = new FormData();
             for (let i = 0; i < files.length; i++) {
@@ -191,6 +184,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             statusHtml += '</div>';
             $('#uploadStatus').html(statusHtml);
+            
+            // Show upload modal AFTER content is added to the DOM
+            showUploadModal();
+            
             $('#attachmentBtn').prop('disabled', true);
             
             $.ajax({

@@ -17,8 +17,14 @@ USERNAME = os.getenv('USERNAME')
 PASS = os.getenv('PASS')
 DB = os.getenv('DB')
 
-
 hub_api = 'https://api.hubapi.com'  
+
+# Email Report Configuration
+# Options: 'both', 'statistics_only', 'errors_only'
+# - 'both': Include both statistics and error/warning tables (default)
+# - 'statistics_only': Only show object processing statistics
+# - 'errors_only': Only show error and warning tables
+EMAIL_REPORT_MODE = 'both'
 
 # Association configuration
 # Set to True to automatically replace existing associations when limit is exceeded

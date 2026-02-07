@@ -442,12 +442,10 @@ input:disabled {
 
 /* File upload modal */
 #modalBackdrop {
-    display: none !important;
     z-index: 9998 !important; /* Ensure backdrop is always behind modal but above other content */
 }
 
 #uploadContainer {
-    display: none !important;
     z-index: 9999 !important; /* Ensure modal is always on top */
 }
 

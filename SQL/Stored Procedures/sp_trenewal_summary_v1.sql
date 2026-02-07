@@ -1,4 +1,4 @@
-﻿/****** Object:  StoredProcedure [edw_core].[sp_trenewal_summary]    Script Date: 11/16/2023 10:55:23 PM ******/
+﻿/****** Object:  StoredProcedure [edw_core].[sp_trenewal_summary_v1]    Script Date: 2/3/2026 6:48:26 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -64,9 +64,10 @@ GO
 -- 														outstanding_premium_amt
 -- 														need_attention_premium_amt
 -- 01/22/26		Dinesh Bobbili					36. AD12328 - Added address logic based policy_sk
+-- 01/30/26     Architha Gudimalla              37. AD12428 - updated to take out the 60 day calc for flat and midterm cancels
 -- ======================================================================================================================================================================= 
 
-CREATE or ALTER     PROCEDURE [edw_core].[sp_trenewal_summary_v1]
+CREATE OR ALTER       PROCEDURE [edw_core].[sp_trenewal_summary_v1]
 @in_yearmonth int = null,
 @in_source_system VARCHAR(10) = null
 AS 
@@ -195,8 +196,8 @@ BEGIN
 							q.prior_policy_no 
 						    , replace(replace(q.uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd
 							, br.primary_address_state_cd
-							, q.prior_term_policy_no
-							, rank() over (partition by q.prior_term_policy_no 
+							, isnull(q.prior_term_policy_no,q.prior_policy_no) prior_term_policy_no
+							, rank() over (partition by isnull(q.prior_term_policy_no,q.prior_policy_no)
 										   order by replace(replace(replace(quote_status,'In Progress','3_In_Progress'),'Offered','2_Offered'),'Issued','1_Issued'), 
 										   			q.quote_sk desc
 										  ) rnk
@@ -248,7 +249,7 @@ BEGIN
 								end) as effective_date_60_day_comm,  
 						sum(CASE WHEN tr.transaction_seq_no = max_pol_tr.transaction_seq_no
 								  and transaction_effective_dt_sk <> expiration_dt_sk and tt.policy_transaction_type_nm in ('Cancellation') --('Cancellation', 'Reinstatement')
-								  and  (transaction_effective_dt_sk - effective_dt_sk  > 60 or transaction_dt_sk - effective_dt_sk  > 60)
+								  and  (transaction_effective_dt_sk <> effective_dt_sk)
 								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round(((expiration_dt_sk - effective_dt_sk)*1.0/(expiration_dt_sk - transaction_effective_dt_sk)),5) 
 								else 0 
 								end) as mid_term_cancel_amount, 
@@ -256,12 +257,34 @@ BEGIN
 								then (tr.premium_amt - tr.tax_fee_surcharge_amt) * round(((expiration_dt_sk - effective_dt_sk)*1.0/(expiration_dt_sk - transaction_effective_dt_sk)),5) 
 								else 0 
 								end) as expiring_premium_amount,
+						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk  
+								then (case when tr.tax_fee_surcharge_sk = 0 then tr.annual_premium_amt else 0 end) 
+								else 0 
+								end) as annual_net_premium_amt,
+						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk and tt.policy_transaction_type_nm in ('New','Renewal') --'Renewal','New Business' 
+								then (case when tr.tax_fee_surcharge_sk = 0 then tr.annual_premium_amt else 0 end) 
+								else 0 
+								end) as initial_annual_net_premium_amt,
 						sum(distinct CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
 								  and tt.policy_transaction_type_nm in ('Cancellation') --('Cancellation'')
 								  and  (transaction_effective_dt_sk - effective_dt_sk  < 61 and transaction_dt_sk - effective_dt_sk < 61)
 								then 1
 								else 0
 								end) as cancel_sixty_days_ind, 
+                        sum(distinct CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
+										--expiring pol paid, cancel eff to the pol eff dt
+										and tt.policy_transaction_type_nm in ('Cancellation') --('Cancellation'')
+										and (transaction_effective_dt_sk = effective_dt_sk)
+									then 1
+									else 0
+									end) as flat_cancel_ind,
+                        sum(distinct CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
+										--expiring pol paid, cancel eff not same as pol eff dt
+										and tt.policy_transaction_type_nm in ('Cancellation') --('Cancellation'')
+										and (transaction_effective_dt_sk <> effective_dt_sk)
+									then 1 
+									else 0
+									end) as mid_term_cancel_ind, 
 						sum( CASE WHEN tr.policy_transaction_sk = max_pol_tr.policy_transaction_sk
 								  and tt.policy_transaction_type_nm in ('Cancellation') --('Cancellation'') 
 								then 1
@@ -386,13 +409,17 @@ BEGIN
 				),
 				ren_pols_all as
 				(
-				 SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no, prior_term_policy_no, prior_policy_no, policy_status,
-						replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd, 
-						rank() over (partition by prior_term_policy_no 
-									order by replace(replace(replace(policy_status,'Expired','2_Expired'),'Cancelled','3_Cancelled'),'Active','1_Active'), policy_sk) rnk
-				 FROM	edw_core.tpolicy
-				 where	effective_dt between @begin_dt and @end_dt
-				 and source_system_sk = isnull(@param_ssk, source_system_sk)
+				 	SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no, prior_term_policy_no, prior_policy_no, policy_status, uw_company_Cd, 
+							rank() over (partition by prior_term_policy_no
+										order by replace(replace(replace(policy_status,'Expired','2_Expired'),'Cancelled','3_Cancelled'),'Active','1_Active'), policy_sk) rnk
+					FROM	 
+					(
+							SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no, isnull(prior_term_policy_no, prior_policy_no) prior_term_policy_no, prior_policy_no, policy_status,
+									replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd
+							FROM	edw_core.tpolicy
+							where	expiration_dt > @begin_dt  and --effective_dt between @begin_dt and @end_dt and
+							 source_system_sk = isnull(@param_ssk, source_system_sk)
+					) aa 
 				),
 				--pols renewing distinct in current month
 				ren_pols as
@@ -467,7 +494,8 @@ BEGIN
 				where ren_pol.policy_status = 'Cancelled'
 				and ren_pol_ph.cancellation_reason_desc in ('Rewritten with Vault','REWRITE WITH VAULT')
 				and ren_pol_new.policy_sk <> exp_pol.renewal_policy_sk
-				and ren_pol_new.policy_status  = 'Active'; 
+				and ren_pol_new.policy_status  = 'Active'
+				and ren_pol_new.policy_term  = 'Renewal'; 
 
 				update a
 				set a.renewal_policy_sk = b.ren_pol_new_policy_sk,
@@ -552,9 +580,12 @@ BEGIN
 						exp_pols_prm.mid_term_cancel_amount, 
 						case when exp_pols_prm.cancel_ind = 0 then exp_pols_prm.expiring_premium_amount else 0 end 
 						expiring_premium_amount, 
-						exp_pols_prm.expiring_premium_amount * (case when ren_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end) as expiringpremiumrenewalaccepted,
-						exp_pols_prm.expiring_premium_amount * (case when pol.non_renewal_in = 'Yes' then -1 else 0 end) as non_renewal_expiring_premium_amount,
-						exp_pols_prm.expiring_premium_amount * (case when pol.pending_non_renewal_in = 'Yes' then -1 else 0 end) as pending_non_renewal_expiring_premium_amount,
+						exp_pols_prm.annual_net_premium_amt expiring_annual_net_premium_amt,
+						exp_pols_prm.initial_annual_net_premium_amt expiring_initial_annual_net_premium_amt,
+						--**************************************redo after checking billing data
+						ren_pols_prm.initial_written_prem * (case when ren_pols_prm.flat_cancel_ind = 0 then 1 else 0 end) as expiringpremiumrenewalaccepted,
+						--exp_pols_prm.annual_net_premium_amt * (case when pol.non_renewal_in = 'Yes' then -1 else 0 end) as non_renewal_expiring_premium_amount,
+						exp_pols_prm.annual_net_premium_amt * (case when pol.pending_non_renewal_in = 'Yes' then -1 else 0 end) as pending_non_renewal_expiring_premium_amount,
 						exp_pols_prm.totalsquarefeet,  
 						(CASE when exp_pols_prm.product_cd  in ('HO','CO')  and exp_pols_prm.max_tr_residencetype =  'Homeowners' then 'Homeowners'
 							  when exp_pols_prm.product_cd in ('HO','CO')  and exp_pols_prm.max_tr_residencetype <> 'Homeowners' then 'Condo/Tenant'
@@ -569,15 +600,17 @@ BEGIN
 						exp_pols_prm.expiring_COVA,
 						exp_pols_prm.expiring_rate_on_line,
 						--1 as policy_ct,
-						case when exp_pols_prm.cancel_sixty_days_ind <> 0 then 1 else 0 end flatcancel_ind, 
-						case when exp_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end non_flatcancel_ind, 
-						case when exp_pols_prm.cancel_ind <> 0 and exp_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end midterm_cancel_ind,  
+						case when exp_pols_prm.flat_cancel_ind 		<> 0 then 1 else 0 end flatcancel_ind, 
+						case when exp_pols_prm.flat_cancel_ind  	 = 0 then 1 else 0 end non_flatcancel_ind, 
+						case when exp_pols_prm.mid_term_cancel_ind  <> 0 then 1 else 0 end midterm_cancel_ind,  
 						case when exp_pols_prm.cancel_ind = 0 then 1 else 0 end expiring_ind,   
 						case when exp_pols_prm.non_renewal_in = 'Yes' then 1 else 0 end as nonrenewal_ind, 
 						case when exp_pols_prm.pending_non_renewal_in = 'Yes' then 1 else 0 end as pending_nonrenewal_ind, 
 						case when exp_pols.renewal_policy_sk is not null then exp_pols.renewal_policy_sk else null end renewal_sk,
 						case when exp_pols.renewal_policy_sk is not null then 1 else 0 end renewalcount,
-						case when ren_pols_prm.cancel_sixty_days_ind = 0 then 1 else 0 end non_flatcancel_renewal_ind,
+						case when ren_pols_prm.flat_cancel_ind = 0 then 1 else 0 end non_flatcancel_renewal_ind,
+						ren_pols_prm.annual_net_premium_amt renewal_annual_net_premium_amt,
+						ren_pols_prm.initial_annual_net_premium_amt renewal_initial_annual_net_premium_amt,
 						case when exp_pols.renewal_policy_sk is not null then ren_pols_prm.initial_written_prem else null end initial_written_renewal_prem,
 						case when exp_pols.renewal_policy_sk is not null then iif(ren_pols_prm.effective_date_60_day_prem=0,ren_pols_prm.initial_written_prem,ren_pols_prm.effective_date_60_day_prem) else null end effective_date_60_day_renewal_prem, 
 						case when exp_pols.renewal_policy_sk is not null then iif(ren_pols_prm.effective_date_60_day_comm=0,ren_pols_prm.initial_written_comm,ren_pols_prm.effective_date_60_day_comm) else null end effective_date_60_day_renewal_comm,
@@ -648,10 +681,10 @@ BEGIN
 						expiring_initial_written_premium_amt,
 						expiring_sixty_day_written_premium_amt,
 						expiring_sixty_day_commission_amt,
-						expiring_mid_term_cancelled_premium_amt,
+						--expiring_mid_term_cancelled_premium_amt,
 						expiring_written_premium_amt,
 						expiring_premium_renewal_accepted_amt,
-						expiring_non_renewal_written_premium_amt,
+						--expiring_non_renewal_written_premium_amt,
 						expiring_pending_non_renewal_written_premium_amt ,
 						expiring_total_finished_square_feet ,
 						expiring_residence_type,
@@ -688,6 +721,7 @@ BEGIN
 						,expiring_customer_other_inforce_ct
 						,renewal_tiv_amt
 						,renewal_cova_amt
+						,renewal_rate_on_line_amt
 						,renewal_total_finished_square_feet
 						,expiring_mid_term_endorsement_premium_amt
 						,expiring_price_sqft
@@ -730,10 +764,10 @@ BEGIN
 						a.initial_written_prem, 
 						a.effective_date_60_day_prem, 
 						a.effective_date_60_day_comm, 
-						a.expiring_premium_amount as mid_term_cancel_amount,
-						a.expiring_premium_amount, 
+						--a.expiring_premium_amount as mid_term_cancel_amount,
+						a.expiring_annual_net_premium_amt expiring_premium_amount, 
 						a.expiringpremiumrenewalaccepted,
-						a.expiring_premium_amount as non_renewal_expiring_premium_amount,
+						--a.expiring_annual_net_premium_amt as non_renewal_expiring_premium_amount,
 						a.pending_non_renewal_expiring_premium_amount,
 						a.totalsquarefeet,  
 						a.residencetype,
@@ -758,7 +792,7 @@ BEGIN
 						a.renewal_sk,
 						a.renewalcount,
 						a.non_flatcancel_renewal_ind,
-						a.initial_written_renewal_prem,
+						a.renewal_initial_annual_net_premium_amt initial_written_renewal_prem,
 						a.effective_date_60_day_renewal_prem, 
 						a.effective_date_60_day_renewal_comm,
 						a.sixty_day_renewal_TIV,
@@ -774,7 +808,9 @@ BEGIN
 						,a.expiring_customer_other_inforce_ct
 						,a.renewal_tiv_amt,
 						 a.renewal_cova_amt,  
+						 a.renewal_rate_on_line_amt,
 						 a.renewal_total_finished_square_feet,
+						 --??????????????????????????????????????????????????*****************************
 						(a.effective_date_60_day_prem - a.initial_written_prem - a.mid_term_cancel_amount) AS expiring_mid_term_endorsement_premium_amt,
 						case 
 							when a.totalsquarefeet > 0
@@ -808,7 +844,7 @@ BEGIN
 						 else 0 
 						 end prior_issued_ct 
 						,case when a.non_flatcancel_ind = 1  
-						 then a.effective_date_60_day_prem 
+						 then a.expiring_annual_net_premium_amt 
 						 else 0 
 						 end prior_issued_premium_amt
 						,case when a.non_flatcancel_ind = 1 
@@ -818,11 +854,27 @@ BEGIN
 										else a.midterm_cancel_ind
 									end = 0 
 							  and  ren_pol.billing_PAID_IN = 'Yes' 
-							  and  ren_pol.first_billing_payment_dt is not null 
+							  and  (ren_pol.cancellation_effective_dt is null or ren_pol.cancellation_effective_dt <> ren_pol.effective_dt)
 						 then 1 
 						 else 0 
 						 end accepted_renewal_ct --renewal is issued and paid
-						,case when a.non_flatcancel_ind = 1 
+						,case 
+							  --if expiring is midterm cancel then not accepted will be 0
+							  when a.non_flatcancel_ind = 1 
+                              and  a.renewalcount = 1 
+                              and a.nonrenewal_ind = 0
+                              and  case when a.nonrenewal_ind = 1 then 0
+                                        when ren_pol.policy_sk is not null and ren_pol.policy_status in ('Active','Expired') then 0
+                                        else a.midterm_cancel_ind
+                                    end = 1  
+                              then 0 
+                              --if expiring is non renewal then not accepted will be 0
+							  when a.non_flatcancel_ind = 1 
+                              and  a.renewalcount = 1 
+                              and a.nonrenewal_ind = 1
+                              then 0 
+                              --if expiring is not non renewal and not midterm cancel then check for renewal billing and status
+							  when a.non_flatcancel_ind = 1 
                               and  a.renewalcount = 1 
                               and a.nonrenewal_ind = 0
                               and  case when a.nonrenewal_ind = 1 then 0
@@ -830,11 +882,14 @@ BEGIN
                                         else a.midterm_cancel_ind
                                     end = 0 
                               and   (       ren_pol.billing_PAID_IN is null 
-                                        and  ren_pol.first_billing_payment_dt is null 
                                         and  ren_ph.transaction_type like 'Cancel%'
                                         --took out below since I added logic to match on address above
                                         --and  ren_ph.cancellation_reason_desc not in ('Rewritten with Vault')
                                         --and  upper(ren_ph.cancellation_reason_desc) not in ('REWRITE WITH VAULT') 
+                                    )
+									or
+                                    ( ren_pol.billing_PAID_IN = 'Yes' 
+                                      and  (ren_pol.cancellation_effective_dt is not null and ren_pol.cancellation_effective_dt = ren_pol.effective_dt)
                                     )
                               then 1 
                               when a.non_flatcancel_ind = 1 
@@ -865,7 +920,6 @@ BEGIN
 										else a.midterm_cancel_ind
 									end = 0 
 							  and  ren_pol.billing_PAID_IN is null 
-							  and  ren_pol.first_billing_payment_dt is null 
     						  and  ren_ph.transaction_type not like 'Cancel%'
 						 then 1 
 						 else 0 
@@ -877,7 +931,7 @@ BEGIN
 										when ren_pol.policy_sk is not null and ren_pol.policy_status in ('Active','Expired') then 0
 										else a.midterm_cancel_ind
 									end = 0 
-							  and  q.quote_source_status = 'In Progress'
+							  and  q.quote_source_status in ('Bound','In Progress')
 							  --and  q.first_offered_quote_history_sk is not null
 						 then 1 
 						 else 0 
@@ -911,51 +965,51 @@ BEGIN
 						 	  else 0 
 						 end offered_quote_premium_amt
 						 ,case
-							when ren_pol.product_cd in ('HO','CO') then isnull(hloc.address_line_1, hloc2.address_line_1)
-							when ren_pol.product_cd in ('LUX')     then isnull(cloc.address_line_1, cloc2.address_line_1)
-							when ren_pol.product_cd in ('PEL')     then isnull(ploc.address_line_1, ploc2.address_line_1)
-							when ren_pol.product_cd in ('BY')      then isnull(bloc.address_line_1, bloc2.address_line_1)
-							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_line1,exp_pol.mailing_address_line1)
+							when exp_pol.product_cd in ('HO','CO') then isnull(hloc.address_line_1, hloc2.address_line_1)
+							when exp_pol.product_cd in ('LUX')     then isnull(cloc.address_line_1, cloc2.address_line_1)
+							when exp_pol.product_cd in ('PEL')     then isnull(ploc.address_line_1, ploc2.address_line_1)
+							when exp_pol.product_cd in ('BY')      then isnull(bloc.address_line_1, bloc2.address_line_1)
+							when exp_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_line1,exp_pol.mailing_address_line1)
 							else NULL
 						end risk_address_line_1
 						,case
-							when ren_pol.product_cd in ('HO','CO') then isnull(hloc.address_line_2, hloc2.address_line_2)
-							when ren_pol.product_cd in ('LUX')     then isnull(cloc.address_line_2, cloc2.address_line_2)
-							when ren_pol.product_cd in ('PEL')     then isnull(ploc.address_line_2, ploc2.address_line_2)
-							when ren_pol.product_cd in ('BY')      then isnull(bloc.address_line_2, bloc2.address_line_2)
-							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_line2,exp_pol.mailing_address_line2)
+							when exp_pol.product_cd in ('HO','CO') then isnull(hloc.address_line_2, hloc2.address_line_2)
+							when exp_pol.product_cd in ('LUX')     then isnull(cloc.address_line_2, cloc2.address_line_2)
+							when exp_pol.product_cd in ('PEL')     then isnull(ploc.address_line_2, ploc2.address_line_2)
+							when exp_pol.product_cd in ('BY')      then isnull(bloc.address_line_2, bloc2.address_line_2)
+							when exp_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_line2,exp_pol.mailing_address_line2)
 							else NULL
 						end risk_address_line_2
 						,case
-							when ren_pol.product_cd in ('HO','CO') then isnull(hloc.unit_no, hloc2.unit_no)
-							when ren_pol.product_cd in ('LUX')     then isnull(cloc.unit_no, cloc2.unit_no)
-							when ren_pol.product_cd in ('PEL')     then isnull(ploc.unit_no, ploc2.unit_no)
-							when ren_pol.product_cd in ('BY')      then isnull(bloc.unit_no, bloc2.unit_no)
-							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_unit_no,exp_pol.mailing_address_unit_no)
+							when exp_pol.product_cd in ('HO','CO') then isnull(hloc.unit_no, hloc2.unit_no)
+							when exp_pol.product_cd in ('LUX')     then isnull(cloc.unit_no, cloc2.unit_no)
+							when exp_pol.product_cd in ('PEL')     then isnull(ploc.unit_no, ploc2.unit_no)
+							when exp_pol.product_cd in ('BY')      then isnull(bloc.unit_no, bloc2.unit_no)
+							when exp_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_unit_no,exp_pol.mailing_address_unit_no)
 							else NULL
 						end risk_address_unit_no
 						,case
-							when ren_pol.product_cd in ('HO','CO') then isnull(hloc.city_nm, hloc2.city_nm)
-							when ren_pol.product_cd in ('LUX')     then isnull(cloc.city_nm, cloc2.city_nm)
-							when ren_pol.product_cd in ('PEL')     then isnull(ploc.city_nm, ploc2.city_nm)
-							when ren_pol.product_cd in ('BY')      then isnull(bloc.city_nm, bloc2.city_nm)
-							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_city_nm,exp_pol.mailing_address_city_nm)
+							when exp_pol.product_cd in ('HO','CO') then isnull(hloc.city_nm, hloc2.city_nm)
+							when exp_pol.product_cd in ('LUX')     then isnull(cloc.city_nm, cloc2.city_nm)
+							when exp_pol.product_cd in ('PEL')     then isnull(ploc.city_nm, ploc2.city_nm)
+							when exp_pol.product_cd in ('BY')      then isnull(bloc.city_nm, bloc2.city_nm)
+							when exp_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_city_nm,exp_pol.mailing_address_city_nm)
 							else NULL
 						end risk_address_city_nm
 						,case
-							when ren_pol.product_cd in ('HO','CO') then isnull(hloc.state_cd, hloc2.state_cd)
-							when ren_pol.product_cd in ('LUX')     then isnull(cloc.state_cd, cloc2.state_cd)
-							when ren_pol.product_cd in ('PEL')     then isnull(ploc.state_cd, ploc2.state_cd)
-							when ren_pol.product_cd in ('BY')      then isnull(bloc.state_cd, bloc2.state_cd)
-							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_state_cd,exp_pol.mailing_address_state_cd)
+							when exp_pol.product_cd in ('HO','CO') then isnull(hloc.state_cd, hloc2.state_cd)
+							when exp_pol.product_cd in ('LUX')     then isnull(cloc.state_cd, cloc2.state_cd)
+							when exp_pol.product_cd in ('PEL')     then isnull(ploc.state_cd, ploc2.state_cd)
+							when exp_pol.product_cd in ('BY')      then isnull(bloc.state_cd, bloc2.state_cd)
+							when exp_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_state_cd,exp_pol.mailing_address_state_cd)
 							else NULL
 						end risk_address_state_cd
 						,case
-							when ren_pol.product_cd in ('HO','CO') then isnull(hloc.zip_cd, hloc2.zip_cd)
-							when ren_pol.product_cd in ('LUX')     then isnull(cloc.zip_cd, cloc2.zip_cd)
-							when ren_pol.product_cd in ('PEL')     then isnull(ploc.zip_cd, ploc2.zip_cd)
-							when ren_pol.product_cd in ('BY')      then isnull(bloc.zip_cd, bloc2.zip_cd)
-							when ren_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_zip_cd,exp_pol.mailing_address_zip_cd)
+							when exp_pol.product_cd in ('HO','CO') then isnull(hloc.zip_cd, hloc2.zip_cd)
+							when exp_pol.product_cd in ('LUX')     then isnull(cloc.zip_cd, cloc2.zip_cd)
+							when exp_pol.product_cd in ('PEL')     then isnull(ploc.zip_cd, ploc2.zip_cd)
+							when exp_pol.product_cd in ('BY')      then isnull(bloc.zip_cd, bloc2.zip_cd)
+							when exp_pol.product_cd in ('AU')      then isnull(ren_pol.mailing_address_zip_cd,exp_pol.mailing_address_zip_cd)
 							else NULL
 						end risk_address_zip_cd
 				from edw_temp.trenewal_summary_v1_temp_6_final a
@@ -1003,17 +1057,40 @@ BEGIN
                 and non_renewal_ct = 1 and accepted_renewal_ct = 1; 
 
 				update edw_stage.trenewal_summary_v1
-				set  pending_process_ct = prior_issued_ct -
-				(isnull(expired_with_no_submission_ct,0) + mid_term_cancelled_ct
-				+ non_renewal_ct + accepted_renewal_ct
-				+ not_accepted_renewal_ct + outstanding_renewal_ct
-				+ in_progress_renewal_ct + closed_with_no_offer_renewal_ct)
-					,in_progress_premium_amt = offered_quote_premium_amt
-					,closed_with_no_offer_premium_amt = expiring_written_premium_amt
-					,accepted_premium_amt = renewal_initial_written_premium_amt
-					,not_accepted_premium_amt = expiring_written_premium_amt
-					,outstanding_premium_amt  = renewal_initial_written_premium_amt
-					,need_attention_premium_amt = expiring_written_premium_amt
+				set pending_process_ct = prior_issued_ct - (isnull(expired_with_no_submission_ct,0) + mid_term_cancelled_ct
+															+ non_renewal_ct + accepted_renewal_ct
+															+ not_accepted_renewal_ct + outstanding_renewal_ct
+															+ in_progress_renewal_ct + closed_with_no_offer_renewal_ct)
+					--										
+					,in_progress_premium_amt 			= case when in_progress_renewal_ct 			> 0 then offered_quote_premium_amt else 0 end
+					,closed_with_no_offer_premium_amt 	= case when closed_with_no_offer_renewal_ct > 0 then prior_issued_premium_amt else 0 end
+					,accepted_premium_amt 				= case when accepted_renewal_ct 			> 0 then renewal_initial_written_premium_amt else 0 end 
+					,not_accepted_premium_amt 			= case when not_accepted_renewal_ct 		> 0 then prior_issued_premium_amt else 0 end 
+					,outstanding_premium_amt  			= case when outstanding_renewal_ct 			> 0 then renewal_initial_written_premium_amt else 0 end 
+				where month_sk = @month_end_dt_sk; 
+
+				update edw_stage.trenewal_summary_v1
+				set pending_process_ct = pending_process_ct + expired_with_no_submission_ct 
+				where month_sk = @month_end_dt_sk; 
+
+				update edw_stage.trenewal_summary_v1
+				set need_attention_premium_amt 		=  case when pending_process_ct > 0 then prior_issued_premium_amt else 0 end
+				where month_sk = @month_end_dt_sk; 
+
+				update edw_stage.trenewal_summary_v1
+				set expiring_mid_term_cancelled_premium_amt 	=  case when mid_term_cancelled_ct = 1 then prior_issued_premium_amt else 0 end
+				where month_sk = @month_end_dt_sk; 
+
+				update edw_stage.trenewal_summary_v1
+				set expiring_non_renewal_written_premium_amt 	=  case when non_renewal_ct = 1 then prior_issued_premium_amt else 0 end
+				where month_sk = @month_end_dt_sk;  
+
+				update edw_stage.trenewal_summary_v1
+				set  outstanding_in_progress_renewal_ct = outstanding_renewal_ct + in_progress_renewal_ct 
+				where month_sk = @month_end_dt_sk
+
+				update edw_stage.trenewal_summary_v1
+				set  closed_with_no_offer_pending_process_renewal_ct = closed_with_no_offer_renewal_ct + pending_process_ct 
 				where month_sk = @month_end_dt_sk
 
 				EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;

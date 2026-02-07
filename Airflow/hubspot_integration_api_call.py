@@ -7,6 +7,7 @@ from airflow.operators.email_operator import EmailOperator
 from vault_edw_HTML_format import get_sp_error_data_HTML, get_HTML_on_vault_format
 
 to_email = "itdatateam@vault.insurance"
+#to_email = "hernando.gonzalez.garcia@vault.insurance;Architha.Gudimalla@vault.insurance"
 ENVIRONMENT = Variable.get("environment", default_var="DEV")
 
 Hubspot_VM_USERNAME = Variable.get("Hubspot-VM-USERNAME")
@@ -22,7 +23,7 @@ else:
 
 SSH_HOME = f'/home/{Hubspot_VM_USERNAME}/hs-integration'
 REMOTE_ENV_PATH = f'{SSH_HOME}/.env'
-REMOTE_RUN_CMD  = f'bash {SSH_HOME}/run_script.sh '
+
 
 def on_failure_callback(context):
     task_instance = context['task_instance']
@@ -33,7 +34,6 @@ def on_failure_callback(context):
     if task_type == "MsSqlOperator":
         task_name = task_instance.task_id
         sp_name = []
-        # extract only the task name (remove the TaskGroup Name)
         if task_name.rfind('.') != -1:
             sp_name.append(task_name[task_name.rfind('.') + 1:])
         else:
@@ -51,10 +51,78 @@ def on_failure_callback(context):
     email.execute(context)
 
 
+def on_success_callback(context):
+    """
+    Send execution report on successful completion
+    Reads the report file from the remote server and emails it
+    """
+    from airflow.providers.ssh.hooks.ssh import SSHHook
+    from airflow.models import Variable
+    
+    task_instance = context['task_instance']
+    ssh_hook = SSHHook(ssh_conn_id='ssh_vm_hubspot')
+    
+    # Get username from Airflow variable
+    Hubspot_VM_USERNAME = Variable.get("Hubspot-VM-USERNAME")
+    ENVIRONMENT = Variable.get("environment", default_var="DEV")
+    report_path = f'/home/{Hubspot_VM_USERNAME}/hs-integration/logs/latest_execution_report.html'
+    
+    try:
+        # Use SSH to read the report file
+        with ssh_hook.get_conn() as ssh_client:
+            sftp = ssh_client.open_sftp()
+            with sftp.file(report_path, 'r') as remote_file:
+                html_content = remote_file.read().decode('utf-8')
+            sftp.close()
+        
+        # Determine subject based on content
+        if '❌' in html_content or 'FAILED' in html_content:
+            subject = f'⚠️ HubSpot Integration - Completed with Errors - {ENVIRONMENT}'
+        elif '⚠️' in html_content or 'WARNING' in html_content:
+            subject = f'⚠️ HubSpot Integration - Completed with Warnings - {ENVIRONMENT}'
+        else:
+            subject = f'✅ HubSpot Integration - Success - {ENVIRONMENT}'
+        
+    except Exception as e:
+        # Fallback if report cannot be read
+        error_msg = str(e)
+        
+        # Provide helpful message based on error type
+        if 'No such file' in error_msg or 'FileNotFoundError' in error_msg:
+            html_content = get_HTML_on_vault_format(
+                f'<strong>HubSpot Integration Script Executed</strong><br><br>'
+                f'The integration script ran but the execution report was not generated. '
+                f'This usually means the script was interrupted or encountered an error before completion.<br><br>'
+                f'<strong>Recommended Actions:</strong><br>'
+                f'• Check the application log: <code>/home/{Hubspot_VM_USERNAME}/hs-integration/logs/hs-integration-run-*.log</code><br>'
+                f'• Verify the script completed successfully<br>'
+                f'• Check for any Python errors or exceptions<br><br>'
+                f'<strong>Error Details:</strong> {error_msg}',
+                ''
+            )
+        else:
+            html_content = get_HTML_on_vault_format(
+                f'HubSpot Integration completed but could not retrieve detailed report.<br><br>'
+                f'<strong>Error:</strong> {error_msg}',
+                ''
+            )
+        subject = f'HubSpot Integration - Report Unavailable - {ENVIRONMENT}'
+    
+    # Send email with report
+    email = EmailOperator(
+        task_id='send_success_report',
+        to=to_email,
+        subject=subject,
+        html_content=html_content
+    )
+    email.execute(context)
+
+
 args = {
     'owner': 'airflow',
     'retries': 0,
     'on_failure_callback': on_failure_callback,
+    # 'on_success_callback': on_success_callback,  # Uncomment to use success callback
 }
 
 with DAG(
@@ -93,14 +161,16 @@ EOF
             "username": Hubspot_USERNAME,
             "token": Hubspot_HSTOKEN,
             "db": Hubspot_DB
-            },
+        },
     )
 
     run_hs = SSHOperator(
         task_id="run_hs_integration_script",
         ssh_conn_id="ssh_vm_hubspot",
-        command=REMOTE_RUN_CMD,
+        command='{{ "bash /home/" ~ var.value.get("Hubspot-VM-USERNAME") ~ "/hs-integration/run_script.sh" }}',
         cmd_timeout=18000,
+        # Add success callback to this specific task
+        on_success_callback=on_success_callback,
     )
 
     end = DummyOperator(task_id="end")

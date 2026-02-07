@@ -1,15 +1,16 @@
 import constants
 from datetime import datetime
-
 import logging
 import sys
-
-
+import os
 
 log_folder_path = constants.log_folder_path
+
+# Ensure log directory exists
+os.makedirs(log_folder_path, exist_ok=True)
+
 today = datetime.today().date()
 file_name = f'{log_folder_path}/hs-integration-run-{today}.log'
-
 
 APP_LOGGER_NAME = 'VAULT - EDW integration'
 
@@ -42,11 +43,7 @@ def setup_applevel_logger(logger_name = APP_LOGGER_NAME, file_name=None):
     return logger
 
 
-
 def get_logger(module_name):
-
     return logging.getLogger(APP_LOGGER_NAME).getChild(module_name)
-
-
 
 logger = setup_applevel_logger(file_name=file_name)

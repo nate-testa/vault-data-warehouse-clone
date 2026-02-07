@@ -30,6 +30,8 @@
 -- 06/24/25		        Dinesh Bobbili				25. AD9848 Added product_cd column
 -- 09/09/25		        Archtha Gudimalla			26. AD10935 - Added monoline fix
 -- 01/13/26		        Dinesh Bobbili				27. AD12200 Added column non_binding_indication_offered_in
+-- 01/24/26		        Archtha Gudimalla			28. Casted non_binding_indication_offered_in as varchar 255 for null values
+-- 02/04/26		        Dinesh Bobbili  			29. AD12453 Added producer_id logic
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]  
@@ -123,7 +125,7 @@ BEGIN
         )
 
         select
-            q.quote_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,
+            q.quote_no,q.effective_dt,q.expiration_dt,h.transaction_type,q.[current_producer_nm] as producer_nm,pd.producer_id,
             q.customer_id,
             br.broker_id, br.broker_nm, br.broker_tier, br.national_agency_in,
             bvt.team_member_nm as bdm_nm,cust.vip_in,i.first_nm as insured_first_nm, 
@@ -213,6 +215,7 @@ BEGIN
         into edw_temp.quote_hubspot_feed_temp1
 
         from edw_core.tquote q
+        left join edw_core.tproducer pd on pd.producer_sk = q.current_producer_sk
         left join edw_core.tpolicy p on q.prior_term_policy_no = p.policy_no
         inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
         inner join edw_core.tquote_history h on h.quote_sk = q.quote_sk
@@ -260,7 +263,7 @@ BEGIN
             group by policy_history_sk
         )
         select
-            q.policy_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,
+            q.policy_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,pd.producer_id,
             q.customer_id,
             br.broker_id, br.broker_nm, br.broker_tier, br.national_agency_in,
             bvt.team_member_nm as bdm_nm,cust.vip_in,i.first_nm as insured_first_nm, 
@@ -343,13 +346,14 @@ BEGIN
 						  end as monoline_in
             ,br.primary_address_state_cd broker_state
             ,pr.product_cd
-            ,null as non_binding_indication_offered_in
+            ,cast(null as varchar(255)) as non_binding_indication_offered_in
         into edw_temp.quote_hubspot_feed_temp2
         
         from edw_core.tpolicy q 
 		--left join edw_core.tquote q1 on q1.quote_no = q.policy_no
         inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
         inner join edw_core.tpolicy_history h on h.policy_sk = q.policy_sk and h.latest_transaction_in = 'Y'
+        left join edw_core.tproducer pd on pd.producer_sk = h.producer_sk
         left join edw_core.tpolicy_insured i	on i.policy_history_sk = h.policy_history_sk and i.primary_insured_in = 'Yes'
         left join edw_core.tcustomer cust on cust.customer_id = q.customer_id
         left join edw_core.tbroker br on br.broker_id = q.broker_id
@@ -429,6 +433,7 @@ BEGIN
             ,quote_business_type
             ,product_cd 
             ,non_binding_indication_offered_in
+            ,producer_id
         )
         VALUES
         (
@@ -457,6 +462,7 @@ BEGIN
             ,'Personal Lines'
             ,product_cd 
             ,non_binding_indication_offered_in
+            ,producer_id
         )
         WHEN MATCHED THEN UPDATE
         SET        
@@ -518,7 +524,8 @@ BEGIN
             [target].monoline_in	                    =	[source].monoline_in ,  
             [target].broker_state	                    =	[source].broker_state,
             [target].product_cd	                        =	[source].product_cd,
-            [target].non_binding_indication_offered_in	=	[source].non_binding_indication_offered_in
+            [target].non_binding_indication_offered_in	=	[source].non_binding_indication_offered_in,
+            [target].producer_id	=	[source].producer_id 
             ;
         
         SET @rows_affected=@@ROWCOUNT;

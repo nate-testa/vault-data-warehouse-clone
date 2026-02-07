@@ -6,6 +6,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 04/23/25		                Yunus Mohammed				1. Created this procedure
 -- 12/09/25						Yunus Mohammed				2. AD-11945 Modified stored procedure to run proc on same date again
+-- 02/06/26						Yunus Mohammed				3. AD-12461 Used product_nm for 'Marine Boat & Yacht' instead of product_cd
 -- =================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_litigation_workday_reserve_feed_itd]
@@ -65,7 +66,7 @@ BEGIN
 				WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
 				WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
 				WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
-				WHEN tprd.product_cd = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
+				WHEN tprd.product_nm = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
 			ELSE tprd.product_nm END AS product,
 			tcf.claim_coverage_desc AS policycoveragetype,
 			CASE

@@ -1,0 +1,38 @@
+update [edw_stage].[ControlLoadTable]
+set CustomScript = '{
+	"SelectStatement": "SELECT 
+		[Id], 
+		[InternalName], 
+		[Name], 
+		[CreatedDate], 
+		[UpdatedDate], 
+		[IsEnabled], 
+		CASE WHEN [Name] in (
+			''Private Company Management Liability'', 
+			''Public Company Management Liability'', 
+			''Family Office Liability''
+		) Then ''CommercialLines-1'' WHEN [Name] in (
+			''Group Personal Excess Liability''
+		) Then ''GroupPersonalLines'' ELSE [ProductLine] END AS [ProductLine], 
+		[RateDefinitionServiceName], 
+		[RulesDefinitionServiceName], 
+		[FormDefinitionServiceName], 
+		[ExternalUserCanBind], 
+		[ExternalUserCanOffer], 
+		[RoundPremiumToNearestDollar], 
+		[CanBillToBrokerage], 
+		[CanBillToInsured], 
+		[CanBillToMortgagee], 
+		CASE WHEN [name] = ''Condo'' THEN ''CO'' WHEN [name] = ''Participant Personal Excess Liability'' THEN ''GRPEL'' ELSE [ProductCode] END AS [ProductCode], 
+		[ExternalSourceId], 
+		[IncrementPolicyNumberOnRenewal], 
+		[GeneratePolicyNumberOnCreation], 
+		[PrimaryInsuredMustBeIndividual], 
+		[AllowPolicyNumberOverride], 
+		[CanBindWithoutIssuance], 
+		[AllowedStates], 
+		[BrokerageMustHaveEffectiveLicenseToBind], 
+		[CanChangeRiskState] 
+		FROM "
+}'
+where JSON_value(SourceObjectSettings,'$.table') = 'Product';
