@@ -417,8 +417,8 @@ BEGIN
 							SELECT policy_sk, policy_no, effective_dt, expiration_dt, original_policy_no, isnull(prior_term_policy_no, prior_policy_no) prior_term_policy_no, prior_policy_no, policy_status,
 									replace(replace(uw_company_nm,'Vault E & S Insurance Company', 'VES'),'Vault Reciprocal Exchange', 'VRE') uw_company_Cd
 							FROM	edw_core.tpolicy
-							where	effective_dt between @begin_dt and @end_dt
-							and source_system_sk = isnull(@param_ssk, source_system_sk)
+							where	expiration_dt > @begin_dt  and --effective_dt between @begin_dt and @end_dt and
+							 source_system_sk = isnull(@param_ssk, source_system_sk)
 					) aa 
 				),
 				--pols renewing distinct in current month
@@ -1067,6 +1067,10 @@ BEGIN
 					,accepted_premium_amt 				= case when accepted_renewal_ct 			> 0 then renewal_initial_written_premium_amt else 0 end 
 					,not_accepted_premium_amt 			= case when not_accepted_renewal_ct 		> 0 then prior_issued_premium_amt else 0 end 
 					,outstanding_premium_amt  			= case when outstanding_renewal_ct 			> 0 then renewal_initial_written_premium_amt else 0 end 
+				where month_sk = @month_end_dt_sk; 
+
+				update edw_stage.trenewal_summary_v1
+				set pending_process_ct = pending_process_ct + expired_with_no_submission_ct 
 				where month_sk = @month_end_dt_sk; 
 
 				update edw_stage.trenewal_summary_v1
