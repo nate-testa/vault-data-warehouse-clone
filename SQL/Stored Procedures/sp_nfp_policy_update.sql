@@ -6,6 +6,7 @@
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
 -- 11/10/25					Dinesh Bobbili				1. Created this procedure  
+-- 02/08/26					Rushin Shah					2. AD12499 : Fixed issue associated with one insured having duplicate transaction_seq_no
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_nfp_policy_update]
 AS
@@ -43,7 +44,8 @@ BEGIN
 			expiration_date,
 			FIRST_VALUE(effective_date) OVER (PARTITION BY insured_cert_no ORDER BY effective_date) as term_effective_date,
 			case when np.reporting_month > @last_source_extract_ts then 'I' else 'H' end as delta_flag,
-			np.reporting_month
+			np.reporting_month,
+			np.total_collected
 		FROM
 			edw_stage.nfp_policy np
 		WHERE
@@ -58,13 +60,15 @@ BEGIN
 			) AS rn,
 			dense_rank() over (partition by insured_cert_no
 					order by 
+						reporting_month,
 						term_effective_date,
 						transaction_date,
 						case 
 							when cast(transaction_type as varchar(60)) in ('New', 'Renewal') then 0
 							when cast(transaction_type as varchar(60)) like 'Cancel%' then 2
 							else 1 
-						end
+						end,
+						total_collected desc
 				) - 1 as transaction_seq_no,
 			CASE 
 				WHEN insured_cert_no = LAG(insured_cert_no) OVER (
@@ -100,7 +104,8 @@ BEGIN
                 --case when  cast(transaction_type as varchar(60)) in ('New', 'Renewal')  then transaction_type 
                     --else FIRST_VALUE(transaction_type) OVER (PARTITION BY insured_cert_no  ORDER BY term_effective_date) end  as	policy_term,
 				delta_flag,
-                reporting_month
+                reporting_month,
+                total_collected 
 		from temp_nfp_base_2)
 		select insured_cert_no
 				,insured_first_name
@@ -120,7 +125,8 @@ BEGIN
 				case when original_policy_no is null  then 'New' 
                     else 'Renewal' end  as	policy_term,
 				delta_flag,
-                reporting_month
+                reporting_month,
+                total_collected 
 		into edw_temp.nfp_policy_temp1
 		from temp_nfp_base_3;
 
@@ -139,7 +145,9 @@ BEGIN
 		on np.insured_cert_no = t.insured_cert_no
 		and np.effective_date = t.effective_date
 		and cast(np.transaction_type as varchar(60)) = cast(t.transaction_type as varchar(60))
-		and np.transaction_date = t.transaction_date
+		and np.transaction_date = t.transaction_date 
+		and np.reporting_month = t.reporting_month
+		and np.total_collected = t.total_collected
 		where t.delta_flag = 'I';
 			
 
