@@ -3,6 +3,7 @@ import pendulum
 from datetime import timedelta
 from airflow import DAG
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
+from airflow.utils.task_group import TaskGroup
 from airflow.operators.email import EmailOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
@@ -139,27 +140,67 @@ with DAG(
         task_id='start',
     )
 
-    majesco_billing_group_items = [
-        'sp_tpolicy_billing_paid_in_update'
-    ]
-    
-    operators = []
-    for item in majesco_billing_group_items:
-        operator = MsSqlOperator(
-            task_id=item,
-            mssql_conn_id='Vault_EDW',
-            sql=f"EXEC edw_core.{item}",
-            database="vault_edw",
-            autocommit=True,
-        )
-        operators.append(operator)
+    with TaskGroup("majesco_billing_policy_group") as majesco_billing_policy_group:
 
-    send_majesco_billing_email_procs = EmailOperator(
-            task_id='send_majesco_billing_email_procs',
+        majesco_billing_policy_group_items = [
+            'sp_tpolicy_billing_paid_in_update'
+        ]
+        
+        operators = []
+        for item in majesco_billing_policy_group_items:
+            operator = MsSqlOperator(
+                task_id=item,
+                mssql_conn_id='Vault_EDW',
+                sql=f"EXEC edw_core.{item}",
+                database="vault_edw",
+                autocommit=True,
+            )
+            operators.append(operator)
+
+        send_majesco_billing_policy_email = EmailOperator(
+                task_id='send_majesco_billing_policy_email',
+                to=to_email,
+                subject='Airflow - Majesco billing policy paid table loaded successfully',
+                html_content=get_sp_success_data_HTML(majesco_billing_policy_group_items, 'All stored procedures executed successfully for all the Policy paid tables'),
+            )
+        
+        for i in range(len(operators) - 1):
+            operators[i].set_downstream(operators[i + 1])
+
+        operators[-1].set_downstream(send_majesco_billing_policy_email)
+    
+
+    with TaskGroup("majesco_billing_broker_group") as majesco_billing_broker_group:
+
+        majesco_billing_broker_group_items = [
+            'sp_trenewal_summary',
+            'sp_trenewal_summary_v1',
+            'sp_tbroker_summary',
+            'sp_tbroker_summary_v1'
+            ]
+
+        operators = []
+        for item in majesco_billing_broker_group_items:
+            operator = MsSqlOperator(
+                task_id=item,
+                mssql_conn_id='Vault_EDW',
+                sql=f"EXEC edw_core.{item}",
+                database="vault_edw",
+                autocommit=True,
+            )
+            operators.append(operator)
+
+        send_majesco_billing_broker_email = EmailOperator(
+            task_id='send_majesco_billing_broker_email',
             to=to_email,
-            subject='Airflow - Policy billing paid table loaded successfully',
-            html_content=get_sp_success_data_HTML(majesco_billing_group_items, 'All stored procedures executed successfully for all the Policy billing paid tables'),
+            subject='Airflow - Majesco broker tables loaded successfully',
+            html_content=get_sp_success_data_HTML(majesco_billing_broker_group_items, 'All stored procedures executed successfully for all the Majesco broker tables'),
         )
+
+        for i in range(len(operators) - 1):
+            operators[i].set_downstream(operators[i + 1])
+
+        operators[-1].set_downstream(send_majesco_billing_broker_email)
         
     process_majesco_billing_files = PythonOperator(
         task_id='process_majesco_billing_files',
@@ -186,8 +227,8 @@ with DAG(
     )
 
 start.set_downstream(process_majesco_billing_files)
-process_majesco_billing_files.set_downstream(operators[-1])
-operators[-1].set_downstream(check_data_and_send_email)
+process_majesco_billing_files.set_downstream(majesco_billing_policy_group)
+majesco_billing_policy_group.set_downstream(check_data_and_send_email)
 check_data_and_send_email.set_downstream(check_not_loaded_data_and_send_email)
-check_not_loaded_data_and_send_email.set_downstream(send_majesco_billing_email_procs)
-send_majesco_billing_email_procs.set_downstream(end)
+check_not_loaded_data_and_send_email.set_downstream(majesco_billing_broker_group)
+majesco_billing_broker_group.set_downstream(end)
