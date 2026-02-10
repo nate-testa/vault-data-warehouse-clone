@@ -154,8 +154,8 @@ with DAG(
         )
         operators.append(operator)
 
-    send_majesco_billing_email = EmailOperator(
-            task_id='send_majesco_billing_email',
+    send_majesco_billing_email_procs = EmailOperator(
+            task_id='send_majesco_billing_email_procs',
             to=to_email,
             subject='Airflow - Policy billing paid table loaded successfully',
             html_content=get_sp_success_data_HTML(majesco_billing_group_items, 'All stored procedures executed successfully for all the Policy billing paid tables'),
@@ -189,5 +189,5 @@ start.set_downstream(process_majesco_billing_files)
 process_majesco_billing_files.set_downstream(operators[-1])
 operators[-1].set_downstream(check_data_and_send_email)
 check_data_and_send_email.set_downstream(check_not_loaded_data_and_send_email)
-check_not_loaded_data_and_send_email.set_downstream(send_majesco_billing_email)
-send_majesco_billing_email.set_downstream(end)
+check_not_loaded_data_and_send_email.set_downstream(send_majesco_billing_email_procs)
+send_majesco_billing_email_procs.set_downstream(end)
