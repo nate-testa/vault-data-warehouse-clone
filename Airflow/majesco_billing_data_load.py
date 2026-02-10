@@ -140,14 +140,14 @@ with DAG(
         task_id='start',
     )
 
-    with TaskGroup("majesco_billing_policy_group") as majesco_billing_policy_group:
+    with TaskGroup("policy_group") as policy_group:
 
-        majesco_billing_policy_group_items = [
+        policy_group_items = [
             'sp_tpolicy_billing_paid_in_update'
         ]
         
         operators = []
-        for item in majesco_billing_policy_group_items:
+        for item in policy_group_items:
             operator = MsSqlOperator(
                 task_id=item,
                 mssql_conn_id='Vault_EDW',
@@ -157,22 +157,22 @@ with DAG(
             )
             operators.append(operator)
 
-        send_majesco_billing_policy_email = EmailOperator(
-                task_id='send_majesco_billing_policy_email',
+        send_policy_group_email = EmailOperator(
+                task_id='send_policy_group_email',
                 to=to_email,
-                subject='Airflow - Majesco billing policy paid table loaded successfully',
-                html_content=get_sp_success_data_HTML(majesco_billing_policy_group_items, 'All stored procedures executed successfully for all the Policy paid tables'),
+                subject='Airflow - Majesco policy tables loaded successfully',
+                html_content=get_sp_success_data_HTML(policy_group_items, 'All stored procedures executed successfully for all the Policy tables'),
             )
         
         for i in range(len(operators) - 1):
             operators[i].set_downstream(operators[i + 1])
 
-        operators[-1].set_downstream(send_majesco_billing_policy_email)
+        operators[-1].set_downstream(send_policy_group_email)
     
 
-    with TaskGroup("majesco_billing_broker_group") as majesco_billing_broker_group:
+    with TaskGroup("datamart_group") as datamart_group:
 
-        majesco_billing_broker_group_items = [
+        datamart_group_items = [
             'sp_trenewal_summary',
             'sp_trenewal_summary_v1',
             'sp_tbroker_summary',
@@ -180,7 +180,7 @@ with DAG(
             ]
 
         operators = []
-        for item in majesco_billing_broker_group_items:
+        for item in datamart_group_items:
             operator = MsSqlOperator(
                 task_id=item,
                 mssql_conn_id='Vault_EDW',
@@ -190,17 +190,17 @@ with DAG(
             )
             operators.append(operator)
 
-        send_majesco_billing_broker_email = EmailOperator(
-            task_id='send_majesco_billing_broker_email',
+        send_datamart_group_email = EmailOperator(
+            task_id='send_datamart_group_email',
             to=to_email,
-            subject='Airflow - Majesco broker tables loaded successfully',
-            html_content=get_sp_success_data_HTML(majesco_billing_broker_group_items, 'All stored procedures executed successfully for all the Majesco broker tables'),
+            subject='Airflow - Majesco datamart tables loaded successfully',
+            html_content=get_sp_success_data_HTML(datamart_group_items, 'All stored procedures executed successfully for all the Majesco datamart tables'),
         )
 
         for i in range(len(operators) - 1):
             operators[i].set_downstream(operators[i + 1])
 
-        operators[-1].set_downstream(send_majesco_billing_broker_email)
+        operators[-1].set_downstream(send_datamart_group_email)
         
     process_majesco_billing_files = PythonOperator(
         task_id='process_majesco_billing_files',
@@ -227,8 +227,8 @@ with DAG(
     )
 
 start.set_downstream(process_majesco_billing_files)
-process_majesco_billing_files.set_downstream(majesco_billing_policy_group)
-majesco_billing_policy_group.set_downstream(check_data_and_send_email)
+process_majesco_billing_files.set_downstream(policy_group)
+policy_group.set_downstream(check_data_and_send_email)
 check_data_and_send_email.set_downstream(check_not_loaded_data_and_send_email)
-check_not_loaded_data_and_send_email.set_downstream(majesco_billing_broker_group)
-majesco_billing_broker_group.set_downstream(end)
+check_not_loaded_data_and_send_email.set_downstream(datamart_group)
+datamart_group.set_downstream(end)
