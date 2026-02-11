@@ -65,7 +65,7 @@ BEGIN
 				left join edw_stage.AccountTransactionVersionObjectField atvof_2 on atvof_2.ReferenceObjectId = atvo.id and atvof_2.Field = 'PrimaryLocationId'
 				left join [edw_core].[tquote_history] tqh on tqh.quote_no=act.PolicyNumber
 						and tqh.effective_dt=act.EffectiveDate
-						and tqh.transaction_seq_no = act.PolicyChangeNumber
+						and tqh.transaction_seq_no = act.[Number]
 				left join edw_stage.Product pr on act.ProductId = pr.id
 			where
 			    act.PolicyNumber is not null
@@ -78,7 +78,7 @@ BEGIN
 					'AddressLine1','AddressLine2','AddressCity','AddressState','AddressZipCode','AddressCounty',
 					'AddressCountry','HasPool','IsRented','RentalTerm'
 				)
-				
+				and act.CreatedDate > @last_source_extract_ts
 			) as t
 		) as t
 		pivot 
