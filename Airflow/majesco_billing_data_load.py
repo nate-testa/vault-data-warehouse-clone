@@ -124,111 +124,125 @@ args = {
     'on_failure_callback': on_failure_callback,
 }
 
-with DAG(
-    dag_id='majesco_billing_data_load',
-    catchup=False,
-    max_active_runs=1,
-    default_args=args,
-    start_date=pendulum.datetime(2025, 1, 1, tz="America/New_York"),
-    schedule_interval='0 8 * * *', # At 08:00 every day
-    # schedule_interval=None,
-    tags=["Majesco Billing", "vault"],
-) as dag:
-    
+# Schedule definitions: Weekday vs Weekend
+SCHEDULES = {
+    "weekday": "0 7 * * 1-5",      # Monday-Friday at 7:00 AM
+    "weekend": "30 10 * * 0,6"     # Sunday and Saturday at 10:30 AM
+}
 
-    start = EmptyOperator(
-        task_id='start',
+# Create DAGs dynamically for each schedule
+for schedule_key, cron_expression in SCHEDULES.items():
+    dag_id = f'majesco_billing_data_load_{schedule_key}'
+    
+    dag = DAG(
+        dag_id=dag_id,
+        catchup=False,
+        max_active_runs=1,
+        default_args=args,
+        start_date=pendulum.datetime(2025, 1, 1, tz="America/New_York"),
+        schedule=cron_expression,
+        tags=["Majesco Billing", "vault", schedule_key],
     )
-
-    with TaskGroup("policy_group") as policy_group:
-
-        policy_group_items = [
-            'sp_tpolicy_billing_paid_in_update'
-        ]
-        
-        operators = []
-        for item in policy_group_items:
-            operator = MsSqlOperator(
-                task_id=item,
-                mssql_conn_id='Vault_EDW',
-                sql=f"EXEC edw_core.{item}",
-                database="vault_edw",
-                autocommit=True,
-            )
-            operators.append(operator)
-
-        send_policy_group_email = EmailOperator(
-                task_id='send_policy_group_email',
-                to=to_email,
-                subject='Airflow - Majesco policy tables loaded successfully',
-                html_content=get_sp_success_data_HTML(policy_group_items, 'All stored procedures executed successfully for all the Policy tables'),
-            )
-        
-        for i in range(len(operators) - 1):
-            operators[i].set_downstream(operators[i + 1])
-
-        operators[-1].set_downstream(send_policy_group_email)
     
+    with dag:
+        
+        start = EmptyOperator(
+            task_id='start',
+        )
 
-    with TaskGroup("datamart_group") as datamart_group:
+        with TaskGroup("policy_group") as policy_group:
 
-        datamart_group_items = [
-            'sp_trenewal_summary',
-            'sp_trenewal_summary_v1',
-            'sp_tbroker_summary',
-            'sp_tbroker_summary_v1'
+            policy_group_items = [
+                'sp_tpolicy_billing_paid_in_update'
             ]
+            
+            operators = []
+            for item in policy_group_items:
+                operator = MsSqlOperator(
+                    task_id=item,
+                    mssql_conn_id='Vault_EDW',
+                    sql=f"EXEC edw_core.{item}",
+                    database="vault_edw",
+                    autocommit=True,
+                )
+                operators.append(operator)
 
-        operators = []
-        for item in datamart_group_items:
-            operator = MsSqlOperator(
-                task_id=item,
-                mssql_conn_id='Vault_EDW',
-                sql=f"EXEC edw_core.{item}",
-                database="vault_edw",
-                autocommit=True,
-            )
-            operators.append(operator)
+            send_policy_group_email = EmailOperator(
+                    task_id='send_policy_group_email',
+                    to=to_email,
+                    subject='Airflow - Majesco policy tables loaded successfully',
+                    html_content=get_sp_success_data_HTML(policy_group_items, 'All stored procedures executed successfully for all the Policy tables'),
+                )
+            
+            for i in range(len(operators) - 1):
+                operators[i].set_downstream(operators[i + 1])
 
-        send_datamart_group_email = EmailOperator(
-            task_id='send_datamart_group_email',
-            to=to_email,
-            subject='Airflow - Majesco datamart tables loaded successfully',
-            html_content=get_sp_success_data_HTML(datamart_group_items, 'All stored procedures executed successfully for all the Majesco datamart tables'),
-        )
-
-        for i in range(len(operators) - 1):
-            operators[i].set_downstream(operators[i + 1])
-
-        operators[-1].set_downstream(send_datamart_group_email)
+            operators[-1].set_downstream(send_policy_group_email)
         
-    process_majesco_billing_files = PythonOperator(
-        task_id='process_majesco_billing_files',
-        python_callable=process_all_files,
-        dag=dag,
-    )
 
-    check_data_and_send_email = PythonOperator(
-            task_id='check_data_and_send_email',
-            python_callable=check_majesco_data_and_send_email,
-            provide_context=True,
+        with TaskGroup("datamart_group") as datamart_group:
+
+            datamart_group_items = [
+                'sp_trenewal_summary',
+                'sp_trenewal_summary_v1',
+                'sp_tbroker_summary',
+                'sp_tbroker_summary_v1'
+                ]
+
+            operators = []
+            for item in datamart_group_items:
+                operator = MsSqlOperator(
+                    task_id=item,
+                    mssql_conn_id='Vault_EDW',
+                    sql=f"EXEC edw_core.{item}",
+                    database="vault_edw",
+                    autocommit=True,
+                )
+                operators.append(operator)
+
+            send_datamart_group_email = EmailOperator(
+                task_id='send_datamart_group_email',
+                to=to_email,
+                subject='Airflow - Majesco datamart tables loaded successfully',
+                html_content=get_sp_success_data_HTML(datamart_group_items, 'All stored procedures executed successfully for all the Majesco datamart tables'),
+            )
+
+            for i in range(len(operators) - 1):
+                operators[i].set_downstream(operators[i + 1])
+
+            operators[-1].set_downstream(send_datamart_group_email)
+            
+        process_majesco_billing_files = PythonOperator(
+            task_id='process_majesco_billing_files',
+            python_callable=process_all_files,
             dag=dag,
         )
-    
-    check_not_loaded_data_and_send_email = PythonOperator(
-            task_id='check_not_loaded_data_and_send_email',
-            python_callable=check_majesco_not_loaded_data_and_send_email,
-            provide_context=True,
-            dag=dag,
+
+        check_data_and_send_email = PythonOperator(
+                task_id='check_data_and_send_email',
+                python_callable=check_majesco_data_and_send_email,
+                provide_context=True,
+                dag=dag,
+            )
+        
+        check_not_loaded_data_and_send_email = PythonOperator(
+                task_id='check_not_loaded_data_and_send_email',
+                python_callable=check_majesco_not_loaded_data_and_send_email,
+                provide_context=True,
+                dag=dag,
+            )
+
+        end = EmptyOperator(
+            task_id='end',
         )
 
-    end = EmptyOperator(
-        task_id='end',
-    )
-
-start.set_downstream(process_majesco_billing_files)
-process_majesco_billing_files.set_downstream(policy_group)
-policy_group.set_downstream(check_data_and_send_email)
-check_data_and_send_email.set_downstream(check_not_loaded_data_and_send_email)
-check_not_loaded_data_and_send_email.set_downstream(datamart_group)
-datamart_group.set_downstream(end)
+        # Set task dependencies
+        start.set_downstream(process_majesco_billing_files)
+        process_majesco_billing_files.set_downstream(policy_group)
+        policy_group.set_downstream(check_data_and_send_email)
+        check_data_and_send_email.set_downstream(check_not_loaded_data_and_send_email)
+        check_not_loaded_data_and_send_email.set_downstream(datamart_group)
+        datamart_group.set_downstream(end)
+        
+    # Register DAG in globals
+    globals()[dag_id] = dag
