@@ -62,7 +62,7 @@ BEGIN
 				inner join edw_stage.AccountTransactionVersionObjectField atvof on atvo.Id=atvof.VersionObjectId
 				left join [edw_core].[tquote_history] tqh on tqh.quote_no=act.PolicyNumber
 						and tqh.effective_dt=act.EffectiveDate
-						and tqh.transaction_seq_no = act.PolicyChangeNumber
+						and tqh.transaction_seq_no = act.[Number]
 				left join edw_stage.Product pr on act.ProductId = pr.id
 			where
 				act.PolicyNumber is not null
