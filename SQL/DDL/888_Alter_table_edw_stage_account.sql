@@ -1,0 +1,7 @@
+IF NOT EXISTS (SELECT *
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE lower(TABLE_NAME) = 'Account'
+        AND LOWER(COLUMN_NAME) = 'GroupAccountId')
+BEGIN
+    ALTER TABLE edw_stage.Account ADD GroupAccountId UNIQUEIDENTIFIER  NULL;
+END;  
