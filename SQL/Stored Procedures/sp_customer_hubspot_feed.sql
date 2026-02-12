@@ -36,6 +36,7 @@
 -- 10/23/25		Dinesh Bobbili				28. AD11462 - Added insured_nm and uw_company_nm 
 -- 11/14/25		Dinesh Bobbili				29. AD11742 - Added ssk filter to exclude NFP data
 -- 02/04/26		Dinesh Bobbili				30. AD12455 - Added total_policy_premium_amt column
+-- 02/12/26		Dinesh Bobbili				31. AD12556 -  Updated producer_nm logic 
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -129,7 +130,21 @@ BEGIN
         where a.policy_inforce_in <> pol.policy_inforce_in 
         and a.policy_no not in (select policy_no from edw_temp.customer_hubspot_feed_temp0);
 
- 		-- Step1 limit amount of rows.
+ 		--used to see if there are any changes in total_policy_premium_amt
+        insert into  edw_temp.customer_hubspot_feed_temp0
+        select a.policy_no
+        from  [edw_integration].[customer_hubspot_feed] a
+        inner join edw_core.tpolicy pol on pol.policy_no = a.policy_no
+        inner join  
+                        (
+                                select policy_sk, sum(premium_amt) as total_policy_premium_amt  
+                                from edw_core.tpolicy_history
+                                group by policy_sk
+                        ) pol_prm on pol_prm.policy_sk = pol.policy_sk
+        where isnull(a.total_policy_premium_amt,0) <> isnull(pol_prm.total_policy_premium_amt ,0)
+        and a.policy_no not in (select policy_no from edw_temp.customer_hubspot_feed_temp0);
+		
+		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp1; 
 		--for policies
 		with pol_prm as
@@ -160,7 +175,7 @@ BEGIN
 			cust.mailing_address_zip_cd,
 			cust.mailing_address_country_nm,
 			pol.customer_id,
-			ph.producer_nm,
+			nullif(trim(isnull(p.first_nm,'') + ' ' + isnull(p.last_nm,'')),'') as producer_nm,
 			p.producer_id
 			, case when pinf.customer_id is not null and pinf.inforce_ct = cinf.inforce_ct
 							   then 'Yes' 
@@ -192,7 +207,7 @@ BEGIN
 													AND isnull(bvt.state_cd,pol.risk_state_cd)=pol.risk_state_cd
 		INNER join edw_core.tpolicy_history ph on ph.policy_sk = pol.policy_sk and ph.latest_transaction_in = 'Y'
 		INNER join edw_core.tpolicy_insured pi on pi.policy_history_sk = ph.policy_history_sk and pi.primary_insured_in = 'Yes'
-		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk 
+		left join edw_core.tproducer p on pol.current_producer_sk = p.producer_sk
 		left join edw_temp.customer_hubspot_feed_temp01 pinf on cust.customer_id = pinf.customer_id and pr.product_cd = pinf.product_cd 
 		left join edw_temp.customer_hubspot_feed_temp01 cinf on cust.customer_id = cinf.customer_id and '[Total]' = cinf.product_cd 
 		left join edw_core.thome_coverage hc on ph.policy_history_sk = hc.policy_history_sk

@@ -32,6 +32,7 @@
 -- 01/13/26		        Dinesh Bobbili				27. AD12200 Added column non_binding_indication_offered_in
 -- 01/24/26		        Archtha Gudimalla			28. Casted non_binding_indication_offered_in as varchar 255 for null values
 -- 02/04/26		        Dinesh Bobbili  			29. AD12453 Added producer_id logic
+-- 02/12/26		        Dinesh Bobbili				30. AD12556 -  Updated producer_nm logic
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed]  
@@ -263,7 +264,7 @@ BEGIN
             group by policy_history_sk
         )
         select
-            q.policy_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,pd.producer_id,
+            q.policy_no,q.effective_dt,q.expiration_dt,h.transaction_type,nullif(trim(isnull(pd.first_nm,'') + ' ' + isnull(pd.last_nm,'')),'') as producer_nm,pd.producer_id,
             q.customer_id,
             br.broker_id, br.broker_nm, br.broker_tier, br.national_agency_in,
             bvt.team_member_nm as bdm_nm,cust.vip_in,i.first_nm as insured_first_nm, 
@@ -353,7 +354,7 @@ BEGIN
 		--left join edw_core.tquote q1 on q1.quote_no = q.policy_no
         inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
         inner join edw_core.tpolicy_history h on h.policy_sk = q.policy_sk and h.latest_transaction_in = 'Y'
-        left join edw_core.tproducer pd on pd.producer_sk = h.producer_sk
+        left join edw_core.tproducer pd on pd.producer_sk = q.current_producer_sk
         left join edw_core.tpolicy_insured i	on i.policy_history_sk = h.policy_history_sk and i.primary_insured_in = 'Yes'
         left join edw_core.tcustomer cust on cust.customer_id = q.customer_id
         left join edw_core.tbroker br on br.broker_id = q.broker_id
