@@ -10,7 +10,7 @@
 -- 03-13-2025				Yunus Mohammed				5 - AD-8568 Added vault litigation policies
 -- 05-07-2025				Yunus Mohammed				6 - AD-9410 Added new vault litigation policy
 -- 11-11-2025               Yunus Mohammed              7 - AD-11665 NFP policies excluded
--- 12-17-2025				Yunus Mohammed				8- AD-11666 Code updated to get NFP data from tpolicy
+-- 12-17-2025				Yunus Mohammed				8- AD-11666 Code updated to get NFP and GRPEL data policies
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_search_snapsheet_api]
 AS
@@ -111,7 +111,6 @@ FROM (
 				LEFT JOIN edw_core.tdate AS dtxn ON pt.transaction_effective_dt_sk = dtxn.date_sk
 				LEFT JOIN edw_core.tpolicy_transaction_type AS ptt ON pt.policy_transaction_type_sk = ptt.policy_transaction_type_sk
 				INNER JOIN edw_core.tpolicy AS p ON pt.policy_sk = p.policy_sk		
-				LEFT JOIN edw_core.tcustomer AS c ON pt.customer_sk = c.customer_sk		
 				LEFT JOIN edw_core.tsource_system AS ss ON pt.source_system_sk = ss.source_system_sk		
 				LEFT JOIN edw_core.tpolicy_insured AS [pi] ON p.policy_no = [pi].policy_no AND p.effective_dt = [pi].effective_dt
 				AND pt.transaction_seq_no = [pi].transaction_seq_no AND pi.primary_insured_in = 'Yes'
