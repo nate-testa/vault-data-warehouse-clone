@@ -127,7 +127,7 @@ args = {
 # Schedule definitions: Weekday vs Weekend
 SCHEDULES = {
     "weekday": "0 7 * * 1-5",      # Monday-Friday at 7:00 AM
-    "weekend": "30 10 * * 0,6"     # Sunday and Saturday at 10:30 AM
+    "weekend": "30 11 * * 0,6"     # Sunday and Saturday at 11:30 AM
 }
 
 # Create DAGs dynamically for each schedule
@@ -139,7 +139,7 @@ for schedule_key, cron_expression in SCHEDULES.items():
         catchup=False,
         max_active_runs=1,
         default_args=args,
-        start_date=pendulum.datetime(2025, 1, 1, tz="America/New_York"),
+        start_date=pendulum.datetime(2026, 2, 12, tz="America/New_York"),
         schedule=cron_expression,
         tags=["Majesco Billing", "vault", schedule_key],
     )
