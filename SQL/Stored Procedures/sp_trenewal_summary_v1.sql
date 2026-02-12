@@ -264,7 +264,11 @@ BEGIN
 								then (case when tr.tax_fee_surcharge_sk = 0 then tr.premium_amt else 0 end) 
 								else 0 
 								end) as mid_term_cancel_amount, 
-						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk and tt.policy_transaction_type_nm in ('New','Renewal') --'Renewal','New Business' 
+						sum(CASE WHEN transaction_effective_dt_sk <> expiration_dt_sk 
+								--and tt.policy_transaction_type_nm in ('New','Renewal') --'Renewal','New Business' 
+								-- need to include all transaction on or before the policy becomes effective
+								and ((transaction_effective_dt_sk <= effective_dt_sk and transaction_dt_sk <= effective_dt_sk)
+									or tt.policy_transaction_type_nm in ('New','Renewal'))
 								then (case when tr.tax_fee_surcharge_sk = 0 then tr.annual_premium_amt else 0 end) 
 								else 0 
 								end) as initial_annual_net_premium_amt,
