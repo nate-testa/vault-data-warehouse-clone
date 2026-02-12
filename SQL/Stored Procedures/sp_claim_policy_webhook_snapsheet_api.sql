@@ -331,37 +331,15 @@ BEGIN
                     -- null as providerSubjectId it can be primary_key
                     json_query((
                         SELECT
-                            tp.mailing_address_line1 as address1,
-                            tp.mailing_address_line2 as address2,
-                            tp.mailing_address_city_nm as city,
-                            tp.mailing_address_zip_cd as postalCode,
-                            tp.mailing_address_state_cd as region,
-                            tp.mailing_address_country_nm as country
+                            tpi.mailing_address_line_1 as address1,
+                            tpi.mailing_address_line_2 as address2,
+                            tpi.mailing_address_city_nm as city,
+                            tpi.mailing_address_zip_cd as postalCode,
+                            tpi.mailing_address_state_cd as region,
+                            tpi.mailing_address_country_nm as country
                             for json path, include_null_values, without_array_wrapper			
                     )) as [address],
-                    json_query((
-                    SELECT *
-                    FROM
-                    (
-					SELECT
-                        'us' as country,
-                        '1' as countryCode,
---                        'true' preferredMethod,
-                        'phone' as [type],
-                       --'7272901574' as [value] 
-                        -- coalesce(p.home_phone_no,mobile_phone_no) as [value]
-						'' as [value] --TBD
-                    UNION
-                     SELECT
-                        null as country,
-                        null as countryCode,
---                        'true' preferredMethod,
-                        'email' as [type],
-                       -- 'Farhad.Imam@Vault.Insurance' as [value] 
-                        '' as [value] -- TBD
-                    ) as a
-                    for json path, include_null_values
-                    )) as contactMethods                
+                   null as contactMethods                
                 for json path, include_null_values
 
             )) 
@@ -385,9 +363,31 @@ BEGIN
                             tpi.mailing_address_zip_cd as postalCode,
                             tpi.mailing_address_state_cd as region,
                             tpi.mailing_address_country_nm as country
-                            for json path, include_null_values, without_array_wrapper			
+                            for json path, include_null_values, without_array_wrapper
                     )) as [address],
-                    null as contactMethods
+                     json_query((
+                    SELECT *
+                    FROM
+                    (
+					SELECT
+                        'us' as country,
+                        '1' as countryCode,
+--                        'true' preferredMethod,
+                        'phone' as [type],
+                       --'7272901574' as [value] 
+                        -- coalesce(p.home_phone_no,mobile_phone_no) as [value]
+						'' as [value] --TBD
+                    UNION
+                     SELECT
+                        null as country,
+                        null as countryCode,
+--                        'true' preferredMethod,
+                        'email' as [type],
+                       -- 'Farhad.Imam@Vault.Insurance' as [value] 
+                        '' as [value] -- TBD
+                    ) as a
+                    for json path, include_null_values
+                    )) as contactMethods
                 from
                     edw_core.tpolicy_insured tpi
                 where
