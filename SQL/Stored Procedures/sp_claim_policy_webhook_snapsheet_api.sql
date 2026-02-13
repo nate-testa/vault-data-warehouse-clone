@@ -339,7 +339,13 @@ BEGIN
                             tpi.mailing_address_country_nm as country
                             for json path, include_null_values, without_array_wrapper			
                     )) as [address],
-                   null as contactMethods                
+                   null as contactMethods
+                 from
+                    edw_core.tpolicy_insured tpi
+                where
+                    tpi.policy_no = tp.policy_no and
+                    tpi.effective_dt = tp.effective_dt and
+                    tpi.transaction_seq_no = cpsa.transaction_seq_no   
                 for json path, include_null_values
 
             )) 
