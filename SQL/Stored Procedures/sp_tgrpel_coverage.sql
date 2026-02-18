@@ -100,7 +100,7 @@ BEGIN
 			,transaction_seq_no
             ,policy_history_sk
             ,group_nm
-            ,group_excess_liability_limit_amt
+            ,excess_liability_limit_amt
             ,uninsured_motorist_liability_limit_amt
             ,employment_practises_liability_limit_amt
             ,non_profit_do_liability_limit_amt
@@ -130,7 +130,7 @@ BEGIN
 			,transaction_seq_no
             ,policy_history_sk
             ,FirstName	as	group_nm
-            ,ExcessLiabilityLimit	as	group_excess_liability_limit_amt
+            ,ExcessLiabilityLimit	as	excess_liability_limit_amt
             ,UMLiabilityLimit	as	uninsured_motorist_liability_limit_amt
             ,EMPLiabilityLimit	as	employment_practises_liability_limit_amt
             ,DOLiabilityLimit	as	non_profit_do_liability_limit_amt
