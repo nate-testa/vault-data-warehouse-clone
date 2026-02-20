@@ -11,7 +11,7 @@
 -- 03-13-2025				Yunus Mohammed				5 - Added vault litigation policies
 -- 05-07-2025               Yunus Mohammed              6 - AD9410 Added new vault litigation policy
 -- 11-11-2025               Yunus Mohammed              7 - AD-11665 NFP policies excluded
--- 12-17-2025				Yunus Mohammed				8 -	AD-11666 NFP polocies included
+-- 12-17-2025				Yunus Mohammed				8 -	AD-11666 NFP policies included
 -- ================================================================================================= 
 CREATE OR ALTER   PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
@@ -324,9 +324,9 @@ BEGIN
 				json_query
 				((
                 select
-                    tp.insured_nm as firstName,
-					null as middleName,
-                    null as lastName,
+                    tpi.first_nm as firstName,
+                    tpi.middle_nm as middleName,
+                    tpi.last_nm as lastName,
                     'policyholder' as [role],
                     -- null as providerSubjectId it can be primary_key
                     json_query((
@@ -339,7 +339,28 @@ BEGIN
                             tpi.mailing_address_country_nm as country
                             for json path, include_null_values, without_array_wrapper			
                     )) as [address],
-                   null as contactMethods
+                     json_query((
+                    SELECT *
+                    FROM
+                    (
+					SELECT
+                        'us' as country,
+                        '1' as countryCode,
+--                        'true' preferredMethod,
+                        'phone' as [type],
+                       --'7272901574' as [value] 
+                        coalesce(home_phone_no,mobile_phone_no) as [value]						
+                    UNION
+                     SELECT
+                        null as country,
+                        null as countryCode,
+--                        'true' preferredMethod,
+                        'email' as [type],
+                       -- 'Farhad.Imam@Vault.Insurance' as [value] 
+                        email as [value] 
+                    ) as a
+                    for json path, include_null_values
+                    )) as contactMethods
                  from
                     edw_core.tpolicy_insured tpi
                 where
@@ -381,8 +402,7 @@ BEGIN
 --                        'true' preferredMethod,
                         'phone' as [type],
                        --'7272901574' as [value] 
-                        -- coalesce(p.home_phone_no,mobile_phone_no) as [value]
-						'' as [value] --TBD
+                        coalesce(home_phone_no,mobile_phone_no) as [value]						
                     UNION
                      SELECT
                         null as country,
@@ -390,7 +410,7 @@ BEGIN
 --                        'true' preferredMethod,
                         'email' as [type],
                        -- 'Farhad.Imam@Vault.Insurance' as [value] 
-                        '' as [value] -- TBD
+                        email as [value] 
                     ) as a
                     for json path, include_null_values
                     )) as contactMethods
