@@ -8,6 +8,7 @@
 -- 11/10/25					Dinesh Bobbili				1. Created this procedure 
 -- 11/18/25					Dinesh Bobbili				2. Renamed the column name
 -- 02/03/26					Yunus Mohammed		3. Renamed procedure
+-- 02/18/26					Yunus Mohammed		4. AD12576 Updated column name group_excess_liability_limit_amt and group_excess_liability_premium_amt
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tgrpel_coverage_nfp]
 AS
@@ -47,8 +48,8 @@ BEGIN
 					np.transaction_seq_no AS transaction_seq_no,
 					cast(np.group_name as varchar(255)) AS group_nm,
 					np.insured_spouse_first_name + ' ' + insured_spouse_last_name AS insured_spouse_nm,
-					np.group_excess_liability_coverage AS group_excess_liability_limit_amt,
-					np.group_excess_liability_coverage_premium AS group_excess_liability_premium_amt,
+					np.group_excess_liability_coverage AS excess_liability_limit_amt,
+					np.group_excess_liability_coverage_premium AS excess_liability_premium_amt,
 					np.uninsured_motorist_liability_coverage AS uninsured_motorist_liability_limit_amt,
 					np.uninsured_motorist_liability_premium AS uninsured_motorist_liability_premium_amt,
 					cast(np.employment_practises_liability_coverage as varchar(255)) AS employment_practises_liability_limit_amt,
@@ -155,8 +156,8 @@ BEGIN
 			,tph.policy_history_sk AS policy_history_sk                                      
 			,np.group_nm                                                  
 			,np.insured_spouse_nm                                         
-			,np.group_excess_liability_limit_amt                          
-			,np.group_excess_liability_premium_amt                        
+			,np.excess_liability_limit_amt                          
+			,np.excess_liability_premium_amt                        
 			,np.uninsured_motorist_liability_limit_amt                    
 			,np.uninsured_motorist_liability_premium_amt                  
 			,np.employment_practises_liability_limit_amt                  
@@ -207,8 +208,8 @@ BEGIN
 			,policy_history_sk
 			,group_nm
 			,insured_spouse_nm
-			,group_excess_liability_limit_amt
-			,group_excess_liability_premium_amt
+			,excess_liability_limit_amt
+			,excess_liability_premium_amt
 			,uninsured_motorist_liability_limit_amt
 			,uninsured_motorist_liability_premium_amt
 			,employment_practises_liability_limit_amt
@@ -253,8 +254,8 @@ BEGIN
 			,policy_history_sk
 			,group_nm
 			,insured_spouse_nm
-			,group_excess_liability_limit_amt
-			,group_excess_liability_premium_amt
+			,excess_liability_limit_amt
+			,excess_liability_premium_amt
 			,uninsured_motorist_liability_limit_amt
 			,uninsured_motorist_liability_premium_amt
 			,employment_practises_liability_limit_amt

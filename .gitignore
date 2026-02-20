@@ -1,1 +1,5 @@
 desktop.ini
+.project
+.vs
+.venv/
+SQL/01_My_Scripts/*

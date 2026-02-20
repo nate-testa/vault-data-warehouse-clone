@@ -10,6 +10,7 @@
 -- 09/29/23     Sandeep Gundreddy				4. Added ins.ReferenceCode!=0 to exclude secondary customers
 -- 09/29/23     Architha Gudimalla				5. Updated vip_in logic from 1/0 to Yes/No
 -- 10/25/23     Mohammed Yunus					6. Update Merge statement condition
+-- 02/18/26		Yunus Mohammed					7. AD12563- Added subscriber_contribution_end_dt
 -- ============================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcustomer]
@@ -56,7 +57,8 @@ BEGIN
 				NULLIF(TRIM(ins.MailingAddressZipCode),'') MailingAddressZipCode,
 				NULLIF(TRIM(ins.MailingAddressCounty),'') MailingAddressCounty,
 				NULLIF(TRIM(ins.MailingAddressCountry),'') MailingAddressCountry,
-				case when ins.IsVip = 1 then 'Yes' else 'No' end IsVip, CreatedDate, UpdatedDate
+				case when ins.IsVip = 1 then 'Yes' else 'No' end IsVip, CreatedDate, UpdatedDate,
+				SubscriberContributionEndDate
         INTO edw_temp.[tcustomer_temp1] 
 		FROM edw_stage.[Insured] ins
 		WHERE GREATEST(CreatedDate,UpdatedDate)>@last_source_extract_ts 
@@ -73,7 +75,7 @@ BEGIN
 				[home_phone_no], [mobile_phone_no], [birth_dt], [occupation_desc], [employer_nm], [prefix], [suffix], [title], [email], [agency_id],
 				[mailing_address_line1],[mailing_address_line2],[mailing_address_unit_no],[mailing_address_city_nm],
 				[mailing_address_state_cd],[mailing_address_zip_cd],[mailing_address_county_nm],[mailing_address_country_nm],
-				[family_account_in], [vip_in], 
+				[family_account_in], [vip_in], subscriber_contribution_end_dt,
 				[create_ts], [update_ts], [etl_audit_sk]
 			)
 		VALUES (--cast(Source.referencecode as varchar), 
@@ -98,7 +100,9 @@ BEGIN
 				Source.MailingAddressZipCode, 
 				Source.MailingAddressCounty,
 				Source.MailingAddressCountry, null, 
-				Source.IsVip, getdate(), getdate(), @etl_audit_sk)
+				Source.IsVip, 
+				Source.SubscriberContributionEndDate,
+				getdate(), getdate(), @etl_audit_sk)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
@@ -123,6 +127,7 @@ BEGIN
 		Target.[mailing_address_county_nm] = Source.MailingAddressCounty,
 		Target.[mailing_address_country_nm]	= Source.MailingAddressCountry,
 		Target.[vip_in]	= Source.IsVip,
+		Target.[subscriber_contribution_end_dt] = Source.SubscriberContributionEndDate,
 		--[employer_nm],  [suffix],  [agency_id], [unit_no], [family_account_in]
 		Target.[update_ts] = getdate()
 		;

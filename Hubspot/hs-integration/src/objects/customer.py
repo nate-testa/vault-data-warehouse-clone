@@ -35,11 +35,15 @@ class Customer:
         customer_df = DatabaseFunctions.get_data_from_db(DatabaseFunctions.table_name['customer'])
         
         if not customer_df.empty:
-            # 1. ALERT: Check for and log any duplicates before taking action.
-            check_and_log_duplicates(customer_df, 'customer_id', 'Customer')
-
-            # 2. deduplicate on customer id since customer table has a line item per policy, but only data from 1 line item is needed
-            customer_df.drop_duplicates(subset='customer_id', keep='first', inplace=True, ignore_index=True )
+            # 1. Check for duplicate customer_ids (same customer_id appearing multiple times due to multiple policies)
+            # Each unique customer_id should create/update ONE contact in HubSpot
+            duplicates_before = len(customer_df)
+            customer_df.drop_duplicates(subset='customer_id', keep='first', inplace=True, ignore_index=True)
+            duplicates_dropped = duplicates_before - len(customer_df)
+            
+            if duplicates_dropped > 0:
+                logger.info(f"Dropped {duplicates_dropped} duplicate customer_id rows (one customer_id per contact)")
+            
             create_batch_payload = {"inputs": []}  
             update_batch_payload = {"inputs": []}  
 
@@ -101,7 +105,9 @@ class Customer:
                 'mailing_address_city_nm': record['mailing_address_city_nm'],               
                 'mailing_address_zip_cd': record['mailing_address_zip_cd'],
                 'risk_state_cd': record['risk_state_cd'],
-                'mailing_address_state_cd': record['mailing_address_state_cd']
+                'mailing_address_state_cd': record['mailing_address_state_cd'],
+                'insured_nm': record['insured_nm'],
+                'customer_business_type': record['customer_business_type']
 
                 #'policy_status': record['policy_status'],
                 # 'create_ts': record['create_ts'],
