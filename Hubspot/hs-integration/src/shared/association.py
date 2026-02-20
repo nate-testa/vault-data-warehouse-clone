@@ -9,16 +9,35 @@ import sqlite3
 
 class Association:
     
-    association_type_id = {
-        "customer-broker": 27, #21
-        "customer-policy": 24, #25
-        "customer-quote": 30, #28
-        "producer-broker": 25, #23
-        "broker-policy": 22, #37
-        "broker-quote": 36, #34
-        "broker-parent-child": 33, #41
-        "parent-child-notes": 189 
-    }
+    # Environment-specific association type IDs
+    # These IDs differ between HubSpot sandbox and production environments
+    if constants.ENVIRONMENT == 'PRODUCTION':
+        association_type_id = {
+            "customer-broker": 27,
+            "customer-policy": 24,
+            "customer-quote": 30,
+            "producer-broker": 25,
+            "broker-policy": 22,
+            "broker-quote": 36,
+            "broker-parent-child": 33,
+            "parent-child-notes": 189,
+            "quote-producer": 37,
+            "policy-producer": 39
+        }
+    else:  # SANDBOX
+        association_type_id = {
+            "customer-broker": 21,
+            "customer-policy": 25,
+            "customer-quote": 28,
+            "producer-broker": 23,
+            "broker-policy": 37,
+            "broker-quote": 34,
+            "broker-parent-child": 41,
+            "parent-child-notes": 189,
+            "quote-producer": 45,
+            "policy-producer": 43
+        }
+    # Note: Update sandbox values above if they differ from production
 
 
     def get_associations(table1, id1, table2, id2, key_column):
@@ -102,6 +121,16 @@ class Association:
             from_object = constants.object_map['notes']
             to_object = constants.object_map['broker']
             association_id = Association.association_type_id['parent-child-notes']
+        
+        elif object_type == 'quote-producer-association':
+            from_object = constants.object_map['quote']     # 'deal'
+            to_object = constants.object_map['producer']    # 'contact'
+            association_id = Association.association_type_id['quote-producer']
+        
+        elif object_type == 'policy-producer-association':
+            from_object = constants.object_map['policy']    # custom object ID
+            to_object = constants.object_map['producer']    # 'contact'
+            association_id = Association.association_type_id['policy-producer']
         
         #### quote notes do not need this because they are associated when they are created
 

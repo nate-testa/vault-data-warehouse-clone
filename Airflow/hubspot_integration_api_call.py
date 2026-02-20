@@ -143,6 +143,7 @@ with DAG(
         ssh_conn_id="ssh_vm_hubspot",
         command="""\
 cat > {{ params.env_path }} <<EOF
+ENVIRONMENT={{ params.environment }}
 {%- if var.value.environment == "PRODUCTION" %}
 HSTOKEN={{ params.token }}
 {%- else %}
@@ -156,6 +157,7 @@ EOF
 """,
         params={
             "env_path": REMOTE_ENV_PATH,
+            "environment": ENVIRONMENT,
             "host": Hubspot_HOST,
             "password": Hubspot_PASS,
             "username": Hubspot_USERNAME,

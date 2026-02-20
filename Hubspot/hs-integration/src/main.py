@@ -34,6 +34,8 @@ def run():
         Producer.associate_records()
         Customer.associate_records()
         Broker.associate_records()
+        Quote.associate_records()
+        Policy.associate_records()
 
 
         now = timetracking.get_current_timestamp()

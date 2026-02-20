@@ -1,5 +1,6 @@
 from shared.database import DatabaseFunctions
 from shared.id_map import id_map_path
+from shared.association import Association
 from shared.logger import get_logger
 import shared.hubspot as hubspot
 
@@ -180,3 +181,32 @@ class Quote:
             payload['id'] = record['hs_object_id']
         
         return payload
+
+
+    def associate_records():
+        # Quote-Producer associations (Deal to Contact/Agent)
+        quote_producer_associations_df = Association.get_associations(
+            table1='quote', 
+            id1='hs_object_id', 
+            table2='producer', 
+            id2='hs_contact_id', 
+            key_column='producer_id'
+        )
+        quote_producer_associations_payload = {"inputs": []}
+
+        for index, row in quote_producer_associations_df.iterrows():
+            from_id = row['hs_object_id']  # Deal ID
+            to_id = row['hs_contact_id']   # Producer Contact ID
+            association_type_id = Association.association_type_id['quote-producer']
+            record_payload = Association.build_association_payload(
+                from_id=from_id, 
+                to_id=to_id, 
+                association_type_id=association_type_id
+            )
+            quote_producer_associations_payload['inputs'].append(record_payload)
+
+        quote_producer_associations = hubspot.AssociationHandler(
+            'quote-producer-association', 
+            'quote-producer-associations'
+        )
+        quote_producer_associations.dispatch(quote_producer_associations_payload)

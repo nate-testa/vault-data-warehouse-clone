@@ -28,14 +28,14 @@ class RecordsDispatcher:
         'Authorization': f'Bearer {constants.hs_token}'
     }
 
-    def api_log(self, res, success_code, action_type, batch, log_failure=True, failure_addon=''):
+    def api_log(self, res, success_code, action_type, batch, log_failure=True, failure_addon='', request_payload=None):
         if res and res.status_code == success_code:
             logger.debug(
                 f'"METHOD": "{res.request.method}", '
                 f'"STATUS_CODE": "{res.status_code}",'
                 f'"URL": "{res.url}"'
             )
-            IDMapFunctions.action_router(action_type, batch, res.json())
+            IDMapFunctions.action_router(action_type, batch, res.json(), request_payload)
             
             # Update success statistics
             object_base = action_type.replace('_create', '').replace('_update', '')
@@ -174,7 +174,8 @@ class RecordsDispatcher:
             201,
             self.action_type,
             batch=True,
-            log_failure=False
+            log_failure=False,
+            request_payload=payload
         )
 
     def unit_update_record(self, object_type, payload):
@@ -236,7 +237,8 @@ class RecordsDispatcher:
             200,
             self.action_type,
             batch=True,
-            log_failure=False
+            log_failure=False,
+            request_payload=payload
         )
 
     def get_existing_associations(self, from_object, from_id, to_object, association_id):
@@ -254,7 +256,7 @@ class RecordsDispatcher:
                 matching = [
                     r for r in results 
                     if any(
-                        t.get('associationTypeId') == association_id 
+                        t.get('typeId') == association_id 
                         for t in r.get('associationTypes', [])
                     )
                 ]
@@ -302,6 +304,60 @@ class RecordsDispatcher:
         max_attempts = 3
         delay_seconds = 3
         res = None
+        
+        # Proactive producer association change detection
+        # For quote-producer and policy-producer associations (environment-agnostic)
+        producer_association_ids = [
+            Association.association_type_id['quote-producer'],
+            Association.association_type_id['policy-producer']
+        ]
+        if constants.CLEAN_CHANGED_PRODUCER_ASSOCIATIONS and association_id in producer_association_ids:
+            existing = self.get_existing_associations(
+                from_object,
+                payload["from"]["id"],
+                to_object,
+                association_id
+            )
+            
+            # Check if there's an existing producer association to a DIFFERENT producer
+            for assoc in existing:
+                old_producer_id = str(assoc.get('toObjectId'))  # Convert to string for comparison
+                new_producer_id = str(payload["to"]["id"])  # Convert to string for comparison
+                
+                logger.info(
+                    f'Producer association check for {from_object} {payload["from"]["id"]}: '
+                    f'Existing producer: {old_producer_id}, Requested producer: {new_producer_id}'
+                )
+                
+                if old_producer_id and old_producer_id != new_producer_id:
+                    logger.info(
+                        f'Producer change detected for {from_object} {payload["from"]["id"]}: '
+                        f'Old producer contact: {old_producer_id}, New producer contact: {new_producer_id}. '
+                        f'Deleting old association...'
+                    )
+                    
+                    # Delete the old producer association
+                    delete_success = self.delete_association(
+                        from_object,
+                        payload["from"]["id"],
+                        to_object,
+                        old_producer_id,
+                        association_id
+                    )
+                    
+                    if delete_success:
+                        logger.info(f'Successfully deleted old producer association to contact {old_producer_id}')
+                        # Track producer association replacements
+                        error_reporter.update_stats('associations', 'producer_reassigned', 1)
+                    else:
+                        logger.warning(f'Failed to delete old producer association to contact {old_producer_id}')
+                elif old_producer_id == new_producer_id:
+                    # Association already exists and is correct - no action needed
+                    logger.info(
+                        f'Producer association already correct for {from_object} {payload["from"]["id"]} '
+                        f'(contact {old_producer_id}). Skipping creation.'
+                    )
+                    return None  # Skip the PUT request below
 
         for attempt in range(max_attempts):
             try:
@@ -487,7 +543,7 @@ class RecordsDispatcher:
         else:
             batches = [payload]
             num_batches = 1
-            logger.info(f'1 batch {self.action_type} request to do.')
+            logger.info(f'1 batch {self.action_type} request to do ({num_total} records).')
 
         for i, batch in enumerate(batches):
             logger.info(f'Working on {self.action_type} batch request {i + 1}/{num_batches}...')

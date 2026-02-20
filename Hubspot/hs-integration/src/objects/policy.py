@@ -164,3 +164,31 @@ class Policy:
 
         policy_broker_associations = hubspot.AssociationHandler('broker-policy-association', 'broker-policy-associations')
         policy_broker_associations.dispatch(policy_broker_associations_payload)
+
+
+        # Policy-Producer associations (Policy to Contact/Agent)
+        policy_producer_associations_df = Association.get_associations(
+            table1='policy', 
+            id1='hs_object_id', 
+            table2='producer', 
+            id2='hs_contact_id', 
+            key_column='producer_id'
+        )
+        policy_producer_associations_payload = {"inputs": []}
+
+        for index, row in policy_producer_associations_df.iterrows():
+            from_id = row['hs_object_id']  # Policy ID
+            to_id = row['hs_contact_id']   # Producer Contact ID
+            association_type_id = Association.association_type_id['policy-producer']
+            record_payload = Association.build_association_payload(
+                from_id=from_id, 
+                to_id=to_id, 
+                association_type_id=association_type_id
+            )
+            policy_producer_associations_payload['inputs'].append(record_payload)
+
+        policy_producer_associations = hubspot.AssociationHandler(
+            'policy-producer-association', 
+            'policy-producer-associations'
+        )
+        policy_producer_associations.dispatch(policy_producer_associations_payload)

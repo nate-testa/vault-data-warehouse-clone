@@ -1,10 +1,8 @@
 import shared.timetracking as timetracking
 import constants
-
 import pandas as pd
 import pymssql
 import re
-
 
 class DatabaseFunctions:
 
@@ -34,8 +32,7 @@ class DatabaseFunctions:
         conn.close()
         df = df.fillna('') # replace null values with blank strings
         return df
-    
+
     def strip_html_tags(text):
         clean = re.compile('<.*?>')
         return re.sub(clean, '', text)
-
