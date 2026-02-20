@@ -127,8 +127,6 @@ with DAG(
             "sp_titem_summary": {"sp_parameters": [{"name": "@in_month_end_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
             "sp_tinternal_coverage_inforce": {"sp_parameters": [{"name": "@in_inforce_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
             "sp_tinternal_coverage_summary": {"sp_parameters": [{"name": "@in_month_end_dt", "value": last_day_previous_month},{"name": "@in_source_system", "value": "NFP"}]},
-            "sp_nfp_claim_policy_search_snapsheet_api": {},
-            "sp_nfp_claim_policy_webhook_snapsheet_api": {},
             "sp_trenewal_summary": {"sp_parameters": [{"name": "@in_yearmonth", "value": previous_month},{"name": "@in_source_system", "value": "NFP"}]},
             "sp_tbroker_summary": {"sp_parameters": [{"name": "@in_end_dt", "value": last_day_previous_month},{"name": "@in_broker_id", "value": "56601"}]},
         }
