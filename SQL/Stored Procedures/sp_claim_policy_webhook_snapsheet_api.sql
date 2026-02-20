@@ -60,7 +60,7 @@ BEGIN
             WHERE
             CASE WHEN pr.product_cd = 'AU' AND pt.item_sk = 0 THEN 0  ELSE 1 END = 1
             AND CASE WHEN pr.product_cd = 'AU' AND avc.vehicle_deleted_in = 'Yes' THEN 0  ELSE 1 END = 1        
-
+       
 	declare @home_sql varchar(max) = ''
         select @home_sql = @home_sql + 'select cpsa.policy_history_sk, ''' + snapsheet_coverage_nm + ''' as  [name],''' 
         + coverage_type + ''' as coverage_type,'''
@@ -1096,6 +1096,37 @@ BEGIN
                             for json path, include_null_values
                         )
                     )
+                       WHEN prd.product_cd = 'GRPEL' then
+                json_query
+                (
+                    (
+                    select
+                        [name],
+                        [coverageCode],
+                        null as [limits.amount],
+                        null as [limits.deductible]
+                        /*
+                        case
+                            when coverage_type = 'Limit' then 
+                                [coverage.limits.amount]
+                        end as [coverage.limits.amount],
+                        [limits.coverageLimitType],
+                        case
+                            when coverage_type = 'Deductible' then 
+                                [coverage.limits.amount]
+                        end as [limits.deductible],
+                        */
+                    from 
+                        edw_temp.policy_webhook_grpel_coverages a
+                    where
+                        a.policy_history_sk = tph.policy_history_sk
+						and a.coverage_type in ('Limit','Indicator')
+                        and ( [limits.amount] is not null 
+                                    or ( a.coverage_type = 'Indicator' and  [limits.amount] ='Yes')
+                                )
+                    for json path, include_null_values
+                    )
+                )
                 when prd.product_cd = 'LUX' then
                     ISNULL(json_query
                     (
