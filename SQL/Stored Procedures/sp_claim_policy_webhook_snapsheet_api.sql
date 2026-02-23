@@ -319,58 +319,7 @@ BEGIN
                 ) as temp
                     
                 for json path, include_null_values
-            )) as [businesses],
-			case when prd.product_nm = 'Group Personal Excess Liability' then
-				json_query
-				((
-                select
-                    tpi.first_nm as firstName,
-                    tpi.middle_nm as middleName,
-                    tpi.last_nm as lastName,
-                    'policyholder' as [role],
-                    -- null as providerSubjectId it can be primary_key
-                    json_query((
-                        SELECT
-                            tpi.mailing_address_line_1 as address1,
-                            tpi.mailing_address_line_2 as address2,
-                            tpi.mailing_address_city_nm as city,
-                            tpi.mailing_address_zip_cd as postalCode,
-                            tpi.mailing_address_state_cd as region,
-                            tpi.mailing_address_country_nm as country
-                            for json path, include_null_values, without_array_wrapper			
-                    )) as [address],
-                     json_query((
-                    SELECT *
-                    FROM
-                    (
-					SELECT
-                        'us' as country,
-                        '1' as countryCode,
---                        'true' preferredMethod,
-                        'phone' as [type],
-                       --'7272901574' as [value] 
-                        coalesce(home_phone_no,mobile_phone_no) as [value]						
-                    UNION
-                     SELECT
-                        null as country,
-                        null as countryCode,
---                        'true' preferredMethod,
-                        'email' as [type],
-                       -- 'Farhad.Imam@Vault.Insurance' as [value] 
-                        email as [value] 
-                    ) as a
-                    for json path, include_null_values
-                    )) as contactMethods
-                 from
-                    edw_core.tpolicy_insured tpi
-                where
-                    tpi.policy_no = tp.policy_no and
-                    tpi.effective_dt = tp.effective_dt and
-                    tpi.transaction_seq_no = cpsa.transaction_seq_no   
-                for json path, include_null_values
-
-            )) 
-			else
+            )) as [businesses],			
 			json_query
             ((
                 select
@@ -422,8 +371,7 @@ BEGIN
                     tpi.transaction_seq_no = cpsa.transaction_seq_no
                 for json path, include_null_values
 
-            )) 
-			end as people,
+            )) as people,
             json_query((
             case
                 when prd.product_cd IN ('HO','CO') then
