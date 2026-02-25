@@ -1,12 +1,12 @@
 -- =======================================================================================================================================================
 -- Description: This procedure updates risk address for tpolicy
 -------------------------------------------------------------------------------------------
--- Change date      |Author						             |	Change Description
+-- Change date      |Author						|	Change Description
 -------------------------------------------------------------------------------------------
 -- 02/24/25		     Yunus Mohammed			    1. Created this procedure
 -- ========================================================================================
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_risk_address ]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_risk_address]
 AS 
 BEGIN
 	BEGIN TRY
@@ -76,6 +76,14 @@ BEGIN
         when p.product_cd in ('AU')  then p.mailing_address_zip_cd
         else NULL
         end risk_address_zip_cd
+        ,case
+        when p.product_cd in ('HO','CO') then hl.country_nm
+        when p.product_cd in ('LUX')     then cl.country_nm
+        when p.product_cd in ('PEL') then pl.country_nm
+        when p.product_cd in ('BY') then mbyl.country_nm
+        when p.product_cd in ('AU')  then p.mailing_address_country_nm
+        else NULL
+        end risk_address_country_nm
     into edw_temp.tpolicy_update_risk_address_temp1
     from
     edw_core.tpolicy p
@@ -85,7 +93,7 @@ BEGIN
     LEFT JOIN edw_core.tcollection_location cl ON cl.policy_no = p.policy_no and cl.effective_dt = p.effective_dt
     LEFT JOIN edw_core.tmarine_boat_yacht_location mbyl ON mbyl.policy_history_sk = ph.policy_history_sk
     where
-        p.create_ts > @last_source_extract_ts
+        ph.create_ts > @last_source_extract_ts
 
         UPDATE [target]
         SET
@@ -94,7 +102,8 @@ BEGIN
             [target].risk_address_unit_no =  [source].risk_address_unit_no,
             [target].risk_address_city_nm =  [source].risk_address_city_nm,
             [target].risk_address_state_cd=  [source].risk_address_state_cd,
-            [target]. risk_address_zip_cd = [source]. risk_address_zip_cd
+            [target].risk_address_zip_cd = [source].risk_address_zip_cd,
+            [target].risk_address_country_nm = [source].risk_address_country_nm
         FROM
             edw_core.tpolicy [target]
             INNER JOIN edw_temp.tpolicy_update_risk_address_temp1 as [source] ON  [target].policy_sk = [source].policy_sk
