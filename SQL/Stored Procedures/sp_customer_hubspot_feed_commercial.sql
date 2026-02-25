@@ -292,7 +292,7 @@ BEGIN
 				,per_claim_attachment_amt
 				,per_claim_retention_amt
 				,uw_company_nm
-				,prm.total_policy_premium_amt
+				,total_policy_premium_amt
 				FROM edw_temp.customer_hubspot_feed_commercial_temp1/*
 				union ALL 
 			SELECT 
