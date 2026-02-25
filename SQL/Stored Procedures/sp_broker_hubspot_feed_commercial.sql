@@ -7,6 +7,7 @@
 -- 05/30/25		         Yunus Mohammed				1. Created this procedure
 -- 08/21/25		         Dinesh Bobbili  			2. Updated filter condition
 -- 09/17/25		         Dinesh Bobbili  			3. Updated logic for quote_to_bind_ratio, submission_to_quote_ratio
+-- 02/25/26		        Yunus Mohammed  			5. Ad-12621 Added ytd & lifetime inforce_ct & premium amt
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed_commercial]
@@ -43,15 +44,18 @@ BEGIN
 
         with br_lifetime_inf as
         (
-            SELECT
-                broker_sk,
-                sum(tbs.inforce_ct) as lifetime_inforce_ct ,
-                sum(tbs.inforce_premium_amt) as lifetime_inforce_premium_amt 
-          FROM edw_commercial.tcommercial_broker_summary tbs
-			inner join edw_core.tdate td on td.date_sk = tbs.month_sk
-            where td.yearmonth >= @ret_start_mn
-			and td.yearmonth <= @var_end_mn            
-            group by broker_sk        
+            select 
+                tr.broker_sk,
+                count(distinct case when YEAR(pol.effective_dt) = YEAR(GETDATE()) or YEAR(pol.expiration_dt) = YEAR(GETDATE()) then pol.commercial_policy_sk end) YTD_inf_ct,
+                sum(distinct case when YEAR(pol.effective_dt) = YEAR(GETDATE()) or YEAR(pol.expiration_dt) = YEAR(GETDATE()) then tr.premium_amt-tr.commission_amt else 0 end) YTD_inf_prm,
+                count(distinct pol.commercial_policy_sk) lifetime_inf_ct,
+                sum(premium_amt-commission_amt) lifetime_inf_prm
+            from edw_commercial.tcommercial_policy_transaction tr, edw_commercial.tcommercial_policy pol
+            where transaction_dt_sk < (select date_sk from edw_core.tdate where actual_dt = cast(getdate() as date))
+            and transaction_effective_dt_sk < (select date_sk from edw_core.tdate where actual_dt = cast(getdate() as date))
+            and pol.commercial_policy_sk = tr.commercial_policy_sk
+            and pol.policy_status <> 'Cancelled'
+            group by tr.broker_sk    
         ),
         br_summ as
         (
@@ -74,10 +78,8 @@ BEGIN
                 sum(case when td.yearmonth = @var_end_mn then tbs.ytd_new_business_premium_amt		else 0 end) as ytd_new_business_premium_amt,                
                 --
                 sum(case when td.yearmonth between @ret_start_mn and @ret_end_mn and tbs.policy_renewal_accepted_ct is not null then tbs.policy_renewal_accepted_ct else 0 end) rolling_12_policy_renewal_accepted_ct,
-                sum(case when td.yearmonth between @ret_start_mn and @ret_end_mn and tbs.policy_renewal_ct  is not null then tbs.policy_renewal_ct else 0 end) rolling_12_policy_renewal_ct,
+                sum(case when td.yearmonth between @ret_start_mn and @ret_end_mn and tbs.policy_renewal_ct  is not null then tbs.policy_renewal_ct else 0 end) rolling_12_policy_renewal_ct
 
-                sum(case when td.yearmonth = @var_end_mn then tbs.inforce_ct else 0 end) as ytd_inforce_ct,
-                sum(case when td.yearmonth = @var_end_mn then tbs.inforce_premium_amt else 0 end) as ytd_inforce_premium_amt
                 --
                 
                 --
@@ -166,8 +168,10 @@ BEGIN
             ,tb.primary_address_state_cd
             ,case when ytd_quote_ct = 0 then null else ytd_bind_ct/ytd_quote_ct end as quote_to_bind_ratio
 	        ,case when ytd_submission_ct = 0 then null else ytd_quote_ct/ytd_submission_ct end as submission_to_quote_ratio
-            ,bs.ytd_inforce_ct,bs.ytd_inforce_premium_amt
-            ,bsl.lifetime_inforce_ct,bsl.lifetime_inforce_premium_amt
+            ,bsl.YTD_inf_ct as ytd_inforce_ct
+            ,bsl.YTD_inf_prm as ytd_inforce_premium_amt
+            ,bsl.lifetime_inf_ct as lifetime_inforce_ct
+            ,bsl.lifetime_inf_prm as lifetime_inforce_premium_amt
         into    edw_temp.broker_hubspot_feed_commercial_temp1
         FROM    edw_core.tbroker tb
         -- left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
