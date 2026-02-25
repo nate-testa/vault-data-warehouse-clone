@@ -2,7 +2,7 @@
 update edw_core.tvalidation_sql 
 set target_sql = 'select 2'
 where
-	validation_sql_desc= 'tpolicy_transaction - item_sk= 0 for AU'
+	validation_sql_desc= 'tclaim_feature - claim_coverage_desc is null'
 
 -- 86 tclaim_feature snapsheet claims - missing coverage_sk
 update edw_core.tvalidation_sql 
