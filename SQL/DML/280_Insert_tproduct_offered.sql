@@ -23,12 +23,12 @@ FROM (
         a.update_ts
     FROM (
         VALUES 
-  ('AK', 'No', 'No', 'No', 'No', 'No', 'No', 'No', GETDATE()),
-        ('HI', 'No', 'No', 'No', 'No', 'No', 'No', 'No', GETDATE()),
-        ('IA', 'No', 'No', 'No', 'No', 'No', 'No', 'No', GETDATE()),
-        ('KY', 'No', 'No', 'No', 'No', 'No', 'No', 'No', GETDATE()),
-        ('ND', 'No', 'No', 'No', 'No', 'No', 'No', 'No', GETDATE()),
-        ('NE', 'No', 'No', 'No', 'No', 'No', 'No', 'No', GETDATE())
+  ('AK', 'No', 'No', 'No', 'No', 'No', 'No', 'Yes', GETDATE()),
+        ('HI', 'No', 'No', 'No', 'No', 'No', 'No', 'Yes', GETDATE()),
+        ('IA', 'No', 'No', 'No', 'No', 'No', 'No', 'Yes', GETDATE()),
+        ('KY', 'No', 'No', 'No', 'No', 'No', 'No', 'Yes', GETDATE()),
+        ('ND', 'No', 'No', 'No', 'No', 'No', 'No', 'Yes', GETDATE()),
+        ('NE', 'No', 'No', 'No', 'No', 'No', 'No', 'Yes', GETDATE())
 
     ) AS a(
         state_cd, 
