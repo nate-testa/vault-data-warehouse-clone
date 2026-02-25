@@ -78,6 +78,7 @@ BEGIN
 		where transaction_dt > @last_source_extract_ts
 		or total_insured_value_amt is null; 
 		
+		-- Rate On Line Update
 		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line; 
 
 		with hc as
@@ -112,7 +113,46 @@ BEGIN
 		where transaction_dt > @last_source_extract_ts
 		or hc.rate_on_line is null; 
 		
-		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line;   
+		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line;
+		-- Rate On Line Update
+
+	    -- Rate On Line Exclude Collection Update
+		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line_exclude_collection; 
+
+		with hc as
+		(
+			SELECT  policy_no, effective_Dt, transaction_seq_no, total_insured_value_amt, source_system_Sk
+			FROM    edw_core.thome_coverage 
+			where rate_on_line_exclude_collection is null
+			or transaction_dt >= @last_source_extract_ts
+		), tr as
+		(
+			select pol.policy_no, pol.effective_Dt, tr.transaction_seq_no, tr.policy_sk, sum(annual_premium_amt) annual_premium_amt  
+			from  edw_core.tpolicy pol, edw_core.tpolicy_transaction tr, edw_core.tinternal_coverage ic
+			where tr.policy_sk = pol.policy_sk 
+			and ic.internal_coverage_sk = tr.internal_coverage_sk and ic.primary_coverage_cd in ('Hurricane','Wildfire','AOP','Wind/Hail')
+			and exists (select 'x' from hc where hc.policy_no = pol.policy_no) 
+			group by pol.policy_no, pol.effective_Dt, tr.transaction_seq_no, tr.policy_sk
+		), tr_run_total as
+		(
+			select policy_no, effective_Dt, transaction_seq_no, policy_sk, annual_premium_amt
+				, SUM(annual_premium_amt ) OVER (partition by tr.policy_sk ORDER BY tr.transaction_seq_no ASC) prm_run_total
+			from  tr
+		)
+		select hc.*,  annual_premium_amt, prm_run_total, round(prm_run_total*100/total_insured_value_amt,2) rate_on_line_exclude_collection
+		into edw_temp.thome_cov_upd_rate_on_line_exclude_collection
+		from hc, tr_run_total a
+		where hc.policy_no = a.policy_no and hc.transaction_seq_no = a.transaction_seq_no;
+
+		update hc 
+			set hc.rate_on_line_exclude_collection = a.rate_on_line_exclude_collection
+		from [edw_core].[thome_coverage] hc
+		inner join edw_temp.thome_cov_upd_rate_on_line_exclude_collection a on hc.policy_no = a.policy_no and hc.transaction_seq_no = a.transaction_seq_no
+		where transaction_dt > @last_source_extract_ts
+		or hc.rate_on_line_exclude_collection is null; 
+		
+		DROP TABLE IF exists edw_temp.thome_cov_upd_rate_on_line_exclude_collection;
+		-- Rate On Line Exclude Collection Update
 
 		SET @rows_affected=@@ROWCOUNT;
 	
