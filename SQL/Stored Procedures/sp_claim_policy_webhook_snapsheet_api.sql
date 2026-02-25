@@ -1,3 +1,8 @@
+/****** Object:  StoredProcedure [edw_core].[sp_claim_policy_webhook_snapsheet_api]    Script Date: 2/24/2026 1:44:25 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
 -- =================================================================================================
 -- Description: This procedures insert policy webhook data for snapsheet
 ---------------------------------------------------------------------------------------------------
@@ -12,8 +17,9 @@
 -- 05-07-2025               Yunus Mohammed              6 - AD9410 Added new vault litigation policy
 -- 11-11-2025               Yunus Mohammed              7 - AD-11665 NFP policies excluded
 -- 12-17-2025				Yunus Mohammed				8 -	AD-11666 NFP policies included
+-- 02-25/2026               Yunus Mohammed              9 - AD-11666 Code updated for participant GRPEL policies
 -- ================================================================================================= 
-CREATE OR ALTER   PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
+ALTER     PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -746,7 +752,7 @@ BEGIN
                     ) as tpv on tpv.policy_history_sk = pl.policy_history_sk
                 for json path, include_null_values
                 ))
-			when prd.product_cd = 'GRPEL' then
+			when prd.product_cd = 'GRPEL' AND tph.source_system_sk = 6 then
                 JSON_QUERY
                 ((
                 select
@@ -775,8 +781,12 @@ BEGIN
 					'' as businessType
                     for json path, include_null_values, without_array_wrapper
                 )) as generalLiabilityDetails,
-			   '{}'as [vehicle],
-				'[]' as [drivers],
+                (
+                select ISNULL( (SELECT 1 as a where 1=2 FOR JSON PATH), '{}')
+                ) as [vehicle],
+                (
+                select ISNULL( (SELECT 1 as a where 1=2 FOR JSON PATH), '[]')
+                ) as [drivers],
                 json_query
                 (
                     (
@@ -808,6 +818,107 @@ BEGIN
                     )
                 ) as coverages
 
+                for json path, include_null_values
+                ))
+			 when prd.product_cd = 'GRPEL' then
+                JSON_QUERY
+                ((
+                select
+                CAST(grpl.grpel_location_sk AS VARCHAR(255)) as [id],
+                cast(location_identifier as varchar(255)) as [externalLocationIdentifier],
+                cast(ISNULL(vehicle_identifier,location_identifier) as varchar(255)) as [externalRiskIdentifier],
+                prd.product_nm as code,
+				case when tgrpv.grpel_vehicle_sk is null then 'general_liability' else 'motor' end as [type],
+                json_query
+                ((
+                    select
+                        grpl.address_line_1 as address1, 
+                        grpl.address_line_2 as address2,
+                        grpl.city_nm  as city,
+                        grpl.zip_cd as postalCode,
+                        grpl.state_cd as region,
+                        grpl.country_nm as country
+                    for json path, include_null_values, without_array_wrapper
+                )) as [address],
+			json_query((
+				select  
+				'' as businessName,
+				'' as businessType
+				for json path, include_null_values, without_array_wrapper
+			)) as generalLiabilityDetails,
+			isnull(
+                json_query((
+                    select
+                        tgrpv.vehicle_make as [make], tgrpv.vehicle_model as [model], tgrpv.vehicle_year as [year]
+                    WHERE
+                        tgrpv.grpel_vehicle_sk is not null
+                    for json path, include_null_values, without_array_wrapper
+                )), '{}'
+            ) as [vehicle],
+            isnull(
+                json_query((
+                    select
+                        null as [prefix], first_nm as [firstName], middle_nm as [middleName], last_nm as [lastName],
+					    null as [suffix],null as [dateOfBirth], license_country_nm as [licenseIssuingCountry],
+                        license_no as [licenseNumber]
+                    from
+                        edw_core.tgrpel_driver tgrpd
+                    where
+                        tgrpd.policy_no = tp.policy_no and
+                        tgrpd.effective_dt = tp.effective_dt and
+                        tgrpd.transaction_seq_no = cpsa.transaction_seq_no
+                        and tgrpv.grpel_vehicle_sk is not null
+                       -- and isnull(pl.primary_location_in,'No') = 'Yes'
+                    for json path, include_null_values
+                )) , '[]'
+                ) as [drivers],
+                json_query
+                (
+                    (
+                    select
+                        [name],
+                        [coverageCode],
+                        null as [limits.amount],
+                        null as [limits.deductible]
+                        /*
+                        case
+                            when coverage_type = 'Limit' then 
+                                [coverage.limits.amount]
+                        end as [coverage.limits.amount],
+                        [limits.coverageLimitType],
+                        case
+                            when coverage_type = 'Deductible' then 
+                                [coverage.limits.amount]
+                        end as [limits.deductible],
+                        */
+                    from 
+                        edw_temp.policy_webhook_grpel_coverages a
+                    where
+                        a.policy_history_sk = tph.policy_history_sk
+						and a.coverage_type in ('Limit','Indicator')
+                        and ( [limits.amount] is not null 
+                                    or ( a.coverage_type = 'Indicator' and  [limits.amount] ='Yes')
+                                )
+                    for json path, include_null_values
+                    )
+                ) as coverages
+                from
+                    (
+                        select ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt, transaction_seq_no ORDER BY location_no) AS location_identifier,*
+                        from
+                            [edw_core].[tgrpel_location]
+                        where
+                            policy_history_sk = tph.policy_history_sk	
+                    )as	grpl
+                    left join 
+                    (
+                        select 
+                            ROW_NUMBER() OVER(PARTITION BY grpv.policy_no, grpv.effective_dt,grpv.transaction_seq_no ORDER BY vehicle_unique_id) AS vehicle_identifier,grpv.*
+                        from
+                            edw_core.tgrpel_vehicle grpv
+                        WHERE
+                            grpv.policy_history_sk = tph.policy_history_sk
+                    ) as tgrpv on tgrpv.policy_history_sk = grpl.policy_history_sk
                 for json path, include_null_values
                 ))
             when prd.product_cd = 'LUX' then
