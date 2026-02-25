@@ -141,6 +141,13 @@ BEGIN
 
  		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_commercial_temp1; 
+
+		with pol_prm as
+		(
+		select commercial_policy_sk, sum(premium_amt) as total_policy_premium_amt  
+		from edw_commercial.tcommercial_policy_history
+		group by commercial_policy_sk
+		)
 		--for policies
 		SELECT
 			pol.policy_no,
@@ -176,8 +183,11 @@ BEGIN
 			,cmt.per_claim_policy_limit_amt
 			,cmt.per_claim_attachment_amt
 			,cmt.per_claim_retention_amt
+			,pol.  as uw_company_nm
+			,prm.total_policy_premium_amt
 		INTO edw_temp.customer_hubspot_feed_commercial_temp1
-		FROM edw_commercial.tcommercial_policy pol		
+		FROM edw_commercial.tcommercial_policy pol
+		INNER JOIN pol_prm prm ON pol.commercial_policy_sk = prm.commercial_policy_sk	
 		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
 		INNER JOIN edw_core.tproduct pr	ON pr.product_cd = pol.product_cd
 		INNER JOIN edw_core.tbroker br	ON br.broker_id = pol.broker_id
