@@ -17,7 +17,7 @@ AND TABLE_NAME = 'broker_hubspot_feed'
 AND COLUMN_NAME = 'ytd_inforce_premium_amt'
 ) 
 BEGIN 
-	ALTER TABLE edw_integration.broker_hubspot_feed ADD ytd_inforce_premium_amt DECIMAL(15,2) NULL
+	ALTER TABLE edw_integration.broker_hubspot_feed ADD ytd_inforce_premium_amt DECIMAL(15,4) NULL
 END;
 
 IF NOT EXISTS (
@@ -39,5 +39,5 @@ AND TABLE_NAME = 'broker_hubspot_feed'
 AND COLUMN_NAME = 'lifetime_inforce_premium_amt '
 ) 
 BEGIN 
-	ALTER TABLE edw_integration.broker_hubspot_feed ADD lifetime_inforce_premium_amt DECIMAL(15,2) NULL
+	ALTER TABLE edw_integration.broker_hubspot_feed ADD lifetime_inforce_premium_amt DECIMAL(15,4) NULL
 END; 
