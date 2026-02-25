@@ -8,6 +8,7 @@
 -- 06/18/25		Dinesh Bobbili			    2. AD9853 added underwriter_nm column 
 -- 06/30/25		Architha Gudimalla		    3. Updated last name to use policy insured_nm
 -- 09/30/25		Dinesh Bobbili				4. AD10938 - Added new columns
+-- 02/25/26		Yunus Mohammed				5. AD12621 - uw_company_nm and total_policy_premium_amt
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed_commercial
@@ -141,6 +142,13 @@ BEGIN
 
  		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_commercial_temp1; 
+
+		with pol_prm as
+		(
+		select commercial_policy_sk, sum(premium_amt) as total_policy_premium_amt  
+		from edw_commercial.tcommercial_policy_history
+		group by commercial_policy_sk
+		)
 		--for policies
 		SELECT
 			pol.policy_no,
@@ -176,8 +184,11 @@ BEGIN
 			,cmt.per_claim_policy_limit_amt
 			,cmt.per_claim_attachment_amt
 			,cmt.per_claim_retention_amt
+			,'Vault E & S Insurance Company' as uw_company_nm
+			,prm.total_policy_premium_amt
 		INTO edw_temp.customer_hubspot_feed_commercial_temp1
-		FROM edw_commercial.tcommercial_policy pol		
+		FROM edw_commercial.tcommercial_policy pol
+		INNER JOIN pol_prm prm ON pol.commercial_policy_sk = prm.commercial_policy_sk	
 		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
 		INNER JOIN edw_core.tproduct pr	ON pr.product_cd = pol.product_cd
 		INNER JOIN edw_core.tbroker br	ON br.broker_id = pol.broker_id
@@ -280,6 +291,8 @@ BEGIN
 				,per_claim_policy_limit_amt
 				,per_claim_attachment_amt
 				,per_claim_retention_amt
+				,uw_company_nm
+				,total_policy_premium_amt
 				FROM edw_temp.customer_hubspot_feed_commercial_temp1/*
 				union ALL 
 			SELECT 
@@ -347,6 +360,8 @@ BEGIN
 			,per_claim_policy_limit_amt
 			,per_claim_attachment_amt
 			,per_claim_retention_amt
+			,uw_company_nm
+			,total_policy_premium_amt
 			)
 		VALUES (source.policy_no,
 				source.first_nm,
@@ -382,6 +397,8 @@ BEGIN
 				,source.per_claim_policy_limit_amt
 				,source.per_claim_attachment_amt
 				,source.per_claim_retention_amt
+				,source.uw_company_nm
+				,source.total_policy_premium_amt
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -418,6 +435,8 @@ BEGIN
 			,target.per_claim_policy_limit_amt 		= source.per_claim_policy_limit_amt
 			,target.per_claim_attachment_amt 		= source.per_claim_attachment_amt
 			,target.per_claim_retention_amt 		= source.per_claim_retention_amt
+			,target.uw_company_nm					= source.uw_company_nm
+			,target.total_policy_premium_amt		= source.total_policy_premium_amt
 		;
 
 		SET @rows_affected=@@ROWCOUNT;

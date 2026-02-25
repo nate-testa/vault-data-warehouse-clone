@@ -11,6 +11,7 @@
 --                                                      ,mailing_address_zip_cd
 -- 06/24/25		        Dinesh Bobbili  			5. Removed Address columns and added product_cd
 -- 09/05/25		        Dinesh Bobbili  			6. Added logic to populate VES for uw_company_nm
+-- 02/25/26		        Yunus Mohammed  			5. Ad-12621 Added producer_id
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed_commercial]  
@@ -72,7 +73,7 @@ BEGIN
         ) 
 
         select
-            q.quote_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,
+            q.quote_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,pd.producer_id,
             q.customer_id,
             br.broker_id, br.broker_nm, br.broker_tier, br.national_agency_in,
             cust.vip_in,
@@ -123,10 +124,11 @@ BEGIN
             ,pr.product_cd
         into edw_temp.quote_hubspot_feed_commercial_temp1
 
-        from edw_commercial.tcommercial_quote q
+        from edw_commercial.tcommercial_quote q        
         left join edw_commercial.tcommercial_policy p on q.prior_term_policy_no = p.policy_no
         inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
         inner join edw_commercial.tcommercial_quote_history h on h.commercial_quote_sk =  q.commercial_quote_sk
+        left join edw_core.tproducer pd on pd.producer_sk = h.producer_sk
         left join edw_commercial.tcommercial_quote_coverage cov on cov.commercial_quote_history_sk = h.commercial_quote_history_sk
         left join edw_core.tcustomer cust on cust.customer_id = q.customer_id
         left join edw_core.tbroker br on br.broker_id = q.broker_id 
@@ -165,7 +167,7 @@ BEGIN
         INSERT
         (
             quote_no , effective_dt ,expiration_dt , transaction_type , broker_id , broker_nm ,broker_tier ,national_agency_in,  
-            vip_in, quote_status , reason_quote_not_taken, producer_nm,
+            vip_in, quote_status , reason_quote_not_taken, producer_nm,producer_id,
             create_ts, update_ts ,etl_audit_sk
             ,customer_id,close_reason_desc,monoline_in,broker_state,
             insured_nm,retroactive_dt_desc,prior_or_pending_dt_desc,primary_carrier_nm,
@@ -178,7 +180,7 @@ BEGIN
         VALUES
         (
          quote_no , effective_dt ,expiration_dt , transaction_type , broker_id , broker_nm ,broker_tier ,national_agency_in,  
-            vip_in, quote_status ,reason_quote_not_taken, producer_nm,
+            vip_in, quote_status ,reason_quote_not_taken, producer_nm,producer_id,
             getdate(), getdate(), @etl_audit_sk 
             ,customer_id,close_reason_desc,monoline_in,broker_state,
             insured_nm,retroactive_dt_desc,prior_or_pending_dt_desc,primary_carrier_nm,
@@ -201,6 +203,7 @@ BEGIN
             [target].quote_status	=	[source].quote_status,
             [target].reason_quote_not_taken	=	[source].reason_quote_not_taken,            
             [target].producer_nm =   [source].producer_nm,
+            [target].producer_id = [source].producer_id,
             [target].update_ts	=	GETDATE(),
             [target].etl_audit_sk	=	@etl_audit_sk,
             [target].customer_id	=	[source].customer_id,
