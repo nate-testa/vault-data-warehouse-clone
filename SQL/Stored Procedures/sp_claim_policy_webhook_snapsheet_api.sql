@@ -19,7 +19,7 @@ GO
 -- 12-17-2025				Yunus Mohammed				8 -	AD-11666 NFP policies included
 -- 02-25/2026               Yunus Mohammed              9 - AD-11666 Code updated for participant GRPEL policies
 -- ================================================================================================= 
-ALTER     PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
