@@ -27,73 +27,73 @@ BEGIN
         -- Drop temp table
 		DROP TABLE IF EXISTS edw_temp.tquote_update_risk_address_temp1
         
-    select 
-        q.quote_sk, qh.create_ts,
-        case
-        when p.product_cd in ('HO','CO') then hl.address_line_1
-        when p.product_cd in ('LUX')     then cl.address_line_1
-        when p.product_cd in ('PEL')     then pl.address_line_1
-        when p.product_cd in ('BY')      then mbyl.address_line_1
-        when p.product_cd in ('AU')      then p.mailing_address_line1
-        else NULL
-        end risk_address_line_1
-        ,case
-        when p.product_cd in ('HO','CO') then hl.address_line_2
-        when p.product_cd in ('LUX')     then cl.address_line_2
-        when p.product_cd in ('PEL')     then pl.address_line_2
-        when p.product_cd in ('BY')      then mbyl.address_line_2
-        when p.product_cd in ('AU')      then p.mailing_address_line2
-        else NULL
-        end risk_address_line_2
-        ,case
-        when p.product_cd in ('HO','CO') then hl.unit_no
-        when p.product_cd in ('LUX')     then cl.unit_no
-        when p.product_cd in ('PEL')     then pl.unit_no
-        when p.product_cd in ('BY')      then mbyl.unit_no
-        when p.product_cd in ('AU')      then p.mailing_address_unit_no
-        else NULL
-        end risk_address_unit_no
-        ,case
-        when p.product_cd in ('HO','CO') then hl.city_nm
-        when p.product_cd in ('LUX')     then cl.city_nm
-        when p.product_cd in ('BY')      then mbyl.city_nm
-        when p.product_cd in ('AU')      then p.mailing_address_city_nm
-        else NULL
-        end risk_address_city_nm
-        ,case
-        when p.product_cd in ('HO','CO') then hl.state_cd
-        when p.product_cd in ('LUX')     then cl.state_cd
-        when p.product_cd in ('PEL')     then pl.state_cd
-        when p.product_cd in ('BY')      then mbyl.state_cd
-        when p.product_cd in ('AU')      then p.mailing_address_state_cd
-        else NULL
-        end risk_address_state_cd
-        ,case
-        when p.product_cd in ('HO','CO') then hl.zip_cd
-        when p.product_cd in ('LUX')     then cl.zip_cd
-        when p.product_cd in ('PEL') then pl.zip_cd
-        when p.product_cd in ('BY') then mbyl.zip_cd
-        when p.product_cd in ('AU')  then p.mailing_address_zip_cd
-        else NULL
-        end risk_address_zip_cd
-        ,case
-        when p.product_cd in ('HO','CO') then hl.country_nm
-        when p.product_cd in ('LUX')     then cl.country_nm
-        when p.product_cd in ('PEL') then pl.country_nm
-        when p.product_cd in ('BY') then mbyl.country_nm
-        when p.product_cd in ('AU')  then p.mailing_address_country_nm
-        else NULL
-        end risk_address_country_nm
-    into edw_temp.tquote_update_risk_address_temp1
-    from
-    edw_core.tquote q
-    inner join edw_core.tquote_history qh on q.quote_sk = qh.quote_sk and qh.latest_transaction_in = 'Y'
-    left join edw_core.tquote_home_location qhl on qhl.quote_no = q.quote_no and qhl.effective_dt = q.effective_dt
-    left join edw_core.tquote_pel_location qpl ON qpl.quote_history_sk = qh.quote_history_sk and quote_no.primary_location_in = 'Yes'
-    LEFT JOIN edw_core.tquote_collection_location qcl ON qcl.quote_no = q.quote_no and qcl.effective_dt = q.effective_dt
-    LEFT JOIN edw_core.tquote_marine_boat_yacht_location qmbyl ON qmbyl.quote_history_sk = qh.quote_history_sk
-    where
-        qh.create_ts > @last_source_extract_ts
+        select 
+                q.quote_sk, qh.create_ts,
+                case
+                when q.product_cd in ('HO','CO') then qhl.address_line_1
+                when q.product_cd in ('LUX')     then qcl.address_line_1
+                when q.product_cd in ('PEL')     then qpl.address_line_1
+                when q.product_cd in ('BY')      then qmbyl.address_line_1
+                when q.product_cd in ('AU')      then q.mailing_address_line1
+                else NULL
+                end risk_address_line_1
+                ,case
+                when q.product_cd in ('HO','CO') then qhl.address_line_2
+                when q.product_cd in ('LUX')     then qcl.address_line_2
+                when q.product_cd in ('PEL')     then qpl.address_line_2
+                when q.product_cd in ('BY')      then qmbyl.address_line_2
+                when q.product_cd in ('AU')      then q.mailing_address_line2
+                else NULL
+                end risk_address_line_2
+                ,case
+                when q.product_cd in ('HO','CO') then qhl.unit_no
+                when q.product_cd in ('LUX')     then qcl.unit_no
+                when q.product_cd in ('PEL')     then qpl.unit_no
+                when q.product_cd in ('BY')      then qmbyl.unit_no
+                when q.product_cd in ('AU')      then q.mailing_address_unit_no
+                else NULL
+                end risk_address_unit_no
+                ,case
+                when q.product_cd in ('HO','CO') then qhl.city_nm
+                when q.product_cd in ('LUX')     then qcl.city_nm
+                when q.product_cd in ('BY')      then qmbyl.city_nm
+                when q.product_cd in ('AU')      then q.mailing_address_city_nm
+                else NULL
+                end risk_address_city_nm
+                ,case
+                when q.product_cd in ('HO','CO') then qhl.state_cd
+                when q.product_cd in ('LUX')     then qcl.state_cd
+                when q.product_cd in ('PEL')     then qpl.state_cd
+                when q.product_cd in ('BY')      then qmbyl.state_cd
+                when q.product_cd in ('AU')      then q.mailing_address_state_cd
+                else NULL
+                end risk_address_state_cd
+                ,case
+                when q.product_cd in ('HO','CO') then qhl.zip_cd
+                when q.product_cd in ('LUX')     then qcl.zip_cd
+                when q.product_cd in ('PEL') then qpl.zip_cd
+                when q.product_cd in ('BY') then qmbyl.zip_cd
+                when q.product_cd in ('AU')  then q.mailing_address_zip_cd
+                else NULL
+                end risk_address_zip_cd
+                ,case
+                when q.product_cd in ('HO','CO') then qhl.country_nm
+                when q.product_cd in ('LUX')     then qcl.country_nm
+                when q.product_cd in ('PEL') then qpl.country_nm
+                when q.product_cd in ('BY') then qmbyl.country_nm
+                when q.product_cd in ('AU')  then q.mailing_address_country_nm
+                else NULL
+                end risk_address_country_nm
+            into edw_temp.tquote_update_risk_address_temp1
+            from
+            edw_core.tquote q
+            inner join edw_core.tquote_history qh on q.quote_sk = qh.quote_sk and qh.latest_transaction_in = 'Y'
+            left join edw_core.tquote_home_location qhl on qhl.quote_no = q.quote_no and qhl.effective_dt = q.effective_dt
+            left join edw_core.tquote_pel_location qpl ON qpl.quote_history_sk = qh.quote_history_sk and qpl.primary_location_in = 'Yes'
+            LEFT JOIN edw_core.tquote_collection_location qcl ON qcl.quote_no = q.quote_no and qcl.effective_dt = q.effective_dt
+            LEFT JOIN edw_core.tquote_marine_boat_yacht_location qmbyl ON qmbyl.quote_history_sk = qh.quote_history_sk
+            where
+                qh.create_ts > @last_source_extract_ts
 
         UPDATE [target]
         SET
