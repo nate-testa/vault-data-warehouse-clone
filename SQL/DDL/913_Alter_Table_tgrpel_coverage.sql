@@ -1,0 +1,21 @@
+IF EXISTS (
+SELECT 1
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA='edw_core'
+AND TABLE_NAME = 'tgrpel_coverage'
+AND COLUMN_NAME = 'grpel_policy_no'
+) 
+BEGIN 
+	ALTER TABLE edw_core.tgrpel_coverage ALTER COLUMN grpel_policy_no VARCHAR(255) NOT NULL
+END; 
+IF NOT EXISTS (
+SELECT 1
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA='edw_core'
+AND TABLE_NAME = 'tgrpel_coverage'
+AND COLUMN_NAME = 'group_nm'
+) 
+BEGIN 
+	ALTER TABLE edw_core.tgrpel_coverage ALTER COLUMN group_nm VARCHAR(255) NOT NULL
+
+END;
