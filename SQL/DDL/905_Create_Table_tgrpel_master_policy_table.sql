@@ -4,7 +4,7 @@ BEGIN
 CREATE TABLE edw_core.tgrpel_master_policy
 (
 grpel_master_policy_sk                                                   int NOT NULL IDENTITY(1,1),  
-grpel_policy_no                                                          varchar(255) NOT NULL,
+grpel_master_policy_no                                                   varchar(255) NOT NULL,
 effective_dt                                                             date NOT NULL,
 expiration_dt                                                            date NOT NULL,
 transaction_seq_no                                                       int NOT NULL,
@@ -86,9 +86,10 @@ create_ts                                                                 dateti
 update_ts                                                                 datetime2(7),
 etl_audit_sk                                                              int,
 CONSTRAINT pk_tgrpel_master_policy PRIMARY KEY (grpel_master_policy_sk),
-CONSTRAINT uidx_tgrpel_master_policy_grpel_policy_no_effective_dt_trans_seq_no UNIQUE (grpel_policy_no,effective_dt,transaction_seq_no)
+CONSTRAINT uidx_tgrpel_master_policy_grpel_policy_no_effective_dt_trans_seq_no UNIQUE (grpel_master_policy_no,effective_dt,transaction_seq_no)
 )
 END;
+
 
 
 

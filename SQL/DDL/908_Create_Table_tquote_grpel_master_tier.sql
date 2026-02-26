@@ -5,8 +5,8 @@ BEGIN
 CREATE TABLE edw_core.tquote_grpel_master_tier
 (
 grpel_master_quote_tier_sk                                       int NOT NULL IDENTITY(1,1),
-grpel_master_quote_sk                                             int NOT NULL, 
 grpel_master_quote_no                                              varchar(255) NOT NULL,
+grpel_master_quote_sk                                             int NOT NULL, 
 effective_dt                                                       date NOT NULL,
 expiration_dt                                                      date NOT NULL,
 tier_type                                                          varchar(255),
@@ -36,9 +36,6 @@ CONSTRAINT fk_tquote_grpel_master_tier_grpel_master_quote_sk FOREIGN KEY (grpel_
 
 );
 END
-
-
-
 
 
 
