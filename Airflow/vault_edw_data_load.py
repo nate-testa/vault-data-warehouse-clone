@@ -358,6 +358,39 @@ with DAG(
         operators[-1] >> send_auto_email
 
 
+    with TaskGroup("GRPEL_group") as GRPEL_group:
+
+        GRPEL_group_items = [
+            'sp_tgrpel_location',
+            'sp_tgrpel_driver',
+            'sp_tgrpel_vehicle',
+            'sp_tgrpel_coverage'
+        ]
+
+        operators = []
+        for item in GRPEL_group_items:
+            operator = MsSqlOperator(
+                task_id=item,
+                mssql_conn_id='Vault_EDW',
+                sql=f"EXEC edw_core.{item}",
+                database="vault_edw",
+                autocommit=True,
+            )
+            operators.append(operator)
+
+        send_GRPEL_email = EmailOperator(
+            task_id='send_GRPEL_email',
+            to=to_email,
+            subject='Airflow - GRPEL tables loaded successfully',
+            html_content=get_sp_success_data_HTML(GRPEL_group_items, 'All stored procedures executed successfully for all the GRPEL tables'),
+        )
+
+        for i in range(len(operators) - 1):
+            operators[i] >> operators[i + 1]
+
+        operators[-1] >> send_GRPEL_email
+
+
     with TaskGroup("policy_transaction_group") as policy_transaction_group:
 
         policy_transaction_group_items = [
@@ -762,4 +795,4 @@ with DAG(
     )
 
 
-start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group] >> collection_marine >> [collection_group, marine_group] >> policy_transaction_group >> claim_group >> datamart_group >> integration_group >> validation_result_group >> exec_vault_edw_data_load_quotes >> end
+start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group, GRPEL_group] >> collection_marine >> [collection_group, marine_group] >> policy_transaction_group >> claim_group >> datamart_group >> integration_group >> validation_result_group >> exec_vault_edw_data_load_quotes >> end

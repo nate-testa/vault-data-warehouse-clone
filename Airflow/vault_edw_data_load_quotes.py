@@ -186,6 +186,43 @@ with DAG(
         operators[-1] >> send_quote_collection_email
 
 
+    with TaskGroup("quote_GRPEL_group") as quote_GRPEL_group:
+
+        quote_GRPEL_group_items = [
+            'sp_tquote_grpel_location_wip',
+            'sp_tquote_grpel_location',
+            'sp_tquote_grpel_driver_wip',
+            'sp_tquote_grpel_driver',
+            'sp_tquote_grpel_vehicle_wip',
+            'sp_tquote_grpel_vehicle',
+            'sp_tquote_grpel_coverage_wip',
+            'sp_tquote_grpel_coverage'
+        ]
+
+        operators = []
+        for item in quote_GRPEL_group_items:
+            operator = MsSqlOperator(
+                task_id=item,
+                mssql_conn_id='Vault_EDW',
+                sql=f"EXEC edw_core.{item}",
+                database="vault_edw",
+                autocommit=True,
+            )
+            operators.append(operator)
+
+        send_quote_GRPEL_email = EmailOperator(
+            task_id='send_quote_GRPEL_email',
+            to=to_email,
+            subject='Airflow - Quote GRPEL tables loaded successfully',
+            html_content=get_sp_success_data_HTML(quote_GRPEL_group_items, 'All stored procedures executed successfully for all the Quote GRPEL tables'),
+        )
+
+        for i in range(len(operators) - 1):
+            operators[i] >> operators[i + 1]
+
+        operators[-1] >> send_quote_GRPEL_email
+
+
     with TaskGroup("quote_marine_group") as quote_marine_group:
 
         quote_marine_group_items = [
@@ -497,4 +534,4 @@ with DAG(
     )
 
 
-start >> quote_group >> [quote_home_group , quote_PEL_group, quote_auto_group] >> quote_collection_marine >> [quote_collection_group, quote_marine_group] >> quote_transaction_group >> quote_broker_group >> quote_validation_result_group >> exec_vault_edw_data_load_vendor_reports >> exec_metal_broker_claim_daily_feed >> exec_customer_midterm_review_daily_feed >> exec_snowflake_daily_feed >> end
+start >> quote_group >> [quote_home_group , quote_PEL_group, quote_auto_group] >> quote_collection_marine >> [quote_collection_group, quote_GRPEL_group, quote_marine_group] >> quote_transaction_group >> quote_broker_group >> quote_validation_result_group >> exec_vault_edw_data_load_vendor_reports >> exec_metal_broker_claim_daily_feed >> exec_customer_midterm_review_daily_feed >> exec_snowflake_daily_feed >> end
