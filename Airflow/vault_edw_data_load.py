@@ -398,6 +398,7 @@ with DAG(
             'sp_tpolicy_transaction_update',
             'sp_thome_coverage_update',
             'sp_tpolicy_update_cancels',
+            'sp_tpolicy_update_risk_address',
             'sp_treconciliation'
         ]
 
