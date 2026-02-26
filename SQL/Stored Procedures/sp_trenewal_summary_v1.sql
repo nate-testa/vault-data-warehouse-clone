@@ -1075,16 +1075,13 @@ BEGIN
 					,in_progress_premium_amt 			= case when in_progress_renewal_ct 			> 0 then offered_quote_premium_amt else 0 end
 					,closed_with_no_offer_premium_amt 	= case when closed_with_no_offer_renewal_ct > 0 then prior_issued_premium_amt else 0 end
 					,accepted_premium_amt 				= case when accepted_renewal_ct 			> 0 then renewal_initial_written_premium_amt else 0 end 
-					,not_accepted_premium_amt 			= case when not_accepted_renewal_ct 		> 0 then prior_issued_premium_amt else 0 end 
+					,not_accepted_premium_amt 			= case when not_accepted_renewal_ct 		> 0 then offered_quote_premium_amt else 0 end 
 					,outstanding_premium_amt  			= case when outstanding_renewal_ct 			> 0 then renewal_initial_written_premium_amt else 0 end 
+					,mid_term_cancelled_premium_amt		= case when mid_term_cancelled_ct 			> 0 then prior_issued_premium_amt else 0 end 
 				where month_sk = @month_end_dt_sk; 
 
 				update edw_stage.trenewal_summary_v1
 				set pending_process_ct = pending_process_ct + expired_with_no_submission_ct 
-				where month_sk = @month_end_dt_sk; 
-
-				update edw_stage.trenewal_summary_v1
-				set need_attention_premium_amt 		=  case when pending_process_ct > 0 then prior_issued_premium_amt else 0 end
 				where month_sk = @month_end_dt_sk;  
 
 				update edw_stage.trenewal_summary_v1
@@ -1098,6 +1095,10 @@ BEGIN
 				update edw_stage.trenewal_summary_v1
 				set  closed_with_no_offer_pending_process_renewal_ct = closed_with_no_offer_renewal_ct + pending_process_ct 
 				where month_sk = @month_end_dt_sk
+
+				update edw_stage.trenewal_summary_v1
+				set need_attention_premium_amt 		=  case when closed_with_no_offer_pending_process_renewal_ct > 0 then prior_issued_premium_amt else 0 end
+				where month_sk = @month_end_dt_sk; 
 
 				EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
