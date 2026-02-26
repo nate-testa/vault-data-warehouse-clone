@@ -409,7 +409,8 @@ with DAG(
         quote_transaction_group_items = [
             'sp_tquote_transaction_wip',
             'sp_tquote_transaction',
-            'sp_tquote_home_coverage_update'
+            'sp_tquote_home_coverage_update',
+            'sp_tquote_update_risk_address'
         ]
 
         operators = []
