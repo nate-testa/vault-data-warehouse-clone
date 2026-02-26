@@ -1,12 +1,12 @@
 -- =======================================================================================================================================================
--- Description: This procedure updates risk address for tpolicy
+-- Description: This procedure updates risk address for tquote
 -------------------------------------------------------------------------------------------
 -- Change date      |Author						|	Change Description
 -------------------------------------------------------------------------------------------
--- 02/24/25		     Yunus Mohammed			    1. Created this procedure
+-- 02/26/25		     Yunus Mohammed			    1. Created this procedure
 -- ========================================================================================
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_risk_address]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_update_risk_address]
 AS 
 BEGIN
 	BEGIN TRY
@@ -25,10 +25,10 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
         -- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tpolicy_update_risk_address_temp1
+		DROP TABLE IF EXISTS edw_temp.tquote_update_risk_address_temp1
         
     select 
-        p.policy_sk, ph.create_ts,
+        q.quote_sk, qh.create_ts,
         case
         when p.product_cd in ('HO','CO') then hl.address_line_1
         when p.product_cd in ('LUX')     then cl.address_line_1
@@ -84,16 +84,16 @@ BEGIN
         when p.product_cd in ('AU')  then p.mailing_address_country_nm
         else NULL
         end risk_address_country_nm
-    into edw_temp.tpolicy_update_risk_address_temp1
+    into edw_temp.tquote_update_risk_address_temp1
     from
-    edw_core.tpolicy p
-    inner join edw_core.tpolicy_history ph on p.policy_sk = ph.policy_sk and ph.latest_transaction_in = 'Y'
-    left join edw_core.thome_location hl on hl.policy_no = p.policy_no and hl.effective_dt = p.effective_dt
-    left join edw_core.tpel_location pl ON pl.policy_history_sk = ph.policy_history_sk and pl.primary_location_in = 'Yes'
-    LEFT JOIN edw_core.tcollection_location cl ON cl.policy_no = p.policy_no and cl.effective_dt = p.effective_dt
-    LEFT JOIN edw_core.tmarine_boat_yacht_location mbyl ON mbyl.policy_history_sk = ph.policy_history_sk
+    edw_core.tquote q
+    inner join edw_core.tquote_history qh on q.quote_sk = qh.quote_sk and qh.latest_transaction_in = 'Y'
+    left join edw_core.tquote_home_location qhl on qhl.quote_no = q.quote_no and qhl.effective_dt = q.effective_dt
+    left join edw_core.tquote_pel_location qpl ON qpl.quote_history_sk = qh.quote_history_sk and quote_no.primary_location_in = 'Yes'
+    LEFT JOIN edw_core.tquote_collection_location qcl ON qcl.quote_no = q.quote_no and qcl.effective_dt = q.effective_dt
+    LEFT JOIN edw_core.tquote_marine_boat_yacht_location qmbyl ON qmbyl.quote_history_sk = qh.quote_history_sk
     where
-        ph.create_ts > @last_source_extract_ts
+        qh.create_ts > @last_source_extract_ts
 
         UPDATE [target]
         SET
@@ -105,12 +105,12 @@ BEGIN
             [target].risk_address_zip_cd = [source].risk_address_zip_cd,
             [target].risk_address_country_nm = [source].risk_address_country_nm
         FROM
-            edw_core.tpolicy [target]
-            INNER JOIN edw_temp.tpolicy_update_risk_address_temp1 as [source] ON  [target].policy_sk = [source].policy_sk
+            edw_core.tquote [target]
+            INNER JOIN edw_temp.tquote_update_risk_address_temp1 as [source] ON  [target].quote_sk = [source].quote_sk
         
 		SET @rows_affected=@@ROWCOUNT; 
 	
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.create_ts) FROM edw_temp.tpolicy_update_risk_address_temp1 t1),@last_source_extract_ts);		
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.create_ts) FROM edw_temp.tquote_update_risk_address_temp1 t1),@last_source_extract_ts);		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;	
 
@@ -119,7 +119,7 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc; 
 
         -- Drop temp table
-		DROP TABLE IF EXISTS edw_temp.tpolicy_update_risk_address_temp1
+		DROP TABLE IF EXISTS edw_temp.tquote_update_risk_address_temp1
 	END TRY
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
@@ -134,5 +134,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-
-GO
