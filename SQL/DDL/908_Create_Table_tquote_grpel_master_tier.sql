@@ -4,9 +4,9 @@ IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
 BEGIN
 CREATE TABLE edw_core.tquote_grpel_master_tier
 (
-quote_grpel_master_tier_sk                                       int NOT NULL IDENTITY(1,1),
+grpel_master_quote_tier_sk                                       int NOT NULL IDENTITY(1,1),
 grpel_master_quote_sk                                             int NOT NULL, 
-grpel_quote_no                                             varchar(255) NOT NULL,
+grpel_master_quote_no                                              varchar(255) NOT NULL,
 effective_dt                                                       date NOT NULL,
 expiration_dt                                                      date NOT NULL,
 tier_type                                                          varchar(255),
@@ -30,12 +30,17 @@ source_system_sk                                                   int NOT NULL,
 create_ts                                                          datetime2(7),
 update_ts                                                          datetime2(7),
 etl_audit_sk                                                       int,
-CONSTRAINT pk_tquote_grpel_master_tier PRIMARY KEY (quote_grpel_master_tier_sk ),
-CONSTRAINT uidx_tquote_grpel_master_tier_grpel_qtno_effdt UNIQUE (grpel_quote_no,effective_dt),
+CONSTRAINT pk_tquote_grpel_master_tier PRIMARY KEY (grpel_master_quote_tier_sk),
+CONSTRAINT uidx_tquote_grpel_master_tier_grpel_qtno_effdt UNIQUE (grpel_master_quote_no ,effective_dt),
 CONSTRAINT fk_tquote_grpel_master_tier_grpel_master_quote_sk FOREIGN KEY (grpel_master_quote_sk) REFERENCES  edw_core.tquote_grpel_master (grpel_master_quote_sk)
 
 );
 END
+
+
+
+
+
 
 
 

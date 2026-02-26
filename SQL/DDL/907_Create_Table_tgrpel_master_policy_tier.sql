@@ -5,8 +5,8 @@ BEGIN
 CREATE TABLE edw_core.tgrpel_master_policy_tier
 (
 grpel_master_policy_tier_sk                                        int NOT NULL IDENTITY(1,1),
-grpel_master_policy_sk                                             int NOT NULL, 
 grpel_master_policy_no                                             varchar(255) NOT NULL,
+grpel_master_policy_sk                                             int NOT NULL, 
 effective_dt                                                       date NOT NULL,
 expiration_dt                                                      date NOT NULL,
 transaction_dt                                                     date NOT NULL,
@@ -38,7 +38,6 @@ CONSTRAINT fk_tgrpel_master_policy_tier_grpel_master_policy_sk FOREIGN KEY (grpe
 
 );
 END
-
 
 
 
