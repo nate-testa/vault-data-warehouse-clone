@@ -30,11 +30,13 @@ BEGIN
 
 		DROP TABLE IF EXISTS edw_temp.tgrpel_coverage_temp1;
         select 
-                PolicyNumber,EffectiveDate,TransactionEffectiveDate,ExpirationDate,TransactionDate,policy_history_sk,insured_nm,source_system_sk,
-                transaction_seq_no,FirstName,ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit ,IssuedDate,
-                        NumberOfVehicles ,UILiabilityLimit ,ReputationalInjuryLimit ,NumberOfPrivateStaff ,
-                        NumberOfHighPerformansVehicles ,NumberOfRecreationalVehicles ,NumberOfWatercraft ,
-                        NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
+				PolicyNumber,EffectiveDate,TransactionEffectiveDate,ExpirationDate,TransactionDate,
+				grpel_policy_no,group_nm,
+				policy_history_sk,insured_nm,source_system_sk,
+				transaction_seq_no,ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit ,IssuedDate,
+				NumberOfVehicles ,UILiabilityLimit ,ReputationalInjuryLimit ,NumberOfPrivateStaff ,
+				NumberOfHighPerformansVehicles ,NumberOfRecreationalVehicles ,NumberOfWatercraft ,
+				NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
             INTO edw_temp.tgrpel_coverage_temp1
             from
                 (
@@ -44,14 +46,17 @@ BEGIN
                     
                     select
                     act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
+					accg.PolicyNumber as grpel_policy_no,trim(concat_ws(' ',insg.FirstName,insg.LastName)) as group_nm,
                     CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.policy_history_sk,pol.insured_nm,
                     act.policychangenumber AS transaction_seq_no, 
                     CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
-                    act.IssuedDate as TransactionDate,atvo.[Index],act.IssuedDate,
+                    act.IssuedDate as TransactionDate,act.IssuedDate,
                     atvof.Field,NULLIF(TRIM(atvof.[Value]),'') AS [Value]
                     from
-                        [edw_stage].[AccountTransaction] as act
-                        --inner join [edw_stage].[Account] as acc on act.AccountId = acc.id
+						edw_stage.Account acc
+                        inner join [edw_stage].[AccountTransaction] as act on acc.Id= act.AccountId
+						left join edw_stage.Account accg on acc.GroupAccountId = accg.Id
+						left join edw_stage.Insured insg on insg.Id= accg.PrimaryInsuredId
                         inner join edw_stage.Product p on p.Id=act.ProductId
                         inner join edw_stage.AccountTransactionVersion atv on act.Id=atv.AccountTransactionId
                         inner join edw_stage.AccountTransactionVersionObject atvo on atv.Id=atvo.AccountTransactionVersionId
@@ -69,7 +74,7 @@ BEGIN
                         and pr.ProductLine = 'PersonalLines'
                         and atvof.Field IN 
                         (
-                            'FirstName','ExcessLiabilityLimit', 'UMLiabilityLimit', 'EMPLiabilityLimit', 'DOLiabilityLimit', 'FTMLiabilityLimit',
+                            'ExcessLiabilityLimit', 'UMLiabilityLimit', 'EMPLiabilityLimit', 'DOLiabilityLimit', 'FTMLiabilityLimit',
                             'NumberOfVehicles', 'UILiabilityLimit', 'ReputationalInjuryLimit', 'NumberOfPrivateStaff', 
                             'NumberOfHighPerformansVehicles', 'NumberOfRecreationalVehicles', 'NumberOfWatercraft', 
                             'NumberOfPersonalWatercraft', 'AutoInsuranceCompany', 'HomeInsuranceCompany', 'WatercraftInsuranceCompany'
@@ -80,7 +85,7 @@ BEGIN
                 (
                     max(Value) FOR Field IN 
                     (
-                        FirstName,ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit ,
+                        ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit ,
                         NumberOfVehicles ,UILiabilityLimit ,ReputationalInjuryLimit ,NumberOfPrivateStaff ,
                         NumberOfHighPerformansVehicles ,NumberOfRecreationalVehicles ,NumberOfWatercraft ,
                         NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
@@ -92,14 +97,14 @@ BEGIN
         INSERT INTO [edw_core].[tgrpel_coverage]
 		(
 			policy_no
-            --,grpel_policy_no
+			,grpel_policy_no
+			,group_nm
             ,effective_dt
             ,transaction_effective_dt
             ,expiration_dt
             ,transaction_dt
 			,transaction_seq_no
-            ,policy_history_sk
-            ,group_nm
+            ,policy_history_sk           
             ,excess_liability_limit_amt
             ,uninsured_motorist_liability_limit_amt
             ,employment_practises_liability_limit_amt
@@ -123,13 +128,14 @@ BEGIN
             ,etl_audit_sk
 		)
         select PolicyNumber AS policy_no
+			,grpel_policy_no
+			,group_nm
             ,EffectiveDate AS effective_dt
             ,TransactionEffectiveDate AS transaction_effective_dt
             ,ExpirationDate AS expiration_dt
             ,TransactionDate AS transaction_dt
 			,transaction_seq_no
-            ,policy_history_sk
-            ,FirstName	as	group_nm
+            ,policy_history_sk            
             ,ExcessLiabilityLimit	as	excess_liability_limit_amt
             ,UMLiabilityLimit	as	uninsured_motorist_liability_limit_amt
             ,EMPLiabilityLimit	as	employment_practises_liability_limit_amt
