@@ -39,8 +39,6 @@ CONSTRAINT fk_tgrpel_master_policy_tier_grpel_master_policy_sk FOREIGN KEY (grpe
 );
 END
 
-
-
 IF EXISTS
 (SELECT 1 FROM edw_core.tedw_table_detail
 	where table_nm = 'tgrpel_master_policy_tier')

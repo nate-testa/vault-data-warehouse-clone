@@ -7,6 +7,7 @@ grpel_master_quote_sk                                                   int NOT 
 grpel_master_quote_no                                                   varchar(255) NOT NULL,
 effective_dt                                                             date NOT NULL,
 expiration_dt                                                            date NOT NULL,
+transaction_seq_no                                                       int NOT NULL,
 broker_id                                                                varchar(255) NOT NULL,
 customer_id                                                              varchar(255) NOT NULL,
 product_cd                                                               varchar(255) NOT NULL,
@@ -84,9 +85,10 @@ create_ts                                                                 dateti
 update_ts                                                                 datetime2(7),
 etl_audit_sk                                                              int,
 CONSTRAINT pk_tquote_grpel_master PRIMARY KEY (grpel_master_quote_sk),
-CONSTRAINT uidx_tquote_grpel_master_grpel_quote_no_effective_dt UNIQUE (grpel_master_quote_no  ,effective_dt)
+CONSTRAINT uidx_tquote_grpel_master_grpel_quote_no_effective_dt_trans_seq_no UNIQUE (grpel_master_quote_no ,effective_dt,transaction_seq_no)
 )
 END;
+
 
 
 IF EXISTS

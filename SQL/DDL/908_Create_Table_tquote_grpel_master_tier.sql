@@ -9,6 +9,7 @@ grpel_master_quote_no                                              varchar(255) 
 grpel_master_quote_sk                                             int NOT NULL, 
 effective_dt                                                       date NOT NULL,
 expiration_dt                                                      date NOT NULL,
+transaction_seq_no                                                 int NOT NULL,
 tier_type                                                          varchar(255),
 no_of_participating_members                                        varchar(255),
 excess_liability_limit_min_amt                                     varchar(255),  
@@ -31,7 +32,7 @@ create_ts                                                          datetime2(7),
 update_ts                                                          datetime2(7),
 etl_audit_sk                                                       int,
 CONSTRAINT pk_tquote_grpel_master_tier PRIMARY KEY (grpel_master_quote_tier_sk),
-CONSTRAINT uidx_tquote_grpel_master_tier_grpel_qtno_effdt UNIQUE (grpel_master_quote_no ,effective_dt),
+CONSTRAINT uidx_tquote_grpel_master_tier_grpel_qtno_effdt_trans_seq_no UNIQUE (grpel_master_quote_no ,effective_dt,transaction_seq_no),
 CONSTRAINT fk_tquote_grpel_master_tier_grpel_master_quote_sk FOREIGN KEY (grpel_master_quote_sk) REFERENCES  edw_core.tquote_grpel_master (grpel_master_quote_sk)
 
 );
