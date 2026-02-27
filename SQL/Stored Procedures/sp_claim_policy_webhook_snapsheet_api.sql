@@ -1,8 +1,3 @@
-/****** Object:  StoredProcedure [edw_core].[sp_claim_policy_webhook_snapsheet_api]    Script Date: 2/24/2026 1:44:25 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 -- =================================================================================================
 -- Description: This procedures insert policy webhook data for snapsheet
 ---------------------------------------------------------------------------------------------------
@@ -17,7 +12,6 @@ GO
 -- 05-07-2025               Yunus Mohammed              6 - AD9410 Added new vault litigation policy
 -- 11-11-2025               Yunus Mohammed              7 - AD-11665 NFP policies excluded
 -- 12-17-2025				Yunus Mohammed				8 -	AD-11666 NFP policies included
--- 02-25/2026               Yunus Mohammed              9 - AD-11666 Code updated for participant GRPEL policies
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
@@ -241,8 +235,8 @@ BEGIN
             JSON_QUERY
             ((
                 select
-                    prd.product_nm as code	,
-                    prd.[product_nm] as [name]
+					prd.product_nm as code	,
+					prd.[product_nm] as [name]
                 for json path, include_null_values, without_array_wrapper
             )
             ) as product,
@@ -756,10 +750,10 @@ BEGIN
                 JSON_QUERY
                 ((
                 select
-                cast(tph.policy_no as varchar(255)) + '-' + cast(tph.transaction_seq_no  as varchar(255)) as [id],
+                cast(tph.policy_no as varchar(255)) + '-' + cast(tph.transaction_seq_no  as varchar(255)) + '-' + cast(tph.transaction_seq_no  as varchar(255)) as [id],
                 '1' as [externalLocationIdentifier],
                 '1' as [externalRiskIdentifier],
-                prd.product_nm as code,
+				prd.product_nm as code,
 				'general_liability' as [type],
                 json_query
                 ((

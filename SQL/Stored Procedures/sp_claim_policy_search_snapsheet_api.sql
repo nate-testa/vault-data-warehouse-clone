@@ -47,10 +47,7 @@ BEGIN
 					when product_nm in('Excess Liability','Group Personal Excess Liability') then 'general_liability'				
 				end as policy_type,
 				p.policy_status as [status],
-				case
-					when product_nm = 'Group Personal Excess Liability' then 'Excess Liability'
-				else product_nm
-				end as product_code,
+				product_nm as product_code,
 				p.effective_dt as inception_date,
 				JSON_QUERY((
 						select
