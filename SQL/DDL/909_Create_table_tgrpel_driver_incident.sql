@@ -18,19 +18,21 @@ driver_no                  int,
 incident_no                int,
 incident_source            varchar(255),
 incident_status            varchar(255),
-indicent_dt                date,
+incident_dt                date,
+incident_unique_id         varchar(255),
 incident_type              varchar(255),
 incident_description       varchar(255),
 source_system_sk           int NOT NULL,
-create_ts                  datetime2(7),
-update_ts                  datetime2(7),
-etl_audit_sk               int,
+create_ts                  datetime2(7) NOT NULL,
+update_ts                  datetime2(7) NOT NULL,
+etl_audit_sk               int NOT NULL,
 CONSTRAINT pk_tgrpel_driver_incident PRIMARY KEY (grpel_driver_incident_sk ),
-CONSTRAINT uidx_tgrpel_driver_incident_polno_effdt_transeq_driver_sk UNIQUE (policy_no,effective_dt,transaction_seq_no,grpel_driver_sk ),
+CONSTRAINT uidx_tgrpel_driver_incident_polno_effdt_transeq_driver_sk_incident_uid UNIQUE (policy_no,effective_dt,transaction_seq_no,grpel_driver_sk,incident_unique_id ),
 CONSTRAINT fk_tgrpel_driver_incident_policy_history_sk FOREIGN KEY (policy_history_sk) REFERENCES  edw_core.tpolicy_history(policy_history_sk),
 CONSTRAINT fk_tgrpel_driver_incident_grpel_driver_sk FOREIGN KEY (grpel_driver_sk) REFERENCES  edw_core.tgrpel_driver(grpel_driver_sk),
 );
 END
+
 
 
 

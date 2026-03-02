@@ -20,15 +20,17 @@ watercraft_model              varchar(255),
 watercraft_unique_id          varchar(255),
 watercraft_deleted_in         varchar(255),
 source_system_sk           int NOT NULL,
-create_ts                  datetime2(7),
-update_ts                  datetime2(7),
-etl_audit_sk               int,
+create_ts                  datetime2(7) NOT NULL,
+update_ts                  datetime2(7) NOT NULL,
+etl_audit_sk               int NOT NULL,
 CONSTRAINT pk_tgrpel_watercraft PRIMARY KEY (grpel_watercraft_sk),
 CONSTRAINT uidx_tgrpel_watercraft_polno_effdt_transeq_watercraft_uid UNIQUE (policy_no,effective_dt,transaction_seq_no,watercraft_unique_id),
 CONSTRAINT fk_tgrpel_watercraft_policy_history_sk FOREIGN KEY (policy_history_sk) REFERENCES  edw_core.tpolicy_history(policy_history_sk)
 
 );
 END
+
+
 
 
 IF EXISTS
