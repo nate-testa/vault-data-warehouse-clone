@@ -1,12 +1,12 @@
 IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES 
                WHERE TABLE_SCHEMA = 'edw_core' 
-               AND TABLE_NAME = 'tgrpel_master_policy_tier')
+               AND TABLE_NAME = 'tgrpel_master_coverage_tier')
 BEGIN
-CREATE TABLE edw_core.tgrpel_master_policy_tier
+CREATE TABLE edw_core.tgrpel_master_coverage_tier
 (
-grpel_master_policy_tier_sk                                        int NOT NULL IDENTITY(1,1),
+grpel_master_coverage_tier_sk                                        int NOT NULL IDENTITY(1,1),
 grpel_master_policy_no                                             varchar(255) NOT NULL,
-grpel_master_policy_sk                                             int NOT NULL, 
+grpel_master_coverage_sk                                             int NOT NULL, 
 effective_dt                                                       date NOT NULL,
 expiration_dt                                                      date NOT NULL,
 transaction_dt                                                     date NOT NULL,
@@ -30,23 +30,24 @@ family_trust_management_liability_limit_min_amt                    varchar(255),
 family_trust_management_liability_limit_max_amt                    varchar(255),
 family_trust_management_liability_limit_sponsored_amt              varchar(255),
 source_system_sk                                                   int NOT NULL,
-create_ts                                                          datetime2(7),
-update_ts                                                          datetime2(7),
-etl_audit_sk                                                       int,
-CONSTRAINT pk_tgrpel_master_policy_tier PRIMARY KEY (grpel_master_policy_tier_sk),
-CONSTRAINT uidx_tgrpel_master_policy_tier_polno_effdt_transeq UNIQUE (grpel_master_policy_no,effective_dt,transaction_seq_no),
-CONSTRAINT fk_tgrpel_master_policy_tier_grpel_master_policy_sk FOREIGN KEY (grpel_master_policy_sk) REFERENCES  edw_core.tgrpel_master_policy (grpel_master_policy_sk)
+create_ts                                                          datetime2(7) NOT NULL,
+update_ts                                                          datetime2(7) NOT NULL,
+etl_audit_sk                                                       int NOT NULL,
+CONSTRAINT pk_tgrpel_master_coverage_tier PRIMARY KEY (grpel_master_coverage_tier_sk),
+CONSTRAINT uidx_tgrpel_master_coverage_tier_polno_effdt_transeq UNIQUE (grpel_master_policy_no,effective_dt,transaction_seq_no),
+CONSTRAINT fk_tgrpel_master_coverage_tier_grpel_master_coverage_sk  FOREIGN KEY (grpel_master_coverage_sk) REFERENCES  edw_core.tgrpel_master_coverage (grpel_master_coverage_sk )
 
 );
 END
 
 
+
 IF EXISTS
 (SELECT 1 FROM edw_core.tedw_table_detail
-	where table_nm = 'tgrpel_master_policy_tier')
+	where table_nm = 'tgrpel_master_coverage_tier')
 BEGIN
 	delete FROM edw_core.tedw_table_detail
-	where table_nm = 'tgrpel_master_policy_tier' ; 
+	where table_nm = 'tgrpel_master_coverage_tier' ; 
 END ; 
 
 INSERT INTO edw_core.tedw_table_detail (
@@ -61,7 +62,7 @@ INSERT INTO edw_core.tedw_table_detail (
     update_ts
 )
 SELECT
-    'tgrpel_master_policy_tier',
+    'tgrpel_master_coverage_tier',
     'Type-2 Dimension',
     'Base',
     'Group Personal Excess Liability',
@@ -73,7 +74,7 @@ SELECT
 WHERE NOT EXISTS (
     SELECT 1
     FROM edw_core.tedw_table_detail
-    WHERE table_nm = 'tgrpel_master_policy_tier'
+    WHERE table_nm = 'tgrpel_master_coverage_tier'
 );
 
 

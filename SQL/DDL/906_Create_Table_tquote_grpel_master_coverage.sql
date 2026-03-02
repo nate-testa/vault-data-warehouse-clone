@@ -1,13 +1,12 @@
 IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES where TABLE_SCHEMA = 'edw_core'
-and TABLE_name = 'tgrpel_master_policy')
+and TABLE_name = 'tquote_grpel_master_coverage')
 BEGIN
-CREATE TABLE edw_core.tgrpel_master_policy
+CREATE TABLE edw_core.tquote_grpel_master_coverage
 (
-grpel_master_policy_sk                                                   int NOT NULL IDENTITY(1,1),  
-grpel_master_policy_no                                                   varchar(255) NOT NULL,
+quote_grpel_master_coverage_sk                                          int NOT NULL IDENTITY(1,1),  
+grpel_master_quote_no                                                   varchar(255) NOT NULL,
 effective_dt                                                             date NOT NULL,
 expiration_dt                                                            date NOT NULL,
-transaction_effective_dt                                                 date NOT NULL,
 transaction_seq_no                                                       int NOT NULL,
 broker_id                                                                varchar(255) NOT NULL,
 customer_id                                                              varchar(255) NOT NULL,
@@ -15,7 +14,7 @@ product_cd                                                               varchar
 risk_state_cd                                                            varchar(255) NOT NULL,
 insured_nm                                                               varchar(255),
 insured_type                                                             varchar(255),
-policy_status                                                            varchar(255),
+quote_status                                                            varchar(255),
 mailing_address_line1                                                    varchar(255),  
 mailing_address_line2                                                    varchar(255),
 mailing_address_city_nm                                                  varchar(255),
@@ -42,63 +41,62 @@ minimum_premium_amt                                                      varchar
 prior_nfp_policy_no                                                      varchar(255),
 prior_nfp_policy_expiring_dt                                             varchar(255),
 excess_liability_limit_1m_premium_amt                                    varchar(255), 
-excess_liability_limit_1m_premium_amt_override                           varchar(255),
+excess_liability_limit_1m_override_premium_amt                          varchar(255),
 excess_liability_limit_3m_premium_amt                                    varchar(255),
-excess_liability_limit_3m_premium_amt_override                           varchar(255),
+excess_liability_limit_3m_override_premium_amt                           varchar(255),
 excess_liability_limit_5m_premium_amt                                    varchar(255),
-excess_liability_limit_5m_premium_amt_override                           varchar(255),
+excess_liability_limit_5m_override_premium_amt                           varchar(255),
 excess_liability_limit_10m_premium_amt                                   varchar(255),
-excess_liability_limit_10m_premium_amt_override                          varchar(255),  
+excess_liability_limit_10m_override_premium_amt                          varchar(255),  
 excess_liability_limit_15m_premium_amt                                   varchar(255),
-excess_liability_limit_15m_premium_amt_override                          varchar(255),
+excess_liability_limit_15m_override_premium_amt                          varchar(255),
 excess_liability_limit_20m_premium_amt                                   varchar(255),
-excess_liability_limit_20m_premium_amt_override                          varchar(255),
+excess_liability_limit_20m_override_premium_amt                          varchar(255),
 excess_liability_limit_30m_premium_amt                                   varchar(255), 
-excess_liability_limit_30m_premium_amt_override                          varchar(255), 
+excess_liability_limit_30m_override_premium_amt                          varchar(255), 
 uninsured_underinsured_motorist_liability_limit_1m_premium_amt           varchar(255),
-uninsured_underinsured_motorist_liability_limit_1m_premium_amt_override  varchar(255), 
+uninsured_underinsured_motorist_liability_limit_1m_override_premium_amt  varchar(255), 
 uninsured_underinsured_motorist_liability_limit_2m_premium_amt           varchar(255),
-uninsured_underinsured_motorist_liability_limit_2m_premium_amt_override  varchar(255),
+uninsured_underinsured_motorist_liability_limit_2m_override_premium_amt  varchar(255),
 uninsured_underinsured_motorist_liability_limit_3m_premium_amt           varchar(255),
-uninsured_underinsured_motorist_liability_limit_3m_premium_amt_override  varchar(255), 
+uninsured_underinsured_motorist_liability_limit_3m_override_premium_amt  varchar(255), 
 uninsured_underinsured_motorist_liability_limit_5m_premium_amt           varchar(255),
-uninsured_underinsured_motorist_liability_limit_5m_premium_amt_override  varchar(255),
+uninsured_underinsured_motorist_liability_limit_5m_override_premium_amt  varchar(255),
 uninsured_underinsured_motorist_liability_limit_10m_premium_amt          varchar(255),
-uninsured_underinsured_motorist_liability_limit_10m_premium_amt_override varchar(255),
+uninsured_underinsured_motorist_liability_limit_10m_override_premium_amt varchar(255),
 employment_practices_liability_limit_250_250_25_premium_amt              varchar(255),   
-employment_practices_liability_limit_250_250_25_premium_amt_override     varchar(255), 
+employment_practices_liability_limit_250_250_25_override_premium_amt     varchar(255), 
 employment_practices_liability_limit_500_500_50_premium_amt              varchar(255),
-employment_practices_liability_limit_500_500_50_premium_amt_override     varchar(255),
+employment_practices_liability_limit_500_500_50_override_premium_amt     varchar(255),
 family_trust_management_liability_limit_1m_premium_amt                   varchar(255),
-family_trust_management_liability_limit_1m_premium_amt_override          varchar(255), 
+family_trust_management_liability_limit_1m_override_premium_amt          varchar(255), 
 non_profit_do_liability_limit_1m_premium_amt                             varchar(255), 
-non_profit_do_liability_limit_1m_premium_amt_override                    varchar(255),
+non_profit_do_liability_limit_1m_override_premium_amt                    varchar(255),
 non_profit_do_liability_limit_2m_premium_amt                             varchar(255),  
-non_profit_do_liability_limit_2m_premium_amt_override                    varchar(255),
+non_profit_do_liability_limit_2m_override_premium_amt                    varchar(255),
 non_profit_do_liability_limit_3m_premium_amt                             varchar(255),  
-non_profit_do_liability_limit_3m_premium_amt_override                    varchar(255),
+non_profit_do_liability_limit_3m_override_premium_amt                    varchar(255),
 non_profit_do_liability_limit_4m_premium_amt                             varchar(255),
-non_profit_do_liability_limit_4m_premium_amt_override                    varchar(255),   
+non_profit_do_liability_limit_4m_override_premium_amt                    varchar(255),   
 non_profit_do_liability_limit_5m_premium_amt                             varchar(255),
-non_profit_do_liability_limit_5m_premium_amt_override                     varchar(255),   
+non_profit_do_liability_limit_5m_override_premium_amt                     varchar(255),   
 source_system_sk                                                          int NOT NULL,
-create_ts                                                                 datetime2(7),
-update_ts                                                                 datetime2(7),
-etl_audit_sk                                                              int,
-CONSTRAINT pk_tgrpel_master_policy PRIMARY KEY (grpel_master_policy_sk),
-CONSTRAINT uidx_tgrpel_master_policy_grpel_policy_no_effective_dt_trans_seq_no UNIQUE (grpel_master_policy_no,effective_dt,transaction_seq_no)
+create_ts                                                                 datetime2(7) NOT NULL,
+update_ts                                                                 datetime2(7) NOT NULL,
+etl_audit_sk                                                              int NOT NULL,
+CONSTRAINT pk_tquote_grpel_master_coverage PRIMARY KEY (quote_grpel_master_coverage_sk ),
+CONSTRAINT uidx_tquote_grpel_master_coverage_grpel_quote_no_effective_dt_trans_seq_no UNIQUE (grpel_master_quote_no ,effective_dt,transaction_seq_no)
 )
 END;
 
-
-
+--DROP TABLE edw_core.tquote_grpel_master_coverage
 
 IF EXISTS
 (SELECT 1 FROM edw_core.tedw_table_detail
-	where table_nm = 'tgrpel_master_policy')
+	where table_nm = 'tquote_grpel_master_coverage')
 BEGIN
 	delete FROM edw_core.tedw_table_detail
-	where table_nm = 'tgrpel_master_policy' ; 
+	where table_nm = 'tquote_grpel_master_coverage' ; 
 END ; 
 
 INSERT INTO edw_core.tedw_table_detail (
@@ -113,7 +111,7 @@ INSERT INTO edw_core.tedw_table_detail (
     update_ts
 )
 SELECT
-    'tgrpel_master_policy',
+    'tquote_grpel_master_coverage',
     'Type-2 Dimension',
     'Base',
     'Group Personal Excess Liability',
@@ -125,7 +123,7 @@ SELECT
 WHERE NOT EXISTS (
     SELECT 1
     FROM edw_core.tedw_table_detail
-    WHERE table_nm = 'tgrpel_master_policy'
+    WHERE table_nm = 'tquote_grpel_master_coverage'
 );
 
 
