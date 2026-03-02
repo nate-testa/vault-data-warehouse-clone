@@ -10,6 +10,7 @@ grpel_master_policy_sk                                             int NOT NULL,
 effective_dt                                                       date NOT NULL,
 expiration_dt                                                      date NOT NULL,
 transaction_dt                                                     date NOT NULL,
+transaction_effective_dt                                           date NOT NULL,
 transaction_seq_no                                                 int NOT NULL,
 tier_type                                                          varchar(255),
 no_of_participating_members                                        varchar(255),
@@ -38,6 +39,7 @@ CONSTRAINT fk_tgrpel_master_policy_tier_grpel_master_policy_sk FOREIGN KEY (grpe
 
 );
 END
+
 
 IF EXISTS
 (SELECT 1 FROM edw_core.tedw_table_detail
