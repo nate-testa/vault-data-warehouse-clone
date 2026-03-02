@@ -38,7 +38,7 @@ CONSTRAINT fk_tquote_grpel_master_coverage_tier_quote_grpel_master_coverage_sk  
 );
 END
 
-
+--DROP
 
 
 
