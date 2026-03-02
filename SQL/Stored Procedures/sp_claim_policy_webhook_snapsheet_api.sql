@@ -249,77 +249,95 @@ BEGIN
                 END account
                 for json path, include_null_values, without_array_wrapper
             )) as underwriting,
-            json_query((
-                select
-                    [role],
-                    temp.name as [name],
-                    json_query((
-                            SELECT
-                                address1,
-                                address2,
-                                city,
-                                postalCode,
-                                region,
-                                country
-                                for json path, include_null_values, without_array_wrapper
-                    )) as [address],
-                    json_query((
-						select *
-						from
-						(
-                        SELECT
-							'us' as country,
-							'1' as countryCode,
---                            'true' preferredMethod,
-                            'phone' as [type],
-                           -- '7272901574' as [value]
-							phone_no as [value]                            
-						UNION
-						SELECT
-                            null as country,
-                            null as countryCode,
---                            'true' preferredMethod,
-                            'email' as [type],
-							--'Farhad.Imam@Vault.Insurance' as [value]
-							email as [value]                        
-						) as temp
-                        for json path, include_null_values
-                    )) as contactMethods
-                from
-             (	
-                    select 'mortgagee' as [role],mortgagee_nm as [name],
-                    address_line_1 as address1, address_line_2 as address2, city_nm as city, zip_cd as postalCode, state_cd as region, country_nm as country
-					, phone_no, email
-                    from edw_core.tmortgagee tm
+        CASE 
+			WHEN prd.product_cd = 'GRPEL' then
+				json_query((
+					select
+						'Other'as [role],
+						concat_ws(' || ',grpc.grpel_policy_no,grpc.group_nm) as [name],
+						null as [address],
+						null as contactMethods
+					from
+						edw_core.tgrpel_coverage grpc
                     where
-                        tm.policy_no = tp.policy_no
-                        and tm.effective_dt = tp.effective_dt
-                        and tm.transaction_seq_no = cpsa.transaction_seq_no
-                    union
-                    select 
-                        case
-                            when interest_type = 'Loss Payee' then 'loss_payee'
-                            when interest_type in ('Additional Insured - Contents','Additional Insured - Individual','Additional Insured - Limited Liability') then 'additional_insured'
-                        else 'Other'
-                        end as [role],
-                        case
-                            when interest_type = 'Loss Payee' and entity_type = 'Individual' then CONCAT_WS(' ',first_nm,last_nm)
-                            when interest_type = 'Loss Payee' then loss_payee_nm
-                            when entity_type = 'Individual' then CONCAT_WS(' ',first_nm,last_nm)
-                            else additional_interest_nm
-                        end as [name],
-                    address_line_1 as address1, address_line_2 as address2, city_nm as city, zip_cd as postalCode, state_cd as region, country_nm as country,
-					null as phone_no,
-					null as email
-                    from edw_core.tadditional_interest tadi
-                    where
-                        tadi.policy_no = tp.policy_no
-                        and tadi.effective_dt = tp.effective_dt
-                        and tadi.transaction_seq_no = cpsa.transaction_seq_no
-                ) as temp
+						grpc.policy_no = tp.policy_no
+						and grpc.effective_dt = tp.effective_dt
+						and grpc.transaction_seq_no = cpsa.transaction_seq_no
+					for json path, include_null_values
+				))
+			ELSE
+				json_query((
+					select
+						[role],
+						temp.name as [name],
+						json_query((
+								SELECT
+									address1,
+									address2,
+									city,
+									postalCode,
+									region,
+									country
+									for json path, include_null_values, without_array_wrapper
+						)) as [address],
+						json_query((
+							select *
+							from
+							(
+							SELECT
+								'us' as country,
+								'1' as countryCode,
+	--                            'true' preferredMethod,
+								'phone' as [type],
+								-- '7272901574' as [value]
+								phone_no as [value]                            
+							UNION
+							SELECT
+								null as country,
+								null as countryCode,
+	--                            'true' preferredMethod,
+								'email' as [type],
+								--'Farhad.Imam@Vault.Insurance' as [value]
+								email as [value]                        
+							) as temp
+							for json path, include_null_values
+						)) as contactMethods
+					from
+					(	
+						select 'mortgagee' as [role],mortgagee_nm as [name],
+						address_line_1 as address1, address_line_2 as address2, city_nm as city, zip_cd as postalCode, state_cd as region, country_nm as country
+						, phone_no, email
+						from edw_core.tmortgagee tm
+						where
+							tm.policy_no = tp.policy_no
+							and tm.effective_dt = tp.effective_dt
+							and tm.transaction_seq_no = cpsa.transaction_seq_no
+						union
+						select 
+							case
+								when interest_type = 'Loss Payee' then 'loss_payee'
+								when interest_type in ('Additional Insured - Contents','Additional Insured - Individual','Additional Insured - Limited Liability') then 'additional_insured'
+							else 'Other'
+							end as [role],
+							case
+								when interest_type = 'Loss Payee' and entity_type = 'Individual' then CONCAT_WS(' ',first_nm,last_nm)
+								when interest_type = 'Loss Payee' then loss_payee_nm
+								when entity_type = 'Individual' then CONCAT_WS(' ',first_nm,last_nm)
+								else additional_interest_nm
+							end as [name],
+						address_line_1 as address1, address_line_2 as address2, city_nm as city, zip_cd as postalCode, state_cd as region, country_nm as country,
+						null as phone_no,
+						null as email
+						from edw_core.tadditional_interest tadi
+						where
+							tadi.policy_no = tp.policy_no
+							and tadi.effective_dt = tp.effective_dt
+							and tadi.transaction_seq_no = cpsa.transaction_seq_no
+					) as temp
                     
-                for json path, include_null_values
-            )) as [businesses],			
+					for json path, include_null_values
+				)) 
+			END as [businesses],		
 			json_query
             ((
                 select
