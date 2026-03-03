@@ -1,9 +1,9 @@
 ﻿-- ===========================================================================================================================
 -- Description: This procedures loads home coverage data
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date	 |Author										|	Change Description
+-- Change date	 |Author						|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
---  						Yunus Mohammed					1. Created this procedure 
+--  			Yunus Mohammed					1. Created this procedure 
 -- 08/23/23		Architha Gudimalla				2. Added changes for residence type, loss_of_use_pc, total_insured_value_amt
 -- 10/02/23		Architha Gudimalla				3. Added replace to remove , from sq footage
 -- 10/05/23		Architha Gudimalla				4. Removed TIV update and moved to separate proc
@@ -11,10 +11,10 @@
 -- 11/16/23		Architha Gudimalla				6. Added wildfire columns
 -- 11/16/23		Architha Gudimalla				7. updated the join for AccountTransactionVersionPremiumfactor
 -- 11/30/23		Yunus Mohammed					8. Added new fields
--- 12/06/23		Alberto Almario						9. Added new field WindstormOrHailDeductibleManual
+-- 12/06/23		Alberto Almario					9. Added new field WindstormOrHailDeductibleManual
 -- 22/02/24		Hernando Gonzalez				10. Added new fields aon_hurricane_reinsurance_margin_amt, aon_hurricane_ceded_loss_amt, aon_hurricane_reinsurance_premium_amt, aon_hurricane_capital_cost_amt, aon_hurricane_cat_score_to_premium_ratio, aon_hurricane_aal_to_premium_ratio, aon_hurricane_aal_amt
 -- 04/02/24		Yunus Mohammed					11. Updated wind_derived_deductible logic
--- 12/06/24		Alberto Almario						12. Added new filed nc_bureau_rate
+-- 12/06/24		Alberto Almario					12. Added new filed nc_bureau_rate
 -- 07/09/24		Yunus Mohammed					13. Added new fields stated_limits_policy_in and risk_sharing_policy_in
 -- 08/13/24		Yunus Mohammed					14. Updated wind_derived_deductible logic
 -- 08/20/24		Yunus Mohammed					15. Updated wind_derived_deductible logic
@@ -27,12 +27,13 @@
 -- 03/19/25		Hernando Gonzalez				22. Added new columns wildfire_risk_score, wildfire_risk_class
 -- 04/02/25		Yunus Mohammed					23. AD-8973 roof_deck_attachment value logic updated
 -- 04/16/25		Yunus Mohammed					24. AD-9121 Corrected null values for premium mods
--- 06/10/22		Dinesh Bobbili						25. AD-9707 Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
--- 10/03/25		Alberto Almario						26. AD-11140 Added new column premium_analytics_grade
--- 10/24/25		Dinesh Bobbili						27. AD-11450 Added new column underwriter_required_inspection
--- 11/26/25		Yunus Mohammed				28. AD-11842 Mapping updated for prior_claim_last5yr_in and added 2 new
+-- 06/10/22		Dinesh Bobbili					25. AD-9707 Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
+-- 10/03/25		Alberto Almario					26. AD-11140 Added new column premium_analytics_grade
+-- 10/24/25		Dinesh Bobbili					27. AD-11450 Added new column underwriter_required_inspection
+-- 11/26/25		Yunus Mohammed					28. AD-11842 Mapping updated for prior_claim_last5yr_in and added 2 new
 --																					columns for prior claims
--- 02/02/26		Dinesh Bobbili						28. AD-12416 Added new columns high_risk_wui_property_in,effective_built_year
+-- 02/02/26		Dinesh Bobbili					29. AD-12416 Added new columns high_risk_wui_property_in,effective_built_year
+-- 03/03/26		Yunus Mohammed					30. AD-12608 Added new column frame_to_foundation_connection_in
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -210,6 +211,7 @@ BEGIN
 				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
 				wildfire_suppression_system,wildfire_decks_balconies_porches_stairs,
 				premium_analytics_grade,underwriter_required_inspection,high_risk_wui_property_in,effective_built_year,
+				frame_to_foundation_connection_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 				
 			)
@@ -377,6 +379,7 @@ BEGIN
 				tthc.premium_analytics_grade,tthc.UnderwriterRequiredInspection as underwriter_required_inspection,
 				tthc.HighRiskWUIProperty as high_risk_wui_property_in,
 				tthc.EffectiveYearBuilt as effective_built_year,
+				tthc.FrameToFoundationConnection as frame_to_foundation_connection_in,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_coverage_temp2 AS tthc
