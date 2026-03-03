@@ -9,6 +9,7 @@
 -- 08/14/24     		Alberto Almario	            2. Added logic for additional_interest_deleted_in and additional interest vehicle
 -- 08/15/24     		Architha Gudimalla          3. Update additional_interest_deleted_in to use Yes/No instead of 1/0
 -- 08/22/24				Yunus Mohammed				4. Removed effective date from merge and added in update clause
+-- 03/03/26				Yunus Mohammed				5. AD-12608 - Added new column residence_owned_by_trust_in
 -- ====================================================================================================================================
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_additional_interest_wip]
 AS
@@ -49,6 +50,7 @@ BEGIN
 			,CreatedDate, UpdatedDate
 			,product_cd
 			,IsDeletedOnPolicyChange as additional_interest_deleted_in
+			,ResidenceOwnedByTrust as residence_owned_by_trust_in
 		INTO edw_temp.tquote_additional_interest_wip_temp1
 		FROM
 			(
@@ -88,7 +90,7 @@ BEGIN
 				MAX(Value) FOR Field IN (
 					InterestType, EntityType, EntityName, DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, 
                     AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew, Name
-					,vehicle
+					,vehicle,ResidenceOwnedByTrust
 					)
 			) pivottable
 
@@ -135,7 +137,7 @@ BEGIN
             ,city_nm,county_nm,state_cd,zip_cd,country_nm,commercial_exposures_in,watercraft_or_employ_crew_in
             ,source_system_sk,create_ts,update_ts,etl_audit_sk,product_cd
 			,additional_interest_deleted_in
-	  		,quote_auto_vehicle_sk
+	  		,quote_auto_vehicle_sk,residence_owned_by_trust_in
 		)
 		VALUES
 		(
@@ -146,7 +148,7 @@ BEGIN
             ,AddressLine1,AddressLine2,AddressCity,AddressCounty,AddressState,AddressZipCode,AddressCountry,AnyCommercialExposures,WatercraftOrEmployCrew
             ,source_system_sk,getdate(),getdate(),@etl_audit_sk,product_cd
 			,additional_interest_deleted_in
-	  		,quote_auto_vehicle_sk
+	  		,quote_auto_vehicle_sk,residence_owned_by_trust_in
 		)
 		WHEN MATCHED THEN UPDATE
 		SET
@@ -173,6 +175,7 @@ BEGIN
 			product_cd = Source.product_cd,
 			Target.additional_interest_deleted_in = Source.additional_interest_deleted_in,
 			Target.quote_auto_vehicle_sk = Source.quote_auto_vehicle_sk,
+			Target.residence_owned_by_trust_in= Source.residence_owned_by_trust_in,
 			update_ts = GETDATE()
 			;
 		
