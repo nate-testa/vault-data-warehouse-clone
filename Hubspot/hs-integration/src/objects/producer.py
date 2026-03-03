@@ -101,7 +101,9 @@ class Producer:
                 'phone': record['phone_no'],
                 'jobtitle': record['title'],
                 'role': record['producer_role'],
-                'producer_status': record['producer_status']
+                'producer_status': record['producer_status'],
+                'customer_business_type': record['customer_business_type'],
+                'ytd_submission_ct': record['ytd_submission_ct']
 
                 # 'agency_status': record['broker_status'],                
                 # 'create_ts': record['create_ts'],
