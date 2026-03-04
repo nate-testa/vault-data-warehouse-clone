@@ -12,7 +12,7 @@ from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from vault_edw_HTML_format import get_sp_success_data_HTML, get_sp_error_data_HTML, get_HTML_on_vault_format, get_vault_data_HTML
 
 to_email = "itdatateam@vault.insurance"
-# to_email = "hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
+#to_email = "hernando.gonzalez.garcia@vault.insurance, alberto.valbuena@vault.insurance"
 cc_email = ""
 
 HOME_PATH = os.path.expanduser('~')
@@ -72,6 +72,61 @@ def on_failure_callback(context):
         html_content=html_content_body
     )
     email.execute(context)
+
+
+def on_workday_sharepoint_success(context):
+    """
+    Send execution report on successful completion of SharePoint upload
+    Reads the HTML report file from the workday_feed_to_sharepoint project
+    """
+    task_instance = context['task_instance']
+    report_path = f'{FOLDER_PATH}/logs/latest_execution_report.html'
+    
+    try:
+        # Read the HTML report file
+        with open(report_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        
+        # Determine subject based on content
+        if '❌' in html_content or 'FAILED' in html_content or 'ERRORS' in html_content:
+            subject = '⚠️ Airflow - Workday SharePoint Upload - Completed with Errors'
+        elif '⚠️' in html_content or 'WARNING' in html_content:
+            subject = '⚠️ Airflow - Workday SharePoint Upload - Completed with Warnings'
+        else:
+            subject = '✅ Airflow - Workday SharePoint Upload - Success'
+        
+    except FileNotFoundError:
+        # Fallback if report cannot be read
+        html_content = get_HTML_on_vault_format(
+            f'<strong>Workday SharePoint Upload Executed</strong><br><br>'
+            f'The upload script ran but the execution report was not generated. '
+            f'This usually means the script was interrupted or encountered an error before completion.<br><br>'
+            f'<strong>Recommended Actions:</strong><br>'
+            f'• Check the application log: <code>{FOLDER_PATH}/logs/workday_upload-*.log</code><br>'
+            f'• Verify the script completed successfully<br>'
+            f'• Check for any Python errors or exceptions<br><br>',
+            ''
+        )
+        subject = 'Airflow - Workday SharePoint Upload - Report Unavailable'
+    except Exception as e:
+        # Fallback for other errors
+        error_msg = str(e)
+        html_content = get_HTML_on_vault_format(
+            f'Workday SharePoint Upload completed but could not retrieve detailed report.<br><br>'
+            f'<strong>Error:</strong> {error_msg}',
+            ''
+        )
+        subject = 'Airflow - Workday SharePoint Upload - Report Unavailable'
+    
+    # Send email with report
+    email = EmailOperator(
+        task_id='send_sharepoint_upload_report',
+        to=to_email,
+        subject=subject,
+        html_content=html_content
+    )
+    email.execute(context)
+
 
 
 args = {
@@ -208,6 +263,7 @@ with DAG(
         run_workday_feed_to_sharepoint_script = BashOperator(
             task_id='run_workday_feed_to_sharepoint_script',
             bash_command=BASH_COMMAND,
+            on_success_callback=on_workday_sharepoint_success,
         )
 
         skip_sharepoint_feed = EmptyOperator(
