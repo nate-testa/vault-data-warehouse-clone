@@ -500,7 +500,7 @@ BEGIN
 						INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
 						WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
 						and coalesce(pt.premium_amt, 0) + coalesce(tcct.scheduled_limit_amt, 0) + coalesce(tcct.scheduled_highest_value_limit_amt, 0) <> 0 
-						and ic.aslob_cd in ('090', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%chedule%' or ic.internal_coverage_cd like '%lux%')
+						and ic.aslob_cd in ('091', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%chedule%' or ic.internal_coverage_cd like '%lux%')
 						--
 						UNION ALL
 						--
@@ -575,7 +575,7 @@ BEGIN
 						INNER JOIN edw_core.tpolicy_history ph ON pt.policy_sk = ph.policy_sk AND pt.transaction_seq_no = ph.transaction_seq_no -- RS Added
 						WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
 						and coalesce(pt.premium_amt, 0) + coalesce(tcct.blanket_limit_amt, 0) + coalesce(tcct.blanket_single_article_limit_amt, 0) + coalesce(tcct.blanket_highest_value_limit_amt, 0) <> 0 
-						and ic.aslob_cd in ('090', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%lanket%' or ic.internal_coverage_cd like '%lux%')
+						and ic.aslob_cd in ('091', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%lanket%' or ic.internal_coverage_cd like '%lux%')
 					) ud
 						WHERE  ud.policy_sk = ptf.policy_sk
                        AND ud.effective_dt_sk = ptf.effective_dt_sk
