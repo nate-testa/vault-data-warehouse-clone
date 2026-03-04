@@ -13,8 +13,8 @@ from vault_edw_HTML_format import get_sp_error_data_HTML, get_HTML_on_vault_form
 from majesco_data_feed_files_processing import process_all_files
 from majesco_data_feed_sftp_to_blob_storage import process_sftp_majesco_files
 
-# to_email = "itdatateam@vault.insurance"
-to_email = "alberto.valbuena@vault.insurance"
+to_email = "itdatateam@vault.insurance"
+# to_email = "alberto.valbuena@vault.insurance"
 cc_email = ""
 
 def check_majesco_data_and_send_email(**kwargs):
