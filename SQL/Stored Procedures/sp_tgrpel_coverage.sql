@@ -46,7 +46,13 @@ BEGIN
                     
                     select
                     act.PolicyNumber,CAST(act.EffectiveDate AS DATE) AS EffectiveDate,CAST(act.ExpirationDate AS DATE) AS ExpirationDate,
-					accg.PolicyNumber as grpel_policy_no,trim(concat_ws(' ',insg.FirstName,insg.LastName)) as group_nm,
+					accg.PolicyNumber as grpel_policy_no,
+                    case 
+                        when nullif(isnull(insg.FirstName + ' ','') + isnull(insg.LastName,''),'') is not null
+                        then nullif(isnull(insg.FirstName + ' ','')	+ isnull(insg.LastName,''),'') 
+                        when insg.NamedInsured is not null then insg.NamedInsured
+                        else insg.NamedInsured 
+                    end as group_nm,
                     CAST(act.TransactionEffectiveDate AS DATE) AS TransactionEffectiveDate,tph.policy_history_sk,pol.insured_nm,
                     act.policychangenumber AS transaction_seq_no, 
                     CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
