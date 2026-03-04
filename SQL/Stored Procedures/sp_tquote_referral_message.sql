@@ -6,6 +6,7 @@
 -- Change date			|Author							|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
 -- 04/18/2024 			Yunus Mohammed					1. Created this procedure 
+-- 02/27/2026			Yunus Mohammed					3. AD-12652 Added external_apply_scope
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_referral_message]
 
@@ -35,6 +36,7 @@ BEGIN
         act.ExpirationDate AS expiration_dt,act.Number as transaction_seq_no, tqh.quote_history_sk,
         acti.[Message] AS referral_message,
         acti.ReferralLevel AS referral_level,
+		acti.ExternalApplyScope  as external_apply_scope,
         acti.CreatedDate AS referral_message_created_ts,
         acti.UpdatedDate AS referral_message_updated_ts,
         CASE WHEN act.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk
@@ -53,12 +55,12 @@ BEGIN
 		INSERT INTO edw_core.tquote_referral_message
         (
         quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_history_sk, referral_message,
-        referral_level, referral_message_created_ts, referral_message_updated_ts,
+        referral_level, referral_message_created_ts, referral_message_updated_ts,external_apply_scope,
         source_system_sk, create_ts, update_ts, etl_audit_sk
         )
 		SELECT
 			quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_history_sk, referral_message,
-            referral_level, referral_message_created_ts, referral_message_updated_ts,
+            referral_level, referral_message_created_ts, referral_message_updated_ts,external_apply_scope,
 			source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 		FROM
 			edw_temp.tquote_referral_message_temp1
