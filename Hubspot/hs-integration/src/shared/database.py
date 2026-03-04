@@ -24,9 +24,15 @@ class DatabaseFunctions:
         password=rf'{constants.PASS}',
         database='vault_edw'
         )
+        
+        # Add additional condition for policy table
+        additional_condition = ""
+        if table_name == DatabaseFunctions.table_name['policy']:
+            additional_condition = " and policy_status <> 'Quote'"
+        
         sql = f'''
         SELECT * FROM {table_name}
-        WHERE update_ts >= '{timestamp}'
+        WHERE update_ts >= '{timestamp}'{additional_condition}
         '''
         df = pd.read_sql_query(sql, conn, dtype=object)
         conn.close()

@@ -108,7 +108,8 @@ class Quote:
         if record['quote_business_type'] == 'Personal Lines':
             record['dealname'] = f"{record['quote_no']} - {record['insured_first_nm']} {record['insured_last_nm']}"
         else:
-            record['dealname'] = f"{record['quote_no']} - {record['insured_nm']}"
+            record['dealname'] = f"{record['quote_no_original']} - {record['insured_nm']}"
+            record['quote_no'] = record['quote_no_original']
 
         payload = {
             'properties': {
