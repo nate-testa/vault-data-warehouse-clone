@@ -38,10 +38,15 @@ BEGIN
                 (
                 select * 
                 from
-                    (
-                    
+                    (                    
                     select
-                    acc.PolicyNumber,accg.PolicyNumber as grpel_quote_no,trim(concat_ws(' ',insg.FirstName,insg.LastName)) as group_nm,
+                    acc.PolicyNumber,accg.PolicyNumber as grpel_quote_no,                    
+                    case 
+                        when nullif(isnull(insg.FirstName + ' ','') + isnull(insg.LastName,''),'') is not null
+                        then nullif(isnull(insg.FirstName + ' ','')	+ isnull(insg.LastName,''),'') 
+                        when insg.NamedInsured is not null then insg.NamedInsured
+                        else insg.NamedInsured 
+                    end as group_nm,
 					CAST(acc.EffectiveDate AS DATE) AS EffectiveDate,CAST(acc.ExpirationDate AS DATE) AS ExpirationDate,
                     tqh.quote_history_sk,
                     0 AS transaction_seq_no, 
