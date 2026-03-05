@@ -16,14 +16,37 @@ class SharePointUploader:
         self.cfg = config_manager
         self.logger = logger
         
-        # SharePoint Config
-        self.site_hostname = "vaultinsurance.sharepoint.com"
-        self.site_path = "/sites/IT"
+        # SharePoint Config from config.yml
+        sharepoint_config = self.cfg.config.get('sharepoint', {})
+        self.site_hostname = sharepoint_config.get('site_hostname', 'vaultinsurance.sharepoint.com')
+        self.site_path = sharepoint_config.get('site_path', '/sites/IT')
         self.site_url = f'https://{self.site_hostname}{self.site_path}'
-        # TEST FOLDER - Change to "00_Month-End" for production
-        #self.base_folder_path = "Data Warehouse/Workday/Vault IT Data Files/Test_Folder"
-        # PRODUCTION FOLDER
-        self.base_folder_path = "Data Warehouse/Workday/Vault IT Data Files/00_Month-End"
+        
+        # Determine folder path based on environment
+        # Priority: 1) .env file (ENVIRONMENT=...), 2) config.yml (environment.name), 3) default 'UAT'
+        env_from_dotenv = os.getenv('ENVIRONMENT')
+        env_from_config = self.cfg.config.get('environment', {}).get('name', 'UAT')
+        
+        if env_from_dotenv:
+            environment = env_from_dotenv.upper()
+            env_source = ".env file"
+        else:
+            environment = env_from_config.upper()
+            env_source = "config.yml"
+        
+        # Get folder path from config based on environment
+        folder_paths = sharepoint_config.get('folder_paths', {})
+        env_key = environment.lower()
+        
+        if env_key == 'production':
+            self.base_folder_path = folder_paths.get('production', 'Data Warehouse/Workday/Vault IT Data Files/00_Month-End')
+            self.logger.info(f"Environment: {environment} (from {env_source}) → Using PRODUCTION folder path")
+        else:
+            # Use 'uat' for both UAT and DEV, or fallback to 'dev' if specified
+            self.base_folder_path = folder_paths.get(env_key, folder_paths.get('uat', 'Data Warehouse/Workday/Vault IT Data Files/Test_Folder'))
+            self.logger.info(f"Environment: {environment} (from {env_source}) → Using TEST folder path")
+        
+        self.logger.info(f"SharePoint folder: {self.base_folder_path}")
         
         # Memory optimization settings
         memory_config = self.cfg.config.get('memory', {})
@@ -58,7 +81,8 @@ class SharePointUploader:
             'successful': [],
             'failed': [],
             'total_rows': 0,
-            'total_files': 0
+            'total_files': 0,
+            'total_source_rows': 0  # Track source row count
         }
 
     def log_memory_usage(self, context=""):
@@ -196,14 +220,15 @@ class SharePointUploader:
                 try:
                     # Choose processing mode and get row count
                     row_count = 0
+                    source_row_count = 0
                     if self.processing_mode == 'local_persist':
-                        row_count = await self._process_local_persist(conn, graph_client, drive.id, 
+                        row_count, source_row_count = await self._process_local_persist(conn, graph_client, drive.id, 
                                                          folder_path, filename, sql)
                     elif self.processing_mode == 'streaming':
-                        row_count = await self._process_streaming(conn, graph_client, drive.id, 
+                        row_count, source_row_count = await self._process_streaming(conn, graph_client, drive.id, 
                                                       folder_path, filename, sql)
                     elif self.processing_mode == 'in_memory':
-                        row_count = await self._process_inmemory(conn, graph_client, drive.id,
+                        row_count, source_row_count = await self._process_inmemory(conn, graph_client, drive.id,
                                                      folder_path, filename, sql)
                     else:
                         raise ValueError(f"Unknown processing_mode: {self.processing_mode}")
@@ -211,9 +236,11 @@ class SharePointUploader:
                     # Track successful result
                     results['successful'].append({
                         'filename': filename,
-                        'rows': row_count
+                        'rows': row_count,
+                        'source_rows': source_row_count
                     })
                     results['total_rows'] += row_count
+                    results['total_source_rows'] += source_row_count
                     
                     self.log_memory_usage(f"after {filename}")
                     
@@ -237,6 +264,9 @@ class SharePointUploader:
             
             # Print summary report
             self._log_summary_report(results)
+            
+            # Generate HTML report for email
+            self._generate_html_report(results)
     
     async def _process_local_persist(self, conn, graph_client, drive_id, folder_path, filename, sql):
         """
@@ -298,7 +328,8 @@ class SharePointUploader:
             else:
                 self.logger.info(f"  ℹ Local backup kept: {local_file}")
             
-            return total_rows
+            # Return both written rows and source rows (they're the same in this case)
+            return total_rows, total_rows
                 
         except Exception as e:
             # Keep local file on failure if configured
@@ -360,7 +391,8 @@ class SharePointUploader:
             
             self.logger.info(f"  ✓ Uploaded {filename} ({total_rows} rows)")
             
-            return total_rows
+            # Return both written rows and source rows (they're the same)
+            return total_rows, total_rows
             
         finally:
             # Always clean up temp file
@@ -405,7 +437,8 @@ class SharePointUploader:
         
         self.logger.info(f"  ✓ Uploaded {filename}")
         
-        return len(df)
+        # Return both written rows and source rows (they're the same)
+        return len(df), len(df)
     
     def _log_summary_report(self, results):
         """Log summary report of all processing results"""
@@ -419,14 +452,17 @@ class SharePointUploader:
             self.logger.info("")
             self.logger.info(f"✓ SUCCESSFUL ({len(results['successful'])} files):")
             self.logger.info("-" * 80)
-            self.logger.info(f"{'Filename':<50} {'Records':<15} {'Status':<15}")
+            self.logger.info(f"{'Filename':<45} {'Source Rows':<15} {'Written Rows':<15} {'Status':<10}")
             self.logger.info("-" * 80)
             
             for item in results['successful']:
-                self.logger.info(f"{item['filename']:<50} {item['rows']:>10,} rows   Uploaded")
+                source_rows = item.get('source_rows', item['rows'])
+                written_rows = item['rows']
+                match = "✓" if source_rows == written_rows else "⚠"
+                self.logger.info(f"{item['filename']:<45} {source_rows:>10,} rows   {written_rows:>10,} rows   {match}")
             
             self.logger.info("-" * 80)
-            self.logger.info(f"{'TOTAL SUCCESSFUL':<50} {results['total_rows']:>10,} rows")
+            self.logger.info(f"{'TOTAL SUCCESSFUL':<45} {results['total_source_rows']:>10,} rows   {results['total_rows']:>10,} rows")
         
         # Failed section
         if results['failed']:
@@ -455,6 +491,253 @@ class SharePointUploader:
         self.logger.info(f"Total Records Extracted: {results['total_rows']:,}")
         self.logger.info("="*80)
         self.logger.info("")
+    
+    def _generate_html_report(self, results):
+        """Generate HTML report for email notification"""
+        try:
+            # Calculate summary statistics
+            success_count = len(results['successful'])
+            failed_count = len(results['failed'])
+            total_count = results['total_files']
+            success_rate = (success_count / total_count * 100) if total_count > 0 else 0
+            
+            # Determine overall status
+            if failed_count > 0:
+                status_icon = "❌"
+                status_text = "COMPLETED WITH ERRORS"
+                status_color = "#B31B34"
+            elif success_count == total_count:
+                status_icon = "✅"
+                status_text = "SUCCESS"
+                status_color = "#28a745"
+            else:
+                status_icon = "⚠️"
+                status_text = "COMPLETED WITH WARNINGS"
+                status_color = "#ffc107"
+            
+            # Build successful files table
+            successful_table_rows = ""
+            if results['successful']:
+                for item in results['successful']:
+                    source_rows = item.get('source_rows', item['rows'])
+                    written_rows = item['rows']
+                    match_status = "✓" if source_rows == written_rows else "⚠"
+                    match_color = "#28a745" if source_rows == written_rows else "#ffc107"
+                    
+                    successful_table_rows += f"""
+                    <tr>
+                        <td>{item['filename']}</td>
+                        <td style="text-align: right;">{source_rows:,}</td>
+                        <td style="text-align: right;">{written_rows:,}</td>
+                        <td style="text-align: center; color: {match_color}; font-weight: bold;">{match_status}</td>
+                    </tr>
+                    """
+            
+            # Build failed files table
+            failed_table_rows = ""
+            if results['failed']:
+                for item in results['failed']:
+                    error_msg = item['error'][:100] + '...' if len(item['error']) > 100 else item['error']
+                    failed_table_rows += f"""
+                    <tr>
+                        <td>{item['filename']}</td>
+                        <td>{error_msg}</td>
+                    </tr>
+                    """
+            
+            # Generate HTML content
+            html_content = f"""
+            <html>
+            <head>
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Arial, sans-serif;
+                        margin: 0;
+                        padding: 20px;
+                        background-color: #f5f5f5;
+                    }}
+                    .container {{
+                        max-width: 900px;
+                        margin: 0 auto;
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    }}
+                    .header {{
+                        text-align: center;
+                        margin-bottom: 30px;
+                    }}
+                    .logo {{
+                        width: 150px;
+                        height: auto;
+                    }}
+                    .status {{
+                        font-size: 24px;
+                        font-weight: bold;
+                        color: {status_color};
+                        margin: 20px 0;
+                    }}
+                    .summary {{
+                        background-color: #f8f9fa;
+                        padding: 20px;
+                        border-radius: 6px;
+                        margin: 20px 0;
+                    }}
+                    .summary-item {{
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 8px 0;
+                        border-bottom: 1px solid #dee2e6;
+                    }}
+                    .summary-item:last-child {{
+                        border-bottom: none;
+                    }}
+                    .summary-label {{
+                        font-weight: 600;
+                        color: #495057;
+                    }}
+                    .summary-value {{
+                        color: #212529;
+                    }}
+                    table {{
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin: 20px 0;
+                    }}
+                    th {{
+                        background-color: #B31B34;
+                        color: white;
+                        padding: 12px;
+                        text-align: left;
+                        font-weight: 600;
+                    }}
+                    td {{
+                        padding: 10px;
+                        border: 1px solid #ddd;
+                    }}
+                    tr:nth-child(even) {{
+                        background-color: #f8f9fa;
+                    }}
+                    .section-title {{
+                        font-size: 18px;
+                        font-weight: bold;
+                        color: #212529;
+                        margin: 25px 0 15px 0;
+                        padding-bottom: 8px;
+                        border-bottom: 2px solid #B31B34;
+                    }}
+                    .footer {{
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #dee2e6;
+                        color: #6c757d;
+                        font-size: 12px;
+                    }}
+                    .error-section {{
+                        background-color: #fff3cd;
+                        border-left: 4px solid #ffc107;
+                        padding: 15px;
+                        margin: 20px 0;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <img src="https://d2j09jzq254cyj.cloudfront.net/vault-logo.png" alt="Vault" class="logo">
+                        <div class="status">{status_icon} Workday Feed to SharePoint - {status_text}</div>
+                    </div>
+                    
+                    <div class="summary">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Files Processed:</span>
+                            <span class="summary-value">{total_count}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Successful:</span>
+                            <span class="summary-value" style="color: #28a745;">{success_count} ({success_rate:.1f}%)</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Failed:</span>
+                            <span class="summary-value" style="color: #dc3545;">{failed_count}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Source Rows:</span>
+                            <span class="summary-value">{results['total_source_rows']:,}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Rows Written:</span>
+                            <span class="summary-value">{results['total_rows']:,}</span>
+                        </div>
+                    </div>
+            """
+            
+            # Add successful files section
+            if results['successful']:
+                html_content += f"""
+                    <div class="section-title">✓ Successful Files ({success_count})</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Filename</th>
+                                <th style="text-align: right;">Source Rows</th>
+                                <th style="text-align: right;">Written Rows</th>
+                                <th style="text-align: center;">Match</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {successful_table_rows}
+                        </tbody>
+                    </table>
+                """
+            
+            # Add failed files section
+            if results['failed']:
+                html_content += f"""
+                    <div class="error-section">
+                        <div class="section-title">✗ Failed Files ({failed_count})</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Filename</th>
+                                    <th>Error</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {failed_table_rows}
+                            </tbody>
+                        </table>
+                    </div>
+                """
+            
+            # Add footer
+            html_content += """
+                    <div class="footer">
+                        <p><strong>Vault Data Team</strong></p>
+                        <p>This is an auto-generated message. If you have any questions, please reach out to 
+                        <a href="mailto:itdatateam@vault.insurance">itdatateam@vault.insurance</a></p>
+                        <p>For issues please contact <a href="https://vsc.vaultinsurance.com">Vault Solution Center</a></p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            # Save to logs directory
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            logs_dir = os.path.join(script_dir, 'logs')
+            report_path = os.path.join(logs_dir, 'latest_execution_report.html')
+            
+            with open(report_path, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            
+            self.logger.info(f"HTML report generated: {report_path}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to generate HTML report: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
     
     def _apply_record_limit(self, sql):
         """
