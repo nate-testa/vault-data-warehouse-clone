@@ -3,6 +3,9 @@ import constants
 import pandas as pd
 import pymssql
 import re
+from shared.logger import get_logger
+
+logger = get_logger(__name__)
 
 class DatabaseFunctions:
 
@@ -16,7 +19,7 @@ class DatabaseFunctions:
         'policy': 'edw_integration.customer_hubspot_feed'
     }
 
-    def get_data_from_db(table_name):
+    def get_data_from_db(table_name, object_type=None):
         timestamp = timetracking.load_previous_timestamp()
         conn = pymssql.connect(
         host=rf'{constants.HOST}',
@@ -24,10 +27,17 @@ class DatabaseFunctions:
         password=rf'{constants.PASS}',
         database='vault_edw'
         )
+        
+        # Add additional condition for policy table
+        additional_condition = ""
+        if object_type == 'policy':
+            additional_condition = " and policy_status <> 'Quote'"
+        
         sql = f'''
         SELECT * FROM {table_name}
-        WHERE update_ts >= '{timestamp}'
+        WHERE update_ts >= '{timestamp}'{additional_condition}
         '''
+        #logger.info(f"Executing SQL: {sql}")
         df = pd.read_sql_query(sql, conn, dtype=object)
         conn.close()
         df = df.fillna('') # replace null values with blank strings

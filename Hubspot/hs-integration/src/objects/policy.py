@@ -33,7 +33,7 @@ def check_and_log_duplicates(df, id_column, object_name):
 class Policy:
 
     def sync_to_hubspot():
-        policy_df = DatabaseFunctions.get_data_from_db(DatabaseFunctions.table_name['policy'])
+        policy_df = DatabaseFunctions.get_data_from_db(DatabaseFunctions.table_name['policy'], object_type='policy')
 
         if not policy_df.empty:
             results = policy_df.apply(Policy.process_row, axis=1)
