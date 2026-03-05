@@ -1,12 +1,11 @@
-"""
+""" 
 Azure Blob Storage upload module for OS Document Extract.
 
 Handles uploading downloaded documents to Azure Blob Storage
 and post-upload local file cleanup (keep / delete / archive).
 
-Auth priority (following the Majesco / broker_goal pattern):
-  1. Airflow WasbHook (wasb_conn_id) - recommended, shared connection
-  2. Storage account + DefaultAzureCredential - Managed Identity
+Uses Airflow WasbHook for blob uploads (following broker_goal pattern).
+Storage account credentials are configured in the Airflow connection.
 """
 
 import os
@@ -43,71 +42,45 @@ class BlobStorageManager:
             self.logger.info("Blob Storage upload: ENABLED")
             self.logger.info(f"  Container: {self.container_name}")
             self.logger.info(f"  Folder:    {self.folder}")
-            if self.wasb_conn_id:
+            if not self.wasb_conn_id:
+                self.logger.warning("  No wasb_conn_id configured - uploads will fail!")
+            else:
                 self.logger.info(f"  Auth:      WasbHook (conn_id={self.wasb_conn_id})")
             self.logger.info(f"  Post-upload action: {self.post_upload_action}")
         else:
             self.logger.info("Blob Storage upload: DISABLED (files stay in downloads/)")
 
     def _init_connection(self):
-        """Initialize blob connection.
-
-        Auth priority:
-          1. wasb_conn_id   -> Airflow WasbHook (same as Majesco/broker_goal)
-          2. storage_account   -> BlobServiceClient + DefaultAzureCredential
-        """
-        if self._wasb_hook is not None or self._blob_service_client is not None:
+        """Initialize blob connection using Airflow WasbHook."""
+        if self._blob_service_client is not None:
             return
 
-        # 1. Try Airflow WasbHook
-        if self.wasb_conn_id:
-            try:
-                from airflow.providers.microsoft.azure.hooks.wasb import WasbHook
-                self._wasb_hook = WasbHook(wasb_conn_id=self.wasb_conn_id)
-                # Validate connection
-                self._blob_service_client = self._wasb_hook.get_conn()
-                self.logger.info(f"  Connected via WasbHook (conn_id={self.wasb_conn_id})")
-                return
-            except ImportError:
-                self.logger.warning("  Airflow WasbHook not available, falling back to direct connection")
-            except Exception as e:
-                self.logger.warning(f"  WasbHook failed: {e}, falling back to direct connection")
+        if not self.wasb_conn_id:
+            raise ValueError(
+                "Blob upload requires wasb_conn_id to be configured. "
+                "Set blob_storage.wasb_conn_id in config.yml (e.g., 'azure_blob_storage')"
+            )
 
-        # 2. Try storage account + DefaultAzureCredential
-        storage_account = (self.cfg.get('blob_storage_account') or '').strip()
-        if storage_account:
-            from azure.storage.blob import BlobServiceClient
-            from azure.identity import DefaultAzureCredential
-            account_url = f"https://{storage_account}.blob.core.windows.net"
-            credential = DefaultAzureCredential()
-            self._blob_service_client = BlobServiceClient(account_url=account_url, credential=credential)
-            self.logger.info(f"  Connected via DefaultAzureCredential to: {storage_account}")
-            return
-
-        raise ValueError(
-            "Blob upload requires one of: wasb_conn_id or blob_storage_account. "
-            "Configure in config.yml or secrets."
-        )
+        try:
+            from airflow.providers.microsoft.azure.hooks.wasb import WasbHook
+            self._wasb_hook = WasbHook(wasb_conn_id=self.wasb_conn_id)
+            # Get blob service client from WasbHook
+            self._blob_service_client = self._wasb_hook.get_conn()
+            self.logger.info(f"  Connected via WasbHook (conn_id={self.wasb_conn_id})")
+        except ImportError:
+            raise ImportError(
+                "Airflow WasbHook not available. Install with: pip install apache-airflow-providers-microsoft-azure"
+            )
+        except Exception as e:
+            raise ConnectionError(f"Failed to connect via WasbHook: {e}")
 
     def _upload_file(self, local_path, blob_name):
-        """Upload a single file to blob storage.
-
-        Uses WasbHook.load_file() if available (same pattern as Majesco),
-        otherwise falls back to BlobServiceClient.
-        """
-        if self._wasb_hook is not None:
-            # Airflow WasbHook pattern (same as majesco_data_feed_sftp_to_blob_storage)
-            self._wasb_hook.load_file(
-                file_path=local_path,
-                container_name=self.container_name,
-                blob_name=blob_name,
-            )
-        else:
-            # Direct BlobServiceClient
-            container_client = self._blob_service_client.get_container_client(self.container_name)
-            blob_client = container_client.get_blob_client(blob_name)
-            with open(local_path, 'rb') as f:
-                blob_client.upload_blob(f, overwrite=True)
+        """Upload a single file to blob storage using WasbHook.load_file()."""
+        self._wasb_hook.load_file(
+            file_path=local_path,
+            container_name=self.container_name,
+            blob_name=blob_name,
+        )
 
     def upload_request_folder(self, request_folder, request_name):
         """
