@@ -83,7 +83,7 @@ class ConfigManager:
             static_values = self.env_config.get('static_values', {})
 
             required_keys = ['client_id', 'client_secret']
-            optional_keys = ['blob_container', 'blob_storage_account']
+            optional_keys = ['blob_container']
 
             for key in required_keys:
                 if key not in static_values or not static_values[key]:
@@ -117,7 +117,6 @@ class ConfigManager:
                 'client_id': keyvault_map.get('client_id', 'os-document-extract-client-id'),
                 'client_secret': keyvault_map.get('client_secret', 'os-document-extract-client-secret'),
                 'blob_container': keyvault_map.get('blob_container', 'oneshield-documents-container'),
-                'blob_storage_account': keyvault_map.get('blob_storage_account', 'oneshield-documents-storage-account'),
             }
 
             for key, name in secret_map.items():

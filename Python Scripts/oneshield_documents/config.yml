@@ -18,7 +18,6 @@ environments:
       client_id: "client_int_edw_uat"
       client_secret: "5VhOtDdliEbGrtXCx6Ub7belXxE6XWnd"
       blob_container: ""            # Blob container name (optional - falls back to blob_storage.container)
-      blob_storage_account: "azruatdatastgacccore01"  # Storage account name for UAT
 
   prod:
     pss_url: "https://security.vrms.vaultinsurance.com/pss"
@@ -30,7 +29,6 @@ environments:
       client_id: ""
       client_secret: ""
       blob_container: ""
-      blob_storage_account: ""      # TBD - prod storage account name
 
 # API Constants (shared across environments)
 api:
@@ -55,15 +53,18 @@ download:
 # Azure Blob Storage Upload
 # =============================================================================
 # After downloading, files can be uploaded to Azure Blob Storage.
-# Set upload_enabled: true to activate.
+# Uses Airflow WasbHook (same connection as broker_goal and other projects).
+# Storage account credentials are configured in the Airflow connection.
 blob_storage:
   upload_enabled: true             # true = upload to blob after download
   container: "outbound-oneshield-documents"   # Blob container name (fallback if not in secrets)
   folder: "extracted_documents"    # Virtual folder prefix inside the container
-  # Auth method for blob uploads (tried in order):
-  #   1. wasb_conn_id   - Airflow WasbHook connection (recommended, same as other projects)
-  #   2. storage_account   - DefaultAzureCredential + account name (from secrets)
-  wasb_conn_id: "azure_blob_storage"   # Airflow connection ID (set to "" to skip)
+  
+  # Airflow WasbHook connection ID (required for blob uploads)
+  # This connection must be configured in Airflow with storage account credentials
+  # Same connection used by: broker_goal, NFP, Majesco, etc.
+  wasb_conn_id: "azure_blob_storage"
+  
   # What to do with local files AFTER successful blob upload:
   #   'keep'    - leave files in the downloads folder (default when upload disabled)
   #   'delete'  - delete the local request folder after upload
