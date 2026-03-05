@@ -9,6 +9,8 @@
 -- 06/30/25		Architha Gudimalla		    3. Updated last name to use policy insured_nm
 -- 09/30/25		Dinesh Bobbili				4. AD10938 - Added new columns
 -- 02/25/26		Yunus Mohammed				5. AD12621 - uw_company_nm and total_policy_premium_amt
+-- 03/04/26		Architha Gudimalla		    6. Updated to check for customer email change
+-- 03/04/26		Architha Gudimalla		    7. Update to add customer from quote
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed_commercial
@@ -53,7 +55,15 @@ BEGIN
         from  [edw_integration].[customer_hubspot_feed] a
         inner join edw_commercial.tcommercial_policy  pol on pol.policy_no = a.policy_no
         where a.policy_inforce_in <> pol.policy_inforce_in
-        and a.policy_no not in (select policy_no from edw_temp.customer_hubspot_feed_commercial_temp0);
+        and a.policy_no not in (select policy_no from edw_temp.customer_hubspot_feed_commercial_temp0); 
+
+        --used to see if there are any changes in customer email
+        insert into  edw_temp.customer_hubspot_feed_commercial_temp0
+		select a.policy_no 
+		from  [edw_integration].[customer_hubspot_feed] a
+		inner join edw_core.tcustomer cust on cust.customer_id = a.customer_id 
+		where a.email <> cust.email
+		and policy_no not in (select policy_no from edw_temp.customer_hubspot_feed_commercial_temp0);
 
 		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_commercial_temp3;
 		SELECT DISTINCT
@@ -205,22 +215,22 @@ BEGIN
 		and pol.effective_dt >= '01-jun-2023'
 		-- and pol.product_cd <> 'BY'
 		;
-
+ 
 		/*
 		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_commercial_temp2; 
 		--for quotes, just to create a customer record
 		SELECT
 			pol.quote_no,
-			pi.first_nm,
-			case when pi.insured_type = 'Entity' then pi.insured_nm  else pi.last_nm end as last_nm,
-			case when cust.email like '%papermail%' or cust.email like '%@%@%' then null else cust.email end email,   
+			null as first_nm,
+			pol.insured_nm last_nm,
+			case when cust.email like '%papermail%' or cust.email like '%@%@%' then null else cust.email end email, 
 			pol.risk_state_cd,
 			pol.product_cd AS product_nm,
 			br.broker_id,
-			bvt.team_member_nm AS bdm_nm,
+			null AS bdm_nm,
 			br.broker_nm,
 			br.broker_phone_no,
-			'Inactive' as policy_status,
+			'Quote' policy_status,
 			pol.create_ts,
 			pol.update_ts,
 			cust.mailing_address_line1 mailing_address_line_1, 
@@ -229,30 +239,37 @@ BEGIN
 			cust.mailing_address_city_nm, 
 			cust.mailing_address_state_cd, 
 			cust.mailing_address_zip_cd,
+			cust.mailing_address_country_nm,
 			pol.customer_id,
 			ph.producer_nm,
 			p.producer_id
-		INTO edw_temp.customer_hubspot_feed_commercial_temp2
-		FROM edw_core.tquote pol		
+			,null as monoline_in
+			,pol.insured_nm
+			,'Commercial Lines' as customer_business_type
+			,ph.underwriter_nm
+			,pol.effective_dt
+			,pol.expiration_dt
+			,null policy_inforce_in 
+			,'Vault E & S Insurance Company' as uw_company_nm
+			,null total_policy_premium_amt 
+		into edw_temp.customer_hubspot_feed_commercial_temp2
+		FROM edw_commercial.tcommercial_quote pol 
 		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
 		INNER JOIN edw_core.tproduct pr	ON pr.product_cd = pol.product_cd
 		INNER JOIN edw_core.tbroker br	ON br.broker_id = pol.broker_id
-		LEFT JOIN edw_core.tbroker_vault_team bvt	ON br.broker_id = bvt.broker_id
-													AND bvt.product_nm = pr.product_nm
-													AND bvt.team_member_type = 'BusinessDevelopmentManager'
-													AND pol.program_type = bvt.program_type
-													AND isnull(bvt.state_cd,pol.risk_state_cd)=pol.risk_state_cd
-		INNER join edw_core.tquote_history ph on ph.quote_sk = pol.quote_sk and ph.latest_transaction_in = 'Y'
-		INNER join edw_core.tquote_insured pi on pi.quote_history_sk = ph.quote_history_sk and pi.primary_insured_in = 'Yes'
-		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk
-		WHERE   isnull(pol.insured_nm,'') not like '%test%' 
+		INNER join edw_commercial.tcommercial_quote_history ph on ph.commercial_quote_sk = pol.commercial_quote_sk	and pol.effective_dt = ph.effective_dt and ph.latest_transaction_in = 'Y'
+		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk  
+		WHERE (greatest(pol.create_ts, pol.update_ts) > @last_source_extract_ts
+		or exists (select 'x' from edw_temp.customer_hubspot_feed_commercial_temp0 a where a.policy_no = pol.quote_no)
+		)
+		and	isnull(pol.insured_nm,'') not like '%test%' 
 		and isnull(cust.last_nm,'') not like '%test%'
 		and isnull(cust.first_nm,'') not like '%test%' 
-		and isnull(cust.customer_nm,'') not like '%test%'  
+		and isnull(cust.customer_nm,'') not like '%test%' 
 		and pol.effective_dt >= '01-jun-2023'
-		and quote_create_ts >= dateadd("mm",-1,cast(getdate() as date))
+		-- and pol.product_cd <> 'BY'
 		and not exists (select 'x' from edw_temp.customer_hubspot_feed_commercial_temp1 a where a.customer_id = cust.customer_id)
-		and not exists (select 'x' from edw_integration.customer_hubspot_feed b where b.customer_id = cust.customer_id);
+		and not exists (select 'x' from edw_integration.customer_hubspot_feed b where b.customer_id = cust.customer_id);  
 		*/
 
 		MERGE edw_integration.customer_hubspot_feed as TARGET
@@ -293,10 +310,10 @@ BEGIN
 				,per_claim_retention_amt
 				,uw_company_nm
 				,total_policy_premium_amt
-				FROM edw_temp.customer_hubspot_feed_commercial_temp1/*
-				union ALL 
-			SELECT 
-				policy_no
+				FROM edw_temp.customer_hubspot_feed_commercial_temp1
+				/*union ALL 
+			SELECT  
+				quote_no
   				,first_nm
   				,last_nm
   				,email
@@ -320,6 +337,17 @@ BEGIN
 			    ,producer_nm
 				,producer_id
 				,monoline_in
+				,insured_nm
+				,customer_business_type
+				,underwriter_nm
+				,effective_dt
+				,expiration_dt
+				,null policy_inforce_in
+				,null per_claim_policy_limit_amt
+				,null per_claim_attachment_amt
+				,null per_claim_retention_amt
+				,uw_company_nm
+				,null total_policy_premium_amt
 				FROM edw_temp.customer_hubspot_feed_commercial_temp2*/
 		) as SOURCE
 		ON Source.policy_no = Target.policy_no

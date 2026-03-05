@@ -8,6 +8,8 @@
 -- 07/26/24		Hernando Gonzalez			2. Updated logic for @last_source_extract_ts
 -- 11/20/25		Dinesh Bobbili				3. Update logic and changed insert to merge
 -- 12/05/25		Architha Gudimalla			4. Added Non Active With PIF to null out email
+-- 03/02/26		Architha Gudimalla			5. Added business type
+-- 03/02/26		Architha Gudimalla			5. Added ytd sbumissions
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_producer_hubspot_feed]
@@ -39,6 +41,42 @@ BEGIN
 		having count(*) > 1
 
  		-- Step1 limit amount of rows.
+		DROP TABLE IF EXISTS [edw_temp].[producer_hubspot_feed_temp0];
+
+		--update ytd_submission_ct to 0 if null
+		update edw_integration.producer_hubspot_feed 
+		set ytd_submission_ct = 0
+		where ytd_submission_ct is null;		
+		
+		with sub_ct as
+		(
+			select pd.producer_id, count(*) ytd_submission_ct
+			from edw_commercial.tcommercial_quote q    
+			inner join edw_commercial.tcommercial_quote_history h 
+					on  h.commercial_quote_sk =  q.commercial_quote_sk and h.effective_Dt =  q.effective_Dt and h.latest_transaction_in = 'Y'     
+			inner join edw_core.tproducer pd on pd.producer_sk = h.producer_sk
+			where q.quote_term = 'New'
+			and year(q.quote_create_ts) = year(getdate())
+			group by pd.producer_id
+			/*
+			--personal lines
+			union
+			select pd.producer_id, count(*) ytd_submission_ct
+			from edw_core.tquote q    
+			inner join edw_core.tquote_history h  on  h.quote_sk =  q.quote_sk and h.latest_transaction_in = 'Y'     
+			inner join edw_core.tproducer pd on pd.producer_sk = h.producer_sk
+			where q.quote_term = 'New'
+			and year(q.quote_create_ts) = year(getdate())
+			group by pd.producer_id*/
+		)
+		select sub_ct.*
+		into [edw_temp].[producer_hubspot_feed_temp0]
+		from sub_ct
+		inner join edw_integration.producer_hubspot_feed p on p.producer_id = sub_ct.producer_id
+		where sub_ct.ytd_submission_ct <> p.ytd_submission_ct;
+
+
+		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[producer_hubspot_feed_temp1];
 
 		-- Start Insert process
@@ -58,12 +96,14 @@ BEGIN
 			p.producer_status,
 			getdate() as create_ts,
 			getdate() as update_ts,
-			@etl_audit_sk AS etl_audit_sk
+			@etl_audit_sk AS etl_audit_sk,
+			commercial_or_personal_business_type,
+			a.ytd_submission_ct
 		INTO [edw_temp].[producer_hubspot_feed_temp1] 
 		FROM edw_core.tproducer p	
-		INNER JOIN edw_core.tbroker br
-			ON p.broker_sk = br.broker_sk
-		and greatest(p.create_ts, p.update_ts) > @last_source_extract_ts
+		INNER JOIN edw_core.tbroker br ON p.broker_sk = br.broker_sk
+		left join  [edw_temp].[producer_hubspot_feed_temp0] a on a.producer_id = p.producer_id
+		where greatest(p.create_ts, p.update_ts) > @last_source_extract_ts
 		and not exists (select 1 from edw_integration.producer_hubspot_feed f where p.producer_id = f.producer_id)
 		and not exists (select 1 from edw_temp.producer_hubspot_feed_producer_dupes d where  ISNULL(d.email, '') = ISNULL(p.email, ''))
 		UNION ALL 
@@ -80,22 +120,34 @@ BEGIN
 			p.producer_status,
 			getdate() as create_ts,
 			getdate() as update_ts,
-			@etl_audit_sk AS etl_audit_sk
+			@etl_audit_sk AS etl_audit_sk,
+			commercial_or_personal_business_type,
+			a.ytd_submission_ct
 		FROM edw_core.tproducer p	
-		INNER JOIN edw_core.tbroker br
-			ON p.broker_sk = br.broker_sk
-		and greatest(p.create_ts, p.update_ts) > @last_source_extract_ts
-		and exists (select 1 from edw_integration.producer_hubspot_feed f where p.producer_id = f.producer_id
-		and (ISNULL(p.broker_id,'')        <> ISNULL(f.broker_id,'')
-			OR ISNULL(p.email,'')            <> ISNULL(f.email,'')
-			OR ISNULL(p.first_nm,'')         <> ISNULL(f.first_nm,'')
-			OR ISNULL(p.last_nm,'')          <> ISNULL(f.last_nm,'')
-			OR ISNULL(p.phone_no,'')         <> ISNULL(f.phone_no,'')
-			OR ISNULL(br.broker_status,'')    <> ISNULL(f.broker_status,'')
-			OR ISNULL(p.title,'')            <> ISNULL(f.title,'')
-			OR ISNULL(p.producer_role,'')    <> ISNULL(f.producer_role,'')
-			OR ISNULL(p.producer_status,'')  <> ISNULL(f.producer_status,'')))
+		INNER JOIN edw_core.tbroker br ON p.broker_sk = br.broker_sk
+		left join  [edw_temp].[producer_hubspot_feed_temp0] a on a.producer_id = p.producer_id
+		where greatest(p.create_ts, p.update_ts) > @last_source_extract_ts
 		and not exists (select 1 from edw_temp.producer_hubspot_feed_producer_dupes d where  ISNULL(d.email, '') = ISNULL(p.email, ''))
+		and (
+				exists (select 1 from edw_integration.producer_hubspot_feed f
+					where p.producer_id = f.producer_id
+					and (ISNULL(p.broker_id,'')        <> ISNULL(f.broker_id,'')
+						OR ISNULL(p.email,'')            <> ISNULL(f.email,'')
+						OR ISNULL(p.first_nm,'')         <> ISNULL(f.first_nm,'')
+						OR ISNULL(p.last_nm,'')          <> ISNULL(f.last_nm,'')
+						OR ISNULL(p.phone_no,'')         <> ISNULL(f.phone_no,'')
+						OR ISNULL(br.broker_status,'')   <> ISNULL(f.broker_status,'')
+						OR ISNULL(p.title,'')            <> ISNULL(f.title,'')
+						OR ISNULL(p.producer_role,'')    <> ISNULL(f.producer_role,'')
+						OR ISNULL(p.producer_status,'')  <> ISNULL(f.producer_status,''))
+					)
+				or
+				exists (select 1 from edw_integration.producer_hubspot_feed f
+						inner join  [edw_temp].[producer_hubspot_feed_temp0] a on f.producer_id = a.producer_id
+					where p.producer_id = f.producer_id
+					and f.ytd_submission_ct <> a.ytd_submission_ct
+					)
+			)
 		UNION ALL 
 		select  p.broker_id,
 			p.producer_id,
@@ -109,21 +161,35 @@ BEGIN
 			p.producer_status,
 			getdate() as create_ts,
 			getdate() as update_ts,
-			@etl_audit_sk AS etl_audit_sk
+			@etl_audit_sk AS etl_audit_sk,
+			commercial_or_personal_business_type,
+			a.ytd_submission_ct
 		from edw_core.tproducer p 
 		INNER JOIN edw_core.tbroker br ON p.broker_sk = br.broker_sk
 		left join edw_integration.producer_hubspot_feed f on p.producer_id = f.producer_id
-		where exists (select 1 from edw_temp.producer_hubspot_feed_producer_dupes d where  ISNULL(d.email, '') = ISNULL(p.email, ''))
-		and (ISNULL(p.broker_id,'')        <> ISNULL(f.broker_id,'')
-		OR ISNULL(case when p.producer_status in ('Disabled','Non Active With PIF')  then null else p.email end,'')            <> ISNULL(f.email,'')
-		OR ISNULL(p.first_nm,'')         <> ISNULL(f.first_nm,'')
-		OR ISNULL(p.last_nm,'')          <> ISNULL(f.last_nm,'')
-		OR ISNULL(p.phone_no,'')         <> ISNULL(f.phone_no,'')
-		OR ISNULL(br.broker_status,'')    <> ISNULL(f.broker_status,'')
-		OR ISNULL(p.title,'')            <> ISNULL(f.title,'')
-		OR ISNULL(p.producer_role,'')    <> ISNULL(f.producer_role,'')
-		OR ISNULL(p.producer_status,'')  <> ISNULL(f.producer_status,''))
+		left join  [edw_temp].[producer_hubspot_feed_temp0] a on a.producer_id = f.producer_id
+		where exists 
+				(
+					select 1 from edw_temp.producer_hubspot_feed_producer_dupes d 
+					where  ISNULL(d.email, '') = ISNULL(p.email, '')
+				)
+		and (
+				ISNULL(p.broker_id,'')        <> ISNULL(f.broker_id,'')
+				OR ISNULL(case when p.producer_status in ('Disabled','Non Active With PIF')  then null else p.email end,'') <> ISNULL(f.email,'')
+				OR ISNULL(p.first_nm,'')         <> ISNULL(f.first_nm,'')
+				OR ISNULL(p.last_nm,'')          <> ISNULL(f.last_nm,'')
+				OR ISNULL(p.phone_no,'')         <> ISNULL(f.phone_no,'')
+				OR ISNULL(br.broker_status,'')    <> ISNULL(f.broker_status,'')
+				OR ISNULL(p.title,'')            <> ISNULL(f.title,'')
+				OR ISNULL(p.producer_role,'')    <> ISNULL(f.producer_role,'')
+				OR ISNULL(p.producer_status,'')  <> ISNULL(f.producer_status,'')
+				OR a.ytd_submission_ct <> f.ytd_submission_ct
+			)
 		;
+
+		/*update edw_temp.producer_hubspot_feed_temp1 
+		set commercial_or_personal_business_type = 'Commercial Agent' 
+		where commercial_or_personal_business_type = 'Commercial lines';*/
 
         -- Start Merge process
         MERGE edw_integration.producer_hubspot_feed AS Target
@@ -143,7 +209,9 @@ BEGIN
 				producer_status,
 				create_ts,
 				update_ts,
-				etl_audit_sk
+				etl_audit_sk,
+				customer_business_type,
+				ytd_submission_ct
 			)
 			VALUES (
 				Source.broker_id,
@@ -158,7 +226,9 @@ BEGIN
 				Source.producer_status,
 				Source.create_ts,
 				Source.update_ts,
-				Source.etl_audit_sk
+				Source.etl_audit_sk,
+				source.commercial_or_personal_business_type,
+				source.ytd_submission_ct
 			)
 		WHEN MATCHED
 		THEN UPDATE SET
@@ -171,7 +241,9 @@ BEGIN
 				Target.title           = Source.title,
 				Target.producer_role   = Source.producer_role,
 				Target.producer_status = Source.producer_status,
-				Target.update_ts       = Source.update_ts;
+				Target.update_ts       = Source.update_ts,
+				Target.customer_business_type   = Source.commercial_or_personal_business_type,
+				Target.ytd_submission_ct   = Source.ytd_submission_ct;
         --************End************
 
 		SET @rows_affected=@@ROWCOUNT;
@@ -184,6 +256,7 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
         -- Drop temp table
+        DROP TABLE IF EXISTS [edw_temp].[producer_hubspot_feed_temp0];
         DROP TABLE IF EXISTS [edw_temp].[producer_hubspot_feed_temp1];
 
 	END TRY
