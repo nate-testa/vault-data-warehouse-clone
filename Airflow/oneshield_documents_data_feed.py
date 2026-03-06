@@ -65,10 +65,10 @@ with DAG(
     params={
         # Request selector: Choose which request to run or ALL for all requests
         "request": Param(
-            default="ALL",
+            default="clm002_customers",
             type="string",
-            enum=["ALL", "clm001_claims", "clm002_customers"],
-            description="Select the request to execute. Choose 'ALL' to run all requests without filters, or select a specific request name."
+            enum=["clm001_claims", "clm002_customers"],
+            description="Select the request to execute."
         ),
         # Parameters for clm001_claims
         "documentType": Param(
@@ -102,29 +102,26 @@ with DAG(
         
         # Get parameters from the execution context
         params = context['params']
-        request = params.get('request', 'ALL')
+        request = params.get('request', 'clm001_claims')
         
         # Build the base command as a list (safer than a string)
-        cmd = ["python3", "main.py"]
-        
-        if request != "ALL":
-            cmd.extend(["-r", request])
-            
-            # Parameters for clm001_claims
-            if request == "clm001_claims":
-                doc_type = params.get('documentType')
-                if doc_type:
-                    cmd.extend(["-p", f"documentType={doc_type}"])
+        cmd = ["python3", "main.py", "-r", request]
+
+        # Parameters for clm001_claims
+        if request == "clm001_claims":
+            doc_type = params.get('documentType')
+            if doc_type:
+                cmd.extend(["-p", f"documentType={doc_type}"])
+                
+            sub_types = params.get('documentSubTypes')
+            if sub_types:
+                cmd.extend(["-p", f"documentSubTypes={sub_types},"])
                     
-                sub_types = params.get('documentSubTypes')
-                if sub_types:
-                    cmd.extend(["-p", f"documentSubTypes={sub_types},"])
-                        
-            # Parameters for clm002_customers
-            elif request == "clm002_customers":
-                cust_name = params.get('customerName')
-                if cust_name:
-                    cmd.extend(["-p", f"customerName={cust_name}"])
+        # Parameters for clm002_customers
+        elif request == "clm002_customers":
+            cust_name = params.get('customerName')
+            if cust_name:
+                cmd.extend(["-p", f"customerName={cust_name}"])
 
         # Log the exact command to facilitate debugging in Airflow logs
         logger.info("!"*150)
