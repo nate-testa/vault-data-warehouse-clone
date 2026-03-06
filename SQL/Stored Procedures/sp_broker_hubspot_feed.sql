@@ -38,6 +38,7 @@
 -- 01/23/26		        Archtha Gudimalla  			29. Fixed broker goal % by taking out the *100, FE property will add the % and *100.
 --                                                      If goal amoount is null or 0, Cait want to display it as null
 -- 01/24/26		        Archtha Gudimalla  			30. Updated logic for goals gwp_ho
+-- 01/24/26		        Archtha Gudimalla  			31. Excluding gpel from tbroker_vault_team
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed]
@@ -82,7 +83,7 @@ BEGIN
 					max(case when team_member_type = 'RenewalUnderwriter' then team_member_nm end) RenewalUnderwriter ,
 					count(distinct case when team_member_type = 'RenewalUnderwriter' then team_member_nm end) RenewalUnderwriter_distinct 
 			from edw_core.tbroker_vault_team bvt 
-            where product_nm <> 'Marine Boat & Yacht'
+            where product_nm not in ('Marine Boat & Yacht','Group Personal Excess Liability')
 			group by broker_id --, --product_nm, state_cd, program_type
         ),
         br_summ as
