@@ -184,17 +184,14 @@ if __name__ == "__main__":
             if cli_payloads:
                 # CLI override mode: use --param payloads (ignore config payload & input_file)
                 for idx, payload in enumerate(cli_payloads, 1):
-                    if len(cli_payloads) == 1:
-                        label = req_name
-                    else:
-                        # Build a readable label from the payload values
-                        short = "_".join(str(v).replace(' ', '_')[:30]
-                                         for v in payload.values() if isinstance(v, str))
-                        label = f"{req_name}_{idx}_{short}" if short else f"{req_name}_{idx}"
+                    # Build suffix from string values in payload (e.g. customerName)
+                    suffix = "_".join(str(v).replace(' ', '_')[:30]
+                                      for v in payload.values() if isinstance(v, str))
+                    label = req_name
 
                     logger.info(f"Using CLI payload for {label}: {payload}")
-                    results = client.process_request(label, endpoint, payload)
-                    all_results[label] = results
+                    results = client.process_request(label, endpoint, payload, suffix=suffix)
+                    all_results[f"{label}_{suffix}" if suffix else label] = results
 
             elif input_file:
                 # Batch mode: load list from JSON file and run one request per item
@@ -205,16 +202,17 @@ if __name__ == "__main__":
                     # Build payload: item can be a string (customerName) or a dict
                     if isinstance(item, str):
                         payload = {"customerName": item}
-                        label = f"{req_name}_{idx}_{item.replace(' ', '_')}"
+                        suffix = item.replace(' ', '_')
                     elif isinstance(item, dict):
                         payload = item
-                        label = f"{req_name}_{idx}"
+                        suffix = ''
                     else:
                         logger.warning(f"Skipping invalid item #{idx}: {item}")
                         continue
 
-                    results = client.process_request(label, endpoint, payload)
-                    all_results[label] = results
+                    label = req_name
+                    results = client.process_request(label, endpoint, payload, suffix=suffix)
+                    all_results[f"{label}_{suffix}" if suffix else f"{label}_{idx}"] = results
             else:
                 # Single mode: payload defined directly in config.yml
                 payload = req_config.get('payload', {})

@@ -125,7 +125,7 @@ class APIClient:
     # -------------------------------------------------------------------------
     # Process a full request (fetch + download all)
     # -------------------------------------------------------------------------
-    def process_request(self, request_name, endpoint_key, payload):
+    def process_request(self, request_name, endpoint_key, payload, suffix=''):
         """
         End-to-end: fetch document list, download each file, save metadata CSV.
 
@@ -133,6 +133,7 @@ class APIClient:
             request_name: Label for this request (used for folder/CSV naming)
             endpoint_key: Endpoint key (clm001, clm002, etc.)
             payload: Request body dict
+            suffix: Optional suffix appended after the timestamp in the folder name
         Returns:
             results dict with 'successful', 'failed', 'skipped' lists
         """
@@ -140,9 +141,12 @@ class APIClient:
         self.logger.info(f"Processing request: {request_name}")
         self.logger.info("-" * 60)
 
-        # Create subfolder per request: downloads/{request_name}_{timestamp}
+        # Create subfolder per request: downloads/{request_name}_{timestamp}[_{suffix}]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        request_folder = os.path.join(self.output_base, f"{request_name}_{timestamp}")
+        folder_name = f"{request_name}_{timestamp}"
+        if suffix:
+            folder_name = f"{folder_name}_{suffix}"
+        request_folder = os.path.join(self.output_base, folder_name)
         os.makedirs(request_folder, exist_ok=True)
         docs_folder = os.path.join(request_folder, "documents")
         os.makedirs(docs_folder, exist_ok=True)
