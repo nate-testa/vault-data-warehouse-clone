@@ -2,7 +2,7 @@
 -- Author:		Yunus Mohammed 
 -- Description: This procedures loads home quote coverage data wip
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date			|Author										|	Change Description
+-- Change date			|Author						|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
 -- 05/07/2024 			Yunus Mohammed				1. Created this procedure 
 -- 05/23/2024 			Yunus Mohammed				2. Updated join with AccountPremiumFactor
@@ -17,17 +17,18 @@
 -- 10/31/24		        Hernando Gonzalez			11. AD-7487 | Added new fields facultative_reinsurance_in, layered_limits_in, 100_pc_dwelling_limit_value_amt, 100_pc_other_structures_limit_value_amt, 100_pc_contents_limit_value_amt, 100_pc_loss_of_use_value_amt, facultative_attachment_point, facultative_limit_amt, facultative_ceded_premium_amt, facultative_reinsurer_nm, coverage_layer, coverage_layer_placed_pc, coverage_layer_limit_amt, newly_purchased_home_in, target_closing_dt, current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in
 -- 12/02/24				Yunus Mohammed				12. AD-7834 Added new fields.
 -- 01/17/25				Yunus Mohammed				13.  AD-8225 Roundoff ReinsuranceTotalTIV value
--- 01/23/25				Alberto Almario					14. Added new column fenced_pool_in
+-- 01/23/25				Alberto Almario				14. Added new column fenced_pool_in
 -- 03/19/25				Hernando Gonzalez			15. Added new columns wildfire_risk_score, wildfire_risk_class
 -- 04/02/25				Yunus Mohammed				16. AD-8973 roof_deck_attachment value logic updated
 -- 04/16/25				Yunus Mohammed				17. AD-9121 Corrected null values for premium mods
--- 06/10/22				Dinesh Bobbili						18. AD-9707 Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
--- 10/03/25				Alberto Almario					 19. AD-11140 Added new column premium_analytics_grade
+-- 06/10/22				Dinesh Bobbili				18. AD-9707 Added new fields wildfire_suppression_system,wildfire_decks_balconies_porches_stairs
+-- 10/03/25				Alberto Almario				19. AD-11140 Added new column premium_analytics_grade
 -- 10/05/25				Yunus Mohammed				20. AD-11240 Resolved runtime error (premium_analytics_grade not found)
--- 10/24/25				Dinesh Bobbili						21. AD-11450 Added new column underwriter_required_inspection
--- 11/26/25		Yunus Mohammed						23. AD-11842 Mapping updated for prior_claim_last5yr_in and added 2 new
+-- 10/24/25				Dinesh Bobbili				21. AD-11450 Added new column underwriter_required_inspection
+-- 11/26/25				Yunus Mohammed				23. AD-11842 Mapping updated for prior_claim_last5yr_in and added 2 new
 --																					columns for prior claims
 -- 02/02/26				Dinesh Bobbili				24. AD-12416 Added new columns high_risk_wui_property_in,effective_built_year
+-- 03/03/26				Yunus Mohammed				25. AD-12608 Added new column frame_to_foundation_connection_in
 -- =========================================================================================================================== 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_home_coverage_wip]
 
@@ -316,6 +317,7 @@ BEGIN
 				tthc.UnderwriterRequiredInspection as underwriter_required_inspection,
 				tthc.HighRiskWUIProperty as high_risk_wui_property_in,
 				tthc.EffectiveYearBuilt as effective_built_year,
+				tthc.FrameToFoundationConnection as frame_to_foundation_connection_in,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk				
 			FROM
 				edw_temp.tquote_home_coverage_wip_temp2 AS tthc
@@ -369,6 +371,7 @@ BEGIN
 				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
 				wildfire_suppression_system,wildfire_decks_balconies_porches_stairs,
 				premium_analytics_grade,underwriter_required_inspection,high_risk_wui_property_in,effective_built_year,
+				frame_to_foundation_connection_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
@@ -417,6 +420,7 @@ BEGIN
 				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
 				wildfire_suppression_system,wildfire_decks_balconies_porches_stairs,
 				premium_analytics_grade,underwriter_required_inspection,high_risk_wui_property_in,effective_built_year,
+				frame_to_foundation_connection_in,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			WHEN MATCHED THEN UPDATE
@@ -581,6 +585,7 @@ BEGIN
 			[target].underwriter_required_inspection = [source].underwriter_required_inspection,
 			[target].high_risk_wui_property_in = [source].high_risk_wui_property_in,
 			[target].effective_built_year = [source].effective_built_year,
+			[target].frame_to_foundation_connection_in = [source].frame_to_foundation_connection_in,
 			[target].update_ts = GETDATE();
 
 			SET @rows_affected=@@ROWCOUNT; 

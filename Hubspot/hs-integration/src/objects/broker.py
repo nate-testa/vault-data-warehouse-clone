@@ -119,7 +119,14 @@ class Broker:
                 'primary_address_state_cd': record['primary_address_state_cd'],
                 'homeowner_2026_premium_goal_amt': record['homeowner_2026_premium_goal_amt'],
                 'homeowner_2026_premium_actual_amt': record['homeowner_2026_premium_actual_amt'],
-                'homeowner_2026_goal_progress_pc': record['homeowner_2026_goal_progress_pc']
+                'homeowner_2026_goal_progress_pc': record['homeowner_2026_goal_progress_pc'],
+                'broker_business_type': record['broker_business_type'],
+                'quote_to_bind_ratio': record['quote_to_bind_ratio'],
+                'submission_to_quote_ratio': record['submission_to_quote_ratio'],
+                'ytd_inforce_ct': record['ytd_inforce_ct'],
+                'ytd_inforce_premium_amt': record['ytd_inforce_premium_amt'],
+                'lifetime_inforce_ct': record['lifetime_inforce_ct'],
+                'lifetime_inforce_premium_amt': record['lifetime_inforce_premium_amt']
 
                 # 'bdm_email': record['bdm_email'],
                 # 'create_ts': record['create_ts'],

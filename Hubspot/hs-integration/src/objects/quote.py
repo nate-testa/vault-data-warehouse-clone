@@ -104,7 +104,12 @@ class Quote:
             else:
                 record['vip_in'] = ''
 
-        record['dealname'] = f"{record['quote_no']} - {record['insured_first_nm']} {record['insured_last_nm']}"
+        #record['dealname'] = f"{record['quote_no']} - {record['insured_first_nm']} {record['insured_last_nm']}"
+        if record['quote_business_type'] == 'Personal Lines':
+            record['dealname'] = f"{record['quote_no']} - {record['insured_first_nm']} {record['insured_last_nm']}"
+        else:
+            record['dealname'] = f"{record['quote_no_original']} - {record['insured_nm']}"
+            record['quote_no'] = record['quote_no_original']
 
         payload = {
             'properties': {
@@ -167,7 +172,24 @@ class Quote:
                 'broker_state': record['broker_state'],
                 'product_cd': record['product_cd'],
                 'broker_id_new': record['broker_id'],
-                'non_binding_indication_offered_in': record['non_binding_indication_offered_in']
+                'non_binding_indication_offered_in': record['non_binding_indication_offered_in'],
+                'insured_nm': record['insured_nm'],
+                'retroactive_dt_desc': record['retroactive_dt_desc'],
+                'prior_or_pending_dt_desc': record['prior_or_pending_dt_desc'],
+                'primary_carrier_nm': record['primary_carrier_nm'],
+                'per_claim_retention_amt': record['per_claim_retention_amt'],
+                'aggregate_retention_amt': record['aggregate_retention_amt'],
+                'thereafter_retention': record['thereafter_retention'],
+                'vault_premium_amt': record['vault_premium_amt'],
+                'vault_commission_amt': record['vault_commission_amt'],
+                'total_layer_premium_amt': record['total_layer_premium_amt'],
+                'vault_per_claim_policy_limit_amt': record['vault_per_claim_policy_limit_amt'],
+                'vault_aggregate_policy_limit_amt': record['vault_aggregate_policy_limit_amt'],
+                'total_layer_per_claim_policy_limit_amt': record['total_layer_per_claim_policy_limit_amt'],
+                'total_layer_aggregate_policy_limit_amt': record['total_layer_aggregate_policy_limit_amt'],
+                'total_aggregate_attachment_amt': record['total_aggregate_attachment_amt'],
+                'total_per_claim_attachment_amt': record['total_per_claim_attachment_amt'],
+                'quote_business_type': record['quote_business_type']
                 
                 # 'pipeline': record['pipeline'],
                 # 'dealstage': record['dealstage'],

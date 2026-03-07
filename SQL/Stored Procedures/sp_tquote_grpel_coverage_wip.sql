@@ -27,24 +27,31 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 		DROP TABLE IF EXISTS edw_temp.tquote_grpel_coverage_wip_temp1;
         select 
-                PolicyNumber,EffectiveDate,ExpirationDate,quote_history_sk,source_system_sk,CreatedDate,UpdatedDate,
-                transaction_seq_no,FirstName,ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit,
-                        NumberOfVehicles ,UILiabilityLimit ,ReputationalInjuryLimit ,NumberOfPrivateStaff ,
-                        NumberOfHighPerformansVehicles ,NumberOfRecreationalVehicles ,NumberOfWatercraft ,
-                        NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
+                PolicyNumber,grpel_quote_no,group_nm,
+				EffectiveDate,ExpirationDate,quote_history_sk,source_system_sk,CreatedDate,UpdatedDate,
+                transaction_seq_no,ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit,
+				NumberOfVehicles ,UILiabilityLimit ,ReputationalInjuryLimit ,NumberOfPrivateStaff ,
+				NumberOfHighPerformansVehicles ,NumberOfRecreationalVehicles ,NumberOfWatercraft ,
+				NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
             INTO edw_temp.tquote_grpel_coverage_wip_temp1
             from
                 (
                 select * 
                 from
-                    (
-                    
+                    (                    
                     select
-                    acc.PolicyNumber,CAST(acc.EffectiveDate AS DATE) AS EffectiveDate,CAST(acc.ExpirationDate AS DATE) AS ExpirationDate,
+                    acc.PolicyNumber,accg.PolicyNumber as grpel_quote_no,                    
+                    case 
+                        when nullif(isnull(insg.FirstName + ' ','') + isnull(insg.LastName,''),'') is not null
+                        then nullif(isnull(insg.FirstName + ' ','')	+ isnull(insg.LastName,''),'') 
+                        when insg.NamedInsured is not null then insg.NamedInsured
+                        else insg.NamedInsured 
+                    end as group_nm,
+					CAST(acc.EffectiveDate AS DATE) AS EffectiveDate,CAST(acc.ExpirationDate AS DATE) AS ExpirationDate,
                     tqh.quote_history_sk,
                     0 AS transaction_seq_no, 
                     CASE WHEN acc.ExternalSourceId IS NOT NULL THEN 2 ELSE 4 END source_system_sk,
-                    accof.[Index],accof.CreatedDate,acc.UpdatedDate,
+                    acc.CreatedDate,acc.UpdatedDate,
                     accof.Field,NULLIF(TRIM(accof.[Value]),'') AS [Value]
                     from
                     (
@@ -54,6 +61,8 @@ BEGIN
                         AND GREATEST(CreatedDate,UpdatedDate) > @last_source_extract_ts
                         AND a.PolicyNumber IS NOT NULL
                     ) acc
+					left join edw_stage.Account accg on acc.GroupAccountId = accg.Id
+					left join edw_stage.Insured insg on insg.Id= accg.PrimaryInsuredId
                     inner join edw_stage.Product p on p.Id=acc.ProductId
                     inner join [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
                     inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
@@ -67,18 +76,20 @@ BEGIN
                         and pr.ProductLine = 'PersonalLines'
                         and accof.Field IN 
                         (
-                            'FirstName','ExcessLiabilityLimit', 'UMLiabilityLimit', 'EMPLiabilityLimit', 'DOLiabilityLimit', 'FTMLiabilityLimit',
+                            'ExcessLiabilityLimit', 'UMLiabilityLimit', 'EMPLiabilityLimit', 'DOLiabilityLimit', 'FTMLiabilityLimit',
                             'NumberOfVehicles', 'UILiabilityLimit', 'ReputationalInjuryLimit', 'NumberOfPrivateStaff', 
                             'NumberOfHighPerformansVehicles', 'NumberOfRecreationalVehicles', 'NumberOfWatercraft', 
                             'NumberOfPersonalWatercraft', 'AutoInsuranceCompany', 'HomeInsuranceCompany', 'WatercraftInsuranceCompany'
                         )
+						
+
                     ) as t
                 ) as t
                 pivot 
                 (
                     max(Value) FOR Field IN 
                     (
-                        FirstName,ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit ,
+                        ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit ,
                         NumberOfVehicles ,UILiabilityLimit ,ReputationalInjuryLimit ,NumberOfPrivateStaff ,
                         NumberOfHighPerformansVehicles ,NumberOfRecreationalVehicles ,NumberOfWatercraft ,
                         NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
@@ -90,12 +101,12 @@ BEGIN
         USING (
             SELECT
                 PolicyNumber AS quote_no,
-                --grpel_quote_no,
+                grpel_quote_no,
+				group_nm,
                 EffectiveDate AS effective_dt,
                 ExpirationDate AS expiration_dt,
                 transaction_seq_no,
-                quote_history_sk,
-                FirstName AS group_nm,
+                quote_history_sk,                
                 ExcessLiabilityLimit AS excess_liability_limit_amt,
                 UMLiabilityLimit AS uninsured_motorist_liability_limit_amt,
                 EMPLiabilityLimit AS employment_practises_liability_limit_amt,
@@ -116,8 +127,9 @@ BEGIN
                 GETDATE() AS create_ts,
                 GETDATE() AS update_ts,
                 @etl_audit_sk AS etl_audit_sk
-            FROM edw_temp.tquote_grpel_coverage_wip_temp1
-        ) AS source
+            FROM edw_temp.tquote_grpel_coverage_wip_temp1	
+		
+        ) AS [source]
         ON
             target.quote_no = source.quote_no
             AND target.effective_dt = source.effective_dt
@@ -125,10 +137,11 @@ BEGIN
 
         WHEN MATCHED THEN
             UPDATE SET
+				target.grpel_quote_no = source.grpel_quote_no,
+				target.group_nm= source.group_nm,
                 target.effective_dt = source.effective_dt,
                 target.expiration_dt = source.expiration_dt,
-                target.quote_history_sk = source.quote_history_sk,
-                target.group_nm = source.group_nm,
+                target.quote_history_sk = source.quote_history_sk,               
                 target.excess_liability_limit_amt = source.excess_liability_limit_amt,
                 target.uninsured_motorist_liability_limit_amt = source.uninsured_motorist_liability_limit_amt,
                 target.employment_practises_liability_limit_amt = source.employment_practises_liability_limit_amt,
@@ -152,11 +165,12 @@ BEGIN
         WHEN NOT MATCHED BY TARGET THEN
             INSERT (
                 quote_no,
+				grpel_quote_no,
+				group_nm,
                 effective_dt,
                 expiration_dt,
                 transaction_seq_no,
                 quote_history_sk,
-                group_nm,
                 excess_liability_limit_amt,
                 uninsured_motorist_liability_limit_amt,
                 employment_practises_liability_limit_amt,
@@ -180,11 +194,12 @@ BEGIN
             )
             VALUES (
                 source.quote_no,
+				source.grpel_quote_no,
+				source.group_nm,
                 source.effective_dt,
                 source.expiration_dt,
                 source.transaction_seq_no,
                 source.quote_history_sk,
-                source.group_nm,
                 source.excess_liability_limit_amt,
                 source.uninsured_motorist_liability_limit_amt,
                 source.employment_practises_liability_limit_amt,

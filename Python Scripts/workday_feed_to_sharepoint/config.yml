@@ -1,6 +1,24 @@
+# Environment Configuration
+environment:
+  # Environment: 'PRODUCTION', 'UAT', or 'DEV'
+  # Can be overridden with ENVIRONMENT environment variable
+  name: UAT  # Change to 'PRODUCTION' when ready for prod
+
+# SharePoint Configuration
+sharepoint:
+  # SharePoint site configuration
+  site_hostname: vaultinsurance.sharepoint.com
+  site_path: /sites/IT
+  
+  # Base folder paths for different environments
+  folder_paths:
+    production: Data Warehouse/Workday/Vault IT Data Files/00_Month-End
+    uat: Data Warehouse/Workday/Vault IT Data Files/Test_Folder
+    dev: Data Warehouse/Workday/Vault IT Data Files/Test_Folder
+
 migration:
   # Data load control
-  load_all: true  # true = load all records, false = limit records
+  load_all: false  # true = load all records, false = limit records
   record_limit: 100  # Only used when load_all = false
   
   # Date filtering control

@@ -1,0 +1,6 @@
+requests
+pyyaml
+azure-identity
+azure-keyvault-secrets
+azure-storage-blob
+python-dotenv

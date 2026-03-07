@@ -11,6 +11,8 @@
 --                                                      ,mailing_address_zip_cd
 -- 06/24/25		        Dinesh Bobbili  			5. Removed Address columns and added product_cd
 -- 09/05/25		        Dinesh Bobbili  			6. Added logic to populate VES for uw_company_nm
+-- 02/25/26		        Yunus Mohammed  			7. Ad-12621 Added producer_id
+-- 03/03/26		        Architha Gudimalla			8. Added quote_no_original
 -- ============================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_quote_hubspot_feed_commercial]  
@@ -72,7 +74,9 @@ BEGIN
         ) 
 
         select
-            q.quote_no,q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,
+            q.quote_no||'-'||year(q.effective_dt)||month(q.effective_dt)||day(q.effective_dt) quote_no,
+            q.quote_no as quote_no_original, 
+            q.effective_dt,q.expiration_dt,h.transaction_type,h.producer_nm,pd.producer_id,
             q.customer_id,
             br.broker_id, br.broker_nm, br.broker_tier, br.national_agency_in,
             cust.vip_in,
@@ -123,10 +127,11 @@ BEGIN
             ,pr.product_cd
         into edw_temp.quote_hubspot_feed_commercial_temp1
 
-        from edw_commercial.tcommercial_quote q
+        from edw_commercial.tcommercial_quote q        
         left join edw_commercial.tcommercial_policy p on q.prior_term_policy_no = p.policy_no
         inner join edw_core.tproduct pr	on pr.product_cd = q.product_cd
-        inner join edw_commercial.tcommercial_quote_history h on h.commercial_quote_sk =  q.commercial_quote_sk
+        inner join edw_commercial.tcommercial_quote_history h on  h.commercial_quote_sk =  q.commercial_quote_sk and h.quote_no =  q.quote_no and h.effective_Dt =  q.effective_Dt
+        left join edw_core.tproducer pd on pd.producer_sk = h.producer_sk
         left join edw_commercial.tcommercial_quote_coverage cov on cov.commercial_quote_history_sk = h.commercial_quote_history_sk
         left join edw_core.tcustomer cust on cust.customer_id = q.customer_id
         left join edw_core.tbroker br on br.broker_id = q.broker_id 
@@ -160,12 +165,12 @@ BEGIN
 
         -- Start Merge process
 		MERGE INTO [edw_integration].[quote_hubspot_feed] AS target
-        USING [edw_temp].[quote_hubspot_feed_commercial_temp3] AS source on target.quote_no = source.quote_no
+        USING [edw_temp].[quote_hubspot_feed_commercial_temp3] AS source on target.quote_no = source.quote_no and target.effective_dt = source.effective_dt
         WHEN NOT MATCHED BY Target THEN
         INSERT
         (
-            quote_no , effective_dt ,expiration_dt , transaction_type , broker_id , broker_nm ,broker_tier ,national_agency_in,  
-            vip_in, quote_status , reason_quote_not_taken, producer_nm,
+            quote_no ,  quote_no_original, effective_dt ,expiration_dt , transaction_type , broker_id , broker_nm ,broker_tier ,national_agency_in,  
+            vip_in, quote_status , reason_quote_not_taken, producer_nm,producer_id,
             create_ts, update_ts ,etl_audit_sk
             ,customer_id,close_reason_desc,monoline_in,broker_state,
             insured_nm,retroactive_dt_desc,prior_or_pending_dt_desc,primary_carrier_nm,
@@ -177,20 +182,20 @@ BEGIN
         )
         VALUES
         (
-         quote_no , effective_dt ,expiration_dt , transaction_type , broker_id , broker_nm ,broker_tier ,national_agency_in,  
-            vip_in, quote_status ,reason_quote_not_taken, producer_nm,
+            quote_no, quote_no_original, effective_dt ,expiration_dt , transaction_type , broker_id , broker_nm ,broker_tier ,national_agency_in,  
+            vip_in, quote_status ,reason_quote_not_taken, producer_nm,producer_id,
             getdate(), getdate(), @etl_audit_sk 
             ,customer_id,close_reason_desc,monoline_in,broker_state,
-            insured_nm,retroactive_dt_desc,prior_or_pending_dt_desc,primary_carrier_nm,
+            insured_nm, retroactive_dt_desc, prior_or_pending_dt_desc, primary_carrier_nm,
             per_claim_retention_amt,aggregate_retention_amt,thereafter_retention_amt,vault_premium_amt,
             vault_commission_amt,total_layer_premium_amt,vault_per_claim_policy_limit_amt,vault_aggregate_policy_limit_amt,
             total_layer_per_claim_policy_limit_amt,total_layer_aggregate_policy_limit_amt,total_aggregate_attachment_amt,
             total_per_claim_attachment_amt,quote_business_type
-            ,underwriter_nm,product_cd,'VES'
+            ,underwriter_nm,product_cd,'VES'  
         )
         WHEN MATCHED THEN UPDATE
         SET 
-            [target].effective_dt	=	[source].effective_dt,
+            --[target].effective_dt	=	[source].effective_dt, 
             [target].expiration_dt	=	[source].expiration_dt,
             [target].transaction_type	=	[source].transaction_type,
             [target].broker_id	=	[source].broker_id,
@@ -201,6 +206,7 @@ BEGIN
             [target].quote_status	=	[source].quote_status,
             [target].reason_quote_not_taken	=	[source].reason_quote_not_taken,            
             [target].producer_nm =   [source].producer_nm,
+            [target].producer_id = [source].producer_id,
             [target].update_ts	=	GETDATE(),
             [target].etl_audit_sk	=	@etl_audit_sk,
             [target].customer_id	=	[source].customer_id,
@@ -229,7 +235,7 @@ BEGIN
             [target].uw_company_nm= 'VES'
             ;
         
-        SET @rows_affected=@@ROWCOUNT;
+        SET @rows_affected=@@ROWCOUNT; 
 
         -- Update control table
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(Greatest(create_ts,update_ts)) FROM edw_temp.[quote_hubspot_feed_commercial_temp1]),@last_source_extract_ts);

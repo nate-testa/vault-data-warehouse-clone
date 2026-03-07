@@ -1,0 +1,105 @@
+# =============================================================================
+# OS Document Extract - Configuration
+# =============================================================================
+
+# Active environment: 'uat' or 'prod'
+# Override with env var: ENVIRONMENT=prod
+active_environment: "prod"
+
+# Environment-specific settings
+environments:
+  uat:
+    pss_url: "https://security.uat.vaultinsurance.com/pss"
+    dms_url: "https://docs.uat.vaultinsurance.com/dms"
+    keyvault_uri: "https://azruatdatakeyvltai01.vault.azure.net/"
+    # Secrets source: 'keyvault' or 'static'
+    secrets_source: "static"
+    static_values:
+      client_id: "client_int_edw_uat"
+      client_secret: "5VhOtDdliEbGrtXCx6Ub7belXxE6XWnd"
+      blob_container: ""            # Blob container name (optional - falls back to blob_storage.container)
+
+  prod:
+    pss_url: "https://security.vrms.vaultinsurance.com/pss"
+    dms_url: "https://docs.vrms.vaultinsurance.com/dms"
+    keyvault_uri: ""   # TBD - prod Key Vault URI
+    # Prod should always use keyvault (secrets TBD via encrypted email)
+    secrets_source: "keyvault"
+    static_values:
+      client_id: ""
+      client_secret: ""
+      blob_container: ""
+
+# API Constants (shared across environments)
+api:
+  auth_path: "/v2/token/generate"
+  realm: "PlatformComponents"
+  grant_type: "client_credentials"
+
+  # Document endpoints (appended to dms_url)
+  endpoints:
+    clm001: "/v3/documents/custom/edw/clm001"   # Filter by documentSubTypes + documentType
+    clm002: "/v3/documents/custom/edw/clm002"   # Filter by customerName
+
+# Download Settings
+download:
+  output_dir: "downloads"          # Base directory for downloaded files
+  keep_metadata_csv: true          # Save metadata CSV alongside documents
+  timeout_seconds: 120             # HTTP timeout for file downloads
+  max_retries: 3                   # Retry count for failed downloads
+  retry_delay_seconds: 2           # Delay between retries
+
+# =============================================================================
+# Azure Blob Storage Upload
+# =============================================================================
+# After downloading, files can be uploaded to Azure Blob Storage.
+# Uses Airflow WasbHook (same connection as broker_goal and other projects).
+# Storage account credentials are configured in the Airflow connection.
+blob_storage:
+  upload_enabled: true             # true = upload to blob after download
+  container: "outbound-oneshield-documents"   # Blob container name (fallback if not in secrets)
+  folder: "extracted_documents"    # Virtual folder prefix inside the container
+  
+  # Airflow WasbHook connection ID (required for blob uploads)
+  # This connection must be configured in Airflow with storage account credentials
+  # Same connection used by: broker_goal, NFP, Majesco, etc.
+  wasb_conn_id: "azure_blob_storage"
+  
+  # What to do with local files AFTER successful blob upload:
+  #   'keep'    - leave files in the downloads folder (default when upload disabled)
+  #   'delete'  - delete the local request folder after upload
+  #   'archive' - move to an 'archive' folder with a timestamp
+  post_upload_action: "keep"
+  archive_dir: "archive"           # Local archive folder (used when post_upload_action = 'archive')
+
+# Request Definitions
+requests:
+  # clm001: Filter by documentSubTypes + documentType
+  # Edit the lists below to control which document types are extracted.
+  clm001_claims:
+    endpoint: "clm001"
+    payload:
+      documentSubTypes:
+        - "Estimate of Damages"
+        - "BI/UM Demand"
+      documentType: "Claim"
+
+  # clm002: Filter by customerName
+  # Customer names are loaded from an external JSON file (one request per customer).
+  clm002_customers:
+    endpoint: "clm002"
+    input_file: "customers.json"   # JSON file with list of customer names
+
+# Secrets Management
+secrets:
+  # Secret names are the SAME across all environments.
+  # The Key Vault URI differs per environment (configured above).
+  keyvault_map:
+    client_id: "oneshield-documents-client-id"
+    client_secret: "oneshield-documents-client-secret"
+    blob_container: "oneshield-documents-container"
+    blob_storage_account: "oneshield-documents-storage-account"
+
+# Logging
+logging:
+  level: "INFO"                    # DEBUG, INFO, WARNING, ERROR, CRITICAL

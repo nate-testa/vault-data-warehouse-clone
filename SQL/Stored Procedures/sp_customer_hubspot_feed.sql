@@ -37,6 +37,7 @@
 -- 11/14/25		Dinesh Bobbili				29. AD11742 - Added ssk filter to exclude NFP data
 -- 02/04/26		Dinesh Bobbili				30. AD12455 - Added total_policy_premium_amt column
 -- 02/12/26		Dinesh Bobbili				31. AD12556 -  Updated producer_nm logic 
+-- 03/04/26		Architha Gudimalla		    32. Update to add customer from quote
 -- ================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE edw_core.sp_customer_hubspot_feed
@@ -236,8 +237,7 @@ BEGIN
 		-- and pol.product_cd <> 'BY'
 		;
 
-		/*
-		DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp2; 
+		/*DROP TABLE IF EXISTS edw_temp.customer_hubspot_feed_temp2; 
 		--for quotes, just to create a customer record
 		SELECT
 			pol.quote_no,
@@ -250,7 +250,7 @@ BEGIN
 			bvt.team_member_nm AS bdm_nm,
 			br.broker_nm,
 			br.broker_phone_no,
-			'Inactive' as policy_status,
+			'Quote' as policy_status,
 			pol.create_ts,
 			pol.update_ts,
 			cust.mailing_address_line1 mailing_address_line_1, 
@@ -262,6 +262,20 @@ BEGIN
 			pol.customer_id,
 			ph.producer_nm,
 			p.producer_id
+			, null monoline_in
+            , case when pol.document_delivery_to = 'Broker' then 'Send to Agent Only'
+				 when pol.document_delivery_to = 'Customer' and pol.document_delivery_method = 'Email' then 'Send to Customer by Email'
+				 when pol.document_delivery_to = 'Customer' and pol.document_delivery_method = 'Mail' then 'Send to Customer by Mail'
+				 when pol.document_delivery_to = 'Customer' and pol.document_delivery_method = 'Email & Mail' then 'Send to Customer by Email & Mail'
+				 else null
+			end document_delivery_preference,
+			null occupancy_type,
+			pol.effective_dt,
+			pol.expiration_dt,
+			null policy_inforce_in,
+			isnull(pol.insured_nm,'') as insured_nm,
+			pol.uw_company_nm as uw_company_nm,
+			null total_policy_premium_amt
 		INTO edw_temp.customer_hubspot_feed_temp2
 		FROM edw_core.tquote pol		
 		INNER JOIN edw_core.tcustomer cust ON cust.customer_id = pol.customer_id	
@@ -275,16 +289,31 @@ BEGIN
 		INNER join edw_core.tquote_history ph on ph.quote_sk = pol.quote_sk and ph.latest_transaction_in = 'Y'
 		INNER join edw_core.tquote_insured pi on pi.quote_history_sk = ph.quote_history_sk and pi.primary_insured_in = 'Yes'
 		left join edw_core.tproducer p on ph.producer_sk = p.producer_sk
-		WHERE   isnull(pol.insured_nm,'') not like '%test%' 
-		and isnull(cust.last_nm,'') not like '%test%'
-		and isnull(cust.first_nm,'') not like '%test%' 
-		and isnull(cust.customer_nm,'') not like '%test%'  
+		WHERE 
+		 ((
+			isnull(pol.insured_nm,'') NOT LIKE '%test%' COLLATE SQL_Latin1_General_CP1_CI_AS AND
+			isnull(cust.last_nm,'') NOT LIKE '%test%' COLLATE SQL_Latin1_General_CP1_CI_AS AND
+			isnull(cust.first_nm,'') NOT LIKE '%test%' COLLATE SQL_Latin1_General_CP1_CI_AS AND
+			isnull(cust.customer_nm,'') NOT LIKE '%test%' COLLATE SQL_Latin1_General_CP1_CI_AS
+		)
+		OR (
+			isnull(pol.insured_nm,'') LIKE '%Richard Tester%' OR
+			isnull(pol.insured_nm,'') LIKE '%Potestio%' OR
+			isnull(pol.insured_nm,'') LIKE '%Testaverde%' OR 
+			isnull(cust.last_nm,'') LIKE '%Potestio%' OR
+			isnull(cust.last_nm,'') LIKE '%Testaverde%' OR
+			isnull(cust.first_nm,'') + ' ' + isnull(cust.last_nm,'') LIKE '%Richard Tester%' OR 
+			isnull(cust.customer_nm,'') LIKE '%Richard Tester%' OR
+			isnull(cust.customer_nm,'') LIKE '%Potestio%' OR
+			isnull(cust.customer_nm,'') LIKE '%Testaverde%'
+		))
 		and pol.effective_dt >= '01-jun-2023'
 		and quote_create_ts >= dateadd("mm",-1,cast(getdate() as date))
 		and not exists (select 'x' from edw_temp.customer_hubspot_feed_temp1 a where a.customer_id = cust.customer_id)
-		and not exists (select 'x' from edw_integration.customer_hubspot_feed b where b.customer_id = cust.customer_id);
-		*/
+		and not exists (select 'x' from edw_integration.customer_hubspot_feed b where b.customer_id = cust.customer_id); 
 
+		*/
+		
 		MERGE edw_integration.customer_hubspot_feed as TARGET
 		USING (
 			SELECT 
@@ -320,8 +349,8 @@ BEGIN
 				,insured_nm
 				,uw_company_nm
 				,total_policy_premium_amt
-				FROM edw_temp.customer_hubspot_feed_temp1/*
-				union ALL 
+				FROM edw_temp.customer_hubspot_feed_temp1
+				/*union ALL 
 			SELECT 
 				policy_no
   				,first_nm
@@ -347,6 +376,14 @@ BEGIN
 			    ,producer_nm
 				,producer_id
 				,monoline_in
+				,document_delivery_preference
+				,occupancy_type
+				,effective_dt
+				,expiration_dt
+				,policy_inforce_in
+				,insured_nm
+				,uw_company_nm
+				,total_policy_premium_amt
 				FROM edw_temp.customer_hubspot_feed_temp2*/
 		) as SOURCE
 		ON Source.policy_no = Target.policy_no

@@ -5,6 +5,7 @@
 -- 10/14/23		Architha Gudimalla			1. Created the proc
 -- 08/14/24     Alberto Almario		        2. Added logic for additional_interest_deleted_in and additional interest vehicle
 -- 08/15/24     Architha Gudimalla          3. Update additional_interest_deleted_in to use Yes/No instead of 1/0
+-- 03/03/26		Yunus Mohammed				4. AD-12608 - Added new column residence_owned_by_trust_in
 -- ================================================================================================================================================
 CREATE or alter  PROCEDURE [edw_core].[sp_tquote_additional_interest]
 AS
@@ -44,6 +45,7 @@ BEGIN
 			,CreatedDate, UpdatedDate
 			,product_cd
 			,IsDeletedOnPolicyChange as additional_interest_deleted_in
+			,ResidenceOwnedByTrust as residence_owned_by_trust_in
 		INTO [edw_temp].[tquote_additional_interest_temp1]
 		FROM
 			(
@@ -83,8 +85,10 @@ BEGIN
 		PIVOT 
 			(
 				MAX([Value]) FOR [Field] IN (
-					InterestType, EntityType, EntityName, DescriptionOfProperty, FirstName, LastName, AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, AnyCommercialExposures, WatercraftOrEmployCrew, [Name]
-					,vehicle
+					InterestType, EntityType, EntityName, DescriptionOfProperty, FirstName, LastName, 
+					AddressLine1, AddressLine2, AddressCity, AddressCounty, AddressState, AddressZipCode, AddressCountry, 
+					AnyCommercialExposures, WatercraftOrEmployCrew, [Name]
+					,vehicle,ResidenceOwnedByTrust
 					)
 			) pivottable
 
@@ -114,68 +118,71 @@ BEGIN
 		-- Start Insert process
 		INSERT INTO [edw_core].[tquote_additional_interest] (
 			[quote_no]
-      ,[effective_dt] 
-      ,[expiration_dt] 
-      ,[transaction_seq_no]
-      ,[quote_history_sk]
-      ,[additional_interest_seq_no]
-      ,[interest_type]
-      ,[entity_type]
-      ,[entity_nm]
-      ,[property_desc]
-      ,[first_nm]
-      ,[last_nm]
-	  ,[loss_payee_nm]
-	  ,[additional_interest_nm]
-      ,[address_line_1]
-      ,[address_line_2]
-      ,[city_nm]
-      ,[county_nm]
-      ,[state_cd]
-      ,[zip_cd]
-      ,[country_nm]
-      ,[commercial_exposures_in]
-      ,[watercraft_or_employ_crew_in]
-      ,[source_system_sk]
-      ,[create_ts]
-      ,[update_ts]
-      ,[etl_audit_sk]
-	  ,[product_cd]
-	  ,additional_interest_deleted_in
-	  ,quote_auto_vehicle_sk
+			,[effective_dt] 
+			,[expiration_dt] 
+			,[transaction_seq_no]
+			,[quote_history_sk]
+			,[additional_interest_seq_no]
+			,[interest_type]
+			,[entity_type]
+			,[entity_nm]
+			,[property_desc]
+			,[first_nm]
+			,[last_nm]
+			,[loss_payee_nm]
+			,[additional_interest_nm]
+			,[address_line_1]
+			,[address_line_2]
+			,[city_nm]
+			,[county_nm]
+			,[state_cd]
+			,[zip_cd]
+			,[country_nm]
+			,[commercial_exposures_in]
+			,[watercraft_or_employ_crew_in]
+			,[source_system_sk]
+			,[create_ts]
+			,[update_ts]
+			,[etl_audit_sk]
+			,[product_cd]
+			,additional_interest_deleted_in
+			,quote_auto_vehicle_sk
+			,residence_owned_by_trust_in
 		)
-		SELECT [PolicyNumber]
-   ,[EffectiveDate] 
-      ,[ExpirationDate] 
-      ,[Number]
-      ,[quote_history_sk]
-      ,[additional_interest_seq_no]
-      ,[InterestType]
-      ,[EntityType]
-      ,[EntityName]
-      ,[DescriptionOfProperty]
-      ,[FirstName]
-      ,[LastName]
-	  ,CASE WHEN [InterestType] = 'Loss Payee' THEN [Name] ELSE NULL END AS [loss_payee_nm]
-	  ,CASE WHEN [InterestType] = 'Additional Interest' OR [InterestType] like '%Additional Insured%' THEN [Name] ELSE NULL END AS [additional_interest_nm]
-      ,[AddressLine1]
-      ,[AddressLine2]
-      ,[AddressCity]
-      ,[AddressCounty]
-      ,[AddressState]
-      ,[AddressZipCode]
-      ,[AddressCountry]
-      ,[AnyCommercialExposures]
-      ,[WatercraftOrEmployCrew]
-      ,a.[source_system_sk]
-      ,getdate()
-      ,getdate()
-	  ,@etl_audit_sk
-	  ,[product_cd]
-	  ,additional_interest_deleted_in
-	  ,t2.quote_auto_vehicle_sk
+		SELECT
+			[PolicyNumber]
+			,[EffectiveDate] 
+			,[ExpirationDate] 
+			,[Number]
+			,[quote_history_sk]
+			,[additional_interest_seq_no]
+			,[InterestType]
+			,[EntityType]
+			,[EntityName]
+			,[DescriptionOfProperty]
+			,[FirstName]
+			,[LastName]
+			,CASE WHEN [InterestType] = 'Loss Payee' THEN [Name] ELSE NULL END AS [loss_payee_nm]
+			,CASE WHEN [InterestType] = 'Additional Interest' OR [InterestType] like '%Additional Insured%' THEN [Name] ELSE NULL END AS [additional_interest_nm]
+			,[AddressLine1]
+			,[AddressLine2]
+			,[AddressCity]
+			,[AddressCounty]
+			,[AddressState]
+			,[AddressZipCode]
+			,[AddressCountry]
+			,[AnyCommercialExposures]
+			,[WatercraftOrEmployCrew]
+			,a.[source_system_sk]
+			,getdate()
+			,getdate()
+			,@etl_audit_sk
+			,[product_cd]
+			,additional_interest_deleted_in
+			,t2.quote_auto_vehicle_sk
+			,residence_owned_by_trust_in
 		FROM 
-			[edw_temp].[tquote_additional_interest_temp1] a
+		[edw_temp].[tquote_additional_interest_temp1] a
 		LEFT JOIN [edw_temp].[tquote_additional_interest_temp2] AS t2 ON a.vehicle = t2.ReferenceObjectId
 		;
 
@@ -188,7 +195,7 @@ BEGIN
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
+
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200)) --20230717 added
 		--EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected; --20230717 removed

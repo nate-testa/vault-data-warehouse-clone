@@ -8,13 +8,25 @@ from objects.quote import Quote
 from objects.parent_child_note import ParentChildNotes
 from objects.quote_note import QuoteNote
 from shared.error_reporter import ErrorReporter
+from shared.process_lock import ProcessLock
 from shared.logger import get_logger
 import constants
 import os
+import sys
 
 logger = get_logger(__name__)
 
 def run():
+    # Check if another instance is already running
+    lock = ProcessLock()
+    if not lock.acquire():
+        logger.error("Cannot start: Another instance of the process is already running.")
+        logger.error("If you believe this is an error, delete the lock file: .process.lock")
+        print("\n❌ ERROR: Process is already running!")
+        print("Another instance of the HubSpot integration is currently executing.")
+        print("Please wait for it to complete or manually remove the lock file if this is an error.")
+        sys.exit(1)
+    
     # Get the singleton error reporter instance
     # Note: This must be the same instance used by hubspot.py
     error_reporter = ErrorReporter()
@@ -73,6 +85,9 @@ def run():
         print(f"Errors: {len(error_reporter.errors)}")
         print(f"Warnings: {len(error_reporter.warnings)}")
         print(f"Report: {report_path}\n")
+        
+        # Release the process lock
+        lock.release()
 
 
 if __name__ == '__main__' :

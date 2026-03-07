@@ -11,8 +11,9 @@
 -- 03-13-2025				Yunus Mohammed				5 - Added vault litigation policies
 -- 05-07-2025               Yunus Mohammed              6 - AD9410 Added new vault litigation policy
 -- 11-11-2025               Yunus Mohammed              7 - AD-11665 NFP policies excluded
+-- 12-17-2025				Yunus Mohammed				8 -	AD-11666 NFP policies included
 -- ================================================================================================= 
-CREATE OR ALTER   PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -37,7 +38,8 @@ BEGIN
         DROP TABLE IF EXISTS edw_temp.policy_webhook_home_coverages
         DROP TABLE IF EXISTS edw_temp.policy_webhook_auto_coverages
         DROP TABLE IF EXISTS edw_temp.policy_webhook_auto_vehicle_coverages
-        DROP TABLE IF EXISTS edw_temp.policy_webhook_pel_coverages        
+        DROP TABLE IF EXISTS edw_temp.policy_webhook_pel_coverages 
+		DROP TABLE IF EXISTS edw_temp.policy_webhook_grpel_coverages;
         
         SELECT distinct
             pt.policy_history_sk, pt.policy_sk,pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, 
@@ -50,7 +52,7 @@ BEGIN
             from
                 edw_core.tpolicy_transaction pt
             where 
-                pt.source_system_sk not in (1,6) and pt.product_sk not in (6,10)       
+                pt.source_system_sk not in (1) and pt.product_sk not in (6)       
                 and cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
             )as pt
             INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
@@ -58,7 +60,7 @@ BEGIN
             WHERE
             CASE WHEN pr.product_cd = 'AU' AND pt.item_sk = 0 THEN 0  ELSE 1 END = 1
             AND CASE WHEN pr.product_cd = 'AU' AND avc.vehicle_deleted_in = 'Yes' THEN 0  ELSE 1 END = 1        
-
+       
 	declare @home_sql varchar(max) = ''
         select @home_sql = @home_sql + 'select cpsa.policy_history_sk, ''' + snapsheet_coverage_nm + ''' as  [name],''' 
         + coverage_type + ''' as coverage_type,'''
@@ -126,6 +128,27 @@ BEGIN
         set @pel_sql = ' select * into edw_temp.policy_webhook_pel_coverages from (' +   (SUBSTRING(@pel_sql,1,len(@pel_sql)-5)) + ' ) as a '
         exec (@pel_sql);
 
+		declare @grpel_sql varchar(max) = ''
+        select @grpel_sql = @grpel_sql + 'select cpsa.policy_history_sk, ''' + snapsheet_coverage_nm + ''' as  [name],''' 
+        + coverage_type + ''' as coverage_type,'
+        + '''' + snapsheet_coverage_cd +''' as [coverageCode],'
+        + ' case when isnumeric('+ column_nm +') = 1 then cast('
+        + column_nm + ' AS varchar(255)) end as [limits.amount],'
+        + ' null as [limits.coverageLimitType]' 
+        + ' from
+        [edw_temp].[claim_policy_webhook_snapsheet_api_temp1] cpsa
+        -- inner join edw_core.tpolicy tp on cpsa.policyNumber = tp.policy_no and tp.effective_dt = tp.effective_dt
+        -- inner join edw_core.tpolicy_history tph on tph.policy_sk = tp.policy_sk and tph.transaction_seq_no = cpsa.transaction_seq_no
+        inner join edw_core.' + table_nm + ' as source on source.policy_history_sk = cpsa.policy_history_sk
+        union '
+        from edw_stage.coverage_mapping_snapsheet
+        where product_nm = 'Group Personal Excess Liability' and snapsheet_coverage_nm != 'Not needed for day 1'
+        and snapsheet_coverage_cd is not null
+        and column_nm not in ( 'Need to bring over from UI')
+
+        set @grpel_sql = ' select * into edw_temp.policy_webhook_grpel_coverages from (' +   (SUBSTRING(@grpel_sql,1,len(@grpel_sql)-5)) + ' ) as a '
+        exec (@grpel_sql);
+
         declare @auto_vehicle_sql varchar(max) = ''
         select @auto_vehicle_sql = @auto_vehicle_sql + 'select cpsa.policy_history_sk, source.auto_vehicle_sk, ''' + snapsheet_coverage_nm + ''' as  [name],'''
 		+ coverage_type + ''' as coverage_type,'''
@@ -156,13 +179,13 @@ BEGIN
             FORMAT(tp.cancellation_effective_dt, 'yyyy-MM-ddTHH:mm:ssZ') AS cancelledAt,
             tph.cancellation_reason_desc  AS cancelledReason,
             FORMAT(tp.effective_dt, 'yyyy-MM-ddTHH:mm:ssZ') as effectiveAt,
-    FORMAT(tp.expiration_dt, 'yyyy-MM-ddTHH:mm:ssZ') as expirationAt,
+			FORMAT(tp.expiration_dt, 'yyyy-MM-ddTHH:mm:ssZ') as expirationAt,
             FORMAT(tp.original_policy_effective_dt, 'yyyy-MM-ddTHH:mm:ssZ') as inceptionAt,
             tph.policy_no as policyNumber,
             case
                 when prd.product_nm = 'Auto' then 'auto'
                 when prd.product_nm in ('Homeowners','Condo','Collections') then 'property'
-                when prd.product_nm = 'Excess Liability' then 'general_liability'
+                when prd.product_nm in ('Excess Liability','Group Personal Excess Liability') then 'general_liability'
             end as policyType,
             tp.policy_status as [status],
             -- FORMAT(cpsa.inception_date, 'yyyy-MM-ddTHH:mm:ssZ') + '-'+ FORMAT(cpsa.expiration_dt, 'yyyy-MM-ddTHH:mm:ssZ') as [version],
@@ -212,8 +235,8 @@ BEGIN
             JSON_QUERY
             ((
                 select
-                    prd.product_nm as code	,
-                    prd.[product_nm] as [name]
+					prd.product_nm as code	,
+					prd.[product_nm] as [name]
                 for json path, include_null_values, without_array_wrapper
             )
             ) as product,
@@ -226,79 +249,97 @@ BEGIN
                 END account
                 for json path, include_null_values, without_array_wrapper
             )) as underwriting,
-            json_query((
-                select
-                    [role],
-                    temp.name as [name],
-                    json_query((
-                            SELECT
-                                address1,
-                                address2,
-                                city,
-                                postalCode,
-                                region,
-                                country
-                                for json path, include_null_values, without_array_wrapper
-                    )) as [address],
-                    json_query((
-						select *
-						from
-						(
-                        SELECT
-            'us' as country,
-                    '1' as countryCode,
---                            'true' preferredMethod,
-                            'phone' as [type],
-                           -- '7272901574' as [value]
-							phone_no as [value]                            
-						UNION
-						SELECT
-                            null as country,
-                            null as countryCode,
---                            'true' preferredMethod,
-                            'email' as [type],
-							--'Farhad.Imam@Vault.Insurance' as [value]
-							email as [value]                        
-						) as temp
-                        for json path, include_null_values
-                    )) as contactMethods
-                from
-             (	
-                    select 'mortgagee' as [role],mortgagee_nm as [name],
-                    address_line_1 as address1, address_line_2 as address2, city_nm as city, zip_cd as postalCode, state_cd as region, country_nm as country
-					, phone_no, email
-                    from edw_core.tmortgagee tm
+        CASE 
+			WHEN prd.product_cd = 'GRPEL' then
+				json_query((
+					select
+						'Other'as [role],
+						concat_ws(' || ',grpc.grpel_policy_no,grpc.group_nm) as [name],
+						null as [address],
+						null as contactMethods
+					from
+						edw_core.tgrpel_coverage grpc
                     where
-                        tm.policy_no = tp.policy_no
-                        and tm.effective_dt = tp.effective_dt
-                        and tm.transaction_seq_no = cpsa.transaction_seq_no
-                    union
-                    select 
-                        case
-                            when interest_type = 'Loss Payee' then 'loss_payee'
-                            when interest_type in ('Additional Insured - Contents','Additional Insured - Individual','Additional Insured - Limited Liability') then 'additional_insured'
-                        else 'Other'
-                        end as [role],
-                        case
-                            when interest_type = 'Loss Payee' and entity_type = 'Individual' then CONCAT_WS(' ',first_nm,last_nm)
-                            when interest_type = 'Loss Payee' then loss_payee_nm
-                            when entity_type = 'Individual' then CONCAT_WS(' ',first_nm,last_nm)
-                            else additional_interest_nm
-                        end as [name],
-                    address_line_1 as address1, address_line_2 as address2, city_nm as city, zip_cd as postalCode, state_cd as region, country_nm as country,
-					null as phone_no,
-					null as email
-                    from edw_core.tadditional_interest tadi
-                    where
-                        tadi.policy_no = tp.policy_no
-                        and tadi.effective_dt = tp.effective_dt
-                        and tadi.transaction_seq_no = cpsa.transaction_seq_no
-                ) as temp
+						grpc.policy_no = tp.policy_no
+						and grpc.effective_dt = tp.effective_dt
+						and grpc.transaction_seq_no = cpsa.transaction_seq_no
+					for json path, include_null_values
+				))
+			ELSE
+				json_query((
+					select
+						[role],
+						temp.name as [name],
+						json_query((
+								SELECT
+									address1,
+									address2,
+									city,
+									postalCode,
+									region,
+									country
+									for json path, include_null_values, without_array_wrapper
+						)) as [address],
+						json_query((
+							select *
+							from
+							(
+							SELECT
+								'us' as country,
+								'1' as countryCode,
+	--                            'true' preferredMethod,
+								'phone' as [type],
+								-- '7272901574' as [value]
+								phone_no as [value]                            
+							UNION
+							SELECT
+								null as country,
+								null as countryCode,
+	--                            'true' preferredMethod,
+								'email' as [type],
+								--'Farhad.Imam@Vault.Insurance' as [value]
+								email as [value]                        
+							) as temp
+							for json path, include_null_values
+						)) as contactMethods
+					from
+					(	
+						select 'mortgagee' as [role],mortgagee_nm as [name],
+						address_line_1 as address1, address_line_2 as address2, city_nm as city, zip_cd as postalCode, state_cd as region, country_nm as country
+						, phone_no, email
+						from edw_core.tmortgagee tm
+						where
+							tm.policy_no = tp.policy_no
+							and tm.effective_dt = tp.effective_dt
+							and tm.transaction_seq_no = cpsa.transaction_seq_no
+						union
+						select 
+							case
+								when interest_type = 'Loss Payee' then 'loss_payee'
+								when interest_type in ('Additional Insured - Contents','Additional Insured - Individual','Additional Insured - Limited Liability') then 'additional_insured'
+							else 'Other'
+							end as [role],
+							case
+								when interest_type = 'Loss Payee' and entity_type = 'Individual' then CONCAT_WS(' ',first_nm,last_nm)
+								when interest_type = 'Loss Payee' then loss_payee_nm
+								when entity_type = 'Individual' then CONCAT_WS(' ',first_nm,last_nm)
+								else additional_interest_nm
+							end as [name],
+						address_line_1 as address1, address_line_2 as address2, city_nm as city, zip_cd as postalCode, state_cd as region, country_nm as country,
+						null as phone_no,
+						null as email
+						from edw_core.tadditional_interest tadi
+						where
+							tadi.policy_no = tp.policy_no
+							and tadi.effective_dt = tp.effective_dt
+							and tadi.transaction_seq_no = cpsa.transaction_seq_no
+					) as temp
                     
-                for json path, include_null_values
-            )) as [businesses],
+					for json path, include_null_values
+				)) 
+			END as [businesses],		
+			json_query
             ((
-
                 select
                     tpi.first_nm as firstName,
                     tpi.middle_nm as middleName,
@@ -316,19 +357,19 @@ BEGIN
                             tpi.mailing_address_zip_cd as postalCode,
                             tpi.mailing_address_state_cd as region,
                             tpi.mailing_address_country_nm as country
-                            for json path, include_null_values, without_array_wrapper			
+                            for json path, include_null_values, without_array_wrapper
                     )) as [address],
-                    json_query((
+                     json_query((
                     SELECT *
                     FROM
                     (
-       SELECT
+					SELECT
                         'us' as country,
                         '1' as countryCode,
 --                        'true' preferredMethod,
                         'phone' as [type],
                        --'7272901574' as [value] 
-                        coalesce(home_phone_no,mobile_phone_no) as [value]
+                        coalesce(home_phone_no,mobile_phone_no) as [value]						
                     UNION
                      SELECT
                         null as country,
@@ -336,7 +377,7 @@ BEGIN
 --                        'true' preferredMethod,
                         'email' as [type],
                        -- 'Farhad.Imam@Vault.Insurance' as [value] 
-                        email as [value]
+                        email as [value] 
                     ) as a
                     for json path, include_null_values
                     )) as contactMethods
@@ -593,7 +634,7 @@ BEGIN
               
                     
                 for json path, include_null_values
-    ))
+			))
             when prd.product_cd = 'PEL' then
                 JSON_QUERY
                 ((
@@ -639,7 +680,7 @@ BEGIN
 --END - ADDED per new documentation - 11142024--
 
 --START - ADDED FOR TESTING - 11142024--
-isnull(
+		isnull(
                 json_query((
                     select
                         tpv.vehicle_make as [make], tpv.vehicle_model as [model], tpv.vehicle_vin as [vinNumber], tpv.vehicle_year as [year]
@@ -661,7 +702,7 @@ isnull(
                 json_query((
                     select
                         prefix as [prefix], first_nm as [firstName], middle_nm as [middleName], last_nm as [lastName],
-                        suffix as [suffix],null as [dateOfBirth], license_country_nm as [licenseIssuingCountry],
+					            suffix as [suffix],null as [dateOfBirth], license_country_nm as [licenseIssuingCountry],
                         license_no as [licenseNumber]
                     from
                         edw_core.tpel_driver tpd
@@ -721,6 +762,175 @@ isnull(
                         WHERE
                             pv.policy_history_sk = tph.policy_history_sk
                     ) as tpv on tpv.policy_history_sk = pl.policy_history_sk
+                for json path, include_null_values
+                ))
+			when prd.product_cd = 'GRPEL' AND tph.source_system_sk = 6 then
+                JSON_QUERY
+                ((
+                select
+                cast(tph.policy_no as varchar(255)) + '-' + cast(tph.transaction_seq_no  as varchar(255)) + '-' + cast(tph.transaction_seq_no  as varchar(255)) as [id],
+                '1' as [externalLocationIdentifier],
+                '1' as [externalRiskIdentifier],
+				prd.product_nm as code,
+				'general_liability' as [type],
+                json_query
+                ((
+                    select
+                        tp.mailing_address_line1 as address1, 
+                        tp.mailing_address_line2 as address2,
+                        tp.mailing_address_city_nm  as city,
+                        tp.mailing_address_zip_cd as postalCode,
+                        tp.mailing_address_state_cd as region,
+                        tp.mailing_address_county_nm as country
+                    for json path, include_null_values, without_array_wrapper
+                )) as [address],
+
+                json_query((
+                    select
+                        -- 'Test' as businessName,
+                        --'individual_sole_proprietor ' as businessType
+					'' as businessName,
+					'' as businessType
+                    for json path, include_null_values, without_array_wrapper
+                )) as generalLiabilityDetails,
+                (
+                select ISNULL( (SELECT 1 as a where 1=2 FOR JSON PATH), '{}')
+                ) as [vehicle],
+                (
+                select ISNULL( (SELECT 1 as a where 1=2 FOR JSON PATH), '[]')
+                ) as [drivers],
+                json_query
+                (
+                    (
+                    select
+                        [name],
+                        [coverageCode],
+                        null as [limits.amount],
+                        null as [limits.deductible]
+                        /*
+                        case
+                            when coverage_type = 'Limit' then 
+                                [coverage.limits.amount]
+                        end as [coverage.limits.amount],
+                        [limits.coverageLimitType],
+                        case
+                            when coverage_type = 'Deductible' then 
+                                [coverage.limits.amount]
+                        end as [limits.deductible],
+                        */
+                    from 
+                        edw_temp.policy_webhook_grpel_coverages a
+                    where
+                        a.policy_history_sk = tph.policy_history_sk
+						and a.coverage_type in ('Limit','Indicator')
+                        and ( [limits.amount] is not null 
+                                    or ( a.coverage_type = 'Indicator' and  [limits.amount] ='Yes')
+                                )
+                    for json path, include_null_values
+                    )
+                ) as coverages
+
+                for json path, include_null_values
+                ))
+			 when prd.product_cd = 'GRPEL' then
+                JSON_QUERY
+                ((
+                select
+                CAST(grpl.grpel_location_sk AS VARCHAR(255)) as [id],
+                cast(location_identifier as varchar(255)) as [externalLocationIdentifier],
+                cast(ISNULL(vehicle_identifier,location_identifier) as varchar(255)) as [externalRiskIdentifier],
+                prd.product_nm as code,
+				case when tgrpv.grpel_vehicle_sk is null then 'general_liability' else 'motor' end as [type],
+                json_query
+                ((
+                    select
+                        grpl.address_line_1 as address1, 
+                        grpl.address_line_2 as address2,
+                        grpl.city_nm  as city,
+                        grpl.zip_cd as postalCode,
+                        grpl.state_cd as region,
+                        grpl.country_nm as country
+                    for json path, include_null_values, without_array_wrapper
+                )) as [address],
+			json_query((
+				select  
+				'' as businessName,
+				'' as businessType
+				for json path, include_null_values, without_array_wrapper
+			)) as generalLiabilityDetails,
+			isnull(
+                json_query((
+                    select
+                        tgrpv.vehicle_make as [make], tgrpv.vehicle_model as [model], tgrpv.vehicle_year as [year]
+                    WHERE
+                        tgrpv.grpel_vehicle_sk is not null
+                    for json path, include_null_values, without_array_wrapper
+                )), '{}'
+            ) as [vehicle],
+            isnull(
+                json_query((
+                    select
+                        null as [prefix], first_nm as [firstName], middle_nm as [middleName], last_nm as [lastName],
+					    null as [suffix],null as [dateOfBirth], license_country_nm as [licenseIssuingCountry],
+                        license_no as [licenseNumber]
+                    from
+                        edw_core.tgrpel_driver tgrpd
+                    where
+                        tgrpd.policy_no = tp.policy_no and
+                        tgrpd.effective_dt = tp.effective_dt and
+                        tgrpd.transaction_seq_no = cpsa.transaction_seq_no
+                        and tgrpv.grpel_vehicle_sk is not null
+                       -- and isnull(pl.primary_location_in,'No') = 'Yes'
+                    for json path, include_null_values
+                )) , '[]'
+                ) as [drivers],
+                json_query
+                (
+                    (
+                    select
+                        [name],
+                        [coverageCode],
+                        null as [limits.amount],
+                        null as [limits.deductible]
+                        /*
+                        case
+                            when coverage_type = 'Limit' then 
+                                [coverage.limits.amount]
+                        end as [coverage.limits.amount],
+                        [limits.coverageLimitType],
+                        case
+                            when coverage_type = 'Deductible' then 
+                                [coverage.limits.amount]
+                        end as [limits.deductible],
+                        */
+                    from 
+                        edw_temp.policy_webhook_grpel_coverages a
+                    where
+                        a.policy_history_sk = tph.policy_history_sk
+						and a.coverage_type in ('Limit','Indicator')
+                        and ( [limits.amount] is not null 
+                                    or ( a.coverage_type = 'Indicator' and  [limits.amount] ='Yes')
+                                )
+                    for json path, include_null_values
+                    )
+                ) as coverages
+                from
+                    (
+                        select ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt, transaction_seq_no ORDER BY location_no) AS location_identifier,*
+                        from
+                            [edw_core].[tgrpel_location]
+                        where
+                            policy_history_sk = tph.policy_history_sk	
+                    )as	grpl
+                    left join 
+                    (
+                        select 
+                            ROW_NUMBER() OVER(PARTITION BY grpv.policy_no, grpv.effective_dt,grpv.transaction_seq_no ORDER BY vehicle_unique_id) AS vehicle_identifier,grpv.*
+                        from
+                            edw_core.tgrpel_vehicle grpv
+                        WHERE
+                            grpv.policy_history_sk = tph.policy_history_sk
+                    ) as tgrpv on tgrpv.policy_history_sk = grpl.policy_history_sk
                 for json path, include_null_values
                 ))
             when prd.product_cd = 'LUX' then
@@ -957,6 +1167,37 @@ isnull(
                             for json path, include_null_values
                         )
                     )
+                       WHEN prd.product_cd = 'GRPEL' then
+                json_query
+                (
+                    (
+                    select
+                        [name],
+                        [coverageCode],
+                        null as [limits.amount],
+                        null as [limits.deductible]
+                        /*
+                        case
+                            when coverage_type = 'Limit' then 
+                                [coverage.limits.amount]
+                        end as [coverage.limits.amount],
+                        [limits.coverageLimitType],
+                        case
+                            when coverage_type = 'Deductible' then 
+                                [coverage.limits.amount]
+                        end as [limits.deductible],
+                        */
+                    from 
+                        edw_temp.policy_webhook_grpel_coverages a
+                    where
+                        a.policy_history_sk = tph.policy_history_sk
+						and a.coverage_type in ('Limit','Indicator')
+                        and ( [limits.amount] is not null 
+                                    or ( a.coverage_type = 'Indicator' and  [limits.amount] ='Yes')
+                                )
+                    for json path, include_null_values
+                    )
+                )
                 when prd.product_cd = 'LUX' then
                     ISNULL(json_query
                     (
@@ -1043,7 +1284,7 @@ isnull(
         left join edw_core.tproduct prd on prd.product_sk = tph.product_sk
         left join edw_core.tbroker tbrk on tph.broker_id = tbrk.broker_id
         WHERE  
-            prd.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability')	
+            prd.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability','Group Personal Excess Liability')	
 		
 	)
 
@@ -1209,6 +1450,7 @@ isnull(
         DROP TABLE IF EXISTS edw_temp.policy_webhook_auto_coverages
         DROP TABLE IF EXISTS edw_temp.policy_webhook_auto_vehicle_coverages
         DROP TABLE IF EXISTS edw_temp.policy_webhook_pel_coverages
+		DROP TABLE IF EXISTS edw_temp.policy_webhook_grpel_coverages
 	
 
 		-- Update control table

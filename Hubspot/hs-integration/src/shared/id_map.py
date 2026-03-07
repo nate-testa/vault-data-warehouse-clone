@@ -219,10 +219,16 @@ class IDMapFunctions:
         try:
             if batch:
                 request_inputs = request_data.get('inputs', []) if request_data else []
-                for idx, unit_json_response in enumerate(response['results']):
+                # Create a mapping from hs_object_id to producer_id from request data
+                producer_id_map = {
+                    inp.get('id'): inp['properties'].get('producer_id', '')
+                    for inp in request_inputs
+                    if inp.get('id')
+                }
+                for unit_json_response in response['results']:
                     hs_object_id = unit_json_response['properties']['hs_object_id']
-                    # Get producer_id from original request data
-                    producer_id = request_inputs[idx]['properties'].get('producer_id', '') if idx < len(request_inputs) else ''
+                    # Look up producer_id by matching hs_object_id, not by index
+                    producer_id = producer_id_map.get(hs_object_id, '')
                     query = f'''
                     UPDATE policy
                     SET updated = '{now}', producer_id = '{producer_id}'
@@ -354,10 +360,16 @@ class IDMapFunctions:
         try:
             if batch:
                 request_inputs = request_data.get('inputs', []) if request_data else []
-                for idx, unit_json_response in enumerate(response['results']):
+                # Create a mapping from hs_object_id to producer_id from request data
+                producer_id_map = {
+                    inp.get('id'): inp['properties'].get('producer_id', '')
+                    for inp in request_inputs
+                    if inp.get('id')
+                }
+                for unit_json_response in response['results']:
                     hs_object_id = unit_json_response['properties']['hs_object_id']
-                    # Get producer_id from original request data
-                    producer_id = request_inputs[idx]['properties'].get('producer_id', '') if idx < len(request_inputs) else ''
+                    # Look up producer_id by matching hs_object_id, not by index
+                    producer_id = producer_id_map.get(hs_object_id, '')
                     query = f'''
                     UPDATE quote
                     SET updated = '{now}', producer_id = '{producer_id}'

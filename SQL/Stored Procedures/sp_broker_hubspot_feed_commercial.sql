@@ -7,12 +7,13 @@
 -- 05/30/25		         Yunus Mohammed				1. Created this procedure
 -- 08/21/25		         Dinesh Bobbili  			2. Updated filter condition
 -- 09/17/25		         Dinesh Bobbili  			3. Updated logic for quote_to_bind_ratio, submission_to_quote_ratio
+-- 02/25/26		        Yunus Mohammed  			5. Ad-12621 Added ytd & lifetime inforce_ct & premium amt
 -- ================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_broker_hubspot_feed_commercial]
 
 AS
-BEGIN
+BEGIN 
 	DECLARE @ProcedureName NVARCHAR(120)
     SET @ProcedureName = OBJECT_NAME(@@PROCID)
     -- SET NOCOUNT ON added to prevent extra result sets from
@@ -40,8 +41,23 @@ BEGIN
         set @var_end_mn   = (select min(yearmonth) from edw_core.tdate where actual_dt = EOMONTH( dateadd("d",-1,getdate())));
 
 		DROP TABLE IF exists edw_temp.broker_hubspot_feed_commercial_temp1;
-          
-        with br_summ as
+
+        with br_lifetime_inf as
+        (
+            select 
+                tr.broker_sk,
+                count(distinct case when YEAR(pol.effective_dt) = YEAR(GETDATE()) or YEAR(pol.expiration_dt) = YEAR(GETDATE()) then pol.commercial_policy_sk end) YTD_inf_ct,
+                sum(distinct case when YEAR(pol.effective_dt) = YEAR(GETDATE()) or YEAR(pol.expiration_dt) = YEAR(GETDATE()) then tr.premium_amt-tr.commission_amt else 0 end) YTD_inf_prm,
+                count(distinct pol.commercial_policy_sk) lifetime_inf_ct,
+                sum(premium_amt-commission_amt) lifetime_inf_prm
+            from edw_commercial.tcommercial_policy_transaction tr, edw_commercial.tcommercial_policy pol
+            where transaction_dt_sk < (select date_sk from edw_core.tdate where actual_dt = cast(getdate() as date))
+            and transaction_effective_dt_sk < (select date_sk from edw_core.tdate where actual_dt = cast(getdate() as date))
+            and pol.commercial_policy_sk = tr.commercial_policy_sk
+            and pol.policy_status <> 'Cancelled'
+            group by tr.broker_sk    
+        ),
+        br_summ as
         (
             SELECT
                 broker_sk,               
@@ -63,6 +79,7 @@ BEGIN
                 --
                 sum(case when td.yearmonth between @ret_start_mn and @ret_end_mn and tbs.policy_renewal_accepted_ct is not null then tbs.policy_renewal_accepted_ct else 0 end) rolling_12_policy_renewal_accepted_ct,
                 sum(case when td.yearmonth between @ret_start_mn and @ret_end_mn and tbs.policy_renewal_ct  is not null then tbs.policy_renewal_ct else 0 end) rolling_12_policy_renewal_ct
+
                 --
                 
                 --
@@ -151,13 +168,20 @@ BEGIN
             ,tb.primary_address_state_cd
             ,case when ytd_quote_ct = 0 then null else ytd_bind_ct/ytd_quote_ct end as quote_to_bind_ratio
 	        ,case when ytd_submission_ct = 0 then null else ytd_quote_ct/ytd_submission_ct end as submission_to_quote_ratio
+            ,bsl.YTD_inf_ct as ytd_inforce_ct
+            ,bsl.YTD_inf_prm as ytd_inforce_premium_amt
+            ,bsl.lifetime_inf_ct as lifetime_inforce_ct
+            ,bsl.lifetime_inf_prm as lifetime_inforce_premium_amt
         into    edw_temp.broker_hubspot_feed_commercial_temp1
         FROM    edw_core.tbroker tb
         -- left join br_vauk_team bvtm on bvtm.broker_id = tb.broker_id
         left join br_summ as bs    on bs.broker_sk = tb.broker_sk
         left join comm_tier as ct   on ct.broker_id = tb.broker_id
+        left join br_lifetime_inf as bsl    on bsl.broker_sk = tb.broker_sk
         where commercial_or_personal_business_type = 'Commercial lines';		
     
+        delete from edw_integration.broker_hubspot_feed where broker_business_type = 'Commercial Lines'
+
         INSERT edw_integration.broker_hubspot_feed
         (
             broker_id,broker_nm,mailing_address_line_1,mailing_address_line_2,mailing_address_city_nm,mailing_address_state_nm,
@@ -171,6 +195,7 @@ BEGIN
             ,ytd_renewal_retention_pc
             ,primary_address_state_cd,broker_business_type
             ,quote_to_bind_ratio,submission_to_quote_ratio
+            ,lifetime_inforce_ct,lifetime_inforce_premium_amt,ytd_inforce_ct,ytd_inforce_premium_amt
             ,create_ts,update_ts,etl_audit_sk
         )
         SELECT
@@ -185,6 +210,7 @@ BEGIN
             ,ytd_renewal_retention_pc
             ,primary_address_state_cd,broker_business_type
             ,quote_to_bind_ratio,submission_to_quote_ratio
+            ,lifetime_inforce_ct,lifetime_inforce_premium_amt,ytd_inforce_ct,ytd_inforce_premium_amt
             ,getdate(), getdate(), @etl_audit_sk
         FROM edw_temp.broker_hubspot_feed_commercial_temp1
         
