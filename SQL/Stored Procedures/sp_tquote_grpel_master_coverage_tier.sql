@@ -1,5 +1,5 @@
 -- ========================================================================================================================================
--- Description: This procedures inserts and updates quote grpel master coverage tier for WIP quotes
+-- Description: This procedures inserts and updates quote grpel master coverage tier
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- Change date		|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
@@ -28,40 +28,39 @@ BEGIN
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200));
 		
-		DROP TABLE IF EXISTS edw_temp.tquote_grpel_master_coverage_tier_wip_temp1;
-		DROP TABLE IF EXISTS edw_temp.tquote_grpel_master_coverage_tier_wip_temp2
+		DROP TABLE IF EXISTS edw_temp.tquote_grpel_master_coverage_tier_temp1;
+		DROP TABLE IF EXISTS edw_temp.tquote_grpel_master_coverage_tier_temp2
 
 		
 		SELECT
-            Id,PolicyNumber,EffectiveDate,0 as transaction_seq_no,ExpirationDate,CreatedDate,
+            Id,PolicyNumber,EffectiveDate,[Number],ExpirationDate,CreatedDate,
             source_system_sk,
             LevelType as tier_type,
             NumberOfParticipatingMembers as no_of_participating_members
-        into edw_temp.tquote_grpel_master_coverage_tier_wip_temp1
+        into edw_temp.tquote_grpel_master_coverage_tier_temp1
         from
         (
         select 
-            acc.Id,acc.PolicyNumber,acc.EffectiveDate,
-            acc.ExpirationDate,acc.CreatedDate,acc.UpdatedDate,
-            case when acc.ExternalSourceId is not NULL 
+            acct.Id,acct.PolicyNumber,acct.EffectiveDate,acct.[Number],
+            acct.ExpirationDate,acct.[CreatedDate],
+            case when acct.ExternalSourceId is not NULL 
                     then 2 --(AV2) 
                     Else 4 --(Metal)
             end source_system_sk,
-            accof.Field,
-            accof.[Value]
+            acctvof.Field,
+            acctvof.[Value]
         from
-            (
-                SELECT source.*,p.ProductCode
-                FROM [edw_stage].[Account] AS a
-                inner join edw_stage.Product p on p.Id=source.ProductId and p.ProductLine = 'GroupPersonalLines' 
-                WHERE 
-                    NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where source.AccountId=source.id)
-                    AND GREATEST(source.CreatedDate,source.UpdatedDate) > @last_source_extract_ts
-                    AND source.PolicyNumber IS NOT NULL
-            ) as acc
-            inner join [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
-            inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
-                and acco.ObjectType in ('Level')      
+            [edw_stage].[AccountTransaction] as acct
+            inner join edw_stage.Product p on p.Id=acct.ProductId
+            inner join edw_stage.AccountTransactionVersion acctv on acct.Id=acctv.AccountTransactionId
+            inner join edw_stage.AccountTransactionVersionObject acctvo on acctv.Id=acctvo.AccountTransactionVersionId
+            and acctvo.ObjectType in ('Level')
+            inner join edw_stage.AccountTransactionVersionObjectField acctvof on acctvo.Id=acctvof.VersionObjectId
+        where
+            acct.PolicyNumber is not null and
+            acct.[State] in ('QUOTE','POLICY')
+            and p.ProductLine = 'GroupPersonalLines'
+            AND acct.CreatedDate>@last_source_extract_ts
         ) as a
         PIVOT 
         (
@@ -92,7 +91,7 @@ BEGIN
             max(case when LimitType = 'EMPLiabilityLimit' then MinValue end) as employment_practices_liability_limit_min_amt,
             max(case when LimitType = 'EMPLiabilityLimit' then MaxValue end) as employment_practices_liability_limit_max_amt,
             max(case when LimitType = 'EMPLiabilityLimit' then SponsoredValue end) as employment_practices_liability_limit_sponsored_amt
-        into edw_temp.tquote_grpel_master_coverage_tier_wip_temp2
+        into edw_temp.tquote_grpel_master_coverage_tier_temp2
         from
 
         (
@@ -105,100 +104,55 @@ BEGIN
             from
             (
             select 
-            acc.Id,
-            accof.Field,
-            accof.[Value]
+            acct.Id,
+            acctvof.Field,
+            acctvof.[Value]
             from
-            edw_temp.tquote_grpel_master_coverage_tier_wip_temp1 as acc
-            inner join edw_stage.AccountObject acco on acc.Id=acco.AccountId 
-            and acco.ObjectType in ('LevelLimit')
-            inner join edw_stage.AccountObjectField accof on acco.Id=accof.ObjectId
+            edw_temp.tquote_grpel_master_coverage_tier_temp1 as acct
+            inner join edw_stage.AccountTransactionVersion acctv on acct.Id=acctv.AccountTransactionId
+            inner join edw_stage.AccountTransactionVersionObject acctvo on acctv.Id=acctvo.AccountTransactionVersionId 
+            and acctvo.ObjectType in ('LevelLimit')
+            inner join edw_stage.AccountTransactionVersionObjectField acctvof on acctvo.Id=acctvof.VersionObjectId   
+
             ) as a
             group by Id
         ) a
         group by Id
 		
-        MERGE INTO [edw_core].[tquote_grpel_master_coverage_tier] AS TARGET
-		USING (
-		    select
-			a.PolicyNumber as grpel_master_quote_no,gmc.quote_grpel_master_coverage_sk , a.EffectiveDate as effective_dt, a.ExpirationDate as expiration_dt,
-			a.transaction_seq_no,
+		INSERT INTO [edw_core].[tquote_grpel_master_coverage_tier]
+		(
+		grpel_master_quote_no,quote_grpel_master_coverage_sk,effective_dt,expiration_dt,transaction_seq_no,
+        tier_type,no_of_participating_members,
+        excess_liability_limit_min_amt,excess_liability_limit_max_amt,excess_liability_sponsored_amt,
+        uninsured_underinsured_motorist_liability_limit_min_amt,uninsured_underinsured_motorist_liability_limit_max_amt,uninsured_underinsured_motorist_liability_limit_sponsored_amt,
+        non_profit_do_liability_limit_min_amt,non_profit_do_liability_limit_max_amt,non_profit_do_liability_limit_sponsored_amt,
+        employment_practices_liability_limit_min_amt,employment_practices_liability_limit_max_amt,employment_practices_liability_limit_sponsored_amt,
+        family_trust_management_liability_limit_min_amt,family_trust_management_liability_limit_max_amt,family_trust_management_liability_limit_sponsored_amt,
+		source_system_sk,create_ts,update_ts,etl_audit_sk
+		)
+		select
+			a.PolicyNumber as grpel_master_quote_no,gmc.quote_grpel_master_coverage_sk , a.EffectiveDate as effective_dt,
+            a.ExpirationDate as expiration_dt,a.[Number] as transaction_dt,
             a.tier_type,a.no_of_participating_members,
-            b.excess_liability_limit_min_amt,b.excess_liability_limit_max_amt,source.excess_liability_sponsored_amt,
-            b.uninsured_underinsured_motorist_liability_limit_min_amt,source.uninsured_underinsured_motorist_liability_limit_max_amt,source.uninsured_underinsured_motorist_liability_limit_sponsored_amt,
-            b.non_profit_do_liability_limit_min_amt,source.non_profit_do_liability_limit_max_amt,source.non_profit_do_liability_limit_sponsored_amt,
-            b.employment_practices_liability_limit_min_amt,source.employment_practices_liability_limit_max_amt,source.employment_practices_liability_limit_sponsored_amt,
-            source.family_trust_management_liability_limit_min_amt,source.family_trust_management_liability_limit_max_amt,source.family_trust_management_liability_limit_sponsored_amt,
+            b.excess_liability_limit_min_amt,b.excess_liability_limit_max_amt,b.excess_liability_sponsored_amt,
+            b.uninsured_underinsured_motorist_liability_limit_min_amt,b.uninsured_underinsured_motorist_liability_limit_max_amt,b.uninsured_underinsured_motorist_liability_limit_sponsored_amt,
+            b.non_profit_do_liability_limit_min_amt,b.non_profit_do_liability_limit_max_amt,b.non_profit_do_liability_limit_sponsored_amt,
+            b.employment_practices_liability_limit_min_amt,b.employment_practices_liability_limit_max_amt,b.employment_practices_liability_limit_sponsored_amt,
+            b.family_trust_management_liability_limit_min_amt,b.family_trust_management_liability_limit_max_amt,b.family_trust_management_liability_limit_sponsored_amt,
 			
-			source.source_system_sk,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk
+			a.source_system_sk,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk
 		from
-			edw_temp.tquote_grpel_master_coverage_tier_wip_temp1 a
-		    left join edw_temp.tquote_grpel_master_coverage_tier_wip_temp2 b on source.Id = source.Id
-            left join edw_core.tquote_grpel_master_coverage gmc on gmc.grpel_master_quote_no = source.PolicyNumber and gmc.effective_dt = source.EffectiveDate
-                and gmc.transaction_seq_no = 0
-		) AS source
-		ON
-		    TARGET.grpel_master_quote_no = source.grpel_master_quote_no AND
-		    --TARGET.effective_dt = SOURCE.effective_dt AND
-		    TARGET.transaction_seq_no = source.transaction_seq_no
-
-		WHEN MATCHED THEN
-		    UPDATE 
-            SET               
-                [TARGET].quote_grpel_master_coverage_sk = [Source].quote_grpel_master_coverage_sk,
-                [TARGET].expiration_dt = [Source].expiration_dt,
-                [TARGET].transaction_seq_no = [Source].transaction_seq_no,
-                [TARGET].tier_type= [Source].tier_type,
-                [TARGET].no_of_participating_members = no_of_participating_members,
-                [TARGET].excess_liability_limit_min_amt = excess_liability_limit_min_amt,
-                [TARGET].excess_liability_limit_max_amt = excess_liability_limit_max_amt,
-                [TARGET].excess_liability_sponsored_amt =excess_liability_sponsored_amt,
-                [TARGET].uninsured_underinsured_motorist_liability_limit_min_amt = uninsured_underinsured_motorist_liability_limit_min_amt,
-                [TARGET].uninsured_underinsured_motorist_liability_limit_max_amt = uninsured_underinsured_motorist_liability_limit_max_amt,
-                [TARGET].uninsured_underinsured_motorist_liability_limit_sponsored_amt = uninsured_underinsured_motorist_liability_limit_sponsored_amt,
-                [TARGET].non_profit_do_liability_limit_min_amt = non_profit_do_liability_limit_min_amt,
-                [TARGET].non_profit_do_liability_limit_max_amt = non_profit_do_liability_limit_max_amt,
-                [TARGET].non_profit_do_liability_limit_sponsored_amt = non_profit_do_liability_limit_sponsored_amt,
-                [TARGET].employment_practices_liability_limit_min_amt= employment_practices_liability_limit_min_amt,
-                [TARGET].employment_practices_liability_limit_max_amt = employment_practices_liability_limit_max_amt,
-                [TARGET].employment_practices_liability_limit_sponsored_amt = employment_practices_liability_limit_sponsored_amt,
-                [TARGET].family_trust_management_liability_limit_min_amt = family_trust_management_liability_limit_min_amt,
-                [TARGET].family_trust_management_liability_limit_max_amt = family_trust_management_liability_limit_max_amt,
-                [TARGET].family_trust_management_liability_limit_sponsored_amt = family_trust_management_liability_limit_sponsored_amt,
-                [TARGET].update_ts = update_ts
-		WHEN NOT MATCHED BY TARGET THEN
-		    INSERT 
-            (
-                grpel_master_quote_no,quote_grpel_master_coverage_sk,effective_dt,expiration_dt,transaction_seq_no,
-                tier_type,no_of_participating_members,
-                excess_liability_limit_min_amt,excess_liability_limit_max_amt,excess_liability_sponsored_amt,
-                uninsured_underinsured_motorist_liability_limit_min_amt,uninsured_underinsured_motorist_liability_limit_max_amt,uninsured_underinsured_motorist_liability_limit_sponsored_amt,
-                non_profit_do_liability_limit_min_amt,non_profit_do_liability_limit_max_amt,non_profit_do_liability_limit_sponsored_amt,
-                employment_practices_liability_limit_min_amt,employment_practices_liability_limit_max_amt,employment_practices_liability_limit_sponsored_amt,
-                family_trust_management_liability_limit_min_amt,family_trust_management_liability_limit_max_amt,family_trust_management_liability_limit_sponsored_amt,
-                source_system_sk,create_ts,update_ts,etl_audit_sk
-		    )
-		    VALUES (
-                    source.grpel_master_quote_no,gsourcemc.quote_grpel_master_coverage_sk , 
-                    source.effective_dt, source.expiration_dt,
-                    source.transaction_seq_no,
-                    source.tier_type,source.no_of_participating_members,
-                    source.excess_liability_limit_min_amt,source.excess_liability_limit_max_amt,source.excess_liability_sponsored_amt,
-                    source.uninsured_underinsured_motorist_liability_limit_min_amt,source.uninsured_underinsured_motorist_liability_limit_max_amt,source.uninsured_underinsured_motorist_liability_limit_sponsored_amt,
-                    source.non_profit_do_liability_limit_min_amt,source.non_profit_do_liability_limit_max_amt,source.non_profit_do_liability_limit_sponsored_amt,
-                    source.employment_practices_liability_limit_min_amt,source.employment_practices_liability_limit_max_amt,source.employment_practices_liability_limit_sponsored_amt,
-                    source.family_trust_management_liability_limit_min_amt,source.family_trust_management_liability_limit_max_amt,
-                    source.family_trust_management_liability_limit_sponsored_amt,
-
-                    source.source_system_sk,create_ts,update_ts,etl_audit_sk
-		);
+			edw_temp.tquote_grpel_master_coverage_tier_temp1 a
+		    left join edw_temp.tquote_grpel_master_coverage_tier_temp2 b on a.Id = b.Id
+            left join edw_core.tquote_grpel_master_coverage gmc on gmc.grpel_master_quote_no = a.PolicyNumber and gmc.effective_dt = a.EffectiveDate
+                and gmc.transaction_seq_no = a.[Number]
 
 		SET @rows_affected=@@ROWCOUNT;
 	
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t2.CreatedDate) FROM edw_temp.tquote_grpel_master_coverage_tier_temp1 t2),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS edw_temp.tquote_grpel_master_coverage_tier_wip_temp1;
-		DROP TABLE IF EXISTS edw_temp.tquote_grpel_master_coverage_tier_wip_temp2;
+        DROP TABLE IF EXISTS edw_temp.tquote_grpel_master_coverage_tier_temp1;
+		DROP TABLE IF EXISTS edw_temp.tquote_grpel_master_coverage_tier_temp2;
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
