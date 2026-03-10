@@ -395,7 +395,7 @@ BEGIN
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-		Target.grpel_master_quote_no					= Source.grpel_master_quote_no
+		Target.grpel_master_quote_no					= Source.grpel_master_quote_no,
         Target.Effective_dt								= Source.EffectiveDate,
 		Target.expiration_dt							= Source.ExpirationDate,
         Target.broker_id								= Source.BrokerId,
