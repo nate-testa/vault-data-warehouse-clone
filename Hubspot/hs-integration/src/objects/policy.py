@@ -125,7 +125,8 @@ class Policy:
                 'per_claim_retention_amt': record['per_claim_retention_amt'],
                 'uw_company_nm': record['uw_company_nm'],
                 'total_policy_premium_amt': record['total_policy_premium_amt'],
-                'customer_business_type': record['customer_business_type']
+                'customer_business_type': record['customer_business_type'],
+                'underwriter_nm': record['underwriter_nm']
                 
                 # 'create_ts': record['create_ts'],
                 # 'update_ts': record['update_ts'],
