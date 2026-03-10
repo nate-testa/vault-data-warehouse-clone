@@ -27,6 +27,7 @@
 -- 01/07/25		Yunus Mohammed					22. AD-12169 Added new column current_producer_nm and current_underwriter_nm
 -- 01/07/25		Yunus Mohammed					23. AD-12169 Added new column current_producer_nm and current_underwriter_nm
 -- 01/08/25		Yunus Mohammed					24. AD-12180 Added new column current_producer_sk
+-- 03/10/26		Yunus Mohammed					27 AD12682 Added grpel_master_policy_no 
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -160,6 +161,7 @@ BEGIN
 		USING (
 			SELECT 
 				tmp1.PolicyNumber,
+				accg.PolicyNumber as grpel_master_quote_no,
 				tmp1.EffectiveDate,
 				tmp1.ExpirationDate, 
 				case when br.producerid is null then '0' else br.producerid end as BrokerId,
@@ -263,6 +265,7 @@ BEGIN
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
 				left join edw_stage.Account acc_prior on tmp1.copyofAccountId = acc_prior.Id 
+				left join edw_stage.Account accg on tmp1.GroupAccountId = accg.Id
 				left join edw_stage.BillingAccount ba on ba.id = tmp1.BillingAccountId
 				left join edw_core.tbillingaccount tb on tb.billingaccount_no = ba.ReferenceCode
 				left join edw_stage.Brokerage br on tmp1.BrokerageId = br.id
@@ -286,6 +289,7 @@ BEGIN
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
 			quote_no
+			,grpel_master_quote_no
            ,effective_dt
            ,expiration_dt
            ,broker_id
@@ -338,6 +342,7 @@ BEGIN
 			,current_producer_nm,current_underwriter_nm,current_producer_sk
 			)
 		VALUES (Source.PolicyNumber, 
+				Source.grpel_master_quote_no,
 				Source.EffectiveDate, 
                 Source.ExpirationDate, 
                 Source.BrokerId, 
@@ -390,6 +395,7 @@ BEGIN
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
+		Target.grpel_master_quote_no					= Source.grpel_master_quote_no
         Target.Effective_dt								= Source.EffectiveDate,
 		Target.expiration_dt							= Source.ExpirationDate,
         Target.broker_id								= Source.BrokerId,
