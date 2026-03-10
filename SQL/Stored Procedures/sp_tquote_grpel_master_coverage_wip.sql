@@ -30,15 +30,6 @@ BEGIN
 
 		DROP TABLE IF EXISTS edw_temp.tquote_grpel_master_coverage_wip_temp1;
 		DROP TABLE IF EXISTS edw_temp.tquote_grpel_master_coverage_wip_temp2;
-		
-		WITH arns AS
-		(
-		select row_number()over(partition by a.AccountId order by a.Id desc) as rn,
-		a.* 
-		from
-		edw_stage.AccountEnrollmentSnapshot a
-		inner join edw_stage.Account a2 on a.AccountId = a2.Id
-		)
 
 		SELECT
 			Id,PolicyNumber,EffectiveDate,0 as transaction_seq_no,ExpirationDate,CreatedDate,
@@ -51,10 +42,6 @@ BEGIN
 			when NamedInsured is not null then NamedInsured
 			else NamedInsured 
 			end as insured_nm,			
-			EnrollmentInitialStartDate as enrollment_initial_start_dt,
-			EnrollmentPeriodByDays as enrollment_preiod_in_days,
-			EnrollmentFrequency as enrollment_frequency,
-			OverrideEnrollmentToOpen as override_enrollment_to_open_in,
 			MailingAddressLine1 as mailing_address_line1, MailingAddressLine2 as mailing_address_line2, 
 			MailingAddressCity as mailing_address_city_nm, MailingAddressState as mailing_address_state_cd, 
 			MailingAddressZipCode as mailing_address_zip_cd, 
@@ -86,11 +73,7 @@ BEGIN
 				nullif(trim(acc.ProductCode),'') product_cd,
 				nullif(trim(COALESCE(acc.RiskStateCode, 'DNA')),'') as risk_state_cd,
 				accof.Field,
-				accof.[Value],
-				arns.EnrollmentInitialStartDate,
-				arns.EnrollmentPeriodByDays,
-				arns.EnrollmentFrequency,
-				arns.OverrideEnrollmentToOpen
+				accof.[Value]
 			from
                 (
                     SELECT a.*,p.ProductCode
@@ -105,8 +88,7 @@ BEGIN
                 inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
 					and acco.ObjectType in ('Insured','GroupPersonalExcessLiability')
 				left join edw_stage.Brokerage br on acc.BrokerageId = br.Id
-				left join edw_stage.Insured ins on acc.PrimaryInsuredId = ins.Id
-				left join arns on arns.AccountId = acc.Id and arns.rn = 1
+				left join edw_stage.Insured ins on acc.PrimaryInsuredId = ins.Id				
 		) as a
 		PIVOT 
 		(
@@ -212,8 +194,7 @@ BEGIN
 			a.broker_id,a.customer_id,a.product_cd,a.risk_state_cd,a.insured_nm, a.insured_type,
 			a.mailing_address_line1,a.mailing_address_line2,a.mailing_address_city_nm,a.mailing_address_state_cd,
 			a.mailing_address_zip_cd,a.mailing_address_county_nm,a.mailing_address_country_nm,a.insured_first_nm,a.insured_last_nm,
-			a.mobile_phone_no,a.email,
-			a.enrollment_initial_start_dt,a.enrollment_preiod_in_days,a.enrollment_frequency,a.override_enrollment_to_open_in,
+			a.mobile_phone_no,a.email,			
 			a.auto_liability_limit_amt,a.no_of_average_homes,a.no_of_average_vehicles,a.no_of_average_watercraft,a.no_of_youthful_driver,
 			a.mvr_trigger_rule,
 			a.commission_pc,a.minimum_premium_amt,a.prior_nfp_policy_no,a.prior_nfp_policy_expiring_dt,
@@ -251,8 +232,7 @@ BEGIN
 		,broker_id,customer_id,product_cd,risk_state_cd,insured_nm,insured_type
 		,mailing_address_line1,mailing_address_line2,mailing_address_city_nm,mailing_address_state_cd
 		,mailing_address_zip_cd,mailing_address_county_nm,mailing_address_country_nm,insured_first_nm,insured_last_nm
-		,mobile_phone_no,email
-		,enrollment_initial_start_dt,enrollment_preiod_in_days,enrollment_frequency,override_enrollment_to_open_in
+		,mobile_phone_no,email	
 		,auto_liability_limit_amt,no_of_average_homes,no_of_average_vehicles,no_of_average_watercraft,no_of_youthful_driver,mvr_trigger_rule
 		,commission_pc,minimum_premium_amt,prior_nfp_policy_no,prior_nfp_policy_expiring_dt
 		,excess_liability_limit_1m_premium_amt,excess_liability_limit_1m_override_premium_amt,excess_liability_limit_3m_premium_amt
@@ -281,8 +261,7 @@ BEGIN
 		,[source].broker_id,[source].customer_id,[source].product_cd,[source].risk_state_cd,[source].insured_nm,[source].insured_type
 		,[source].mailing_address_line1,[source].mailing_address_line2,[source].mailing_address_city_nm,[source].mailing_address_state_cd
 		,[source].mailing_address_zip_cd,[source].mailing_address_county_nm,[source].mailing_address_country_nm,[source].insured_first_nm,[source].insured_last_nm
-		,[source].mobile_phone_no,[source].email
-		,[source].enrollment_initial_start_dt,[source].enrollment_preiod_in_days,[source].enrollment_frequency,[source].override_enrollment_to_open_in
+		,[source].mobile_phone_no,[source].email		
 		,[source].auto_liability_limit_amt,[source].no_of_average_homes,[source].no_of_average_vehicles,[source].no_of_average_watercraft,[source].no_of_youthful_driver,[source].mvr_trigger_rule
 		,[source].commission_pc,[source].minimum_premium_amt,[source].prior_nfp_policy_no,[source].prior_nfp_policy_expiring_dt
 		,[source].excess_liability_limit_1m_premium_amt,[source].excess_liability_limit_1m_override_premium_amt,[source].excess_liability_limit_3m_premium_amt
@@ -325,11 +304,7 @@ BEGIN
 				,[target].insured_first_nm= [source].insured_first_nm
 				,[target].insured_last_nm= [source].insured_last_nm
 				,[target].mobile_phone_no= [source].mobile_phone_no
-				,[target].email= [source].email
-				,[target].enrollment_initial_start_dt =[source].enrollment_initial_start_dt
-				,[target].enrollment_preiod_in_days =[source].enrollment_preiod_in_days
-				,[target].enrollment_frequency=[source].enrollment_frequency
-				,[target].override_enrollment_to_open_in=[source].override_enrollment_to_open_in
+				,[target].email= [source].email				
 				,[target].auto_liability_limit_amt=[source].auto_liability_limit_amt
 				,[target].no_of_average_homes=[source].no_of_average_homes
 				,[target].no_of_average_vehicles=[source].no_of_average_vehicles
