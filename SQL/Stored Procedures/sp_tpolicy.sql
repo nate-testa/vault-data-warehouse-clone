@@ -30,9 +30,10 @@
 -- 07/10/25		Alberto Almario					24. AD10214 - Added new column renewal_cap_factor
 -- 07/10/25		Hernando Gonzalez				25. AD10220 | Added bound_by_broker_in
 -- 10/13/25		Yunus Mohammed					26 AD11316 Added broker_of_record_change_in
+-- 03/10/26		Yunus Mohammed					27 AD12682 Added grpel_master_policy_no 
 -- ======================================================================================================================================== 
 
-CREATE OR ALTER     PROCEDURE [edw_core].[sp_tpolicy]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy]
 
 AS 
 BEGIN
@@ -129,6 +130,7 @@ BEGIN
 		USING (
 			SELECT 
 				tmp1.PolicyNumber,
+				accg.PolicyNumber as grpel_master_policy_no,
 				tmp1.EffectiveDate,
 				tmp1.ExpirationDate, 
 				br.producerid as BrokerId,
@@ -214,6 +216,7 @@ BEGIN
 				inner join edw_stage.Account acc on tmp1.AccountId = acc.Id 
 				left join edw_stage.AccountDocumentDelivery accdd on acc.Id = accdd.AccountId				
 				left join edw_stage.Account acc_prior on acc.copyofAccountId = acc_prior.Id 
+				left join edw_stage.Account accg on acc.GroupAccountId = accg.Id
 				--added on 3/21/24 - AG
 				left join edw_stage.Account acc_rw on acc.rewrittenfromaccountid = acc_rw.Id 
 				left join edw_stage.BillingAccount ba on ba.id = acc.BillingAccountId
@@ -229,6 +232,7 @@ BEGIN
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
 			policy_no
+			,grpel_master_policy_no
            ,effective_dt
            ,expiration_dt
            ,broker_id
@@ -271,6 +275,7 @@ BEGIN
 		   ,broker_of_record_change_in
 			)
 		VALUES (Source.PolicyNumber, 
+				Source.grpel_master_policy_no,
 				Source.EffectiveDate, Source.ExpirationDate, Source.BrokerId, Source.customer_id, 
 				Source.product_cd,
 				Source.RiskStateCode,
@@ -310,6 +315,7 @@ BEGIN
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
+		Target.grpel_master_policy_no		= Source.grpel_master_policy_no,
         Target.broker_id					= Source.BrokerId,
         Target.customer_id					= Source.customer_id,
         Target.risk_state_cd				= Source.RiskStateCode,
