@@ -51,13 +51,13 @@ BEGIN
             accof.[Value]
         from
             (
-                SELECT source.*,p.ProductCode
+                SELECT a.*,p.ProductCode
                 FROM [edw_stage].[Account] AS a
-                inner join edw_stage.Product p on p.Id=source.ProductId and p.ProductLine = 'GroupPersonalLines' 
+                inner join edw_stage.Product p on p.Id=a.ProductId and p.ProductLine = 'GroupPersonalLines' 
                 WHERE 
-                    NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where source.AccountId=source.id)
-                    AND GREATEST(source.CreatedDate,source.UpdatedDate) > @last_source_extract_ts
-                    AND source.PolicyNumber IS NOT NULL
+                    NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where b.AccountId=a.id)
+                    AND GREATEST(a.CreatedDate,a.UpdatedDate) > @last_source_extract_ts
+                    AND a.PolicyNumber IS NOT NULL
             ) as acc
             inner join [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
             inner join [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
