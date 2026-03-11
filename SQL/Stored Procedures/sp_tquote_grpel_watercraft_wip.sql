@@ -118,7 +118,7 @@ BEGIN
 		    INSERT (
 		        quote_no, effective_dt, expiration_dt, transaction_seq_no, quote_history_sk,
 		        watercraft_no, watercraft_year, watercraft_make, watercraft_model,watercraft_unique_id,
-		        source_system_sk, create_ts, update_ts, etl_audit_sk,
+		        source_system_sk, create_ts, update_ts, etl_audit_sk
 		    )
 		    VALUES (
 		        SOURCE.quote_no, SOURCE.effective_dt, SOURCE.expiration_dt, SOURCE.transaction_seq_no, SOURCE.quote_history_sk,
