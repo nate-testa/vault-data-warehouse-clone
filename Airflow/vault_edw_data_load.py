@@ -361,10 +361,13 @@ with DAG(
     with TaskGroup("GRPEL_group") as GRPEL_group:
 
         GRPEL_group_items = [
+            'sp_tgrpel_master_coverage',
+            'sp_tgrpel_master_coverage_tier',
             'sp_tgrpel_location',
             'sp_tgrpel_driver',
             'sp_tgrpel_vehicle',
-            'sp_tgrpel_coverage'
+            'sp_tgrpel_coverage',
+            'sp_tgrpel_watercraft'
         ]
 
         operators = []
