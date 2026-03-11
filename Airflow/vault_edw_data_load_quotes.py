@@ -189,6 +189,10 @@ with DAG(
     with TaskGroup("quote_GRPEL_group") as quote_GRPEL_group:
 
         quote_GRPEL_group_items = [
+            'sp_tquote_grpel_master_coverage_wip',
+            'sp_tquote_grpel_master_coverage',
+            'sp_tquote_grpel_master_coverage_tier_wip',
+            'sp_tquote_grpel_master_coverage_tier',
             'sp_tquote_grpel_location_wip',
             'sp_tquote_grpel_location',
             'sp_tquote_grpel_driver_wip',
@@ -196,7 +200,9 @@ with DAG(
             'sp_tquote_grpel_vehicle_wip',
             'sp_tquote_grpel_vehicle',
             'sp_tquote_grpel_coverage_wip',
-            'sp_tquote_grpel_coverage'
+            'sp_tquote_grpel_coverage',
+            'sp_tquote_grpel_watercraft_wip',
+            'sp_tquote_grpel_watercraft'
         ]
 
         operators = []
