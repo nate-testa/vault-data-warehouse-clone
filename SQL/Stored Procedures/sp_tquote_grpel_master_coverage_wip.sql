@@ -185,7 +185,7 @@ BEGIN
 		)
 		) pivottable
 
-		MERGE INTO [edw_core].[tquote_grpel_master_coverage_tier] AS Target
+		MERGE INTO [edw_core].[tquote_grpel_master_coverage] AS Target
 		USING
 		(
 			select
@@ -220,6 +220,8 @@ BEGIN
 		from
 			edw_temp.tquote_grpel_master_coverage_wip_temp1 a
 			left join edw_temp.tquote_grpel_master_coverage_wip_temp2 b on a.Id = b.Id
+		where
+			broker_id is not null
 		) as [source]
 		ON
 		    target.grpel_master_quote_no = source.grpel_master_quote_no AND
@@ -327,9 +329,9 @@ BEGIN
 				,[target].excess_liability_limit_15m_override_premium_amt = [source].excess_liability_limit_15m_override_premium_amt
 				,[target].excess_liability_limit_20m_premium_amt = [source].excess_liability_limit_20m_premium_amt
 				,[target].excess_liability_limit_20m_override_premium_amt= [source].excess_liability_limit_20m_override_premium_amt
-				,[target].excess_liability_limit_30m_premium_amt = [source].excess_liability_limit_30m_premium_amt,
-				.[target].excess_liability_limit_30m_override_premium_amt = [source].excess_liability_limit_30m_override_premium_amt
-				,[target].uninsured_underinsured_motorist_liability_limit_1m_premium_am = [source].uninsured_underinsured_motorist_liability_limit_1m_premium_amt
+				,[target].excess_liability_limit_30m_premium_amt = [source].excess_liability_limit_30m_premium_amt
+				,[target].excess_liability_limit_30m_override_premium_amt = [source].excess_liability_limit_30m_override_premium_amt
+				,[target].uninsured_underinsured_motorist_liability_limit_1m_premium_amt = [source].uninsured_underinsured_motorist_liability_limit_1m_premium_amt
 				,[target].uninsured_underinsured_motorist_liability_limit_1m_override_premium_amt= [source].uninsured_underinsured_motorist_liability_limit_1m_override_premium_amt
 				,[target].uninsured_underinsured_motorist_liability_limit_2m_premium_amt = [source].uninsured_underinsured_motorist_liability_limit_2m_premium_amt
 				,[target].uninsured_underinsured_motorist_liability_limit_2m_override_premium_amt = [source].uninsured_underinsured_motorist_liability_limit_2m_override_premium_amt

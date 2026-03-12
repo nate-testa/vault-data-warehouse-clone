@@ -33,7 +33,7 @@ BEGIN
 
 		
 		SELECT
-            Id,PolicyNumber,EffectiveDate,0 as transaction_seq_no,ExpirationDate,CreatedDate,
+            Id,PolicyNumber,EffectiveDate,0 as transaction_seq_no,ExpirationDate,CreatedDate,UpdatedDate,
             source_system_sk,
             LevelType as tier_type,
             NumberOfParticipatingMembers as no_of_participating_members
