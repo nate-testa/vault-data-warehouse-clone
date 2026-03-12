@@ -243,6 +243,18 @@ class RecordsDispatcher:
 
     def get_existing_associations(self, from_object, from_id, to_object, association_id):
         """Get existing associations of a specific type from an object."""
+        all_assocs = self.get_all_associations(from_object, from_id, to_object)
+        matching = [
+            r for r in all_assocs
+            if any(
+                t.get('typeId') == association_id
+                for t in r.get('associationTypes', [])
+            )
+        ]
+        return matching
+
+    def get_all_associations(self, from_object, from_id, to_object):
+        """Get ALL existing associations from an object to a target object type, regardless of association type."""
         endpoint = f'{constants.hub_api}/crm/v4/objects/{from_object}/{from_id}/associations/{to_object}'
         try:
             res = requests.get(
@@ -251,20 +263,64 @@ class RecordsDispatcher:
                 timeout=120
             )
             if res.status_code == 200:
-                results = res.json().get('results', [])
-                # Filter for the specific association type
-                matching = [
-                    r for r in results 
-                    if any(
-                        t.get('typeId') == association_id 
-                        for t in r.get('associationTypes', [])
-                    )
-                ]
-                return matching
+                return res.json().get('results', [])
             return []
         except Exception as exc:
-            logger.warning(f'Failed to get existing associations: {exc}')
+            logger.warning(f'Failed to get all associations for {from_object} {from_id} -> {to_object}: {exc}')
             return []
+
+    def _classify_association_conflict(self, all_associations, target_to_id, association_id):
+        """Classify association conflict into specific failure scenarios.
+
+        Returns:
+            tuple: (conflict_type, details_dict)
+            conflict_type is one of:
+              - 'ALREADY_CORRECT': target association already exists with correct type
+              - 'ASSOCIATION_NEEDS_REPLACEMENT': same-type association exists to different target
+              - 'ASSOCIATION_CROSS_TYPE_CONFLICT': different association type is occupying the slot
+              - None: no conflict detected
+        """
+        same_type_assocs = []
+        other_type_assocs = []
+        target_to_id_str = str(target_to_id)
+
+        for assoc in all_associations:
+            to_obj_id = str(assoc.get('toObjectId', ''))
+            type_ids = [t.get('typeId') for t in assoc.get('associationTypes', [])]
+            categories = [t.get('category', 'UNKNOWN') for t in assoc.get('associationTypes', [])]
+
+            if association_id in type_ids:
+                if to_obj_id == target_to_id_str:
+                    return 'ALREADY_CORRECT', {
+                        'existing_to_id': to_obj_id,
+                        'type_ids': type_ids,
+                        'categories': categories
+                    }
+                else:
+                    same_type_assocs.append({
+                        'to_id': to_obj_id,
+                        'type_ids': type_ids,
+                        'categories': categories
+                    })
+            else:
+                other_type_assocs.append({
+                    'to_id': to_obj_id,
+                    'type_ids': type_ids,
+                    'categories': categories
+                })
+
+        if same_type_assocs:
+            return 'ASSOCIATION_NEEDS_REPLACEMENT', {
+                'same_type_associations': same_type_assocs,
+                'other_type_associations': other_type_assocs
+            }
+
+        if other_type_assocs:
+            return 'ASSOCIATION_CROSS_TYPE_CONFLICT', {
+                'blocking_associations': other_type_assocs
+            }
+
+        return None, {}
 
     def delete_association(self, from_object, from_id, to_object, to_id, association_id):
         """Delete a specific association."""
@@ -294,13 +350,15 @@ class RecordsDispatcher:
 
     def unit_associate_records(self, object_type, payload):
         from_object, to_object, association_id = Association.route_associations(object_type)
+        from_id = payload["from"]["id"]
+        to_id = payload["to"]["id"]
         data_body = [
             {
                 'associationCategory': 'USER_DEFINED',
                 'associationTypeId': association_id,
             },
         ]
-        endpoint = f'{constants.hub_api}/crm/v4/objects/{from_object}/{payload["from"]["id"]}/associations/{to_object}/{payload["to"]["id"]}'
+        endpoint = f'{constants.hub_api}/crm/v4/objects/{from_object}/{from_id}/associations/{to_object}/{to_id}'
         max_attempts = 3
         delay_seconds = 3
         res = None
@@ -313,51 +371,97 @@ class RecordsDispatcher:
         ]
         if constants.CLEAN_CHANGED_PRODUCER_ASSOCIATIONS and association_id in producer_association_ids:
             existing = self.get_existing_associations(
-                from_object,
-                payload["from"]["id"],
-                to_object,
-                association_id
+                from_object, from_id, to_object, association_id
             )
             
             # Check if there's an existing producer association to a DIFFERENT producer
             for assoc in existing:
-                old_producer_id = str(assoc.get('toObjectId'))  # Convert to string for comparison
-                new_producer_id = str(payload["to"]["id"])  # Convert to string for comparison
+                old_producer_id = str(assoc.get('toObjectId'))
+                new_producer_id = str(to_id)
                 
                 logger.info(
-                    f'Producer association check for {from_object} {payload["from"]["id"]}: '
+                    f'Producer association check for {from_object} {from_id}: '
                     f'Existing producer: {old_producer_id}, Requested producer: {new_producer_id}'
                 )
                 
                 if old_producer_id and old_producer_id != new_producer_id:
                     logger.info(
-                        f'Producer change detected for {from_object} {payload["from"]["id"]}: '
+                        f'Producer change detected for {from_object} {from_id}: '
                         f'Old producer contact: {old_producer_id}, New producer contact: {new_producer_id}. '
                         f'Deleting old association...'
                     )
                     
-                    # Delete the old producer association
                     delete_success = self.delete_association(
-                        from_object,
-                        payload["from"]["id"],
-                        to_object,
-                        old_producer_id,
-                        association_id
+                        from_object, from_id, to_object, old_producer_id, association_id
                     )
                     
                     if delete_success:
                         logger.info(f'Successfully deleted old producer association to contact {old_producer_id}')
-                        # Track producer association replacements
                         error_reporter.update_stats('associations', 'producer_reassigned', 1)
                     else:
                         logger.warning(f'Failed to delete old producer association to contact {old_producer_id}')
                 elif old_producer_id == new_producer_id:
-                    # Association already exists and is correct - no action needed
                     logger.info(
-                        f'Producer association already correct for {from_object} {payload["from"]["id"]} '
+                        f'Producer association already correct for {from_object} {from_id} '
                         f'(contact {old_producer_id}). Skipping creation.'
                     )
-                    return None  # Skip the PUT request below
+                    return None
+
+        # --- Pre-flight validation (#4): Check existing associations before attempting PUT ---
+        # Only for association types with a limit of 1 (configured in constants.LIMITED_ASSOCIATION_TYPES)
+        limited_types = getattr(constants, 'LIMITED_ASSOCIATION_TYPES', [])
+        if getattr(constants, 'PREFLIGHT_ASSOCIATION_CHECK', False) and association_id in limited_types:
+            all_existing = self.get_all_associations(from_object, from_id, to_object)
+            if all_existing:
+                conflict_type, conflict_details = self._classify_association_conflict(
+                    all_existing, to_id, association_id
+                )
+
+                if conflict_type == 'ALREADY_CORRECT':
+                    logger.debug(
+                        f'ASSOCIATION_ALREADY_CORRECT: {from_object} {from_id} -> {to_object} {to_id} '
+                        f'(type {association_id}). Skipping.'
+                    )
+                    error_reporter.update_stats('associations', 'already_correct', 1)
+                    return None
+
+                elif conflict_type == 'ASSOCIATION_CROSS_TYPE_CONFLICT':
+                    blocking = conflict_details.get('blocking_associations', [])
+                    blocking_summary = [
+                        f"to={b['to_id']} types={b['type_ids']} categories={b['categories']}"
+                        for b in blocking
+                    ]
+                    logger.warning(
+                        f'PREFLIGHT_CROSS_TYPE_CONFLICT: {from_object} {from_id} -> {to_object} {to_id} '
+                        f'(type {association_id}). Slot occupied by different association type(s). '
+                        f'Blocking associations: {blocking_summary}. '
+                        f'Skipping PUT — this call would fail with ASSOCIATION_USER_CONFIG_LIMIT_EXCEEDED.'
+                    )
+                    error_reporter.add_error(
+                        'ASSOCIATION_CROSS_TYPE_CONFLICT',
+                        f'{from_object} {from_id}: slot blocked by other type(s)',
+                        {
+                            'from_object': from_object, 'from_id': from_id,
+                            'to_object': to_object, 'to_id': to_id,
+                            'association_type_id': association_id,
+                            'blocking_associations': blocking,
+                            'fix': 'Remove or reconfigure blocking association type, or increase HubSpot association limit'
+                        }
+                    )
+                    error_reporter.update_stats('associations', 'cross_type_conflict', 1)
+                    return None
+
+                elif conflict_type == 'ASSOCIATION_NEEDS_REPLACEMENT':
+                    same_type = conflict_details.get('same_type_associations', [])
+                    other_type = conflict_details.get('other_type_associations', [])
+                    logger.warning(
+                        f'PREFLIGHT_NEEDS_REPLACEMENT: {from_object} {from_id} -> {to_object} {to_id} '
+                        f'(type {association_id}). Same-type association exists to different target(s): '
+                        f'{[a["to_id"] for a in same_type]}. '
+                        f'Other types on this object: {[(a["to_id"], a["type_ids"]) for a in other_type]}. '
+                        f'Will attempt PUT (may need REPLACE_ASSOCIATIONS_ON_LIMIT=True to succeed).'
+                    )
+                    error_reporter.update_stats('associations', 'needs_replacement', 1)
 
         for attempt in range(max_attempts):
             try:
@@ -370,50 +474,122 @@ class RecordsDispatcher:
                 
                 # Check if we hit the association limit error
                 if res.status_code == 400 and 'ASSOCIATION_USER_CONFIG_LIMIT_EXCEEDED' in res.text:
-                    # Get existing associations of this type to log details
-                    existing = self.get_existing_associations(
-                        from_object, 
-                        payload["from"]["id"], 
-                        to_object, 
-                        association_id
-                    )
-                    
-                    existing_ids = [assoc.get('toObjectId') for assoc in existing]
-                    logger.warning(
-                        f'Association limit exceeded for type {association_id}. '
-                        f'From: {from_object} {payload["from"]["id"]}, '
-                        f'Attempting to add: {to_object} {payload["to"]["id"]}, '
-                        f'Existing associations to: {existing_ids}'
-                    )
-                    
-                    # Capture in error reporter
-                    error_reporter.add_error(
-                        'ASSOCIATION_LIMIT',
-                        f'Association limit exceeded for type {association_id}',
-                        {
-                            'from_object': from_object,
-                            'from_id': payload["from"]["id"],
-                            'to_object': to_object,
-                            'to_id': payload["to"]["id"],
-                            'existing_associations': existing_ids,
-                            'association_type_id': association_id
-                        }
-                    )
+                    # --- Enhanced diagnostics (#1 & #2): Only for limited types ---
+                    limited_types = getattr(constants, 'LIMITED_ASSOCIATION_TYPES', [])
+                    if association_id in limited_types:
+                        # Fetch ALL associations, not just our type
+                        all_associations = self.get_all_associations(from_object, from_id, to_object)
+                        conflict_type, conflict_details = self._classify_association_conflict(
+                            all_associations, to_id, association_id
+                        )
+
+                        # Build a full picture of what's on this object
+                        assoc_summary = []
+                        for assoc in all_associations:
+                            a_to_id = assoc.get('toObjectId')
+                            a_types = [
+                                {'typeId': t.get('typeId'), 'category': t.get('category', 'N/A'), 'label': t.get('label', 'N/A')}
+                                for t in assoc.get('associationTypes', [])
+                            ]
+                            assoc_summary.append({'to_id': a_to_id, 'types': a_types})
+
+                        if conflict_type == 'ASSOCIATION_CROSS_TYPE_CONFLICT':
+                            blocking = conflict_details.get('blocking_associations', [])
+                            logger.warning(
+                                f'ASSOCIATION_CROSS_TYPE_CONFLICT: {from_object} {from_id} -> {to_object} {to_id} '
+                                f'(requested type {association_id}). '
+                                f'No same-type association exists, but a different association type is using the slot. '
+                                f'Blocking associations: {blocking}. '
+                                f'ALL associations on this object: {assoc_summary}. '
+                                f'FIX: Remove the blocking association or increase the HubSpot association limit for this type.'
+                            )
+                            error_reporter.add_error(
+                                'ASSOCIATION_CROSS_TYPE_CONFLICT',
+                                f'{from_object} {from_id}: slot blocked by type(s) {[b["type_ids"] for b in blocking]}',
+                                {
+                                    'from_object': from_object, 'from_id': from_id,
+                                    'to_object': to_object, 'to_id': to_id,
+                                    'association_type_id': association_id,
+                                    'conflict_type': 'CROSS_TYPE',
+                                    'blocking_associations': blocking,
+                                    'all_associations': assoc_summary,
+                                    'fix': 'Remove blocking association type or increase limit'
+                                }
+                            )
+                            error_reporter.update_stats('associations', 'cross_type_conflict', 1)
+
+                        elif conflict_type == 'ASSOCIATION_NEEDS_REPLACEMENT':
+                            same_type = conflict_details.get('same_type_associations', [])
+                            logger.warning(
+                                f'ASSOCIATION_NEEDS_REPLACEMENT: {from_object} {from_id} -> {to_object} {to_id} '
+                                f'(type {association_id}). '
+                                f'Same-type association already exists to different target(s): '
+                                f'{[a["to_id"] for a in same_type]}. '
+                                f'ALL associations on this object: {assoc_summary}. '
+                                f'FIX: Set REPLACE_ASSOCIATIONS_ON_LIMIT=True to auto-replace, or manually update in HubSpot.'
+                            )
+                            error_reporter.add_error(
+                                'ASSOCIATION_NEEDS_REPLACEMENT',
+                                f'{from_object} {from_id}: same-type assoc to {[a["to_id"] for a in same_type]}',
+                                {
+                                    'from_object': from_object, 'from_id': from_id,
+                                    'to_object': to_object, 'to_id': to_id,
+                                    'association_type_id': association_id,
+                                    'conflict_type': 'SAME_TYPE',
+                                    'existing_same_type': same_type,
+                                    'all_associations': assoc_summary,
+                                    'fix': 'Set REPLACE_ASSOCIATIONS_ON_LIMIT=True'
+                                }
+                            )
+                            error_reporter.update_stats('associations', 'needs_replacement', 1)
+
+                        else:
+                            # Fallback: couldn't determine conflict type
+                            logger.warning(
+                                f'ASSOCIATION_LIMIT_UNKNOWN: {from_object} {from_id} -> {to_object} {to_id} '
+                                f'(type {association_id}). Limit exceeded but conflict type unknown. '
+                                f'ALL associations on this object: {assoc_summary}'
+                            )
+                            error_reporter.add_error(
+                                'ASSOCIATION_LIMIT',
+                                f'{from_object} {from_id}: limit exceeded (unknown conflict)',
+                                {
+                                    'from_object': from_object, 'from_id': from_id,
+                                    'to_object': to_object, 'to_id': to_id,
+                                    'association_type_id': association_id,
+                                    'all_associations': assoc_summary
+                                }
+                            )
+                    else:
+                        # Non-limited type hit limit — log basic info without extra GET calls
+                        logger.warning(
+                            f'ASSOCIATION_LIMIT: {from_object} {from_id} -> {to_object} {to_id} '
+                            f'(type {association_id}). Limit exceeded. '
+                            f'This type is not in LIMITED_ASSOCIATION_TYPES — no detailed diagnostics.'
+                        )
+                        error_reporter.add_error(
+                            'ASSOCIATION_LIMIT',
+                            f'{from_object} {from_id}: limit exceeded for type {association_id}',
+                            {
+                                'from_object': from_object, 'from_id': from_id,
+                                'to_object': to_object, 'to_id': to_id,
+                                'association_type_id': association_id
+                            }
+                        )
                     
                     # Only delete and replace if configured to do so
                     if constants.REPLACE_ASSOCIATIONS_ON_LIMIT:
                         logger.info('REPLACE_ASSOCIATIONS_ON_LIMIT is True. Replacing existing association...')
                         
-                        # Delete existing associations of this type
-                        for assoc in existing:
+                        # Delete existing associations of this specific type
+                        existing_same_type = self.get_existing_associations(
+                            from_object, from_id, to_object, association_id
+                        )
+                        for assoc in existing_same_type:
                             old_to_id = assoc.get('toObjectId')
-                            if old_to_id and old_to_id != payload["to"]["id"]:
+                            if old_to_id and str(old_to_id) != str(to_id):
                                 self.delete_association(
-                                    from_object,
-                                    payload["from"]["id"],
-                                    to_object,
-                                    old_to_id,
-                                    association_id
+                                    from_object, from_id, to_object, old_to_id, association_id
                                 )
                         
                         # Retry the association creation
