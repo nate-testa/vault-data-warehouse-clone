@@ -16,12 +16,12 @@ enrollment_period_in_days                       Int,
 enrollment_frequency                            Varchar(255),
 override_enrollment_to_open_in                  Varchar(255),
 source_system_sk                                Int NOT NULL,
-create_ts                                       Datetime2(7),
-update_ts                                       Datetime2(7),
-etl_audit_sk                                    Int,
+create_ts                                       Datetime2(7) NOT NULL,
+update_ts                                       Datetime2(7) NOT NULL,
+etl_audit_sk                                    Int NOT NULL,
 CONSTRAINT pk_tquote_grpel_master_coverage_enrollment PRIMARY KEY (quote_grpel_master_coverage_enrollment_sk ),
 CONSTRAINT uidx_tquote_grpel_master_coverage_enrollment_qtno_effdt_created_ts UNIQUE (grpel_master_quote_no,effective_dt,enrollment_created_ts ),
-CONSTRAINT fk_tquote_grpel_master_coverage_enrollment_quote_no FOREIGN KEY (quote_grpel_master_coverage_sk) REFERENCES  edw_core.tquote_grpel_master_coverage(quote_grpel_master_coverage_sk)
+CONSTRAINT fk_tquote_grpel_master_coverage_enrollment_qt_cov_sk FOREIGN KEY (quote_grpel_master_coverage_sk) REFERENCES  edw_core.tquote_grpel_master_coverage(quote_grpel_master_coverage_sk)
 
 );
 END
