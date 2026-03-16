@@ -17,6 +17,8 @@ CREATE TABLE edw_stage.BrokerageProducer
 [MailingAddressCountry]            [nvarchar](500) NULL,
 [Phone]                            [nvarchar](20) NULL,
 [CreatedDate]                      [datetime2](7) NOT NULL,
-[UpdatedDate]                      [datetime2](7) NULL
+[UpdatedDate]                      [datetime2](7) NOT NULL
 );
 END
+
+
