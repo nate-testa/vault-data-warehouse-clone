@@ -12,7 +12,7 @@ IF EXISTS (
     FROM INFORMATION_SCHEMA.COLUMNS					
     WHERE TABLE_SCHEMA='edw_core'					
       AND TABLE_NAME = 'tquote_grpel_master_coverage_enrollment'					
-      AND COLUMN_NAME = 'grpel_master_coverage_sk'					
+      AND COLUMN_NAME = 'quote_grpel_master_coverage_sk'					
 ) 
 BEGIN 
 ALTER TABLE edw_core.tquote_grpel_master_coverage_enrollment DROP COLUMN quote_grpel_master_coverage_sk   END ;
