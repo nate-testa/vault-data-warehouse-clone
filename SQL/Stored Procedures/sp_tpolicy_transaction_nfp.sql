@@ -7,6 +7,7 @@
 -- ---------------------------------------------------------------------------------------------------
 -- 11/10/25					Dinesh Bobbili				1. Created this procedure  
 -- 12/17/25					Dinesh Bobbili				2. Updated logic for tax_fee_surcharge_sk 
+-- 03/17/26					Yunus Mohammed				3. Ad-12820 - Removed error.
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction_nfp]
 AS
@@ -202,7 +203,7 @@ BEGIN
 		left join edw_core.tinternal_coverage ic on 
 		ic.internal_coverage_cd = 
 									CASE
-									WHEN uc.group_excess_liability_limit_amt IS NOT NULL THEN 'Excess Liability' 
+									WHEN uc.excess_liability_limit_amt IS NOT NULL THEN 'Excess Liability' 
 									WHEN uc.uninsured_motorist_liability_limit_amt IS NOT NULL THEN 'UM/UIM Motorist Liability' 
 									WHEN uc.employment_practises_liability_limit_amt IS NOT NULL THEN 'Employment Practices Liability'
 									ELSE 'Excess Liability'
