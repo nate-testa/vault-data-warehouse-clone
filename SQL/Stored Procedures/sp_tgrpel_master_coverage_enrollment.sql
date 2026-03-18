@@ -45,10 +45,12 @@ BEGIN
         into edw_temp.tgrpel_master_coverage_enrollment_temp1
         from
             edw_stage.Account acc
+			inner join edw_stage.Product p on acc.ProductId = p.Id
             inner join edw_stage.AccountEnrollmentSnapshot aes on acc.Id= aes.AccountId
             left join edw_stage.[User] u on u.Id = aes.UserId
         where
-            acc.state = 'ISSUED'
+			p.ProductLine = 'GroupPersonalLines'
+            and acc.state = 'ISSUED'
             and aes.CreatedDate > @last_source_extract_ts
 		
 		INSERT INTO [edw_core].[tgrpel_master_coverage_enrollment]
