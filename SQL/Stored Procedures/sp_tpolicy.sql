@@ -219,8 +219,8 @@ BEGIN
 				left join edw_stage.AccountDocumentDelivery accdd on acc.Id = accdd.AccountId				
 				left join edw_stage.Account acc_prior on acc.copyofAccountId = acc_prior.Id 
 				left join edw_stage.Account accg on acc.GroupAccountId = accg.Id
-				left join edw_stage.BrokerageProducer bp on acc.BrokerageProducerId = bp.Id
-				left join edw_stage.Brokerage brkp on brkp.Id = bp.BrokerageId
+				left join (select * from edw_stage.BrokerageProducer where [Name] IS NOT NULL) bp on acc.BrokerageProducerId = bp.Id
+				left join (select * from edw_stage.Brokerage where [Name] NOT IN ('Bass Underwriters, Inc')) brkp on brkp.Id = bp.BrokerageId
 				--added on 3/21/24 - AG
 				left join edw_stage.Account acc_rw on acc.rewrittenfromaccountid = acc_rw.Id 
 				left join edw_stage.BillingAccount ba on ba.id = acc.BillingAccountId
@@ -229,9 +229,8 @@ BEGIN
 				left join edw_stage.Insured ins on acctv.PrimaryInsuredId = ins.Id
 				left join edw_stage.Product pr on tmp1.ProductId = pr.id
 				left join edw_temp.tpolicy_temp2 tmp2 on tmp2.AccountTransactionId = tmp1.Id
-				where pr.productline <> 'CommercialLines' --and tmp1.policynumber = 'CO100023657'   
-				and bp.Name IS NOT NULL
-				and brkp.Name NOT IN ('Bass Underwriters, Inc')
+				where pr.productline <> 'CommercialLines' 
+				
 		) AS Source
 		ON Source.PolicyNumber = Target.policy_no and cast(Source.EffectiveDate as date) = cast(Target.effective_dt as date)
 		-- For Inserts
@@ -367,8 +366,7 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.tpolicy_temp2;
 		
 		-- Update control table
-		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
+		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;		
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

@@ -284,11 +284,10 @@ BEGIN
 							and indicationstatus = 'IndicationOffered'
 							and attr.Stage in ('QUOTE','POLICY')) attr1
 				on attr1.AccountId = tmp1.id
-				left join edw_stage.BrokerageProducer bp on tmp1.BrokerageProducerId = bp.Id
-				left join edw_stage.Brokerage brkp on brkp.Id = bp.BrokerageId
-				where pr.productline <> 'CommercialLines' --and tmp1.policynumber = 'CO100023657'
-				and bp.Name IS NOT NULL
-				and brkp.Name NOT IN ('Bass Underwriters, Inc')
+				left join (select * from edw_stage.BrokerageProducer where [Name] IS NOT NULL) bp on tmp1.BrokerageProducerId = bp.Id
+				left join (select * from edw_stage.Brokerage where [Name] NOT IN ('Bass Underwriters, Inc')) brkp on brkp.Id = bp.BrokerageId
+				where pr.productline <> 'CommercialLines'
+				
 		) AS Source
 		ON Source.PolicyNumber = Target.quote_no --and cast(Source.EffectiveDate as date) = cast(Target.effective_dt as date)
 		-- For Inserts
