@@ -8,7 +8,7 @@
 -- 09/02/25				Alberto Almario				2. Add new columns Addr1_063,City_064,StateProvCd_065,PostalCode_066,Latitude_067,Longitude_068,County_069,Country_070
 -- 09/08/25				Alberto Almario				3. Use tpolicy_insured for address columns
 -- 28/01/26				Alberto Almario				4. Add filter scheduled_item_deleted_in = 'No'
--- 17/03/26				Alberto Almario				5. Add filter additional_interest_deleted_in = 'No'
+-- 18/03/26				Alberto Almario				5. Add filter additional_interest_deleted_in = 'No' and class_deleted_in = 'No'
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_collection_feed]
@@ -154,7 +154,7 @@ BEGIN
 							edw_core.tcollection_scheduled_item csi
 							INNER JOIN edw_core.tpolicy_history ph ON csi.policy_history_sk = ph.policy_history_sk
 									AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
-								LEFT JOIN edw_core.tcollection_class_type cct on csi.collection_class_type_sk = cct.collection_class_type_sk
+								LEFT JOIN (select * from edw_core.tcollection_class_type where class_deleted_in = 'No') cct on csi.collection_class_type_sk = cct.collection_class_type_sk
 						WHERE
 							ptf.policy_no = csi.policy_no
 							AND ptf.effective_dt = csi.effective_dt
@@ -243,6 +243,7 @@ BEGIN
 							and ic.aslob_cd in ('091') and ic.product_cd = 'LUX' 
 							and ic.internal_coverage_category_nm = 'Premium' 
 							and (ic.internal_coverage_cd like '%chedule%' or ic.internal_coverage_cd like '%lux%')
+							and tcct.class_deleted_in = 'No'
 						--
 						UNION ALL
 						--
@@ -310,6 +311,7 @@ BEGIN
 						and ic.aslob_cd in ('091') and ic.product_cd = 'LUX' 
 						and ic.internal_coverage_category_nm = 'Premium' 
 						and (ic.internal_coverage_cd like '%lanket%' or ic.internal_coverage_cd like '%lux%')
+						and tcct.class_deleted_in = 'No'
 					) ud
 						WHERE  ud.policy_sk = ptf.policy_sk
                        AND ud.effective_dt_sk = ptf.effective_dt_sk
