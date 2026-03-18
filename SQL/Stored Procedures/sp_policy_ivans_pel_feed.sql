@@ -14,6 +14,7 @@ GO
 -- 04/05/2024       Sandeep Gundreddy           Repush to Git Repo
 -- 21/07/2025       Alberto Almario             Add filter location_deleted_in = 'No'
 -- 06/08/2025       Alberto Almario             Add column WaterUnitTypeCd on json_pel_objects -> PEL_Watercrafts
+-- 17/03/2026		Alberto Almario				Add filter driver_deleted_in = 'No'
 -- ==============================================================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_pel_feed]
@@ -209,6 +210,7 @@ BEGIN
                     WHERE pd.policy_no = pdf.policy_no
                     AND pd.effective_dt = pdf.effective_dt
                     AND pd.transaction_seq_no = pdf.transaction_seq_no
+                    AND pd.driver_deleted_in = 'No'
                     FOR JSON PATH, INCLUDE_NULL_VALUES
                 ) AS PEL_Drivers
             FROM edw_core.tpel_driver AS pdf

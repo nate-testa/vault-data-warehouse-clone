@@ -8,6 +8,7 @@
 -- 09/02/25				Alberto Almario				2. Add new columns Addr1_063,City_064,StateProvCd_065,PostalCode_066,Latitude_067,Longitude_068,County_069,Country_070
 -- 09/08/25				Alberto Almario				3. Use tpolicy_insured for address columns
 -- 28/01/26				Alberto Almario				4. Add filter scheduled_item_deleted_in = 'No'
+-- 17/03/26				Alberto Almario				5. Add filter additional_interest_deleted_in = 'No'
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_collection_feed]
@@ -117,6 +118,7 @@ BEGIN
 					INNER JOIN edw_core.tpolicy tp ON ai.policy_no = tp.policy_no AND ai.effective_dt = tp.effective_dt
 					WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
 					and ai.product_cd = 'LUX'
+					and ai.additional_interest_deleted_in = 'No'
 				) AS jdata
 					WHERE  ptf.policy_no = jdata.policy_no
 						AND ptf.effective_dt = jdata.effective_dt
