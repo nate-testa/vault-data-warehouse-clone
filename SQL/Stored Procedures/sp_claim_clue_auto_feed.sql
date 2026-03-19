@@ -22,6 +22,7 @@ GO
 -- 10-01-2025               Alberto Almario             10.  AD11173-Set Date of births to 0 for default Birthdate
 -- 10-09-2025               Alberto Almario             11.  AD11296-Change logic for PolicyHolderNameLast, PolicyHolderNameFirst, and PolicyHolderNameMiddle
 -- 10-27-2025               Alberto Almario             12. AD11505-Add else statement for PolicyHolderNameLast and PolicyHolderNameFirst
+-- 03-19-2026               Alberto Almario             13. AD11866-Add records that don't have transactions but have closed reason of below_deductible, ce_policy_not_in_force, or ce_full_denial
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_clue_auto_feed]
 AS
@@ -50,6 +51,20 @@ BEGIN
         DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp1];
         DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp2];
         DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp3];
+        DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp4];
+
+        -- Get data that doesn't have records in tclaim_transaction and have closed reason of below_deductible, ce_policy_not_in_force, or ce_full_denial.
+        SELECT DISTINCT a.claim_no, a.claim_sk
+        INTO edw_temp.[claim_clue_auto_feed_temp4]
+        FROM edw_core.tclaim_feature a
+        WHERE a.claim_sk NOT IN (select distinct claim_sk from edw_core.tclaim_transaction)
+        AND a.product_sk = 3
+        AND a.source_system_sk <> 1
+        AND a.claim_feature_status = 'CLOSED'
+        AND a.closed_reason_desc IN ('below_deductible','ce_policy_not_in_force','ce_full_denial')
+        AND a.claim_no not in (select ClaimNumber from [edw_integration].[claim_clue_auto_feed]) -- exclude records that are already in the claim_clue_auto_feed table
+        ;
+        --------------------------------------------------------------
 
         -- Get records where the claimDisposition changed on tclaim_feature 
         SELECT DISTINCT a.claim_sk, a.claim_no
@@ -62,7 +77,10 @@ BEGIN
                     ClaimType,
                     CASE 
                         WHEN sum_subro_exp_rec_amt <> 0 THEN 'S'
-                        WHEN claim_feature_status_no = 1 THEN 'C'
+                        WHEN claim_feature_status_no = 10 THEN 'C' -- Closed
+                        WHEN claim_feature_status_no = 11 THEN 'D' -- Closed - Below Deductible
+                        WHEN claim_feature_status_no = 12 THEN 'P' -- Closed - CE Policy Not In Force
+                        WHEN claim_feature_status_no = 13 THEN 'P' -- Closed - CE Full Denial
                         ELSE 'O' 
                     END AS [ClaimDisposition]
                 FROM 
@@ -86,12 +104,16 @@ BEGIN
                             SUM(a.subrogation_expense_recovery_amt + a.subrogation_recovery_amt) AS sum_subro_exp_rec_amt,
                             MAX(
                                 CASE 
-                                    WHEN a.claim_feature_status = 'CLOSED' THEN 1
-                                    ELSE 2
+                                    WHEN a.claim_feature_status = 'CLOSED' AND c.claim_sk IS NULL THEN 10
+                                    WHEN a.claim_feature_status = 'CLOSED' AND c.claim_sk IS NOT NULL AND a.closed_reason_desc = 'below_deductible' THEN 11
+                                    WHEN a.claim_feature_status = 'CLOSED' AND c.claim_sk IS NOT NULL AND a.closed_reason_desc = 'ce_policy_not_in_force' THEN 12
+                                    WHEN a.claim_feature_status = 'CLOSED' AND c.claim_sk IS NOT NULL AND a.closed_reason_desc = 'ce_full_denial' THEN 13
+                                    ELSE 20
                                 END
                             )
                             AS claim_feature_status_no
                         FROM edw_core.tclaim_feature AS a
+                        LEFT JOIN edw_temp.[claim_clue_auto_feed_temp4] AS c ON a.claim_sk = c.claim_sk
                         WHERE a.source_system_sk in (3,5)
                         AND a.product_sk = 3
                         GROUP BY
@@ -184,8 +206,11 @@ BEGIN
                 SUM(a.subrogation_expense_recovery_amt + a.subrogation_recovery_amt) AS sum_subro_exp_rec_amt,
                 MAX(
                     CASE 
-                        WHEN a.claim_feature_status = 'CLOSED' THEN 1
-                        ELSE 2
+                        WHEN a.claim_feature_status = 'CLOSED' and c.claim_sk is null THEN 10
+                        WHEN a.claim_feature_status = 'CLOSED' and c.claim_sk is not null and a.closed_reason_desc = 'below_deductible' THEN 11
+                        WHEN a.claim_feature_status = 'CLOSED' and c.claim_sk is not null and a.closed_reason_desc = 'ce_policy_not_in_force' THEN 12
+                        WHEN a.claim_feature_status = 'CLOSED' and c.claim_sk is not null and a.closed_reason_desc = 'ce_full_denial' THEN 13
+                        ELSE 20
                     END
                 )
                 AS claim_feature_status_no,
@@ -211,18 +236,21 @@ BEGIN
                             ), 0)
                     ) AS [claimAmount]
             FROM edw_core.tclaim_feature AS a
-            INNER JOIN 
+            LEFT JOIN 
                 (
                     SELECT claim_sk, MAX(transaction_ts) AS transaction_ts
                     FROM edw_core.tclaim_transaction
                     GROUP BY claim_sk
                 ) AS b ON a.claim_sk = b.claim_sk
+            LEFT JOIN edw_temp.[claim_clue_auto_feed_temp4] AS c ON a.claim_sk = c.claim_sk
             WHERE a.source_system_sk in (3,5)
             AND a.product_sk = 3
             AND (
                     cast(b.transaction_ts as datetime2(7)) > @last_source_extract_ts
                     OR
                     a.claim_sk IN (select claim_sk from [edw_temp].[claim_clue_auto_feed_temp3])
+                    OR
+                    c.claim_sk IS NOT NULL
             )
             GROUP BY
                 a.claim_sk,
@@ -377,7 +405,10 @@ BEGIN
             '' AS [InsuredVehicleDisposition],
             CASE 
                 WHEN cf.sum_subro_exp_rec_amt <> 0 THEN 'S'
-                WHEN cf.claim_feature_status_no = 1 THEN 'C' --1 = Closed
+                WHEN cf.claim_feature_status_no = 10 THEN 'C' -- Closed
+                WHEN cf.claim_feature_status_no = 11 THEN 'D' -- Closed - Below Deductible
+                WHEN cf.claim_feature_status_no = 12 THEN 'P' -- Closed - CE Policy Not In Force
+                WHEN cf.claim_feature_status_no = 13 THEN 'P' -- Closed - CE Full Denial
                 ELSE 'O' 
             END AS [ClaimDisposition],
             CASE
@@ -815,6 +846,7 @@ BEGIN
         DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp1];
         DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp2];
         DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp3];
+        DROP TABLE IF EXISTS edw_temp.[claim_clue_auto_feed_temp4];
 
 	END TRY
 	BEGIN CATCH
