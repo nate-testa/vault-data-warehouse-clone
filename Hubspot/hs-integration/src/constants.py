@@ -3,15 +3,15 @@ import os
 
 load_dotenv()
 
-# Environment detection: 'PRODUCTION' or 'SANDBOX' (default)
+# Environment detection: 'PRODUCTION', 'UAT', or 'SANDBOX' (default)
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'SANDBOX').upper()
 
 # Environment-specific configuration
 if ENVIRONMENT == 'PRODUCTION':
     policy_object_id = '2-34924470'
     hs_token = os.getenv('HSTOKEN')
-else:  # SANDBOX (default)
-    policy_object_id = '2-33911930'
+else:  # UAT
+    policy_object_id = '2-59012341'
     hs_token = os.getenv('HSSANDBOXKEY')
 
 # Use current working directory for paths (allows DAG to control location)
@@ -62,11 +62,11 @@ if ENVIRONMENT == 'PRODUCTION':
         39,  # policy-producer
         30,  # customer-quote
     ]
-else:  # SANDBOX
+else:  # UAT
     LIMITED_ASSOCIATION_TYPES = [
-        45,  # quote-producer
-        43,  # policy-producer
-        28,  # customer-quote
+        22,  # quote-producer
+        30,  # policy-producer
+        26,  # customer-quote
     ]
 
 # Email Report Configuration
