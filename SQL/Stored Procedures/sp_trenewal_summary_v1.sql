@@ -966,7 +966,7 @@ BEGIN
 									OR q.quote_status in ( 'Not taken', 'Offered') 
 									OR a.renewalcount = 1 
 									)
-							  then qh.premium_amt 
+							  then qh.net_premium_amt 
 						 	  else 0 
 						 end offered_quote_premium_amt
 						 ,case
