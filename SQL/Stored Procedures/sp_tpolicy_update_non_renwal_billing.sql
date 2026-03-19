@@ -66,17 +66,16 @@ BEGIN
 				nullif(trim(isnull(cpd.firstname,'') + ' ' + isnull(cpd.LastName,'')),'') as current_producer_nm,
 				cusr.[name] as current_underwriter_nm,
 				pd.producer_sk as current_producer_sk,
-				brkp.[Name] as marine_boat_yacht_broker_nm
+				bp.[Name] as marine_boat_yacht_broker_nm
 				from 
 					edw_stage.Account  acct  
 					left join edw_stage.[Broker] cpd on acct.BrokerId = cpd.id
 					left join edw_stage.[user] cusr on cusr.id = acct.UnderwriterUserId 
 					LEFT JOIN edw_core.tproducer pd on pd.producer_id = acct.BrokerId
-					left join (select * from edw_stage.BrokerageProducer where [Name] IS NOT NULL) bp on acct.BrokerageProducerId = bp.Id
-					left join (select * from edw_stage.Brokerage where [Name] NOT IN ('Bass Underwriters, Inc')) brkp on brkp.Id = bp.BrokerageId
+					left join edw_stage.BrokerageProducer bp on acct.BrokerageProducerId = bp.Id
 				where	acct.UpdatedDate --CreatedDate
 							> @last_source_extract_ts
-		) b on	a.policy_no = b.policynumber and		a.effective_dt = cast(b.EffectiveDate as date);
+		) b on	a.policy_no = b.policynumber and a.effective_dt = cast(b.EffectiveDate as date);
 
 		/*
 		update a
