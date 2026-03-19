@@ -6,6 +6,8 @@
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 02/12/26		Dinesh Bobbili				1. Created this SP
+-- 03/18/26     Yunus Mohammed              2. AD-12841 Corrected insert stmt
+--                                          The positions of no_of_vehicles and reputational_injury_coverage_limit_amt are swapped
 -- ==========================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_grpel_coverage]
 AS
@@ -96,61 +98,26 @@ BEGIN
         
         INSERT INTO [edw_core].[tquote_grpel_coverage]
 		(
-	        quote_no
-            ,grpel_quote_no
-            ,effective_dt
-            ,expiration_dt
-            ,transaction_seq_no
-            ,quote_history_sk
-            ,group_nm
-            ,excess_liability_limit_amt
-            ,uninsured_motorist_liability_limit_amt
-            ,employment_practises_liability_limit_amt
-            ,non_profit_do_liability_limit_amt
-            ,family_trust_management_liability_limit_amt
-            ,uninsured_underinsured_liability_limit_amt
-            ,reputational_injury_coverage_limit_amt
-            ,no_of_vehicles
-            ,no_of_private_staff
-            ,no_of_high_performance_vehicles
-            ,no_of_recreational_vehicles
-            ,no_of_boats_yachts
-            ,no_of_personal_watercraft
-            ,underlying_auto_insurance_company_nm
-            ,underlying_home_insurance_company_nm
-            ,underlying_watercraft_insurance_company_nm
-            ,source_system_sk
-            ,create_ts
-            ,update_ts
-            ,etl_audit_sk
+            quote_no,grpel_quote_no,effective_dt,expiration_dt,transaction_seq_no,quote_history_sk,group_nm,excess_liability_limit_amt
+            ,uninsured_motorist_liability_limit_amt,employment_practises_liability_limit_amt,non_profit_do_liability_limit_amt
+            ,family_trust_management_liability_limit_amt,uninsured_underinsured_liability_limit_amt
+            ,reputational_injury_coverage_limit_amt,no_of_vehicles,no_of_private_staff,no_of_high_performance_vehicles
+            ,no_of_recreational_vehicles,no_of_boats_yachts,no_of_personal_watercraft,underlying_auto_insurance_company_nm
+            ,underlying_home_insurance_company_nm,underlying_watercraft_insurance_company_nm
+            ,source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
-        select PolicyNumber AS quote_no
-			,grpel_quote_no 
-            ,EffectiveDate AS effective_dt
-            ,ExpirationDate AS expiration_dt
-			,transaction_seq_no
-            ,quote_history_sk
-            ,group_nm	as	group_nm
-            ,ExcessLiabilityLimit	as	excess_liability_limit_amt
-            ,UMLiabilityLimit	as	uninsured_motorist_liability_limit_amt
-            ,EMPLiabilityLimit	as	employment_practises_liability_limit_amt
-            ,DOLiabilityLimit	as	non_profit_do_liability_limit_amt
-            ,FTMLiabilityLimit	as	family_trust_management_liability_limit_amt
-            ,NumberOfVehicles	as	no_of_vehicles
-            ,UILiabilityLimit	as	uninsured_underinsured_liability_limit_amt
-            ,ReputationalInjuryLimit	as	reputational_injury_coverage_limit_amt
-            ,NumberOfPrivateStaff	as	no_of_private_staff
-            ,NumberOfHighPerformansVehicles	as	no_of_high_performance_vehicles
-            ,NumberOfRecreationalVehicles	as	no_of_recreational_vehicles
-            ,NumberOfWatercraft	as	no_of_boats_yachts
-            ,NumberOfPersonalWatercraft	as	no_of_personal_watercraft
-            ,AutoInsuranceCompany	as	underlying_auto_insurance_company_nm
-            ,HomeInsuranceCompany	as	underlying_home_insurance_company_nm
-            ,WatercraftInsuranceCompany	as	underlying_watercraft_insurance_company_nm
-            ,source_system_sk
-            ,getdate() AS create_ts
-            ,getdate() AS update_ts
-            ,@etl_audit_sk AS etl_audit_sk
+        select
+            PolicyNumber AS quote_no, grpel_quote_no,EffectiveDate AS effective_dt, ExpirationDate AS expiration_dt
+            ,transaction_seq_no,quote_history_sk, group_nm as group_nm, ExcessLiabilityLimit as excess_liability_limit_amt
+            ,UMLiabilityLimit as uninsured_motorist_liability_limit_amt, EMPLiabilityLimit as employment_practises_liability_limit_amt
+            ,DOLiabilityLimit as non_profit_do_liability_limit_amt, FTMLiabilityLimit as family_trust_management_liability_limit_amt
+            ,UILiabilityLimit as uninsured_underinsured_liability_limit_amt, ReputationalInjuryLimit as	reputational_injury_coverage_limit_amt
+            ,NumberOfVehicles as no_of_vehicles, NumberOfPrivateStaff as no_of_private_staff
+            ,NumberOfHighPerformansVehicles	as no_of_high_performance_vehicles, NumberOfRecreationalVehicles as	no_of_recreational_vehicles
+            ,NumberOfWatercraft	as no_of_boats_yachts, NumberOfPersonalWatercraft as no_of_personal_watercraft
+            ,AutoInsuranceCompany as underlying_auto_insurance_company_nm, HomeInsuranceCompany as underlying_home_insurance_company_nm
+            ,WatercraftInsuranceCompany	as underlying_watercraft_insurance_company_nm
+            ,source_system_sk ,getdate() AS create_ts, getdate() AS update_ts, @etl_audit_sk AS etl_audit_sk
         from edw_temp.tquote_grpel_coverage_temp1
 		
 		SET @rows_affected=@@ROWCOUNT;
