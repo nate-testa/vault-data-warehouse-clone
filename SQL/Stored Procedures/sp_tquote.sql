@@ -284,7 +284,7 @@ BEGIN
 							and indicationstatus = 'IndicationOffered'
 							and attr.Stage in ('QUOTE','POLICY')) attr1
 				on attr1.AccountId = tmp1.id
-				left join edw_stage.BrokerageProducer bp on tmp1.BrokerageProducerId = bp.Id
+				left join  edw_stage.BrokerageProducer  bp on tmp1.BrokerageProducerId = bp.Id
 				where pr.productline <> 'CommercialLines'
 				
 		) AS Source
