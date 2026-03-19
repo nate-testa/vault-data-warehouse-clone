@@ -67,6 +67,7 @@ GO
 -- 01/30/26     Architha Gudimalla              37. AD12428 - updated to take out the 60 day calc for flat and midterm cancels
 -- 02/11/26     Architha Gudimalla              38. AD12428 - added_bpr_cancel_rw_in
 -- 02/11/26     Architha Gudimalla              39. AD12428 - updated expiring prm to exclude mid tern cancel prm amt
+-- 03/19/26     Architha Gudimalla              40. AD12861 - updated to use net offered prm for quote
 -- ======================================================================================================================================================================= 
 
 CREATE OR ALTER       PROCEDURE [edw_core].[sp_trenewal_summary_v1]
