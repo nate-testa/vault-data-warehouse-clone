@@ -209,9 +209,9 @@ BEGIN
 				,case when acc.BoundByBroker = 1 then 'Yes' else 'No' end as bound_by_broker_in
 				,case
 					when acc.BrokerOfRecordChangeApplied = 1 then 'Yes'
-					else  'No' 
+					else  'No'
 				end as broker_of_record_change_in
-				,brkp.[Name] as marine_boat_yacht_broker_nm
+				,bp.[Name] as marine_boat_yacht_broker_nm
 			FROM 
 				edw_temp.tpolicy_temp1 tmp1
 				INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = tmp1.Id
@@ -219,8 +219,7 @@ BEGIN
 				left join edw_stage.AccountDocumentDelivery accdd on acc.Id = accdd.AccountId				
 				left join edw_stage.Account acc_prior on acc.copyofAccountId = acc_prior.Id 
 				left join edw_stage.Account accg on acc.GroupAccountId = accg.Id
-				left join (select * from edw_stage.BrokerageProducer where [Name] IS NOT NULL) bp on acc.BrokerageProducerId = bp.Id
-				left join (select * from edw_stage.Brokerage where [Name] NOT IN ('Bass Underwriters, Inc')) brkp on brkp.Id = bp.BrokerageId
+				left join edw_stage.BrokerageProducer bp on acc.BrokerageProducerId = bp.Id
 				--added on 3/21/24 - AG
 				left join edw_stage.Account acc_rw on acc.rewrittenfromaccountid = acc_rw.Id 
 				left join edw_stage.BillingAccount ba on ba.id = acc.BillingAccountId
@@ -354,7 +353,7 @@ BEGIN
 		Target.document_delivery_method = source.document_delivery_method,
 		Target.renewal_cap_factor 			= Source.renewal_cap_factor,
 		Target.bound_by_broker_in = source.bound_by_broker_in,
-		Target.broker_of_record_change_in =source.broker_of_record_change_in
+		Target.broker_of_record_change_in =source.broker_of_record_change_in,
 		Target.marine_boat_yacht_broker_nm = source.marine_boat_yacht_broker_nm
 		;
 

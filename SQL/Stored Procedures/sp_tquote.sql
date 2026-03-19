@@ -262,7 +262,7 @@ BEGIN
 				nullif(trim(isnull(cpd.firstname,'') + ' ' + isnull(cpd.LastName,'')),'') as current_producer_nm,
 				cusr.[name] current_underwriter_nm,
 				pd.producer_sk as current_producer_sk,
-				brkp.[Name] as marine_boat_yacht_broker_nm
+				bp.[Name] as marine_boat_yacht_broker_nm
 			FROM
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
@@ -284,8 +284,7 @@ BEGIN
 							and indicationstatus = 'IndicationOffered'
 							and attr.Stage in ('QUOTE','POLICY')) attr1
 				on attr1.AccountId = tmp1.id
-				left join (select * from edw_stage.BrokerageProducer where [Name] IS NOT NULL) bp on tmp1.BrokerageProducerId = bp.Id
-				left join (select * from edw_stage.Brokerage where [Name] NOT IN ('Bass Underwriters, Inc')) brkp on brkp.Id = bp.BrokerageId
+				left join edw_stage.BrokerageProducer bp on tmp1.BrokerageProducerId = bp.Id
 				where pr.productline <> 'CommercialLines'
 				
 		) AS Source
@@ -450,7 +449,7 @@ BEGIN
 		,Target.current_producer_nm = Source.current_producer_nm
 		,Target.current_underwriter_nm= Source.current_underwriter_nm
 		,Target.current_producer_sk = Source.current_producer_sk
-		.Target.marine_boat_yacht_broker_nm = Source.marine_boat_yacht_broker_nm
+		,Target.marine_boat_yacht_broker_nm = Source.marine_boat_yacht_broker_nm
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
