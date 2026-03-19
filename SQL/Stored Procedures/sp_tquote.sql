@@ -262,7 +262,7 @@ BEGIN
 				nullif(trim(isnull(cpd.firstname,'') + ' ' + isnull(cpd.LastName,'')),'') as current_producer_nm,
 				cusr.[name] current_underwriter_nm,
 				pd.producer_sk as current_producer_sk,
-				brkp.[Name] as marine_boat_yacht_broker_nm
+				bp.[Name] as marine_boat_yacht_broker_nm
 			FROM
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
@@ -285,7 +285,6 @@ BEGIN
 							and attr.Stage in ('QUOTE','POLICY')) attr1
 				on attr1.AccountId = tmp1.id
 				left join  edw_stage.BrokerageProducer  bp on tmp1.BrokerageProducerId = bp.Id
-				left join  edw_stage.Brokerage  brkp on brkp.Id = bp.BrokerageId
 				where pr.productline <> 'CommercialLines'
 				
 		) AS Source
