@@ -28,6 +28,7 @@
 -- 01/07/25		Yunus Mohammed					23. AD-12169 Added new column current_producer_nm and current_underwriter_nm
 -- 01/08/25		Yunus Mohammed					24. AD-12180 Added new column current_producer_sk
 -- 03/10/26		Yunus Mohammed					27 AD12682 Added grpel_master_policy_no 
+-- 03/18/26		Yunus Mohammed					28 AD12729 Added marine_boat_yacht_broker_nm
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote]
@@ -260,7 +261,8 @@ BEGIN
 				case when attr1.AccountId is not null then 'Yes' else 'No' end as non_binding_indication_offered_in ,
 				nullif(trim(isnull(cpd.firstname,'') + ' ' + isnull(cpd.LastName,'')),'') as current_producer_nm,
 				cusr.[name] current_underwriter_nm,
-				pd.producer_sk as current_producer_sk
+				pd.producer_sk as current_producer_sk,
+				bp.[Name] as marine_boat_yacht_broker_nm
 			FROM
 				edw_temp.tquote_temp1 tmp1
 				left join edw_stage.AccountDocumentDelivery accdd on tmp1.Id = accdd.AccountId
@@ -282,7 +284,9 @@ BEGIN
 							and indicationstatus = 'IndicationOffered'
 							and attr.Stage in ('QUOTE','POLICY')) attr1
 				on attr1.AccountId = tmp1.id
-				where pr.productline <> 'CommercialLines' --and tmp1.policynumber = 'CO100023657'
+				left join  edw_stage.BrokerageProducer  bp on tmp1.BrokerageProducerId = bp.Id
+				where pr.productline <> 'CommercialLines'
+				
 		) AS Source
 		ON Source.PolicyNumber = Target.quote_no --and cast(Source.EffectiveDate as date) = cast(Target.effective_dt as date)
 		-- For Inserts
@@ -340,6 +344,7 @@ BEGIN
 			,broker_of_record_change_in
 			,non_binding_indication_offered_in
 			,current_producer_nm,current_underwriter_nm,current_producer_sk
+			,marine_boat_yacht_broker_nm
 			)
 		VALUES (Source.PolicyNumber, 
 				Source.grpel_master_quote_no,
@@ -391,6 +396,7 @@ BEGIN
 				,Source.broker_of_record_change_in
 				,Source.non_binding_indication_offered_in
 				,Source.current_producer_nm,Source.current_underwriter_nm,Source.current_producer_sk
+				,Source.marine_boat_yacht_broker_nm
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
@@ -443,6 +449,7 @@ BEGIN
 		,Target.current_producer_nm = Source.current_producer_nm
 		,Target.current_underwriter_nm= Source.current_underwriter_nm
 		,Target.current_producer_sk = Source.current_producer_sk
+		,Target.marine_boat_yacht_broker_nm = Source.marine_boat_yacht_broker_nm
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
