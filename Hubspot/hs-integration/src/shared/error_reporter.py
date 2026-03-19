@@ -6,6 +6,9 @@ from datetime import datetime
 from collections import defaultdict
 import json
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ErrorReporter:
@@ -40,7 +43,13 @@ class ErrorReporter:
             'policy': {'created': 0, 'updated': 0, 'failed': 0},
             'quote_note': {'created': 0, 'updated': 0, 'failed': 0},
             'parent_child_note': {'created': 0, 'updated': 0, 'failed': 0},
-            'associations': {'created': 0, 'failed': 0}
+            'associations': {
+                'created': 0, 'failed': 0,
+                'cross_type_conflict': 0,
+                'needs_replacement': 0,
+                'already_correct': 0,
+                'producer_reassigned': 0
+            }
         }
         
         # Error categorization
@@ -78,6 +87,163 @@ class ErrorReporter:
     def finalize(self):
         """Mark execution as complete"""
         self.end_time = datetime.now()
+        self._log_association_summary()
+
+    def _log_association_summary(self):
+        """Log a detailed association summary at end of run (#3)."""
+        assoc_stats = self.stats.get('associations', {})
+        created = assoc_stats.get('created', 0)
+        failed = assoc_stats.get('failed', 0)
+        cross_type = assoc_stats.get('cross_type_conflict', 0)
+        needs_replace = assoc_stats.get('needs_replacement', 0)
+        already_correct = assoc_stats.get('already_correct', 0)
+        producer_reassigned = assoc_stats.get('producer_reassigned', 0)
+        total_limit_failures = cross_type + needs_replace
+
+        logger.info('=' * 70)
+        logger.info('ASSOCIATION SUMMARY')
+        logger.info('=' * 70)
+        logger.info(f'  Created successfully:        {created}')
+        logger.info(f'  Already correct (skipped):   {already_correct}')
+        logger.info(f'  Producer reassignments:      {producer_reassigned}')
+        logger.info(f'  Total limit failures:        {total_limit_failures}')
+        logger.info(f'    - Cross-type conflicts:    {cross_type}')
+        logger.info(f'    - Same-type replacements:  {needs_replace}')
+        logger.info(f'  Other failures:              {failed}')
+
+        if total_limit_failures > 0:
+            # Break down by association type
+            type_breakdown = defaultdict(lambda: {'cross_type': 0, 'needs_replacement': 0})
+            for error in self.errors:
+                if error['category'] in ('ASSOCIATION_CROSS_TYPE_CONFLICT', 'ASSOCIATION_NEEDS_REPLACEMENT'):
+                    assoc_type_id = error.get('details', {}).get('association_type_id', 'unknown')
+                    if error['category'] == 'ASSOCIATION_CROSS_TYPE_CONFLICT':
+                        type_breakdown[assoc_type_id]['cross_type'] += 1
+                    else:
+                        type_breakdown[assoc_type_id]['needs_replacement'] += 1
+
+            logger.info(f'  Failures by association type:')
+            for type_id, counts in sorted(type_breakdown.items(), key=lambda x: sum(x[1].values()), reverse=True):
+                logger.info(
+                    f'    Type {type_id}: '
+                    f'{counts["cross_type"]} cross-type, '
+                    f'{counts["needs_replacement"]} same-type'
+                )
+
+            # Top affected objects
+            affected_objects = defaultdict(int)
+            for error in self.errors:
+                if error['category'] in ('ASSOCIATION_CROSS_TYPE_CONFLICT', 'ASSOCIATION_NEEDS_REPLACEMENT'):
+                    from_id = error.get('details', {}).get('from_id', 'unknown')
+                    from_obj = error.get('details', {}).get('from_object', 'unknown')
+                    affected_objects[f'{from_obj}:{from_id}'] += 1
+
+            top_affected = sorted(affected_objects.items(), key=lambda x: x[1], reverse=True)[:10]
+            if top_affected:
+                logger.info(f'  Top affected objects (up to 10):')
+                for obj_key, count in top_affected:
+                    logger.info(f'    {obj_key}: {count} failures')
+
+            # Recommendation
+            if cross_type > needs_replace:
+                logger.info(
+                    f'  RECOMMENDATION: {cross_type} failures are cross-type conflicts. '
+                    f'Increasing the HubSpot association limit would fix these. '
+                    f'REPLACE_ASSOCIATIONS_ON_LIMIT will NOT fix cross-type conflicts.'
+                )
+            elif needs_replace > 0:
+                logger.info(
+                    f'  RECOMMENDATION: {needs_replace} failures are same-type conflicts. '
+                    f'Setting REPLACE_ASSOCIATIONS_ON_LIMIT=True would fix these.'
+                )
+
+        # Cumulative tracking (#5)
+        self._log_cumulative_delta(total_limit_failures)
+
+        logger.info('=' * 70)
+
+    def _get_failure_history_path(self):
+        """Get path for the cumulative failure history file."""
+        import constants
+        return os.path.join(getattr(constants, 'log_folder_path', '.'), 'association_failure_history.json')
+
+    def save_failure_history(self):
+        """Save current failure counts for cumulative tracking (#5)."""
+        history_path = self._get_failure_history_path()
+        assoc_stats = self.stats.get('associations', {})
+        entry = {
+            'timestamp': datetime.now().isoformat(),
+            'created': assoc_stats.get('created', 0),
+            'failed': assoc_stats.get('failed', 0),
+            'cross_type_conflict': assoc_stats.get('cross_type_conflict', 0),
+            'needs_replacement': assoc_stats.get('needs_replacement', 0),
+            'already_correct': assoc_stats.get('already_correct', 0),
+            'total_limit_failures': assoc_stats.get('cross_type_conflict', 0) + assoc_stats.get('needs_replacement', 0)
+        }
+
+        history = []
+        if os.path.exists(history_path):
+            try:
+                with open(history_path, 'r') as f:
+                    history = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                history = []
+
+        history.append(entry)
+        # Keep last 30 runs
+        history = history[-30:]
+
+        try:
+            os.makedirs(os.path.dirname(history_path), exist_ok=True)
+            with open(history_path, 'w') as f:
+                json.dump(history, f, indent=2)
+        except IOError as e:
+            logger.warning(f'Failed to save failure history: {e}')
+
+    def _log_cumulative_delta(self, current_failures):
+        """Log delta compared to previous run (#5)."""
+        history_path = self._get_failure_history_path()
+        if not os.path.exists(history_path):
+            logger.info(f'  Cumulative tracking: First run (no previous data).')
+            return
+
+        try:
+            with open(history_path, 'r') as f:
+                history = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return
+
+        if not history:
+            return
+
+        prev = history[-1]
+        prev_failures = prev.get('total_limit_failures', 0)
+        prev_timestamp = prev.get('timestamp', 'unknown')
+        delta = current_failures - prev_failures
+
+        if delta > 0:
+            logger.warning(
+                f'  CUMULATIVE TREND: Association limit failures INCREASED by {delta} '
+                f'({prev_failures} -> {current_failures}) since last run ({prev_timestamp}). '
+                f'Problem is growing.'
+            )
+        elif delta < 0:
+            logger.info(
+                f'  CUMULATIVE TREND: Association limit failures DECREASED by {abs(delta)} '
+                f'({prev_failures} -> {current_failures}) since last run ({prev_timestamp}).'
+            )
+        else:
+            logger.info(
+                f'  CUMULATIVE TREND: Association limit failures unchanged at {current_failures} '
+                f'since last run ({prev_timestamp}).'
+            )
+
+        # Show last 5 runs trend if available
+        if len(history) >= 2:
+            recent = history[-5:]
+            trend_values = [r.get('total_limit_failures', 0) for r in recent]
+            trend_values.append(current_failures)
+            logger.info(f'  Recent trend (last {len(trend_values)} runs): {trend_values}')
     
     def get_duration(self):
         """Get execution duration"""
@@ -253,6 +419,10 @@ class ErrorReporter:
         </table>
 """
         
+        # Association Diagnostics section (always show if there are association issues)
+        if report_mode in ['both', 'errors_only']:
+            html += self.generate_association_summary_html()
+
         # Object Processing Statistics (conditionally included)
         if report_mode in ['both', 'statistics_only']:
             html += """
@@ -334,6 +504,73 @@ class ErrorReporter:
         
         return output_path
     
+    def generate_association_summary_html(self):
+        """Generate HTML section for association diagnostics in the email report."""
+        assoc_stats = self.stats.get('associations', {})
+        created = assoc_stats.get('created', 0)
+        failed = assoc_stats.get('failed', 0)
+        cross_type = assoc_stats.get('cross_type_conflict', 0)
+        needs_replace = assoc_stats.get('needs_replacement', 0)
+        already_correct = assoc_stats.get('already_correct', 0)
+        producer_reassigned = assoc_stats.get('producer_reassigned', 0)
+        total_limit = cross_type + needs_replace
+
+        if total_limit == 0 and failed == 0:
+            return ''
+
+        html = """
+        <h2>\U0001f517 Association Diagnostics</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th class="metric">Count</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+"""
+        rows = [
+            ('Created', created, 'Successfully created associations'),
+            ('Already Correct', already_correct, 'Skipped — association already exists with correct target'),
+            ('Producer Reassigned', producer_reassigned, 'Old producer association deleted and replaced'),
+            ('Cross-Type Conflicts', cross_type, 'Different association type occupying the slot (e.g., standard DEAL_TO_CONTACT)'),
+            ('Same-Type Replacements Needed', needs_replace, 'Same type exists to different target; needs REPLACE_ASSOCIATIONS_ON_LIMIT=True'),
+            ('Other Failures', failed, 'Other association API failures'),
+        ]
+        for label, count, desc in rows:
+            color = '#dc3545' if count > 0 and 'Conflict' in label or 'Failure' in label else '#3498db'
+            html += f"""
+                <tr>
+                    <td><strong>{label}</strong></td>
+                    <td class="metric"><span class="metric-value" style="color: {color};">{count}</span></td>
+                    <td style="font-size: 12px;">{desc}</td>
+                </tr>
+"""
+        html += """
+            </tbody>
+        </table>
+"""
+
+        # Recommendation
+        if cross_type > needs_replace:
+            html += f"""
+        <p style="background-color: #fff3cd; padding: 10px; border-radius: 5px;">
+            <strong>\u26a0\ufe0f Recommendation:</strong> {cross_type} failures are cross-type conflicts.
+            Increasing the HubSpot association limit would fix these.
+            <code>REPLACE_ASSOCIATIONS_ON_LIMIT</code> will NOT fix cross-type conflicts.
+        </p>
+"""
+        elif needs_replace > 0:
+            html += f"""
+        <p style="background-color: #fff3cd; padding: 10px; border-radius: 5px;">
+            <strong>\u26a0\ufe0f Recommendation:</strong> {needs_replace} failures are same-type conflicts.
+            Setting <code>REPLACE_ASSOCIATIONS_ON_LIMIT=True</code> would fix these.
+        </p>
+"""
+
+        return html
+
     def reset(self):
         """Reset for new execution (useful for testing)"""
         self.__init__()

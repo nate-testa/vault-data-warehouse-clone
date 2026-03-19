@@ -63,6 +63,10 @@ def run():
         # Finalize and generate report
         error_reporter.finalize()
         
+        # Save failure history for cumulative tracking across runs (if enabled)
+        if getattr(constants, 'TRACK_CUMULATIVE_FAILURES', False):
+            error_reporter.save_failure_history()
+        
         # Get report mode from constants (default to 'both')
         report_mode = getattr(constants, 'EMAIL_REPORT_MODE', 'both')
         
