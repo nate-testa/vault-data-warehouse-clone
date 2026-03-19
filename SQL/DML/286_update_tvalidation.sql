@@ -20,3 +20,10 @@ update edw_core.tvalidation_sql
 set target_sql = 'select 1'
 where
 	validation_sql_desc= 'Current Carrier VR01- Missing required fields'
+
+-- 112 Broker - Brokers with policies or quotes in both commercial and personal lines
+update edw_core.tvalidation_sql 
+set target_sql = 'select 2'
+where
+	validation_sql_desc= 'Broker - Brokers with policies or quotes in both commercial and personal lines'
+	
