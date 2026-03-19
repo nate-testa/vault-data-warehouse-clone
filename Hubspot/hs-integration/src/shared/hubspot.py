@@ -352,9 +352,13 @@ class RecordsDispatcher:
         from_object, to_object, association_id = Association.route_associations(object_type)
         from_id = payload["from"]["id"]
         to_id = payload["to"]["id"]
+        # Respect the category from the payload if provided, otherwise default to USER_DEFINED
+        association_category = 'USER_DEFINED'
+        if 'types' in payload and payload['types']:
+            association_category = payload['types'][0].get('associationCategory', 'USER_DEFINED')
         data_body = [
             {
-                'associationCategory': 'USER_DEFINED',
+                'associationCategory': association_category,
                 'associationTypeId': association_id,
             },
         ]

@@ -20,14 +20,20 @@ class ParentChildNotes:
 
             for index, row in broker_relation_df.iterrows():
                 try:
-                    from_id = Broker.return_broker_hs_id_for_update(row['parent_broker_id'])
-                    related_notes = hubspot.RecordsDispatcher.get_related_notes(from_id)
+                    parent_company_id = Broker.return_broker_hs_id_for_update(row['parent_broker_id'])
+                    related_notes = hubspot.RecordsDispatcher.get_related_notes(parent_company_id)
 
-                    if related_notes:
-                        to_id = Broker.return_broker_hs_id_for_update(row['child_broker_id'])
-                        association_type_id = Association.association_type_id['broker-parent-child']
-                        record_payload = Association.build_association_payload(from_id, to_id, association_type_id, association_category='HUBSPOT_DEFINED')
-                        batch_payload['inputs'].append(record_payload)
+                    note_results = related_notes.get('results', []) if isinstance(related_notes, dict) else []
+                    if note_results:
+                        child_company_id = Broker.return_broker_hs_id_for_update(row['child_broker_id'])
+                        association_type_id = Association.association_type_id['parent-child-notes']
+                        for note in note_results:
+                            note_id = str(note.get('toObjectId', ''))
+                            if note_id:
+                                record_payload = Association.build_association_payload(
+                                    note_id, child_company_id, association_type_id, association_category='HUBSPOT_DEFINED'
+                                )
+                                batch_payload['inputs'].append(record_payload)
 
                 except Exception as e:
                     logger.error(f'error while syncing parent child notes: {e}')

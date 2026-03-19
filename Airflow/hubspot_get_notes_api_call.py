@@ -18,7 +18,7 @@ Hubspot_DB = Variable.get("Hubspot-DB")
 if ENVIRONMENT == "PRODUCTION":
     Hubspot_HSTOKEN = Variable.get("Hubspot-HSTOKEN")
 else:
-    Hubspot_HSTOKEN = Variable.get("Hubspot-HSSANDBOXKEY")
+    Hubspot_HSTOKEN = Variable.get("Hubspot-HSSANDBOXKEY-WRITEBACK")
 
 SSH_HOME = f'/home/{Hubspot_VM_USERNAME}/hs-edw-writeback'
 REMOTE_ENV_PATH = f'{SSH_HOME}/.env'
