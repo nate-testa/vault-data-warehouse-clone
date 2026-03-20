@@ -4,6 +4,7 @@
 -- Change date      |Author						|	Change Description
 -------------------------------------------------------------------------------------------
 -- 02/24/25		     Yunus Mohammed			    1. Created this procedure
+-- 03/20/26          Yununs Mohammed            2. AD-12872 Added risk_adress_city_nm for PEL policies
 -- ========================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_risk_address]
@@ -56,6 +57,7 @@ BEGIN
             ,case
             when p.product_cd in ('HO','CO') then hl.city_nm
             when p.product_cd in ('LUX')     then cl.city_nm
+            when p.product_cd in ('PEL')     then pl.city_nm
             when p.product_cd in ('BY')      then mbyl.city_nm
             when p.product_cd in ('AU')      then p.mailing_address_city_nm
             else NULL
