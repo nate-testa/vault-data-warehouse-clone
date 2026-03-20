@@ -406,13 +406,12 @@ BEGIN
 						FROM edw_core.tcollection_scheduled_item csi
 						INNER JOIN edw_core.tpolicy_history ph ON csi.policy_history_sk = ph.policy_history_sk
 						AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
-						LEFT JOIN edw_core.tcollection_class_type cct
+						LEFT JOIN (SELECT * FROM edw_core.tcollection_class_type WHERE class_deleted_in = 'No') cct
 						on csi.collection_class_type_sk = cct.collection_class_type_sk
 						WHERE  ptf.policy_no = csi.policy_no
 							AND ptf.effective_dt = csi.effective_dt
 							AND ptf.transaction_seq_no = csi.transaction_seq_no
 							AND csi.scheduled_item_deleted_in = 'No'
-							AND cct.class_deleted_in = 'No'
 					FOR JSON PATH, INCLUDE_NULL_VALUES 
 				) AS Scheduled_Items
 				FROM edw_core.tcollection_scheduled_item as ptf
