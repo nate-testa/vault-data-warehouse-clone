@@ -411,7 +411,6 @@ BEGIN
 						WHERE  ptf.policy_no = csi.policy_no
 							AND ptf.effective_dt = csi.effective_dt
 							AND ptf.transaction_seq_no = csi.transaction_seq_no
-							AND csi.scheduled_item_deleted_in = 'No'
 					FOR JSON PATH, INCLUDE_NULL_VALUES 
 				) AS Scheduled_Items
 				FROM edw_core.tcollection_scheduled_item as ptf
