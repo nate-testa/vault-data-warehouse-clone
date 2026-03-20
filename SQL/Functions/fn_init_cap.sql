@@ -1,14 +1,15 @@
 -- ================================================================================================= 
 -- Description: Function to InitCap text
 -- -------------------------------------------------------------------------------------------------
--- Change date    |  Author                                |  Change Description
+-- Change date       |  Author                |  Change Description
 -- -------------------------------------------------------------------------------------------------
--- 01/05/26          Yunus                                  1. Created this Function
+-- 01/05/26          Yunus Mohammed           1. Created this Function
 -- 01/08/26          Architha Gudimalla       2. Updated to return null, if input is null
 -- 01/30/26          Architha Gudimalla       3. Updated after further testing
 -- 02/03/26          Architha Gudimalla       4. Added more exceptions
+-- 03/19/26          Yunus Mohammed           5. AD-12777 Updated to remove issue when word starts with number
 -- ================================================================================================= 
-CREATE OR ALTER FUNCTION [edw_core].[fn_init_cap] (@in VARCHAR(MAX))
+ALTER   FUNCTION [edw_core].[fn_init_cap] (@in VARCHAR(MAX))
 RETURNS VARCHAR(MAX)
 AS
 BEGIN
@@ -74,7 +75,8 @@ BEGIN
     SELECT  1
       where
   --checks if the first word in the name is all caps
-  LEFT(@in, CHARINDEX(' ', @in + ' ') - 1) COLLATE Latin1_General_CS_AS =  UPPER(LEFT(@in, CHARINDEX(' ', @in + ' ') - 1)) COLLATE Latin1_General_CS_AS
+  ISNUMERIC(LEFT(@in, CHARINDEX(' ', @in + ' ') - 1))=0
+  and LEFT(@in, CHARINDEX(' ', @in + ' ') - 1) COLLATE Latin1_General_CS_AS =  UPPER(LEFT(@in, CHARINDEX(' ', @in + ' ') - 1)) COLLATE Latin1_General_CS_AS
   and
   --checks if the entire name is not all caps
   @in COLLATE Latin1_General_CS_AS <> UPPER(@in) COLLATE Latin1_General_CS_AS
@@ -112,7 +114,7 @@ BEGIN
         SET @result += upper(SUBSTRING(@in, @i, 2)); 
         SET @i = @i + 1;
       END
-    ELSE IF @make_capital = 1 AND @prevChar IN ('''', '’') AND (@nextChar = ' ' or @i=@len)
+    ELSE IF @make_capital = 1 AND @prevChar IN ('''', 'â€™') AND (@nextChar = ' ' or @i=@len)
     BEGIN
       SET @result += @char;
             SET @make_capital = 0;
@@ -127,7 +129,7 @@ BEGIN
         BEGIN
             SET @result += @char;
         END
-        IF @char IN (' ', '-', '''', '’')
+        IF @char IN (' ', '-', '''', 'â€™')
         BEGIN
             SET @make_capital = 1;
      /* IF @fullWord IN ('I','II','III','IV','V','VI','VII','VIII','IX','X','XI')
@@ -154,18 +156,6 @@ BEGIN
   SET @result = REPLACE(@result, ' ltd', ' LTD')
     SET @result = REPLACE(REPLACE(@result, ' II', ' II'), ' III', ' III'); 
     --SET @result = REPLACE(@result, ' II', ' II');
-    SET @result = REPLACE(@result, ' SW ',' SW ');
-    SELECT @result = REPLACE(@result, ' SW',' SW')
-      WHERE @result LIKE '% SW';
-    SET @result = REPLACE(@result, ' SE ',' SE ');
-    SELECT @result = REPLACE(@result, ' SE',' SE')
-      WHERE @result LIKE '% SE';
-    SET @result = REPLACE(@result, ' NE ',' NE ');
-    SELECT @result = REPLACE(@result, ' NE',' NE')
-      WHERE @result LIKE '% NE';
-    SET @result = REPLACE(@result, ' NW ', ' NW ');
-    SELECT @result = REPLACE(@result, ' NW', ' NW')
-      WHERE @result LIKE '% NW';
   SELECT @result = REPLACE(@result, ' TWP', ' TWP')
       WHERE @result LIKE '% TWP';
   SELECT @result = REPLACE(@result, ' RM ', ' RM ')
@@ -204,11 +194,25 @@ BEGIN
   SELECT @result = REPLACE(@result, ' US ', ' US ')
       WHERE @result LIKE '% US %';  
   SET @result = REPLACE(@result, ' and ', ' and ')
-  SET @result = REPLACE(@result, ' the ', ' the ')
+  SET @result = REPLACE(@result, ' the ', ' The ')
   SET @result = REPLACE(@result, ' of ', ' of ')
+    SET @result = REPLACE(@result, ' SW ',' SW ');
+    SELECT @result = REPLACE(@result, ' SW',' SW')
+      WHERE @result LIKE '% SW';
+    SET @result = REPLACE(@result, ' SE ',' SE ');
+    SELECT @result = REPLACE(@result, ' SE',' SE')
+      WHERE @result LIKE '% SE';
+    SET @result = REPLACE(@result, ' NE ',' NE ');
+    SELECT @result = REPLACE(@result, ' NE',' NE')
+      WHERE @result LIKE '% NE';
+    SET @result = REPLACE(@result, ' NW ', ' NW ');
+    SELECT @result = REPLACE(@result, ' NW', ' NW')
+      WHERE @result LIKE '% NW';
+    SELECT @result = REPLACE(@result, ' PH', ' PH')
+      WHERE @result LIKE '% PH';
   IF @in is null 
         BEGIN
             SET @result = null;
         END
     RETURN @result;
-END;     
+END;
