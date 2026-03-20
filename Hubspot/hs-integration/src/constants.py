@@ -3,15 +3,15 @@ import os
 
 load_dotenv()
 
-# Environment detection: 'PRODUCTION' or 'SANDBOX' (default)
+# Environment detection: 'PRODUCTION', 'UAT', or 'SANDBOX' (default)
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'SANDBOX').upper()
 
 # Environment-specific configuration
 if ENVIRONMENT == 'PRODUCTION':
     policy_object_id = '2-34924470'
     hs_token = os.getenv('HSTOKEN')
-else:  # SANDBOX (default)
-    policy_object_id = '2-33911930'
+else:  # UAT
+    policy_object_id = '2-59012341'
     hs_token = os.getenv('HSSANDBOXKEY')
 
 # Use current working directory for paths (allows DAG to control location)
@@ -37,6 +37,37 @@ REPLACE_ASSOCIATIONS_ON_LIMIT = False
 # This prevents duplicate producer associations when a quote/policy is reassigned to a different producer
 # Example: If a quote moves from Producer A to Producer B, the old association to A is deleted
 CLEAN_CHANGED_PRODUCER_ASSOCIATIONS = True
+
+# Pre-flight Association Check
+# Set to True to check existing associations BEFORE attempting the PUT call.
+# Only applies to association types listed in LIMITED_ASSOCIATION_TYPES below.
+# This avoids wasted API calls on requests guaranteed to fail due to limit conflicts,
+# and provides early classification of cross-type vs same-type conflicts.
+# Trade-off: adds one GET call per limited association attempt.
+PREFLIGHT_ASSOCIATION_CHECK = True
+
+# Cumulative Failure Tracking
+# Set to True to save association failure counts to a JSON history file after each run.
+# This enables run-over-run trend logging (e.g., "failures increased by 449 since last run").
+# History is stored in logs/association_failure_history.json (last 30 runs).
+TRACK_CUMULATIVE_FAILURES = False
+
+# Association types that have a limit of 1 (one-to-one) in HubSpot.
+# Only these types get enhanced diagnostics (pre-flight check, cross-type vs same-type
+# conflict classification, full association dump on failure).
+# Other types (many-to-many) skip the extra GET calls entirely.
+if ENVIRONMENT == 'PRODUCTION':
+    LIMITED_ASSOCIATION_TYPES = [
+        37,  # quote-producer
+        39,  # policy-producer
+        30,  # customer-quote
+    ]
+else:  # UAT
+    LIMITED_ASSOCIATION_TYPES = [
+        22,  # quote-producer
+        30,  # policy-producer
+        26,  # customer-quote
+    ]
 
 # Email Report Configuration
 # Options: 'both', 'statistics_only', 'errors_only'

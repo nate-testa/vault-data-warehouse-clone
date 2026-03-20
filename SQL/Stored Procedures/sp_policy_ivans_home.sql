@@ -13,6 +13,7 @@ GO
 -- 18/09/2024					   Hernando Gonzalez							Fixed Earthquake Coverage
 -- 09/11/2024					   Hernando Gonzalez							VI-34591 | Fixed Contents and Loss of Use
 -- 21/01/2025					   Hernando Gonzalez							New logic for AOP
+-- 20/03/2026					   Hernando Gonzalez							Add filter additional_interest_deleted_in, class_deleted_in, scheduled_item_deleted_in
 -- ========================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_home]
@@ -371,6 +372,7 @@ BEGIN
 					INNER JOIN edw_core.tpolicy_history ph ON ai.policy_history_sk = ph.policy_history_sk
 					INNER JOIN edw_core.tpolicy tp ON ai.policy_no = tp.policy_no AND ai.effective_dt = tp.effective_dt
 					WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
+					AND ai.additional_interest_deleted_in = 'No'
 				) AS jdata
 					WHERE  ptf.policy_no = jdata.policy_no
 						AND ptf.effective_dt = jdata.effective_dt
@@ -404,11 +406,12 @@ BEGIN
 						FROM edw_core.tcollection_scheduled_item csi
 						INNER JOIN edw_core.tpolicy_history ph ON csi.policy_history_sk = ph.policy_history_sk
 						AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
-						LEFT JOIN edw_core.tcollection_class_type cct
+						LEFT JOIN (SELECT * FROM edw_core.tcollection_class_type WHERE class_deleted_in = 'No') cct
 						on csi.collection_class_type_sk = cct.collection_class_type_sk
 						WHERE  ptf.policy_no = csi.policy_no
 							AND ptf.effective_dt = csi.effective_dt
 							AND ptf.transaction_seq_no = csi.transaction_seq_no
+							AND csi.scheduled_item_deleted_in = 'No'
 					FOR JSON PATH, INCLUDE_NULL_VALUES 
 				) AS Scheduled_Items
 				FROM edw_core.tcollection_scheduled_item as ptf
@@ -501,6 +504,7 @@ BEGIN
 						WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
 						and coalesce(pt.premium_amt, 0) + coalesce(tcct.scheduled_limit_amt, 0) + coalesce(tcct.scheduled_highest_value_limit_amt, 0) <> 0 
 						and ic.aslob_cd in ('091', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%chedule%' or ic.internal_coverage_cd like '%lux%')
+						and tcct.class_deleted_in = 'No'
 						--
 						UNION ALL
 						--
@@ -576,6 +580,7 @@ BEGIN
 						WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts -- RS Updated
 						and coalesce(pt.premium_amt, 0) + coalesce(tcct.blanket_limit_amt, 0) + coalesce(tcct.blanket_single_article_limit_amt, 0) + coalesce(tcct.blanket_highest_value_limit_amt, 0) <> 0 
 						and ic.aslob_cd in ('091', '040') and ic.product_cd in ('HO', 'CO') and ic.internal_coverage_category_nm = 'Premium' and (ic.internal_coverage_cd like '%lanket%' or ic.internal_coverage_cd like '%lux%')
+						and tcct.class_deleted_in = 'No'
 					) ud
 						WHERE  ud.policy_sk = ptf.policy_sk
                        AND ud.effective_dt_sk = ptf.effective_dt_sk

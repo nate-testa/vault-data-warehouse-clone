@@ -30,9 +30,11 @@
 -- 07/10/25		Alberto Almario					24. AD10214 - Added new column renewal_cap_factor
 -- 07/10/25		Hernando Gonzalez				25. AD10220 | Added bound_by_broker_in
 -- 10/13/25		Yunus Mohammed					26 AD11316 Added broker_of_record_change_in
+-- 03/10/26		Yunus Mohammed					27 AD12682 Added grpel_master_policy_no 
+-- 03/18/26		Yunus Mohammed					28 AD12729 Added marine_boat_yacht_broker_nm
 -- ======================================================================================================================================== 
 
-CREATE OR ALTER     PROCEDURE [edw_core].[sp_tpolicy]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy]
 
 AS 
 BEGIN
@@ -129,6 +131,7 @@ BEGIN
 		USING (
 			SELECT 
 				tmp1.PolicyNumber,
+				accg.PolicyNumber as grpel_master_policy_no,
 				tmp1.EffectiveDate,
 				tmp1.ExpirationDate, 
 				br.producerid as BrokerId,
@@ -206,14 +209,17 @@ BEGIN
 				,case when acc.BoundByBroker = 1 then 'Yes' else 'No' end as bound_by_broker_in
 				,case
 					when acc.BrokerOfRecordChangeApplied = 1 then 'Yes'
-					else  'No' 
-				end as broker_of_record_change_in  
+					else  'No'
+				end as broker_of_record_change_in
+				,bp.[Name] as marine_boat_yacht_broker_nm
 			FROM 
 				edw_temp.tpolicy_temp1 tmp1
 				INNER JOIN edw_stage.AccountTransactionVersion acctv ON acctv.AccountTransactionId = tmp1.Id
 				inner join edw_stage.Account acc on tmp1.AccountId = acc.Id 
 				left join edw_stage.AccountDocumentDelivery accdd on acc.Id = accdd.AccountId				
 				left join edw_stage.Account acc_prior on acc.copyofAccountId = acc_prior.Id 
+				left join edw_stage.Account accg on acc.GroupAccountId = accg.Id
+				left join edw_stage.BrokerageProducer  bp on acc.BrokerageProducerId = bp.Id
 				--added on 3/21/24 - AG
 				left join edw_stage.Account acc_rw on acc.rewrittenfromaccountid = acc_rw.Id 
 				left join edw_stage.BillingAccount ba on ba.id = acc.BillingAccountId
@@ -222,13 +228,15 @@ BEGIN
 				left join edw_stage.Insured ins on acctv.PrimaryInsuredId = ins.Id
 				left join edw_stage.Product pr on tmp1.ProductId = pr.id
 				left join edw_temp.tpolicy_temp2 tmp2 on tmp2.AccountTransactionId = tmp1.Id
-				where pr.productline <> 'CommercialLines' --and tmp1.policynumber = 'CO100023657'   
+				where pr.productline <> 'CommercialLines' 
+				
 		) AS Source
 		ON Source.PolicyNumber = Target.policy_no and cast(Source.EffectiveDate as date) = cast(Target.effective_dt as date)
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT (
 			policy_no
+			,grpel_master_policy_no
            ,effective_dt
            ,expiration_dt
            ,broker_id
@@ -269,8 +277,10 @@ BEGIN
 		   ,renewal_cap_factor
 		   ,bound_by_broker_in
 		   ,broker_of_record_change_in
+		   ,marine_boat_yacht_broker_nm
 			)
 		VALUES (Source.PolicyNumber, 
+				Source.grpel_master_policy_no,
 				Source.EffectiveDate, Source.ExpirationDate, Source.BrokerId, Source.customer_id, 
 				Source.product_cd,
 				Source.RiskStateCode,
@@ -306,10 +316,12 @@ BEGIN
 				,source.renewal_cap_factor
 				,source.bound_by_broker_in
 				,broker_of_record_change_in
+				,source.marine_boat_yacht_broker_nm
 				)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
+		Target.grpel_master_policy_no		= Source.grpel_master_policy_no,
         Target.broker_id					= Source.BrokerId,
         Target.customer_id					= Source.customer_id,
         Target.risk_state_cd				= Source.RiskStateCode,
@@ -341,7 +353,8 @@ BEGIN
 		Target.document_delivery_method = source.document_delivery_method,
 		Target.renewal_cap_factor 			= Source.renewal_cap_factor,
 		Target.bound_by_broker_in = source.bound_by_broker_in,
-		Target.broker_of_record_change_in =source.broker_of_record_change_in
+		Target.broker_of_record_change_in =source.broker_of_record_change_in,
+		Target.marine_boat_yacht_broker_nm = source.marine_boat_yacht_broker_nm
 		;
 
 		SET @rows_affected=@@ROWCOUNT;
@@ -352,8 +365,7 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.tpolicy_temp2;
 		
 		-- Update control table
-		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
+		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;		
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))

@@ -20,22 +20,22 @@ class Association:
             "broker-policy": 22,
             "broker-quote": 36,
             "broker-parent-child": 33,
-            "parent-child-notes": 189,
+            "parent-child-notes": 190,
             "quote-producer": 37,
             "policy-producer": 39
         }
-    else:  # SANDBOX
+    else:  # UAT
         association_type_id = {
-            "customer-broker": 21,
-            "customer-policy": 25,
-            "customer-quote": 28,
+            "customer-broker": 31,
+            "customer-policy": 35,
+            "customer-quote": 26,
             "producer-broker": 23,
-            "broker-policy": 37,
-            "broker-quote": 34,
-            "broker-parent-child": 41,
-            "parent-child-notes": 189,
-            "quote-producer": 45,
-            "policy-producer": 43
+            "broker-policy": 34,
+            "broker-quote": 37,
+            "broker-parent-child": 27,
+            "parent-child-notes": 190,
+            "quote-producer": 22,
+            "policy-producer": 30
         }
     # Note: Update sandbox values above if they differ from production
 

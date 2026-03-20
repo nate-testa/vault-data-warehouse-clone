@@ -18,6 +18,7 @@
 -- 01/07/26		Architha Gudimalla		   12. Updated to pick producer from tpolicy table
 -- 01/08/26		Architha Gudimalla		   13. Added InitCap for customer_nm, producer_nm, risk address
 -- 01/08/26		Architha Gudimalla		   14. Excluded not recommended procs from ghostdraft
+-- 03/19/26		Yunus Mohammed			   15. AD-12777 Updated risk_address logic
 -- =====================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
@@ -213,6 +214,16 @@ BEGIN
 					edw_core.fn_Init_Cap(p.risk_address_city_nm) risk_address_city_nm, 
 					p.risk_address_state_cd,
 					p.risk_address_zip_cd,
+					replace(
+					isnull(       trim(edw_core.fn_Init_Cap(p.risk_address_line1)), '') +
+					isnull(', '  + nullif(trim(edw_core.fn_Init_Cap(p.risk_address_line2)),''), '') +
+					isnull(', '  + nullif(trim(p.risk_address_unit_no),''), '') +
+					isnull(', ' + edw_core.fn_Init_Cap(p.risk_address_city_nm), '') +
+					isnull(', ' + p.risk_address_state_cd, '') +
+					isnull(', '  + p.risk_address_zip_cd, '')
+					,'  ',''
+					) AS risk_address,
+					/*
 					replace( 
 							CONCAT(
 								isnull(       edw_core.fn_Init_Cap(p.risk_address_line1), ''), 
@@ -222,7 +233,8 @@ BEGIN
 								isnull(', ' + p.risk_address_state_cd, ''), 
 								isnull(' '  + p.risk_address_zip_cd, '')
 							 ),'  ',''
-					) AS risk_address,  
+					) AS risk_address, 
+					*/
 					p.occupancy_type,
 					case p.occupancy_type
 						when 'Primary' then '1_Primary'
