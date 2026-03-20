@@ -411,12 +411,12 @@ BEGIN
 						WHERE  ptf.policy_no = csi.policy_no
 							AND ptf.effective_dt = csi.effective_dt
 							AND ptf.transaction_seq_no = csi.transaction_seq_no
+							AND csi.scheduled_item_deleted_in = 'No'
 					FOR JSON PATH, INCLUDE_NULL_VALUES 
 				) AS Scheduled_Items
 				FROM edw_core.tcollection_scheduled_item as ptf
 				INNER JOIN edw_core.tpolicy_history ph ON ptf.policy_history_sk = ph.policy_history_sk
 				WHERE cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
-				AND ptf.scheduled_item_deleted_in = 'No'
 				group by ptf.policy_no, ptf.effective_dt, ptf.transaction_seq_no
 		) temp5
 
