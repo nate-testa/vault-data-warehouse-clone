@@ -193,6 +193,7 @@ with DAG(
             'sp_tquote_grpel_master_coverage',
             'sp_tquote_grpel_master_coverage_tier_wip',
             'sp_tquote_grpel_master_coverage_tier',
+            'sp_tquote_grpel_master_coverage_enrollment',
             'sp_tquote_grpel_location_wip',
             'sp_tquote_grpel_location',
             'sp_tquote_grpel_driver_wip',
