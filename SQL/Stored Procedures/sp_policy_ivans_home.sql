@@ -13,6 +13,7 @@ GO
 -- 18/09/2024					   Hernando Gonzalez							Fixed Earthquake Coverage
 -- 09/11/2024					   Hernando Gonzalez							VI-34591 | Fixed Contents and Loss of Use
 -- 21/01/2025					   Hernando Gonzalez							New logic for AOP
+-- 20/03/2026					   Hernando Gonzalez							Add filter additional_interest_deleted_in, class_deleted_in, scheduled_item_deleted_in
 -- ========================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_home]
