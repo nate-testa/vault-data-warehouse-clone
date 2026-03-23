@@ -46,8 +46,8 @@ BEGIN
 			and mca.receivable_code = 'Premium'	
 			and mca.policy_no = p.policy_no
 			)
-			and p.billing_paid_in is null;  
-			select * from edw_stage.stage_majesco_payment_data_feed
+			and p.billing_paid_in is null; 
+			
 		UPDATE p
 		SET p.first_billing_payment_dt = mca.created_on 
 		FROM edw_core.tpolicy AS p
