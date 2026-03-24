@@ -8,7 +8,7 @@
 -- 08/20/25		Dinesh Bobbili				3. Updated logic for billing_paid_in and added logic for first_billing_payment_dt
 -- 01/27/26		Yunus Mohammed		 		4. AD-12386 Added transaction_type PAYMENT_ADJUSTMENT
 -- 01/28/26		Yunus Mohammed		 		5. AD-12386 Removed delta identifier. Now we are doing full update.
--- 03/23/26		Yunus Mohammed		 		5. AD-12718 Used edw_stage.stage_majesco_payment_data_feed table instead of 
+-- 03/24/26		Yunus Mohammed		 		5. AD-12718 Used edw_stage.stage_majesco_payment_data_feed table instead of 
 --													edw_stage.stage_majesco_cash_activity
 -- ======================================================================================================================================================= 
 
@@ -34,13 +34,19 @@ BEGIN
 	
 		DECLARE @parameter_desc VARCHAR(255)
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
+		
+		drop table if exists edw_temp.tpolicy_billing_paid_in_update_temp1;
 
+		select policy_no,txn_date,total_payment_amount
+		INTO edw_temp.tpolicy_billing_paid_in_update_temp1
+		from
+		(
 		SELECT
 			ROW_NUMBER() OVER (PARTITION BY pf.policy_no ORDER BY CAST(pf.created_on AS date) ASC) AS rn,
 			pf.policy_no,
 			CAST(pf.created_on AS date) AS txn_date,
 			SUM(v.payment_amount_num) AS total_payment_amount
-		INTO edw_temp.tpolicy_billing_paid_in_update_temp1
+		
 		FROM edw_stage.stage_majesco_payment_data_feed pf
 			CROSS APPLY 
 			(
@@ -58,10 +64,14 @@ BEGIN
 				) AS payment_amount_num
 			) v
 		WHERE
-			created_on > @last_source_extract_ts
+			cast(created_on as date) >= '2024-01-01'
 			AND pf.receivable_code = 'PREMIUM'
 			AND pf.transaction_type IN ('PAYMENT', 'PAYMENT_TRANSFER_INTERNAL', 'PAYMENT_ADJUSTMENT')
-			GROUP BY pf.policy_no, CAST(pf.created_on AS date)
+		GROUP BY pf.policy_no, CAST(pf.created_on AS date)
+		HAVING SUM(v.payment_amount_num) < 0
+		) as a
+		WHERE
+			rn =1
 
 		update a
 		SET
@@ -70,35 +80,30 @@ BEGIN
 			edw_core.tpolicy a,
 			edw_temp.tpolicy_billing_paid_in_update_temp1 b
 		where
-			b.rn =1
-			and a.policy_no = b.policy_no
+			a.policy_no = b.policy_no			
 			AND a.billing_paid_in IS NULL	
 			
-		UPDATE p
-		SET p.first_billing_payment_dt = mca.txn_date 
-		FROM edw_core.tpolicy AS p
-		INNER JOIN 
-		(SELECT
-				policy_no,				
-				min(txn_date) AS txn_date 
-			FROM
-				edw_temp.tpolicy_billing_paid_in_update_temp1
-			GROUP BY
-				policy_no
-		) mca 
-		ON mca.policy_no = p.policy_no
-		WHERE p.first_billing_payment_dt is null;
+		UPDATE a
+		SET a.first_billing_payment_dt = b.txn_date
+		from
+			edw_core.tpolicy a,
+			edw_temp.tpolicy_billing_paid_in_update_temp1 b
+		where
+			a.policy_no = b.policy_no
+			and a.first_billing_payment_dt is null;
 
-		SET @rows_affected=@@ROWCOUNT;   
+		SET @rows_affected=@@ROWCOUNT;
 	
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(txn_date) FROM edw_temp.tpolicy_billing_paid_in_update_temp1),@last_source_extract_ts); 
-		--SET @new_last_source_extract_ts = '2017-01-01';
+		--SET @new_last_source_extract_ts=COALESCE((SELECT MAX(txn_date) FROM edw_temp.tpolicy_billing_paid_in_update_temp1),@last_source_extract_ts); 
+		SET @new_last_source_extract_ts = '2017-01-01';
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
 		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc; 
+
+		drop table if exists edw_temp.tpolicy_billing_paid_in_update_temp1;
 
 	END TRY
 	BEGIN CATCH
