@@ -2,7 +2,7 @@
 -- Author:		Hernando Gonzalez Garcia  
 -- Description: This procedures inserts into TPolicy_Transaction  
 -----------------------------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date |Author							|	Change Description
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 -- 06/02/23		Hernando Gonzalez Garcia		1. Created this procedure
 -- 06/28/23		Architha Gudimalla				2. Made changes to fix the errors on first run
@@ -30,7 +30,8 @@
 -- 06/04/25		Alberto Almario					20. Added new column user_sk
 -- 07/10/25		Dinesh Bobbili					21. Added IssuedByUserId in the filter
 -- 08/29/25		Dinesh Bobbili					22. Added ncrb_premium_amt, ncrb_annual_premium_amt
--- 09/11/25		Yunus Mohammed			23. AD10946 Renamed ncrb_premium_amt, ncrb_annual_premium_amt
+-- 09/11/25		Yunus Mohammed					23. AD-10946 Renamed ncrb_premium_amt, ncrb_annual_premium_amt
+-- 03/20/26		Yunus Mohammed					24. AD-12868 Populated coverage_sk for GRPEL policies
 -- ====================================================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tpolicy_transaction]
@@ -196,7 +197,8 @@ BEGIN
 				 when coll.policy_no is not null then coll.collection_coverage_sk 
 			     when pel_cov.policy_no is not null then pel_cov.pel_coverage_sk 
 			     when au_pol_cov.policy_no is not null then au_pol_cov.auto_policy_coverage_sk
-				 when mby.policy_no is not null then mby.marine_boat_yacht_coverage_sk 
+				 when mby.policy_no is not null then mby.marine_boat_yacht_coverage_sk
+				 when grpel_cov.policy_no is not null then grpel_cov.grpel_coverage_sk 
 			     else 0 
 			end cov_sk, 
 			case when au_veh_cov.policy_no is not null then au_veh_cov.auto_vehicle_coverage_sk 
@@ -236,6 +238,7 @@ BEGIN
 		LEFT JOIN edw_core.thome_coverage ho on source.PolicyNumber = ho.policy_no and cast(source.EffectiveDate as date) = ho.effective_dt and source.PolicyChangeNumber = ho.transaction_seq_no
 		LEFT JOIN edw_core.tcollection_coverage coll on source.PolicyNumber = coll.policy_no and cast(source.EffectiveDate as date) = coll.effective_dt and source.PolicyChangeNumber = coll.transaction_seq_no
 		LEFT JOIN edw_core.tpel_coverage pel_cov on source.PolicyNumber = pel_cov.policy_no and cast(source.EffectiveDate as date) = pel_cov.effective_dt and source.PolicyChangeNumber = pel_cov.transaction_seq_no
+		LEFT JOIN edw_core.tgrpel_coverage grpel_cov on source.PolicyNumber = grpel_cov.policy_no and cast(source.EffectiveDate as date) = grpel_cov.effective_dt and source.PolicyChangeNumber = grpel_cov.transaction_seq_no
 		--LEFT JOIN edw_core.tpel_location pel_loc on source.PolicyNumber = pel_loc.policy_no and cast(source.EffectiveDate as date) = pel_loc.effective_dt and source.PolicyChangeNumber = pel_loc.transaction_seq_no
 		LEFT JOIN edw_core.tauto_vehicle au_veh on source.PolicyNumber = au_veh.policy_no and cast(source.EffectiveDate as date) = au_veh.effective_dt and source.vehicle_unique_id = au_veh.vehicle_unique_id
 		LEFT JOIN edw_core.tauto_policy_coverage au_pol_cov on source.PolicyNumber = au_pol_cov.policy_no and cast(source.EffectiveDate as date) = au_pol_cov.effective_dt and source.PolicyChangeNumber = au_pol_cov.transaction_seq_no
