@@ -33,34 +33,56 @@ BEGIN
 		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;
 	
 		DECLARE @parameter_desc VARCHAR(255)
-		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))  
+		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200))
 
-		UPDATE p
-		SET p.billing_paid_in = 'Yes'
-		FROM edw_core.tpolicy AS p
-		WHERE EXISTS 
-		(
-			SELECT 1
-			FROM edw_stage.stage_majesco_payment_data_feed AS mca
-			WHERE mca.transaction_type in ('PAYMENT', 'PAYMENT_TRANSFER_INTERNAL','PAYMENT_ADJUSTMENT') 
-			and mca.receivable_code = 'Premium'	
-			and mca.policy_no = p.policy_no
-			)
-			and p.billing_paid_in is null; 
+		SELECT
+			ROW_NUMBER() OVER (PARTITION BY pf.policy_no ORDER BY CAST(pf.created_on AS date) ASC) AS rn,
+			pf.policy_no,
+			CAST(pf.created_on AS date) AS txn_date,
+			SUM(v.payment_amount_num) AS total_payment_amount
+		INTO edw_temp.tpolicy_billing_paid_in_update_temp1
+		FROM edw_stage.stage_majesco_payment_data_feed pf
+			CROSS APPLY 
+			(
+			SELECT TRY_CONVERT(
+					decimal(18,2),
+					NULLIF(
+						REPLACE(
+							REPLACE(
+								REPLACE(
+									REPLACE(LTRIM(RTRIM(pf.payment_amount)), '$', ''), 
+								',', ''), 
+							'(', '-'), 
+						')', ''), 
+					'')
+				) AS payment_amount_num
+			) v
+		WHERE
+			created_on > @last_source_extract_ts
+			AND pf.receivable_code = 'PREMIUM'
+			AND pf.transaction_type IN ('PAYMENT', 'PAYMENT_TRANSFER_INTERNAL', 'PAYMENT_ADJUSTMENT')
+			GROUP BY pf.policy_no, CAST(pf.created_on AS date)
+
+		update a
+		SET
+			billing_paid_in = 'Yes'
+		from 
+			edw_core.tpolicy a,
+			edw_temp.tpolicy_billing_paid_in_update_temp1 b
+		where
+			b.rn =1
+			and a.policy_no = b.policy_no
+			AND a.billing_paid_in IS NULL	
 			
 		UPDATE p
-		SET p.first_billing_payment_dt = mca.created_on 
+		SET p.first_billing_payment_dt = mca.txn_date 
 		FROM edw_core.tpolicy AS p
 		INNER JOIN 
 		(SELECT
 				policy_no,				
-				min(created_on) AS created_on 
+				min(txn_date) AS txn_date 
 			FROM
-				edw_stage.stage_majesco_payment_data_feed
-			WHERE
-				transaction_type IN ('PAYMENT', 'PAYMENT_TRANSFER_INTERNAL','PAYMENT_ADJUSTMENT')
-				AND receivable_code = 'Premium'
-			--	AND create_ts > @last_source_extract_ts
+				edw_temp.tpolicy_billing_paid_in_update_temp1
 			GROUP BY
 				policy_no
 		) mca 
@@ -69,8 +91,8 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;   
 	
-		--SET @new_last_source_extract_ts=COALESCE((SELECT MAX(create_ts) FROM edw_stage.stage_majesco_cash_activity),@last_source_extract_ts); 
-		SET @new_last_source_extract_ts = '2017-01-01';
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(txn_date) FROM edw_temp.tpolicy_billing_paid_in_update_temp1),@last_source_extract_ts); 
+		--SET @new_last_source_extract_ts = '2017-01-01';
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 
