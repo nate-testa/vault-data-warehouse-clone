@@ -70,7 +70,7 @@ BEGIN
 			GROUP BY pf.policy_no, cast(tf.policy_eff_date as date), pf.system_activity_no, CAST(pf.created_on AS date)
 		)
 
-		SELECT policy_no, txn_date, total_payment_amount
+		SELECT policy_no, policy_eff_date, txn_date, total_payment_amount
 		INTO edw_temp.tpolicy_billing_paid_in_update_temp1
 		FROM (
 			SELECT a.*,
@@ -85,22 +85,15 @@ BEGIN
 
 		update a
 		SET
-			billing_paid_in = 'Yes'
-		from
-			edw_core.tpolicy a,
-			edw_temp.tpolicy_billing_paid_in_update_temp1 b
-		where
-			a.policy_no = b.policy_no			
-			AND a.billing_paid_in IS NULL	
-			
-		UPDATE a
-		SET a.first_billing_payment_dt = b.txn_date
+			a.billing_paid_in = 'Yes',
+			a.first_billing_payment_dt = b.txn_date
 		from
 			edw_core.tpolicy a,
 			edw_temp.tpolicy_billing_paid_in_update_temp1 b
 		where
 			a.policy_no = b.policy_no
-			and a.first_billing_payment_dt is null;
+			AND a.effective_dt =  b.policy_eff_date
+			AND a.billing_paid_in IS NULL
 
 		SET @rows_affected=@@ROWCOUNT;
 	
