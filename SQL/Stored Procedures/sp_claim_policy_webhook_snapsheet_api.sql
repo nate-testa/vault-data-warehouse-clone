@@ -13,6 +13,7 @@
 -- 11-11-2025               Yunus Mohammed              7 - AD-11665 NFP policies excluded
 -- 12-17-2025				Yunus Mohammed				8 -	AD-11666 NFP policies included
 -- 03-12-2026               Yunus Mohammed              9 - AD-12720 Added address and contact info for businesses object of GRPEL polices
+-- 03-25-2026               Yunus Mohammed             10 - AD-12866 Added Marine Boat & Yacht policies to webhook
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
@@ -41,6 +42,7 @@ BEGIN
         DROP TABLE IF EXISTS edw_temp.policy_webhook_auto_vehicle_coverages
         DROP TABLE IF EXISTS edw_temp.policy_webhook_pel_coverages 
 		DROP TABLE IF EXISTS edw_temp.policy_webhook_grpel_coverages;
+		DROP TABLE IF EXISTS edw_temp.policy_webhook_mbyt_coverages;
         
         SELECT distinct
             pt.policy_history_sk, pt.policy_sk,pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, 
@@ -53,7 +55,7 @@ BEGIN
             from
                 edw_core.tpolicy_transaction pt
             where 
-                pt.source_system_sk not in (1) and pt.product_sk not in (6)       
+                pt.source_system_sk not in (1) 
                 and cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
             )as pt
             INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
@@ -175,6 +177,26 @@ BEGIN
 
         exec (@auto_vehicle_sql);
 
+		declare @mbyt_sql varchar(max) = ''
+		select @mbyt_sql = @mbyt_sql + 'select cpsa.policy_history_sk ,''' + snapsheet_coverage_nm + ''' as  [name],'''
+		 + coverage_type + ''' as coverage_type,'''
+         + snapsheet_coverage_cd +''' as [coverageCode],'
+        + ' cast('
+        + column_nm + ' AS varchar(255)) as [limits.amount],'
+        + ' null as [limits.coverageLimitType]'
+        + ' from
+        [edw_temp].[claim_policy_webhook_snapsheet_api_temp1] cpsa
+        -- inner join edw_core.tpolicy tp on cpsa.policyNumber = tp.policy_no and tp.effective_dt = tp.effective_dt
+        -- inner join edw_core.tpolicy_history tph on tph.policy_sk = tp.policy_sk and tph.transaction_seq_no = cpsa.transaction_seq_no
+        inner join edw_core.' + table_nm + ' as source on source.policy_history_sk = cpsa.policy_history_sk
+        union '
+		from edw_stage.coverage_mapping_snapsheet
+		where product_nm = 'Marine Boat & Yacht' and snapsheet_coverage_nm != 'Not needed for day 1'
+		and snapsheet_coverage_cd is not null
+		and column_nm not in ( 'Need to bring over from UI')
+
+		set @mbyt_sql = ' select * into edw_temp.policy_webhook_mbyt_coverages from (' +   (SUBSTRING(@mbyt_sql,1,len(@mbyt_sql)-5)) + ' ) as a '
+		exec (@mbyt_sql);
 
 	with policy_webhook as
 	(
@@ -186,15 +208,15 @@ BEGIN
             FORMAT(tp.original_policy_effective_dt, 'yyyy-MM-ddTHH:mm:ssZ') as inceptionAt,
             tph.policy_no as policyNumber,
             case
-                when prd.product_nm = 'Auto' then 'auto'
+                when prd.product_nm in ('Auto','Marine Boat & Yacht') then 'auto'
                 when prd.product_nm in ('Homeowners','Condo','Collections') then 'property'
                 when prd.product_nm in ('Excess Liability','Group Personal Excess Liability') then 'general_liability'
             end as policyType,
             tp.policy_status as [status],
             -- FORMAT(cpsa.inception_date, 'yyyy-MM-ddTHH:mm:ssZ') + '-'+ FORMAT(cpsa.expiration_dt, 'yyyy-MM-ddTHH:mm:ssZ') as [version],
-            tph.transaction_effective_dt  as [version],
+            tph.transaction_effective_dt as [version],
             cpsa.transaction_seq_no,
-            --underwriting  means VRE and VES
+            --underwriting means VRE and VES
             json_query((
                 select
                     tbrk.broker_id as agencyCode,
@@ -595,7 +617,7 @@ BEGIN
                     select
                         prefix as [prefix], first_nm as [firstName], middle_nm as [middleName], last_nm as [lastName],
                         suffix as [suffix], null as [dateOfBirth], gender as [gender],license_country_nm as [licenseIssuingCountry],
-      license_no as [licenseNumber]
+						license_no as [licenseNumber]
                     from
                         edw_core.tauto_driver tad
                     where
@@ -1059,6 +1081,103 @@ BEGIN
                 
                 for json path, include_null_values
                 ))
+			    when prd.product_cd = 'BY' then
+                JSON_QUERY
+                ((
+                select
+                CAST(tmbyt.marine_boat_yacht_sk AS VARCHAR(255)) as [id],
+                CAST(location_identifier as varchar(255)) as [externalLocationIdentifier],
+                CAST(mbyt_identifier as varchar(255)) as [externalRiskIdentifier],
+                prd.product_nm as code,
+                'motor' as [type],
+                tmbyt.boat_yacht_make as [vehicle.make],
+                tmbyt.boat_yacht_model as [vehicle.model],
+                tmbyt.boat_yatch_hull_id as [vehicle.vinNumber],
+                tmbyt.boat_yacht_year as [vehicle.year],
+                tmbyt.boat_yatch_type as [vehicle.code],
+                tmbyt.boat_yatch_type as [vehicle.codeDescription],	
+                json_query((
+                            select
+                                tmbyl.address_line_1 as address1, 
+                                tmbyl.address_line_2 as address2,
+                                tmbyl.city_nm  as city,
+                                tmbyl.zip_cd as postalCode,
+                                tmbyl.state_cd as region,
+                                tmbyl.country_nm as country
+                            for json path, include_null_values, without_array_wrapper
+                        )) as [address],             
+                
+                json_query((
+                    select
+                        null as [prefix], first_nm as [firstName], null as [middleName], last_nm as [lastName],
+                        null as [suffix], null as [dateOfBirth], null as [gender],null as [licenseIssuingCountry],
+						null as [licenseNumber]
+                    from
+                        edw_core.tmarine_boat_yacht_operator tmbyo
+                    where
+                        tmbyo.policy_history_sk = tph.policy_history_sk
+                    for json path, include_null_values
+                )) as [drivers],
+                json_query
+                    (
+                        (
+                        select 
+                            [name],
+                            [coverageCode],
+                            [limits.amount],
+                            [limits.deductible]
+                        from 
+                        (
+                            select
+                                [name],
+                                [coverageCode],
+                                null as [limits.amount],
+                                null as [limits.deductible]
+                                /*
+                                [limits.amount],
+                                [limits.coverageLimitType]
+                                */
+                            from edw_temp.policy_webhook_mbyt_coverages a
+                            where a.policy_history_sk = tph.policy_history_sk
+                                and a.coverage_type in ('Limit','Indicator')
+                                and ( [limits.amount] is not null 
+                                    or ( a.coverage_type = 'Indicator' and  [limits.amount] ='Yes')
+                                )
+                        ) as tbl
+					for json path, include_null_values
+                        )
+                    ) as coverages
+                from
+                    (
+                        select 
+                            ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt ORDER BY boat_yatch_hull_id) AS mbyt_identifier,*
+                        from
+                        edw_core.tmarine_boat_yacht
+                    ) as tmbyt
+                    inner join edw_core.tmarine_boat_yacht_coverage as tmbyc on tmbyc.marine_boat_yacht_sk = tmbyt.marine_boat_yacht_sk
+                    and tmbyc.policy_history_sk = cpsa.policy_history_sk
+                    left join
+                        (
+                            select
+                                ROW_NUMBER() OVER(PARTITION BY policy_no, effective_dt, 
+                            transaction_seq_no ORDER BY marine_boat_yacht_location_sk) AS location_identifier,*
+                            from
+                            edw_core.tmarine_boat_yacht_location
+                        ) as tmbyl ON tmbyl.marine_boat_yacht_location_sk = tmbyc.marine_boat_yacht_location_sk
+                where      
+					tmbyt.policy_no = tp.policy_no
+                    and tmbyt.effective_dt = tp.effective_dt
+                    and tmbyc.transaction_seq_no = cpsa.transaction_seq_no             
+					and	exists(
+										select 1 from [edw_temp].[claim_policy_webhook_snapsheet_api_temp1] cpsa1
+										where
+											cpsa1.policy_history_sk = cpsa.policy_history_sk
+											and cpsa1.item_sk = tmbyt.marine_boat_yacht_sk
+								)
+              
+                    
+                for json path, include_null_values
+			))
             end )) as risks,
             (
                 select ISNULL( (SELECT 1 as a where 1=2 FOR JSON PATH), '[]')
@@ -1161,9 +1280,9 @@ BEGIN
                                 [coverage.limits.amount],
                               [coverage.limits.coverageLimitType]
                                 */
-                    from 
+								from 
                                 edw_temp.policy_webhook_auto_coverages a
-                            where
+								where
                                 a.policy_history_sk = tph.policy_history_sk
 								and coverage_type in ('Limit','Indicator')
 								and
@@ -1213,7 +1332,7 @@ BEGIN
                             for json path, include_null_values
                         )
                     )
-                       WHEN prd.product_cd = 'GRPEL' then
+                WHEN prd.product_cd = 'GRPEL' then
                 json_query
                 (
                     (
@@ -1287,7 +1406,38 @@ BEGIN
                             ISNULL(Limit,0) > 0
                         for json path, include_null_values
                         )
-                    ),'[]')
+                    )
+					,'[]')
+				when prd.product_cd = 'BY' then
+                    json_query
+                    (
+                        (
+                        select 
+                            [name],
+                            [coverageCode],
+                            [limits.amount],
+                            [limits.deductible]
+                        from 
+                        (
+                            select
+                                [name],
+                                [coverageCode],
+                                null as [limits.amount],
+                                null as [limits.deductible]
+                                /*
+                                [limits.amount],
+                                [limits.coverageLimitType]
+                                */
+                            from edw_temp.policy_webhook_mbyt_coverages a
+                            where a.policy_history_sk = tph.policy_history_sk
+                                and a.coverage_type in ('Limit','Indicator','Deductible')
+                                and ( [limits.amount] is not null 
+                                    or ( a.coverage_type = 'Indicator' and  [limits.amount] ='Yes')
+                                )
+                        ) as tbl
+					for json path, include_null_values
+                        )
+                    )
                 end )) as coverages,
             json_query((
                 select
@@ -1330,7 +1480,7 @@ BEGIN
         left join edw_core.tproduct prd on prd.product_sk = tph.product_sk
         left join edw_core.tbroker tbrk on tph.broker_id = tbrk.broker_id
         WHERE  
-            prd.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability','Group Personal Excess Liability')	
+            prd.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability','Group Personal Excess Liability','Marine Boat & Yacht')	
 		
 	)
 
@@ -1492,11 +1642,12 @@ BEGIN
         DROP TABLE IF EXISTS [edw_temp].[claim_policy_webhook_snapsheet_api_temp1];
         DROP TABLE IF EXISTS [edw_temp].[claim_policy_webhook_snapsheet_api_temp2];
         DROP TABLE IF EXISTS [edw_temp].[claim_policy_webhook_snapsheet_api_temp3];
-        DROP TABLE IF EXISTS edw_temp.policy_webhook_home_coverages
-        DROP TABLE IF EXISTS edw_temp.policy_webhook_auto_coverages
-        DROP TABLE IF EXISTS edw_temp.policy_webhook_auto_vehicle_coverages
-        DROP TABLE IF EXISTS edw_temp.policy_webhook_pel_coverages
-		DROP TABLE IF EXISTS edw_temp.policy_webhook_grpel_coverages
+        DROP TABLE IF EXISTS edw_temp.policy_webhook_home_coverages;
+        DROP TABLE IF EXISTS edw_temp.policy_webhook_auto_coverages;
+        DROP TABLE IF EXISTS edw_temp.policy_webhook_auto_vehicle_coverages;
+        DROP TABLE IF EXISTS edw_temp.policy_webhook_pel_coverages;
+		DROP TABLE IF EXISTS edw_temp.policy_webhook_grpel_coverages;
+		DROP TABLE IF EXISTS edw_temp.policy_webhook_mbyt_coverages;
 	
 
 		-- Update control table
