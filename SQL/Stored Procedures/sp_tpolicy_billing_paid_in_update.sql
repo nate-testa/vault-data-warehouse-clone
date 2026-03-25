@@ -61,13 +61,13 @@ BEGIN
 					) AS payment_amount_num
 			) v
 			, edw_stage.stage_majesco_transaction_data_feed tf 
-			WHERE cast(created_on as date) >= '2024-01-01'
+			WHERE cast(pf.created_on as date) >= '2024-01-01'
 			AND pf.receivable_code = 'PREMIUM'
 			AND pf.transaction_type IN ('PAYMENT', 'PAYMENT_TRANSFER_INTERNAL', 'PAYMENT_ADJUSTMENT')
 			and pf.account_no = tf.account_no
 			and pf.policy_no = tf.policy_no
 			and pf.system_activity_no = tf.system_activity_no
-			GROUP BY pf.policy_no, cast(tf.policy_eff_date as date), pf.system_activity_no, pf.system_activity_no, CAST(pf.created_on AS date)
+			GROUP BY pf.policy_no, cast(tf.policy_eff_date as date), pf.system_activity_no, CAST(pf.created_on AS date)
 		)
 
 		SELECT policy_no, txn_date, total_payment_amount
