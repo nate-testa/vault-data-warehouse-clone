@@ -1430,7 +1430,7 @@ BEGIN
                                 */
                             from edw_temp.policy_webhook_mbyt_coverages a
                             where a.policy_history_sk = tph.policy_history_sk
-                                and a.coverage_type in ('Limit','Indicator','Deductible')
+                                and a.coverage_type in ('Limit','Indicator')
                                 and ( [limits.amount] is not null 
                                     or ( a.coverage_type = 'Indicator' and  [limits.amount] ='Yes')
                                 )
