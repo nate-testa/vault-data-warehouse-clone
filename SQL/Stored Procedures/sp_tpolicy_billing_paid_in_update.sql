@@ -37,60 +37,63 @@ BEGIN
 		
 		drop table if exists edw_temp.tpolicy_billing_paid_in_update_temp1;
 
-		select policy_no,txn_date,total_payment_amount
-		INTO edw_temp.tpolicy_billing_paid_in_update_temp1
-		from
+		WITH payment_totals AS 
 		(
-		SELECT
-			ROW_NUMBER() OVER (PARTITION BY pf.policy_no ORDER BY CAST(pf.created_on AS date) ASC) AS rn,
-			pf.policy_no,
-			CAST(pf.created_on AS date) AS txn_date,
-			SUM(v.payment_amount_num) AS total_payment_amount
-		
-		FROM edw_stage.stage_majesco_payment_data_feed pf
-			CROSS APPLY 
-			(
-			SELECT TRY_CONVERT(
-					decimal(18,2),
-					NULLIF(
-						REPLACE(
+			SELECT 
+				pf.policy_no,
+				cast(tf.policy_eff_date as date) as policy_eff_date,
+				pf.system_activity_no,
+				CAST(pf.created_on AS date) AS txn_date,
+				SUM(v.payment_amount_num) AS total_payment_amount
+			FROM edw_stage.stage_majesco_payment_data_feed pf
+			CROSS APPLY (
+				SELECT TRY_CONVERT(
+						decimal(18,2),
+						NULLIF(
 							REPLACE(
 								REPLACE(
-									REPLACE(LTRIM(RTRIM(pf.payment_amount)), '$', ''), 
-								',', ''), 
-							'(', '-'), 
-						')', ''), 
-					'')
-				) AS payment_amount_num
+									REPLACE(
+										REPLACE(LTRIM(RTRIM(pf.payment_amount)), '$', ''), 
+									',', ''), 
+								'(', '-'), 
+							')', ''), 
+						'')
+					) AS payment_amount_num
 			) v
-		WHERE
-			cast(created_on as date) >= '2024-01-01'
+			, edw_stage.stage_majesco_transaction_data_feed tf 
+			WHERE cast(pf.created_on as date) >= '2024-01-01'
 			AND pf.receivable_code = 'PREMIUM'
 			AND pf.transaction_type IN ('PAYMENT', 'PAYMENT_TRANSFER_INTERNAL', 'PAYMENT_ADJUSTMENT')
-		GROUP BY pf.policy_no, CAST(pf.created_on AS date)
-		HAVING SUM(v.payment_amount_num) < 0
-		) as a
-		WHERE
-			rn =1
+			and pf.account_no = tf.account_no
+			and pf.policy_no = tf.policy_no
+			and pf.system_activity_no = tf.system_activity_no
+			GROUP BY pf.policy_no, cast(tf.policy_eff_date as date), pf.system_activity_no, CAST(pf.created_on AS date)
+		)
+
+		SELECT policy_no, policy_eff_date, txn_date, total_payment_amount
+		INTO edw_temp.tpolicy_billing_paid_in_update_temp1
+		FROM (
+			SELECT a.*,
+				ROW_NUMBER() OVER (PARTITION BY a.policy_no, a.policy_eff_date ORDER BY txn_date ASC) AS rn
+			FROM payment_totals a, edw_core.tpolicy b 
+			WHERE a.policy_no = b.policy_no
+			and a.policy_eff_date = b.effective_dt 
+			AND b.billing_paid_in IS NULL
+		) t
+		WHERE rn = 1
+		AND total_payment_amount < 0 
 
 		update a
 		SET
-			billing_paid_in = 'Yes'
-		from 
-			edw_core.tpolicy a,
-			edw_temp.tpolicy_billing_paid_in_update_temp1 b
-		where
-			a.policy_no = b.policy_no			
-			AND a.billing_paid_in IS NULL	
-			
-		UPDATE a
-		SET a.first_billing_payment_dt = b.txn_date
+			a.billing_paid_in = 'Yes',
+			a.first_billing_payment_dt = b.txn_date
 		from
 			edw_core.tpolicy a,
 			edw_temp.tpolicy_billing_paid_in_update_temp1 b
 		where
 			a.policy_no = b.policy_no
-			and a.first_billing_payment_dt is null;
+			AND a.effective_dt =  b.policy_eff_date
+			AND a.billing_paid_in IS NULL
 
 		SET @rows_affected=@@ROWCOUNT;
 	
