@@ -9,6 +9,7 @@
 -- 04/19/24		Architha Gudimalla		    4. Updated the @new_last_source_extract_ts and also added the update to check for nulls
 -- 06/14/24		Yunus Mohammed 				5. Removed error for rate_on_line 
 -- 04/18/25		Architha Gudimalla		    6. Updated conversion error on loss_of_use_limit_amt error
+-- 03/26/26		Yunus Mohammed				7. AD-12951 Updated loss_of_use_derived_pc calculation
 -- ================================================================================================================================== 
 
 
@@ -36,18 +37,26 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) 
 		
 		update a
-			set loss_of_use_derived_pc = 	ROUND(
-													CASE
-														WHEN c.loss_of_use_option_raw IN ('Reasonable and Necessary Expenses','reasonableAndNecessaryExpenses12months','Reasonable and Necessary Expenses- 12 months') THEN 0.20
-														WHEN c.loss_of_use_option_float > 0 THEN c.loss_of_use_option_float
-														WHEN c.loss_of_use_pc_float > 0 THEN c.loss_of_use_pc_float
-														WHEN c.loss_of_use_pc_float IS NULL AND c.loss_of_use_option_float IS NULL AND c.loss_of_use_limit_amt_float IS NULL THEN 0
-														WHEN c.loss_of_use_limit_amt_float > 100 AND c.dwelling_limit_amt > 0 THEN c.loss_of_use_limit_amt_float / c.dwelling_limit_amt
-														WHEN c.loss_of_use_limit_amt_float > 100 AND c.contents_limit_amt > 0 THEN c.loss_of_use_limit_amt_float / c.contents_limit_amt
-														WHEN c.loss_of_use_pc_float IS NOT NULL THEN c.loss_of_use_pc_float
-													ELSE 0
-													END
-												,4)
+			set loss_of_use_derived_pc = 	
+					ROUND(
+						CASE
+							WHEN c.loss_of_use_option_raw IN 
+							(
+								'Reasonable and Necessary Expenses',
+								'reasonableAndNecessaryExpenses12months',
+								'Reasonable and Necessary Expenses- 12 months',
+								'Reasonable and Necessary Expenses- 24 months',
+								'reasonableAndNecessaryExpenses24months'
+							) THEN 0.20
+							WHEN c.loss_of_use_option_float > 0 THEN c.loss_of_use_option_float
+							WHEN c.loss_of_use_pc_float > 0 THEN c.loss_of_use_pc_float
+							WHEN c.loss_of_use_pc_float IS NULL AND c.loss_of_use_option_float IS NULL AND c.loss_of_use_limit_amt_float IS NULL THEN 0
+							WHEN c.loss_of_use_limit_amt_float > 100 AND c.dwelling_limit_amt > 0 THEN c.loss_of_use_limit_amt_float / c.dwelling_limit_amt
+							WHEN c.loss_of_use_limit_amt_float > 100 AND c.contents_limit_amt > 0 THEN c.loss_of_use_limit_amt_float / c.contents_limit_amt
+							WHEN c.loss_of_use_pc_float IS NOT NULL THEN c.loss_of_use_pc_float
+						ELSE 0
+						END
+					,4)
 		from [edw_core].[thome_coverage] a
 		inner join 	(
 						SELECT  
