@@ -409,7 +409,10 @@ BEGIN
 			json_query
             ((
                 select
-                    tpi.first_nm as firstName,
+                     case
+                        when [tpi].insured_type = 'Entity' then [tpi].insured_nm
+                    else tpi.first_nm
+                    end as firstName,                    
                     tpi.middle_nm as middleName,
                     tpi.last_nm as lastName,
                     case
