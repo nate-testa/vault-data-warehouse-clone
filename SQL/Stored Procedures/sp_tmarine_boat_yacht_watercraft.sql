@@ -10,6 +10,7 @@ GO
 -- Change date 		|Author						|	Change Description
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- 25/11/2024		Alberto Almario				1. Create this stored procedure.
+-- 26/03/2026        Tuba Mohsin                2. Fixed Mapping for Year, Model and Make
 -- ===============================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tmarine_boat_yacht_watercraft]
 AS
@@ -46,9 +47,9 @@ BEGIN
 			watercraft_no,
 			watercraft_unique_id,
 			policy_history_sk,
-			[Year] AS watercraft_make,
-			Make AS watercraft_model,
-			Model AS watercraft_year,
+			Make AS watercraft_make,
+			Model AS watercraft_model,
+			[Year] AS watercraft_year,
 			PWCId AS watercraft_pwc_id,
 			source_system_sk,
 			IssuedDate
