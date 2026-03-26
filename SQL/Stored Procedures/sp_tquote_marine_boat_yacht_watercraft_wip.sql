@@ -44,9 +44,9 @@ BEGIN
 			watercraft_no,
 			watercraft_unique_id,
 			quote_history_sk,
-			[Year] AS watercraft_make,
-			Make AS watercraft_model,
-			Model AS watercraft_year,
+			Make AS watercraft_make,
+			Model AS watercraft_model,
+			[Year]AS watercraft_year,
 			PWCId AS watercraft_pwc_id,
 			source_system_sk,
 			greatest_create_update_date
