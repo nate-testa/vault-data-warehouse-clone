@@ -10,6 +10,7 @@ GO
 -- Change date 		|Author						|	Change Description
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- 25/11/2024		Alberto Almario				1. Create this stored procedure.
+-- 26/03/2026        Tuba Mohsin                2. Fixed Mapping for Year, Model and Make
 -- ===============================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_marine_boat_yacht_watercraft]
 AS
