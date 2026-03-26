@@ -409,12 +409,18 @@ BEGIN
 			json_query
             ((
                 select
+                     case
+						when [tpi].insured_type = 'Entity' then [tpi].insured_nm                         
+                    end as businessName,
                     tpi.first_nm as firstName,
                     tpi.middle_nm as middleName,
-                    tpi.last_nm as lastName,
+                    tpi.last_nm as lastName,                
                     case
-                        when tpi.primary_insured_in = 'Yes' then 'policyholder'
-                        else 'additional_insured'
+                        when tpi.primary_insured_in = 'Yes'	 and insured_type = 'Individual' then 'policyholder'
+                        when tpi.primary_insured_in = 'Yes'  and insured_type = 'Entity' then  'business_owner'
+                        when tpi.primary_insured_in = 'No' and insured_type = 'Individual' then 'additional_insured'
+                        when tpi.primary_insured_in = 'No' and	insured_type = 'Entity' then 'business_owner'                 
+                        else 'other'
                     end as [role],
                     -- null as providerSubjectId it can be primary_key
                     json_query((
