@@ -64,10 +64,12 @@ BEGIN
 			WHERE cast(pf.created_on as date) >= '2024-01-01'
 			AND pf.receivable_code = 'PREMIUM'
 			AND pf.transaction_type IN ('PAYMENT', 'PAYMENT_TRANSFER_INTERNAL', 'PAYMENT_ADJUSTMENT')
+			and pf.system_transaction_seq = tf.system_transaction_seq
 			and pf.account_no = tf.account_no
 			and pf.policy_no = tf.policy_no
 			and pf.system_activity_no = tf.system_activity_no
 			GROUP BY pf.policy_no, cast(tf.policy_eff_date as date), pf.system_activity_no, CAST(pf.created_on AS date)
+			having SUM(v.payment_amount_num) < 0 
 		)
 
 		SELECT policy_no, policy_eff_date, txn_date, total_payment_amount
@@ -78,10 +80,10 @@ BEGIN
 			FROM payment_totals a, edw_core.tpolicy b 
 			WHERE a.policy_no = b.policy_no
 			and a.policy_eff_date = b.effective_dt 
-			AND b.billing_paid_in IS NULL
+			AND b.billing_paid_in IS NULL			
 		) t
 		WHERE rn = 1
-		AND total_payment_amount < 0 
+		
 
 		update a
 		SET
@@ -92,8 +94,7 @@ BEGIN
 			edw_temp.tpolicy_billing_paid_in_update_temp1 b
 		where
 			a.policy_no = b.policy_no
-			AND a.effective_dt =  b.policy_eff_date
-			AND a.billing_paid_in IS NULL
+			AND a.effective_dt =  b.policy_eff_date			
 
 		SET @rows_affected=@@ROWCOUNT;
 	
