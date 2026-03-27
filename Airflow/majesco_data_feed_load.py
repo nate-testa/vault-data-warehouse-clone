@@ -5,6 +5,7 @@ from typing import cast
 from airflow import DAG
 from airflow.utils.context import Context
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
+from airflow.utils.task_group import TaskGroup
 from airflow.operators.email import EmailOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
@@ -114,52 +115,131 @@ args = {
     'on_failure_callback': on_failure_callback,
 }
 
-with DAG(
-    dag_id='majesco_data_feed_load',
-    catchup=False,
-    max_active_runs=1,
-    default_args=args,
-    start_date=pendulum.datetime(2025, 1, 1, tz="America/New_York"),
-    # schedule_interval='0 8 * * *', # At 08:00 every day
-    schedule_interval=None,
-    tags=["Majesco Data Feed", "vault"],
-) as dag:
-    
+# Schedule definitions: Weekday vs Weekend
+SCHEDULES = {
+    "weekday": "0 7 * * 1-5",      # Monday-Friday at 7:00 AM
+    "weekend": "30 11 * * 0,6"     # Sunday and Saturday at 11:30 AM
+}
 
-    start = EmptyOperator(
-        task_id='start',
-    )
+# Create DAGs dynamically for each schedule
+for schedule_key, cron_expression in SCHEDULES.items():
+    dag_id = f'majesco_data_feed_load_{schedule_key}'
 
-    copy_files_from_sftp_to_blob_storage = PythonOperator(
-        task_id='copy_files_from_sftp_to_blob_storage',
-        python_callable=process_sftp_majesco_files,
-        dag=dag,
-    )
+    dag = DAG(
+            dag_id=dag_id,
+            catchup=False,
+            max_active_runs=1,
+            default_args=args,
+            start_date=pendulum.datetime(2026, 3, 27, tz="America/New_York"),
+            schedule=cron_expression,
+            tags=["majesco data feed", schedule_key],
+        )
+
+    with dag:
+
+        start = EmptyOperator(
+            task_id='start',
+        )
+
+        with TaskGroup("process_files_group") as process_files_group:
+
+            copy_files_from_sftp_to_blob_storage = PythonOperator(
+                task_id='copy_files_from_sftp_to_blob_storage',
+                python_callable=process_sftp_majesco_files,
+                dag=dag,
+            )
+                
+            process_majesco_data_feed_files = PythonOperator(
+                task_id='process_majesco_data_feed_files',
+                python_callable=process_all_files,
+                dag=dag,
+            )
+
+            copy_files_from_sftp_to_blob_storage.set_downstream(process_majesco_data_feed_files)
+
+        with TaskGroup("policy_group") as policy_group:
+
+                policy_group_items = [
+                    'sp_tpolicy_billing_paid_in_update'
+                ]
+                
+                operators = []
+                for item in policy_group_items:
+                    operator = MsSqlOperator(
+                        task_id=item,
+                        mssql_conn_id='Vault_EDW',
+                        sql=f"EXEC edw_core.{item}",
+                        database="vault_edw",
+                        autocommit=True,
+                    )
+                    operators.append(operator)
+
+                send_policy_group_email = EmailOperator(
+                        task_id='send_policy_group_email',
+                        to=to_email,
+                        subject='Airflow - Majesco data feed policy tables loaded successfully',
+                        html_content=get_sp_success_data_HTML(policy_group_items, 'All stored procedures executed successfully for all the Policy tables'),
+                    )
+                
+                for i in range(len(operators) - 1):
+                    operators[i].set_downstream(operators[i + 1])
+
+                operators[-1].set_downstream(send_policy_group_email)
+
+        check_data_and_send_email = PythonOperator(
+                task_id='check_data_and_send_email',
+                python_callable=check_majesco_data_and_send_email,
+                dag=dag,
+            )
         
-    process_majesco_data_feed_files = PythonOperator(
-        task_id='process_majesco_data_feed_files',
-        python_callable=process_all_files,
-        dag=dag,
-    )
+        check_not_loaded_data_and_send_email = PythonOperator(
+                task_id='check_not_loaded_data_and_send_email',
+                python_callable=check_majesco_not_loaded_data_and_send_email,
+                dag=dag,
+            )
 
-    check_data_and_send_email = PythonOperator(
-            task_id='check_data_and_send_email',
-            python_callable=check_majesco_data_and_send_email,
-            dag=dag,
+        with TaskGroup("datamart_group") as datamart_group:
+
+                datamart_group_items = [
+                    'sp_trenewal_summary',
+                    'sp_trenewal_summary_v1',
+                    'sp_tbroker_summary',
+                    'sp_tbroker_summary_v1'
+                    ]
+
+                operators = []
+                for item in datamart_group_items:
+                    operator = MsSqlOperator(
+                        task_id=item,
+                        mssql_conn_id='Vault_EDW',
+                        sql=f"EXEC edw_core.{item}",
+                        database="vault_edw",
+                        autocommit=True,
+                    )
+                    operators.append(operator)
+
+                send_datamart_group_email = EmailOperator(
+                    task_id='send_datamart_group_email',
+                    to=to_email,
+                    subject='Airflow - Majesco data feed datamart tables loaded successfully',
+                    html_content=get_sp_success_data_HTML(datamart_group_items, 'All stored procedures executed successfully for all the Majesco datamart tables'),
+                )
+
+                for i in range(len(operators) - 1):
+                    operators[i].set_downstream(operators[i + 1])
+
+                operators[-1].set_downstream(send_datamart_group_email)
+
+        end = EmptyOperator(
+            task_id='end',
         )
-    
-    check_not_loaded_data_and_send_email = PythonOperator(
-            task_id='check_not_loaded_data_and_send_email',
-            python_callable=check_majesco_not_loaded_data_and_send_email,
-            dag=dag,
-        )
 
-    end = EmptyOperator(
-        task_id='end',
-    )
+    start.set_downstream(process_files_group)
+    process_files_group.set_downstream(policy_group)
+    policy_group.set_downstream(check_data_and_send_email)
+    check_data_and_send_email.set_downstream(check_not_loaded_data_and_send_email)
+    check_not_loaded_data_and_send_email.set_downstream(datamart_group)
+    datamart_group.set_downstream(end)
 
-start.set_downstream(copy_files_from_sftp_to_blob_storage)
-copy_files_from_sftp_to_blob_storage.set_downstream(process_majesco_data_feed_files)
-process_majesco_data_feed_files.set_downstream(check_data_and_send_email)
-check_data_and_send_email.set_downstream(check_not_loaded_data_and_send_email)
-check_not_loaded_data_and_send_email.set_downstream(end)
+    # Register DAG in globals
+    globals()[dag_id] = dag
