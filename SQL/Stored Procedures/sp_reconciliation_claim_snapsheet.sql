@@ -5,6 +5,7 @@
 ---------------------------------------------------------------------------------------------------
 -- 03/19/25				Yunus Mohammed				1. Created this procedure 
 -- 06/13/25             Sandeep Gundreddy           2. updated EDW query logic to -ve expense subro and salvage recovery amounts
+-- 03/27/26             Yunus Mohammed              3. AD-12964 Updated query to remove C21HOA00850 from delta
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_reconciliation_claim_snapsheet]
 AS
@@ -139,7 +140,8 @@ BEGIN
         edw_core.tclaim_feature cf,
         edw_stage_snapsheet.claims cl,
         edw_stage_snapsheet.exposures ex
-        where a.claim_number=b.claim_no and a.exposure_id=b.claim_coverage_cd and a.total_loss_incurred!=b.total_loss_incurred
+        where a.claim_number=b.claim_no and a.exposure_id=b.claim_coverage_cd and a.total_loss_incurred!=
+        case when c.claim_no = 'C21HOA00850' then a.total_loss_incurred else b.total_loss_incurred end
         and b.claim_no=c.claim_no 
         and b.claim_feature_sk=cf.claim_feature_sk
         and c.claim_no=cl.claim_number
