@@ -6,6 +6,7 @@ CREATE TABLE edw_commercial.tcommercial_task
 (
              
 commercial_task_sk                       int IDENTITY(1,1) NOT NULL,
+commercial_policy_sk                     int NOT NULL,
 policy_no                                varchar(255) NOT NULL,
 effective_dt                             date NOT NULL,
 transaction_effective_dt                 date NULL,
@@ -40,8 +41,10 @@ create_ts                                Datetime2(7) NOT NULL,
 update_ts                                Datetime2(7) NOT NULL,
 etl_audit_sk                             Int NOT NULL,
 CONSTRAINT pk_tcommercial_task PRIMARY KEY (commercial_task_sk),
-CONSTRAINT uidx_tcommercial_task_polno_effdt_trans_effdt UNIQUE (commercial_task_sk,policy_no ,effective_dt,transaction_effective_dt   ),
-CONSTRAINT fk_tcommercial_task_policy_no FOREIGN KEY (policy_no) REFERENCES  edw_commercial.tcommercial_policy(policy_no)
+CONSTRAINT uidx_tcommercial_task_polno_effdt_task_wf_wfs_cust UNIQUE (policy_no ,effective_dt,transaction_effective_dt, task_nm, task_created_dt,workflow_nm,workflow_step_nm,customer_sk ),
+CONSTRAINT fk_tcommercial_task_policy_no FOREIGN KEY (commercial_policy_sk) REFERENCES  edw_commercial.tcommercial_policy(commercial_policy_sk),
+CONSTRAINT fk_tcommercial_task_task_workflow_step_sk FOREIGN KEY (task_workflow_step_sk) REFERENCES edw_core.ttask_workflow_step(task_workflow_step_sk),
+CONSTRAINT fk_tcommercial_task_task_workflow_sk FOREIGN KEY (task_workflow_sk) REFERENCES edw_core.ttask_workflow(task_workflow_sk)
 
 );
 END
@@ -73,7 +76,7 @@ SELECT
     'Base',
     'Policy',
     'Stored Procedure',
-    'Insert',
+    'Insert/Update',
     'Daily',
     GETDATE(),
     GETDATE()
