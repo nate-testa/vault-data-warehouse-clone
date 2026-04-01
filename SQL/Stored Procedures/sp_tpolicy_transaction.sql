@@ -99,7 +99,7 @@ BEGIN
 			COALESCE(acctrcp.CededPremiumDelta,acctrcp.CededPremium) as ceded_annual_premium_amt,
 			COALESCE(acctrcp.CededPremiumDeltaProRated,acctrcp.CededPremium) as ceded_premium_amt,
 			null covID
-			,tmp1.ReviewedById
+			,tmp1.ReviewedById 
 			,tmp1.CreatedById
 			,tmp1.IssuedByUserId
 			,COALESCE(acctrcp.StatePremiumDeltaProRated,acctrcp.StatePremium) as state_premium_amt

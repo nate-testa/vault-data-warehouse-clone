@@ -32,7 +32,7 @@ BEGIN
         -- Create temp table with name as sp_tttask_temp and use it in 
         DROP TABLE IF EXISTS edw_temp.tcommercial_temp1
         SELECT 
-            acc.PolicyNumber policy_no
+			coalesce(acc.PolicyNumber,cast(acc.[Number]as varchar(255))) as policy_no
             ,acc.EffectiveDate effective_dt
             ,acctr.TransactionEffectiveDate transaction_effective_dt
             ,acctr.number  transaction_seq_no
