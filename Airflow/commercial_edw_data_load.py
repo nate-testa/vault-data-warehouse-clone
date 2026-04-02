@@ -134,6 +134,7 @@ with DAG(
             'sp_tcommercial_policy_quota_share',
             'sp_tcommercial_policy_subjectivity',
             'sp_tcommercial_policy_transaction',
+            'sp_tcommercial_task',
             'sp_tcommercial_reconciliation'
         ]
 
