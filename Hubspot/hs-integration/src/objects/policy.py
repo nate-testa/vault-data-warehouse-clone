@@ -1,11 +1,9 @@
 from shared.database import DatabaseFunctions
-from shared.id_map import id_map_path
+from shared.id_map_db import get_id_map_connection, ID_MAP_SCHEMA
 from shared.association import Association
 import shared.hubspot as hubspot
 from shared.logger import get_logger
 import constants
-
-import sqlite3
 
 logger = get_logger(__name__)
 
@@ -69,13 +67,10 @@ class Policy:
 
 
     def return_policy_hs_id_for_update(policy_no):
-        conn = sqlite3.connect(id_map_path)
+        conn = get_id_map_connection()
         cursor = conn.cursor()
-        sql = f'''
-        SELECT hs_object_id FROM policy WHERE policy_no = '{policy_no}'
-        '''
-        query = cursor.execute(sql)
-        result = query.fetchall()
+        cursor.execute(f"SELECT hs_object_id FROM {ID_MAP_SCHEMA}.policy WHERE policy_no = %s", (policy_no,))
+        result = cursor.fetchall()
         conn.close()
 
         if result:

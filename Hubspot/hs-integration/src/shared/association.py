@@ -1,9 +1,8 @@
-from shared.id_map import id_map_path
+from shared.id_map_db import get_id_map_connection, ID_MAP_SCHEMA
 import shared.timetracking as timetracking
 import constants
 
 import pandas as pd
-import sqlite3
 
 
 
@@ -41,23 +40,19 @@ class Association:
 
 
     def get_associations(table1, id1, table2, id2, key_column):
+        S = ID_MAP_SCHEMA
         timestamp = timetracking.load_previous_timestamp()
-        conn = sqlite3.connect(id_map_path)
-        # query = f'''                
-        # SELECT CT.{id1}, CM.{id2}
-        # FROM {table2} CM
-        # INNER JOIN {table1} CT
-        # ON CT.{key_column} = CM.{key_column}
-        # '''
+        conn = get_id_map_connection()
         #live query with timestamp parameters below (so as not to associate id map every time but just what was updated since the last run)
         query = f'''
                 SELECT CT.{id1}, CM.{id2}
-                FROM {table2} CM
-                INNER JOIN {table1} CT
+                FROM {S}.{table2} CM
+                INNER JOIN {S}.{table1} CT
                 ON CT.{key_column} = CM.{key_column} AND
-                (CT.updated >= '{timestamp}' OR CM.updated >= '{timestamp}')
+                (CT.updated >= %s OR CM.updated >= %s)
                 '''
-        results_df = pd.read_sql_query(query, conn)
+        results_df = pd.read_sql_query(query, conn, params=(timestamp, timestamp))
+        conn.close()
         return results_df
     
 

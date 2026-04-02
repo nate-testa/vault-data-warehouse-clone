@@ -15,7 +15,8 @@ else:  # UAT
     hs_token = os.getenv('HSSANDBOXKEY')
 
 # Use current working directory for paths (allows DAG to control location)
-id_map_path = rf'{os.getcwd()}/id_map.db'  
+# id_map_path is no longer used - id_map tables are now in SQL Server (edw_hubspot schema)
+# See shared/id_map_db.py for connection details
 time_tracking_file_path = f'{os.getcwd()}/timetracking.txt' 
 log_folder_path = f'{os.getcwd()}/logs'
 
@@ -87,10 +88,10 @@ object_map = {
 
 
 id_map_tables = {
-    'broker': 'CREATE TABLE broker ( hs_company_id text NOT NULL, broker_id text NOT NULL, created text NOT NULL, updated text NOT NULL )',
-    'customer': 'CREATE TABLE customer ( hs_contact_id text NOT NULL, customer_id text NOT NULL, broker_id text NOT NULL, email text, created text NOT NULL, updated text NOT NULL )',
-    'policy': 'CREATE TABLE policy ( hs_object_id text NOT NULL, policy_no text NOT NULL, customer_id text NOT NULL, broker_id text NOT NULL, producer_id text, email text, created text NOT NULL, updated text NOT NULL )',
-    'producer': 'CREATE TABLE producer ( hs_contact_id text NOT NULL, producer_id text NOT NULL, broker_id text NOT NULL, email text, created text NOT NULL, updated text NOT NULL )',
-    'quote': 'CREATE TABLE quote ( hs_object_id text NOT NULL, quote_no text NOT NULL, customer_id text NOT NULL, broker_id text NOT NULL, producer_id text, created text NOT NULL, updated text NOT NULL )',
-    'quote_note': 'CREATE TABLE quote_note ( hs_note_id text NOT NULL, quote_no text NOT NULL, created text NOT NULL, updated text NOT NULL )'
+    'broker': 'CREATE TABLE edw_hubspot.broker ( hs_company_id NVARCHAR(50) NOT NULL, broker_id NVARCHAR(50) NOT NULL, created NVARCHAR(50) NOT NULL, updated NVARCHAR(50) NOT NULL )',
+    'customer': 'CREATE TABLE edw_hubspot.customer ( hs_contact_id NVARCHAR(50) NOT NULL, customer_id NVARCHAR(50) NOT NULL, broker_id NVARCHAR(50) NOT NULL, email NVARCHAR(255), created NVARCHAR(50) NOT NULL, updated NVARCHAR(50) NOT NULL )',
+    'policy': 'CREATE TABLE edw_hubspot.policy ( hs_object_id NVARCHAR(50) NOT NULL, policy_no NVARCHAR(100) NOT NULL, customer_id NVARCHAR(50) NOT NULL, broker_id NVARCHAR(50) NOT NULL, producer_id NVARCHAR(50), email NVARCHAR(255), created NVARCHAR(50) NOT NULL, updated NVARCHAR(50) NOT NULL )',
+    'producer': 'CREATE TABLE edw_hubspot.producer ( hs_contact_id NVARCHAR(50) NOT NULL, producer_id NVARCHAR(50) NOT NULL, broker_id NVARCHAR(50) NOT NULL, email NVARCHAR(255), created NVARCHAR(50) NOT NULL, updated NVARCHAR(50) NOT NULL )',
+    'quote': 'CREATE TABLE edw_hubspot.quote ( hs_object_id NVARCHAR(50) NOT NULL, quote_no NVARCHAR(100) NOT NULL, customer_id NVARCHAR(50) NOT NULL, broker_id NVARCHAR(50) NOT NULL, producer_id NVARCHAR(50), created NVARCHAR(50) NOT NULL, updated NVARCHAR(50) NOT NULL )',
+    'quote_note': 'CREATE TABLE edw_hubspot.quote_note ( hs_note_id NVARCHAR(50) NOT NULL, quote_no NVARCHAR(100) NOT NULL, created NVARCHAR(50) NOT NULL, updated NVARCHAR(50) NOT NULL )'
 }

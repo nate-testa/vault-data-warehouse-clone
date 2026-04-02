@@ -1,10 +1,8 @@
 from shared.database import DatabaseFunctions
-from shared.id_map import id_map_path
+from shared.id_map_db import get_id_map_connection, ID_MAP_SCHEMA
 from shared.association import Association
 from shared.logger import get_logger
 import shared.hubspot as hubspot
-
-import sqlite3
 
 logger = get_logger(__name__)
 
@@ -74,13 +72,10 @@ class Producer:
             
 
     def return_producer_hs_id_for_update(producer_id):
-        conn = sqlite3.connect(id_map_path)
+        conn = get_id_map_connection()
         cursor = conn.cursor()
-        sql = f'''
-        SELECT hs_contact_id FROM producer WHERE producer_id = '{producer_id}'
-        '''
-        query = cursor.execute(sql)
-        result = query.fetchall()
+        cursor.execute(f"SELECT hs_contact_id FROM {ID_MAP_SCHEMA}.producer WHERE producer_id = %s", (producer_id,))
+        result = cursor.fetchall()
         conn.close()
 
         if result:
