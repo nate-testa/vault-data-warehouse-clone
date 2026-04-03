@@ -1,5 +1,4 @@
 from shared.database import DatabaseFunctions
-from shared.id_map import id_map_path
 from shared.association import Association
 from objects.broker import Broker as Broker
 from shared.logger import get_logger

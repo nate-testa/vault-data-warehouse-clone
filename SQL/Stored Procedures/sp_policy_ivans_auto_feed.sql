@@ -10,7 +10,8 @@ GO
 -------------------------------------------------------------------------------------------------------------------------------------------------
 -- Change date      |Author						|Change Description
 -------------------------------------------------------------------------------------------------------------------------------------------------
--- 09/10/2025        Alberto Almario             Change order for case on limits column
+-- 09/10/2025       Alberto Almario             1 Change order for case on limits column
+-- 03/26/2026       Yunus Mohammed              2 AD-12948 case stmt updated for natureInterestCd and country
 -- ==============================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_ivans_auto_feed]
 AS
@@ -65,8 +66,6 @@ BEGIN
             AND cast(ph.transaction_ts as datetime2(7)) > @last_source_extract_ts
         GROUP BY pt.policy_sk, pt.effective_dt_sk, pt.transaction_seq_no, pt.transaction_effective_dt_sk, pt.transaction_dt_sk, pt.customer_sk, pt.policy_transaction_type_sk, pt.source_system_sk
         ;
-
-
 
         WITH 
         loss_history AS (
@@ -257,10 +256,10 @@ BEGIN
 								ai.city_nm as city,
 								ai.state_cd as stateProvCd,
 								ai.zip_cd as postalCode,
-								CASE WHEN ai.additional_interest_nm IS NULL THEN NULL ELSE 'US' END as countryCd,
-								CASE WHEN ai.additional_interest_nm IS NULL THEN NULL ELSE 'United States' END as countryName,
+								CASE WHEN coalesce(ai.additional_interest_nm, ai.loss_payee_nm) is null THEN NULL ELSE 'US' END as countryCd,
+								CASE WHEN coalesce(ai.additional_interest_nm, ai.loss_payee_nm) is null THEN NULL ELSE 'United States' END as countryName,
 								CASE 
-									WHEN ai.additional_interest_nm IS NULL THEN NULL
+									WHEN coalesce(ai.additional_interest_nm, ai.loss_payee_nm) IS NULL THEN NULL
 									ELSE
 										CASE ai.interest_type
 											WHEN 'Additional Insured' THEN 'ADDIN'

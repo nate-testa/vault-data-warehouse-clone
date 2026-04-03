@@ -1,7 +1,7 @@
 -- ====================================================================================================================================
 -- Description: This procedures inserts into TQuote_Transaction  
 ---------------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author								|	Change Description
+-- Change date |Author					|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 06/02/23		Architha Gudimalla		1. Created this procedure
 -- 11/14/23		Sandeep Gundreddy		2. modified quote_auto_vehicle join
@@ -13,10 +13,11 @@
 --										   Legislative Fire Marshal Assessment Discount of 1.00% pursuant to section 624.5108(1)(b), F.S
 -- 										   Legislative Premium Tax Discount of 1.75% pursuant to section 624.5108(1)(a), F.S
 -- 08/30/24		Architha Gudimalla		8. Update product join to inner instead of left
---11/25/24		Sandeep Gundreddy	9. Added logic to load item_sk and coverage_sk for Marine Boat & Yacht
--- 06/04/25		Alberto Almario				10. Added new column user_sk
--- 08/29/25		Dinesh Bobbili				11. Added ncrb_premium_amt, ncrb_annual_premium_amt
--- 09/11/25		Yunus Mohammed		12. AD10946 Renamed ncrb_premium_amt, ncrb_annual_premium_amt
+--11/25/24		Sandeep Gundreddy		9. Added logic to load item_sk and coverage_sk for Marine Boat & Yacht
+-- 06/04/25		Alberto Almario			10. Added new column user_sk
+-- 08/29/25		Dinesh Bobbili			11. Added ncrb_premium_amt, ncrb_annual_premium_amt
+-- 09/11/25		Yunus Mohammed			12. AD-10946 Renamed ncrb_premium_amt, ncrb_annual_premium_amt
+-- 03/20/26		Yunus Mohammed			12. AD-12868 Populated coverage_sk for GRPEL policies
 -- ==================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_transaction]
@@ -177,6 +178,7 @@ BEGIN
 			     when pel_cov.quote_no is not null then pel_cov.quote_pel_coverage_sk 
 			     when au_pol_cov.quote_no is not null then au_pol_cov.quote_auto_policy_coverage_sk 
 				 when qmby.quote_no is not null then qmby.quote_marine_boat_yacht_coverage_sk
+				 when grpel_cov.quote_no is not null then grpel_cov.quote_grpel_coverage_sk
 			     else 0 
 			end cov_sk, 
 			case when au_veh_cov.quote_no is not null then au_veh_cov.quote_auto_vehicle_coverage_sk 
@@ -213,6 +215,7 @@ BEGIN
 		LEFT JOIN edw_core.tquote_auto_policy_coverage au_pol_cov on source.PolicyNumber = au_pol_cov.quote_no and cast(source.EffectiveDate as date) = au_pol_cov.effective_dt and source.number = au_pol_cov.transaction_seq_no
 		LEFT JOIN edw_core.tquote_auto_vehicle_coverage au_veh_cov on source.PolicyNumber = au_veh_cov.quote_no and cast(source.EffectiveDate as date) = au_veh_cov.effective_dt and source.number = au_veh_cov.transaction_seq_no and source.vehicle_no = au_veh_cov.vehicle_no
 		LEFT JOIN edw_core.tquote_marine_boat_yacht_coverage qmby on source.PolicyNumber = qmby.quote_no and cast(source.EffectiveDate as date) = qmby.effective_dt and source.number = qmby.transaction_seq_no
+		LEFT JOIN edw_core.tquote_grpel_coverage grpel_cov on source.PolicyNumber = grpel_cov.quote_no and cast(source.EffectiveDate as date) = grpel_cov.effective_dt and source.number = grpel_cov.transaction_seq_no
 		inner JOIN edw_core.tproduct pr on pr.product_cd = q.product_cd
 		LEFT JOIN edw_core.tbroker br on q.broker_id = br.broker_id
 		LEFT JOIN edw_core.tcustomer cust on q.customer_id = cust.customer_id

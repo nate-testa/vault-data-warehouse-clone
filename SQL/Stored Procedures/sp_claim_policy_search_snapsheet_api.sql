@@ -5,12 +5,13 @@
 ---------------------------------------------------------------------------------------------------
 --	09-27-2024				Yunus Mohammed				1 - Created procedure
 -- 01-28-2025				Yunus Mohammed				2 - Used latest transaction for policy
--- 01-28-2025	           Sandeep Gundreddy			3- Removed source_system_sk<>1  filter to include OS data
--- 02-07-2025              Yunus Mohammed               4 - Used trim for city, state, zip and country
+-- 01-28-2025	           	Sandeep Gundreddy			3- Removed source_system_sk<>1  filter to include OS data
+-- 02-07-2025              	Yunus Mohammed              4 - Used trim for city, state, zip and country
 -- 03-13-2025				Yunus Mohammed				5 - AD-8568 Added vault litigation policies
 -- 05-07-2025				Yunus Mohammed				6 - AD-9410 Added new vault litigation policy
 -- 11-11-2025               Yunus Mohammed              7 - AD-11665 NFP policies excluded
--- 12-17-2025				Yunus Mohammed				8- AD-11666 Code updated to get NFP and GRPEL data policies
+-- 12-17-2025				Yunus Mohammed				8 - AD-11666 Code updated to get NFP and GRPEL data policies
+-- 03-23-2026				Yunus Mohammed				9 - AD-11587 Code updated to include Marine Boat & Yatch policies
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_search_snapsheet_api]
 AS
@@ -42,7 +43,7 @@ BEGIN
 			DISTINCT
 				p.policy_no,
 				case
-					when product_nm = 'Auto' then 'auto'
+					when product_nm in ('Auto','Marine Boat & Yacht') then 'auto'
 					when product_nm in ('Homeowners','Condo','Collections') then 'property'
 					when product_nm in('Excess Liability','Group Personal Excess Liability') then 'general_liability'				
 				end as policy_type,
@@ -95,7 +96,7 @@ FROM (
 							edw_core.tpolicy_transaction pt
 						where
 							cast(pt.create_ts as datetime2(7)) > @last_source_extract_ts
-							and pt.source_system_sk not in (1) and pt.product_sk not in (6)  
+							and pt.source_system_sk not in (1)
 					)as pt
 					INNER JOIN edw_core.tproduct as pr ON pt.product_sk = pr.product_sk
 					LEFT JOIN edw_core.tauto_vehicle_coverage AS avc ON pt.vehicle_coverage_sk = avc.auto_vehicle_coverage_sk
@@ -103,7 +104,7 @@ FROM (
 					CASE WHEN pr.product_cd = 'AU' AND pt.item_sk = 0 THEN 0  ELSE 1 END = 1
 					AND CASE WHEN pr.product_cd = 'AU' AND avc.vehicle_deleted_in = 'Yes' THEN 0  ELSE 1 END = 1
 					and rn = 1
-					and pr.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability','Group Personal Excess Liability')	
+					and pr.product_nm in ('Auto','Homeowners','Condo','Collections','Excess Liability','Group Personal Excess Liability', 'Marine Boat & Yacht')	
 				) AS pt
 				LEFT JOIN edw_core.tdate AS dtxn ON pt.transaction_effective_dt_sk = dtxn.date_sk
 				LEFT JOIN edw_core.tpolicy_transaction_type AS ptt ON pt.policy_transaction_type_sk = ptt.policy_transaction_type_sk
