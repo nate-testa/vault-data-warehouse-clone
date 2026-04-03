@@ -1,18 +1,19 @@
 -- =================================================================================================
 -- Description: This procedures update claim financial payment status
 ---------------------------------------------------------------------------------------------------
--- Change date 				|Author										|	Change Description
+-- Change date 				|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
---	01-22-2025				Yunus Mohammed				 Created procedure
---  01-28-2025				Sandeep Gundreddy	       Added extra filters to limit data and modified date filter
+--	01-22-2025				Yunus Mohammed				Created procedure
+--  01-28-2025				Sandeep Gundreddy	       	Added extra filters to limit data and modified date filter
 -- 02-03-2025				Yunus Mohammed				Added distinct and removed dups from source table
 --																							Used pm_cleared_date as originated_at
 --																							Used remote_identifier as settle_payee_id
 -- 02-04-2025				Yunus Mohammed				Removed settle_payee_id column and used id column instead of it.
 --																							Used migration_create_financial_transaction_api.id column to insert data in it.
 --03-05-2025                Yunus Mohammed              Added 'submitted' to stage filter to fetch recovery payment transactions
+--04-03-2026				Yunus Mohammed				AD-13012 Cast created_date in where clause to datetime
 -- ================================================================================================= 
-CREATE OR ALTER   PROCEDURE [edw_core].[sp_claim_financial_transaction_action_snapsheet_api]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_financial_transaction_action_snapsheet_api]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -74,7 +75,7 @@ BEGIN
 			api_status = 'Success'
 			and amount_type = 'Payment_Amount' and ft.is_historical='true' and ft.stage in ('issued', 'submitted')
 			and pay.pm_status in ('Success','Stopped')
-			and pay.created_date > @last_source_extract_ts
+			and cast(pay.created_date  as DATETIME2(7)) > @last_source_extract_ts
 		) as temp
 
 		insert into edw_integration.claim_financial_transaction_action_snapsheet_api
