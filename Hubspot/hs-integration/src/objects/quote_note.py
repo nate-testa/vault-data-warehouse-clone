@@ -1,12 +1,11 @@
 from shared.database import DatabaseFunctions
-from shared.id_map import id_map_path
+from shared.id_map_db import get_id_map_connection, ID_MAP_SCHEMA
 from shared.logger import get_logger
 from objects.quote import Quote
 import shared.hubspot as hubspot
 
 import pandas as pd
 import json
-import sqlite3
 
 
 logger = get_logger(__name__)
@@ -52,13 +51,10 @@ class QuoteNote:
 
 
     def return_quote_note_hs_id_for_update(quote_no):
-        conn = sqlite3.connect(id_map_path)
+        conn = get_id_map_connection()
         cursor = conn.cursor()
-        sql = f'''
-        SELECT hs_note_id FROM quote_note WHERE quote_no = '{quote_no}'
-        '''
-        query = cursor.execute(sql)
-        result = query.fetchall()
+        cursor.execute(f"SELECT hs_note_id FROM {ID_MAP_SCHEMA}.quote_note WHERE quote_no = %s", (quote_no,))
+        result = cursor.fetchall()
         conn.close()
 
         if result:

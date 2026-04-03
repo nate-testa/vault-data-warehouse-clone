@@ -1,10 +1,8 @@
 from shared.database import DatabaseFunctions
-from shared.id_map import id_map_path
+from shared.id_map_db import get_id_map_connection, ID_MAP_SCHEMA
 from shared.association import Association
 from shared.logger import get_logger
 import shared.hubspot as hubspot
-
-import sqlite3
 
 logger = get_logger(__name__)
 
@@ -51,13 +49,10 @@ class Broker:
 
     
     def return_broker_hs_id_for_update(broker_id):
-        conn = sqlite3.connect(id_map_path)
+        conn = get_id_map_connection()
         cursor = conn.cursor()
-        sql = f'''
-        SELECT hs_company_id FROM broker WHERE broker_id = '{broker_id}'
-        '''
-        query = cursor.execute(sql)
-        result = query.fetchall()
+        cursor.execute(f"SELECT hs_company_id FROM {ID_MAP_SCHEMA}.broker WHERE broker_id = %s", (broker_id,))
+        result = cursor.fetchall()
         conn.close()
 
         if result:
