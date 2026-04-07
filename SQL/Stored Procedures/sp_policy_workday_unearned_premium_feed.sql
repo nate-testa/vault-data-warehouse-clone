@@ -229,7 +229,7 @@ BEGIN
 				AND (tic.internal_coverage_category_nm = 'Premium' OR tic.internal_coverage_desc like 'Subscriber Contribution%')
 				AND tpts.transaction_effective_dt_sk < = @acounting_date_sk
 				AND tpts.expiration_dt_sk > @acounting_date_sk
-				AND tp.product_cd != 'GRPEL'
+				AND NOT (tp.product_cd = 'GRPEL' and tp.source_system_sk =6 )
 			) AS t
 			GROUP BY
 						accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_effective_date,transaction_ts,

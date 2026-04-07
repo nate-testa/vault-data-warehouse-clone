@@ -207,7 +207,7 @@ BEGIN
 			WHERE
 				tpt.accouting_month_sk=@acounting_date_sk
 				AND GREATEST(tpt.transaction_dt_sk,tpt.transaction_effective_dt_sk)<=@acounting_date_sk
-				AND tp.product_cd != 'GRPEL'
+				AND NOT (tp.product_cd = 'GRPEL' and tp.source_system_sk =6 )
 				AND tpt.premium_amt != 0
 			) AS temp
 			GROUP BY
