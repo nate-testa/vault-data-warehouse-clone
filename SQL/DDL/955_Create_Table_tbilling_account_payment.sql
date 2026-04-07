@@ -8,7 +8,7 @@ CREATE TABLE edw_core.tbilling_account_payment
 billing_account_payment_sk        int IDENTITY(1,1) NOT NULL,
 billingaccount_no          varchar(255) NOT NULL,
 billingaccount_sk		   int NOT NULL,
-grpel_master_policy_no 	   varchar(255) NOT NULL,
+grpel_master_policy_no 	   varchar(255) NULL,
 transaction_type           varchar(255) NULL, 
 receivable_cd              varchar(255) NULL, 
 payment_amt                decimal(15,2) NULL,
@@ -41,7 +41,8 @@ INSERT INTO edw_core.tedw_table_detail (
     load_type,
     load_frequency,
     create_ts,
-    update_ts
+    update_ts,
+    schema_nm
 )
 SELECT
     'tbilling_account_payment',
@@ -52,7 +53,8 @@ SELECT
     'Insert/Update',
     'Daily',
     GETDATE(),
-    GETDATE()
+    GETDATE(),
+    'edw_core'
 WHERE NOT EXISTS (
     SELECT 1
     FROM edw_core.tedw_table_detail
