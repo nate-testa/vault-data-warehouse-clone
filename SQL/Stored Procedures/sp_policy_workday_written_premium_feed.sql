@@ -3,7 +3,7 @@
 -- Create Date: 09/13/2023
 -- Description: This procedures inserts written premium data
 ---------------------------------------------------------------------------------------------------
--- Change date |Author									|	Change Description
+-- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 11/16/23		Yunus Mohammed				1. Update logic for category, subcategory columns. Removed extra space in company 
 -- 12/01/23		Yunus Mohammed				2. Updated  product name and company name
@@ -17,11 +17,12 @@
 -- 11/26/24		Yunus Mohammed				9. Updated Marine Boat & Yacht to Marine_Boat&Yacht
 -- 03/11/25		Yunus Mohammed				10.  Corrected proc running for past months
 -- 04/25/25		Yunus Mohammed				11. AD8820 Updated logic to get risk address
---																					Update run date logic
--- 07/22/25		Dinesh Bobbili						12. AD10205 Added 5 PEL columns
--- 09/25/25		Dinesh Bobbili						13. AD11102 Added scheduled_limit_amt,blanket_limit_amt columns 
+--												 Update run date logic
+-- 07/22/25		Dinesh Bobbili				12. AD10205 Added 5 PEL columns
+-- 09/25/25		Dinesh Bobbili				13. AD11102 Added scheduled_limit_amt,blanket_limit_amt columns 
 -- 11/10/25		Yunus Mohammed				14. AD11647 - Excluded NFP policies
 -- 12/09/25		Yunus Mohammed				15. AD-11945 Modified stored procedure to run proc on same date again
+-- 04/07/25		Yunus Mohammed				16. AD-13025 Included GRPEL policies (PEX policies) and excluded NFP policies.
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
