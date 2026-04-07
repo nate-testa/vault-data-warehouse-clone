@@ -15,6 +15,7 @@
 -- 10/01/2024			Architha Gudimalla				7. Corrected AddressCountry
 -- 02/03/26				Dinesh Bobbii		 			8. AD12434 - Added new columns
 -- 02/05/26				Dinesh Bobbii		 			9. AD12434 - Updated column names
+-- 04/07/26             Tuba Mohsin                     10.Updated mapping for unit_no
 -- =========================================================================================================================== 
 CREATE or alter  PROCEDURE [edw_core].[sp_tquote_pel_location]
 
@@ -41,7 +42,7 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,source_system_sk,quote_history_sk,
 			rownum as [index],
-			CreatedDate,AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
+			CreatedDate,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
 			NumberOfSwimmingPools,MultiFamilyDwelling,VacantOrUnoccupied,ForSale,
 			SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator,primary_location_in,
 			OwnedByTrustLLCOrOtherEntity ,TrustOrLegalEntityLegalName ,MailingAddressTrustOrLegalEntity ,TrustOrLegalEntityPurpose ,
@@ -85,7 +86,7 @@ BEGIN
 				and atvo.ObjectType='Location'
 				and atvof.Field IN 
 				(
-					'AddressLine1','AddressLine2','AddressCity','AddressState','AddressZipCode','AddressCounty',
+					'AddressLine1','AddressLine2','AddressLineUnit','AddressCity','AddressState','AddressZipCode','AddressCounty',
 					'AddressCountry','NumberOfSwimmingPools','MultiFamilyDwelling','VacantOrUnoccupied','ForSale',
 					'SquareFootage','NumberofAthleticStructures','ShortTermRental','LongTermRental','LocationsLimitsIndicator',
 					'OwnedByTrustLLCOrOtherEntity' ,'TrustOrLegalEntityLegalName' ,'MailingAddressTrustOrLegalEntity' ,'TrustOrLegalEntityPurpose' ,
@@ -100,7 +101,7 @@ BEGIN
 		pivot 
 		(
 			max(Value) FOR Field IN (NumberOfMortgagees,[Name],MortgageeType,BillMortgagee,Email,Fax,Phone,
-					IsaoAtima,IsaoAtimaOther,LoanNumber,AddressLine1,AddressLine2,AddressCity,
+					IsaoAtima,IsaoAtimaOther,LoanNumber,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,
 					AddressState,AddressZipCode,AddressCounty,AddressCountry,NumberOfSwimmingPools,MultiFamilyDwelling,
 					VacantOrUnoccupied,ForSale,SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator,
 					OwnedByTrustLLCOrOtherEntity ,TrustOrLegalEntityLegalName ,MailingAddressTrustOrLegalEntity ,TrustOrLegalEntityPurpose ,
@@ -126,7 +127,7 @@ BEGIN
 		SELECT
 			ttlc.PolicyNumber AS policy_no,ttlc.EffectiveDate AS effective_dt,
 			ExpirationDate AS expiration_dt,transaction_seq_no AS transaction_seq_no,quote_history_sk,
-			[index] AS location_no,AddressLine1 AS address_line_1,AddressLine2 AS address_line_2,NULL AS unit_no,AddressCity AS city_nm,
+			[index] AS location_no,AddressLine1 AS address_line_1,AddressLine2 AS address_line_2,AddressLineUnit AS unit_no,AddressCity AS city_nm,
 			AddressState AS state_cd,AddressZipCode AS zip_cd,AddressCounty AS county_nm,AddressCountry AS country_nm,NULL AS longitude,NULL AS latitude,
 			NumberOfSwimmingPools AS swimming_pool_ct,MultiFamilyDwelling AS multi_family_dwelling_in,
 			COALESCE(NULLIF(IsVacant, ''), VacantOrUnoccupied) AS vacant_unoccupied_in,COALESCE(NULLIF(IsAnyVaultHomeForSale, ''), ForSale) AS for_sale_in,
