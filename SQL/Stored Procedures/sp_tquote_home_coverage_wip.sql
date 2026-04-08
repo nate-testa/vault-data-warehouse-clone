@@ -373,7 +373,7 @@ BEGIN
 				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
 				wildfire_suppression_system,wildfire_decks_balconies_porches_stairs,
 				premium_analytics_grade,underwriter_required_inspection,high_risk_wui_property_in,effective_built_year,
-				frame_to_foundation_connection_in,RoofGeometryAPI,
+				frame_to_foundation_connection_in,roof_geometry_api,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
@@ -422,7 +422,7 @@ BEGIN
 				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
 				wildfire_suppression_system,wildfire_decks_balconies_porches_stairs,
 				premium_analytics_grade,underwriter_required_inspection,high_risk_wui_property_in,effective_built_year,
-				frame_to_foundation_connection_in,RoofGeometryAPI,
+				frame_to_foundation_connection_in,roof_geometry_api,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			WHEN MATCHED THEN UPDATE
