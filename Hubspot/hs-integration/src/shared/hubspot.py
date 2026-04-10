@@ -105,6 +105,23 @@ class RecordsDispatcher:
         else:
             return 'OTHER_ERROR'
 
+    def _lookup_existing_contact(self, email):
+        """Look up an existing HubSpot contact by email address."""
+        if not email:
+            return None
+        try:
+            res = requests.get(
+                f'https://api.hubapi.com/crm/v3/objects/contacts/{email}',
+                params={'idProperty': 'email', 'properties': 'producer_id,customer_id,broker_id,email,type'},
+                headers=self.headers,
+                timeout=120
+            )
+            if res.status_code == 200:
+                return res.json()
+        except Exception as exc:
+            logger.error(f'Failed to look up contact by email={email}: {exc}')
+        return None
+
     def unit_create_record(self, object_type, payload):
         endpoint = f'https://api.hubapi.com/crm/v3/objects/{object_type}'
         max_attempts = 3
@@ -120,11 +137,34 @@ class RecordsDispatcher:
                     timeout=120
                 )
 
-                # If "Contact already exists" is found, remove 'email' from payload and retry once
+                # If "Contact already exists", look up the existing contact and map it
+                # instead of creating a duplicate without email
                 if object_type == 'contacts' and 'Contact already exists' in res.text:
-                    if payload['properties'].get('email'):
-                        del payload['properties']['email']
-                    return self.unit_create_record(object_type, payload)
+                    email = payload['properties'].get('email', '')
+                    logger.warning(
+                        f'Contact already exists in HubSpot (email={email}). '
+                        f'Looking up existing contact to register in mapping table.'
+                    )
+                    existing_contact = self._lookup_existing_contact(email)
+                    if existing_contact:
+                        # Return the existing contact as if we created it
+                        # so the id_map gets populated with the correct HubSpot ID
+                        logger.info(f'Found existing contact {existing_contact["id"]} for email={email}. Registering in mapping table.')
+                        # Build a fake successful response for id_map
+                        merged_props = dict(existing_contact.get('properties', {}))
+                        # Overlay our payload properties so id_map gets the business keys
+                        merged_props.update(payload['properties'])
+                        merged_props['hs_object_id'] = existing_contact['id']
+                        IDMapFunctions.action_router(self.action_type, False, {'properties': merged_props})
+                        error_reporter.update_stats(
+                            self.action_type.replace('_create', '').replace('_update', ''),
+                            'updated', 1
+                        )
+                        return None  # skip normal api_log
+                    else:
+                        logger.error(f'Contact already exists but could not look up by email={email}. Skipping to avoid duplicate.')
+                        error_reporter.add_error('DUPLICATE_CONTACT', f'Contact exists but lookup failed: {email}', {'email': email})
+                        return None
 
                 break  # success or non-200 response, but got a response
 

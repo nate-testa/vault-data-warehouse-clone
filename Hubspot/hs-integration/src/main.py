@@ -10,6 +10,7 @@ from objects.quote_note import QuoteNote
 from shared.error_reporter import ErrorReporter
 from shared.process_lock import ProcessLock
 from shared.logger import get_logger
+from shared.hubspot_presync import hubspot_presync
 import constants
 import os
 import sys
@@ -34,6 +35,11 @@ def run():
     logger.info("Starting HubSpot Integration")
 
     try:
+        # Pre-sync: pull any HubSpot-native contacts into mapping tables
+        # to prevent duplicates when EDW data arrives for contacts
+        # that were created directly in HubSpot (CRM UI, forms, etc.)
+        hubspot_presync()
+
         Producer.sync_to_hubspot()         # contacts
         Customer.sync_to_hubspot()         # contacts
         Policy.sync_to_hubspot()           # policies
