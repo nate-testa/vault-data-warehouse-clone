@@ -5,13 +5,14 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 08/30/23		Architha Gudimalla				1. Created this procedure  
--- 10/05/23		Architha Gudimalla				2. Fixed division by 0 error for EP calculation  
--- 03/20/24		Architha Gudimalla				3. Added commission_amt
--- 07/03/24		Yunus Mohammed					4. Added policy_history_sk
--- 07/18/24		Architha Gudimalla				5. Updated logic for @last_source_extract_ts
--- 07/08/25		Architha Gudimalla				6. Updated EP logic
--- 11/10/25		Dinesh Bobbili					7. AD11641 - Added source_system_sk filter for NFP process
+-- 08/30/23		Architha Gudimalla			1. Created this procedure  
+-- 10/05/23		Architha Gudimalla			2. Fixed division by 0 error for EP calculation  
+-- 03/20/24		Architha Gudimalla			3. Added commission_amt
+-- 07/03/24		Yunus Mohammed				4. Added policy_history_sk
+-- 07/18/24		Architha Gudimalla			5. Updated logic for @last_source_extract_ts
+-- 07/08/25		Architha Gudimalla			6. Updated EP logic
+-- 11/10/25		Dinesh Bobbili				7. AD11641 - Added source_system_sk filter for NFP process
+-- 04/10/26		Yunus Mohammed				8. AD-12926 - Added earned_ceded_premium_amt and unearned_ceded_premium_amt
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_transaction_summary]
@@ -134,7 +135,27 @@ BEGIN
 									else 0
 								end
 						   ) mtd_ep,
-				 		sum(commission_amt) commission_amt
+				 		sum(commission_amt) commission_amt,
+						sum(
+							--for transactions issued in the month, eff in the month or later
+								case when		tr.policy_transaction_type_sk in (1,7) 
+											and (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) > 0
+											and (tr.expiration_dt_sk-tr.transaction_effective_dt_sk) <> 0
+									then
+										(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+										- (greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) ))
+										* tr.ceded_premium_amt/(tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk))
+									when		tr.policy_transaction_type_sk not in (1,7) 
+											and (tr.expiration_dt_sk-greatest(tr.transaction_dt_sk, tr.transaction_effective_dt_sk)) <> 0
+											and (tr.expiration_dt_sk-tr.transaction_effective_dt_sk) <> 0
+									then
+										(1+(iif(tr.expiration_dt_sk > @end_dt_sk, @end_dt_sk, (tr.expiration_dt_sk-1))
+										- (tr.transaction_effective_dt_sk) ))
+										* tr.ceded_premium_amt/(tr.expiration_dt_sk-tr.transaction_effective_dt_sk)
+									else 0
+								end
+							) mtd_cp,
+						sum(tr.ceded_premium_amt) as ceded_premium_amt
 				 FROM edw_core.tpolicy_transaction tr, edw_core.tpolicy pol 
 				 where tr.policy_sk = pol.policy_sk
 				 and 	tr.internal_coverage_sk <> 0 
@@ -159,7 +180,7 @@ BEGIN
 						transaction_dt_sk,
 						policy_transaction_type_sk, premium_amt,  
 						earned_premium_amt, unearned_premium_amt,  source_system_sk, update_ts, etl_audit_sk
-						,commission_amt
+						,commission_amt,earned_ceded_premium_amt,unearned_ceded_premium_amt
 					)
 				select 	@month_end_dt_sk, prm.policy_sk,prm.policy_history_sk, prm.item_sk, prm.transaction_seq_no,  prm.internal_coverage_sk,
 						prm.coverage_sk, prm.vehicle_coverage_sk, 
@@ -171,7 +192,7 @@ BEGIN
 						prm.policy_transaction_type_sk, prm.premium_amt,  
 						prm.mtd_ep earned_premium_amt, (1.0000 * prm.premium_amt)-mtd_ep unearned_premium_amt, 
 						source_system_sk, getdate(), @etl_audit_sk
-						, prm.commission_amt
+						, prm.commission_amt,mtd_cp as earned_ceded_premium_amt,unearned_ceded_premium_amt
 				from prm
 				where prm.premium_amt <> 0
 				   or prm.mtd_ep <> 0;
