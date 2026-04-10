@@ -372,8 +372,7 @@ BEGIN
 				tthc.premium_analytics_grade,tthc.UnderwriterRequiredInspection as underwriter_required_inspection,
 				tthc.HighRiskWUIProperty as high_risk_wui_property_in,
 				tthc.EffectiveYearBuilt as effective_built_year,
-				tthc.FrameToFoundationConnection as frame_to_foundation_connection_in,
-				tthc.RoofGeometryAPI as roof_geometry_api, 
+				tthc.FrameToFoundationConnection as frame_to_foundation_connection_in,tthc.RoofGeometryAPI as roof_geometry_api, 
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.tquote_home_coverage_temp2 AS tthc

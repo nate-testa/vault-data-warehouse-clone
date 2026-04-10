@@ -318,8 +318,7 @@ BEGIN
 				tthc.UnderwriterRequiredInspection as underwriter_required_inspection,
 				tthc.HighRiskWUIProperty as high_risk_wui_property_in,
 				tthc.EffectiveYearBuilt as effective_built_year,
-				tthc.FrameToFoundationConnection as frame_to_foundation_connection_in,
-				tthc.RoofGeometryAPI as roof_geometry_api, 
+				tthc.FrameToFoundationConnection as frame_to_foundation_connection_in,tthc.RoofGeometryAPI as roof_geometry_api, 
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk				
 			FROM
 				edw_temp.tquote_home_coverage_wip_temp2 AS tthc
@@ -372,8 +371,7 @@ BEGIN
 				current_policy_anniversary_dt, current_underlying_company_nm, new_client_for_agency_in,
 				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
 				wildfire_suppression_system,wildfire_decks_balconies_porches_stairs,
-				premium_analytics_grade,underwriter_required_inspection,high_risk_wui_property_in,effective_built_year,
-				frame_to_foundation_connection_in,roof_geometry_api,
+				premium_analytics_grade,underwriter_required_inspection,high_risk_wui_property_in,effective_built_year,frame_to_foundation_connection_in,roof_geometry_api,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 			VALUES
