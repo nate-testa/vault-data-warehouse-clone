@@ -3,7 +3,7 @@
 -- Create Date: 09/13/2023
 -- Description: This procedures inserts unearned premium data
 ---------------------------------------------------------------------------------------------------
--- Change date |Author									 |	Change Description
+-- Change date |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 11/15/23		Yunus Mohammed				1. Updated logic for cancelled and expired policies
 -- 12/01/23		Yunus Mohammed				2. Updated  product name and company name
@@ -12,18 +12,19 @@
 -- 09/18/24		Yunus Mohammed				5. Added Throw in catch block
 -- 11/26/24		Yunus Mohammed				6. Updated Marine Boat & Yacht to Marine_Boat&Yacht
 -- 03/11/25		Yunus Mohammed				7. Corrected proc running for past months
---																				Added run_date as param for pre-run
+--												Added run_date as param for pre-run
 -- 04/25/25		Yunus Mohammed				8. AD-8820 Updated logic to get risk address
---																					Update run date logic
+--												Update run date logic
 -- 05/07/25		Yunus Mohammed				9. AD-9047 Used tdaily_inforce table to check inforce policies.
---																					Removed cancellation logic
--- 07/22/25		Dinesh Bobbili						10. AD-10205 Added 5 PEL columns
--- 09/25/25		Dinesh Bobbili						11. AD-11102 Added scheduled_limit_amt,blanket_limit_amt columns 
+--												Removed cancellation logic
+-- 07/22/25		Dinesh Bobbili				10. AD-10205 Added 5 PEL columns
+-- 09/25/25		Dinesh Bobbili				11. AD-11102 Added scheduled_limit_amt,blanket_limit_amt columns 
 -- 11/10/25		Yunus Mohammed				12. AD-11646 - Excluded NFP policies
 -- 12/09/25		Yunus Mohammed				13. AD-11945 Modified stored procedure to run proc on same date again
 -- 12/11/25		Yunus Mohammed				14. AD-11946 Added transaction effective date and transaction_ts columns
---																						Delete stmt modified to delete personal line data only
+--													Delete stmt modified to delete personal line data only
 -- 02/04/26		Yunus Mohammed				15. AD-12461 Used product_nm for 'Marine Boat & Yacht' instead of product_cd
+-- 04/07/25		Yunus Mohammed				16. AD-13025 Included GRPEL policies (PEX policies) and excluded NFP policies.
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -229,7 +230,7 @@ BEGIN
 				AND (tic.internal_coverage_category_nm = 'Premium' OR tic.internal_coverage_desc like 'Subscriber Contribution%')
 				AND tpts.transaction_effective_dt_sk < = @acounting_date_sk
 				AND tpts.expiration_dt_sk > @acounting_date_sk
-				AND tp.product_cd != 'GRPEL'
+				AND NOT (tp.product_cd = 'GRPEL' and tp.source_system_sk =6 )
 			) AS t
 			GROUP BY
 						accounting_date,policy_image_id,policy_number,product,company,transaction_date,transaction_effective_date,transaction_ts,
