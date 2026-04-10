@@ -5,7 +5,8 @@
 -- ---------------------------------------------------------------------------------------------------
 -- Change date 				|Author						|	Change Description
 -- ---------------------------------------------------------------------------------------------------
--- 11/10/25					Dinesh Bobbili				1. Created this procedure  
+-- 11/10/25					Dinesh Bobbili				1. Created this procedure
+-- 04/08/26					Yunus Mohammed				2. AD-13063 Modified to use NFP customers only
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_nfp]
 AS
@@ -65,6 +66,8 @@ BEGIN
 					UPPER(np.insured_last_name) = UPPER(tc.last_nm) AND
 					UPPER(np.address1) = UPPER(tc.mailing_address_line1) AND
 					np.zip = tc.mailing_address_zip_cd
+				WHERE
+					tc.customer_id LIKE 'NFP%'
 			) a 
 			WHERE cust_rn = 1
 		)
