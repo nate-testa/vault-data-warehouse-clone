@@ -190,7 +190,8 @@ set CopyActivitySettings = '{
         "sink": {
           "name": "ExternalSourceUniqueId",
           "type": "String"
-        },
+        }
+      },
       {
         "source": {
           "name": "LineItemCategory",
@@ -201,7 +202,6 @@ set CopyActivitySettings = '{
           "name": "LineItemCategory",
           "type": "String"
         }
-      }
     ],
     "typeConversion": true,
     "typeConversionSettings": {
