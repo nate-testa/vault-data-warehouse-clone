@@ -3,11 +3,12 @@
 -- Create Date: 07/17/2025
 -- Description: This procedures inserts and updates claim feature data
 -----------------------------------------------------------------------------------------------------------
--- Change date 		  |Author						           |	Change Description
+-- Change date 		|Author					|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 07/17/2025		Hernando Gonzalez			1. Created this procedure
--- 08/05/2025		Yunus Mohammed			   2. Remove case statement from product_cd 
--- 08/06/2025		Yunus Mohammed			   3. Removed vehicle join
+-- 08/05/2025		Yunus Mohammed			   	2. Remove case statement from product_cd 
+-- 08/06/2025		Yunus Mohammed			   	3. Removed vehicle join
+-- 04/13/2026		Yunus Mohammed				3. AD-11426 - Added new columns
 -- ========================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_claim_feature]
@@ -58,6 +59,7 @@ BEGIN
 			exps.[status] AS claim_feature_status,
 			asl.aslob_sk,
 			exps.[user_name] AS claim_adjuster_nm,
+			exps.closed_reason_code as closed_reason_desc,
 	
 			CASE
 				WHEN exps.external_reference_number is not null THEN 3
@@ -111,14 +113,14 @@ BEGIN
 		INSERT (
 				commercial_claim_sk,claim_no,exposure_type,exposure_name,claim_coverage_cd,claim_coverage_desc,
 				claimant_nm,
-				product_sk,claim_feature_status,aslob_sk,claim_adjuster_nm,
+				product_sk,claim_feature_status,aslob_sk,claim_adjuster_nm,closed_reason_desc,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 			)
 		VALUES
 			(
 			commercial_claim_sk,claim_no,exposure_type,exposure_name,claim_coverage_cd,claim_coverage_desc,
 			claimant_nm,
-			product_sk,claim_feature_status,aslob_sk,claim_adjuster_nm,
+			product_sk,claim_feature_status,aslob_sk,claim_adjuster_nm,closed_reason_desc,
 			source_system_sk,@current_date,@current_date,@etl_audit_sk
 			)
 		-- For Updates
@@ -129,7 +131,8 @@ BEGIN
 			Target.product_sk=Source.product_sk,
 			Target.claim_feature_status=Source.claim_feature_status,
 			Target.aslob_sk=Source.aslob_sk,
-			Target.claim_adjuster_nm=Source.claim_adjuster_nm,		
+			Target.claim_adjuster_nm=Source.claim_adjuster_nm,
+			Target.closed_reason_desc = Source.closed_reason_desc,
 			Target.update_ts=@current_date;
 
 		--************End************
