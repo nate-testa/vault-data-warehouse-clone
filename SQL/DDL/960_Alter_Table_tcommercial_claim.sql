@@ -2,7 +2,7 @@ IF NOT EXISTS (
     SELECT 1
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = 'edw_commercial'
-      AND TABLE_NAME = 'tpolicy_transaction_summary'
+      AND TABLE_NAME = 'tcommercial_claim'
       AND COLUMN_NAME = 'loss_location_desc'
 )
 BEGIN
