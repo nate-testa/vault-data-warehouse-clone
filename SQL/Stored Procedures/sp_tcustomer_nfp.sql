@@ -1,11 +1,13 @@
--- =============================================================================================================
+-- =================================================================================================
 -- Author:		Dinesh Bobbili
 -- Description: This procedures inserts and updates nfp Customer data
--- ---------------------------------------------------------------------------------------------------
+-- -------------------------------------------------------------------------------------------------
 -- Change date 				|Author						|	Change Description
--- ---------------------------------------------------------------------------------------------------
--- 11/10/25					Dinesh Bobbili				1. Created this procedure  
--- ================================================================================================= 
+-- -------------------------------------------------------------------------------------------------
+-- 11/10/25					Dinesh Bobbili				1. Created this procedure
+-- 03/27/26					Yunus Mohammed				2. AD-12946 Created separate customer for NFP in case
+--															same customer found in tcustomer.
+-- =================================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcustomer_nfp]
 
@@ -49,6 +51,7 @@ BEGIN
 		FROM edw_stage.nfp_policy
 		WHERE insured_cert_no is not null 
 		and reporting_month > @last_source_extract_ts)
+
 		select 'NFP' + RIGHT('0000000' + CAST(@max_customer_id + ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS VARCHAR), 7)  AS customer_id,
 			customer_nm,
 			first_nm,
@@ -61,12 +64,18 @@ BEGIN
 			reporting_month
 		INTO edw_temp.tcustomer_nfp_temp1
 		from nfp_base a 
-		where not exists (select 1 
+		where 
+		not exists 
+		(
+			select 1 
 				from edw_core.tcustomer b
-				where  UPPER(a.first_nm) = UPPER(b.first_nm)
+				where
+				b.customer_id like 'NFP%'
+				and UPPER(a.first_nm) = UPPER(b.first_nm)
 				and UPPER(a.last_nm) = UPPER(b.last_nm)
 				and UPPER(a.mailing_address_line1) = UPPER(b.mailing_address_line1)
-				and a.mailing_address_zip_cd = b.mailing_address_zip_cd)
+				and a.mailing_address_zip_cd = b.mailing_address_zip_cd
+		)
 		and rn = 1;
 
 		INSERT INTO [edw_core].[tcustomer] (
