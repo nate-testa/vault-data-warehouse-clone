@@ -6,7 +6,7 @@ IF NOT EXISTS (
       AND COLUMN_NAME = 'loss_location_desc'
 )
 BEGIN
-    ALTER TABLE edw_commercial.tcommercial_claim ADD loss_location_desc DECIMAL(15,2) ;
+    ALTER TABLE edw_commercial.tcommercial_claim ADD loss_location_desc NVARCHAR(max);
 END;
  
 IF NOT EXISTS (
@@ -17,7 +17,7 @@ IF NOT EXISTS (
       AND COLUMN_NAME = 'large_loss_in'
 )
 BEGIN
-    ALTER TABLE edw_commercial.tcommercial_claim ADD large_loss_in DECIMAL(15,2) ;
+    ALTER TABLE edw_commercial.tcommercial_claim ADD large_loss_in VARCHAR(255);
 END;
 
 IF NOT EXISTS (
