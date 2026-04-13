@@ -46,11 +46,11 @@ IF NOT EXISTS (
     SELECT 1
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = 'edw_commercial'
-      AND TABLE_NAME = 'tcommercial_claim'
+      AND TABLE_NAME = 'tcommercial_claim_feature'
       AND COLUMN_NAME = 'closed_reason_desc'
 )
 BEGIN
-    ALTER TABLE edw_commercial.tcommercial_claim ADD closed_reason_desc VARCHAR(255) ;
+    ALTER TABLE edw_commercial.tcommercial_claim_feature ADD closed_reason_desc VARCHAR(255) ;
 END;
 
 
