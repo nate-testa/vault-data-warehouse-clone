@@ -122,6 +122,23 @@ class RecordsDispatcher:
             logger.error(f'Failed to look up contact by email={email}: {exc}')
         return None
 
+    def _patch_existing_contact(self, contact_id, properties):
+        """PATCH an existing HubSpot contact to add/update properties."""
+        try:
+            res = requests.patch(
+                f'https://api.hubapi.com/crm/v3/objects/contacts/{contact_id}',
+                headers=self.headers,
+                json={'properties': properties},
+                timeout=120
+            )
+            if res.status_code == 200:
+                return res.json()
+            else:
+                logger.error(f'Failed to PATCH contact {contact_id}: {res.status_code} - {res.text}')
+        except Exception as exc:
+            logger.error(f'Failed to PATCH contact {contact_id}: {exc}')
+        return None
+
     def unit_create_record(self, object_type, payload):
         endpoint = f'https://api.hubapi.com/crm/v3/objects/{object_type}'
         max_attempts = 3
@@ -137,22 +154,52 @@ class RecordsDispatcher:
                     timeout=120
                 )
 
-                # If "Contact already exists", look up the existing contact and map it
-                # instead of creating a duplicate without email
+                # If "Contact already exists", look up the existing contact and handle it
+                # based on whether the types match (same type = map, different type = patch & map)
                 if object_type == 'contacts' and 'Contact already exists' in res.text:
                     email = payload['properties'].get('email', '')
                     logger.warning(
                         f'Contact already exists in HubSpot (email={email}). '
-                        f'Looking up existing contact to register in mapping table.'
+                        f'Looking up existing contact to determine action.'
                     )
                     existing_contact = self._lookup_existing_contact(email)
                     if existing_contact:
-                        # Return the existing contact as if we created it
-                        # so the id_map gets populated with the correct HubSpot ID
-                        logger.info(f'Found existing contact {existing_contact["id"]} for email={email}. Registering in mapping table.')
-                        # Build a fake successful response for id_map
+                        existing_type = (existing_contact.get('properties', {}).get('type') or '').strip()
+                        incoming_type = (payload['properties'].get('type') or '').strip()
+
+                        if existing_type == incoming_type:
+                            # Same type — map to existing contact (e.g., producer → producer)
+                            logger.info(
+                                f'Same type ({existing_type}): mapping existing contact '
+                                f'{existing_contact["id"]} for email={email}.'
+                            )
+                        else:
+                            # Different type — PATCH existing contact to add the new business key
+                            # e.g., existing is Agency (producer), incoming is Customer
+                            logger.info(
+                                f'Cross-type conflict: existing={existing_type}, incoming={incoming_type}. '
+                                f'PATCHing contact {existing_contact["id"]} to add {incoming_type} properties.'
+                            )
+                            # Build patch with only the new business-key properties
+                            # (don't overwrite type or other existing properties)
+                            patch_props = {}
+                            for key in ('customer_id', 'producer_id', 'broker_id'):
+                                if key in payload['properties'] and not existing_contact['properties'].get(key):
+                                    patch_props[key] = payload['properties'][key]
+
+                            if patch_props:
+                                patch_result = self._patch_existing_contact(existing_contact['id'], patch_props)
+                                if not patch_result:
+                                    logger.error(f'Failed to PATCH cross-type contact {existing_contact["id"]}. Skipping.')
+                                    error_reporter.add_error(
+                                        'CROSS_TYPE_PATCH_FAILED',
+                                        f'Could not patch {existing_type} contact to add {incoming_type} keys: {email}',
+                                        {'email': email, 'existing_type': existing_type, 'incoming_type': incoming_type}
+                                    )
+                                    return None
+
+                        # Register in the mapping table for the incoming type
                         merged_props = dict(existing_contact.get('properties', {}))
-                        # Overlay our payload properties so id_map gets the business keys
                         merged_props.update(payload['properties'])
                         merged_props['hs_object_id'] = existing_contact['id']
                         IDMapFunctions.action_router(self.action_type, False, {'properties': merged_props})
