@@ -3,10 +3,11 @@
 -- Create Date: 07/17/2025
 -- Description: This procedures inserts and updates claim data
 -----------------------------------------------------------------------------------------------------------
--- Change date		  |Author									|	Change Description
+-- Change date		|Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 07/17/2025		Hernando Gonzalez			1. Created this procedure
--- 08/05/2025		Yunus Mohammed			   2. Removed NFP and Catastrophe code
+-- 08/05/2025		Yunus Mohammed			   	2. Removed NFP and Catastrophe code
+-- 04/13/2026		Yunus Mohammed				3. AD-11426 - Added new columns
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_claim]
 
@@ -40,7 +41,9 @@ BEGIN
 		source_system_sk,update_time
 		,fault_decision,
 		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,
-		litigation_in,litigation_complete_in
+		litigation_in,litigation_complete_in,
+		loss_location_desc, [large_loss_in],
+		closed_reason_desc, last_update_ts
 		INTO edw_temp.tcommercial_claim_temp1
 		FROM
 		(
@@ -100,6 +103,13 @@ BEGIN
 					when c.litigation_complete = 'true' then 'Yes'
 					when c.litigation_complete = 'false' then 'No'
 			end as [litigation_complete_in]
+			, c.incident_location_description as loss_location_desc
+			, case
+					when c.large_loss = 'true' then 'Yes'
+					when c.large_loss = 'false' then 'No'
+			end as [large_loss_in]
+			, c.closed_reason_code as closed_reason_desc
+			, c.updated_at  as last_update_ts			
 		FROM edw_stage_snapsheet.claims c
 		LEFT JOIN edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
 		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcmp.claim_party_id and  cpcmp.contact_method_type = 'phone'
@@ -154,7 +164,8 @@ BEGIN
 			,source_system_sk,create_ts,update_ts,etl_audit_sk
 			,fault_decision,
 			coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,
-			litigation_in,litigation_complete_in
+			litigation_in,litigation_complete_in,
+			loss_location_desc,large_loss_in,closed_reason_desc,last_update_ts
 		)
 	VALUES
 		(
@@ -166,7 +177,8 @@ BEGIN
 		,source_system_sk,@current_date,@current_date,@etl_audit_sk
 		,fault_decision,
 		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,
-		litigation_in,litigation_complete_in
+		litigation_in,litigation_complete_in,
+		loss_location_desc,large_loss_in,closed_reason_desc,last_update_ts
 		)
 	-- For Updates
 	WHEN MATCHED THEN UPDATE 
@@ -200,6 +212,10 @@ BEGIN
 		,Target.coverage_confirmed_in= Source.coverage_confirmed_in
 		,Target.litigation_in = Source.litigation_in
 		,Target.litigation_complete_in= Source.litigation_complete_in
+		,Target.loss_location_desc = Source.loss_location_desc
+		,Target.large_loss_in = Source.large_loss_in
+		,Target.closed_reason_desc = Source.closed_reason_desc
+		,Target.last_update_ts = Source.last_update_ts
 		;
 		
 		--************End************
