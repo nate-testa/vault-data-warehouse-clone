@@ -41,7 +41,9 @@ BEGIN
 		source_system_sk,update_time
 		,fault_decision,
 		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,
-		litigation_in,litigation_complete_in
+		litigation_in,litigation_complete_in,
+		loss_location_desc, [large_loss_in],
+		closed_reason_desc, last_update_ts
 		INTO edw_temp.tcommercial_claim_temp1
 		FROM
 		(
