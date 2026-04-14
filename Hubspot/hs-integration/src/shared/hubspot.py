@@ -122,23 +122,6 @@ class RecordsDispatcher:
             logger.error(f'Failed to look up contact by email={email}: {exc}')
         return None
 
-    def _patch_existing_contact(self, contact_id, properties):
-        """PATCH an existing HubSpot contact to add/update properties."""
-        try:
-            res = requests.patch(
-                f'https://api.hubapi.com/crm/v3/objects/contacts/{contact_id}',
-                headers=self.headers,
-                json={'properties': properties},
-                timeout=120
-            )
-            if res.status_code == 200:
-                return res.json()
-            else:
-                logger.error(f'Failed to PATCH contact {contact_id}: {res.status_code} - {res.text}')
-        except Exception as exc:
-            logger.error(f'Failed to PATCH contact {contact_id}: {exc}')
-        return None
-
     def unit_create_record(self, object_type, payload):
         endpoint = f'https://api.hubapi.com/crm/v3/objects/{object_type}'
         max_attempts = 3
@@ -154,8 +137,12 @@ class RecordsDispatcher:
                     timeout=120
                 )
 
-                # If "Contact already exists", look up the existing contact and handle it
-                # based on whether the types match (same type = map, different type = patch & map)
+                # Handle "Contact already exists" (HubSpot enforces email uniqueness)
+                # Rules:
+                #   1. Same email + same type + same business key → map to existing (update)
+                #   2. Same email + same type + different business key → create without email
+                #   3. Same email + different type → create without email
+                #   4. Lookup fails → skip (don't create duplicate)
                 if object_type == 'contacts' and 'Contact already exists' in res.text:
                     email = payload['properties'].get('email', '')
                     logger.warning(
@@ -167,47 +154,53 @@ class RecordsDispatcher:
                         existing_type = (existing_contact.get('properties', {}).get('type') or '').strip()
                         incoming_type = (payload['properties'].get('type') or '').strip()
 
-                        if existing_type == incoming_type:
-                            # Same type — map to existing contact (e.g., producer → producer)
-                            logger.info(
-                                f'Same type ({existing_type}): mapping existing contact '
-                                f'{existing_contact["id"]} for email={email}.'
-                            )
+                        # Determine the business key based on action type
+                        if 'producer' in self.action_type:
+                            biz_key = 'producer_id'
+                        elif 'customer' in self.action_type:
+                            biz_key = 'customer_id'
                         else:
-                            # Different type — PATCH existing contact to add the new business key
-                            # e.g., existing is Agency (producer), incoming is Customer
+                            biz_key = None
+
+                        existing_biz_id = existing_contact.get('properties', {}).get(biz_key, '') if biz_key else ''
+                        incoming_biz_id = payload['properties'].get(biz_key, '') if biz_key else ''
+
+                        same_type = existing_type == incoming_type
+                        same_biz_key = biz_key and existing_biz_id and incoming_biz_id and existing_biz_id == incoming_biz_id
+
+                        if same_type and same_biz_key:
+                            # Rule 1: Same email + same type + same business key → map to existing
                             logger.info(
-                                f'Cross-type conflict: existing={existing_type}, incoming={incoming_type}. '
-                                f'PATCHing contact {existing_contact["id"]} to add {incoming_type} properties.'
+                                f'Same type ({existing_type}) and same {biz_key} ({incoming_biz_id}): '
+                                f'mapping existing contact {existing_contact["id"]} for email={email}.'
                             )
-                            # Build patch with only the new business-key properties
-                            # (don't overwrite type or other existing properties)
-                            patch_props = {}
-                            for key in ('customer_id', 'producer_id', 'broker_id'):
-                                if key in payload['properties'] and not existing_contact['properties'].get(key):
-                                    patch_props[key] = payload['properties'][key]
-
-                            if patch_props:
-                                patch_result = self._patch_existing_contact(existing_contact['id'], patch_props)
-                                if not patch_result:
-                                    logger.error(f'Failed to PATCH cross-type contact {existing_contact["id"]}. Skipping.')
-                                    error_reporter.add_error(
-                                        'CROSS_TYPE_PATCH_FAILED',
-                                        f'Could not patch {existing_type} contact to add {incoming_type} keys: {email}',
-                                        {'email': email, 'existing_type': existing_type, 'incoming_type': incoming_type}
-                                    )
-                                    return None
-
-                        # Register in the mapping table for the incoming type
-                        merged_props = dict(existing_contact.get('properties', {}))
-                        merged_props.update(payload['properties'])
-                        merged_props['hs_object_id'] = existing_contact['id']
-                        IDMapFunctions.action_router(self.action_type, False, {'properties': merged_props})
-                        error_reporter.update_stats(
-                            self.action_type.replace('_create', '').replace('_update', ''),
-                            'updated', 1
-                        )
-                        return None  # skip normal api_log
+                            merged_props = dict(existing_contact.get('properties', {}))
+                            merged_props.update(payload['properties'])
+                            merged_props['hs_object_id'] = existing_contact['id']
+                            IDMapFunctions.action_router(self.action_type, False, {'properties': merged_props})
+                            error_reporter.update_stats(
+                                self.action_type.replace('_create', '').replace('_update', ''),
+                                'updated', 1
+                            )
+                            return None
+                        else:
+                            # Rule 2 or 3: Different type OR different business key
+                            # → create a new contact without email
+                            reason = 'different type' if not same_type else f'different {biz_key}'
+                            logger.info(
+                                f'Contact exists with {reason} (existing={existing_type}/{existing_biz_id}, '
+                                f'incoming={incoming_type}/{incoming_biz_id}). '
+                                f'Creating new contact without email.'
+                            )
+                            payload['properties'].pop('email', None)
+                            # Reset attempt counter and retry without email
+                            res = requests.post(
+                                url=endpoint,
+                                data=json.dumps(payload, default=str),
+                                headers=self.headers,
+                                timeout=120
+                            )
+                            break  # proceed to api_log with the retry result
                     else:
                         logger.error(f'Contact already exists but could not look up by email={email}. Skipping to avoid duplicate.')
                         error_reporter.add_error('DUPLICATE_CONTACT', f'Contact exists but lookup failed: {email}', {'email': email})
