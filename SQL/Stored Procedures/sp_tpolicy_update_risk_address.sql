@@ -4,7 +4,8 @@
 -- Change date      |Author						|	Change Description
 -------------------------------------------------------------------------------------------
 -- 02/24/25		     Yunus Mohammed			    1. Created this procedure
--- 03/20/26          Yununs Mohammed            2. AD-12872 Added risk_adress_city_nm for PEL policies
+-- 03/20/26          Yunus Mohammed             2. AD-12872 Added risk_adress_city_nm for PEL policies
+-- 04/14/26          Yunus Mohammed             3. AD-13102 Added risk_address_county_nm
 -- ========================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_update_risk_address]
@@ -79,6 +80,14 @@ BEGIN
             else NULL
             end risk_address_zip_cd
             ,case
+            when p.product_cd in ('HO','CO') then hl.county_nm
+            when p.product_cd in ('LUX')     then cl.county_nm
+            when p.product_cd in ('PEL') then pl.county_nm
+            when p.product_cd in ('BY') then mbyl.county_nm
+            when p.product_cd in ('AU')  then p.mailing_address_county_nm
+            else NULL
+            end risk_address_county_nm
+            ,case
             when p.product_cd in ('HO','CO') then hl.country_nm
             when p.product_cd in ('LUX')     then cl.country_nm
             when p.product_cd in ('PEL') then pl.country_nm
@@ -105,6 +114,7 @@ BEGIN
             [target].risk_address_city_nm =  [source].risk_address_city_nm,
             [target].risk_address_state_cd=  [source].risk_address_state_cd,
             [target].risk_address_zip_cd = [source].risk_address_zip_cd,
+            [target].risk_address_county_nm = [source].risk_address_county_nm,
             [target].risk_address_country_nm = [source].risk_address_country_nm
         FROM
             edw_core.tpolicy [target]
