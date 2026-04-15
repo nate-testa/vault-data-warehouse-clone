@@ -43,7 +43,7 @@ BEGIN
 		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,
 		litigation_in,litigation_complete_in,
 		loss_location_desc, [large_loss_in],
-		closed_reason_desc, last_update_ts
+		closed_reason_desc, claim_last_updated_ts
 		INTO edw_temp.tcommercial_claim_temp1
 		FROM
 		(
@@ -109,7 +109,7 @@ BEGIN
 					when c.large_loss = 'false' then 'No'
 			end as [large_loss_in]
 			, c.closed_reason_code as closed_reason_desc
-			, c.updated_at  as last_update_ts			
+			, c.updated_at  as claim_last_updated_ts			
 		FROM edw_stage_snapsheet.claims c
 		LEFT JOIN edw_stage_snapsheet.claim_parties cp on c.notifier_claim_party_id = cp.id
 		LEFT JOIN edw_stage_snapsheet.claim_party_contact_methods cpcmp on c.notifier_claim_party_id = cpcmp.claim_party_id and  cpcmp.contact_method_type = 'phone'
@@ -165,7 +165,7 @@ BEGIN
 			,fault_decision,
 			coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,
 			litigation_in,litigation_complete_in,
-			loss_location_desc,large_loss_in,closed_reason_desc,last_update_ts
+			loss_location_desc,large_loss_in,closed_reason_desc,claim_last_updated_ts
 		)
 	VALUES
 		(
@@ -178,7 +178,7 @@ BEGIN
 		,fault_decision,
 		coverage_confirmed_ts,coverage_confirmed_by_nm,coverage_confirmed_in,
 		litigation_in,litigation_complete_in,
-		loss_location_desc,large_loss_in,closed_reason_desc,last_update_ts
+		loss_location_desc,large_loss_in,closed_reason_desc,claim_last_updated_ts
 		)
 	-- For Updates
 	WHEN MATCHED THEN UPDATE 
@@ -215,7 +215,7 @@ BEGIN
 		,Target.loss_location_desc = Source.loss_location_desc
 		,Target.large_loss_in = Source.large_loss_in
 		,Target.closed_reason_desc = Source.closed_reason_desc
-		,Target.last_update_ts = Source.last_update_ts
+		,Target.claim_last_updated_ts = Source.claim_last_updated_ts
 		;
 		
 		--************End************
