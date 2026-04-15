@@ -1,9 +1,9 @@
 -- =================================================================================================
--- Description: This stored procedure insert and update info related to Billing Account.
+-- Description: This stored procedure insert and update info related to Billing Account Payment.
 ---------------------------------------------------------------------------------------------------
--- Change date |Author					|	Change Description
+-- Change date 	|Author					|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 08/18/23		Yunus Mohammed		    1. Create the proc
+-- 04/15/25		Yunus Mohammed		    1. Create the proc
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbilling_account_payment]
@@ -34,7 +34,7 @@ BEGIN
             ba.billingaccount_no,
             ba.billingaccount_sk,
             accg.PolicyNumber as grpel_master_policy_no,
-            'Payment' AS transaction_type,
+            case when accp.Amount >=0 then 'Payment' else 'Refund' end AS transaction_type,
             accp.LineItemCategory as receivable_cd,
             accp.Amount as payment_amt,
             bacc.BillToType as bill_type,
@@ -44,6 +44,8 @@ BEGIN
             bacc.ReferenceCode,
             null as system_remark,
             accp.ReferenceCode as user_remark,
+			accp.Id as payment_id, 
+			accp.ReversalOfId as reversal_of_payment_id,
             4 AS source_system_sk,
             getdate() as create_ts,
             getdate() as update_ts,
@@ -62,56 +64,44 @@ BEGIN
 		-- Start Merge process
 		MERGE edw_core.tbilling_account_payment AS Target
 		USING edw_temp.tbilling_account_payment_temp1 Source
-		ON Source.BillingAccountId = Target.billingaccount_no
+		ON Source.payment_id = Target.payment_id
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
-		INSERT (
-                billingaccount_no, billingaccount_sk, grpel_master_policy_no, transaction_type, 
-                receivable_cd, payment_amt, bill_type, payment_method, payment_dt, payment_from_type,
-                system_remark, user_remark, source_system_sk,
-                create_ts,update_ts, etl_audit_sk
-			)
-		VALUES (Source.BillingAccountId, Source.EffectiveDate, Source.ExpirationDate, Source.TransactionEffectiveDate, Source.BillToType, Source.PaymentPlan
-		,Source.PaymentMethod, Source.Payor, Source.ContactPrefix, Source.ContactFirstName, Source.ContactMiddleName, Source.ContactLastName, Source.ContactSuffix
-		, Source.ContactPhone, Source.birth_dt, Source.ContactEmail, Source.AddressLine1, Source.AddressLine2, Source.mailing_address_unit_no, Source.AddressCity, Source.AddressState
-		, Source.AddressZipCode, Source.AddressCounty, Source.AddressCountry, Source.source_system_sk, Source.create_ts, Source.update_ts, @etl_audit_sk, IsAutoPay
-		--, AutoPayMethod
-		, AutoPayToken, customer_sk)
+		INSERT 
+		(
+			billingaccount_no, billingaccount_sk, grpel_master_policy_no, transaction_type, 
+			receivable_cd, payment_amt, bill_type, payment_method, payment_dt, payment_from_type,
+			system_remark, user_remark, payment_id, reversal_of_payment_id,
+			source_system_sk, create_ts,update_ts, etl_audit_sk
+		)
+		VALUES 
+		(
+			[Source].billingaccount_no, [Source].billingaccount_sk, [Source].grpel_master_policy_no, [Source].transaction_type, 
+			[Source].receivable_cd, [Source].payment_amt, [Source].bill_type, [Source].payment_method, [Source].payment_dt, [Source].payment_from_type,
+			[Source].system_remark, [Source].user_remark, [Source].payment_id, [Source].reversal_of_payment_id,
+			[Source].source_system_sk, [Source].create_ts, [Source].update_ts, [Source].etl_audit_sk
+		)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET
-        Target.effective_dt = Source.EffectiveDate,
-		Target.expiration_dt = Source.ExpirationDate,
-		Target.transaction_dt = Source.TransactionEffectiveDate,
-		Target.bill_type = Source.BillToType,
-		Target.payment_plan = Source.PaymentPlan,
-		Target.payment_method = Source.PaymentPlan,
-		Target.payor_nm = Source.Payor,
-		Target.prefix = Source.ContactPrefix,
-		Target.first_nm = Source.ContactFirstName,
-		Target.middle_nm = Source.ContactMiddleName,
-		Target.last_nm = Source.ContactLastName,
-		Target.suffix = Source.ContactSuffix,
-		Target.phone_no = Source.ContactPhone,
-		Target.email = Source.ContactEmail,
-		Target.mailing_address_line_1 = Source.AddressLine1,
-		Target.mailing_address_line_2 = Source.AddressLine2,
-		Target.mailing_address_unit_no = Source.mailing_address_unit_no,
-		Target.mailing_city_nm = Source.AddressCity,
-		Target.mailing_state_cd = Source.AddressState,
-		Target.mailing_zip_cd = Source.AddressZipCode,
-		Target.mailing_county_nm = Source.AddressCounty,
-		Target.mailing_country_nm = Source.AddressCountry,
-		Target.update_ts = Source.update_ts,
-		Target.etl_audit_sk = @etl_audit_sk,
-		Target.auto_pay_in = Source.IsAutoPay,
-		--Target.auto_pay_method = Source.AutoPayMethod,
-		Target.auto_pay_token = Source.AutoPayToken,
-		Target.customer_sk = Source.customer_sk;
+       		[Source].billingaccount_no = [Source].billingaccount_no, 
+			[Source].billingaccount_sk = [Source].billingaccount_sk, 
+			[Source].grpel_master_policy_no = [Source].grpel_master_policy_no, 
+			[Source].transaction_type = [Source].transaction_type, 
+			[Source].receivable_cd = [Source].receivable_cd, 
+			[Source].payment_amt = [Source].payment_amt, 
+			[Source].bill_type = [Source].bill_type, 
+			[Source].payment_method = [Source].payment_method, 
+			[Source].payment_dt = [Source].payment_dt, 
+			[Source].payment_from_type = [Source].payment_from_type,
+			[Source].system_remark = [Source].system_remark, 
+			[Source].user_remark = [Source].user_remark, 
+			[Source].reversal_of_payment_id = [Source].reversal_of_payment_id,
+			[Source].update_ts = [Source].update_ts;
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(CreatedDate, UpdatedDate)) FROM edw_stage.BillingAccount),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(CreatedDate, UpdatedDate)) FROM edw_temp.tbilling_account_payment_temp1),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS edw_temp.tbillingaccount_temp1;
 		
