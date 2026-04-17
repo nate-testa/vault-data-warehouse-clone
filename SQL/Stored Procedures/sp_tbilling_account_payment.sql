@@ -3,7 +3,7 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date 	|Author					|	Change Description
 ---------------------------------------------------------------------------------------------------
--- 04/15/25		Yunus Mohammed		    1. Create the proc
+-- 04/15/25		Yunus Mohammed		    1. Created the proc
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tbilling_account_payment]
@@ -83,19 +83,7 @@ BEGIN
 		)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
-		SET
-       		[Source].billingaccount_no = [Source].billingaccount_no, 
-			[Source].billingaccount_sk = [Source].billingaccount_sk, 
-			[Source].grpel_master_policy_no = [Source].grpel_master_policy_no, 
-			[Source].transaction_type = [Source].transaction_type, 
-			[Source].receivable_cd = [Source].receivable_cd, 
-			[Source].payment_amt = [Source].payment_amt, 
-			[Source].bill_type = [Source].bill_type, 
-			[Source].payment_method = [Source].payment_method, 
-			[Source].payment_dt = [Source].payment_dt, 
-			[Source].payment_from_type = [Source].payment_from_type,
-			[Source].system_remark = [Source].system_remark, 
-			[Source].user_remark = [Source].user_remark, 
+		SET       		
 			[Source].reversal_of_payment_id = [Source].reversal_of_payment_id,
 			[Source].update_ts = [Source].update_ts;
 
