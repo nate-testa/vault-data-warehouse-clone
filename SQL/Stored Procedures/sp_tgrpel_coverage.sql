@@ -6,6 +6,8 @@
 -- Change date |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 02/03/26		Dinesh Bobbili				1. Created this SP
+-- 04/04/26     Yunus Mohammed              2. AD-13016 -  Remove no_of_high_performance_vehicles, no_of_boats_yachts and
+--                                                         reputational_injury_coverage_limit_amt columns
 -- ==========================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tgrpel_coverage]
 
@@ -34,8 +36,8 @@ BEGIN
 				grpel_policy_no,group_nm,
 				policy_history_sk,insured_nm,source_system_sk,
 				transaction_seq_no,ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit ,IssuedDate,
-				NumberOfVehicles ,UILiabilityLimit ,ReputationalInjuryLimit ,NumberOfPrivateStaff ,
-				NumberOfHighPerformansVehicles ,NumberOfRecreationalVehicles ,NumberOfWatercraft ,
+				NumberOfVehicles ,UILiabilityLimit ,NumberOfPrivateStaff ,
+				NumberOfRecreationalVehicles ,
 				NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
             INTO edw_temp.tgrpel_coverage_temp1
             from
@@ -81,8 +83,8 @@ BEGIN
                         and atvof.Field IN 
                         (
                             'ExcessLiabilityLimit', 'UMLiabilityLimit', 'EMPLiabilityLimit', 'DOLiabilityLimit', 'FTMLiabilityLimit',
-                            'NumberOfVehicles', 'UILiabilityLimit', 'ReputationalInjuryLimit', 'NumberOfPrivateStaff', 
-                            'NumberOfHighPerformansVehicles', 'NumberOfRecreationalVehicles', 'NumberOfWatercraft', 
+                            'NumberOfVehicles', 'UILiabilityLimit', 'NumberOfPrivateStaff', 
+                            'NumberOfRecreationalVehicles',
                             'NumberOfPersonalWatercraft', 'AutoInsuranceCompany', 'HomeInsuranceCompany', 'WatercraftInsuranceCompany'
                         )
                     ) as t
@@ -92,8 +94,8 @@ BEGIN
                     max(Value) FOR Field IN 
                     (
                         ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit ,
-                        NumberOfVehicles ,UILiabilityLimit ,ReputationalInjuryLimit ,NumberOfPrivateStaff ,
-                        NumberOfHighPerformansVehicles ,NumberOfRecreationalVehicles ,NumberOfWatercraft ,
+                        NumberOfVehicles ,UILiabilityLimit ,NumberOfPrivateStaff ,
+                        NumberOfRecreationalVehicles ,
                         NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
                         )
                 ) as pivottable
@@ -118,12 +120,9 @@ BEGIN
             ,family_trust_management_liability_limit_amt
             ,no_of_vehicles
             ,risk_group
-            ,uninsured_underinsured_liability_limit_amt
-            ,reputational_injury_coverage_limit_amt
-            ,no_of_private_staff
-            ,no_of_high_performance_vehicles
-            ,no_of_recreational_vehicles
-            ,no_of_boats_yachts
+            ,uninsured_underinsured_liability_limit_amt           
+            ,no_of_private_staff           
+            ,no_of_recreational_vehicles           
             ,no_of_personal_watercraft
             ,underlying_auto_insurance_company_nm
             ,underlying_home_insurance_company_nm
@@ -149,12 +148,9 @@ BEGIN
             ,FTMLiabilityLimit	as	family_trust_management_liability_limit_amt
             ,NumberOfVehicles	as	no_of_vehicles
             ,concat(PolicyNumber, ' - ', insured_nm)	as	risk_group
-            ,UILiabilityLimit	as	uninsured_underinsured_liability_limit_amt
-            ,ReputationalInjuryLimit	as	reputational_injury_coverage_limit_amt
-            ,NumberOfPrivateStaff	as	no_of_private_staff
-            ,NumberOfHighPerformansVehicles	as	no_of_high_performance_vehicles
-            ,NumberOfRecreationalVehicles	as	no_of_recreational_vehicles
-            ,NumberOfWatercraft	as	no_of_boats_yachts
+            ,UILiabilityLimit	as	uninsured_underinsured_liability_limit_amt           
+            ,NumberOfPrivateStaff	as	no_of_private_staff           
+            ,NumberOfRecreationalVehicles	as	no_of_recreational_vehicles           
             ,NumberOfPersonalWatercraft	as	no_of_personal_watercraft
             ,AutoInsuranceCompany	as	underlying_auto_insurance_company_nm
             ,HomeInsuranceCompany	as	underlying_home_insurance_company_nm

@@ -1,14 +1,14 @@
 import shared.timetracking as timetracking
 from shared.logger import get_logger
-import constants
+from shared.id_map_db import get_id_map_connection, ID_MAP_SCHEMA
 
 from datetime import datetime
 import pandas as pd
-import sqlite3
 
 
 logger = get_logger(__name__)
-id_map_path = constants.id_map_path 
+
+S = ID_MAP_SCHEMA  # short alias for schema prefix
 
 
 
@@ -44,138 +44,116 @@ class IDMapFunctions:
 
 
     def customer_id_map_create_record(batch, response):
-        now = datetime.now()
-        conn = sqlite3.connect(id_map_path)
+        now = str(datetime.now())
+        conn = get_id_map_connection()
         try:
             if batch:
                 for unit_json_response in response['results']:
                     hs_object_id = unit_json_response['properties']['hs_object_id']
                     broker_id = unit_json_response['properties']['broker_id']
                     customer_id = unit_json_response['properties']['customer_id']
-                    query = f'''
-                    INSERT INTO customer (hs_contact_id, customer_id, broker_id, created, updated)
-                    VALUES ('{hs_object_id}', '{customer_id}', '{broker_id}', '{now}', '{now}');
-                    '''
-                    conn.execute(query)
+                    conn.cursor().execute(
+                        f"INSERT INTO {S}.customer (hs_contact_id, customer_id, broker_id, created, updated) VALUES (%s, %s, %s, %s, %s)",
+                        (hs_object_id, customer_id, broker_id, now, now)
+                    )
                     conn.commit()
-                    continue
             else:
                 hs_object_id = response['properties']['hs_object_id']
                 broker_id = response['properties']['broker_id']
                 customer_id = response['properties']['customer_id']
-                query = f'''
-                INSERT INTO customer (hs_contact_id, customer_id, broker_id, created, updated)
-                VALUES ('{hs_object_id}', '{customer_id}', '{broker_id}', '{now}', '{now}');
-                '''
-                conn.execute(query)
+                conn.cursor().execute(
+                    f"INSERT INTO {S}.customer (hs_contact_id, customer_id, broker_id, created, updated) VALUES (%s, %s, %s, %s, %s)",
+                    (hs_object_id, customer_id, broker_id, now, now)
+                )
                 conn.commit()
-                conn.close()
-                return
-        
         except Exception as e:
             logger.error(f"Error creating ID Map entry: {e}")
+        finally:
+            conn.close()
 
 
     def customer_id_map_update_record(batch, response):
-        now = datetime.now()
-        conn = sqlite3.connect(id_map_path)
+        now = str(datetime.now())
+        conn = get_id_map_connection()
         try:
             if batch:
                 for unit_json_response in response['results']:
                     hs_object_id = unit_json_response['properties']['hs_object_id']
-                    query = f'''
-                    UPDATE customer
-                    SET updated = '{now}'
-                    WHERE hs_contact_id = '{hs_object_id}'
-                    '''
-                    conn.execute(query)
+                    conn.cursor().execute(
+                        f"UPDATE {S}.customer SET updated = %s WHERE hs_contact_id = %s",
+                        (now, hs_object_id)
+                    )
                     conn.commit()
-                    continue
             else:
                 hs_object_id = response['properties']['hs_object_id']
-                query = f'''
-                UPDATE customer
-                SET updated = '{now}'
-                WHERE hs_contact_id = '{hs_object_id}'
-                '''
-                conn.execute(query)
+                conn.cursor().execute(
+                    f"UPDATE {S}.customer SET updated = %s WHERE hs_contact_id = %s",
+                    (now, hs_object_id)
+                )
                 conn.commit()
-                conn.close()
-                return
-            
         except Exception as e:
             logger.error(f"Error creating ID Map entry: {e}")
+        finally:
+            conn.close()
         
 
     def producer_id_map_create_record(batch, response):
-        now = datetime.now()
-        conn = sqlite3.connect(id_map_path)
+        now = str(datetime.now())
+        conn = get_id_map_connection()
         try:
             if batch:
                 for unit_json_response in response['results']:
                     hs_object_id = unit_json_response['properties']['hs_object_id']
                     broker_id = unit_json_response['properties']['broker_id']
                     producer_id = unit_json_response['properties']['producer_id']
-                    query = f'''
-                    INSERT INTO producer (hs_contact_id, producer_id, broker_id, created, updated)
-                    VALUES ('{hs_object_id}', '{producer_id}', '{broker_id}', '{now}', '{now}');
-                    '''
-                    conn.execute(query)
+                    conn.cursor().execute(
+                        f"INSERT INTO {S}.producer (hs_contact_id, producer_id, broker_id, created, updated) VALUES (%s, %s, %s, %s, %s)",
+                        (hs_object_id, producer_id, broker_id, now, now)
+                    )
                     conn.commit()
-                    continue
-                    
-
             else:
                 hs_object_id = response['properties']['hs_object_id']
                 broker_id = response['properties']['broker_id']
                 producer_id = response['properties']['producer_id']
-                query = f'''
-                INSERT INTO producer (hs_contact_id, producer_id, broker_id, created, updated)
-                VALUES ('{hs_object_id}', '{producer_id}', '{broker_id}', '{now}', '{now}');
-                '''
-                conn.execute(query)
+                conn.cursor().execute(
+                    f"INSERT INTO {S}.producer (hs_contact_id, producer_id, broker_id, created, updated) VALUES (%s, %s, %s, %s, %s)",
+                    (hs_object_id, producer_id, broker_id, now, now)
+                )
                 conn.commit()
-                conn.close()
-                return
-            
         except Exception as e:
             logger.error(f"Error creating ID Map entry: {e}")
+        finally:
+            conn.close()
 
 
     def producer_id_map_update_record(batch, response):
-        now = datetime.now()
-        conn = sqlite3.connect(id_map_path)
+        now = str(datetime.now())
+        conn = get_id_map_connection()
         try:
             if batch:
                 for unit_json_response in response['results']:
                     hs_object_id = unit_json_response['properties']['hs_object_id']
-                    query = f'''
-                    UPDATE producer
-                    SET updated = '{now}'
-                    WHERE hs_contact_id = '{hs_object_id}'
-                    '''
-                    conn.execute(query)
+                    conn.cursor().execute(
+                        f"UPDATE {S}.producer SET updated = %s WHERE hs_contact_id = %s",
+                        (now, hs_object_id)
+                    )
                     conn.commit()
-                    continue
             else:
                 hs_object_id = response['properties']['hs_object_id']
-                query = f'''
-                UPDATE producer
-                SET updated = '{now}'
-                WHERE hs_contact_id = '{hs_object_id}'
-                '''
-                conn.execute(query)
+                conn.cursor().execute(
+                    f"UPDATE {S}.producer SET updated = %s WHERE hs_contact_id = %s",
+                    (now, hs_object_id)
+                )
                 conn.commit()
-                conn.close()
-                return
-            
         except Exception as e:
             logger.error(f"Error creating ID Map entry: {e}")
+        finally:
+            conn.close()
 
 
     def policy_id_map_create_record(batch, response, request_data=None):
-        now = datetime.now()
-        conn = sqlite3.connect(id_map_path)
+        now = str(datetime.now())
+        conn = get_id_map_connection()
         try:
             if batch:
                 request_inputs = request_data.get('inputs', []) if request_data else []
@@ -186,13 +164,11 @@ class IDMapFunctions:
                     broker_id = unit_json_response['properties']['broker_id']
                     # Get producer_id from original request data
                     producer_id = request_inputs[idx]['properties'].get('producer_id', '') if idx < len(request_inputs) else ''
-                    query = f'''
-                    INSERT INTO policy (hs_object_id, policy_no, customer_id, broker_id, producer_id, created, updated)
-                    VALUES ('{hs_object_id}', '{policy_no}', '{customer_id}', '{broker_id}', '{producer_id}', '{now}', '{now}');
-                    '''
-                    conn.execute(query)
+                    conn.cursor().execute(
+                        f"INSERT INTO {S}.policy (hs_object_id, policy_no, customer_id, broker_id, producer_id, created, updated) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                        (hs_object_id, policy_no, customer_id, broker_id, producer_id, now, now)
+                    )
                     conn.commit()
-                    continue
             else:
                 hs_object_id = response['properties']['hs_object_id']
                 policy_no = response['properties']['policy_name']
@@ -200,22 +176,20 @@ class IDMapFunctions:
                 broker_id = response['properties']['broker_id']
                 producer_id = response['properties'].get('producer_id', '')
                 email = response['properties']['email']
-                query = f'''
-                INSERT INTO policy (hs_object_id, policy_no, customer_id, broker_id, producer_id, email, created, updated)
-                VALUES ('{hs_object_id}', '{policy_no}', '{customer_id}', '{broker_id}', '{producer_id}', '{email}', '{now}', '{now}');
-                '''
-                conn.execute(query)
+                conn.cursor().execute(
+                    f"INSERT INTO {S}.policy (hs_object_id, policy_no, customer_id, broker_id, producer_id, email, created, updated) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                    (hs_object_id, policy_no, customer_id, broker_id, producer_id, email, now, now)
+                )
                 conn.commit()
-                conn.close()
-                return
-            
         except Exception as e:
             logger.error(f"Error creating ID Map entry: {e}")
+        finally:
+            conn.close()
 
 
     def policy_id_map_update_record(batch, response, request_data=None):
-        now = datetime.now()
-        conn = sqlite3.connect(id_map_path)
+        now = str(datetime.now())
+        conn = get_id_map_connection()
         try:
             if batch:
                 request_inputs = request_data.get('inputs', []) if request_data else []
@@ -229,95 +203,79 @@ class IDMapFunctions:
                     hs_object_id = unit_json_response['properties']['hs_object_id']
                     # Look up producer_id by matching hs_object_id, not by index
                     producer_id = producer_id_map.get(hs_object_id, '')
-                    query = f'''
-                    UPDATE policy
-                    SET updated = '{now}', producer_id = '{producer_id}'
-                    WHERE hs_object_id = '{hs_object_id}'
-                    '''
-                    conn.execute(query)
+                    conn.cursor().execute(
+                        f"UPDATE {S}.policy SET updated = %s, producer_id = %s WHERE hs_object_id = %s",
+                        (now, producer_id, hs_object_id)
+                    )
                     conn.commit()
-                    continue
             else:
                 hs_object_id = response['properties']['hs_object_id']
-                query = f'''
-                UPDATE policy
-                SET updated = '{now}'
-                WHERE hs_object_id = '{hs_object_id}'
-                '''
-                conn.execute(query)
+                conn.cursor().execute(
+                    f"UPDATE {S}.policy SET updated = %s WHERE hs_object_id = %s",
+                    (now, hs_object_id)
+                )
                 conn.commit()
-                conn.close()
-                return
-            
         except Exception as e:
             logger.error(f"Error creating ID Map entry: {e}")
+        finally:
+            conn.close()
 
 
     def broker_id_map_create_record(batch, response):
-        now = datetime.now()
-        conn = sqlite3.connect(id_map_path)
+        now = str(datetime.now())
+        conn = get_id_map_connection()
         try:
             if batch:
                 for unit_json_response in response['results']:
                     hs_company_id = unit_json_response['properties']['hs_object_id']
                     broker_id = unit_json_response['properties']['broker_id']
-                    query = f'''
-                    INSERT INTO broker (hs_company_id, broker_id, created, updated)
-                    VALUES ('{hs_company_id}', '{broker_id}', '{now}', '{now}');
-                    '''
-                    conn.execute(query)
+                    conn.cursor().execute(
+                        f"INSERT INTO {S}.broker (hs_company_id, broker_id, created, updated) VALUES (%s, %s, %s, %s)",
+                        (hs_company_id, broker_id, now, now)
+                    )
                     conn.commit()
-                    continue
             else:
                 hs_company_id = response['properties']['hs_object_id']
                 broker_id = response['properties']['broker_id']
-                query = f'''
-                INSERT INTO broker (hs_company_id, broker_id, created, updated)
-                VALUES ('{hs_company_id}', '{broker_id}', '{now}', '{now}');
-                '''
-                conn.execute(query)
+                conn.cursor().execute(
+                    f"INSERT INTO {S}.broker (hs_company_id, broker_id, created, updated) VALUES (%s, %s, %s, %s)",
+                    (hs_company_id, broker_id, now, now)
+                )
                 conn.commit()
-                conn.close()
-                return
-            
         except Exception as e:
             logger.error(f"Error creating ID Map entry: {e}")
+        finally:
+            conn.close()
 
 
     def broker_id_map_update_record(batch, response):
-        now = datetime.now()
-        conn = sqlite3.connect(id_map_path)
+        now = str(datetime.now())
+        conn = get_id_map_connection()
         try:
             if batch:
                 for unit_json_response in response['results']:
                     hs_company_id = unit_json_response['properties']['hs_object_id']
-                    query = f'''
-                    UPDATE broker
-                    SET updated = '{now}'
-                    WHERE hs_company_id = '{hs_company_id}'
-                    '''
-                    conn.execute(query)
+                    conn.cursor().execute(
+                        f"UPDATE {S}.broker SET updated = %s WHERE hs_company_id = %s",
+                        (now, hs_company_id)
+                    )
                     conn.commit()
-                    continue
             else:
                 hs_company_id = response['properties']['hs_object_id']
-                query = f'''
-                UPDATE broker
-                SET updated = '{now}'
-                WHERE hs_company_id = '{hs_company_id}'
-                '''
-                conn.execute(query)
+                conn.cursor().execute(
+                    f"UPDATE {S}.broker SET updated = %s WHERE hs_company_id = %s",
+                    (now, hs_company_id)
+                )
                 conn.commit()
-                conn.close()
-                return
-
         except Exception as e:
             logger.error(f"Error creating ID Map entry: {e}")
+        finally:
+            conn.close()
         
 
     def quote_id_map_create_record(batch, response, request_data=None):
-        now = datetime.now()
-        conn = sqlite3.connect(id_map_path)
+        now = str(datetime.now())
+        conn = get_id_map_connection()
         try:
             if batch:
                 request_inputs = request_data.get('inputs', []) if request_data else []
@@ -328,35 +286,31 @@ class IDMapFunctions:
                     # Get producer_id from original request data
                     producer_id = request_inputs[idx]['properties'].get('producer_id', '') if idx < len(request_inputs) else ''
                     quote_no = unit_json_response['properties']['policy_number']
-                    query = f'''
-                    INSERT INTO quote (hs_object_id, broker_id, customer_id, producer_id, quote_no, created, updated)
-                    VALUES ('{hs_object_id}', '{broker_id}', '{customer_id}', '{producer_id}', '{quote_no}', '{now}', '{now}');
-                    '''
-                    conn.execute(query)
+                    conn.cursor().execute(
+                        f"INSERT INTO {S}.quote (hs_object_id, broker_id, customer_id, producer_id, quote_no, created, updated) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                        (hs_object_id, broker_id, customer_id, producer_id, quote_no, now, now)
+                    )
                     conn.commit()
-                    continue
             else:
                 hs_object_id = response['properties']['hs_object_id']
                 broker_id = response['properties']['broker_id']
                 customer_id = response['properties']['customer_id']
                 producer_id = response['properties'].get('producer_id', '')
                 quote_no = response['properties']['policy_number']
-                query = f'''
-                INSERT INTO quote (hs_object_id, broker_id, customer_id, producer_id, quote_no, created, updated)
-                VALUES ('{hs_object_id}', '{broker_id}', '{customer_id}', '{producer_id}', '{quote_no}', '{now}', '{now}');
-                '''
-                conn.execute(query)
+                conn.cursor().execute(
+                    f"INSERT INTO {S}.quote (hs_object_id, broker_id, customer_id, producer_id, quote_no, created, updated) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    (hs_object_id, broker_id, customer_id, producer_id, quote_no, now, now)
+                )
                 conn.commit()
-                conn.close()
-                return
-
         except Exception as e:
             logger.error(f"Error creating ID Map entry: {e}")
+        finally:
+            conn.close()
 
 
     def quote_id_map_update_record(batch, response, request_data=None):
-        now = datetime.now()
-        conn = sqlite3.connect(id_map_path)
+        now = str(datetime.now())
+        conn = get_id_map_connection()
         try:
             if batch:
                 request_inputs = request_data.get('inputs', []) if request_data else []
@@ -370,88 +324,72 @@ class IDMapFunctions:
                     hs_object_id = unit_json_response['properties']['hs_object_id']
                     # Look up producer_id by matching hs_object_id, not by index
                     producer_id = producer_id_map.get(hs_object_id, '')
-                    query = f'''
-                    UPDATE quote
-                    SET updated = '{now}', producer_id = '{producer_id}'
-                    WHERE hs_object_id = '{hs_object_id}'
-                    '''
-                    conn.execute(query)
+                    conn.cursor().execute(
+                        f"UPDATE {S}.quote SET updated = %s, producer_id = %s WHERE hs_object_id = %s",
+                        (now, producer_id, hs_object_id)
+                    )
                     conn.commit()
-                    continue
             else:
                 hs_object_id = response['properties']['hs_object_id']
-                query = f'''
-                UPDATE quote
-                SET updated = '{now}'
-                WHERE hs_object_id = '{hs_object_id}'
-                '''
-                conn.execute(query)
+                conn.cursor().execute(
+                    f"UPDATE {S}.quote SET updated = %s WHERE hs_object_id = %s",
+                    (now, hs_object_id)
+                )
                 conn.commit()
-                conn.close()
-                return
-
         except Exception as e:
             logger.error(f"Error creating ID Map entry: {e}")
+        finally:
+            conn.close()
        
         
     def quote_note_id_map_create_record(batch, response):
-        now = datetime.now()
-        conn = sqlite3.connect(id_map_path)
+        now = str(datetime.now())
+        conn = get_id_map_connection()
         try:
             if batch:
                 for unit_json_response in response['results']:
                     hs_object_id = unit_json_response['id']#['properties']['hs_object_id']
                     quote_no = unit_json_response['properties']['quote_no']
-                    query = f'''
-                    INSERT INTO quote_note (hs_note_id, quote_no, created, updated)
-                    VALUES ('{hs_object_id}', '{quote_no}', '{now}', '{now}');
-                    '''
-                    conn.execute(query)
+                    conn.cursor().execute(
+                        f"INSERT INTO {S}.quote_note (hs_note_id, quote_no, created, updated) VALUES (%s, %s, %s, %s)",
+                        (hs_object_id, quote_no, now, now)
+                    )
                     conn.commit()
-                    continue
             else:
                 hs_object_id = response['id']#['properties']['hs_object_id']
                 quote_no = response['properties']['quote_no']
-                query = f'''
-                INSERT INTO quote_note (hs_note_id, quote_no, created, updated)
-                VALUES ('{hs_object_id}', '{quote_no}', '{now}', '{now}');
-                '''
-                conn.execute(query)
+                conn.cursor().execute(
+                    f"INSERT INTO {S}.quote_note (hs_note_id, quote_no, created, updated) VALUES (%s, %s, %s, %s)",
+                    (hs_object_id, quote_no, now, now)
+                )
                 conn.commit()
-                conn.close()
-                return
-
         except Exception as e:
             logger.error(f"Error creating ID Map entry: {e}")
+        finally:
+            conn.close()
 
 
     def quote_note_id_map_update_record(batch, response):
-        now = datetime.now()
-        conn = sqlite3.connect(id_map_path)
+        now = str(datetime.now())
+        conn = get_id_map_connection()
         try:
             if batch:
                 for unit_json_response in response['results']:
                     hs_object_id = unit_json_response['properties']['hs_object_id']
-                    query = f'''
-                    UPDATE quote_note
-                    SET updated = '{now}'
-                    WHERE hs_note_id = '{hs_object_id}'
-                    '''
-                    conn.execute(query)
+                    conn.cursor().execute(
+                        f"UPDATE {S}.quote_note SET updated = %s WHERE hs_note_id = %s",
+                        (now, hs_object_id)
+                    )
                     conn.commit()
-                    continue
             else:
                 hs_object_id = response['properties']['hs_object_id']
-                query = f'''
-                UPDATE quote_note
-                SET updated = '{now}'
-                WHERE hs_note_id = '{hs_object_id}'
-                '''
-                conn.execute(query)
+                conn.cursor().execute(
+                    f"UPDATE {S}.quote_note SET updated = %s WHERE hs_note_id = %s",
+                    (now, hs_object_id)
+                )
                 conn.commit()
-                conn.close()
-                return
-
         except Exception as e:
             logger.error(f"Error creating ID Map entry: {e}")
+        finally:
+            conn.close()
         

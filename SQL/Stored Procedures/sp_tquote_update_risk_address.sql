@@ -5,6 +5,7 @@
 -------------------------------------------------------------------------------------------
 -- 02/26/25		     Yunus Mohammed			    1. Created this procedure
 -- 03/20/26          Yununs Mohammed            2. AD-12872 Added risk_adress_city_nm for PEL policies
+-- 04/14/26          Yunus Mohammed             3. AD-13102 Added risk_address_county_nm
 -- ========================================================================================
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_update_risk_address]
@@ -79,6 +80,14 @@ BEGIN
                 else NULL
                 end risk_address_zip_cd
                 ,case
+                    when q.product_cd in ('HO','CO') then qhl.county_nm
+                    when q.product_cd in ('LUX')     then qcl.county_nm
+                    when q.product_cd in ('PEL') then qpl.county_nm
+                    when q.product_cd in ('BY') then qmbyl.county_nm
+                    when q.product_cd in ('AU')  then q.mailing_address_county_nm
+                    else NULL
+                    end risk_address_county_nm                
+                ,case
                 when q.product_cd in ('HO','CO') then qhl.country_nm
                 when q.product_cd in ('LUX')     then qcl.country_nm
                 when q.product_cd in ('PEL') then qpl.country_nm
@@ -105,6 +114,7 @@ BEGIN
             [target].risk_address_city_nm =  [source].risk_address_city_nm,
             [target].risk_address_state_cd=  [source].risk_address_state_cd,
             [target].risk_address_zip_cd = [source].risk_address_zip_cd,
+             [target].risk_address_county_nm = [source].risk_address_county_nm,
             [target].risk_address_country_nm = [source].risk_address_country_nm
         FROM
             edw_core.tquote [target]

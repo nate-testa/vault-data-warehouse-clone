@@ -2,9 +2,10 @@
 -- Author:		Yunus Mohammed
 -- Description: This proceudre generates marine boat and yatch commission feed
 ---------------------------------------------------------------------------------------------------
--- Change date 			|Author									        |	Change Description
+-- Change date 			|Author							  |	Change Description
 ---------------------------------------------------------------------------------------------------
--- 09/24/25				   Yunus Mohammed				1. Created this procedure
+-- 09/24/25				  Yunus Mohammed				1. Created this procedure
+-- 04/08/26         Yununs Mohammed       2. AD-13070 Modified where clause for commission_paid_to_date
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_integration].[sp_policy_yacht_commission_feed]
 AS
@@ -63,14 +64,14 @@ BEGIN
             sum(case when pay.receivable_type = 'Premium' then cast(replace(replace( replace(replace(pay.amount,'$',''),'(',''),')',''),',','') as decimal(18,2)) else 0 end)*-1 as commission_premium_collected,
             '20' as [commission_pct],
             sum(case when pay.receivable_type = 'Premium' then cast(replace(replace( replace(replace(pay.amount,'$',''),'(',''),')',''),',','') as decimal(18,2)) else 0 end)*0.20*-1 as commission_paid_this_period,
-            (
-                
+            (                
             select sum(case when pay1.receivable_type = 'Premium' then cast(replace(replace( replace(replace(pay1.amount,'$',''),'(',''),')',''),',','') as decimal(18,2)) else 0 end)*0.20*-1
             from
             edw_core.vmajescocashactivity pay1
             where
             pay1.policy_no = p.policy_no
             and cast(pay1.policy_effective_date as date) = p.effective_dt
+            and cast(pay1.accounting_month as int) < = @yearmonth
             ) as commission_paid_to_date,
             getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk
           from

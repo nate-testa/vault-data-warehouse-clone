@@ -34,6 +34,7 @@
 --																					columns for prior claims
 -- 02/02/26		Dinesh Bobbili					29. AD-12416 Added new columns high_risk_wui_property_in,effective_built_year
 -- 03/03/26		Yunus Mohammed					30. AD-12608 Added new column frame_to_foundation_connection_in
+-- 04/07/26     Tuba Mohsin                     31. AD-13046 Added new column roof_geometry_api
 -- =========================================================================================================================== 
 
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_thome_coverage]
@@ -211,7 +212,7 @@ BEGIN
 				no_of_bathrooms,no_of_fireplaces,foundation_type,waived_inflation_factor_in,fenced_pool_in,wildfire_risk_score,wildfire_risk_class,
 				wildfire_suppression_system,wildfire_decks_balconies_porches_stairs,
 				premium_analytics_grade,underwriter_required_inspection,high_risk_wui_property_in,effective_built_year,
-				frame_to_foundation_connection_in,
+				frame_to_foundation_connection_in,roof_geometry_api,
 				source_system_sk,create_ts,update_ts,etl_audit_sk
 				
 			)
@@ -380,6 +381,7 @@ BEGIN
 				tthc.HighRiskWUIProperty as high_risk_wui_property_in,
 				tthc.EffectiveYearBuilt as effective_built_year,
 				tthc.FrameToFoundationConnection as frame_to_foundation_connection_in,
+				tthc.RoofGeometryAPI as roof_geometry_api,
 				source_system_sk,getdate() AS create_ts,getdate() AS update_ts,@etl_audit_sk AS etl_audit_sk
 			FROM
 				edw_temp.thome_coverage_temp2 AS tthc

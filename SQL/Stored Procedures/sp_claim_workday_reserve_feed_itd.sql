@@ -18,7 +18,8 @@
 --																					Update run date logic
 -- 11/10/25		Yunus Mohammed				10. AD-11662 Updated for NFP policy claims
 -- 12/09/25		Yunus Mohammed				11. AD-11945 Modified stored procedure to run proc on same date again
--- 02/04/26		Yunus Mohammed				11. AD-12461 Used product_nm for 'Marine Boat & Yacht' instead of product_cd
+-- 02/04/26		Yunus Mohammed				12. AD-12461 Used product_nm for 'Marine Boat & Yacht' instead of product_cd
+-- 04/08/26		Yunus Mohammed				13. AD-13068 Removed distinct from select clause
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_reserve_feed_itd]
@@ -67,8 +68,7 @@ BEGIN
 		
 		WITH claim_reserve_itd_feed_temp AS
 		(
-		SELECT
-			DISTINCT
+		SELECT			
 			CASE
 				WHEN tc.underwriting_company_nm='VRE' THEN 'Vault Reciprocal Exchange'
 				WHEN tc.underwriting_company_nm='VES' THEN 'Vault E&S Insurance Company'

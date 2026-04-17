@@ -10,6 +10,7 @@
 -- 10/01/2024			Architha Gudimalla					5. Corrected AddressCountry
 -- 02/03/26				Dinesh Bobbii		 				6. AD12434 - Added new columns
 -- 02/05/26				Dinesh Bobbii		 				7. AD12434 - Updated column names
+-- 04/07/26             Tuba Mohsin                         8.Updated mapping for unit_no
 -- =========================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_pel_location_wip]
 
@@ -36,7 +37,7 @@ BEGIN
 		select 
 			PolicyNumber,EffectiveDate,ExpirationDate,TransactionEffectiveDate,transaction_seq_no,source_system_sk,quote_history_sk,
 			rownum as [index],
-			CreatedDate,UpdatedDate,AddressLine1,AddressLine2,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
+			CreatedDate,UpdatedDate,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressState,AddressZipCode,AddressCounty,AddressCountry,
 			NumberOfSwimmingPools,MultiFamilyDwelling,VacantOrUnoccupied,ForSale,
 			SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator
 			,primary_location_in,
@@ -86,7 +87,7 @@ BEGIN
 				and acco.ObjectType='Location'
 				and accof.Field IN 
 				(
-					'AddressLine1','AddressLine2','AddressCity','AddressState','AddressZipCode','AddressCounty',
+					'AddressLine1','AddressLine2','AddressLineUnit','AddressCity','AddressState','AddressZipCode','AddressCounty',
 					'AddressCountry','NumberOfSwimmingPools','MultiFamilyDwelling','VacantOrUnoccupied','ForSale',
 					'SquareFootage','NumberofAthleticStructures','ShortTermRental','LongTermRental','LocationsLimitsIndicator',
 					'OwnedByTrustLLCOrOtherEntity' ,'TrustOrLegalEntityLegalName' ,'MailingAddressTrustOrLegalEntity' ,'TrustOrLegalEntityPurpose' ,
@@ -100,7 +101,7 @@ BEGIN
 		pivot 
 		(
 			max(Value) FOR Field IN (NumberOfMortgagees,[Name],MortgageeType,BillMortgagee,Email,Fax,Phone,
-					IsaoAtima,IsaoAtimaOther,LoanNumber,AddressLine1,AddressLine2,AddressCity,
+					IsaoAtima,IsaoAtimaOther,LoanNumber,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,
 					AddressState,AddressZipCode,AddressCounty,AddressCountry,NumberOfSwimmingPools,MultiFamilyDwelling,
 					VacantOrUnoccupied,ForSale,SquareFootage,NumberofAthleticStructures,ShortTermRental,LongTermRental,LocationsLimitsIndicator,
 					OwnedByTrustLLCOrOtherEntity ,TrustOrLegalEntityLegalName ,MailingAddressTrustOrLegalEntity ,TrustOrLegalEntityPurpose ,
@@ -121,7 +122,7 @@ BEGIN
 		        ttlc.[index] AS location_no,
 		        ttlc.AddressLine1 AS address_line_1,
 		        ttlc.AddressLine2 AS address_line_2,
-		        NULL AS unit_no,
+		        ttlc.AddressLineUnit AS unit_no,
 		        ttlc.AddressCity AS city_nm,
 		        ttlc.AddressState AS state_cd,
 		        ttlc.AddressZipCode AS zip_cd,

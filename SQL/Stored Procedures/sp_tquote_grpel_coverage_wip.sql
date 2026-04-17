@@ -3,9 +3,11 @@
 -- Create Date: <Create Date, , >
 -- Description: This procedures insert quote grpel coverage data
 -----------------------------------------------------------------------------------------------------------
--- Change date |Author						|	Change Description
+-- Change date  |Author						|	Change Description
 -----------------------------------------------------------------------------------------------------------
 -- 02/12/26		Dinesh Bobbili				1. Created this SP
+-- 04/04/26     Yunus Mohammed              2. AD-13016 -  Remove no_of_high_performance_vehicles, no_of_boats_yachts and
+--                                                         reputational_injury_coverage_limit_amt columns
 -- ==========================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_grpel_coverage_wip]
 AS
@@ -30,8 +32,8 @@ BEGIN
                 PolicyNumber,grpel_quote_no,group_nm,
 				EffectiveDate,ExpirationDate,quote_history_sk,source_system_sk,CreatedDate,UpdatedDate,
                 transaction_seq_no,ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit,
-				NumberOfVehicles ,UILiabilityLimit ,ReputationalInjuryLimit ,NumberOfPrivateStaff ,
-				NumberOfHighPerformansVehicles ,NumberOfRecreationalVehicles ,NumberOfWatercraft ,
+				NumberOfVehicles ,UILiabilityLimit ,NumberOfPrivateStaff ,
+				NumberOfRecreationalVehicles ,
 				NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
             INTO edw_temp.tquote_grpel_coverage_wip_temp1
             from
@@ -77,8 +79,8 @@ BEGIN
                         and accof.Field IN 
                         (
                             'ExcessLiabilityLimit', 'UMLiabilityLimit', 'EMPLiabilityLimit', 'DOLiabilityLimit', 'FTMLiabilityLimit',
-                            'NumberOfVehicles', 'UILiabilityLimit', 'ReputationalInjuryLimit', 'NumberOfPrivateStaff', 
-                            'NumberOfHighPerformansVehicles', 'NumberOfRecreationalVehicles', 'NumberOfWatercraft', 
+                            'NumberOfVehicles', 'UILiabilityLimit', 'NumberOfPrivateStaff', 
+                            'NumberOfRecreationalVehicles',
                             'NumberOfPersonalWatercraft', 'AutoInsuranceCompany', 'HomeInsuranceCompany', 'WatercraftInsuranceCompany'
                         )
 						
@@ -90,8 +92,8 @@ BEGIN
                     max(Value) FOR Field IN 
                     (
                         ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit ,
-                        NumberOfVehicles ,UILiabilityLimit ,ReputationalInjuryLimit ,NumberOfPrivateStaff ,
-                        NumberOfHighPerformansVehicles ,NumberOfRecreationalVehicles ,NumberOfWatercraft ,
+                        NumberOfVehicles ,UILiabilityLimit , NumberOfPrivateStaff ,
+                        NumberOfRecreationalVehicles ,
                         NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
                         )
                 ) as pivottable
@@ -112,13 +114,10 @@ BEGIN
                 EMPLiabilityLimit AS employment_practises_liability_limit_amt,
                 DOLiabilityLimit AS non_profit_do_liability_limit_amt,
                 FTMLiabilityLimit AS family_trust_management_liability_limit_amt,
-                UILiabilityLimit AS uninsured_underinsured_liability_limit_amt,
-                ReputationalInjuryLimit AS reputational_injury_coverage_limit_amt,
+                UILiabilityLimit AS uninsured_underinsured_liability_limit_amt,                
                 NumberOfVehicles AS no_of_vehicles,
-                NumberOfPrivateStaff AS no_of_private_staff,
-                NumberOfHighPerformansVehicles AS no_of_high_performance_vehicles,
-                NumberOfRecreationalVehicles AS no_of_recreational_vehicles,
-                NumberOfWatercraft AS no_of_boats_yachts,
+                NumberOfPrivateStaff AS no_of_private_staff,                
+                NumberOfRecreationalVehicles AS no_of_recreational_vehicles,               
                 NumberOfPersonalWatercraft AS no_of_personal_watercraft,
                 AutoInsuranceCompany AS underlying_auto_insurance_company_nm,
                 HomeInsuranceCompany AS underlying_home_insurance_company_nm,
@@ -147,13 +146,10 @@ BEGIN
                 target.employment_practises_liability_limit_amt = source.employment_practises_liability_limit_amt,
                 target.non_profit_do_liability_limit_amt = source.non_profit_do_liability_limit_amt,
                 target.family_trust_management_liability_limit_amt = source.family_trust_management_liability_limit_amt,
-                target.uninsured_underinsured_liability_limit_amt = source.uninsured_underinsured_liability_limit_amt,
-                target.reputational_injury_coverage_limit_amt = source.reputational_injury_coverage_limit_amt,
+                target.uninsured_underinsured_liability_limit_amt = source.uninsured_underinsured_liability_limit_amt,               
                 target.no_of_vehicles = source.no_of_vehicles,
-                target.no_of_private_staff = source.no_of_private_staff,
-                target.no_of_high_performance_vehicles = source.no_of_high_performance_vehicles,
-                target.no_of_recreational_vehicles = source.no_of_recreational_vehicles,
-                target.no_of_boats_yachts = source.no_of_boats_yachts,
+                target.no_of_private_staff = source.no_of_private_staff,                
+                target.no_of_recreational_vehicles = source.no_of_recreational_vehicles,                
                 target.no_of_personal_watercraft = source.no_of_personal_watercraft,
                 target.underlying_auto_insurance_company_nm = source.underlying_auto_insurance_company_nm,
                 target.underlying_home_insurance_company_nm = source.underlying_home_insurance_company_nm,
@@ -177,12 +173,9 @@ BEGIN
                 non_profit_do_liability_limit_amt,
                 family_trust_management_liability_limit_amt,
                 uninsured_underinsured_liability_limit_amt,
-                reputational_injury_coverage_limit_amt,
                 no_of_vehicles,
                 no_of_private_staff,
-                no_of_high_performance_vehicles,
                 no_of_recreational_vehicles,
-                no_of_boats_yachts,
                 no_of_personal_watercraft,
                 underlying_auto_insurance_company_nm,
                 underlying_home_insurance_company_nm,
@@ -205,13 +198,10 @@ BEGIN
                 source.employment_practises_liability_limit_amt,
                 source.non_profit_do_liability_limit_amt,
                 source.family_trust_management_liability_limit_amt,
-                source.uninsured_underinsured_liability_limit_amt,
-                source.reputational_injury_coverage_limit_amt,
+                source.uninsured_underinsured_liability_limit_amt,                
                 source.no_of_vehicles,
                 source.no_of_private_staff,
-                source.no_of_high_performance_vehicles,
                 source.no_of_recreational_vehicles,
-                source.no_of_boats_yachts,
                 source.no_of_personal_watercraft,
                 source.underlying_auto_insurance_company_nm,
                 source.underlying_home_insurance_company_nm,
