@@ -28,6 +28,6 @@ BEGIN
 		WITH
 		(
 		PolicyNumber varchar(200) '$.PolicyNumber'
-		) AS pn ON crrh.PolicyNumber=pn.PolicyNumber
+		) AS pn ON crrc.PolicyNumber=pn.PolicyNumber
 END
 GO
