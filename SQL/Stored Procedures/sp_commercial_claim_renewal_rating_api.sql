@@ -1,4 +1,4 @@
-   -- =================================================================================================
+-- =================================================================================================
 -- Author:		Yunus Mohammed
 -- Create Date: 04/16/2026
 -- Description: This procedures inserts and updates data for commercial claim renewal rating
@@ -41,7 +41,7 @@ BEGIN
 		cl.litigation_complete_in as LitigationComplete,
 		cl.claim_no AS [ClaimNumber],
 		cl.claim_status AS [ClaimStatus],
-		cfa.claimant_nm as [Claimanat],
+		cfa.claimant_nm as [Claimant],
 		cl.claim_last_updated_ts as [LastUpdate],
 		l.cause_of_loss_desc as [CauseOfLoss],
 		cl.loss_desc as [FactOfLoss],
@@ -80,7 +80,9 @@ BEGIN
     LEFT JOIN edw_commercial.tcommercial_claim_feature cfa on cfa.commercial_claim_sk = cf.commercial_claim_sk and cfa.claim_coverage_cd = cf.claim_coverage_cd
     ) as a
     where
-    rn = 1		
+    rn = 1
+ 
+		
 
 	MERGE edw_integration.commercial_claim_renewal_rating_api AS [Target]
 	USING edw_temp.commercial_claim_renewal_rating_api_temp1 AS [Source]
@@ -100,8 +102,7 @@ BEGIN
             DateOfLoss, PolicyNumber, Litigation, LitigationComplete, ClaimNumber, ClaimStatus,
             Claimant, LastUpdate, CauseOfLoss, FactOfLoss, AdditionalFactOfLoss, LargeLoss,
             CurrentIndemnityReserve, TotalIndemnityPayment, CurrentExpenseReserve, TotalExpensePayment,
-            CurrentLegalDefenseReserve, TotalLegalDefensePayment, TotalIncurredPayment, AdjusterName,
-            create_ts, update_ts, etl_audit_sk,
+            CurrentLegalDefenseReserve, TotalLegalDefensePayment, TotalIncurredPayment, AdjusterName,        
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -145,4 +146,3 @@ BEGIN
 		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
 	END CATCH
 END
-GO
