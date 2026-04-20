@@ -22,7 +22,7 @@ class IDMapFunctions:
         elif action_type == 'producer_create':
             IDMapFunctions.producer_id_map_create_record(batch, response)
         elif action_type == 'producer_update':
-            IDMapFunctions.customer_id_map_update_record(batch, response)
+            IDMapFunctions.producer_id_map_update_record(batch, response)
         elif action_type == 'policy_create':
             IDMapFunctions.policy_id_map_create_record(batch, response, request_data)
         elif action_type == 'policy_update':
@@ -52,18 +52,20 @@ class IDMapFunctions:
                     hs_object_id = unit_json_response['properties']['hs_object_id']
                     broker_id = unit_json_response['properties']['broker_id']
                     customer_id = unit_json_response['properties']['customer_id']
+                    email = unit_json_response['properties'].get('email', '')
                     conn.cursor().execute(
-                        f"INSERT INTO {S}.customer (hs_contact_id, customer_id, broker_id, created, updated) VALUES (%s, %s, %s, %s, %s)",
-                        (hs_object_id, customer_id, broker_id, now, now)
+                        f"INSERT INTO {S}.customer (hs_contact_id, customer_id, broker_id, email, created, updated) VALUES (%s, %s, %s, %s, %s, %s)",
+                        (hs_object_id, customer_id, broker_id, email, now, now)
                     )
                     conn.commit()
             else:
                 hs_object_id = response['properties']['hs_object_id']
                 broker_id = response['properties']['broker_id']
                 customer_id = response['properties']['customer_id']
+                email = response['properties'].get('email', '')
                 conn.cursor().execute(
-                    f"INSERT INTO {S}.customer (hs_contact_id, customer_id, broker_id, created, updated) VALUES (%s, %s, %s, %s, %s)",
-                    (hs_object_id, customer_id, broker_id, now, now)
+                    f"INSERT INTO {S}.customer (hs_contact_id, customer_id, broker_id, email, created, updated) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (hs_object_id, customer_id, broker_id, email, now, now)
                 )
                 conn.commit()
         except Exception as e:
@@ -106,18 +108,20 @@ class IDMapFunctions:
                     hs_object_id = unit_json_response['properties']['hs_object_id']
                     broker_id = unit_json_response['properties']['broker_id']
                     producer_id = unit_json_response['properties']['producer_id']
+                    email = unit_json_response['properties'].get('email', '')
                     conn.cursor().execute(
-                        f"INSERT INTO {S}.producer (hs_contact_id, producer_id, broker_id, created, updated) VALUES (%s, %s, %s, %s, %s)",
-                        (hs_object_id, producer_id, broker_id, now, now)
+                        f"INSERT INTO {S}.producer (hs_contact_id, producer_id, broker_id, email, created, updated) VALUES (%s, %s, %s, %s, %s, %s)",
+                        (hs_object_id, producer_id, broker_id, email, now, now)
                     )
                     conn.commit()
             else:
                 hs_object_id = response['properties']['hs_object_id']
                 broker_id = response['properties']['broker_id']
                 producer_id = response['properties']['producer_id']
+                email = response['properties'].get('email', '')
                 conn.cursor().execute(
-                    f"INSERT INTO {S}.producer (hs_contact_id, producer_id, broker_id, created, updated) VALUES (%s, %s, %s, %s, %s)",
-                    (hs_object_id, producer_id, broker_id, now, now)
+                    f"INSERT INTO {S}.producer (hs_contact_id, producer_id, broker_id, email, created, updated) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (hs_object_id, producer_id, broker_id, email, now, now)
                 )
                 conn.commit()
         except Exception as e:

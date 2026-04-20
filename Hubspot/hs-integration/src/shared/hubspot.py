@@ -105,6 +105,23 @@ class RecordsDispatcher:
         else:
             return 'OTHER_ERROR'
 
+    def _lookup_existing_contact(self, email):
+        """Look up an existing HubSpot contact by email address."""
+        if not email:
+            return None
+        try:
+            res = requests.get(
+                f'https://api.hubapi.com/crm/v3/objects/contacts/{email}',
+                params={'idProperty': 'email', 'properties': 'producer_id,customer_id,broker_id,email,type'},
+                headers=self.headers,
+                timeout=120
+            )
+            if res.status_code == 200:
+                return res.json()
+        except Exception as exc:
+            logger.error(f'Failed to look up contact by email={email}: {exc}')
+        return None
+
     def unit_create_record(self, object_type, payload):
         endpoint = f'https://api.hubapi.com/crm/v3/objects/{object_type}'
         max_attempts = 3
@@ -120,11 +137,74 @@ class RecordsDispatcher:
                     timeout=120
                 )
 
-                # If "Contact already exists" is found, remove 'email' from payload and retry once
+                # Handle "Contact already exists" (HubSpot enforces email uniqueness)
+                # Rules:
+                #   1. Same email + same type + same business key → map to existing (update)
+                #   2. Same email + same type + different business key → create without email
+                #   3. Same email + different type → create without email
+                #   4. Lookup fails → skip (don't create duplicate)
                 if object_type == 'contacts' and 'Contact already exists' in res.text:
-                    if payload['properties'].get('email'):
-                        del payload['properties']['email']
-                    return self.unit_create_record(object_type, payload)
+                    email = payload['properties'].get('email', '')
+                    logger.warning(
+                        f'Contact already exists in HubSpot (email={email}). '
+                        f'Looking up existing contact to determine action.'
+                    )
+                    existing_contact = self._lookup_existing_contact(email)
+                    if existing_contact:
+                        existing_type = (existing_contact.get('properties', {}).get('type') or '').strip()
+                        incoming_type = (payload['properties'].get('type') or '').strip()
+
+                        # Determine the business key based on action type
+                        if 'producer' in self.action_type:
+                            biz_key = 'producer_id'
+                        elif 'customer' in self.action_type:
+                            biz_key = 'customer_id'
+                        else:
+                            biz_key = None
+
+                        existing_biz_id = existing_contact.get('properties', {}).get(biz_key, '') if biz_key else ''
+                        incoming_biz_id = payload['properties'].get(biz_key, '') if biz_key else ''
+
+                        same_type = existing_type == incoming_type
+                        same_biz_key = biz_key and existing_biz_id and incoming_biz_id and existing_biz_id == incoming_biz_id
+
+                        if same_type and same_biz_key:
+                            # Rule 1: Same email + same type + same business key → map to existing
+                            logger.info(
+                                f'Same type ({existing_type}) and same {biz_key} ({incoming_biz_id}): '
+                                f'mapping existing contact {existing_contact["id"]} for email={email}.'
+                            )
+                            merged_props = dict(existing_contact.get('properties', {}))
+                            merged_props.update(payload['properties'])
+                            merged_props['hs_object_id'] = existing_contact['id']
+                            IDMapFunctions.action_router(self.action_type, False, {'properties': merged_props})
+                            error_reporter.update_stats(
+                                self.action_type.replace('_create', '').replace('_update', ''),
+                                'updated', 1
+                            )
+                            return None
+                        else:
+                            # Rule 2 or 3: Different type OR different business key
+                            # → create a new contact without email
+                            reason = 'different type' if not same_type else f'different {biz_key}'
+                            logger.info(
+                                f'Contact exists with {reason} (existing={existing_type}/{existing_biz_id}, '
+                                f'incoming={incoming_type}/{incoming_biz_id}). '
+                                f'Creating new contact without email.'
+                            )
+                            payload['properties'].pop('email', None)
+                            # Reset attempt counter and retry without email
+                            res = requests.post(
+                                url=endpoint,
+                                data=json.dumps(payload, default=str),
+                                headers=self.headers,
+                                timeout=120
+                            )
+                            break  # proceed to api_log with the retry result
+                    else:
+                        logger.error(f'Contact already exists but could not look up by email={email}. Skipping to avoid duplicate.')
+                        error_reporter.add_error('DUPLICATE_CONTACT', f'Contact exists but lookup failed: {email}', {'email': email})
+                        return None
 
                 break  # success or non-200 response, but got a response
 
