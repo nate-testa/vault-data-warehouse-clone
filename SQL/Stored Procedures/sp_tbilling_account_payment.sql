@@ -49,7 +49,9 @@ BEGIN
             4 AS source_system_sk,
             getdate() as create_ts,
             getdate() as update_ts,
-            @etl_audit_sk as etl_audit_sk
+            @etl_audit_sk as etl_audit_sk,
+			accp.CreatedDate,
+			accp.UpdatedDate
         INTO edw_temp.tbilling_account_payment_temp1
         FROM 
         edw_stage.Account acc
@@ -84,18 +86,18 @@ BEGIN
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET       		
-			[Source].reversal_of_payment_id = [Source].reversal_of_payment_id,
-			[Source].update_ts = [Source].update_ts;
+			[Target].reversal_of_payment_id= [Source].reversal_of_payment_id,
+			[Target].update_ts = [Source].update_ts;
 
 		SET @rows_affected=@@ROWCOUNT;
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(CreatedDate, UpdatedDate)) FROM edw_temp.tbilling_account_payment_temp1),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS edw_temp.tbillingaccount_temp1;
+        DROP TABLE IF EXISTS edw_temp.tbilling_account_payment_temp1;
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
+	
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200)) --20230717 added
 		--EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected; --20230717 removed
@@ -117,4 +119,3 @@ BEGIN
 
 	END CATCH
 END
-GO
