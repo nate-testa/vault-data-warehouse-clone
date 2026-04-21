@@ -243,7 +243,14 @@ with DAG(
             dag=dag,
         )
 
-        exec_Snapsheet_Commercial_Daily_Feed >> operators[-1]
+        send_commercial_integration_email = EmailOperator(
+            task_id='send_commercial_integration_email',
+            to=to_email,
+            subject='Airflow - Commercial Integration tables loaded successfully',
+            html_content=get_sp_success_data_HTML(commercial_integration_group_items, 'All stored procedures executed successfully for all the Commercial Integration tables'),
+        )
+
+        exec_Snapsheet_Commercial_Daily_Feed >> operators[-1] >> send_commercial_integration_email
 
 
     with TaskGroup("commercial_quote_group") as commercial_quote_group:
