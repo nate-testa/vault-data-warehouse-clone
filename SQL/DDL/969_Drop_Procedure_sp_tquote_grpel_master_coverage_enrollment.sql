@@ -1,0 +1,1 @@
+	DROP PROCEDURE IF EXISTS edw_core.sp_tquote_grpel_master_coverage_enrollment
