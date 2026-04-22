@@ -4,6 +4,7 @@
 -- Change date		|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 03/17/26			Yunus Mohammed				1. Created this procedure
+-- 04/22/26			Yunus Mohammed				2. AD-13204 Removed filter to keep both policy and quote
 -- ======================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tgrpel_master_coverage_enrollment]
@@ -49,8 +50,7 @@ BEGIN
             inner join edw_stage.AccountEnrollmentSnapshot aes on acc.Id= aes.AccountId
             left join edw_stage.[User] u on u.Id = aes.UserId
         where
-			p.ProductLine = 'GroupPersonalLines'
-            and acc.state = 'ISSUED'
+			p.ProductLine = 'GroupPersonalLines'            
             and aes.CreatedDate > @last_source_extract_ts
 		
 		INSERT INTO [edw_core].[tgrpel_master_coverage_enrollment]
