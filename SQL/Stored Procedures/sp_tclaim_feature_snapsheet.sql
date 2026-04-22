@@ -15,6 +15,7 @@
 -- 10/13/2025				Yunus Mohammed				10. AD-11322 Added closed_reason_desc column
 -- 11/10/2025				Yunus Mohammed				21 AD-11654 Added coverage_sk for NFP policies
 -- 11/25/2025				Yunus Mohammed				22. AD-11875 Update aslob_sk and claim_coverage_desc code for NFP
+-- 04/22/2026				Yunus Mohammed				23. AD-13218 Added item_sk for Maribe boat & Yacht
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet]
 AS
@@ -81,6 +82,7 @@ BEGIN
 				WHEN 'LUX' THEN tccov.collection_location_sk
 				WHEN 'PEL' THEN NULL
 				WHEN 'AU' THEN taveh.auto_vehicle_sk
+				WHEN 'BY' THEN mby.marine_boat_yacht_sk
 				WHEN 'GRPEL' THEN NULL
 			END AS item_sk,
 			CASE
@@ -231,6 +233,19 @@ BEGIN
 									AND tcl.loss_dt >= gpc1.transaction_effective_dt
 								ORDER BY gpc1.transaction_seq_no DESC
 							)
+		-- Marine Boat & Yacht
+		LEFT JOIN edw_core.tmarine_boat_yacht mby ON 
+		mby.policy_no = tcl.policy_no AND mby.boat_yatch_hull_id = CAST(veh.vin_number AS VARCHAR(MAX))	AND
+		mby.marine_boat_yacht_sk = (
+									SELECT TOP 1 marine_boat_yacht_sk
+									FROM
+										edw_core.tmarine_boat_yacht mby1
+									WHERE
+										mby1.policy_no = mby.policy_no
+										AND mby1.boat_yatch_hull_id =  CAST(veh.vin_number AS VARCHAR(MAX))
+										AND tcl.loss_dt > = mby1.effective_dt
+									ORDER BY mby1.effective_dt DESC
+								)
 		WHERE greatest(clm.created_at,clm.updated_at) > @last_source_extract_ts;
 
 		MERGE edw_core.tclaim_feature AS Target
