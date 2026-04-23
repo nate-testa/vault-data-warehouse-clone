@@ -1,7 +1,7 @@
 IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES 
                WHERE TABLE_SCHEMA = 'edw_stage' 
                AND TABLE_NAME = 'GroupInsuranceEnrollmentParticipant')
-BEGIN
+BEGIN 
 CREATE TABLE [dbo].[GroupInsuranceEnrollmentParticipant](
 	[Id] [uniqueidentifier] NOT NULL,
 	[GroupInsuranceId] [uniqueidentifier] NOT NULL,

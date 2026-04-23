@@ -1,7 +1,7 @@
   IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES 
                WHERE TABLE_SCHEMA = 'edw_core' 
                AND TABLE_NAME = 'tgrpel_parcipant')
-BEGIN
+BEGIN 
 CREATE TABLE edw_core.tgrpel_participant
 (
              
