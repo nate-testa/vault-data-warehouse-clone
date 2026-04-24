@@ -15,7 +15,7 @@
 -- 10/13/2025				Yunus Mohammed				10. AD-11322 Added closed_reason_desc column
 -- 11/10/2025				Yunus Mohammed				21 AD-11654 Added coverage_sk for NFP policies
 -- 11/25/2025				Yunus Mohammed				22. AD-11875 Update aslob_sk and claim_coverage_desc code for NFP
--- 04/22/2026				Yunus Mohammed				23. AD-13218 Added item_sk for Maribe boat & Yacht
+-- 04/22/2026				Yunus Mohammed				23. AD-13218 Added item_sk and coverage_sk for Maribe boat & Yacht
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tclaim_feature_snapsheet]
 AS
@@ -92,6 +92,7 @@ BEGIN
 				WHEN 'LUX' THEN tccov.collection_coverage_sk
 				WHEN 'PEL' THEN tpcov.pel_coverage_sk
 				WHEN 'AU' THEN tacov.auto_policy_coverage_sk
+				WHEN 'BY' THEN mbyc.marine_boat_yacht_coverage_sk
 				WHEN 'GRPEL' THEN gpc.grpel_coverage_sk
 			END AS coverage_sk ,		
 			CASE
@@ -223,6 +224,7 @@ BEGIN
 											AND tcl.loss_dt > = tavc1.transaction_effective_dt
 										ORDER BY tavc1.transaction_seq_no DESC
 								)
+		-- GRPEL Coverage
 		LEFT JOIN edw_core.tgrpel_coverage gpc
 			ON gpc.grpel_coverage_sk = (
 								SELECT TOP 1 gpc1.grpel_coverage_sk
@@ -232,6 +234,17 @@ BEGIN
 									gpc1.policy_no = tcl.policy_no
 									AND tcl.loss_dt >= gpc1.transaction_effective_dt
 								ORDER BY gpc1.transaction_seq_no DESC
+							)
+		-- Marine Boat & Yacht
+		LEFT JOIN edw_core.tmarine_boat_yacht_coverage mbyc
+			ON mbyc.marine_boat_yacht_coverage_sk = (
+								SELECT TOP 1 mbyc1.marine_boat_yacht_coverage_sk
+								FROM
+									edw_core.tmarine_boat_yacht_coverage mbyc1
+								WHERE
+									mbyc1.policy_no = tcl.policy_no
+									AND tcl.loss_dt >= mbyc1.transaction_effective_dt
+								ORDER BY mbyc1.transaction_seq_no DESC
 							)
 		-- Marine Boat & Yacht
 		LEFT JOIN edw_core.tmarine_boat_yacht mby ON 
