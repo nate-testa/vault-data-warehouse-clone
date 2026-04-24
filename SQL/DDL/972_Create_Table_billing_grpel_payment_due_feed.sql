@@ -9,16 +9,16 @@ CREATE TABLE edw_integration.billing_grpel_payment_due_feed
 company varchar(255),
 group_account varchar(255) NOT NULL,
 group_name varchar(255),
-effective_date date,
-expiration_date date,
+effective_date date  NOT NULL,
+expiration_date date  NOT NULL,
 payor_type varchar(255),
 product varchar(255),
 total_premium decimal(15,2),
 payments_made decimal(15,2),
 balance_due_as_of_month_end decimal(15,2),
 month_end date,
-create_ts datetime2 ,
-update_ts datetime2 ,
+create_ts datetime2(7) ,
+update_ts datetime2(7) ,
 etl_audit_sk int
 );
 END; 
