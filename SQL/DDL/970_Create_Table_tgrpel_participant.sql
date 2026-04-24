@@ -1,13 +1,12 @@
   IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES 
                WHERE TABLE_SCHEMA = 'edw_core' 
-               AND TABLE_NAME = 'tgrpel_parcipant')
+               AND TABLE_NAME = 'tgrpel_participant')
 BEGIN 
 CREATE TABLE edw_core.tgrpel_participant
 (
              
-tgrpel_participant_sk                 int IDENTITY(1,1) NOT NULL,
+grpel_participant_sk                 int IDENTITY(1,1) NOT NULL,
 grpel_master_policy_no                varchar(255) NOT NULL,
-grpel_master_coverage_tier_sk 		  int NOT NULL,
 first_nm                        	  varchar(255) NULL,
 last_nm                               varchar(255) NULL, 
 email                                 varchar(255) NULL, 
@@ -18,11 +17,12 @@ source_system_sk           int NOT NULL,
 create_ts                  datetime2(7) NOT NULL,
 update_ts                  datetime2(7) NOT NULL,
 etl_audit_sk               int NOT NULL,
-CONSTRAINT pk_grpel_participant PRIMARY KEY (tgrpel_participant_sk),
-CONSTRAINT fk_tgrpel_participant_tier_sk FOREIGN KEY (grpel_master_coverage_tier_sk ) REFERENCES  edw_core.tgrpel_master_coverage_tier (grpel_master_coverage_tier_sk)
+CONSTRAINT pk_tgrpel_participant PRIMARY KEY (grpel_participant_sk)
 
 );
 END
+
+
 IF EXISTS
 (SELECT 1 FROM edw_core.tedw_table_detail
 	where table_nm = 'tgrpel_participant')
@@ -46,7 +46,7 @@ SELECT
     'tgrpel_participant',
     'Type-1 Dimension',
     'Base',
-    'Policy',
+    'Group Personal Excess Liability',
     'Stored Procedure',
     'Insert/Update',
     'Daily',
