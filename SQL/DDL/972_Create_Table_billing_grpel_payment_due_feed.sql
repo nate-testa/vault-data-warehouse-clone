@@ -19,7 +19,8 @@ balance_due_as_of_month_end decimal(15,2),
 month_end date,
 create_ts datetime2(7) ,
 update_ts datetime2(7) ,
-etl_audit_sk int
+etl_audit_sk int,
+CONSTRAINT pk_billing_grpel_payment_due_feed PRIMARY KEY(group_account,month_end)
 );
 END; 
 

@@ -22,7 +22,8 @@ amount decimal(15,2),
 month_end date,
 create_ts datetime2(7) ,
 update_ts datetime2(7) ,
-etl_audit_sk int
+etl_audit_sk int,
+CONSTRAINT pk_billing_grpel_cash_activity_feed PRIMARY KEY(group_account,payment_date,amount,month_end)
 );
 END; 
 
