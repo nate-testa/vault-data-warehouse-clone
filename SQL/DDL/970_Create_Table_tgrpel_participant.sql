@@ -7,6 +7,7 @@ CREATE TABLE edw_core.tgrpel_participant
              
 grpel_participant_sk                 int IDENTITY(1,1) NOT NULL,
 grpel_master_policy_no                varchar(255) NOT NULL,
+grpel_participant_id                  varchar(255) NOT NULL,
 first_nm                        	  varchar(255) NULL,
 last_nm                               varchar(255) NULL, 
 email                                 varchar(255) NULL, 
@@ -21,6 +22,7 @@ CONSTRAINT pk_tgrpel_participant PRIMARY KEY (grpel_participant_sk)
 
 );
 END
+
 
 
 IF EXISTS
