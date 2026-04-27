@@ -33,7 +33,8 @@ BEGIN
         SELECT
             ba.billingaccount_no,
             ba.billingaccount_sk,
-            accg.PolicyNumber as grpel_master_policy_no,
+            --accg.PolicyNumber as grpel_master_policy_no,
+			acc.PolicyNumber as grpel_master_policy_no,
             case when accp.Amount >=0 then 'Payment' else 'Refund' end AS transaction_type,
             accp.LineItemCategory as receivable_cd,
             accp.Amount as payment_amt,
@@ -55,8 +56,7 @@ BEGIN
         INTO edw_temp.tbilling_account_payment_temp1
         FROM 
         edw_stage.Account acc
-        LEFT JOIN edw_stage.Account accg on acc.GroupAccountId = accg.Id
-        INNER JOIN edw_stage.AccountInvoice accinv on acc.Id= accinv.AccountId
+		inner join edw_stage.[Product] p on acc.ProductId = p.Id and p.InternalName = 'GroupPersonalExcessLiability'
         INNER JOIN edw_stage.BillingAccount bacc on bacc.Id= acc.BillingAccountId
         INNER JOIN edw_stage.AccountPayment accp on accp.AccountId = acc.Id 
         LEFT JOIN edw_core.tbillingaccount ba on ba.billingaccount_no =bacc.ReferenceCode
@@ -99,9 +99,8 @@ BEGIN
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 	
 		-- Update audit table
-		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200)) --20230717 added
-		--EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected; --20230717 removed
-		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc; --20230717 added
+		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
 
 
 	END TRY
