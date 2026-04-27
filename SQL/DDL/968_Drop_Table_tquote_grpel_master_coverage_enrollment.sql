@@ -1,0 +1,2 @@
+
+DROP TABLE IF EXISTS edw_core.tquote_grpel_master_coverage_enrollment
