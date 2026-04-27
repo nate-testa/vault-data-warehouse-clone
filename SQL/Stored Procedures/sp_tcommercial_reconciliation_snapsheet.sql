@@ -2,10 +2,11 @@
 -- Author:		Yunus Mohammed 
 -- Description: This procedure reconciles snapsheet data for commercial claims
 ---------------------------------------------------------------------------------------------------
--- Change date     |Author						             |	Change Description
+-- Change date     |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 12/03/25         Yunus Mohammed				1. Created this procedure
 -- 12/10/25         Dinesh Bobbili				2. Updated status_desc
+-- 04/27/26			Yunus Mohammed			    3. AD-13187 Code updated for recoding payments
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_reconciliation_snapsheet]
@@ -54,7 +55,7 @@ BEGIN
         sum(
         case  
                 when ft.financial_transaction_type='indemnity' and fta.code='submitted' then pay.amount 
-                when ft.financial_transaction_type='indemnity' and fta.code in ('stop','cancel','failed') then pay.amount * -1
+                when ft.financial_transaction_type='indemnity' and fta.code in ('stop','cancel','failed','recoded') then pay.amount * -1
             else 0
         end	
         ) as loss	
@@ -63,7 +64,7 @@ BEGIN
             INNER JOIN edw_stage_snapsheet.financial_transactions ft on pay.financial_transaction_id = ft.id
             INNER JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = pay.financial_transaction_id
         where
-            fta.code in ('submitted','cancel','stop','failed') and ft.approved_at is not null and ft.is_historical='false'
+            fta.code in ('submitted','cancel','stop','failed','recoded') and ft.approved_at is not null and ft.is_historical='false'
             AND cast(fta.created_at as date)  BETWEEN @last_source_extract_ts AND @max_transaction_ts
             AND exists(select 1 from edw_stage_snapsheet.tags t where t.claim_id = pay.claim_id and [name]  like 'Commercial%')
         group by cast(fta.created_at as date)
@@ -73,7 +74,7 @@ BEGIN
         sum(
         case  
                 when ft.financial_transaction_type='indemnity' and fta.code='submitted' then pay.amount 
-                when ft.financial_transaction_type='indemnity' and fta.code in ('stop','cancel','failed') then pay.amount * -1
+                when ft.financial_transaction_type='indemnity' and fta.code in ('stop','cancel','failed','recoded') then pay.amount * -1
             else 0
         end	
         ) as loss	
@@ -82,7 +83,7 @@ BEGIN
             INNER JOIN edw_stage_snapsheet.financial_transactions ft on pay.financial_transaction_id = ft.id
             INNER JOIN edw_stage_snapsheet.financial_transaction_actions fta on fta.financial_transaction_id = pay.financial_transaction_id
         where
-            fta.code in ('submitted','cancel','stop','failed') and ft.is_historical='true'
+            fta.code in ('submitted','cancel','stop','failed','recoded') and ft.is_historical='true'
             AND cast(fta.created_at as date)  BETWEEN @last_source_extract_ts AND @max_transaction_ts
             AND exists(select 1 from edw_stage_snapsheet.tags t where t.claim_id = pay.claim_id and [name]  like 'Commercial%')
         group by cast(fta.created_at as date)

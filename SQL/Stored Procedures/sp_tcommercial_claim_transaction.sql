@@ -1,9 +1,10 @@
 -- =================================================================================================
 -- Description: This procedures inserts commercial claim transactio data
 -----------------------------------------------------------------------------------------------------------
--- Change date          |Author						         |	Change Description
+-- Change date          |Author					|	Change Description
 -----------------------------------------------------------------------------------------------------------
--- 11/18/25		         Yunus Mohammed			1. Created this procedure
+-- 11/18/25		        Yunus Mohammed			1. Created this procedure
+-- 04/27/26				Yunus Mohammed			2. AD-13187 Code updated for recoding payments
 -- ======================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_claim_transaction]
 AS
@@ -209,58 +210,58 @@ BEGIN
 		fta.created_at,
 		fta.code
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method is NULL and fta.code='submitted' then pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method is NULL and fta.code in ('stop','cancel','failed') then -1 * pay.amount
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method is NULL and fta.code in ('stop','cancel','failed','recoded') then -1 * pay.amount
 			ELSE 0 END) as loss_paid_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method is NULL and fta.code='submitted' then pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method is NULL and fta.code in ('stop','cancel','failed') then -1 * pay.amount
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method is NULL and fta.code in ('stop','cancel','failed','recoded') then -1 * pay.amount
 			ELSE 0 END) as expense_paid_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method is NULL and fta.code='submitted' then pay.amount
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method is NULL and fta.code in ('stop','cancel','failed') then -1 * pay.amount
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method is NULL and fta.code in ('stop','cancel','failed','recoded') then -1 * pay.amount
 			ELSE 0 END) as defense_paid_amt 
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'subrogation' and fta.code='submitted' then -1 * pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'subrogation' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'subrogation' and fta.code in ('stop','cancel','failed','recoded') then  pay.amount 
 			ELSE 0 END) as subrogation_recovery_amt 
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'salvage' and fta.code='submitted' then -1 * pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'salvage' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'salvage' and fta.code in ('stop','cancel','failed','recoded') then  pay.amount 
 			ELSE 0 END) as salvage_recovery_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'deductible' and fta.code='submitted' then -1 * pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'deductible' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'deductible' and fta.code in ('stop','cancel','failed','recoded') then  pay.amount 
 			ELSE 0 END) as deductible_recovery_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'reinsurance' and fta.code='submitted' then -1 * pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'reinsurance' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'reinsurance' and fta.code in ('stop','cancel','failed','recoded') then  pay.amount 
 			ELSE 0 END) as reinsurance_recovery_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'overpayment' and fta.code='submitted' then -1 * pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'overpayment' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'claim' and res.reserve_method = 'overpayment' and fta.code in ('stop','cancel','failed','recoded') then  pay.amount 
 			ELSE 0 END) as overpayment_recovery_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'subrogation' and fta.code='submitted' then  pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'subrogation' and fta.code in ('stop','cancel','failed') then  -1 * pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'subrogation' and fta.code in ('stop','cancel','failed','recoded') then  -1 * pay.amount 
 			ELSE 0 END) as subrogation_expense_recovery_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'salvage' and fta.code='submitted' then  pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'salvage' and fta.code in ('stop','cancel','failed') then  -1 * pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'salvage' and fta.code in ('stop','cancel','failed','recoded') then  -1 * pay.amount 
 			ELSE 0 END) as salvage_expense_recovery_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'deductible' and fta.code='submitted' then -1 * pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'deductible' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'deductible' and fta.code in ('stop','cancel','failed','recoded') then  pay.amount 
 			ELSE 0 END) as deductible_expense_recovery_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'reinsurance' and fta.code='submitted' then -1 * pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'reinsurance' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'reinsurance' and fta.code in ('stop','cancel','failed','recoded') then  pay.amount 
 			ELSE 0 END) as reinsurance_expense_recovery_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'overpayment' and fta.code='submitted' then -1 * pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'overpayment' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'adjusting' and res.reserve_method = 'overpayment' and fta.code in ('stop','cancel','failed','recoded') then  pay.amount 
 			ELSE 0 END) as overpayment_expense_recovery_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'subrogation' and fta.code='submitted' then -1 * pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'subrogation' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'subrogation' and fta.code in ('stop','cancel','failed','recoded') then  pay.amount 
 			ELSE 0 END) as subrogation_defense_recovery_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'salvage' and fta.code='submitted' then -1 * pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'salvage' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'salvage' and fta.code in ('stop','cancel','failed','recoded') then  pay.amount 
 			ELSE 0 END) as salvage_defense_recovery_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'deductible' and fta.code='submitted' then -1 * pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'deductible' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'deductible' and fta.code in ('stop','cancel','failed','recoded') then  pay.amount 
 			ELSE 0 END) as deductible_defense_recovery_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'reinsurance' and fta.code='submitted' then -1 * pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'reinsurance' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'reinsurance' and fta.code in ('stop','cancel','failed','recoded') then  pay.amount 
 			ELSE 0 END) as reinsurance_defense_recovery_amt
 		,(case when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'overpayment' and fta.code='submitted' then -1 * pay.amount 
-			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'overpayment' and fta.code in ('stop','cancel','failed') then  pay.amount 
+			when SUBSTRING(pay.cost_type, CHARINDEX('_', pay.cost_type) + 1, LEN(pay.cost_type)) = 'defense' and res.reserve_method = 'overpayment' and fta.code in ('stop','cancel','failed','recoded') then  pay.amount 
 			ELSE 0 END) as overpayment_defense_recovery_amt 
 	INTO edw_temp.tcommercial_claim_transaction_temp3
 	FROM edw_stage_snapsheet.financial_reserve_items res
