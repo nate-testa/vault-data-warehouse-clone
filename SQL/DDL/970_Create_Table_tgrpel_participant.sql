@@ -18,10 +18,12 @@ source_system_sk           int NOT NULL,
 create_ts                  datetime2(7) NOT NULL,
 update_ts                  datetime2(7) NOT NULL,
 etl_audit_sk               int NOT NULL,
-CONSTRAINT pk_tgrpel_participant PRIMARY KEY (grpel_participant_sk)
+CONSTRAINT pk_tgrpel_participant PRIMARY KEY (grpel_participant_sk),
+CONSTRAINT uidx_tgrpel_participant_grpel_polno_participant_uid UNIQUE (grpel_master_policy_no ,grpel_participant_id)
 
 );
 END
+
 
 
 
