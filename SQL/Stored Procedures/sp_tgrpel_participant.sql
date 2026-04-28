@@ -42,7 +42,8 @@ BEGIN
             case when acct.ExternalSourceId is not NULL 
                 then 2 --(AV2) 
                 Else 4 --(Metal)
-            end source_system_sk
+            end source_system_sk,
+            GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk etl_audit_sk
         INTO edw_temp.tgrpel_participant_temp1
         FROM
             edw_stage.Account acc
@@ -61,7 +62,8 @@ BEGIN
 		WHEN NOT MATCHED BY Target THEN
 		INSERT 
 		(
-			
+			grpel_master_policy_no,first_nm,last_nm,email,tier_type,enrollment_status,deleted_in,
+            source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 		VALUES 
 		(
