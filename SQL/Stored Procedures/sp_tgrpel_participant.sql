@@ -1,0 +1,104 @@
+-- =================================================================================================
+-- Description: This stored procedure insert and update GRPEL participants
+---------------------------------------------------------------------------------------------------
+-- Change date 	|Author					|	Change Description
+---------------------------------------------------------------------------------------------------
+-- 04/28/26		Yunus Mohammed		    1. Created the proc
+-- ================================================================================================= 
+
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tgrpel_participant]
+AS
+BEGIN
+    DECLARE @ProcedureName NVARCHAR(120)
+    SET @ProcedureName = OBJECT_NAME(@@PROCID)
+    -- SET NOCOUNT ON added to prevent extra result sets from
+    -- interfering with SELECT statements.
+    SET NOCOUNT ON
+
+	BEGIN TRY
+		DECLARE @last_source_extract_ts DATETIME2(7)
+		DECLARE @etl_audit_sk INT
+		DECLARE @new_last_source_extract_ts DATETIME2(7)
+		DECLARE @rows_affected INT
+		DECLARE @process_nm VARCHAR(255)=@ProcedureName
+		DECLARE @CU DATETIME=GETDATE()
+		DECLARE @parameter_desc VARCHAR(255) --20230717 added
+		-- Get last source extract date
+		SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+		EXEC edw_core.sp_ins_tetl_audit @process_nm,@CU,@etl_audit_sk=@etl_audit_sk OUTPUT;
+		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) --20230717 added
+
+		-- Step1 limit amount of rows.
+		DROP TABLE IF EXISTS edw_temp.tgrpel_participant_temp1;
+        
+        SELECT 
+            acc.PolicyNumber, acc.EffectiveDate, accg.PolicyNumber as grpel_master_policy_no ,
+            giep.FirstName as first_nm, giep.LastName as last_nm,
+            giep.Email as email, giep.Tier as tier_type,giep.EnrollmentStatus as enrollment_status,
+            case
+                when giep.IsDeleted = 1 then 'Yes'
+                when giep.IsDeleted = 0 then 'No'
+            end as deleted_in,
+            case when acct.ExternalSourceId is not NULL 
+                then 2 --(AV2) 
+                Else 4 --(Metal)
+            end source_system_sk
+        INTO edw_temp.tgrpel_participant_temp1
+        FROM
+            edw_stage.Account acc
+            INNER JOIN edw_stage.[Product] p on acc.ProductId = p.Id
+            INNER JOIN edw_stage.GroupInsuranceEnrollmentParticipant giep on acc.Id = giep.AccountId
+            LEFT JOIN edw_stage.Account accg on acc.GroupAccountId = accg.Id
+        where
+            p.InternalName = 'ParticipantPersonalExcessLiability'
+            AND GREATEST(giep.CreatedDate,giep.UpdatedDate) > @last_source_extract_ts
+
+		-- Start Merge process
+		MERGE edw_core.tgrpel_participant AS [Target]
+		USING edw_temp.tgrpel_participant_temp1 [Source]
+		ON Source.
+		-- For Inserts
+		WHEN NOT MATCHED BY Target THEN
+		INSERT 
+		(
+			
+		)
+		VALUES 
+		(
+			
+		)
+		-- For Updates
+		WHEN MATCHED THEN UPDATE 
+		SET       		
+			[Target].reversal_of_payment_id= [Source].reversal_of_payment_id,
+			[Target].update_ts = [Source].update_ts;
+
+		SET @rows_affected=@@ROWCOUNT;
+
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(CreatedDate, UpdatedDate)) FROM edw_temp.tbilling_account_payment_temp1),@last_source_extract_ts);
+
+        DROP TABLE IF EXISTS edw_temp.tbilling_account_payment_temp1;
+		
+		-- Update control table
+		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
+	
+		-- Update audit table
+		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
+		EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;
+
+
+	END TRY
+	BEGIN CATCH
+		DECLARE @error_message nvarchar(4000)
+		SET @error_message = 'Error Number:' + ISNULL(CAST(ERROR_NUMBER() AS NVARCHAR(100)),'') + 
+						' Error State:' + ISNULL(CAST(ERROR_STATE() AS NVARCHAR(100)),'')
+							+ ' Error Severity:' + ISNULL(CAST(ERROR_SEVERITY() AS NVARCHAR(100)),'') +
+							CHAR(13) + 'Error Procedure:' + ISNULL(ERROR_PROCEDURE(),'') + ' Error Line:' + ISNULL(CAST(ERROR_LINE() AS NVARCHAR(100)),'') +
+							CHAR(13) + 'Error Message:' + ISNULL(ERROR_MESSAGE(),'')
+	
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1; --20230717 added
+
+	END CATCH
+END
