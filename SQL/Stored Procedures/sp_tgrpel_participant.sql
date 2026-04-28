@@ -30,16 +30,20 @@ BEGIN
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.tgrpel_participant_temp1;
-        
-        SELECT 
-            acc.PolicyNumber, acc.EffectiveDate, accg.PolicyNumber as grpel_master_policy_no ,
-            giep.FirstName as first_nm, giep.LastName as last_nm,
-            giep.Email as email, giep.Tier as tier_type,giep.EnrollmentStatus as enrollment_status,
+
+        SELECT
+            accg.PolicyNumber as grpel_master_policy_no ,
+            giep.Id as grpel_participant_id,
+            giep.FirstName as first_nm,
+            giep.LastName as last_nm,
+            giep.Email as email, 
+            giep.Tier as tier_type,
+            giep.EnrollmentStatus as enrollment_status,
             case
                 when giep.IsDeleted = 1 then 'Yes'
                 when giep.IsDeleted = 0 then 'No'
             end as deleted_in,
-            case when acct.ExternalSourceId is not NULL 
+            case when acc.ExternalSourceId is not NULL 
                 then 2 --(AV2) 
                 Else 4 --(Metal)
             end source_system_sk,
@@ -57,29 +61,36 @@ BEGIN
 		-- Start Merge process
 		MERGE edw_core.tgrpel_participant AS [Target]
 		USING edw_temp.tgrpel_participant_temp1 [Source]
-		ON Source.
+		ON Source.grpel_participant_id = [Target].grpel_participant_id
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
 		INSERT 
 		(
-			grpel_master_policy_no,first_nm,last_nm,email,tier_type,enrollment_status,deleted_in,
-            source_system_sk,create_ts,update_ts,etl_audit_sk
+			grpel_master_policy_no,grpel_participant_id,first_nm,last_nm,email,tier_type,
+            enrollment_status,deleted_in,source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 		VALUES 
 		(
-			
+			grpel_master_policy_no,grpel_participant_id,first_nm,last_nm,email,tier_type,
+            enrollment_status,deleted_in,source_system_sk,create_ts,update_ts,etl_audit_sk			
 		)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET       		
-			[Target].reversal_of_payment_id= [Source].reversal_of_payment_id,
+			[Target].grpel_master_policy_no = [Source].grpel_master_policy_no,            
+            [Target].first_nm = [Source].first_nm,
+            [Target].last_nm = [Source].last_nm,
+            [Target].email = [Source].email,
+            [Target].tier_type = [Source].tier_type,
+            [Target].enrollment_status = [Source].enrollment_status,
+            [Target].deleted_in = [Source].deleted_in,
 			[Target].update_ts = [Source].update_ts;
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(CreatedDate, UpdatedDate)) FROM edw_temp.tbilling_account_payment_temp1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(CreatedDate, UpdatedDate)) FROM edw_temp.tgrpel_participant_temp1),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS edw_temp.tbilling_account_payment_temp1;
+        DROP TABLE IF EXISTS edw_temp.tgrpel_participant_temp1;
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
