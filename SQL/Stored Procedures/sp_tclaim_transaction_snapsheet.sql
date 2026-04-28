@@ -329,7 +329,7 @@ and a.source_system_sk=5-- to exclude migrated transactions
 									ELSE c.claim_type 
 								END)*/
 		WHERE 1=1
-			AND fta.code in ('submitted','cancel','stop','failed')
+			AND fta.code in ('submitted','cancel','stop','failed','recoded')
             AND fta.created_at > @last_source_extract_ts 
 		;
 
