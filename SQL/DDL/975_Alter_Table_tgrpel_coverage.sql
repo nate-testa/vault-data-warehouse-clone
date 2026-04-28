@@ -3,8 +3,8 @@
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = 'edw_core'
       AND TABLE_NAME = 'tgrpel_coverage'
-      AND COLUMN_NAME = 'no_other_watercraft'
+      AND COLUMN_NAME = 'no_of_other_watercraft'
 )
 BEGIN
-    ALTER TABLE edw_core.tgrpel_coverage ADD no_other_watercraft Varchar(255);
+    ALTER TABLE edw_core.tgrpel_coverage ADD no_of_other_watercraft Varchar(255);
 END;
