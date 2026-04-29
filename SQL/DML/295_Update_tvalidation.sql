@@ -25,3 +25,10 @@ and financial_transaction_type != ''recovery'''
 ,target_sql='select 4',
 validation_sql_desc='Snapsheet Validation- Cancelled approved reserves/payments'
 where validation_sql_desc='Snapsheet Validation- Cancelled approved reserves/payments'
+
+
+--123 Current Carrier SJ01- Policies having no A1 record  
+
+update edw_core.tvalidation_sql 
+set target_sql = 'select 1'
+where validation_sql_desc= 'Current Carrier SJ01- Policies having no A1 record'
