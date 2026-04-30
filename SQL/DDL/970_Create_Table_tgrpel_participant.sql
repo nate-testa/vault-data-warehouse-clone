@@ -7,6 +7,7 @@ CREATE TABLE edw_core.tgrpel_participant
              
 grpel_participant_sk                 int IDENTITY(1,1) NOT NULL,
 grpel_master_policy_no                varchar(255) NOT NULL,
+policy_no                              varchar(255) NULL,
 grpel_participant_id                  varchar(255) NOT NULL,
 first_nm                        	  varchar(255) NULL,
 last_nm                               varchar(255) NULL, 
@@ -19,7 +20,7 @@ create_ts                  datetime2(7) NOT NULL,
 update_ts                  datetime2(7) NOT NULL,
 etl_audit_sk               int NOT NULL,
 CONSTRAINT pk_tgrpel_participant PRIMARY KEY (grpel_participant_sk),
-CONSTRAINT uidx_tgrpel_participant_grpel_polno_participant_uid UNIQUE (grpel_master_policy_no ,grpel_participant_id)
+CONSTRAINT uidx_tgrpel_participant_participant_id UNIQUE (grpel_participant_id)
 
 );
 END
