@@ -6,6 +6,7 @@
 -- 08/14/24     Alberto Almario		        2. Added logic for additional_interest_deleted_in and additional interest vehicle
 -- 08/15/24     Architha Gudimalla          3. Update additional_interest_deleted_in to use Yes/No instead of 1/0
 -- 03/03/26		Yunus Mohammed				4. AD-12608 - Added new column residence_owned_by_trust_in
+-- 04/30/26		Yunus Mohammed				5. Ad-12470 - Modified Left Join to Inner Join for performance issues
 -- ================================================================================================================================================
 CREATE or alter  PROCEDURE [edw_core].[sp_tquote_additional_interest]
 AS
@@ -73,14 +74,10 @@ BEGIN
 				AND CreatedDate>@last_source_extract_ts
 				) acc
 				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
-				LEFT JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
+				INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
+				INNER JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id and acct.ObjectType = 'AdditionalInterest'
+				INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
 				LEFT JOIN [edw_core].[tquote_history] his ON his.quote_no = acc.PolicyNumber AND his.effective_dt=acc.EffectiveDate AND his.transaction_seq_no = acc.number
-			WHERE
-				--p.[Name]='Collections'
-				acct.ObjectType = 'AdditionalInterest'
-				--AND p.ProductLine='PersonalLines' --20230717 added
 			) t
 		PIVOT 
 			(
