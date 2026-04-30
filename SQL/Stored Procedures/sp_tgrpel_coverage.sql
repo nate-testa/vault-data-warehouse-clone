@@ -8,6 +8,7 @@
 -- 02/03/26		Dinesh Bobbili				1. Created this SP
 -- 04/04/26     Yunus Mohammed              2. AD-13016 -  Remove no_of_high_performance_vehicles, no_of_boats_yachts and
 --                                                         reputational_injury_coverage_limit_amt columns
+-- 04/30/26     Yunus Mohammed              3. AD-13285 Added no_of_other_watercraft columns
 -- ==========================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tgrpel_coverage]
 
@@ -38,7 +39,8 @@ BEGIN
 				transaction_seq_no,ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit ,IssuedDate,
 				NumberOfVehicles ,UILiabilityLimit ,NumberOfPrivateStaff ,
 				NumberOfRecreationalVehicles ,
-				NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
+				NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany,
+                NumberOfOtherWatercraft
             INTO edw_temp.tgrpel_coverage_temp1
             from
                 (
@@ -85,7 +87,8 @@ BEGIN
                             'ExcessLiabilityLimit', 'UMLiabilityLimit', 'EMPLiabilityLimit', 'DOLiabilityLimit', 'FTMLiabilityLimit',
                             'NumberOfVehicles', 'UILiabilityLimit', 'NumberOfPrivateStaff', 
                             'NumberOfRecreationalVehicles',
-                            'NumberOfPersonalWatercraft', 'AutoInsuranceCompany', 'HomeInsuranceCompany', 'WatercraftInsuranceCompany'
+                            'NumberOfPersonalWatercraft', 'AutoInsuranceCompany', 'HomeInsuranceCompany', 'WatercraftInsuranceCompany',
+                            'NumberOfOtherWatercraft'
                         )
                     ) as t
                 ) as t
@@ -96,7 +99,8 @@ BEGIN
                         ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit ,
                         NumberOfVehicles ,UILiabilityLimit ,NumberOfPrivateStaff ,
                         NumberOfRecreationalVehicles ,
-                        NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
+                        NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany,
+                        NumberOfOtherWatercraft
                         )
                 ) as pivottable
             ;
@@ -127,6 +131,7 @@ BEGIN
             ,underlying_auto_insurance_company_nm
             ,underlying_home_insurance_company_nm
             ,underlying_watercraft_insurance_company_nm
+            ,no_of_other_watercraft
             ,source_system_sk
             ,create_ts
             ,update_ts
@@ -155,6 +160,7 @@ BEGIN
             ,AutoInsuranceCompany	as	underlying_auto_insurance_company_nm
             ,HomeInsuranceCompany	as	underlying_home_insurance_company_nm
             ,WatercraftInsuranceCompany	as	underlying_watercraft_insurance_company_nm
+            ,NumberOfOtherWatercraft as no_of_other_watercraft
             ,source_system_sk
             ,getdate() AS create_ts
             ,getdate() AS update_ts

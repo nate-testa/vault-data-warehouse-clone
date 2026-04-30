@@ -8,6 +8,7 @@
 -- 02/12/26		Dinesh Bobbili				1. Created this SP
 -- 04/04/26     Yunus Mohammed              2. AD-13016 -  Remove no_of_high_performance_vehicles, no_of_boats_yachts and
 --                                                         reputational_injury_coverage_limit_amt columns
+-- 04/30/26     Yunus Mohammed              3. AD-13285 Added no_of_other_watercraft columns
 -- ==========================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_grpel_coverage_wip]
 AS
@@ -34,7 +35,8 @@ BEGIN
                 transaction_seq_no,ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit,
 				NumberOfVehicles ,UILiabilityLimit ,NumberOfPrivateStaff ,
 				NumberOfRecreationalVehicles ,
-				NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
+				NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany,
+                NumberOfOtherWatercraft
             INTO edw_temp.tquote_grpel_coverage_wip_temp1
             from
                 (
@@ -81,10 +83,9 @@ BEGIN
                             'ExcessLiabilityLimit', 'UMLiabilityLimit', 'EMPLiabilityLimit', 'DOLiabilityLimit', 'FTMLiabilityLimit',
                             'NumberOfVehicles', 'UILiabilityLimit', 'NumberOfPrivateStaff', 
                             'NumberOfRecreationalVehicles',
-                            'NumberOfPersonalWatercraft', 'AutoInsuranceCompany', 'HomeInsuranceCompany', 'WatercraftInsuranceCompany'
+                            'NumberOfPersonalWatercraft', 'AutoInsuranceCompany', 'HomeInsuranceCompany', 'WatercraftInsuranceCompany',
+                            'NumberOfOtherWatercraft'
                         )
-						
-
                     ) as t
                 ) as t
                 pivot 
@@ -94,7 +95,8 @@ BEGIN
                         ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit ,
                         NumberOfVehicles ,UILiabilityLimit , NumberOfPrivateStaff ,
                         NumberOfRecreationalVehicles ,
-                        NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
+                        NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany,
+                        NumberOfOtherWatercraft
                         )
                 ) as pivottable
             ;
@@ -122,6 +124,7 @@ BEGIN
                 AutoInsuranceCompany AS underlying_auto_insurance_company_nm,
                 HomeInsuranceCompany AS underlying_home_insurance_company_nm,
                 WatercraftInsuranceCompany AS underlying_watercraft_insurance_company_nm,
+                NumberOfOtherWatercraft as no_of_other_watercraft,
                 source_system_sk,
                 GETDATE() AS create_ts,
                 GETDATE() AS update_ts,
@@ -154,6 +157,7 @@ BEGIN
                 target.underlying_auto_insurance_company_nm = source.underlying_auto_insurance_company_nm,
                 target.underlying_home_insurance_company_nm = source.underlying_home_insurance_company_nm,
                 target.underlying_watercraft_insurance_company_nm = source.underlying_watercraft_insurance_company_nm,
+                target.no_of_other_watercraft = source.no_of_other_watercraft,
                 target.source_system_sk = source.source_system_sk,
                 target.update_ts = source.update_ts,
                 target.etl_audit_sk = source.etl_audit_sk
@@ -180,6 +184,7 @@ BEGIN
                 underlying_auto_insurance_company_nm,
                 underlying_home_insurance_company_nm,
                 underlying_watercraft_insurance_company_nm,
+                no_of_other_watercraft,
                 source_system_sk,
                 create_ts,
                 update_ts,
@@ -206,6 +211,7 @@ BEGIN
                 source.underlying_auto_insurance_company_nm,
                 source.underlying_home_insurance_company_nm,
                 source.underlying_watercraft_insurance_company_nm,
+                source.no_of_other_watercraft,
                 source.source_system_sk,
                 source.create_ts,
                 source.update_ts,
