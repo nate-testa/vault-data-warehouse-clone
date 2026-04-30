@@ -29,8 +29,6 @@ BEGIN
 
 		DECLARE @year_month INT,@begin_dt DATE,@end_dt DATE,@begin_sk INT,@end_sk INT
 
-		DECLARE @last_day_month DATE, @year_month INT;
-
 		DECLARE cur_main CURSOR FOR
 		select yearmonth
 		from edw_core.tdate
@@ -59,7 +57,7 @@ BEGIN
 			SET @parameter_desc= 'last_source_extract_ts >=' + CAST(@begin_dt AS VARCHAR(200))
 
 			DELETE FROM edw_integration.billing_grpel_cash_activity_feed
-        	WHERE month_end = @year_month; 
+        	WHERE month_end = @end_dt; 
 
 			WITH billing_grpel_cash_activity_feed_temp AS
 			(
@@ -83,6 +81,7 @@ BEGIN
 					@etl_audit_sk as etl_audit_sk
 					from
 						edw_core.tbilling_account_payment bap
+						inner join edw_stage.AccountPayment ap on bap.payment_id = ap.Id
 						inner join edw_core.tgrpel_master_coverage gmc on bap.grpel_master_policy_no = gmc.grpel_master_policy_no
 						and gmc.transaction_seq_no = 
 												(
@@ -93,7 +92,7 @@ BEGIN
 														gmc1.grpel_master_policy_no = gmc.grpel_master_policy_no
 												)
 					WHERE
-						CAST(bap.TransactionDate as date) between @begin_dt and @end_dt
+						CAST(ap.TransactionDate as date) between @begin_dt and @end_dt
 			)              
 
 			INSERT INTO edw_integration.billing_grpel_cash_activity_feed
@@ -107,7 +106,7 @@ BEGIN
 			FROM
 				billing_grpel_cash_activity_feed_temp
 
-			END		
+					
 			
 			SET @rows_affected=@@ROWCOUNT;
 
@@ -120,8 +119,15 @@ BEGIN
 			EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected,@parameter_desc;		
 
 			SELECT @last_source_extract_ts = edw_core.fn_get_last_source_extract_ts(@process_nm);
+			FETCH NEXT FROM cur_main INTO @year_month
+		END
+		CLOSE cur_main;
 
+		DEALLOCATE cur_main;
+	
 	END TRY
+
+
 	BEGIN CATCH
 		DECLARE @error_message nvarchar(4000)
 		SET @error_message = 'Error Number:' + CAST(ERROR_NUMBER() AS NVARCHAR(100)) + ' Error State:' + CAST(ERROR_STATE() AS NVARCHAR(100))
