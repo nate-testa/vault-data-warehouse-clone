@@ -11,6 +11,7 @@ GO
 -- 01/17/24				Architha Gudimalla				2. Modified for errors after first run  
 -- 09/07/24				Yunus Mohammed					3. Use ValueBlob if Value field is null for manuscript_title an desc
 -- 08/20/24				Yunus Mohammed					4. Used IncludeManuscript indicator
+-- 04/30/26				Yunus Mohammed					5. AD-12470 - Modified code for performance issues
 -- ======================================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_manuscript]
 AS
@@ -36,47 +37,53 @@ BEGIN
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tquote_manuscript_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[tquote_manuscript_temp2];
+
+		SELECT
+			acct.Id,acct.PolicyNumber,acct.EffectiveDate,acct.ExpirationDate,acct.[Number], acct.CreatedDate,acctvo.[Index],
+			case when acct.ExternalSourceId is not NULL then 2--(AV2) 
+				Else 4 --(Metal)
+			end as [source_system_sk]
+		INTO edw_temp.tquote_manuscript_temp1
+		FROM
+			[edw_stage].[AccountTransaction] acct
+			INNER JOIN [edw_stage].[Product] p on p.Id = acct.ProductId
+			INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
+			INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
+			AND acctvo.ObjectType in ('Homeowner','Condo','Collection','PersonalExcessLiability')
+			INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof ON acctvof.VersionObjectId = acctvo.Id 
+				AND acctvof.Field = 'IncludeManuscript' AND acctvof.[Value] = 'Yes'
+		WHERE
+		acct.[Stage] IN ('QUOTE','POLICY')
+		AND acct.CreatedDate > @last_source_extract_ts
+
 		SELECT 
 			PolicyNumber as quote_no, EffectiveDate, ExpirationDate, [Number] as transaction_seq_no
 			,quote_history_sk
 			,ManuscriptTitle, ManuscriptNumber, ManuscriptDescription
-			,source_system_sk --20230717 added
+			,source_system_sk
 			,CreatedDate
 			,[Index] as manuscript_seq_no
-		INTO [edw_temp].[tquote_manuscript_temp1]
+		INTO [edw_temp].[tquote_manuscript_temp2]
 		FROM
 			(
 			SELECT
-				acc.PolicyNumber, acc.EffectiveDate, acc.ExpirationDate, acc.[Number]
+				acct.PolicyNumber, acct.EffectiveDate, acct.ExpirationDate, acct.[Number], acct.CreatedDate, acct.[Index],acct.[source_system_sk]
 				,tqh.[quote_history_sk]
-				,accto.[Field] 
+				,acctvof.[Field] 
 				,case
-					when accto.Field in ('ManuscriptDescription','ManuscriptTitle') and len(accto.[Value])= 0 then NULLIF(accto.[ValueBlob],'')
-				else NULLIF(accto.[Value], '') end as [Value]
-				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
-					  Else 4 --(Metal)
-				 end as [source_system_sk] --20230717 added
-				,acc.CreatedDate
-				,acct.[Index]
+					when acctvof.Field in ('ManuscriptDescription','ManuscriptTitle') and len(acctvof.[Value])= 0 then NULLIF(acctvof.[ValueBlob],'')
+				else NULLIF(acctvof.[Value], '') end as [Value]	
 			FROM
-				(SELECT
-					*
-				FROM [edw_stage].[AccountTransaction]
-				WHERE
-					[Stage] IN ('QUOTE','POLICY')
-					AND CreatedDate > @last_source_extract_ts --20230717 added
-				) acc
-				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
-				LEFT JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
-				INNER JOIN [edw_core].[tquote_history] tqh on tqh.quote_no=acc.PolicyNumber	and tqh.effective_dt=acc.EffectiveDate and tqh.transaction_seq_no = acc.number
-				INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo_in ON acctvo_in.AccountTransactionVersionId = acctv.Id
-				INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof_in ON acctvof_in.VersionObjectId = acctvo_in.id and acctvof_in.Field = 'IncludeManuscript'
+				edw_temp.[tquote_manuscript_temp1] acct
+				INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acct.Id
+				INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
+				--AND acctvo.ObjectType in ('Homeowner','Condo','Collection','PersonalExcessLiability')
+				INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof ON acctvof.VersionObjectId = acctvo.id
+				LEFT JOIN [edw_core].[tquote_history] tqh on tqh.quote_no=acct.PolicyNumber 
+					AND tqh.effective_dt=acct.EffectiveDate and tqh.transaction_seq_no = acct.[Number]
 			WHERE
-				acct.ObjectType = 'Manuscript'
-				and acctvo_in.ObjectType in ('Homeowner','Condo','Collection','PersonalExcessLiability')
-				and acctvof_in.[Value] = 'Yes'
+				acctvof.Field in ('ManuscriptDescription','ManuscriptTitle','ManuscriptNumber') 
 			) t
 		PIVOT 
 			(
@@ -99,28 +106,30 @@ BEGIN
 			,[etl_audit_sk]
 			,[manuscript_seq_no]
 		)
-		SELECT [quote_no]
-      		,[EffectiveDate]
-      		,[ExpirationDate]
-      		,[transaction_seq_no]
-      		,[quote_history_sk]
-      		,[ManuscriptNumber]
-      		,[ManuscriptTitle]
-      		,[ManuscriptDescription]
-      		,[source_system_sk]
-      		,getdate()
-      		,getdate()
-		   ,@etl_audit_sk
-		   ,[manuscript_seq_no]
+		SELECT
+			[quote_no]
+			,[EffectiveDate]
+			,[ExpirationDate]
+			,[transaction_seq_no]
+			,[quote_history_sk]
+			,[ManuscriptNumber]
+			,[ManuscriptTitle]
+			,[ManuscriptDescription]
+			,[source_system_sk]
+			,getdate()
+			,getdate()
+			,@etl_audit_sk
+			,[manuscript_seq_no]
 		FROM 
-			[edw_temp].[tquote_manuscript_temp1]
+			[edw_temp].[tquote_manuscript_temp2]
 
 		SET @rows_affected=@@ROWCOUNT;
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(t1.createddate) FROM edw_temp.[tquote_manuscript_temp1] t1),@last_source_extract_ts);
 
         DROP TABLE IF EXISTS edw_temp.[tquote_manuscript_temp1];
-		
+		DROP TABLE IF EXISTS edw_temp.[tquote_manuscript_temp2];
+
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
 		
