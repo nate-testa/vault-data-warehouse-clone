@@ -75,6 +75,7 @@ BEGIN
 					bap.user_remark reference_code,
 					bap.payment_dt as payment_date,
 					bap.payment_amt as amount,
+					ap.TransactionDate as transaction_date,
 					@end_dt AS month_end,
 					GETDATE() as create_ts,
 					GETDATE() as update_ts,
@@ -97,11 +98,13 @@ BEGIN
 
 			INSERT INTO edw_integration.billing_grpel_cash_activity_feed
 			(
-				company,group_account,group_name,effective_date,expiration_date,payor_type,product,payment_from,category,paid_via,reference_code,payment_date,amount,
+				company,group_account,group_name,effective_date,expiration_date,payor_type,product,payment_from,
+				category,paid_via,reference_code,payment_date,amount,transaction_date,
 				month_end,create_ts,update_ts,etl_audit_sk
 			)
 			SELECT
-				company,group_account,group_name,effective_date,expiration_date,payor_type,product,payment_from,category,paid_via,reference_code,payment_date,amount,
+				company,group_account,group_name,effective_date,expiration_date,payor_type,product,payment_from,
+				category,paid_via,reference_code,payment_date,amount,transaction_date,
 				month_end,create_ts,update_ts,etl_audit_sk
 			FROM
 				billing_grpel_cash_activity_feed_temp
