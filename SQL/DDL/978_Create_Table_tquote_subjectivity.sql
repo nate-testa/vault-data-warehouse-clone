@@ -6,7 +6,7 @@ CREATE TABLE edw_core.tquote_subjectivity
 (
              
 	quote_subjectivity_sk          int IDENTITY(1,1) NOT NULL,
-	quote_no                       varchar(255) NOT NULL,
+	quote_no                       varchar(255) NOT NULL, 
 	effective_dt                    datetime2(7) NOT NULL,
 	expiration_dt                   datetime2(7) NOT NULL,
 	transaction_seq_no              int NOT NULL,

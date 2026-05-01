@@ -11,7 +11,7 @@ CREATE TABLE edw_core.tpolicy_subjectivity
 	expiration_dt                   datetime2(7) NOT NULL,
 	transaction_effective_dt        datetime2(7) NOT NULL,
 	transaction_seq_no              int NOT NULL,
-	policy_history_sk               int NOT NULL,
+	policy_history_sk               int NOT NULL, 
 	required_for                    varchar(255) NULL,
 	subjectivity_desc               nvarchar(2000) NULL,
 	completed_in                    varchar(255) NULL,
