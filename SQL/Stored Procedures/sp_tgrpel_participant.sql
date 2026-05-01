@@ -31,32 +31,33 @@ BEGIN
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS edw_temp.tgrpel_participant_temp1;
 
-        SELECT
-            accg.PolicyNumber as grpel_master_policy_no ,
-            giep.Id as grpel_participant_id,
-            giep.FirstName as first_nm,
-            giep.LastName as last_nm,
-            giep.Email as email, 
-            giep.Tier as tier_type,
-            giep.EnrollmentStatus as enrollment_status,
-            case
-                when giep.IsDeleted = 1 then 'Yes'
-                when giep.IsDeleted = 0 then 'No'
-            end as deleted_in,
-            case when acc.ExternalSourceId is not NULL 
-                then 2 --(AV2) 
-                Else 4 --(Metal)
-            end source_system_sk,
-            GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk etl_audit_sk
-        INTO edw_temp.tgrpel_participant_temp1
-        FROM
-            edw_stage.Account acc
-            INNER JOIN edw_stage.[Product] p on acc.ProductId = p.Id
-            INNER JOIN edw_stage.GroupInsuranceEnrollmentParticipant giep on acc.Id = giep.AccountId
-            LEFT JOIN edw_stage.Account accg on acc.GroupAccountId = accg.Id
-        where
-            p.InternalName = 'ParticipantPersonalExcessLiability'
-            AND GREATEST(giep.CreatedDate,giep.UpdatedDate) > @last_source_extract_ts
+        SELECT 
+			accg.PolicyNumber as grpel_master_policy_no,
+			acc.PolicyNumber as policy_no,
+			giep.Id as grpel_participant_id,
+			giep.FirstName as first_nm,
+			giep.LastName as last_nm,
+			giep.Email as email,
+			giep.Tier as tier_type,
+			giep.EnrollmentStatus as enrollment_status,
+			case
+				when giep.IsDeleted = 1 then 'Yes'
+				when giep.IsDeleted = 0 then 'No'
+			end as deleted_in,
+			case when acc.ExternalSourceId is not NULL 
+				then 2 --(AV2) 
+				Else 4 --(Metal)
+			end source_system_sk,
+			GETDATE() AS create_ts,GETDATE() AS update_ts,@etl_audit_sk etl_audit_sk,
+			giep.CreatedDate,giep.UpdatedDate
+		INTO edw_temp.tgrpel_participant_temp1
+		FROM
+			edw_stage.GroupInsurance gi
+			inner join edw_stage.Account accg on accg.Id= gi.GroupAccountId
+			inner join edw_stage.GroupInsuranceEnrollmentParticipant giep on giep.GroupInsuranceId = gi.Id
+			left join edw_stage.Account acc on giep.AccountId = acc.Id
+		WHERE
+		 	GREATEST(giep.CreatedDate,giep.UpdatedDate) > @last_source_extract_ts
 
 		-- Start Merge process
 		MERGE edw_core.tgrpel_participant AS [Target]
@@ -66,18 +67,18 @@ BEGIN
 		WHEN NOT MATCHED BY Target THEN
 		INSERT 
 		(
-			grpel_master_policy_no,grpel_participant_id,first_nm,last_nm,email,tier_type,
+			grpel_master_policy_no,policy_no,grpel_participant_id,first_nm,last_nm,email,tier_type,
             enrollment_status,deleted_in,source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
 		VALUES 
 		(
-			grpel_master_policy_no,grpel_participant_id,first_nm,last_nm,email,tier_type,
+			grpel_master_policy_no,policy_no,grpel_participant_id,first_nm,last_nm,email,tier_type,
             enrollment_status,deleted_in,source_system_sk,create_ts,update_ts,etl_audit_sk			
 		)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
 		SET       		
-			[Target].grpel_master_policy_no = [Source].grpel_master_policy_no,            
+			[Target].policy_no = [Source].policy_no,            
             [Target].first_nm = [Source].first_nm,
             [Target].last_nm = [Source].last_nm,
             [Target].email = [Source].email,
