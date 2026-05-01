@@ -1,14 +1,15 @@
 ﻿-- ========================================================================================================================================
 -- Description: This procedures insert and update info related to Quote Manuscript
 ---------------------------------------------------------------------------------------------------------------------------------------
--- Change date 				|Author												|	Change Description
+-- Change date 				|Author							|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 10/05/2024				Hernando Gonzalez Garcia		1. Created this procedure 
--- 05/16/2024				Architha Gudimalla 						2. Updated after errors 
--- 09/07/24					Yunus Mohammed							3. Use ValueBlob if Value field is null for manuscript_title an desc
--- 08/22/24					Yunus Mohammed							4. Used IncludeManuscript indicator
--- 03/03/25					Alberto Almario								5. Change JOIN with tquote_history table
--- 03/10/25					Yunus Mohammed							6. Merge join updated
+-- 05/16/2024				Architha Gudimalla 				2. Updated after errors 
+-- 09/07/24					Yunus Mohammed					3. Use ValueBlob if Value field is null for manuscript_title an desc
+-- 08/22/24					Yunus Mohammed					4. Used IncludeManuscript indicator
+-- 03/03/25					Alberto Almario					5. Change JOIN with tquote_history table
+-- 03/10/25					Yunus Mohammed					6. Merge join updated
+-- 04/30/26					Yunus Mohammed					7. AD-12470 - Modified code for performance issues
 -- ======================================================================================================================================== 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_manuscript_wip]
 AS
