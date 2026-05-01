@@ -3,8 +3,8 @@ IF NOT EXISTS (
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = 'edw_core'
       AND TABLE_NAME = 'tquote_history'
-      AND COLUMN_NAME = 'companion_credit_group_excess_in'
+      AND COLUMN_NAME = 'grpel_policy_credit_in'
 )
 BEGIN
-    ALTER TABLE edw_core.tquote_history ADD companion_credit_group_excess_in Varchar(255);
+    ALTER TABLE edw_core.tquote_history ADD grpel_policy_credit_in Varchar(255);
 END;
