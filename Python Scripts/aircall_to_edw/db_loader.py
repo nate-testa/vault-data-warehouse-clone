@@ -12,43 +12,48 @@ from datetime import datetime, timezone
 import pandas as pd
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL, Engine
-from sqlalchemy.types import NVARCHAR, DECIMAL
+from sqlalchemy.types import NVARCHAR, DECIMAL, BigInteger, Integer, Boolean
 
 from config_manager import setup_logger
 
 
 # Column mapping: DDL column name -> extraction function from API call dict
-# Fields that are JSON objects/arrays get serialized with json.dumps
+# Types aligned with Aircall API docs (https://developer.aircall.io/api-references/#call-overview)
+# - id: integer (Int64), sid: string, started_at/answered_at/ended_at: integer (UNIX timestamp)
+# - duration: integer (seconds), archived: boolean, cost: string (DEPRECATED)
+# - user/contact/number/assigned_to/transferred_by/transferred_to: object (JSON)
+# - comments/tags/teams/ivr_options_selected: array (JSON)
 COLUMN_MAPPING = {
-    'sid': lambda c: _to_str(c.get('sid')),
-    'direct_link': lambda c: _to_str(c.get('direct_link')),
-    'direction': lambda c: _to_str(c.get('direction')),
-    'status': lambda c: _to_str(c.get('status')),
-    'missed_call_reason': lambda c: _to_str(c.get('missed_call_reason')),
-    'started_at': lambda c: _to_str(c.get('started_at')),
-    'answered_at': lambda c: _to_str(c.get('answered_at')),
-    'ended_at': lambda c: _to_str(c.get('ended_at')),
-    'duration': lambda c: _to_str(c.get('duration')),
-    'archived': lambda c: _to_str(c.get('archived')),
-    'cost': lambda c: c.get('cost'),
-    'voicemail': lambda c: _to_str(c.get('voicemail')),
-    'recording': lambda c: _to_str(c.get('recording')),
-    'asset': lambda c: _to_str(c.get('asset')),
-    'raw_digits': lambda c: _to_str(c.get('raw_digits')),
-    'user_json': lambda c: _to_json(c.get('user')),
-    'contact_json': lambda c: _to_json(c.get('contact')),
-    'assigned_to': lambda c: _to_json(c.get('assigned_to')),
-    'transferred_by': lambda c: _to_json(c.get('transferred_by')),
-    'transferred_to': lambda c: _to_json(c.get('transferred_to')),
-    'comments_json': lambda c: _to_json(c.get('comments')),
-    'number_json': lambda c: _to_json(c.get('number')),
-    'teams_json': lambda c: _to_json(c.get('teams')),
-    'tags_json': lambda c: _to_json(c.get('tags')),
-    'recording_short_url': lambda c: _to_str(c.get('recording_short_url')),
-    'voicemail_short_url': lambda c: _to_str(c.get('voicemail_short_url')),
-    'country_code_a2': lambda c: _extract_country(c),
-    'pricing_type': lambda c: None,
-    'ivr_options_json': lambda c: _to_json(c.get('ivr_options_selected')),
+    'id': lambda c: _to_str(c.get('id')),                        # API id (Int64) -> NVARCHAR
+    'sid': lambda c: _to_str(c.get('sid')),                      # string
+    'direct_link': lambda c: _to_str(c.get('direct_link')),      # string
+    'direction': lambda c: _to_str(c.get('direction')),          # string
+    'status': lambda c: _to_str(c.get('status')),                # string
+    'missed_call_reason': lambda c: _to_str(c.get('missed_call_reason')),  # string
+    'started_at': lambda c: c.get('started_at'),                 # integer (UNIX ts)
+    'answered_at': lambda c: c.get('answered_at'),               # integer (UNIX ts)
+    'ended_at': lambda c: c.get('ended_at'),                     # integer (UNIX ts)
+    'duration': lambda c: c.get('duration'),                     # integer (seconds)
+    'archived': lambda c: c.get('archived'),                     # boolean
+    'cost': lambda c: c.get('cost'),                             # string (DEPRECATED)
+    'voicemail': lambda c: _to_str(c.get('voicemail')),          # string (URL)
+    'recording': lambda c: _to_str(c.get('recording')),          # string (URL)
+    'asset': lambda c: _to_str(c.get('asset')),                  # string (URL)
+    'raw_digits': lambda c: _to_str(c.get('raw_digits')),        # string
+    'user_json': lambda c: _to_json(c.get('user')),              # object -> JSON
+    'contact_json': lambda c: _to_json(c.get('contact')),        # object -> JSON
+    'assigned_to_json': lambda c: _to_json(c.get('assigned_to')),       # object -> JSON
+    'transferred_by_json': lambda c: _to_json(c.get('transferred_by')), # object -> JSON
+    'transferred_to_json': lambda c: _to_json(c.get('transferred_to')), # object -> JSON
+    'comments_json': lambda c: _to_json(c.get('comments')),      # array -> JSON
+    'number_json': lambda c: _to_json(c.get('number')),          # object -> JSON
+    'teams_json': lambda c: _to_json(c.get('teams')),            # array -> JSON
+    'tags_json': lambda c: _to_json(c.get('tags')),              # array -> JSON
+    'recording_short_url': lambda c: _to_str(c.get('recording_short_url')),  # string
+    'voicemail_short_url': lambda c: _to_str(c.get('voicemail_short_url')),  # string
+    'country_code_a2': lambda c: _extract_country(c),            # from number.country
+    'pricing_type': lambda c: None,                              # not in API docs
+    'ivr_options_selected_json': lambda c: _to_json(c.get('ivr_options_selected')),  # array -> JSON
     'create_ts': lambda c: datetime.now(timezone.utc),
 }
 
@@ -140,24 +145,34 @@ class DbLoader:
         self.logger.info(f"Transformation complete. DataFrame shape: {df.shape}")
         return df
 
-    # Columns that use NVARCHAR(MAX) in the DDL (JSON columns)
+    # Columns that use NVARCHAR(MAX) in the DDL (JSON object/array columns)
     _MAX_COLUMNS = {
         'user_json', 'contact_json', 'comments_json', 'number_json',
-        'teams_json', 'tags_json', 'ivr_options_json',
+        'teams_json', 'tags_json', 'ivr_options_selected_json',
+        'assigned_to_json', 'transferred_by_json', 'transferred_to_json',
+    }
+
+    # Columns with explicit non-string SQL types (matching API data types)
+    _TYPED_COLUMNS = {
+        'started_at': BigInteger(),    # API: integer (UNIX timestamp)
+        'answered_at': BigInteger(),   # API: integer (UNIX timestamp)
+        'ended_at': BigInteger(),      # API: integer (UNIX timestamp)
+        'duration': Integer(),         # API: integer (seconds)
+        'archived': Boolean(),         # API: boolean
+        'cost': DECIMAL(15, 2),        # API: string (DEPRECATED), stored as decimal
     }
 
     def _get_column_dtypes(self, df):
         dtypes = {}
-        for col_name, dtype in df.dtypes.items():
-            if col_name == 'cost':
-                dtypes[col_name] = DECIMAL(15, 2)
-            elif col_name == 'create_ts':
+        for col_name in df.columns:
+            if col_name == 'create_ts':
                 continue  # let SQLAlchemy infer datetime
-            elif dtype == 'object':
-                if col_name in self._MAX_COLUMNS:
-                    dtypes[col_name] = NVARCHAR(None)   # NVARCHAR(MAX)
-                else:
-                    dtypes[col_name] = NVARCHAR(4000)   # NVARCHAR(4000)
+            elif col_name in self._TYPED_COLUMNS:
+                dtypes[col_name] = self._TYPED_COLUMNS[col_name]
+            elif col_name in self._MAX_COLUMNS:
+                dtypes[col_name] = NVARCHAR(None)   # NVARCHAR(MAX)
+            elif df[col_name].dtype == 'object':
+                dtypes[col_name] = NVARCHAR(4000)   # NVARCHAR(4000)
         return dtypes
 
     def load(self, df, from_ts=None, to_ts=None):
@@ -196,8 +211,8 @@ class DbLoader:
                     )
                     delete_sql = text(
                         f"DELETE FROM {table_ref} "
-                        f"WHERE CAST(started_at AS BIGINT) >= :from_ts "
-                        f"AND CAST(started_at AS BIGINT) <= :to_ts"
+                        f"WHERE started_at >= :from_ts "
+                        f"AND started_at <= :to_ts"
                     )
                     result = conn.execute(delete_sql, {'from_ts': from_ts, 'to_ts': to_ts})
                     self.logger.info(f"Deleted {result.rowcount} existing records.")

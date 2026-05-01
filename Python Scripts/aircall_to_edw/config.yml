@@ -68,7 +68,7 @@ database:
   #   truncate_day  - DELETE rows for the date range, then insert
   #   append        - Insert without deleting
   #   truncate_all  - TRUNCATE the entire table, then insert
-  load_strategy: "truncate_day"
+  load_strategy: "append"
   batch_size: 1000
 
 # ============================================================================

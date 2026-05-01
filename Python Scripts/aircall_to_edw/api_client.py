@@ -43,6 +43,18 @@ class AircallApiClient:
         self.session = requests.Session()
         self.session.auth = self.auth
 
+    def _build_extra_params(self):
+        """Build the fetch_* params that must be sent on every page request
+        (Aircall's next_page_link does NOT preserve them)."""
+        extra = {}
+        if self.fetch_contact:
+            extra['fetch_contact'] = 'true'
+        if self.fetch_short_urls:
+            extra['fetch_short_urls'] = 'true'
+        if self.fetch_call_timeline:
+            extra['fetch_call_timeline'] = 'true'
+        return extra
+
     def _build_params(self, from_ts, to_ts, page=1):
         params = {
             'from': str(from_ts),
@@ -51,12 +63,7 @@ class AircallApiClient:
             'per_page': self.per_page,
             'page': page,
         }
-        if self.fetch_contact:
-            params['fetch_contact'] = 'true'
-        if self.fetch_short_urls:
-            params['fetch_short_urls'] = 'true'
-        if self.fetch_call_timeline:
-            params['fetch_call_timeline'] = 'true'
+        params.update(self._build_extra_params())
         return params
 
     def _respect_rate_limit(self, response):
@@ -156,13 +163,17 @@ class AircallApiClient:
             f"(per_page={self.per_page}, order={self.order})..."
         )
 
+        # fetch_* params must be re-sent on every page because
+        # Aircall's next_page_link does not preserve them.
+        extra_params = self._build_extra_params()
+
         while True:
-            # If we have a full next_page_link URL, use it directly (no params)
-            # Otherwise (first call), use url + params
             if params is not None:
                 data = self._request_with_retry(url, params)
             else:
-                data = self._request_with_retry(url, params={})
+                # next_page_link already has pagination params;
+                # append the fetch_* params that Aircall strips.
+                data = self._request_with_retry(url, params=extra_params)
 
             calls = data.get('calls', [])
             meta = data.get('meta', {})
@@ -182,7 +193,7 @@ class AircallApiClient:
 
             # Follow the next_page_link directly from the response
             url = next_page_link
-            params = None  # signal to use the URL as-is
+            params = None  # signal to use URL + extra_params
 
             # Safety check: Aircall caps pagination at max_records_per_window
             if len(all_calls) >= self.max_records_per_window:
