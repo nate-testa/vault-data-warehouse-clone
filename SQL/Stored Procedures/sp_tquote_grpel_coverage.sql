@@ -8,8 +8,10 @@
 -- 02/12/26		Dinesh Bobbili				1. Created this SP
 -- 03/18/26     Yunus Mohammed              2. AD-12841 Corrected insert stmt
 --                                          The positions of no_of_vehicles and reputational_injury_coverage_limit_amt are swapped
--- 04/04/26     Yunus Mohammed              2. AD-13016 -  Remove no_of_high_performance_vehicles, no_of_boats_yachts and
+-- 04/04/26     Yunus Mohammed              3. AD-13016 -  Remove no_of_high_performance_vehicles, no_of_boats_yachts and
 --                                                         reputational_injury_coverage_limit_amt columns
+-- 04/30/26     Yunus Mohammed              4. AD-13285 Added no_of_other_watercraft columns
+-- 05/01/26     Yunus Mohammed              5. AD-13267 Added underlying auto, home and watercraft liability limit amts
 -- ==========================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_grpel_coverage]
 AS
@@ -35,7 +37,8 @@ BEGIN
                 transaction_seq_no,ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit,
                         NumberOfVehicles ,UILiabilityLimit ,NumberOfPrivateStaff ,
                         NumberOfRecreationalVehicles ,
-                        NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
+                        NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany,
+                        NumberOfOtherWatercraft,AutoUnderlyingLimit,HomeUnderlyingLimit,WatercraftUnderlyingLimit
             INTO edw_temp.tquote_grpel_coverage_temp1
             from
                 (
@@ -82,7 +85,8 @@ BEGIN
                             'ExcessLiabilityLimit', 'UMLiabilityLimit', 'EMPLiabilityLimit', 'DOLiabilityLimit', 'FTMLiabilityLimit',
                             'NumberOfVehicles', 'UILiabilityLimit', 'NumberOfPrivateStaff', 
                             'NumberOfRecreationalVehicles',
-                            'NumberOfPersonalWatercraft', 'AutoInsuranceCompany', 'HomeInsuranceCompany', 'WatercraftInsuranceCompany'
+                            'NumberOfPersonalWatercraft', 'AutoInsuranceCompany', 'HomeInsuranceCompany', 'WatercraftInsuranceCompany',
+                            'NumberOfOtherWatercraft','AutoUnderlyingLimit','HomeUnderlyingLimit','WatercraftUnderlyingLimit'
                         )
                     ) as t
                 ) as t
@@ -93,7 +97,8 @@ BEGIN
                         ExcessLiabilityLimit ,UMLiabilityLimit ,EMPLiabilityLimit ,DOLiabilityLimit ,FTMLiabilityLimit ,
                         NumberOfVehicles ,UILiabilityLimit ,NumberOfPrivateStaff ,
                         NumberOfRecreationalVehicles ,
-                        NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany
+                        NumberOfPersonalWatercraft ,AutoInsuranceCompany ,HomeInsuranceCompany ,WatercraftInsuranceCompany,
+                        NumberOfOtherWatercraft,AutoUnderlyingLimit,HomeUnderlyingLimit,WatercraftUnderlyingLimit
                         )
                 ) as pivottable
             ;
@@ -105,7 +110,8 @@ BEGIN
             ,family_trust_management_liability_limit_amt,uninsured_underinsured_liability_limit_amt
             ,no_of_vehicles,no_of_private_staff
             ,no_of_recreational_vehicles,no_of_personal_watercraft,underlying_auto_insurance_company_nm
-            ,underlying_home_insurance_company_nm,underlying_watercraft_insurance_company_nm
+            ,underlying_home_insurance_company_nm,underlying_watercraft_insurance_company_nm,no_of_other_watercraft
+            ,underlying_auto_liability_limit_amt,underlying_home_liability_limit_amt,underlying_watercraft_liability_limit_amt
             ,source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
         select
@@ -119,6 +125,10 @@ BEGIN
             , NumberOfPersonalWatercraft as no_of_personal_watercraft
             ,AutoInsuranceCompany as underlying_auto_insurance_company_nm, HomeInsuranceCompany as underlying_home_insurance_company_nm
             ,WatercraftInsuranceCompany	as underlying_watercraft_insurance_company_nm
+            ,NumberOfOtherWatercraft as no_of_other_watercraft
+            ,AutoUnderlyingLimit as underlying_auto_liability_limit_amt
+            ,HomeUnderlyingLimit as underlying_home_liability_limit_amt
+            ,WatercraftUnderlyingLimit as underlying_watercraft_liability_limit_amt
             ,source_system_sk ,getdate() AS create_ts, getdate() AS update_ts, @etl_audit_sk AS etl_audit_sk
         from edw_temp.tquote_grpel_coverage_temp1
 		
