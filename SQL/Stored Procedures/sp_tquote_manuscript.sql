@@ -68,7 +68,7 @@ BEGIN
 		FROM
 			(
 			SELECT
-				acct.PolicyNumber, acct.EffectiveDate, acct.ExpirationDate, acct.[Number], acct.CreatedDate, acct.[Index],acct.[source_system_sk]
+				acct.PolicyNumber, acct.EffectiveDate, acct.ExpirationDate, acct.[Number], acct.CreatedDate, acctvo.[Index],acct.[source_system_sk]
 				,tqh.[quote_history_sk]
 				,acctvof.[Field] 
 				,case

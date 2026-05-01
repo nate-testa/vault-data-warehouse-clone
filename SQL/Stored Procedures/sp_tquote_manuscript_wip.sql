@@ -34,6 +34,29 @@ BEGIN
 
 		-- Step1 limit amount of rows.
 		DROP TABLE IF EXISTS [edw_temp].[tquote_manuscript_wip_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[tquote_manuscript_wip_temp2];
+
+		SELECT
+			acc.Id,acc.PolicyNumber, acc.EffectiveDate, acc.ExpirationDate, acc.[Number]
+			,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
+				Else 4 --(Metal)
+			end as [source_system_sk] --20230717 added
+			,acc.CreatedDate,acc.UpdatedDate
+		INTO [edw_temp].[tquote_manuscript_wip_temp1]
+		FROM
+				(
+					SELECT *
+					FROM [edw_stage].[Account] AS a
+					WHERE NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where b.AccountId=a.id)
+					AND GREATEST(CreatedDate,UpdatedDate) > @last_source_extract_ts
+					AND a.PolicyNumber IS NOT NULL
+				) acc
+		INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
+		INNER JOIN [edw_stage].[AccountObject] AS acco_in ON acco_in.AccountId = acc.Id
+		and acco_in.ObjectType in ('Homeowner','Condo','Collection','PersonalExcessLiability')
+		INNER JOIN [edw_stage].[AccountObjectField] accof_in ON accof_in.ObjectId = acco_in.id
+		AND accof_in.Field = 'IncludeManuscript' and accof_in.[Value] = 'Yes'
+
 		SELECT 
 			PolicyNumber as quote_no, EffectiveDate, ExpirationDate
 			--,[Number] as transaction_seq_no
@@ -43,46 +66,32 @@ BEGIN
 			,source_system_sk --20230717 added
 			,CreatedDate, UpdatedDate
 			,[Index] as manuscript_seq_no
-		INTO [edw_temp].[tquote_manuscript_wip_temp1]
+		INTO [edw_temp].[tquote_manuscript_wip_temp2]
 		FROM
-			(
-			SELECT
-				acc.PolicyNumber, acc.EffectiveDate, acc.ExpirationDate, acc.[Number]
-				,tqh.[quote_history_sk]
-				,accof.[Field]
-				,case
-					when accof.Field in ('ManuscriptDescription','ManuscriptTitle') and len(accof.[Value])= 0 then NULLIF(accof.[ValueBlob],'')
-				else NULLIF(accof.[Value], '') end as [Value]
-				,case when acc.ExternalSourceId is not NULL then 2--(AV2) 
-					  Else 4 --(Metal)
-				 end as [source_system_sk] --20230717 added
-				,acc.CreatedDate,acc.UpdatedDate
-				,acco.[Index]
-			FROM
-				(
-				    SELECT *
-				    FROM [edw_stage].[Account] AS a
-				    WHERE NOT EXISTS (select * from [edw_stage].[AccountTransaction] b where b.AccountId=a.id)
-				    AND GREATEST(CreatedDate,UpdatedDate) > @last_source_extract_ts
-					AND a.PolicyNumber IS NOT NULL
-				) acc
-				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
-				INNER JOIN [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
-				INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
-				INNER JOIN [edw_core].[tquote_history] tqh on tqh.quote_no=acc.PolicyNumber and tqh.effective_dt=acc.EffectiveDate and tqh.transaction_seq_no = 0
-
-				INNER JOIN [edw_stage].[AccountObject] AS acco_in ON acco_in.AccountId = acc.Id
-				INNER JOIN [edw_stage].[AccountObjectField] accof_in ON accof_in.ObjectId = acco_in.id and accof_in.Field = 'IncludeManuscript'
-			WHERE
-				acco.ObjectType = 'Manuscript'
-				and acco_in.ObjectType in ('Homeowner','Condo','Collection','PersonalExcessLiability')
-				and accof_in.[Value] = 'Yes'
-			) t
+		(
+		SELECT
+			acc.PolicyNumber, acc.EffectiveDate, acc.ExpirationDate, acc.[Number]
+			,tqh.[quote_history_sk]
+			,accof.[Field]
+			,case
+				when accof.Field in ('ManuscriptDescription','ManuscriptTitle') and len(accof.[Value])= 0 then NULLIF(accof.[ValueBlob],'')
+			else NULLIF(accof.[Value], '') end as [Value]
+			,acc.[source_system_sk]
+			,acc.CreatedDate,acc.UpdatedDate
+			,acco.[Index]
+		FROM
+			[edw_temp].[tquote_manuscript_wip_temp1] as acc
+			INNER JOIN [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
+			INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
+			INNER JOIN [edw_core].[tquote_history] tqh on tqh.quote_no=acc.PolicyNumber and tqh.effective_dt=acc.EffectiveDate and tqh.transaction_seq_no = 0
+			AND	acco.ObjectType = 'Manuscript'
+		) t
 		PIVOT 
-			(
-				MAX([Value]) FOR [Field] IN (ManuscriptTitle, ManuscriptNumber, ManuscriptDescription)
-			) pivottable
-			
+		(
+		MAX([Value]) FOR [Field] IN (ManuscriptTitle, ManuscriptNumber, ManuscriptDescription)
+		) pivottable
+
+
 		MERGE INTO [edw_core].[tquote_manuscript] AS TARGET
 		USING (
 		    SELECT
@@ -100,7 +109,7 @@ BEGIN
 		        @etl_audit_sk AS etl_audit_sk,
 		        [manuscript_seq_no]
 		    FROM
-		        [edw_temp].[tquote_manuscript_wip_temp1]
+		        [edw_temp].[tquote_manuscript_wip_temp2]
 		) AS SOURCE
 		ON
 		    TARGET.quote_no = SOURCE.quote_no AND
@@ -154,11 +163,11 @@ BEGIN
 
 		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(greatest(t1.CreatedDate, t1.UpdatedDate)) FROM edw_temp.[tquote_manuscript_wip_temp1] t1),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS edw_temp.[tquote_manuscript_wip_temp1];
+        DROP TABLE IF EXISTS [edw_temp].[tquote_manuscript_wip_temp1];
+		DROP TABLE IF EXISTS [edw_temp].[tquote_manuscript_wip_temp2];
 		
 		-- Update control table
-		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
+		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;		
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200)) --20230717 added
 		--EXEC edw_core.sp_upd_tetl_audit @etl_audit_sk,@rows_affected; --20230717 removed
