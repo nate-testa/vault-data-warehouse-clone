@@ -10,6 +10,7 @@
 -- 08/15/24     		Architha Gudimalla          3. Update additional_interest_deleted_in to use Yes/No instead of 1/0
 -- 08/22/24				Yunus Mohammed				4. Removed effective date from merge and added in update clause
 -- 03/03/26				Yunus Mohammed				5. AD-12608 - Added new column residence_owned_by_trust_in
+-- 04/30/26				Yunus Mohammed				6. AD-12470 - Modified Left Join to Inner Join for performance issues
 -- ====================================================================================================================================
 CREATE OR ALTER  PROCEDURE [edw_core].[sp_tquote_additional_interest_wip]
 AS
@@ -79,11 +80,9 @@ BEGIN
 				        AND GREATEST(acc.CreatedDate,acc.UpdatedDate) > @last_source_extract_ts
 				) acc
 				INNER JOIN edw_stage.Product p on p.Id = acc.ProductId
-                LEFT JOIN edw_stage.AccountObject AS accvo ON accvo.AccountId = acc.Id
-                LEFT JOIN edw_stage.AccountObjectField AS accvof ON accvof.ObjectId = accvo.id				
-				LEFT JOIN edw_core.tquote_history his ON his.quote_no = acc.PolicyNumber AND his.effective_dt=acc.EffectiveDate AND his.transaction_seq_no = 0
-			WHERE				
-				accvo.ObjectType = 'AdditionalInterest'
+                INNER JOIN edw_stage.AccountObject AS accvo ON accvo.AccountId = acc.Id AND accvo.ObjectType = 'AdditionalInterest'
+                INNER JOIN edw_stage.AccountObjectField AS accvof ON accvof.ObjectId = accvo.id				
+				INNER JOIN edw_core.tquote_history his ON his.quote_no = acc.PolicyNumber AND his.effective_dt=acc.EffectiveDate AND his.transaction_seq_no = 0			
 			) t
 		PIVOT 
 			(
