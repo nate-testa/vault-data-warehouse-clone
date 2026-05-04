@@ -1,0 +1,19 @@
+{
+	"name": "MetadataDrivenCopyTask_delete04052026_lh9_ControlDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_EDW_UAT",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "MetadataDrivenCopyTask_delete04052026_lh9_20260504"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edw_stage",
+			"table": "ControlLoadTable"
+		}
+	}
+}
