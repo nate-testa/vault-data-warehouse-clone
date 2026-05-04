@@ -10,6 +10,7 @@
 -- 08/20/25     Dinesh Bobbili		            5. Fixed the mapping issue for transaction_effective_dt and transaction_dt
 -- 09/09/25		Yunus Mohammed		 			6. AD-10907 - Added logic to use IsDeletedOnRenewal
 -- 03/03/26		Yunus Mohammed					7. AD-12608 - Added residence_owned_by_trust_in
+-- 05/04/26		Yunus Mohammed					8. AD-12470 - Modified Left Join to Inner Join for performance issues
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tadditional_interest]
 AS
@@ -81,14 +82,10 @@ BEGIN
 					AND GREATEST(IssuedDate)>@last_source_extract_ts --20230717 added
 				) acc
 				INNER JOIN [edw_stage].[Product] p on p.Id = acc.ProductId
-				LEFT JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id
-				LEFT JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
-				LEFT JOIN [edw_core].[tpolicy_history] his ON his.policy_no = acc.PolicyNumber AND his.effective_dt=acc.EffectiveDate AND his.transaction_seq_no = acc.policychangenumber
-			WHERE
-				--p.[Name]='Collections'
-				acct.ObjectType = 'AdditionalInterest'
-				--AND p.ProductLine='PersonalLines' --20230717 added
+				INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
+				INNER JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id AND acct.ObjectType = 'AdditionalInterest'
+				INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
+				INNER JOIN [edw_core].[tpolicy_history] his ON his.policy_no = acc.PolicyNumber AND his.effective_dt=acc.EffectiveDate AND his.transaction_seq_no = acc.PolicyChangeNumber			
 			) t
 		PIVOT 
 			(

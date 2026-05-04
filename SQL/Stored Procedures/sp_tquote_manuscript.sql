@@ -80,10 +80,9 @@ BEGIN
 				INNER JOIN [edw_stage].[AccountTransactionVersionObject] acctvo ON acctvo.AccountTransactionVersionId = acctv.Id
 				--AND acctvo.ObjectType in ('Homeowner','Condo','Collection','PersonalExcessLiability')
 				INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] acctvof ON acctvof.VersionObjectId = acctvo.id
-				LEFT JOIN [edw_core].[tquote_history] tqh on tqh.quote_no=acct.PolicyNumber 
+				AND acctvof.Field in ('ManuscriptDescription','ManuscriptTitle','ManuscriptNumber') 
+				INNER JOIN [edw_core].[tquote_history] tqh on tqh.quote_no=acct.PolicyNumber 
 					AND tqh.effective_dt=acct.EffectiveDate and tqh.transaction_seq_no = acct.[Number]
-			WHERE
-				acctvof.Field in ('ManuscriptDescription','ManuscriptTitle','ManuscriptNumber') 
 			) t
 		PIVOT 
 			(

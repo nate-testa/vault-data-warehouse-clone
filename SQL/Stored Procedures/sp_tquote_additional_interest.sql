@@ -77,7 +77,7 @@ BEGIN
 				INNER JOIN [edw_stage].[AccountTransactionVersion] acctv ON acctv.AccountTransactionId = acc.Id
 				INNER JOIN [edw_stage].[AccountTransactionVersionObject] acct ON acct.AccountTransactionVersionId = acctv.Id and acct.ObjectType = 'AdditionalInterest'
 				INNER JOIN [edw_stage].[AccountTransactionVersionObjectField] accto ON accto.VersionObjectId = acct.id
-				LEFT JOIN [edw_core].[tquote_history] his ON his.quote_no = acc.PolicyNumber AND his.effective_dt=acc.EffectiveDate AND his.transaction_seq_no = acc.number
+				INNER JOIN [edw_core].[tquote_history] his ON his.quote_no = acc.PolicyNumber AND his.effective_dt=acc.EffectiveDate AND his.transaction_seq_no = acc.number
 			) t
 		PIVOT 
 			(

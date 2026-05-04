@@ -85,7 +85,7 @@ BEGIN
 			INNER JOIN [edw_stage].[AccountObject] AS acco ON acco.AccountId = acc.Id
 			INNER JOIN [edw_stage].[AccountObjectField] AS accof ON accof.ObjectId = acco.id
 			INNER JOIN [edw_core].[tquote_history] tqh on tqh.quote_no=acc.PolicyNumber and tqh.effective_dt=acc.EffectiveDate and tqh.transaction_seq_no = 0
-			AND	acco.ObjectType = 'Manuscript'
+			AND accof.Field in ('ManuscriptDescription','ManuscriptTitle','ManuscriptNumber') 
 		) t
 		PIVOT 
 		(
