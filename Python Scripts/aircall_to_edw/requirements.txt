@@ -1,0 +1,8 @@
+requests
+sqlalchemy
+pyodbc
+pandas
+azure-identity
+azure-keyvault-secrets
+python-dotenv
+pyyaml

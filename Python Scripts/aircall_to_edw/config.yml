@@ -1,0 +1,84 @@
+# Aircall to EDW Configuration
+
+# ============================================================================
+# CONFIGURATION MODE
+# ============================================================================
+# Set use_static_config = true to use static values below (local dev/testing)
+# Set use_static_config = false to load secrets from Azure Key Vault
+use_static_config: false
+
+# ============================================================================
+# STATIC CONFIGURATION (used when use_static_config = true)
+# ============================================================================
+static_config:
+  # Aircall API
+  aircall_api_id: ""
+  aircall_api_token: ""
+  # SQL Server (EDW)
+  sql_server: ""
+  sql_database: ""
+  sql_username: ""
+  sql_password: ""
+
+# ============================================================================
+# SECRETS MAPPING (Key Vault secret names)
+# ============================================================================
+# These map logical keys to actual Key Vault secret names.
+# Change these names when deploying to different environments (pre-prod, prod)
+# if the vault uses different secret names.
+secrets:
+  # Aircall API credentials (aircall-specific, new secrets)
+  aircall_api_id: "aircall-api-id"
+  aircall_api_token: "aircall-api-token"
+  # EDW database connection (reuse existing shared secrets)
+  edw_sql_server: "edw-sql-server"
+  edw_sql_database: "edw-sql-database"
+  edw_sql_username: "edw-sql-user"
+  edw_sql_password: "edw-sql-password"
+
+# ============================================================================
+# AIRCALL API SETTINGS
+# ============================================================================
+aircall_api:
+  base_url: "https://api.aircall.io/v1"
+  endpoint: "/calls"
+  # Rate limiting
+  rate_limit_per_minute: 60
+  # Pagination
+  default_per_page: 20
+  max_per_page: 50
+  per_page: 50
+  max_records_per_window: 10000
+  # Query parameters
+  order: "asc"
+  fetch_contact: true
+  fetch_short_urls: true
+  fetch_call_timeline: true
+  # Retry settings
+  max_retries: 3
+  retry_backoff_seconds: 5
+
+# ============================================================================
+# DATABASE TARGET CONFIGURATION
+# ============================================================================
+database:
+  target_schema: "edw_stage"
+  target_table: "stage_aircall_list_all_calls"
+  # Load strategy: truncate_day | append | truncate_all
+  #   truncate_day  - DELETE rows for the date range, then insert
+  #   append        - Insert without deleting
+  #   truncate_all  - TRUNCATE the entire table, then insert
+  load_strategy: "append"
+  batch_size: 1000
+
+# ============================================================================
+# LOGGING CONFIGURATION
+# ============================================================================
+logging:
+  log_dir: "log"
+  log_level: "INFO"
+  # Rotating file settings
+  max_bytes: 10485760        # 10 MB per log file
+  backup_count: 10           # keep 10 rotated files
+  # Execution summary JSON (written at end of each run for DAG consumption)
+  write_summary_json: true
