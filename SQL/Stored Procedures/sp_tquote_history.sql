@@ -1,22 +1,23 @@
 ﻿-- ==============================================================================================================================
 -- Description: This procedures inserts into tquote_history
 ---------------------------------------------------------------------------------------------------------------------------------
--- Change date |Author												|	Change Description 
+-- Change date |Author							|	Change Description 
 ---------------------------------------------------------------------------------------------------------------------------------
--- 10/23/23		Architha Gudimalla							1. Created this procedure 
--- 12/11/23		Architha Gudimalla							2. Commented out stage in forst temp table
--- 02/08/24		Alberto Almario									3. Added new column producer_sk
--- 04/29/24		Hernando Gonzalez							4. Added new column insurance_score_last_run_dt
--- 05/15/24		Architha Gudimalla							5. Removed effecivedate from partiion in rnk used for latest_transaction_ind
--- 07/31/24		Architha Gudimalla							6. Added number desc to the rank in main query
--- 03/13/25		Yunus Mohammed								7. Ad-8848 Added premium_rater_version
--- 03/14/25		Yunus Mohammed								8. Used product internalName instead of Name
--- 04/03/25		Yunus Mohammed								9. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
--- 04/22/25		Yunus Mohammed								10. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
--- 05/20/25		Alberto Almario									11. Ad-9559 Added insurance_score_source
--- 07/08/25		Dinesh Bobbili									12. Ad-10153 Added bound_by_user_nm,issued_by_user_nm
--- 01/06/26		Dinesh Bobbili									13. Ad-12155 Added indication_status column
--- 01/16/26		Yunus Mohammed							14. AD-12292  Added primary_home_credit_in and mapping updated for home_policy_credit_in
+-- 10/23/23		Architha Gudimalla				1. Created this procedure 
+-- 12/11/23		Architha Gudimalla				2. Commented out stage in forst temp table
+-- 02/08/24		Alberto Almario					3. Added new column producer_sk
+-- 04/29/24		Hernando Gonzalez				4. Added new column insurance_score_last_run_dt
+-- 05/15/24		Architha Gudimalla				5. Removed effecivedate from partiion in rnk used for latest_transaction_ind
+-- 07/31/24		Architha Gudimalla				6. Added number desc to the rank in main query
+-- 03/13/25		Yunus Mohammed					7. Ad-8848 Added premium_rater_version
+-- 03/14/25		Yunus Mohammed					8. Used product internalName instead of Name
+-- 04/03/25		Yunus Mohammed					9. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
+-- 04/22/25		Yunus Mohammed					10. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
+-- 05/20/25		Alberto Almario					11. Ad-9559 Added insurance_score_source
+-- 07/08/25		Dinesh Bobbili					12. Ad-10153 Added bound_by_user_nm,issued_by_user_nm
+-- 01/06/26		Dinesh Bobbili					13. Ad-12155 Added indication_status column
+-- 01/16/26		Yunus Mohammed					14. AD-12292  Added primary_home_credit_in and mapping updated for home_policy_credit_in
+-- 05/04/26		Yunus Mohammed					15. AD-13263 Added grpel_policy_credit_in
 -- ============================================================================================================================== 
 
 CREATE  OR ALTER  PROCEDURE [edw_core].[sp_tquote_history]
@@ -127,7 +128,8 @@ BEGIN
 		-- Pivot Table
 		DROP TABLE IF EXISTS edw_temp.tquote_history_temp2;
 		SELECT	AccountTransactionId,  
-				CompanionCreditHomeowner,CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
+				CompanionCreditHomeowner,CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, 
+				CompanionCreditCollections, CompanionCreditAuto,CompanionCreditGroupExcess,
 				nullif(trim(PriorResidenceAddressLine1),'') PriorResidenceAddressLine1, 
 				nullif(trim(PriorResidenceAddressLine2),'') PriorResidenceAddressLine2, 
 				nullif(trim(PriorResidenceAddressLineUnit),'') PriorResidenceAddressLineUnit,  
@@ -165,12 +167,15 @@ BEGIN
 			) t
 		PIVOT 
 			(
-				MAX(Value) FOR Field IN (CompanionCreditHomeowner,CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
-										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
-										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
-										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
-										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate
-										 ,InsuranceScoreSource)
+				MAX(Value) FOR Field IN 
+				(
+					CompanionCreditHomeowner,CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,CompanionCreditGroupExcess,
+					PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
+					PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
+					InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
+					InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate
+					,InsuranceScoreSource
+				)
 			) pivottable 
 
 		-- Start Inserting records
@@ -203,6 +208,7 @@ BEGIN
            ,auto_policy_credit_in
            ,home_policy_credit_in
 			,primary_home_credit_in
+			,grpel_policy_credit_in
            ,prior_address_in, prior_address_line_1, prior_address_line_2, prior_address_unit_no,
            prior_address_city_nm, prior_address_state_cd, prior_address_zip_cd, prior_address_county_nm, prior_address_country_nm
            ,source_system_sk
@@ -252,6 +258,7 @@ BEGIN
 				source1.CompanionCreditAuto as auto_policy_credit_in, 
 				source1.CompanionCreditHomeowner as home_policy_credit_in,
 				source1.CompanionCreditPrimaryHome as primary_home_credit_in,
+				source1.CompanionCreditGroupExcess as grpel_policy_credit_in,
 				ResidenceHasPrior as prior_address_in, PriorResidenceAddressLine1 as prior_address_line_1, 
 				PriorResidenceAddressLine2 as prior_address_line_2, 
 				PriorResidenceAddressLineUnit as prior_address_unit_no, PriorResidenceAddressCity as prior_address_city_nm, 

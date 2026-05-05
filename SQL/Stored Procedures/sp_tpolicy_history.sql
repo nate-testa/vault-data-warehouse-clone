@@ -2,28 +2,29 @@
 -- Author:		Hernando Gonzalez Garcia  
 -- Description: This procedures inserts into TPolicy_history
 ---------------------------------------------------------------------------------------------------
--- Change date |Author											|	Change Description
+-- Change date |Author							|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 06/02/23		Hernando Gonzalez Garcia		1. Created this procedure
--- 06/28/23		Architha Gudimalla						2. Made changes to fix the errors on first run 
--- 09/08/23		Architha Gudimalla						3. Made changes for updated model 
--- 10/06/23		Architha Gudimalla						4. Added commission override columns
--- 10/10/23		Architha Gudimalla						5. Updated logic for transaction_type - renewals
--- 10/17/23		Architha Gudimalla						6. Updated logic for transaction_desc
--- 10/17/23		Architha Gudimalla						7. Updated logic for producer_nm
--- 10/26/23		Yunus Mohammed						8. Made changes to fix error on customer_id and broker_id
--- 02/08/24		Alberto Almario								9. Added new column producer_sk
--- 04/29/24		Hernando Gonzalez					10. Added new column insurance_score_last_run_dt
--- 06/14/24		Alberto Almario							11. Added new column prorate_factor
--- 03/03/25		Alberto Almario							12. Added new column transaction_status
--- 03/13/25		Yunus Mohammed			  			13. Ad-8848 Added premium_rater_version
--- 03/14/25		Yunus Mohammed			  			14. Used product InternalName instead of Name 
--- 04/03/25		Yunus Mohammed			  			15. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
--- 04/22/25		Yunus Mohammed						16. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
--- 04/30/25		Yunus Mohammed						17. Ad-9338 Added cancellation_sub_reason_desc
--- 05/20/25		Alberto Almario						18. Ad-9559 Added insurance_score_source
--- 07/08/25		Dinesh Bobbili						19. Ad-10153 Added transaction_bound_by_user_nm
--- 01/16/26		Yunus Mohammed					20 AD-12292  Added primary_home_credit_in and mapping updated for home_policy_credit_in
+-- 06/28/23		Architha Gudimalla				2. Made changes to fix the errors on first run 
+-- 09/08/23		Architha Gudimalla				3. Made changes for updated model 
+-- 10/06/23		Architha Gudimalla				4. Added commission override columns
+-- 10/10/23		Architha Gudimalla				5. Updated logic for transaction_type - renewals
+-- 10/17/23		Architha Gudimalla				6. Updated logic for transaction_desc
+-- 10/17/23		Architha Gudimalla				7. Updated logic for producer_nm
+-- 10/26/23		Yunus Mohammed					8. Made changes to fix error on customer_id and broker_id
+-- 02/08/24		Alberto Almario					9. Added new column producer_sk
+-- 04/29/24		Hernando Gonzalez				10. Added new column insurance_score_last_run_dt
+-- 06/14/24		Alberto Almario					11. Added new column prorate_factor
+-- 03/03/25		Alberto Almario					12. Added new column transaction_status
+-- 03/13/25		Yunus Mohammed			  		13. Ad-8848 Added premium_rater_version
+-- 03/14/25		Yunus Mohammed			  		14. Used product InternalName instead of Name 
+-- 04/03/25		Yunus Mohammed			  		15. Ad-9059 Used companionCreditPrimaryHome instead of CompanionCreditHomeowner
+-- 04/22/25		Yunus Mohammed					16. Ad-9259  Adjusted join alignment with PremiumRaterRererence and product table
+-- 04/30/25		Yunus Mohammed					17. Ad-9338 Added cancellation_sub_reason_desc
+-- 05/20/25		Alberto Almario					18. Ad-9559 Added insurance_score_source
+-- 07/08/25		Dinesh Bobbili					19. Ad-10153 Added transaction_bound_by_user_nm
+-- 01/16/26		Yunus Mohammed					20. AD-12292 Added primary_home_credit_in and mapping updated for home_policy_credit_in
+-- 05/04/26		Yunus Mohammed					21. AD-13263 Added grpel_policy_credit_in
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tpolicy_history]
@@ -129,7 +130,7 @@ BEGIN
 		DROP TABLE IF EXISTS edw_temp.tpolicy_history_temp2;
 		SELECT	AccountTransactionId,  
 				CompanionCreditHomeowner,CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, 
-				CompanionCreditCollections, CompanionCreditAuto,
+				CompanionCreditCollections, CompanionCreditAuto,CompanionCreditGroupExcess,
 				nullif(trim(PriorResidenceAddressLine1),'') PriorResidenceAddressLine1, 
 				nullif(trim(PriorResidenceAddressLine2),'') PriorResidenceAddressLine2, 
 				nullif(trim(PriorResidenceAddressLineUnit),'') PriorResidenceAddressLineUnit,  
@@ -167,12 +168,15 @@ BEGIN
 			) t
 		PIVOT 
 			(
-				MAX(Value) FOR Field IN (CompanionCreditHomeowner,CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,
-										 PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
-										 PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
-										 InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
-										 InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate
-										 ,InsuranceScoreSource)
+				MAX(Value) FOR Field IN 
+				(
+					CompanionCreditHomeowner,CompanionCreditPrimaryHome, CompanionCreditPersonalExcessLiability, CompanionCreditCollections, CompanionCreditAuto,CompanionCreditGroupExcess,
+					PriorResidenceAddressLine1, PriorResidenceAddressLine2, PriorResidenceAddressLineUnit, PriorResidenceAddressCity, 
+					PriorResidenceAddressState, PriorResidenceAddressZipCode, PriorResidenceAddressCounty, PriorResidenceAddressCountry, ResidenceHasPrior,
+					InsuranceScore,InsuranceScoreCode1,InsuranceScoreCode1Description,InsuranceScoreCode2,InsuranceScoreCode2Description,
+					InsuranceScoreCode3,InsuranceScoreCode3Description,InsuranceScoreCode4,InsuranceScoreCode4Description,InsuranceScoreLastRunDate
+					,InsuranceScoreSource
+				)
 			) pivottable 
 
 		-- Start Inserting records
@@ -201,6 +205,7 @@ BEGIN
            ,transaction_issued_by
            ,collection_policy_credit_in
            ,excess_liability_policy_credit_in
+		   ,grpel_policy_credit_in
            ,auto_policy_credit_in
            ,home_policy_credit_in
 		   ,primary_home_credit_in
@@ -242,7 +247,8 @@ BEGIN
 				ap as annual_premium_amt,
 				rid.Name as transaction_initiated_by, cid.Name as transaction_issued_by, 
 				source1.CompanionCreditCollections as collection_policy_credit_in, 
-				source1.CompanionCreditPersonalExcessLiability as excess_liability_policy_credit_in, 
+				source1.CompanionCreditPersonalExcessLiability as excess_liability_policy_credit_in,
+				source1.CompanionCreditGroupExcess as grpel_policy_credit_in,
 				source1.CompanionCreditAuto as auto_policy_credit_in, 
 				source1.CompanionCreditHomeowner as home_policy_credit_in,
 				source1.CompanionCreditPrimaryHome as primary_home_credit_in,
