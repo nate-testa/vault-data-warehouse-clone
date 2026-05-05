@@ -1,0 +1,10 @@
+IF NOT EXISTS (
+SELECT 1
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA='edw_stage'
+AND TABLE_NAME = 'AccountSubjectivity'
+AND COLUMN_NAME = 'IsCritical'
+)
+BEGIN
+    ALTER TABLE edw_stage.AccountSubjectivity ADD [IsCritical] [bit] NOT NULL DEFAULT 0 ;
+END ;
