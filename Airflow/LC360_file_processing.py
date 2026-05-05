@@ -148,6 +148,11 @@ class LC360Processor:
             # Replace True with 1, False with 0 in 'VIP' column
             df['VIP'] = df['VIP'].replace({'True': '1', 'False': '0'})
 
+            # Remove internal whitespace from locationZip (e.g. "11 1256" → "111256")
+            df['locationZip'] = df['locationZip'].apply(
+                lambda x: x.replace(' ', '') if isinstance(x, str) else x
+            )
+
             # List of numeric columns that need to be converted
             numeric_columns = ['inspectionNumber', 'covA_in', 'covA_out', 'covA_diff', 'covB', 'locationZip']
 
@@ -172,6 +177,35 @@ class LC360Processor:
                 df[col] = pd.to_datetime(df[col], errors='coerce')
                 df[col] = df[col].dt.strftime('%Y-%m-%d %H:%M:%S')
                 df[col] = df[col].replace('NaT', None)
+
+            # Limit varchar columns to match SQL destination table
+            varchar_limits = {
+                'inspection_update_dt': 10,
+                'policyNumber': 50,
+                'status': 50,
+                'inspectionType': 50,
+                'QARepresentative': 50,
+                'firstTimeQAComplete_dt': 50,
+                'received_dt': 50,
+                'firstFieldComplete_dt': 50,
+                'completed_dt': 50,
+                'policyHolderFirstName': 50,
+                'policyHolderLastName': 50,
+                'VIP': 50,
+                'effective_dt': 50,
+                'isDuplicate': 50,
+                'locationStreet': 255,
+                'locationCity': 50,
+                'locationState': 50,
+                'underwriter': 50,
+                'agency': 128,
+                'consultant': 50,
+                'orderedBy': 50,
+                'inspectionDue_dt': 50,
+            }
+            for col, max_len in varchar_limits.items():
+                if col in df.columns:
+                    df[col] = df[col].where(df[col].isna(), df[col].astype(str).str[:max_len])
 
             logging.info("Data read and prepared successfully.") 
             return df
