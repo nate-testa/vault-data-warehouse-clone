@@ -789,6 +789,12 @@ with DAG(
 
         exec_Snapsheet_Daily_Feed >> operators[0] >> operators[1] >> operators[2] >> exec_Ivans_Daily_Feed >> operators[3] >> generate_livevox_file >> upload_livevox_file_to_sftp >> operators[4] >> operators[5] >> exec_vault_redzone_feed >> exec_vault_CLUE_property_daily_feed >> exec_vault_CLUE_auto_daily_feed >> exec_Snapsheet_Financial_Transaction_Action_Daily_Feed >> exec_Honk_Daily_Feed >> exec_current_carrier_auto_daily_feed >> send_integration_email
 
+    exec_aircall_data_load = TriggerDagRunOperator(
+        task_id="exec_aircall_data_load",
+        trigger_dag_id="aircall_data_load",
+        dag=dag,
+    )
+
     exec_vault_edw_data_load_quotes = TriggerDagRunOperator(
         task_id="exec_vault_edw_data_load_quotes",
         trigger_dag_id="vault_edw_data_load_quotes",
@@ -800,4 +806,4 @@ with DAG(
     )
 
 
-start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group, GRPEL_group] >> collection_marine >> [collection_group, marine_group] >> policy_transaction_group >> claim_group >> datamart_group >> integration_group >> validation_result_group >> exec_vault_edw_data_load_quotes >> end
+start >> ADF_group >> reference_group >> broker_group >> policy_group >> [home_group , PEL_group, auto_group, GRPEL_group] >> collection_marine >> [collection_group, marine_group] >> policy_transaction_group >> claim_group >> datamart_group >> integration_group >> validation_result_group >> exec_aircall_data_load >> exec_vault_edw_data_load_quotes >> end
