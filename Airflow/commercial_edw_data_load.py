@@ -270,7 +270,8 @@ with DAG(
             'sp_tcommercial_quote_subjectivity_wip',
             'sp_tcommercial_quote_subjectivity',
             'sp_tcommercial_quote_transaction_wip',
-            'sp_tcommercial_quote_transaction'
+            'sp_tcommercial_quote_transaction',
+            'sp_tcommercial_subjectivity'
         ]
 
         operators = []
