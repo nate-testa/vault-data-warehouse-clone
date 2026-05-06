@@ -1,12 +1,12 @@
 -- =================================================================================================
--- Description: This stored procedure insert and update Subjectivity data for Personal Line
+-- Description: This stored procedure insert and update Subjectivity data for Commercial Line
 ---------------------------------------------------------------------------------------------------
 -- Change date 	|Author					|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 05/05/26		Yunus Mohammed		    1. Created the proc
 -- ================================================================================================= 
 
-CREATE OR ALTER PROCEDURE [edw_core].[sp_tsubjectivity]
+CREATE OR ALTER PROCEDURE [edw_core].[sp_tcommercial_subjectivity]
 AS
 BEGIN
     DECLARE @ProcedureName NVARCHAR(120)
@@ -29,10 +29,10 @@ BEGIN
 		SET @parameter_desc= 'last_source_extract_ts >' + CAST(@last_source_extract_ts AS VARCHAR(200)) --20230717 added
 
 		-- Step1 limit amount of rows.
-		DROP TABLE IF EXISTS edw_temp.tsubjectivity_temp1;
+		DROP TABLE IF EXISTS edw_temp.tcommercial_subjectivity_temp1;
 
         SELECT
-            acc.PolicyNumber as quote_no,
+            acc.[Number] as quote_no,
             acc.EffectiveDate as effective_dt,
             acc.ExpirationDate as expiration_dt,
             accs.Id as subjectivity_id,
@@ -79,7 +79,7 @@ BEGIN
             then 2 --(AV2) 
             Else 4 --(Metal)
             end source_system_sk
-        INTO edw_temp.tsubjectivity_temp1
+        INTO edw_temp.tcommercial_subjectivity_temp1
         FROM
             edw_stage.Account acc
             INNER JOIN edw_stage.Product pr on acc.ProductId = pr.id
@@ -87,12 +87,12 @@ BEGIN
             LEFT JOIN edw_core.[tuser] ua on ua.[user_id] = accs.AddedByUserId
             LEFT JOIN edw_core.[tuser] uc on uc.[user_id] = accs.CompletedByUserId
         WHERE
-            pr.ProductLine = 'PersonalLines' AND
+            pr.ProductLine = 'CommercialLines' AND
             GREATEST(accs.CreatedDate, accs.UpdatedDate) >  @last_source_extract_ts
 
 		-- Start Merge process
-		MERGE edw_core.tsubjectvity AS [Target]
-		USING edw_temp.tsubjectivity_temp1 [Source]
+		MERGE edw_commercial.tcommercial_subjectivity AS [Target]
+		USING edw_temp.tcommercial_subjectivity_temp1 [Source]
 		ON [Source].subjectivity_id = [Target].subjectivity_id
 		-- For Inserts
 		WHEN NOT MATCHED BY Target THEN
@@ -133,9 +133,9 @@ BEGIN
 
 		SET @rows_affected=@@ROWCOUNT;
 
-		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(CreatedDate, UpdatedDate)) FROM edw_temp.tsubjectivity_temp1),@last_source_extract_ts);
+		SET @new_last_source_extract_ts=COALESCE((SELECT MAX(GREATEST(CreatedDate, UpdatedDate)) FROM edw_temp.tcommercial_subjectivity_temp1),@last_source_extract_ts);
 
-        DROP TABLE IF EXISTS edw_temp.tsubjectivity_temp1;
+        DROP TABLE IF EXISTS edw_temp.tcommercial_subjectivity_temp1;
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
