@@ -368,7 +368,8 @@ with DAG(
             'sp_tgrpel_driver',
             'sp_tgrpel_vehicle',
             'sp_tgrpel_coverage',
-            'sp_tgrpel_watercraft'
+            'sp_tgrpel_watercraft',
+            'sp_tgrpel_participant'
         ]
 
         operators = []
