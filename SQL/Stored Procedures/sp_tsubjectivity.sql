@@ -112,11 +112,7 @@ BEGIN
 		)
 		-- For Updates
 		WHEN MATCHED THEN UPDATE 
-		SET       		
-			[Target].quote_no = [Source].quote_no,
-            [Target].effective_dt = [Source].effective_dt,
-            [Target].expiration_dt = [Source].expiration_dt,
-            [Target].subjectivity_created_ts = [Source].subjectivity_created_ts,
+		SET		
             [Target].subjectivity_updated_ts = [Source].subjectivity_updated_ts,
             [Target].required_for = [Source].required_for,
             [Target].subjectivity_desc = [Source].subjectivity_desc,
