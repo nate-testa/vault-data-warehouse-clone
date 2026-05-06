@@ -383,7 +383,8 @@ with DAG(
             'sp_tquote_update_lifetime_claims',
             'sp_tquote_update_document_delivery',
             'sp_tquote_referral_message',
-            'sp_tquote_form'
+            'sp_tquote_form',
+            'sp_tsubjectivity'
         ]
 
         operators = []
