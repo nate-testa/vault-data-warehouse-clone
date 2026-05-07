@@ -14,6 +14,7 @@ GO
 -- 01/23/25		Architha Gudimalla			5. VI33968/AD7635 - Added uwco orig eff dt..
 -- 03/03/25		Architha Gudimalla			6. AD8347 - New quote close reasons
 -- 06/25/25		Architha Gudimalla			7. AD9828 - Update first_offered_quote_ts for quotes that RENEWAL_RELEASED transaction
+-- 05/07/26		Yunus Mohammed				8. AD-13316 - Updates made to capture first offered quote for GRPEL policies
 -- ======================================================================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_update]
@@ -101,7 +102,7 @@ BEGIN
 		update a
 				set a.first_offered_quote_ts 	=transaction_ts,
 					first_offered_quote_history_sk=quote_history_sk
-		from edw_core.tquote a,
+		from edw_core.tquote a,				
 				(select * from 
 					(
 						select quote_no, transaction_ts, quote_history_sk, dense_rank() OVER (PARTITION BY quote_no ORDER BY transaction_ts ASC) AS policy_txn_order
@@ -111,7 +112,26 @@ BEGIN
 					)tqtsh
 					where policy_txn_order=1
 				)b
-        where a.quote_no=b.quote_no and a.first_offered_quote_ts is null;
+        where
+			a.product_cd <> 'GRPEL'
+			and a.quote_no=b.quote_no and a.first_offered_quote_ts is null;
+
+		update a
+				set a.first_offered_quote_ts 	=transaction_ts,
+					first_offered_quote_history_sk=quote_history_sk
+		from edw_core.tquote a,				
+				(select * from 
+					(
+						select quote_no, transaction_ts, quote_history_sk, dense_rank() OVER (PARTITION BY quote_no ORDER BY transaction_ts ASC) AS policy_txn_order
+						from edw_core.tquote_transaction_status_history  a
+						WHERE upper(transaction_status) IN ('BOUND')
+
+					)tqtsh
+					where policy_txn_order=1
+				)b
+        where
+			a.product_cd = 'GRPEL'
+			and a.quote_no=b.quote_no and a.first_offered_quote_ts is null;
 		
         --AV2 Issued quotes which don't exist in tquote_transaction_status_history
         	         
@@ -173,7 +193,6 @@ BEGIN
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
@@ -193,5 +212,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-
-GO
