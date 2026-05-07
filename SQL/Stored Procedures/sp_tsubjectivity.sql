@@ -88,6 +88,7 @@ BEGIN
             LEFT JOIN edw_core.[tuser] uc on uc.[user_id] = accs.CompletedByUserId
         WHERE
             pr.ProductLine = 'PersonalLines' AND
+            acc.PolicyNumber is not null AND
             GREATEST(accs.CreatedDate, accs.UpdatedDate) >  @last_source_extract_ts
 
 		-- Start Merge process
