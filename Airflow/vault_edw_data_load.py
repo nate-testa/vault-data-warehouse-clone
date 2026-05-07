@@ -547,7 +547,8 @@ with DAG(
             'sp_tuser',
             'sp_tinternal_coverage',
             'sp_ttax_fee_surcharge',
-            'sp_tbillingaccount'
+            'sp_tbillingaccount',
+            'sp_tbilling_account_payment'
         ]
 
         operators = []
