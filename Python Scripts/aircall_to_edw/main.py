@@ -60,7 +60,7 @@ def write_summary_json(summary):
     summary_file = os.path.join(log_dir, f'execution_summary_{ts}.json')
     with open(summary_file, 'w') as f:
         json.dump(summary, f, indent=2, default=str)
-    return summary_filed
+    return summary_file
 
 
 def main():
