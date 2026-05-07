@@ -91,7 +91,7 @@ BEGIN
             GREATEST(accs.CreatedDate, accs.UpdatedDate) >  @last_source_extract_ts
 
 		-- Start Merge process
-		MERGE edw_core.tsubjectvity AS [Target]
+		MERGE edw_core.tsubjectivity AS [Target]
 		USING edw_temp.tsubjectivity_temp1 [Source]
 		ON [Source].subjectivity_id = [Target].subjectivity_id
 		-- For Inserts
