@@ -102,8 +102,7 @@ BEGIN
 		update a
 				set a.first_offered_quote_ts 	=transaction_ts,
 					first_offered_quote_history_sk=quote_history_sk
-		from edw_core.tquote a,
-				edw_core.tproduct pr,
+		from edw_core.tquote a,				
 				(select * from 
 					(
 						select quote_no, transaction_ts, quote_history_sk, dense_rank() OVER (PARTITION BY quote_no ORDER BY transaction_ts ASC) AS policy_txn_order
@@ -114,15 +113,13 @@ BEGIN
 					where policy_txn_order=1
 				)b
         where
-			pr.product_cd = a.product_cd
-			and pr.product_cd <> 'GRPEL'
+			a.product_cd <> 'GRPEL'
 			and a.quote_no=b.quote_no and a.first_offered_quote_ts is null;
 
 		update a
 				set a.first_offered_quote_ts 	=transaction_ts,
 					first_offered_quote_history_sk=quote_history_sk
-		from edw_core.tquote a,
-				edw_core.tproduct pr,
+		from edw_core.tquote a,				
 				(select * from 
 					(
 						select quote_no, transaction_ts, quote_history_sk, dense_rank() OVER (PARTITION BY quote_no ORDER BY transaction_ts ASC) AS policy_txn_order
@@ -133,8 +130,7 @@ BEGIN
 					where policy_txn_order=1
 				)b
         where
-			pr.product_cd = a.product_cd
-			and pr.product_cd = 'GRPEL'
+			a.product_cd = 'GRPEL'
 			and a.quote_no=b.quote_no and a.first_offered_quote_ts is null;
 		
         --AV2 Issued quotes which don't exist in tquote_transaction_status_history
@@ -197,7 +193,6 @@ BEGIN
 		
 		-- Update control table
 		EXEC edw_core.sp_upd_tetl_control @process_nm,@new_last_source_extract_ts;
-		print @etl_audit_sk
 
 		-- Update audit table
 		SET @parameter_desc= @parameter_desc + ' AND last_source_extract_ts <=' + CAST(@new_last_source_extract_ts AS VARCHAR(200))
@@ -217,5 +212,3 @@ BEGIN
 		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
-
-GO
