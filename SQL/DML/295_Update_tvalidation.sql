@@ -16,6 +16,7 @@ set target_sql = 'select 16'
 where validation_sql_desc= 'tclaim_feature snapsheet claims - missing coverage_sk'
 
 -- 81 Snapsheet Validation- Cancelled approved reserves/payments
+update edw_core.tvalidation_sql 
 set source_sql='select count(*) 
 from edw_stage_snapsheet.financial_transactions 
 where stage=''cancelled'' 
