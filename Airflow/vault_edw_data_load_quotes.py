@@ -193,7 +193,6 @@ with DAG(
             'sp_tquote_grpel_master_coverage',
             'sp_tquote_grpel_master_coverage_tier_wip',
             'sp_tquote_grpel_master_coverage_tier',
-            'sp_tquote_grpel_master_coverage_enrollment',
             'sp_tquote_grpel_location_wip',
             'sp_tquote_grpel_location',
             'sp_tquote_grpel_driver_wip',
@@ -384,7 +383,8 @@ with DAG(
             'sp_tquote_update_lifetime_claims',
             'sp_tquote_update_document_delivery',
             'sp_tquote_referral_message',
-            'sp_tquote_form'
+            'sp_tquote_form',
+            'sp_tsubjectivity'
         ]
 
         operators = []

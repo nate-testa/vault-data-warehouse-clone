@@ -219,13 +219,38 @@ with DAG(
 
     with TaskGroup("commercial_integration_group") as commercial_integration_group:
 
+        commercial_integration_group_items = [
+            'sp_commercial_claim_renewal_rating_api'
+            ]
+
+        operators = []
+        for item in commercial_integration_group_items:
+            operator = MsSqlOperator(
+                task_id=item,
+                mssql_conn_id='Vault_EDW',
+                sql=f"EXEC edw_core.{item}",
+                database="vault_edw",
+                autocommit=True,
+            )
+            operators.append(operator)       
+
+        for i in range(len(operators) - 1):
+            operators[i] >> operators[i + 1]
+
         exec_Snapsheet_Commercial_Daily_Feed = TriggerDagRunOperator(
             task_id="exec_Snapsheet_Commercial_Daily_Feed",
             trigger_dag_id="Snapsheet_Commercial_Daily_Feed",
             dag=dag,
         )
 
-        exec_Snapsheet_Commercial_Daily_Feed
+        send_commercial_integration_email = EmailOperator(
+            task_id='send_commercial_integration_email',
+            to=to_email,
+            subject='Airflow - Commercial Integration tables loaded successfully',
+            html_content=get_sp_success_data_HTML(commercial_integration_group_items, 'All stored procedures executed successfully for all the Commercial Integration tables'),
+        )
+
+        exec_Snapsheet_Commercial_Daily_Feed >> operators[-1] >> send_commercial_integration_email
 
 
     with TaskGroup("commercial_quote_group") as commercial_quote_group:
@@ -245,7 +270,8 @@ with DAG(
             'sp_tcommercial_quote_subjectivity_wip',
             'sp_tcommercial_quote_subjectivity',
             'sp_tcommercial_quote_transaction_wip',
-            'sp_tcommercial_quote_transaction'
+            'sp_tcommercial_quote_transaction',
+            'sp_tcommercial_subjectivity'
         ]
 
         operators = []

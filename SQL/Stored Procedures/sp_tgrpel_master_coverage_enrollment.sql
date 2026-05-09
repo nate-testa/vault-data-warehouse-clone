@@ -4,6 +4,8 @@
 -- Change date		|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 03/17/26			Yunus Mohammed				1. Created this procedure
+-- 04/22/26			Yunus Mohammed				2. AD-13204 Removed filter to keep both policy and quote
+-- 05/07/26			Yunus Mohammed				3. AD-13317 Added new column enrollment_end_dt
 -- ======================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tgrpel_master_coverage_enrollment]
@@ -37,6 +39,7 @@ BEGIN
             aes.EnrollmentPeriodByDays As  enrollment_period_in_days,
             aes.EnrollmentFrequency as enrollment_frequency,
             aes.OverrideEnrollmentToOpen as override_enrollment_to_open_in,
+			DATEADD(DAY,ISNULL(aes.EnrollmentPeriodByDays,0),aes.EnrollmentInitialStartDate) as enrollment_end_dt,
             CASE 
                 WHEN acc.ExternalSourceId IS NOT NULL THEN 2 -- (AV2) 
                 ELSE 4 --(Metal)
@@ -49,19 +52,20 @@ BEGIN
             inner join edw_stage.AccountEnrollmentSnapshot aes on acc.Id= aes.AccountId
             left join edw_stage.[User] u on u.Id = aes.UserId
         where
-			p.ProductLine = 'GroupPersonalLines'
-            and acc.state = 'ISSUED'
+			p.ProductLine = 'GroupPersonalLines'            
             and aes.CreatedDate > @last_source_extract_ts
 		
 		INSERT INTO [edw_core].[tgrpel_master_coverage_enrollment]
 		(
             grpel_master_policy_no,effective_dt,expiration_dt,enrollment_created_user_nm,enrollment_created_ts,
             enrollment_initial_start_dt,enrollment_period_in_days,enrollment_frequency,override_enrollment_to_open_in,
+			enrollment_end_dt,
             source_system_sk,create_ts,update_ts,etl_audit_sk
 		)
         SELECT
             grpel_master_policy_no,effective_dt,expiration_dt,enrollment_created_user_nm,enrollment_created_ts,
             enrollment_initial_start_dt,enrollment_period_in_days,enrollment_frequency,override_enrollment_to_open_in,
+			enrollment_end_dt,
             source_system_sk,getdate() as create_ts,getdate() as update_ts,@etl_audit_sk as etl_audit_sk
         FROM
             edw_temp.tgrpel_master_coverage_enrollment_temp1
