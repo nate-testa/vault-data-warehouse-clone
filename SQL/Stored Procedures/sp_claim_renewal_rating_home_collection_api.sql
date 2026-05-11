@@ -3,14 +3,15 @@
 -- Create Date: 10/06/2023
 -- Description: This procedures inserts and updates data for claim renewal rating for home and collection
 ---------------------------------------------------------------------------------------------------
--- Change date		  |Author									|	Change Description
+-- Change date		  |Author					|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 10/06/2023		Yunus Mohammed				1. Created this procedure 
--- 01/08/2025		Rushin Shah				    		 2. AD7660 - Added new columns
+-- 01/08/2025		Rushin Shah				    2. AD7660 - Added new columns
 -- 01/14/2025		Sandeep Gundreddy			3. AD7660 - Added product_sk=5(Condo)
 -- 05/08/2025		Yunus Mohammed				4. AD9412 Added adjuster_name
 -- 06/11/2025		Yunus Mohammed				5. AD-9744 Add Litigation Tag Indicator  (Litigation and LitigationComplete)
--- 10/09/2025		Yunus Mohammed				8. AD-10933 Added new columns and updated definition of other columns
+-- 10/09/2025		Yunus Mohammed				6. AD-10933 Added new columns and updated definition of other columns
+-- 05/11/2026		Yunus Mohammed				7. AD-13339 Added throw statement in catch block
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_home_collection_api]
@@ -182,7 +183,8 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;		
 	END CATCH
 END
 GO
