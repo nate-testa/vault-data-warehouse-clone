@@ -13,16 +13,16 @@ environments:
     dms_url: "https://docs.uat.vaultinsurance.com/dms"
     keyvault_uri: "https://azruatdatakeyvltai01.vault.azure.net/"
     # Secrets source: 'keyvault' or 'static'
-    secrets_source: "static"
+    secrets_source: "keyvault"
     static_values:
-      client_id: "client_int_edw_uat"
-      client_secret: "5VhOtDdliEbGrtXCx6Ub7belXxE6XWnd"
+      client_id: ""
+      client_secret: ""
       blob_container: ""            # Blob container name (optional - falls back to blob_storage.container)
 
   prod:
     pss_url: "https://security.vrms.vaultinsurance.com/pss"
     dms_url: "https://docs.vrms.vaultinsurance.com/dms"
-    keyvault_uri: ""   # TBD - prod Key Vault URI
+    keyvault_uri: "https://azrproddatakeyvltspt01.vault.azure.net/"   # TBD - prod Key Vault URI
     # Prod should always use keyvault (secrets TBD via encrypted email)
     secrets_source: "keyvault"
     static_values:
@@ -95,8 +95,8 @@ secrets:
   # Secret names are the SAME across all environments.
   # The Key Vault URI differs per environment (configured above).
   keyvault_map:
-    client_id: "oneshield-documents-client-id"
-    client_secret: "oneshield-documents-client-secret"
+    client_id: "oneshield-client-id"
+    client_secret: "oneshield-client-secret"
     blob_container: "oneshield-documents-container"
     blob_storage_account: "oneshield-documents-storage-account"
 
