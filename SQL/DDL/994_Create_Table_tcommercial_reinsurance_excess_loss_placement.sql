@@ -1,0 +1,74 @@
+  IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES 
+               WHERE TABLE_SCHEMA = 'edw_commercial' 
+               AND TABLE_NAME = 'tcommercial_reinsurance_excess_loss_placement')
+BEGIN
+CREATE TABLE edw_commercial.tcommercial_reinsurance_excess_loss_placement
+(
+             
+commercial_reinsurance_excess_loss_placement_sk           int IDENTITY(1,1) NOT NULL,
+commercial_policy_sk                                      int NOT NULL,
+policy_no                                                 varchar(255) NOT NULL,
+effective_dt                                              date NOT NULL,
+expiration_dt                                             date NOT NULL,
+transaction_effective_dt                                  date NULL,
+transaction_seq_no                                        int NULL,  
+commercial_reinsurance_sk                                 int NOT NULL,  
+carrier_nm                                                varchar(255) NULL,
+reference_num                                             varchar(255) NULL,
+brokerage_perc                                            varchar(255) NULL,
+per_claim_limit_attachment_amt                            varchar(255) NULL,
+aggregate_limit_attachment_amt                            varchar(255) NULL,
+per_claim_limit_amt                                       varchar(255) NULL,
+aggregate_limit_amt                                       varchar(255) NULL,
+net_premium_due_amt                                       varchar(255) NULL,
+other_notes                                               varchar(255) NULL,
+deleted_in                                                varchar(255) NULL,
+source_system_sk                                          Int NOT NULL,
+create_ts                                                 Datetime2(7) NOT NULL,
+update_ts                                                 Datetime2(7) NOT NULL,
+etl_audit_sk                                              Int NOT NULL,
+CONSTRAINT pk_tcommercial_reinsurance_excess_loss_placement PRIMARY KEY (commercial_reinsurance_excess_loss_placement_sk),
+CONSTRAINT uidx_tcommercial_reinsurance_excess_loss_placement_polno_effdt_commercial_reinsurance_sk UNIQUE (policy_no ,effective_dt,transaction_effective_dt,commercial_reinsurance_excess_loss_placement_sk ),
+CONSTRAINT fk_tcommercial_policy_reinsurance_excess_loss_placement FOREIGN KEY (commercial_policy_sk) REFERENCES edw_commercial.tcommercial_policy (commercial_policy_sk),
+CONSTRAINT fk_tcommercial_reinsurance_reinsurance_excess_loss_placement FOREIGN KEY (commercial_reinsurance_sk ) REFERENCES edw_commercial.tcommercial_reinsurance (commercial_reinsurance_sk)
+
+);
+END
+
+
+
+
+IF EXISTS
+(SELECT 1 FROM edw_core.tedw_table_detail
+	where table_nm = 'tcommercial_reinsurance_excess_loss_placement')
+BEGIN
+	delete FROM edw_core.tedw_table_detail
+	where table_nm = 'tcommercial_reinsurance_excess_loss_placement' ; 
+END ; 
+
+INSERT INTO edw_core.tedw_table_detail (
+    table_nm,
+    table_type,
+    table_category_nm,
+    domain_nm,
+    load_method,
+    load_type,
+    load_frequency,
+    create_ts,
+    update_ts
+)
+SELECT
+    'tcommercial_reinsurance_excess_loss_placement',
+    'Type-2 Dimension',
+    'Base',
+    'Policy',
+    'Stored Procedure',
+    'Insert/Update',
+    'Daily',
+    GETDATE(),
+    GETDATE()
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM edw_core.tedw_table_detail
+    WHERE table_nm = 'tcommercial_reinsurance_excess_loss_placement'
+);
