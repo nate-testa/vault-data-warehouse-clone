@@ -12,6 +12,7 @@
 -- 06/11/2025		Yunus Mohammed				5. AD-9744 Add Litigation Tag Indicator  (Litigation and LitigationComplete)
 -- 10/09/2025		Yunus Mohammed				6. AD-10933 Added new columns and updated definition of other columns
 -- 05/11/2026		Yunus Mohammed				7. AD-13339 Added throw statement in catch block
+-- 05/12/2026		Yunus Mohammed				8. AD-13339 Added TotalLoss new column
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_home_collection_api]
@@ -81,12 +82,14 @@ BEGIN
 	,cl.litigation_in as Litigation
 	,cl.litigation_complete_in as LitigationComplete
 	,cl.large_loss_in as LargeLoss,cl.loss_location_desc  as LossDescription2
+	,CASE WHEN ctg.claim_sk IS NOT NULL THEN 'Yes' END AS TotalLoss
 	FROM
 	edw_core.tclaim cl
 	inner join edw_core.tproduct tp on tp.product_sk=cl.product_sk
 	LEFT JOIN edw_core.tcause_of_loss l on cl.cause_of_loss_sk = l.cause_of_loss_sk 
 	Left join edw_core.tpolicy p on p.policy_no = cl.policy_no 
 	left join edw_core.tcatastrophe cat on cat.catastrophe_sk=cl.catastrophe_sk
+	LEFT JOIN (SELECT * FROM edw_core.tclaim_tag WHERE tag_nm = 'Total Loss') ctg on ctg.claim_sk = cl.claim_sk
 	INNER JOIN
 	(
 	SELECT 
@@ -121,6 +124,7 @@ BEGIN
 			LossDescription,PolicyType,CatIndicator,CatCode,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressZipCode,
 			AddressState,AddressCounty,AddressCountry,Coverage,ReserveExpense,ReserveIndemnity,PaidExpense,PaidIndemnity,
 			SourceOfFire,SourceOfWater,AdjusterName,Litigation,LitigationComplete,LargeLoss,LossDescription2,TotalIncurred,
+			TotalLoss,
 			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -129,6 +133,7 @@ BEGIN
 			LossDescription,PolicyType,CatIndicator,CatCode,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressZipCode,
 			AddressState,AddressCounty,AddressCountry,Coverage,ReserveExpense,ReserveIndemnity,PaidExpense,PaidIndemnity,
 			SourceOfFire,SourceOfWater,AdjusterName,Litigation,LitigationComplete,LargeLoss,LossDescription2,TotalIncurred,
+			TotalLoss,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -167,6 +172,7 @@ BEGIN
 		Target.LargeLoss = Source.LargeLoss,
 		Target.LossDescription2 = Source.LossDescription2,
 		Target.TotalIncurred = Source.TotalIncurred,
+		Target.TotalLoss = Source.TotalLoss,
 		Target.update_ts = GETDATE();
 
 		SET @rows_affected=@@ROWCOUNT;
