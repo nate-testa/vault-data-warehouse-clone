@@ -2,37 +2,38 @@
 -- Author:		Yunus Mohammed
 -- Description: This procedures insert homeowners quote additional coverage data
 ------------------------------------------------------------------------------------------------------------------------------
--- Change date				|Author										|	Change Description
+-- Change date				|Author						|	Change Description
 ------------------------------------------------------------------------------------------------------------------------------
--- 10/23/23					Yunus Mohammed					1. Created this procedure 
--- 11/11/23					Sandeep Gundreddy		    	2. Modified join to tquote_history
--- 11/14/23					Sandeep Gundreddy		    	3. Modified tqupte_home_location_sk join
--- 11/17/23					Yunus Mohammed					4. Added new columns
--- 01/18/24					Alberto Almario						  5. Added new column extended_liability_location_ct
--- 01/25/24					Alberto Almario						  6. Added new columns roof_exclusion_with_ensuing_loss_in, 	
---																								 roof_coverage_endorsement_wh_in, 
---																		 						roof_coverage_endorsement_ap_in,
---																		 						roof_coverage_endorsement_rv_in
--- 09/07/24				Hernando Gonzalez					 7. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
--- 08/01/24             Tuba Mohsin                 				8. added contents_extended_replacement_cost_limit_amt
--- 08/30/24				Yunus Mohammed						9. Added new columns
--- 10/02/24				Yunus Mohammed						10. Added new column fortified_roof_upgrade_endorsement_in
--- 10/30/24				Hernando Gonzalez					 11. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
--- 12/02/24				Yunus Mohammed						12. AD-7834 Added new fields
--- 12/18/24				Hernando Gonzalez					 13. AD-7963 | Added Risk_Score_Fire
--- 01/22/25				Alberto Almario							  14. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
--- 04/01/25		   		Yunus Mohammed						15 Ad-9035 Added automatic_seismic_shutoff_valve_in
--- 05/12/25				Yunus Mohammed				        16 AD-9481 Added all_peril_roof_covering_coverage_cw_in
--- 05/14/25				Yunus Mohammed				   		17. AD-9392 Added WFGateQuestion and updated logic for gate_code
--- 05/21/25				Alberto Almario				   			  18. AD-9575 Added caddy_grade
--- 06/02/25				Yunus Mohammed				   		19. AD-9691 Modified seperator for gate_code 
--- 06/02/25				Sandeep Gundreddy			  20. Modified gate location and code seperator from ',' to '-'
--- 07/02/25				Dinesh Bobbili				   		21. AD-10034 Added all_peril_roof_covering_coverage_specified_states_in column
--- 08/05/25				Dinesh Bobbili				   		22. AD-10467 Added mine_subsidence_and_sinkhole_coverage_in column
--- 08/12/25				Dinesh Bobbili				   		23. AD-10619 Added defense_coverage_within_limits_in, wind_sublimit_in, wind_sublimit_value_amt
--- 08/20/25				Dinesh Bobbili				   		24. AD-10619 Added logic to handle blank values for defense_coverage_within_limits_in, wind_sublimit_in, wind_sublimit_value_amt
--- 11/26/25				Dinesh Bobbili				   		25. AD-11826 Added risk_sharing_deductible_pc
--- 02/02/26				Dinesh Bobbili				   		26. AD-12416 Added theft_or_loss_general_conditions_approval_in
+-- 10/23/23					Yunus Mohammed				1. Created this procedure 
+-- 11/11/23					Sandeep Gundreddy		    2. Modified join to tquote_history
+-- 11/14/23					Sandeep Gundreddy		    3. Modified tqupte_home_location_sk join
+-- 11/17/23					Yunus Mohammed				4. Added new columns
+-- 01/18/24					Alberto Almario				5. Added new column extended_liability_location_ct
+-- 01/25/24					Alberto Almario				6. Added new columns roof_exclusion_with_ensuing_loss_in, 	
+--															roof_coverage_endorsement_wh_in, 
+--															roof_coverage_endorsement_ap_in,
+--															roof_coverage_endorsement_rv_in
+-- 09/07/24				Hernando Gonzalez				7. Added new columns trampoline_liability_exclusion_in, fine_arts_exclusion_in, screen_enclosure_coverage_in, screen_enclosure_limit_amt, matching_undamaged_property_in, matching_undamaged_property_limit_amt, roof_covering_coverage_limitation_all_peril_loss_settlement_endorsement_in, all_peril_roof_covering_coverage_limitation_loss_settlement_endorsement_in
+-- 08/01/24             Tuba Mohsin                 	8. added contents_extended_replacement_cost_limit_amt
+-- 08/30/24				Yunus Mohammed					9. Added new columns
+-- 10/02/24				Yunus Mohammed					10. Added new column fortified_roof_upgrade_endorsement_in
+-- 10/30/24				Hernando Gonzalez				11. AD-7502 | Added new columns fortified_roof_program_discount_amt, non_program_discount_amt
+-- 12/02/24				Yunus Mohammed					12. AD-7834 Added new fields
+-- 12/18/24				Hernando Gonzalez				13. AD-7963 | Added Risk_Score_Fire
+-- 01/22/25				Alberto Almario					14. Added new columns theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in
+-- 04/01/25		   		Yunus Mohammed					15 Ad-9035 Added automatic_seismic_shutoff_valve_in
+-- 05/12/25				Yunus Mohammed				    16 AD-9481 Added all_peril_roof_covering_coverage_cw_in
+-- 05/14/25				Yunus Mohammed				   	17. AD-9392 Added WFGateQuestion and updated logic for gate_code
+-- 05/21/25				Alberto Almario				   	18. AD-9575 Added caddy_grade
+-- 06/02/25				Yunus Mohammed				   	19. AD-9691 Modified seperator for gate_code 
+-- 06/02/25				Sandeep Gundreddy			  	20. Modified gate location and code seperator from ',' to '-'
+-- 07/02/25				Dinesh Bobbili				   	21. AD-10034 Added all_peril_roof_covering_coverage_specified_states_in column
+-- 08/05/25				Dinesh Bobbili				   	22. AD-10467 Added mine_subsidence_and_sinkhole_coverage_in column
+-- 08/12/25				Dinesh Bobbili				   	23. AD-10619 Added defense_coverage_within_limits_in, wind_sublimit_in, wind_sublimit_value_amt
+-- 08/20/25				Dinesh Bobbili				   	24. AD-10619 Added logic to handle blank values for defense_coverage_within_limits_in, wind_sublimit_in, wind_sublimit_value_amt
+-- 11/26/25				Dinesh Bobbili				   	25. AD-11826 Added risk_sharing_deductible_pc
+-- 02/02/26				Dinesh Bobbili				   	26. AD-12416 Added theft_or_loss_general_conditions_approval_in
+-- 05/13/26				Yunus Mohammed					27. AD-13371 Added wind_hail_roof_covering_schedule_in
 -- =========================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_home_additional_coverage]
@@ -246,6 +247,7 @@ BEGIN
 			theft_or_loss_general_conditions_endorsement_in, animal_related_liability_endorsement_in,automatic_seismic_shutoff_valve_in,
 			all_peril_roof_covering_coverage_cw_in,gate_entry_code_required_in,all_peril_roof_covering_coverage_specified_states_in,mine_subsidence_and_sinkhole_coverage_in,
 			defense_coverage_within_limits_in, wind_sublimit_in, wind_sublimit_value_amt, risk_sharing_deductible_pc,theft_or_loss_general_conditions_approval_in,
+			wind_hail_roof_covering_schedule_in,
 			source_system_sk,create_ts,update_ts,etl_audit_sk,caddy_grade
 			)
 			SELECT
@@ -460,6 +462,7 @@ BEGIN
 			,NULLIF(TRIM(WindSublimitValue), '') as wind_sublimit_value_amt
 			,RiskSharingDeductiblePercentage as risk_sharing_deductible_pc
 			,TheftOrLossGeneralConditionsApproval as theft_or_loss_general_conditions_approval_in
+			,WindHailRoofCoveringSchedule as wind_hail_roof_covering_schedule_in
 		   ,source_system_sk
            ,GETDATE() AS create_ts
            ,GETDATE() AS update_ts
