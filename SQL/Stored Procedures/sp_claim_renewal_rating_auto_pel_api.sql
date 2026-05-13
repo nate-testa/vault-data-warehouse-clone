@@ -2,17 +2,19 @@
 -- Author:		Yunus Mohammed
 -- Description: This procedures inserts and updates data for claim renewal rating for auto and pel
 ---------------------------------------------------------------------------------------------------
--- Change date		|Author										|	Change Description
+-- Change date		|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 11/15/2023		Yunus Mohammed				1. Created this procedure 
 -- 03/11/2024		Yunus Mohammed				2. Logic corrected to calculate amount columns
--- 01/08/2025		Rushin Shah							 3. AD8990 - Added new columns
--- 01/10/2025		Rushin Shah							 4. Updated the coverage information to match snapsheet coverages
+-- 01/08/2025		Rushin Shah					3. AD8990 - Added new columns
+-- 01/10/2025		Rushin Shah					4. Updated the coverage information to match snapsheet coverages
 -- 01/14/2025		Sandeep Gundreddy			5. minor logic change to MedicalExpensePayment,MedicalPaymentPayment
 -- 05/08/2025		Yunus Mohammed				6. AD9412 Added adjuster_name
 -- 06/11/2025		Yunus Mohammed				7. AD-9744 Add Litigation Tag Indicator  (Litigation and LitigationComplete)
 -- 10/09/2025		Yunus Mohammed				8. AD-10933 Added new columns and updated definition of other columns
 -- 11/10/2025		Yunus Mohammed				9. AD-11838 Used product sk instead of claim no like 'NFP'
+-- 05/11/2026		Yunus Mohammed				10. AD-13339 Added throw statement in catch block
+-- 05/12/2026		Yunus Mohammed				11. AD-13339 Added TotalLoss new column
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_auto_pel_api]
@@ -59,54 +61,56 @@ BEGIN
 		clf.claim_adjuster_nm as AdjusterName,
 		cl.first_party_driver_relationship_to_insured as FirstPartyDriverRelationshipToInsured,
 		cl.litigation_in as Litigation, cl.litigation_complete_in as LitigationComplete,
-		cl.large_loss_in as LargeLoss,cl.loss_location_desc  as IncidentDescription2
+		cl.large_loss_in as LargeLoss,cl.loss_location_desc  as IncidentDescription2,
+		CASE WHEN ctg.claim_sk IS NOT NULL THEN 'Yes' END AS TotalLoss
 		FROM
 		edw_core.tclaim cl
 		LEFT JOIN edw_core.tcause_of_loss l on cl.cause_of_loss_sk = l.cause_of_loss_sk 
 		LEFT JOIN edw_core.tpolicy p on p.policy_no = cl.policy_no 
+		LEFT JOIN (SELECT * FROM edw_core.tclaim_tag WHERE tag_nm = 'Total Loss') ctg on ctg.claim_sk = cl.claim_sk
 		INNER JOIN
 		(
-		SELECT		
-		cl.claim_sk,
-		SUM(clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt + clf.expense_paid_amt + clf.subrogation_expense_recovery_amt + clf.salvage_expense_recovery_amt + clf.overpayment_expense_recovery_amt) AS TotalIncurred,
-  SUM(clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt) as TotalPayout, 
-  SUM(Case When clf.claim_coverage_desc = 'Combined Single Limits' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as BodilyInjuryPayment,
-  SUM(Case When clf.claim_coverage_desc = 'Collision' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as CollisionPayment,
-  SUM(Case When clf.claim_coverage_desc = 'Comprehensive' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as ComprehensivePayment,
-  SUM(Case When clf.claim_coverage_desc = 'Full Glass' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as GlassPayment,
-  SUM(Case When clf.claim_coverage_desc = 'Medical Payments' then clf.expense_paid_amt + clf.subrogation_expense_recovery_amt + clf.salvage_expense_recovery_amt + clf.overpayment_expense_recovery_amt End) as MedicalExpensePayment,
-  SUM(Case When clf.claim_coverage_desc = 'Medical Payments' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as MedicalPaymentPayment,
-  SUM(Case When clf.claim_coverage_desc = ('PD Liability Limit') then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as PropertyDamagePayment,
-  SUM(Case When clf.claim_coverage_desc = 'PIP' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as PersonalInjuryProtectionPayment,
-  SUM(Case When clf.claim_coverage_desc = 'Combined Single Limits' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as SpousalLiabilityPayment,
-  SUM(Case When clf.claim_coverage_desc IN ('Roadside Assistance') then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as TowingAndLaborPayment,
-  SUM(Case When clf.claim_coverage_desc = 'Uninsured Motorist Liablity' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as UninsuredMotoristPayment,
-  SUM(Case When clf.claim_coverage_desc IN ('Uninsured / Underinsured Motorist','Underinsured Motorist')
-   then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as UnderinsuredMotoristPayment, -- RS : This is not there
-  SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as ExcessLiabilityCoveragePayment,
-  SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as UninsuredLiabilityPayment,
-  SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as UnderinsuredLiabilityPayment,
-  SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as ExcessLiabilityDOpayment,
-  SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as EmploymentPracticesPaymentLiabilityPayment,
-  
-  SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpExcessLiabilityCoveragePayment,
-  SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUninsuredLiabilityPayment,
-  SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUnderinsuredLiabilityPayment,
-  SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUninsuredMotoristPayment,
-  SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUnderinsuredMotoristPayment,
-  SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpExcessLiabilityDOPayment,
-  SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpEmploymentPracticesLiabilityPayment
-		FROM
-		edw_core.tclaim cl
-		INNER JOIN edw_core.tclaim_feature clf on cl.claim_sk = clf.claim_sk
-		WHERE
-		cl.product_sk in(3,4,10)
-		GROUP BY cl.claim_sk
-		) AS temp ON cl.claim_sk = temp.claim_sk
-		inner join edw_core.tclaim_feature clf on temp.claim_sk = clf.claim_sk
-		) as a
-		where
-		rn = 1
+			SELECT		
+				cl.claim_sk,
+				SUM(clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt + clf.expense_paid_amt + clf.subrogation_expense_recovery_amt + clf.salvage_expense_recovery_amt + clf.overpayment_expense_recovery_amt) AS TotalIncurred,
+				SUM(clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt) as TotalPayout, 
+				SUM(Case When clf.claim_coverage_desc = 'Combined Single Limits' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as BodilyInjuryPayment,
+				SUM(Case When clf.claim_coverage_desc = 'Collision' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as CollisionPayment,
+				SUM(Case When clf.claim_coverage_desc = 'Comprehensive' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as ComprehensivePayment,
+				SUM(Case When clf.claim_coverage_desc = 'Full Glass' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as GlassPayment,
+				SUM(Case When clf.claim_coverage_desc = 'Medical Payments' then clf.expense_paid_amt + clf.subrogation_expense_recovery_amt + clf.salvage_expense_recovery_amt + clf.overpayment_expense_recovery_amt End) as MedicalExpensePayment,
+				SUM(Case When clf.claim_coverage_desc = 'Medical Payments' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as MedicalPaymentPayment,
+				SUM(Case When clf.claim_coverage_desc = ('PD Liability Limit') then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as PropertyDamagePayment,
+				SUM(Case When clf.claim_coverage_desc = 'PIP' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as PersonalInjuryProtectionPayment,
+				SUM(Case When clf.claim_coverage_desc = 'Combined Single Limits' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as SpousalLiabilityPayment,
+				SUM(Case When clf.claim_coverage_desc IN ('Roadside Assistance') then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as TowingAndLaborPayment,
+				SUM(Case When clf.claim_coverage_desc = 'Uninsured Motorist Liablity' then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as UninsuredMotoristPayment,
+				SUM(Case When clf.claim_coverage_desc IN ('Uninsured / Underinsured Motorist','Underinsured Motorist')
+				then clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt End) as UnderinsuredMotoristPayment, -- RS : This is not there
+				SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as ExcessLiabilityCoveragePayment,
+				SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as UninsuredLiabilityPayment,
+				SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as UnderinsuredLiabilityPayment,
+				SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as ExcessLiabilityDOpayment,
+				SUM(CASE WHEN cl.product_sk!=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as EmploymentPracticesPaymentLiabilityPayment,
+
+				SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpExcessLiabilityCoveragePayment,
+				SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUninsuredLiabilityPayment,
+				SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUnderinsuredLiabilityPayment,
+				SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUninsuredMotoristPayment,
+				SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpUnderinsuredMotoristPayment,
+				SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpExcessLiabilityDOPayment,
+				SUM(CASE WHEN cl.product_sk=10 THEN clf.loss_paid_amt + clf.subrogation_recovery_amt + clf.salvage_recovery_amt + clf.overpayment_recovery_amt ELSE NULL END) as GrpEmploymentPracticesLiabilityPayment
+			FROM
+			edw_core.tclaim cl
+			INNER JOIN edw_core.tclaim_feature clf on cl.claim_sk = clf.claim_sk			
+			WHERE
+			cl.product_sk in(3,4,10)
+			GROUP BY cl.claim_sk
+			) AS temp ON cl.claim_sk = temp.claim_sk
+			inner join edw_core.tclaim_feature clf on temp.claim_sk = clf.claim_sk
+			) as a
+			where
+			rn = 1
 
 	MERGE edw_integration.claim_renewal_rating_auto_pel_api AS Target
 	USING edw_temp.claim_renewal_rating_auto_pel_api_temp1 AS Source
@@ -120,6 +124,7 @@ BEGIN
 			PersonalInjuryProtectionPayment,RentalReimbursementPayment,SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,
 			UnderinsuredMotoristPayment,ViolationPointClass,FirstPartyDriverName,FaultDecision,ResponsibleParty,AtFaultPercent,
 			AdjusterName,FirstPartyDriverRelationshipToInsured,Litigation,LitigationComplete,LargeLoss,IncidentDescription2,TotalIncurred,
+			TotalLoss,
 			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -131,6 +136,7 @@ BEGIN
 			NULL, -- ViolationPointClass
 			FirstPartyDriverName,FaultDecision,ResponsibleParty,AtFaultPercent,AdjusterName,FirstPartyDriverRelationshipToInsured,
 			Litigation,LitigationComplete,LargeLoss,IncidentDescription2,TotalIncurred,
+			TotalLoss,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -170,6 +176,7 @@ BEGIN
 			Target.LargeLoss = Source.LargeLoss,
 			Target.IncidentDescription2 = Source.IncidentDescription2,
 			Target.TotalIncurred = Source.TotalIncurred,
+			Target.TotalLoss = Source.TotalLoss,
 			Target.update_ts = GETDATE();
 			
 		SET @rows_affected=@@ROWCOUNT;
@@ -186,7 +193,8 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END
 GO
