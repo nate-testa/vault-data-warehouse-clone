@@ -132,7 +132,6 @@ with DAG(
             'sp_tcommercial_policy_coverage',
             'sp_tcommercial_policy_tower',
             'sp_tcommercial_policy_quota_share',
-            'sp_tcommercial_policy_subjectivity',
             'sp_tcommercial_policy_transaction',
             'sp_tcommercial_task',
             'sp_tcommercial_reconciliation'
@@ -267,8 +266,6 @@ with DAG(
             'sp_tcommercial_quote_tower',
             'sp_tcommercial_quote_quota_share_wip',
             'sp_tcommercial_quote_quota_share',
-            'sp_tcommercial_quote_subjectivity_wip',
-            'sp_tcommercial_quote_subjectivity',
             'sp_tcommercial_quote_transaction_wip',
             'sp_tcommercial_quote_transaction',
             'sp_tcommercial_subjectivity'
