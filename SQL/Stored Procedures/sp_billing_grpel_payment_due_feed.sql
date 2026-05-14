@@ -7,6 +7,8 @@
 -- Change date      |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 04/29/2026		Yunus Mohammed				1. Created this procedure
+-- 05/14/2026		Yunus Mohammed				2. AD-13382- Added group_minimum_premium,commission_due_broker
+--														and renamed some columns
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_billing_grpel_payment_due_feed]
@@ -45,45 +47,73 @@ BEGIN
         WHERE month_end = @last_day_month; 
 		
 		WITH billing_grpel_payment_due_feed_temp AS
-		(			
-			select
+		(
+			SELECT
 				gmc.grpel_master_policy_no,
 				gmc.insured_nm,
 				gmc.effective_dt,
 				gmc.expiration_dt,
 				sum(pt.premium_amt) as premium_amt
-			from
+			FROM
 				edw_core.tgrpel_master_coverage gmc
-				inner join edw_core.tpolicy p on gmc.grpel_master_policy_no = p.grpel_master_policy_no
-				inner join edw_core.tpolicy_transaction pt on p.policy_sk = pt.policy_sk
-			group by gmc.grpel_master_policy_no, gmc.insured_nm, gmc.effective_dt,  gmc.expiration_dt
+				INNER JOIN edw_core.tpolicy p ON gmc.grpel_master_policy_no = p.grpel_master_policy_no
+				INNER JOIN edw_core.tpolicy_transaction pt ON p.policy_sk = pt.policy_sk
+			GROUP BY gmc.grpel_master_policy_no, gmc.insured_nm, gmc.effective_dt,  gmc.expiration_dt
 		)
               
 
 		INSERT INTO edw_integration.billing_grpel_payment_due_feed
 		(
-			company,group_account,group_name,effective_date,expiration_date,payor_type,product,total_premium,payments_made,balance_due_as_of_month_end,
+			company,group_account,group_name,effective_date,expiration_date,payor_type,product,total_participant_premium,
+			payments_received,net_amount_due_vault,group_minimum_premium,commission_due_broker,
             month_end,create_ts,update_ts,etl_audit_sk
 		)		
-		select
+		SELECT
 			'Vault E & S Insurance Company' as company,
-			bap.grpel_master_policy_no as group_account,
-			pt.insured_nm as group_name,
-			pt.effective_dt as effective_date,
-			pt.expiration_dt as expiration_date,
+			pivottable.grpel_master_policy_no as group_account,
+			pivottable.insured_nm as group_name,
+			pivottable.effective_dt as effective_date, 
+			pivottable.expiration_dt as expiration_date,
 			bap.bill_type as payor_type,
-			'Group Personal Excess Liability' as product,
-			pt.premium_amt as total_premium,
-			sum(bap.payment_amt) as payments_made,
-			pt.premium_amt - sum(bap.payment_amt) as balance_due_as_of_month_end,
+			'Group Personal Excess Liability' as [product],
+			pivottable.premium_amt as total_participant_premium,
+			sum(bap.payment_amt) as payments_received,
+			pivottable.premium_amt - sum(bap.payment_amt) as net_amount_due_vault,
+			pivottable.MinimumPremium as group_minimum_premium,
+			(cast(pivottable.MinimumPremium as decimal(15,2)) * cast(pivottable.CommissionPercentage as decimal(15,2)) /100.00) as commission_due_broker,
 			@last_day_month AS month_end,
 			GETDATE() as create_ts,
 			GETDATE() as update_ts,
 			@etl_audit_sk as etl_audit_sk
-		from
-			billing_grpel_payment_due_feed_temp as pt
-			inner join edw_core.tbilling_account_payment bap on bap.grpel_master_policy_no = pt.grpel_master_policy_no
-		group by bap.grpel_master_policy_no, pt.insured_nm, pt.effective_dt,  pt.expiration_dt, bap.bill_type,pt.premium_amt
+		FROM
+		(
+		SELECT
+			pt.grpel_master_policy_no,
+			pt.insured_nm,
+			pt.effective_dt,
+			pt.expiration_dt,
+			pt.premium_amt,
+			accof.Field,
+			accof.[Value]
+		FROM
+		billing_grpel_payment_due_feed_temp as pt
+		INNER JOIN edw_stage.Account acc ON acc.PolicyNumber = pt.grpel_master_policy_no
+				and acc.EffectiveDate  = pt.effective_dt
+		INNER JOIN edw_stage.AccountObject acco ON acc.Id = acco.AccountId
+		INNER JOIN edw_stage.AccountObjectField accof ON acco.Id = accof.ObjectId
+		and accof.Field in ('MinimumPremium','CommissionPercentage')
+		) as t
+
+		pivot 
+		(
+			max(Value) FOR Field IN 
+			(      
+			MinimumPremium,CommissionPercentage
+			)
+		) as pivottable
+		inner join edw_core.tbilling_account_payment bap on bap.grpel_master_policy_no = pivottable.grpel_master_policy_no
+		group by pivottable.grpel_master_policy_no, pivottable.insured_nm, pivottable.effective_dt,  pivottable.expiration_dt, 
+		bap.bill_type,pivottable.premium_amt,pivottable.MinimumPremium,pivottable.CommissionPercentage
 		
 		SET @rows_affected=@@ROWCOUNT;
 
