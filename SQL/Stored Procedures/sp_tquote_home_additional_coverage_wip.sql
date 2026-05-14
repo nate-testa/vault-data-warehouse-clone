@@ -378,7 +378,7 @@ BEGIN
 								LEFT JOIN edw_temp.tquote_home_additional_coverage_wip_temp3 AS c ON a.quote_no = c.quote_no AND a.EffectiveDate = c.EffectiveDate 
 								AND a.transaction_seq_no = c.transaction_seq_no
 			) as [Source]
-			ON Source.quote_no = Target.[quote_qqno] and Source.transaction_seq_no = Target.transaction_seq_no
+			ON Source.quote_no = Target.[quote_no] and Source.transaction_seq_no = Target.transaction_seq_no
 			WHEN NOT MATCHED BY Target THEN	
 			INSERT
 			(
