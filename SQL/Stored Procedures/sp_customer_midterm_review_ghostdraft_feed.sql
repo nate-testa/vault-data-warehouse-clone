@@ -19,6 +19,7 @@
 -- 01/08/26		Architha Gudimalla		   13. Added InitCap for customer_nm, producer_nm, risk address
 -- 01/08/26		Architha Gudimalla		   14. Excluded not recommended procs from ghostdraft
 -- 03/19/26		Yunus Mohammed			   15. AD-12777 Updated risk_address logic
+-- 05/15/26		Architha Gudimalla		   16. AD-13239 
 -- =====================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_ghostdraft_feed]
@@ -143,7 +144,11 @@ BEGIN
 					--primary_ho_monoline_recommendation_message_1
 					null non_primary_ho_monoline_recommendation_message_1_id,  
 					--non_primary_ho_monoline_recommendation_message_1
-					null renovation_recommendation_message_1_id  
+					null renovation_recommendation_message_1_id , 
+					null secondary_recommendation_message_1_id,
+					--secondary_recommendation_message_1
+					null primary_recommendation_message_1_id,
+					--primary_recommendation_message_1
 					--renovation_recommendation_message_1
 					--custom_recommendation_message_1_id,
 					--custom_recommendation_message_1,
@@ -153,9 +158,10 @@ BEGIN
 					--custom_recommendation_message_3,
 					--custom_recommendation_message_4_id,
 					--custom_recommendation_message_4, 
-					,null account_id 
+					null account_id 
 					,null primary_home_monoline_in
 					,null non_primary_home_monoline_in
+					,null renewal_effective_dt 
 				from edw_integration.customer_midterm_review_eligibility_feed e
 				inner join edw_core.tcustomer cust on e.customer_id = cust.customer_id
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
@@ -288,10 +294,21 @@ BEGIN
 					--primary_ho_monoline_recommendation_message_1
 					case when p.non_primary_home_monoline_in = 'Yes' then '026' end non_primary_ho_monoline_recommendation_message_1_id,  
 					--non_primary_ho_monoline_recommendation_message_1
-					case when r.product_nm in ('Condo','Homeowners') then '029' end renovation_recommendation_message_1_id  
+					case when r.product_nm in ('Condo','Homeowners') then '029' end renovation_recommendation_message_1_id,  
 					--renovation_recommendation_message_1 
-					,acc.id account_id
+					case when sum(case when p.occupancy_type = 'Primary' then 1 else 0 end) over (partition by cust.customer_id) 
+					        = count(*) over (partition by cust.customer_id) 
+							and count(*) over (partition by cust.customer_id)  = 1
+					     then '038' 
+					end secondary_recommendation_message_1_id,
+					--secondary_recommendation_message_1
+					case when sum(case when p.occupancy_type = 'Primary' then 1 else 0 end) over (partition by cust.customer_id) = 0 
+						 then '039' 
+					end primary_recommendation_message_1_id,
+					--primary_recommendation_message_1
+					acc.id account_id
 					, p.primary_home_monoline_in, p.non_primary_home_monoline_in
+					,p.expiration_dt as renewal_effective_dt
 				from edw_integration.customer_midterm_review_eligibility_feed e
 				inner join edw_core.tcustomer cust on e.customer_id = cust.customer_id
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
@@ -394,6 +411,10 @@ BEGIN
 			--non_primary_ho_monoline_recommendation_message_1,
 			renovation_recommendation_message_1_id,
 			--renovation_recommendation_message_1
+			secondary_recommendation_message_1_id,
+			--secondary_recommendation_message_1
+			primary_recommendation_message_1_id,
+			--primary_recommendation_message_1
 			--custom_recommendation_message_1_id,
 			--custom_recommendation_message_1,
 			--custom_recommendation_message_2_id,
@@ -407,6 +428,7 @@ BEGIN
 			update_ts
 			,primary_home_monoline_in
 			,non_primary_home_monoline_in
+			,renewal_effective_dt
 		)
 		select a.customer_id,
 				a.customer_nm,
@@ -481,6 +503,10 @@ BEGIN
 				--non_primary_ho_monoline_recommendation_message_1,
 				renovation_recommendation_message_1_id,
 				--renovation_recommendation_message_1
+				secondary_recommendation_message_1_id,
+				--secondary_recommendation_message_1
+				primary_recommendation_message_1_id,
+				--primary_recommendation_message_1
 				--custom_recommendation_message_1_id,
 				--custom_recommendation_message_1,
 				--custom_recommendation_message_2_id ,
@@ -489,6 +515,7 @@ BEGIN
                 getdate() update_ts 
 				,primary_home_monoline_in
 				,non_primary_home_monoline_in
+				,renewal_effective_dt
 		from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 a
 		left join ( 
 					select  customer_id, account_id, producer_id, producer_nm, producer_phone_no, producer_email,
@@ -524,10 +551,13 @@ BEGIN
 		 
         --- Update customer message
         update a
-        set customer_message = replace(case when m.message_id = '002' then m.message_desc
-									else replace(m.message_desc, '<<<X>>>', a.no_of_years_with_vault )
-								end,'Thank you for allowing us to serve you for 1 years.','Thank you for allowing us to serve you for 1 year.')
+        set customer_message = case when m.message_id = '002' 
+									then m.message_desc
+									--001 
+									else replace(m.message_desc, '<<20xx>>', year(b.customer_since_dt) )
+							   end
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
+		inner join edw_integration.customer_midterm_review_policy_detail b on a.policy_no = b.policy_no
 		inner join edw_stage.customer_midterm_review_message m on a.customer_message_id = m.message_id
 		where a.update_ts >  @last_source_extract_ts
 		 
@@ -589,7 +619,7 @@ BEGIN
         set lux_on_endorsement_message =  m.message_desc
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.lux_on_endorsement_message_id = m.message_id
-		where a.update_ts >  @last_source_extract_ts
+		where a.update_ts >  @last_source_extract_ts 
 		 
         --- Update water shut off reco message 
         update a
@@ -671,6 +701,16 @@ BEGIN
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.renovation_recommendation_message_1_id = m.message_id   
 		where a.update_ts >  @last_source_extract_ts
+
+		drop table if exists edw_temp.customer_midterm_review_ghostdraft_feed_temp3;
+		
+		select  distinct customer_id , quote_no, prior_term_policy_no
+		into edw_temp.customer_midterm_review_ghostdraft_feed_temp3
+            from    edw_core.tquote
+			where   renewal_quote_review_start_dt > @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
+			and     renewal_quote_review_start_dt < cast(getdate() as date) 
+			and     quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
+			and     quote_term = 'Renewal' ;
 		 
 		drop table if exists edw_temp.customer_midterm_review_ghostdraft_feed_temp2;
 		
@@ -768,6 +808,16 @@ BEGIN
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
 					where CustomerList.customer_id= mrm.customer_id  and 
 					mrm.lux_on_endorsement_message_id = m.message_id
+					union
+					select distinct mrm.customer_id, mrm.secondary_recommendation_message_1_id,m.message_desc as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id  and 
+					mrm.secondary_recommendation_message_1_id = m.message_id 
+					union
+					select distinct mrm.customer_id, mrm.primary_recommendation_message_1_id,m.message_desc as [message], m.sequence_id, m.line_ct
+					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
+					where CustomerList.customer_id= mrm.customer_id  and 
+					mrm.primary_recommendation_message_1_id = m.message_id  
 		),
 		reco_message_order as
 		(
@@ -823,15 +873,19 @@ BEGIN
 				JSON_QUERY(            
 					(	
 						select        
-						cmrh.risk_address_line1 as [risk_address_line1],
-						cmrh.risk_address_line2 as [risk_address_line2],
-						cmrh.risk_address_unit_no as [risk_address_unit_no],
-						cmrh.risk_address_city_nm as [risk_address_city_nm],
-						cmrh.risk_address_state_cd as [risk_address_state_cd],
-						cmrh.risk_address_zip_cd as [risk_address_zip_cd],
-						cmrh.risk_address as [risk_address]
+							cmrh.risk_address_line1 as [risk_address_line1],
+							cmrh.risk_address_line2 as [risk_address_line2],
+							cmrh.risk_address_unit_no as [risk_address_unit_no],
+							cmrh.risk_address_city_nm as [risk_address_city_nm],
+							cmrh.risk_address_state_cd as [risk_address_state_cd],
+							cmrh.risk_address_zip_cd as [risk_address_zip_cd],
+							cmrh.risk_address as [risk_address],
+							case when q.prior_term_policy_no is not null then cmrp.expiration_dt else null end as [renewal_date],
+							case when count(*) over (partition by cmrh.customer_id) > 1 
+								and cmrp.occupancy_type =  'Primary' then 'Yes' end primary_home 
 						from edw_integration.customer_midterm_review_ghostdraft_feed cmrh
 						inner join edw_integration.customer_midterm_review_policy_detail cmrp on cmrh.policy_no = cmrp.policy_no
+						left join edw_temp.customer_midterm_review_ghostdraft_feed_temp3 q on q.prior_term_policy_no = cmrp.policy_no
 						WHERE cmrh.customer_id = cmr.customer_id
 							and cmrh. product_nm in ('Condo','Homeowners')
 							and cmrh.existing_product_in = 'Yes'
@@ -986,6 +1040,7 @@ BEGIN
 		
         drop table if exists edw_temp.customer_midterm_review_ghostdraft_feed_temp1;
 		drop table if exists edw_temp.customer_midterm_review_ghostdraft_feed_temp2; 
+		drop table if exists edw_temp.customer_midterm_review_ghostdraft_feed_temp3; 
  
     END TRY
     BEGIN CATCH
