@@ -78,7 +78,7 @@ BEGIN
 			'Group Personal Excess Liability' as [product],
 			pivottable.premium_amt as total_participant_premium,
 			sum(bap.payment_amt) as payments_received,
-			pivottable.premium_amt - sum(bap.payment_amt) as net_amount_due_vault,
+			pivottable.premium_amt - sum(bap.payment_amt) -(cast(pivottable.MinimumPremium as decimal(15,2)) * cast(pivottable.CommissionPercentage as decimal(15,2)) /100.00) as net_amount_due_vault,
 			pivottable.MinimumPremium as group_minimum_premium,
 			(cast(pivottable.MinimumPremium as decimal(15,2)) * cast(pivottable.CommissionPercentage as decimal(15,2)) /100.00) as commission_due_broker,
 			@last_day_month AS month_end,
