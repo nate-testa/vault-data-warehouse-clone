@@ -16,9 +16,10 @@ GO
 -- 01/12/26		Dinesh Bobbili				    5. AD-12215 Added logic for lc360 related columns to add them in main table
 -- 01/21/26		Dinesh Bobbili				    6. AD-12215 Fixed syntax issue
 -- 01/23/26		Dinesh Bobbili				    7. AD-12215 Added max to lc360 columns
+-- 05/12/26		Yunus Mohammed					8. AD-13361 Used Varchar(max) for dynamically creted columns
 -- ================================================================================================= 
 
-CREATE or ALTER       PROCEDURE [edw_core].[sp_tvendor_report]
+CREATE or ALTER PROCEDURE [edw_core].[sp_tvendor_report]
 @in_source varchar(255)
 AS
 BEGIN
@@ -109,12 +110,12 @@ BEGIN
 		open c1_rec; 
 		FETCH NEXT FROM c1_rec INTO @reporttype, @source; 
 		WHILE @@FETCH_STATUS = 0
-			BEGIN    
+			BEGIN
 
 				-- Get last source extract date
 				--print 'source'
 				--print @source
-		print 'here3'
+				print 'here3'
 
 				set @ColumnsToPivot = ''
 				set @ColumnsToPivot1 = ''
@@ -125,74 +126,74 @@ BEGIN
 				set @ColumnsToPivot6 = '' 
 				set @ColumnsToPivot7 = '' 
 
-				SELECT
-					/*@ColumnsToPivot = ISNULL( @ColumnsToPivot + ', ', '') +  
-									  cast(field_name + '=' +  cast('max(IIF(field_name='''+ replace(replace(field_name,'[',''),']','') + ''',[Value],null))  ' as nvarchar(max))
-									  as nvarchar(max)),*/
-					@ColumnsToPivot = ISNULL( @ColumnsToPivot + ', ', '') +  
-									  cast(case when Row_num between 1 and 500 then field_name else '' end + '=' +  
-									  case when Row_num between 1 and 500 then cast('max(IIF(field_name='''+ 
-									  replace(replace(field_name,'[',''),']','') + ''',[Value],null)) ' as varchar(max))   else '' end
-									  as varchar(max)),
-					@ColumnsToPivot1 = ISNULL( @ColumnsToPivot1 + ', ', '') +  
-									  cast(case when Row_num between 501 and 1000 then field_name else '' end + '=' +  
-									  case when Row_num between 501 and 1000 then cast('max(IIF(field_name='''+ 
-									  replace(replace(field_name,'[',''),']','') + ''',[Value],null)) ' as varchar(max))   else '' end
-									  as varchar(max)),
-					@ColumnsToPivot2 = ISNULL( @ColumnsToPivot2 + ', ', '') +  
-									  cast(case when Row_num between 1001 and 1500 then field_name else '' end + '=' +  
-									  case when Row_num between 1001 and 1500 then cast('max(IIF(field_name='''+ 
-									  replace(replace(field_name,'[',''),']','') + ''',[Value],null)) ' as varchar(max))   else '' end
-									  as varchar(max)),
-					@ColumnsToPivot3 = ISNULL( @ColumnsToPivot3 + ', ', '') +  
-									  cast(case when Row_num between 1501 and 2000 then field_name else '' end + '=' +  
-									  case when Row_num between 1501 and 2000 then cast('max(IIF(field_name='''+ 
-									  replace(replace(field_name,'[',''),']','') + ''',[Value],null)) ' as varchar(max))   else '' end
-									  as varchar(max)),
-					@ColumnsToPivot4 = ISNULL( @ColumnsToPivot4 + ', ', '') +  
-									  cast(case when Row_num between 2001 and 2500 then field_name else '' end + '=' +  
-									  case when Row_num between 2001 and 2500 then cast('max(IIF(field_name='''+ 
-									  replace(replace(field_name,'[',''),']','') + ''',[Value],null)) ' as varchar(max))   else '' end
-									  as varchar(max)),
-					@ColumnsToPivot5 = ISNULL( @ColumnsToPivot5 + ', ', '') +  
-									  cast(case when Row_num between 2501 and 3000 then field_name else '' end + '=' +  
-									  case when Row_num between 2501 and 3000 then cast('max(IIF(field_name='''+ 
-									  replace(replace(field_name,'[',''),']','') + ''',[Value],null)) ' as varchar(max))   else '' end
-									  as varchar(max)),
-					@ColumnsToPivot6 = ISNULL( @ColumnsToPivot6 + ', ', '') +  
-									  cast(case when Row_num between 3000 and 3500 then field_name else '' end + '=' +  
-									  case when Row_num between 3000 and 3500 then cast('max(IIF(field_name='''+ 
-									  replace(replace(field_name,'[',''),']','') + ''',[Value],null)) ' as varchar(max))   else '' end
-									  as varchar(max)),
-					@ColumnsToPivot7 = ISNULL( @ColumnsToPivot7 + ', ', '') +  
-									  cast(case when Row_num between 3501 and 4000 then field_name else '' end + '=' +  
-									  case when Row_num between 3501 and 4000 then cast('max(IIF(field_name='''+ 
-									  replace(replace(field_name,'[',''),']','') + ''',[Value],null)) ' as varchar(max))   else '' end
-									  as varchar(max))/*
-					@ColumnsToPivot2 = case when @ColumnsToPivot2 = '' then @ColumnsToPivot2 else ISNULL( @ColumnsToPivot2 + ', ', '') end  +  
-									  cast(case when Row_num between 2001 and 3000 then field_name + '=' else '' end +  
-									  case when Row_num between 2001 and 3000 then cast('max(IIF(field_name='''+ 
-									  replace(replace(field_name,'[',''),']','') + ''',[Value],null)) ' as nvarchar(max))   else '' end
-									  as nvarchar(max))*/
-				FROM
-				(
-					select field_name, ROW_NUMBER() OVER(ORDER BY field_name ASC) AS Row_num
-					from
-					(
-						SELECT distinct cast(case when  Category  = [Group]  or [Label]  = [Group] then concat('[', cast(Category as nvarchar(max)), ' - ',cast([Label] as nvarchar(max)),']')
-												  when Category <> isnull([Group],'') 
-												  then concat('[', cast(Category as nvarchar(max)), ' - ',
-												  				   cast(isnull([Group] + ' - ','') as nvarchar(max)), 
-																   cast(replace([Label],'(when construction starts on second floor)','(when starts on 2nd fl)') as nvarchar(max)),']'
-															 )
-												  else ''
-												  end 
-											 as nvarchar(max)) as field_name 
-						FROM  edw_stage.tvendor_report_field 
-						where source = @source and reporttype = @reporttype
-						and Category <> 'Inspection Images'
-					) a 
-				) as temp 
+			SELECT
+			/*@ColumnsToPivot = ISNULL( @ColumnsToPivot + ', ', '') +  
+								cast(field_name + '=' +  cast('max(IIF(field_name='''+ replace(replace(field_name,'[',''),']','') + ''',[Value],null))  ' as nvarchar(max))
+								as nvarchar(max)),*/
+			@ColumnsToPivot = ISNULL( @ColumnsToPivot + ', ', '') +  
+								cast(case when Row_num between 1 and 500 then field_name else '' end + '=' +  
+								case when Row_num between 1 and 500 then cast('max(IIF(field_name='''+ 
+								replace(replace(field_name,'[',''),']','') + ''',cast([Value] as varchar(max)),null)) ' as varchar(max))   else '' end
+								as varchar(max)),
+			@ColumnsToPivot1 = ISNULL( @ColumnsToPivot1 + ', ', '') +  
+								cast(case when Row_num between 501 and 1000 then field_name else '' end + '=' +  
+								case when Row_num between 501 and 1000 then cast('max(IIF(field_name='''+ 
+								replace(replace(field_name,'[',''),']','') + ''',cast([Value] as varchar(max)),null)) ' as varchar(max))   else '' end
+								as varchar(max)),
+			@ColumnsToPivot2 = ISNULL( @ColumnsToPivot2 + ', ', '') +  
+								cast(case when Row_num between 1001 and 1500 then field_name else '' end + '=' +  
+								case when Row_num between 1001 and 1500 then cast('max(IIF(field_name='''+ 
+								replace(replace(field_name,'[',''),']','') + ''',cast([Value] as varchar(max)),null)) ' as varchar(max))   else '' end
+								as varchar(max)),
+			@ColumnsToPivot3 = ISNULL( @ColumnsToPivot3 + ', ', '') +  
+								cast(case when Row_num between 1501 and 2000 then field_name else '' end + '=' +  
+								case when Row_num between 1501 and 2000 then cast('max(IIF(field_name='''+ 
+								replace(replace(field_name,'[',''),']','') + ''',cast([Value] as varchar(max)),null)) ' as varchar(max))   else '' end
+								as varchar(max)),
+			@ColumnsToPivot4 = ISNULL( @ColumnsToPivot4 + ', ', '') +  
+								cast(case when Row_num between 2001 and 2500 then field_name else '' end + '=' +  
+								case when Row_num between 2001 and 2500 then cast('max(IIF(field_name='''+ 
+								replace(replace(field_name,'[',''),']','') + ''',cast([Value] as varchar(max)),null)) ' as varchar(max))   else '' end
+								as varchar(max)),
+			@ColumnsToPivot5 = ISNULL( @ColumnsToPivot5 + ', ', '') +  
+								cast(case when Row_num between 2501 and 3000 then field_name else '' end + '=' +  
+								case when Row_num between 2501 and 3000 then cast('max(IIF(field_name='''+ 
+								replace(replace(field_name,'[',''),']','') + ''',cast([Value] as varchar(max)),null)) ' as varchar(max))   else '' end
+								as varchar(max)),
+			@ColumnsToPivot6 = ISNULL( @ColumnsToPivot6 + ', ', '') +  
+								cast(case when Row_num between 3000 and 3500 then field_name else '' end + '=' +  
+								case when Row_num between 3000 and 3500 then cast('max(IIF(field_name='''+ 
+								replace(replace(field_name,'[',''),']','') + ''',cast([Value] as varchar(max)),null)) ' as varchar(max))   else '' end
+								as varchar(max)),
+			@ColumnsToPivot7 = ISNULL( @ColumnsToPivot7 + ', ', '') +  
+								cast(case when Row_num between 3501 and 4000 then field_name else '' end + '=' +  
+								case when Row_num between 3501 and 4000 then cast('max(IIF(field_name='''+ 
+								replace(replace(field_name,'[',''),']','') + ''',cast([Value] as varchar(max)),null)) ' as varchar(max))   else '' end
+								as varchar(max))/*
+			@ColumnsToPivot2 = case when @ColumnsToPivot2 = '' then @ColumnsToPivot2 else ISNULL( @ColumnsToPivot2 + ', ', '') end  +  
+								cast(case when Row_num between 2001 and 3000 then field_name + '=' else '' end +  
+								case when Row_num between 2001 and 3000 then cast('max(IIF(field_name='''+ 
+								replace(replace(field_name,'[',''),']','') + ''',[Value],null)) ' as nvarchar(max))   else '' end
+								as nvarchar(max))*/
+		FROM
+		(
+			select field_name, ROW_NUMBER() OVER(ORDER BY field_name ASC) AS Row_num
+			from
+			(
+				SELECT distinct cast(case when  Category  = [Group]  or [Label]  = [Group] then concat('[', cast(Category as nvarchar(max)), ' - ',cast([Label] as nvarchar(max)),']')
+											when Category <> isnull([Group],'') 
+											then concat('[', cast(Category as nvarchar(max)), ' - ',
+												  			cast(isnull([Group] + ' - ','') as nvarchar(max)), 
+															cast(replace([Label],'(when construction starts on second floor)','(when starts on 2nd fl)') as nvarchar(max)),']'
+														)
+											else ''
+											end 
+										as nvarchar(max)) as field_name 
+				FROM  edw_stage.tvendor_report_field 
+				where source = @source and reporttype = @reporttype
+				and Category <> 'Inspection Images'
+			) a 
+		) as temp
 		print 'here4'
 
 				set @ColumnsToPivot  = REPLACE(@ColumnsToPivot,', =','')
