@@ -28,7 +28,7 @@ IF EXISTS (
       AND COLUMN_NAME = 'balance_due_as_of_month_end'
 )
 BEGIN
-    exec sp_rename 'edw_integration.billing_grpel_payment_due_feed.balance_due_as_of_month_end','net_amount_due_vault';
+    exec sp_rename 'edw_integration.billing_grpel_payment_due_feed.balance_due_as_of_month_end','net_amount_due_to_vault';
 END;
 
 IF NOT EXISTS (
@@ -48,8 +48,8 @@ IF NOT EXISTS (
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = 'edw_integration'
       AND TABLE_NAME = 'billing_grpel_payment_due_feed'
-      AND COLUMN_NAME = 'commission_due_broker'
+      AND COLUMN_NAME = 'broker_commission'
 )
 BEGIN
-    ALTER TABLE edw_integration.billing_grpel_payment_due_feed ADD commission_due_broker DECIMAL(15,2);
+    ALTER TABLE edw_integration.billing_grpel_payment_due_feed ADD broker_commission DECIMAL(15,2);
 END;
