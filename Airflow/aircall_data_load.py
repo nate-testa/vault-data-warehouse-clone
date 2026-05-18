@@ -2,6 +2,7 @@ import os
 import pendulum
 from datetime import timedelta
 from airflow import DAG
+from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.providers.microsoft.mssql.operators.mssql import MsSqlOperator
@@ -17,7 +18,12 @@ cc_email = ""
 
 HOME_PATH = os.path.expanduser('~')
 FOLDER_PATH = HOME_PATH + "/python_scripts/aircall_to_edw"
-BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
+
+ENVIRONMENT = Variable.get("environment")
+if ENVIRONMENT == 'PRODUCTION':
+    BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
+else:
+    BASH_COMMAND = f'echo "*** This is a placeholder command. The Aircall script is set to run only in the PRODUCTION environment. ***" '
 
 
 def on_failure_callback(context):
