@@ -4,6 +4,7 @@
 -- Change date      |Author						|	Change Description
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- 03/17/26		    Yunus Mohammed				1. Created the proc
+-- 05/18/26			Yunus Mohammed				2. AD-1339- Join updated for quote history
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_grpel_driver_incident] 
 AS
@@ -53,7 +54,7 @@ BEGIN
 				INNER JOIN edw_stage.AccountTransactionVersionObject AS pid ON acctvo.ParentObjectId = pid.Id
 				left join [edw_core].[tquote_history] tqh on tqh.quote_no=acct.PolicyNumber
 						and tqh.effective_dt=acct.EffectiveDate
-						and tqh.transaction_seq_no = acct.policychangenumber
+						and tqh.transaction_seq_no = acct.[Number]
                 LEFT JOIN edw_core.[tquote_grpel_driver] AS qgrpd ON qgrpd.quote_no = acct.PolicyNumber AND qgrpd.effective_dt = acct.EffectiveDate
 					AND qgrpd.transaction_seq_no = acct.[Number] and qgrpd.driver_unique_id=pid.UniqueId
 			where
