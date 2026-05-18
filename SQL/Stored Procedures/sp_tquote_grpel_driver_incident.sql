@@ -4,7 +4,7 @@
 -- Change date      |Author						|	Change Description
 --------------------------------------------------------------------------------------------------------------------------------------------------
 -- 03/17/26		    Yunus Mohammed				1. Created the proc
--- 05/18/26			Yunus Mohammed				2. AD-1339- Join updated for quote history
+-- 05/18/26			Yunus Mohammed				2. AD-13395 - Join updated for quote history
 -- ================================================================================================================================================
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tquote_grpel_driver_incident] 
 AS
