@@ -727,7 +727,7 @@ and a.PrimaryInsuredId=b.id
 				
         from (  
               -- this is based on customer homerisk state eligibility
-              select a.customer_id, b.risk_address_state_cd, occupancy_type, total_insured_value_amt, 
+              select a.customer_id, b.risk_address_state_cd mailing_address_state_cd, occupancy_type, total_insured_value_amt, 
                     rank() over (partition by a.customer_id order by case b.occupancy_type
                                                                         when 'Primary' then '1_Primary'
                                                                         else '2_Non_Primary' 

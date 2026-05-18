@@ -160,8 +160,7 @@ BEGIN
 					--custom_recommendation_message_4, 
 					null account_id 
 					,null primary_home_monoline_in
-					,null non_primary_home_monoline_in
-					,null renewal_effective_dt 
+					,null non_primary_home_monoline_in 
 				from edw_integration.customer_midterm_review_eligibility_feed e
 				inner join edw_core.tcustomer cust on e.customer_id = cust.customer_id
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
@@ -307,8 +306,7 @@ BEGIN
 					end primary_recommendation_message_1_id,
 					--primary_recommendation_message_1
 					acc.id account_id
-					, p.primary_home_monoline_in, p.non_primary_home_monoline_in
-					,p.expiration_dt as renewal_effective_dt
+					, p.primary_home_monoline_in, p.non_primary_home_monoline_in 
 				from edw_integration.customer_midterm_review_eligibility_feed e
 				inner join edw_core.tcustomer cust on e.customer_id = cust.customer_id
 				inner join edw_integration.customer_midterm_review_recommendation r on e.customer_id = r.customer_id
@@ -427,8 +425,7 @@ BEGIN
 			create_ts,
 			update_ts
 			,primary_home_monoline_in
-			,non_primary_home_monoline_in
-			,renewal_effective_dt
+			,non_primary_home_monoline_in 
 		)
 		select a.customer_id,
 				a.customer_nm,
@@ -514,8 +511,7 @@ BEGIN
                 getdate() create_ts,
                 getdate() update_ts 
 				,primary_home_monoline_in
-				,non_primary_home_monoline_in
-				,renewal_effective_dt
+				,non_primary_home_monoline_in 
 		from edw_temp.customer_midterm_review_ghostdraft_feed_temp1 a
 		left join ( 
 					select  customer_id, account_id, producer_id, producer_nm, producer_phone_no, producer_email,
