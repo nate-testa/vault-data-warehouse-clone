@@ -7,7 +7,7 @@
 -- Change date      |Author						|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 04/29/2026		Yunus Mohammed				1. Created this procedure
--- 05/14/2026		Yunus Mohammed				2. AD-13382- Added group_minimum_premium,commission_due_broker
+-- 05/14/2026		Yunus Mohammed				2. AD-13382- Added group_minimum_premium,broker_commission
 --														and renamed some columns
 -- ================================================================================================= 
 
@@ -65,7 +65,7 @@ BEGIN
 		INSERT INTO edw_integration.billing_grpel_payment_due_feed
 		(
 			company,group_account,group_name,effective_date,expiration_date,payor_type,product,total_participant_premium,
-			payments_received,net_amount_due_vault,group_minimum_premium,commission_due_broker,
+			payments_received,net_amount_due_to_vault,group_minimum_premium,broker_commission,
             month_end,create_ts,update_ts,etl_audit_sk
 		)		
 		SELECT
@@ -78,9 +78,9 @@ BEGIN
 			'Group Personal Excess Liability' as [product],
 			pivottable.premium_amt as total_participant_premium,
 			sum(bap.payment_amt) as payments_received,
-			pivottable.premium_amt - sum(bap.payment_amt) -(cast(pivottable.MinimumPremium as decimal(15,2)) * cast(pivottable.CommissionPercentage as decimal(15,2)) /100.00) as net_amount_due_vault,
+			pivottable.premium_amt - sum(bap.payment_amt) -(cast(pivottable.MinimumPremium as decimal(15,2)) * cast(pivottable.CommissionPercentage as decimal(15,2)) /100.00) as net_amount_due_to_vault,
 			pivottable.MinimumPremium as group_minimum_premium,
-			(cast(pivottable.MinimumPremium as decimal(15,2)) * cast(pivottable.CommissionPercentage as decimal(15,2)) /100.00) as commission_due_broker,
+			(cast(pivottable.MinimumPremium as decimal(15,2)) * cast(pivottable.CommissionPercentage as decimal(15,2)) /100.00) as broker_commission,
 			@last_day_month AS month_end,
 			GETDATE() as create_ts,
 			GETDATE() as update_ts,
