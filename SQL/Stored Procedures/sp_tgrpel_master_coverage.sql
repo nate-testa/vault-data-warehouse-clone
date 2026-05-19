@@ -4,6 +4,7 @@
 -- Change date		|Author						|	Change Description
 ---------------------------------------------------------------------------------------------------------------------------------------
 -- 03/04/26			Yunus Mohammed				1. Created this procedure
+-- 05/19/26			Yunus Mohammed				2. AD-13391 Product Code updated 
 -- ======================================================================================================================================== 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_tgrpel_master_coverage]
@@ -72,7 +73,7 @@ BEGIN
 				end source_system_sk,
 				br.producerid as broker_id,
 				ins.ReferenceCode as customer_id,
-				nullif(trim(p.ProductCode),'') product_cd,
+				'GRPEL' product_cd,
 				nullif(trim(COALESCE(acctv.RiskStateCode, 'DNA')),'') as risk_state_cd,
 				acctvof.Field,
 				acctvof.[Value]
