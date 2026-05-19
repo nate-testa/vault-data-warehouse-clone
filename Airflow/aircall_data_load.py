@@ -16,15 +16,16 @@ to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
 cc_email = ""
 
+ENVIRONMENT = Variable.get("environment")
 HOME_PATH = os.path.expanduser('~')
 FOLDER_PATH = HOME_PATH + "/python_scripts/aircall_to_edw"
+BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
 
-ENVIRONMENT = Variable.get("environment")
-if ENVIRONMENT == 'PRODUCTION':
-    BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
-else:
-    BASH_COMMAND = f'echo "*** This is a placeholder command. The Aircall script is set to run only in the PRODUCTION environment. ***" '
 
+def check_environment(**kwargs):
+    if ENVIRONMENT == 'PRODUCTION':
+        return 'run_aircall_script'
+    return 'end'
 
 def on_failure_callback(context):
 
@@ -76,8 +77,14 @@ with DAG(
         task_id='start',
     )
 
+    check_env = BranchPythonOperator(
+        task_id='check_environment',
+        python_callable=check_environment,
+    )
+
     end = EmptyOperator(
         task_id='end',
+        trigger_rule='none_failed_min_one_success',
     )
 
     send_aircall_email = EmailOperator(
@@ -92,6 +99,8 @@ with DAG(
             bash_command=BASH_COMMAND,
         )
 
-start.set_downstream(run_aircall_script)
+start.set_downstream(check_env)
+check_env.set_downstream(run_aircall_script)
+check_env.set_downstream(end)
 run_aircall_script.set_downstream(send_aircall_email)
 send_aircall_email.set_downstream(end)
