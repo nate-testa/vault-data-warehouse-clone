@@ -14,6 +14,7 @@
 -- 12-17-2025				Yunus Mohammed				8 -	AD-11666 NFP policies included
 -- 03-12-2026               Yunus Mohammed              9 - AD-12720 Added address and contact info for businesses object of GRPEL polices
 -- 03-25-2026               Yunus Mohammed             10 - AD-12866 Added Marine Boat & Yacht policies to webhook
+-- 05-20-2026               Yunus Mohammed             11 - AD-13403 Mapping updated for agencyContactMethods.email.
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_policy_webhook_snapsheet_api]
 AS
@@ -250,7 +251,7 @@ BEGIN
 --                            'true' preferredMethod,
                             'email' as [type],
 							--'Farhad.Imam@Vault.Insurance' as [value]
-							tbrk.broker_email as [value]
+						 COALESCE(tbrk.claims_contact_email, tbrk.broker_email) as [value]
 						) as a
                         for json path, include_null_values
                     )) as agencyContactMethods
