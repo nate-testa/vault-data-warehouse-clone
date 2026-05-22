@@ -115,7 +115,17 @@ and a.PrimaryInsuredId=b.id
                                                 and quote_term = 'Renewal');*/
 		
         If @last_source_extract_ts = '1900-01-01'  
-        set @last_source_extract_ts = (select Dateadd(dd,-1,cast(getdate() as date)));
+        set @last_source_extract_ts = (select Dateadd(dd,-1,cast(getdate() as date))); 
+
+		drop table if exists edw_temp.customer_midterm_review_ghostdraft_feed_temp3;
+		
+		select  distinct customer_id , quote_no, prior_term_policy_no
+		into edw_temp.customer_midterm_review_ghostdraft_feed_temp3
+            from    edw_core.tquote
+			where   renewal_quote_review_start_dt > @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
+			and     renewal_quote_review_start_dt < cast(getdate() as date) 
+			and     quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
+			and     quote_term = 'Renewal' ;
        
         with cust as
 		(
@@ -408,12 +418,13 @@ and a.PrimaryInsuredId=b.id
 				y.no_of_years_with_vault,  
                 y.customer_since_dt,
 				-- Yunus 09/25/2025 (Multiple Yrs with Vault)
-				case 
+				/*case 
 					when y.no_of_years_with_vault > 1 then
 						concat_ws('','Thank you for allowing us to serve you for '+ cast(y.no_of_years_with_vault as varchar(255)) ,' years')
 					else 
 						'Thank you for allowing us to serve you this year. We''re glad you''re with us!'
-				end
+				end*/
+                null
 				as no_of_years_with_vault_tx,
 				apc.emergency_movement_coverage_in,
 				avl.auto_vehicle_list, 

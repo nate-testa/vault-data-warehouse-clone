@@ -295,13 +295,13 @@ BEGIN
 					--non_primary_ho_monoline_recommendation_message_1
 					case when r.product_nm in ('Condo','Homeowners') then '029' end renovation_recommendation_message_1_id,  
 					--renovation_recommendation_message_1 
-					case when sum(case when p.occupancy_type = 'Primary' then 1 else 0 end) over (partition by cust.customer_id) 
-					        = count(*) over (partition by cust.customer_id) 
-							and count(*) over (partition by cust.customer_id)  = 1
+					case when sum(case when p.policy_no is not null and p.occupancy_type = 'Primary' then 1 else 0 end) over (partition by cust.customer_id) 
+					        = sum(case when p.policy_no is not null then 1 else 0 end) over (partition by cust.customer_id)
+							and sum(case when p.policy_no is not null then 1 else 0 end) over (partition by cust.customer_id)  = 1
 					     then '038' 
 					end secondary_recommendation_message_1_id,
 					--secondary_recommendation_message_1
-					case when sum(case when p.occupancy_type = 'Primary' then 1 else 0 end) over (partition by cust.customer_id) = 0 
+					case when sum(case when p.policy_no is not null and p.occupancy_type = 'Primary' then 1 else 0 end) over (partition by cust.customer_id) = 0 
 						 then '039' 
 					end primary_recommendation_message_1_id,
 					--primary_recommendation_message_1
@@ -553,7 +553,7 @@ BEGIN
 									else replace(m.message_desc, '<<20xx>>', year(b.customer_since_dt) )
 							   end
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
-		inner join edw_integration.customer_midterm_review_policy_detail b on a.policy_no = b.policy_no
+		inner join (select distinct customer_id, customer_since_dt from edw_integration.customer_midterm_review_policy_detail ) b on a.customer_id = b.customer_id
 		inner join edw_stage.customer_midterm_review_message m on a.customer_message_id = m.message_id
 		where a.update_ts >  @last_source_extract_ts
 		 
@@ -697,16 +697,6 @@ BEGIN
 		from edw_integration.customer_midterm_review_ghostdraft_feed a
 		inner join edw_stage.customer_midterm_review_message m on a.renovation_recommendation_message_1_id = m.message_id   
 		where a.update_ts >  @last_source_extract_ts
-
-		drop table if exists edw_temp.customer_midterm_review_ghostdraft_feed_temp3;
-		
-		select  distinct customer_id , quote_no, prior_term_policy_no
-		into edw_temp.customer_midterm_review_ghostdraft_feed_temp3
-            from    edw_core.tquote
-			where   renewal_quote_review_start_dt > @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
-			and     renewal_quote_review_start_dt < cast(getdate() as date) 
-			and     quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
-			and     quote_term = 'Renewal' ;
 		 
 		drop table if exists edw_temp.customer_midterm_review_ghostdraft_feed_temp2;
 		
@@ -804,16 +794,6 @@ BEGIN
 					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
 					where CustomerList.customer_id= mrm.customer_id  and 
 					mrm.lux_on_endorsement_message_id = m.message_id
-					union
-					select distinct mrm.customer_id, mrm.secondary_recommendation_message_1_id,m.message_desc as [message], m.sequence_id, m.line_ct
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
-					where CustomerList.customer_id= mrm.customer_id  and 
-					mrm.secondary_recommendation_message_1_id = m.message_id 
-					union
-					select distinct mrm.customer_id, mrm.primary_recommendation_message_1_id,m.message_desc as [message], m.sequence_id, m.line_ct
-					from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m, CustomerList
-					where CustomerList.customer_id= mrm.customer_id  and 
-					mrm.primary_recommendation_message_1_id = m.message_id  
 		),
 		reco_message_order as
 		(
@@ -894,6 +874,21 @@ BEGIN
 					for json path, include_null_values
 				)) as [current_coverage.home]
 				,
+					(
+						select distinct m.message_desc as [message] 
+						from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m 
+						where cmr.customer_id= mrm.customer_id  
+						and   mrm.secondary_recommendation_message_1_id = m.message_id 
+						and   mrm. product_nm in ('Condo','Homeowners')
+						and   mrm.existing_product_in = 'Yes'
+						union
+						select distinct m.message_desc as [message] 
+						from  edw_integration.customer_midterm_review_ghostdraft_feed mrm , edw_stage.customer_midterm_review_message m 
+						where cmr.customer_id= mrm.customer_id  
+						and   mrm.primary_recommendation_message_1_id = m.message_id  
+						and   mrm. product_nm in ('Condo','Homeowners')
+						and   mrm.existing_product_in = 'Yes'
+					) [current_coverage.message_home], 
 					(
 					select top 1
 						'Yes' 
