@@ -6,7 +6,7 @@ where validation_sql_desc= 'tclaim_feature snapsheet claims - missing coverage_s
 
   -- 87 tclaim_feature snapsheet claims - missing item_sk
 update edw_core.tvalidation_sql 
-set target_sql = 'select 48'
+set target_sql = 'select 44'
 where validation_sql_desc= 'tclaim_feature snapsheet claims - missing item_sk'
 
 --123 Current Carrier SJ01- Policies having no A1 record  
