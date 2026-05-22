@@ -7,8 +7,9 @@
 -- 10/06/23				Yunus Mohammed				1. Created this procedure 
 -- 12/18/24				Yunus Mohammed				2. AD7660 Added SourceOfFire and SourceOfWater
 -- 05/08/25				Yunus Mohammed				4. AD9412 Added new columns
--- 06/10/2025		Yunus Mohammed				 5. AD-9744 Added Litigation Tag Indicator  (Litigation_In and Litigation_Complete_In)
--- 10/11/2025		Yunus Mohammed				6. AD10933 Added new columns
+-- 06/10/2025			Yunus Mohammed				5. AD-9744 Added Litigation Tag Indicator  (Litigation_In and Litigation_Complete_In)
+-- 10/11/2025			Yunus Mohammed				6. AD10933 Added new columns
+-- 05/12/2026			Yunus Mohammed				7. AD-13339 Added TotalLoss new column
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_claim_renewal_rating_home_collection_api]
 (
@@ -27,7 +28,8 @@ BEGIN
 		crrh.AddressState,crrh.AddressCounty,crrh.AddressCountry,crrh.Coverage,
 		crrh.SourceOfFire,crrh.SourceOfWater,
 		crrh.ReserveExpense,crrh.ReserveIndemnity,crrh.PaidExpense,crrh.PaidIndemnity,crrh.AdjusterName,
-		crrh.Litigation,crrh.LitigationComplete,crrh.LargeLoss,crrh.LossDescription2,crrh.TotalIncurred
+		crrh.Litigation,crrh.LitigationComplete,crrh.LargeLoss,crrh.LossDescription2,crrh.TotalIncurred,
+		crrh.TotalLoss
 	FROM
 		edw_integration.claim_renewal_rating_home_collection_api AS crrh
 		INNER JOIN

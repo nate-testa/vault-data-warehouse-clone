@@ -2,6 +2,7 @@ import os
 import pendulum
 from datetime import timedelta
 from airflow import DAG
+from airflow.models import Variable
 from airflow.utils.task_group import TaskGroup
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.providers.microsoft.mssql.operators.mssql import MsSqlOperator
@@ -15,10 +16,16 @@ to_email = "itdatateam@vault.insurance"
 # to_email = "alberto.valbuena@vault.insurance"
 cc_email = ""
 
+ENVIRONMENT = Variable.get("environment")
 HOME_PATH = os.path.expanduser('~')
 FOLDER_PATH = HOME_PATH + "/python_scripts/aircall_to_edw"
 BASH_COMMAND = f'bash {FOLDER_PATH}/run_script.sh '
 
+
+def check_environment(**kwargs):
+    if ENVIRONMENT == 'PRODUCTION':
+        return 'run_aircall_script'
+    return 'end'
 
 def on_failure_callback(context):
 
@@ -70,8 +77,14 @@ with DAG(
         task_id='start',
     )
 
+    check_env = BranchPythonOperator(
+        task_id='check_environment',
+        python_callable=check_environment,
+    )
+
     end = EmptyOperator(
         task_id='end',
+        trigger_rule='none_failed_min_one_success',
     )
 
     send_aircall_email = EmailOperator(
@@ -86,6 +99,8 @@ with DAG(
             bash_command=BASH_COMMAND,
         )
 
-start.set_downstream(run_aircall_script)
+start.set_downstream(check_env)
+check_env.set_downstream(run_aircall_script)
+check_env.set_downstream(end)
 run_aircall_script.set_downstream(send_aircall_email)
 send_aircall_email.set_downstream(end)

@@ -197,6 +197,8 @@ with DAG(
             'sp_tquote_grpel_location',
             'sp_tquote_grpel_driver_wip',
             'sp_tquote_grpel_driver',
+            'sp_tquote_grpel_driver_incident_wip',
+            'sp_tquote_grpel_driver_incident',
             'sp_tquote_grpel_vehicle_wip',
             'sp_tquote_grpel_vehicle',
             'sp_tquote_grpel_coverage_wip',
@@ -449,7 +451,8 @@ with DAG(
         quote_broker_group_items = [
             'sp_trenewal_summary',
             'sp_trenewal_summary_v1',
-            'sp_tbroker_summary'
+            'sp_tbroker_summary',
+            'sp_tbroker_summary_v1'
             ]
 
         operators = []

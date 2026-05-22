@@ -3,14 +3,16 @@
 -- Create Date: 10/06/2023
 -- Description: This procedures inserts and updates data for claim renewal rating for home and collection
 ---------------------------------------------------------------------------------------------------
--- Change date		  |Author									|	Change Description
+-- Change date		  |Author					|	Change Description
 ---------------------------------------------------------------------------------------------------
 -- 10/06/2023		Yunus Mohammed				1. Created this procedure 
--- 01/08/2025		Rushin Shah				    		 2. AD7660 - Added new columns
+-- 01/08/2025		Rushin Shah				    2. AD7660 - Added new columns
 -- 01/14/2025		Sandeep Gundreddy			3. AD7660 - Added product_sk=5(Condo)
 -- 05/08/2025		Yunus Mohammed				4. AD9412 Added adjuster_name
 -- 06/11/2025		Yunus Mohammed				5. AD-9744 Add Litigation Tag Indicator  (Litigation and LitigationComplete)
--- 10/09/2025		Yunus Mohammed				8. AD-10933 Added new columns and updated definition of other columns
+-- 10/09/2025		Yunus Mohammed				6. AD-10933 Added new columns and updated definition of other columns
+-- 05/11/2026		Yunus Mohammed				7. AD-13339 Added throw statement in catch block
+-- 05/12/2026		Yunus Mohammed				8. AD-13339 Added TotalLoss new column
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_home_collection_api]
@@ -80,12 +82,14 @@ BEGIN
 	,cl.litigation_in as Litigation
 	,cl.litigation_complete_in as LitigationComplete
 	,cl.large_loss_in as LargeLoss,cl.loss_location_desc  as LossDescription2
+	,CASE WHEN ctg.claim_sk IS NOT NULL THEN 'Yes' END AS TotalLoss
 	FROM
 	edw_core.tclaim cl
 	inner join edw_core.tproduct tp on tp.product_sk=cl.product_sk
 	LEFT JOIN edw_core.tcause_of_loss l on cl.cause_of_loss_sk = l.cause_of_loss_sk 
 	Left join edw_core.tpolicy p on p.policy_no = cl.policy_no 
 	left join edw_core.tcatastrophe cat on cat.catastrophe_sk=cl.catastrophe_sk
+	LEFT JOIN (SELECT * FROM edw_core.tclaim_tag WHERE tag_nm = 'Total Loss') ctg on ctg.claim_sk = cl.claim_sk
 	INNER JOIN
 	(
 	SELECT 
@@ -120,6 +124,7 @@ BEGIN
 			LossDescription,PolicyType,CatIndicator,CatCode,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressZipCode,
 			AddressState,AddressCounty,AddressCountry,Coverage,ReserveExpense,ReserveIndemnity,PaidExpense,PaidIndemnity,
 			SourceOfFire,SourceOfWater,AdjusterName,Litigation,LitigationComplete,LargeLoss,LossDescription2,TotalIncurred,
+			TotalLoss,
 			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -128,6 +133,7 @@ BEGIN
 			LossDescription,PolicyType,CatIndicator,CatCode,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressZipCode,
 			AddressState,AddressCounty,AddressCountry,Coverage,ReserveExpense,ReserveIndemnity,PaidExpense,PaidIndemnity,
 			SourceOfFire,SourceOfWater,AdjusterName,Litigation,LitigationComplete,LargeLoss,LossDescription2,TotalIncurred,
+			TotalLoss,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -166,6 +172,7 @@ BEGIN
 		Target.LargeLoss = Source.LargeLoss,
 		Target.LossDescription2 = Source.LossDescription2,
 		Target.TotalIncurred = Source.TotalIncurred,
+		Target.TotalLoss = Source.TotalLoss,
 		Target.update_ts = GETDATE();
 
 		SET @rows_affected=@@ROWCOUNT;
@@ -182,7 +189,8 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+		THROW 99001,'Error occured: see tetl_audit table for more info', 1;		
 	END CATCH
 END
 GO

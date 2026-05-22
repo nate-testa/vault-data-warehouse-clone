@@ -5,7 +5,8 @@
 ---------------------------------------------------------------------------------------------------
 -- Change date	    |Author					| Change Description
 ---------------------------------------------------------------------------------------------------
--- 04/16/2026		Yunus Mohammed				1. Created this procedure
+-- 04/16/2026		Yunus Mohammed			1. Created this procedure
+-- 05/11/2026		Yunus Mohammed			2. AD-13339 Added throw statement in catch block
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_commercial_claim_renewal_rating_api]
@@ -143,6 +144,7 @@ BEGIN
 							+ ' Error Severity:' + CAST(ERROR_SEVERITY() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Procedure:' + ERROR_PROCEDURE() + ' Error Line:' +CAST(ERROR_LINE() AS NVARCHAR(100)) +
 							CHAR(13) + 'Error Message:' + ERROR_MESSAGE()
-		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message
+		EXEC edw_core.sp_upd_error_tetl_audit @etl_audit_sk,@error_message;
+        THROW 99001,'Error occured: see tetl_audit table for more info', 1;
 	END CATCH
 END

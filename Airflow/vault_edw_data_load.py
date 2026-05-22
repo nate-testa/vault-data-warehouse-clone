@@ -366,6 +366,7 @@ with DAG(
             'sp_tgrpel_master_coverage_enrollment',
             'sp_tgrpel_location',
             'sp_tgrpel_driver',
+            'sp_tgrpel_driver_incident',
             'sp_tgrpel_vehicle',
             'sp_tgrpel_coverage',
             'sp_tgrpel_watercraft',
