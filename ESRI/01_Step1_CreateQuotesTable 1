@@ -1,0 +1,1059 @@
+-- 3 different uws on HO200023942
+-- report those with null addresses which are within my guidelines?
+-- work through example HO100169308-01 -- should HO200032932 show up differently than a brand new quote
+-- should HO200032491 to show up as bound? why does it show up as in progress if there is a bound date?
+-- same for HO100137656-02 with a bound date
+-- same for HO200031543 with a bound date but quote source status = cancelled?
+-- dont understand quote_sourcre_status = 60
+ 
+--DECLARE @pif_date DATE = getdate(); 
+--EXEC edw_cat_model.sp_HO_monthly_modelling_quotes @pif_date;
+
+--DROP PROCEDURE edw_cat_model.sp_HO_monthly_modelling_quotes;
+
+CREATE PROCEDURE edw_cat_model.sp_HO_monthly_modelling_quotes_arc(@pif_date DATE) AS
+
+BEGIN
+	
+	DECLARE @update_cte_base 					INT;
+	DECLARE @update_cte_quote_status			INT;
+	DECLARE @update_cte_quote					INT;
+	DECLARE @update_cte_address       			INT;
+	DECLARE @update_cte_ho_quote				INT;
+	DECLARE @update_cte_quote_coverage			INT;
+	DECLARE @update_cte_quote_esri_v1			INT;
+	DECLARE @update_cte_quote_esri_v2			INT;
+	DECLARE @delete_intermediary_tables         INT;
+ 
+ 	SET @update_cte_base 						= 1
+	SET @update_cte_quote_status				= 1;
+	SET @update_cte_quote						= 1;
+ 	SET @update_cte_address						= 1;
+	SET @update_cte_ho_quote					= 1;
+	SET @update_cte_quote_coverage				= 1;
+	SET @update_cte_quote_esri_v1				= 1;
+	SET @update_cte_quote_esri_v2				= 1;
+	----------------------------------------------- 
+	SET @delete_intermediary_tables             = 0;
+ 
+
+	IF @update_cte_base = 1 BEGIN TRANSACTION BEGIN
+		
+		DROP TABLE IF EXISTS #tquote;
+			with 
+			base_no as 
+			(
+				SELECT distinct 
+						CASE WHEN prior_term_policy_no like '9%'
+							 THEN LEFT(prior_term_policy_no, LEN(prior_term_policy_no) - 1)
+							 ELSE LEFT(prior_term_policy_no, CHARINDEX('-', prior_term_policy_no + '-') - 1)
+							 END base_prior_term_policy_no,
+						LEFT(prior_policy_no, CHARINDEX('-', prior_policy_no + '-') - 1) base_prior_policy_no,
+						LEFT(quote_no, CHARINDEX('-', quote_no + '-') - 1) base_quote_no,
+						quote_no
+				FROM edw_core.tquote q
+			),
+			tquote as 
+			(
+				SELECT DISTINCT 
+					   CASE WHEN b.base_quote_no = b.base_prior_term_policy_no THEN NULL ELSE b.base_prior_term_policy_no END  base_prior_term_quote_no,
+					   CASE WHEN b.base_quote_no = b.base_prior_policy_no 	   THEN NULL ELSE b.base_prior_policy_no	  END  base_prior_quote_no,
+						base_quote_no
+				FROM base_no b 
+			),
+			quote_prior_term as 
+			(
+				select distinct base_quote_no, base_prior_term_quote_no
+				from tquote
+				where base_prior_term_quote_no is not null
+			),
+			quote_prior as 
+			(
+				select distinct base_quote_no, base_prior_quote_no
+				from tquote
+				where base_prior_quote_no is not null
+			),
+			quote_union as 
+			(
+					select p.base_prior_quote_no, t.base_prior_term_quote_no, p.base_quote_no 
+					from 	  quote_prior p
+					left join quote_prior_term t on p.base_quote_no = t.base_quote_no 
+					where t.base_quote_no is null 
+				UNION
+					select p.base_prior_quote_no, t.base_prior_term_quote_no, t.base_quote_no 
+					from  	  quote_prior_term t
+					left join quote_prior p on p.base_quote_no = t.base_quote_no
+					where p.base_quote_no is null
+				UNION	
+					select p.base_prior_quote_no, 
+							case when t.base_prior_term_quote_no = p.base_prior_quote_no then null 
+								 else t.base_prior_term_quote_no
+								 end    base_prior_term_quote_no, t.base_quote_no 
+					from quote_prior_term t
+					join quote_prior p on p.base_quote_no = t.base_quote_no 
+			)
+			select coalesce(u.base_prior_quote_no, u.base_prior_term_quote_no) as base_prior, b.base_quote_no, 
+				   case when q.quote_no not like '%-%' then 0 
+						else cast(right(q.quote_no, len(q.quote_no) - CHARINDEX('-', q.quote_no + '-')) as int) 
+						end term_no, 
+				   s.source_system_nm ,
+				   p.product_nm,
+--				   p.product_cd,
+				   q.quote_sk, 
+                   q.quote_no, 
+                   q.effective_dt, 
+                   q.expiration_dt, 
+                   q.broker_id, 
+                   q.customer_id, 
+                   q.product_cd, 
+                   q.risk_state_cd, 
+                   q.insured_nm, 
+                   q.insured_type, 
+                   q.uw_company_nm, 
+                   q.program_type, 
+                   q.quote_term, 
+                   q.quote_status, 
+                   q.quote_source_status, 
+                   q.original_policy_no, 
+                   q.original_policy_effective_dt, 
+                   q.mailing_address_line1, 
+                   q.mailing_address_line2, 
+                   q.mailing_address_unit_no, 
+                   q.mailing_address_city_nm, 
+                   q.mailing_address_state_cd, 
+                   q.mailing_address_zip_cd, 
+                   q.mailing_address_county_nm, 
+                   q.mailing_address_country_nm, 
+                   q.prior_policy_no, 
+                   q.billingaccount_sk, 
+                   q.prior_term_policy_no, 
+                   q.quote_create_ts, 
+                   q.first_offered_quote_ts, 
+                   q.policy_sk, 
+                   q.prior_term_policy_sk, 
+                   q.first_offered_quote_history_sk, 
+                   q.bind_dt, 
+                   q.migrated_in, 
+                   q.source_system_sk, 
+                   q.create_ts, 
+                   q.update_ts, 
+                   q.etl_audit_sk, 
+                   q.close_reason_desc
+ --                q.* -- would probably do term before prior if not for HO100212483-04 -- had to replace since new field named "term_no" was added to tquote and created duplicate field
+			INTO #tquote
+			FROM base_no b 
+			JOIN edw_core.tquote  q on q.quote_no = b.quote_no
+			LEFT JOIN quote_union u on u.base_quote_no = b.base_quote_no
+			LEFT JOIN edw_core.tsource_system s on s.source_system_sk = q.source_system_sk 
+			LEFT JOIN edw_core.tproduct 	 p on q.product_cd = p.product_cd
+--			where u.base_prior_quote_no is not null and u.base_prior_term_quote_no is not null				-- reported VI-30830 HO100212483-04 
+--			where b.base_quote_no = 'HO100169308'
+			;
+	END;
+		COMMIT;
+	
+
+	
+
+	IF @update_cte_quote_status = 1 BEGIN TRANSACTION BEGIN 
+	
+		DROP TABLE IF EXISTS #quote_status ;
+
+		select 
+		case when quote_source_status = 'Closed' THEN 
+			 case when close_reason_desc in ('Doesn’t meet current guidelines','OutsideRiskAppetite','Wildfire Concerns','Unprotected','Profile concerns','CAT modeling','Lack of updates','Loss history','Other','Occupancy','Unacceptable entity')	then 'Declined'
+			 	  when close_reason_desc = '' 							then 'Declined'		-- can't tell whether declined or not take, could check notes?
+			 	  when h.transaction_status = 'Submit_declined' 		then 'Declined'
+			      when h.transaction_status in('Nottaken','Not Taken')  then 
+			  	  case when transaction_desc like '%decline%' 			then 'Declined'
+			  		   when transaction_desc like '%wildfire exposure%' then 'Declined'
+	  		 		   when transaction_desc like '%cov %' and 
+	  		 		       (transaction_desc like '%below%' or 
+	  		 		        transaction_desc like '%min%' or 
+	  		 		        transaction_desc like '%<%') 					then 'Declined'
+	  		 		   when deny_note is not null 							then 'Declined'
+	  		 		   when transaction_desc like '%model%' 				then 'Declined'
+	  		 		   when close_reason_desc = 'NotTaken' 					then 'Not Taken'
+	  		 		   when close_reason_desc = 'UnacceptableTerms' 		then 'Not Taken'	
+	  		 		   when not_taken_reason_desc not like 'transaction not%' then 'Not Taken'
+	  		 				 when transaction_desc = 'DNO' then 'Declined'
+	  		 		   else q.quote_status end 										-- can't tell when declined vs not taken
+			 		when close_reason_desc IN('BrokerNotResponsive','UnacceptableTerms','UnavailableProduct') then 'Not Taken'
+			 		when close_reason_desc = 'NotTaken' then 'Not Taken' 			-- is this an appropriate assumption?
+			 		when close_reason_desc = 'Mid term COC' then 'Not Taken' 		-- is this an appropriate assumption?
+			else case when coalesce(note_count,0) <= 1 then 'Not Taken' 
+					  when note_declined > 0 or note_pass_on > 0 then 'Declined' 	-- not perfect but good enough
+					  else 'Not Taken' end  end										-- is this an appropraite assumption?
+		else case when transaction_status = 'Submit_declined' then 'Declined'
+--					  when transaction_status = 'nottaken' then 'Not Taken' 		-- VI-30784
+				  else q.quote_status  end end as quote_calc_status,				-- may need to refine offered/referred
+--				q.product_cd ,q.quote_no , cast(q.quote_create_ts as date) quote_create, q.quote_status , q.quote_source_status , note_count ,h.transaction_status,h.transaction_desc ,h.approval_note,h.deny_note,h.not_taken_reason_desc ,close_reason_desc
+			q.*,h.transaction_seq_no
+		INTO #quote_status
+		FROM #tquote q
+		LEFT JOIN edw_core.tbroker 						b on q.broker_id 		=  b.broker_id
+		LEFT JOIN edw_core.tbillingaccount 					a on a.billingaccount_sk = q.billingaccount_sk
+		left JOIN (
+				select h.*
+				from edw_core.tquote_history h
+--				where h.quote_no like 'HO200027870%' order by quote_no, transaction_seq_no
+				join (		
+						select distinct quote_no,  LAST_VALUE(transaction_seq_no) OVER (PARTITION BY quote_no
+													ORDER BY transaction_seq_no  ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) maxseq
+						from edw_core.tquote_history h
+						where 1=1 
+						and coalesce(h.transaction_desc,'') not like '%do not use%'
+						and coalesce(h.transaction_desc,'') not like '%disregard%'
+--						and quote_no = 'HO100169308'
+--						where latest_transaction_in =  'y' -- can't use this per HO100128923, HO10010453-02
+						-- see example with HO200025288
+						-- see example with HO200027145, how to get referral required to show up?
+					 )													 								  seq on seq.quote_no = h.quote_no  and seq.maxseq = h.transaction_seq_no 
+																 )											h on q.quote_sk   = h.quote_sk 
+		left join (select policy_no, count(*) as note_count ,
+						sum(case when note_desc like '%declined%' then 1 else 0 end) note_declined  ,
+						sum(case when note_desc like '%pass on%' then 1 else 0 end) note_pass_on,
+						sum(case when note_desc like '%loss history%' then 1 else 0 end) note_loss_history,
+						sum(case when note_desc like '%aggregation%' then 1 else 0 end) note_aggregation
+					from edw_core.tnote
+					group by policy_no )			note on note.policy_no = q.quote_no
+		where 1=1
+		and coalesce(b.broker_id,'') NOT IN ('56689', '56500', '56721', '57454', '57519', '57518', '57511', '56625')
+--		and coalesce(close_reason_desc,'') not in('CreatedInError','DuplicateSubmission','RenewalOfAccountCanceled','IncompleteSubmission')
+		and coalesce(close_reason_desc,'') not in('CreatedInError','DuplicateSubmission','IncompleteSubmission') 		-- removed RenewalOfAccountCanceled due to HO100025803-03
+--		and q.quote_no like 'HO100169308%'
+		order by close_reason_desc 
+	;
+	END;
+	COMMIT;
+
+
+
+
+--select latest_transaction_in, quote_calc_status, quote_status, quote_source_status, close_reason_desc, count(*)
+--FROM #quote_status
+--where quote_calc_status <> quote_status
+--group by latest_transaction_in,quote_calc_status, quote_status, quote_source_status, close_reason_desc
+--order by latest_transaction_in,quote_calc_status, quote_status, quote_source_status, close_reason_desc
+
+	IF @update_cte_quote = 1 BEGIN TRANSACTION BEGIN
+		
+		DROP TABLE IF EXISTS edw_cat_model.cte_all_quote;
+	
+			SELECT max_quote_no, max_prior_quote_no, q.*
+			INTO edw_cat_model.cte_all_quote
+			FROM #quote_status q
+			left JOIN (
+						select distinct LAST_VALUE(quote_no) OVER (PARTITION BY base_quote_no 
+							ORDER BY quote_create_ts, effective_Dt ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) max_quote_no
+						from #quote_status
+					  )								maxterm on q.quote_no = maxterm.max_quote_no
+			LEFT JOIN (
+						select distinct LAST_VALUE(quote_no) OVER (PARTITION BY base_prior
+							ORDER BY quote_create_ts, effective_Dt ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) max_prior_quote_no
+						from #quote_status
+					  )						   maxpriorterm on q.quote_no = maxpriorterm.max_prior_quote_no
+
+	END;
+	COMMIT;
+
+
+		
+		
+	IF @update_cte_address = 1 BEGIN TRANSACTION BEGIN
+		
+		DROP TABLE IF EXISTS edw_cat_model.cte_ho_quote_address;
+	
+	-- what to do when country = 'US' but unit  = 'toronto'				
+	-- states like HI, PR, AS, BC, GU, CN city = Moscow, Ontario, Paris TX, Prageu, Sydney, Berlin, Peru, hong kong // mail city = singapore
+	-- mailing address state for HOX10004597 should be WA
+	-- and mailing_address_zip in('G1E', 'M4W 1W9')
+	-- Fort Laurdale, CA = city, state 
+	-- look at when risk_state_cd <> state
+	-- look for cities which show up in multiple states
+	-- houston, ct // miami, ct // nashville, ct // baton rouge, fl
+	-- wrong state when Hilton Head Island, GA
+	-- city = arp? look at length of city
+	
+		with 
+		cte_ho_address_step1 as 
+		(
+			select 
+				s.source_system_nm							source_system,
+				q.quote_no, 
+				q.quote_status,
+				cast(q.quote_create_ts as date) 			quote_create,
+				q.risk_state_cd 							risk_state, 
+				trim(l.address_line_1) 
+				Collate SQL_Latin1_General_CP1253_CI_AI 	address1_og,
+				trim(l.address_line_2)  
+				COLLATE SQL_Latin1_General_CP1253_CI_AI		address2_og,
+				trim(l.unit_no) 							
+				COLLATE SQL_Latin1_General_CP1253_CI_AI		unit_og,
+				trim(l.city_nm) 
+				Collate SQL_Latin1_General_CP1253_CI_AI		city_og,
+				trim(l.state_cd) 							state_og,
+				trim(l.zip_cd) 								zip_og,
+				trim(l.county_nm) 							county_og,
+				trim(l.country_nm)							country_og,
+				trim(l.latitude) 							latitude,
+				trim(l.longitude) 							longitude,
+				trim(q.mailing_address_line1) 
+				Collate SQL_Latin1_General_CP1253_CI_AI		mail_address1_og,
+				trim(q.mailing_address_line2)    			mail_address2_og,
+				trim(q.mailing_address_unit_no) 			mail_unit_og,
+				trim(q.mailing_address_city_nm)	 
+				Collate SQL_Latin1_General_CP1253_CI_AI		mail_city_og,
+				trim(q.mailing_address_state_cd)			mail_state_og,		
+				trim(q.mailing_address_zip_cd) 				mail_zip_og,
+				trim(q.mailing_address_county_nm) 			mail_county_og,
+				trim(q.mailing_address_country_nm)			mail_country_og,
+				coalesce((LEN(l.address_line_1) 		- LEN(REPLACE(l.address_line_1,',','')) + 1),0) 		AS commaCount_address1,
+				coalesce((LEN(l.address_line_2) 		- LEN(REPLACE(l.address_line_2,',','')) + 1),0) 		AS commaCount_address2,
+				coalesce((LEN(q.mailing_address_line1) 	- LEN(REPLACE(q.mailing_address_line1,',','')) + 1),0) 	AS commaCount_mail_address1,
+				coalesce((LEN(q.mailing_address_line2) 	- LEN(REPLACE(q.mailing_address_line2,',','')) + 1),0) 	AS commaCount_mail_address2
+			from #tquote q
+			left join edw_core.tsource_system 		s on s.source_system_sk = q.source_system_sk 
+			left join edw_core.tquote_home_location l on l.quote_no = q.quote_no  
+			where q.quote_no like 'HO%'
+--			and COALESCE (l.address_line_1, q.mailing_address_line1) is null 
+		),
+		cte_ho_address_step2 as 
+		(
+			select 
+					case when address1_og like 'P%' and address1_og like '% Box %' then null
+						 when address1_og like 'co %' then null
+						 when address1_og like 'care of%' then null
+						 else replace(address1_og,'"','') 
+						 end  					as address1,
+					case when address2_og like 'P%' and address2_og like '% box %'  then null
+						 when address2_og like '%c/o %' 						    then null
+						 when address2_og like 'care of%'							then null
+						 when address2_og IN('','0')							    then null
+						 else replace(address2_og,'"','')
+						 end  					as address2,
+					unit_og  					as unit,
+					LEFT(city_og, CHARINDEX(',', city_og + ',') - 1) city,
+					state_og 					as state,
+					left(zip_og, charindex('-', zip_og + '-')-1)		zip,
+					county_og 					as county, 
+					coalesce(REPLACE(country_og,'United States','US'),'US') as country, 			-- could add logic for cities outside of us
+					case when (mail_address1_og like 'P%'  
+						   and mail_address1_og like '% Box %') 
+							or mail_address1_og like 'Post office%' then null 
+						 when (mail_address1_og like '%c/o %' or
+						 	   mail_address1_og like 'c o %' or
+						 	   mail_address1_og like 'care of%' or 
+						 	   mail_address1_og like 'co %' ) then case when mail_address1_og like '%[0-9]%' 
+						 	   			 						  	 	then right(mail_address1_og, len(mail_address1_og) - patindex('%[0-9]%', mail_address1_og)+1)
+							  											else null end
+					  	 when mail_address1_og = '' then null
+						 else replace(mail_address1_og,'"','') 
+						 end  mail_address1,
+					case when (mail_address2_og like '%c/o %' or
+						 	   mail_address2_og like 'c o %' or
+						 	   mail_address2_og like 'care of%' or
+						 	   mail_address2_og like '%co %' )  then null 
+						 when mail_address2_og like '% Box %'  then null
+						 when mail_address2_og like '%attn%'    then null 	-- should make this to the left of first number but w/e only affects 1 quote
+					  	 when mail_address2_og = '' then null
+						 else replace(mail_address2_og,'"','')
+						 end  mail_address2, 
+					mail_unit_og as mail_unit, 
+					case when mail_city_og like 'PO B%' then NULL 
+						 else left(mail_city_og, charindex(',', mail_city_og + ',') - 1)
+						 end  mail_city,
+					replace(replace(replace(mail_state_og,'California','CA'),'Utah','UT'),'Georgia','GA') mail_state,		-- reported vi-26511
+					case when mail_zip_og like 'V%' then null 
+					when mail_zip_og like 'H%' then null else mail_zip_og end as mail_zip,
+					mail_county_og 		as mail_county,
+					coalesce(mail_country_og,'US') 	as mail_country, a.*
+			from cte_ho_address_step1 a
+		)
+		,
+		cte_ho_address_step3 as -- city look up
+		(
+			select left(address1, charindex(', Washington',address1 + ', Washington') - 1) as address1_temp1,
+				   COALESCE(c3.city_lu, c.city_lu, a.city) 	as city_lu,
+				   COALESCE(c.city_lu, a.mail_city)  		as mail_city_lu, a.*
+			from cte_ho_address_step2 a
+			left join edw_cat_model.lu_metal_city 			c on   c.lu = concat(a.state, a.city)
+			left join edw_cat_model.lu_metal_city 			c2 on c2.lu = concat(a.state, a.mail_city)
+			left join edw_cat_model.lu_metal_address_quote_no_city 	c3 on c3.quote_no_in = a.quote_no
+		)
+		,
+		cte_ho_address_step4 as -- removing redundant info
+		(		
+			select  
+					trim(
+							case when commaCount_address1 > 1 then 
+								replace(
+									left(left(left(left(left(
+								address1_temp1, 
+									charindex(', ' + city + ' ' + state + ' ', address1_temp1 + ', ' + city + ' ' + state + ' ') -1),
+									charindex(' ' + city + ', ' + state + ' ', address1_temp1 + ' ' + city + ', ' + state + ' ') -1),
+									charindex(' ' + city + ' ' + state + ', ', address1_temp1 + ' ' + city + ' ' + state + ', ') -1),
+									charindex(', ' + state					 , address1_temp1 + ', ' + state) - 1),
+									charindex(' ' + state + ', '			 , address1_temp1 + ' '	+ state + ', ') - 1)
+								, ', ' + city_lu,'')
+							else address1_temp1 
+							end				
+						) address1_temp, 
+					trim(replace(replace(replace(address2,city_lu,''),state,''),zip,'')) address2_temp,
+					replace(city_lu,'.','') as 	city_temp, 
+					mail_city_lu  			as	mail_city_temp,  a.* 
+			from cte_ho_address_step3 a
+		)
+		,
+		cte_ho_address_step5 as -- cleaning up after redundant info
+		(
+			select 
+				source_system, quote_no, quote_status, quote_create, latitude, longitude, risk_state, commaCount_address1, commaCount_address2, commaCount_mail_address1, commaCount_mail_address2,
+				case when address1_temp like '%,' then left(address1_temp, len(address1_temp)-1) 
+						 else address1_temp 
+						 end address1,
+		--		address1_temp2 as address1,
+				address1_og,
+				case when address2_temp = ',' then null 
+					 when address2_temp like ', %' then null
+						 else replace(address2_temp , address1_temp,'')
+						 end address2,	 		
+				address2_og, 
+				unit, 
+				unit_og,
+				case 
+					 when city_temp like 'Ft %' 		then replace(city_temp,'Ft ','Fort ')
+					 when city_temp like 'Mt %' 		then replace(city_temp,'Mt ','Mount ')
+					 when city_temp like 'Pt %' 		then replace(city_temp,'Pt ','Point ')
+					 when city_temp like '% Pt' 		then replace(city_temp,' Pt',' Point')
+					 when city_temp like 'E %' 			then replace(city_temp,'E ','East ')
+					 when city_temp like 'Est %' 		then replace(city_temp,'Est ','East ')
+					 when city_temp like 'N %' 			then replace(city_temp,'N ','North ')
+					 when city_temp like 'No %' 		then replace(city_temp,'No ','North ')
+					 when city_temp like 'S %' 			then replace(city_temp,'S ','South ')
+					 when city_temp like 'W %' 			then replace(city_temp,'W ','West ')
+					 when city_temp like 'St %' 		then replace(city_temp,'St ','Saint ')
+					 else replace(replace(replace(replace(replace(replace(replace(
+					 	 case when state in ('MI','NJ') then replace(replace(city_temp,' Township',''),' TWP', '') 	else city_temp 	end
+					 	 ,'  ',' '),' Twp',' Township'),' Gtwy',' Gateway'),'Mc ' ,'Mc'),' St ' , ' Saint '),' DC'	,''),' Mtn',' Mountain')
+					 end city, 
+				city_og,
+				case when city = 'Washington DC' and state = 'WA' then 'DC' else state end state, 
+				state_og, 
+				case when quote_no like 'HOX10010204%' then '24986' else zip end as zip, 
+				zip_og, 
+				county, 	county_og, 	
+				country, 	country_og,		 	 	 	  					   
+				mail_address1, 					mail_address1_og,
+				mail_address2, 					mail_address2_og,
+				mail_unit, 						mail_unit_og,
+				case when state in ('MI','NJ') then replace(mail_city_temp,' Township','') 	else mail_city_temp	end as 
+				mail_city,						mail_city_og,
+				mail_state,  					mail_state_og,
+				mail_zip, 						mail_zip_og, 	
+				mail_county, 					mail_county_og,
+				mail_country,					mail_country_og
+			from cte_ho_address_step4 a
+			where 1=1
+				and country IN('US')
+		--		and city not in ('fsd','na','nowhere','PO Box 563','test')			-- removes HO100202737/HO100045933/HO100039178, clause could be removed later
+		--		and coalesce(state,'') not in ('BC', 'PR', 'AS', 'BC', 'GU','USVI')
+		),
+		cte_ho_address_av2 as 
+		(
+			select basepolnum, policynumber, address1 as address1_av2, address2 as address2_av2, city as city_av2, state as state_av2, zip as zip_av2
+			from edw_cat_model.tho_monthly_modelling_quote_231121
+			union
+			select basepolnum, policynumber, address1 as address1_av2, address2 as address2_av2, city as city_av2, state as state_av2, zip as zip_av2
+			from edw_cat_model.tho_monthly_modelling_policy_231121
+		),
+		cte_ho_address_combined as 
+		(
+			select source_system, 
+				   quote_no, 
+				   quote_status,
+				   quote_create,
+				   datediff(d, quote_create, getdate()) days_since_created,
+				   case when address1 is null and  address1_av2 is null then mail_address1
+				   		when address1 is null then address1_av2
+				   		else address1
+				   		end address1_calc,
+				   address1, address1_og, address1_av2,
+				   case when address2 is null and  address2_av2 is null then mail_address2
+				   		when address2 is null then address2_av2
+				   		else address2
+				   		end address2_calc,
+				   address2, address2_og, address2_av2, unit,
+				   case when city is null and  city_av2 is null then mail_city
+				   	 	when city is null then city_av2
+				   	 	else city
+				   	 	end city_calc, 			
+				   city_og, city_av2,
+				   case when state is null and  state_av2 is null then mail_state
+				   	 	when state is null then state_av2
+				   	 	else state
+				   	 	end state_calc, 	
+				   state,  state_og, state_av2,
+				   case when convert(varchar(10),zip) is null and convert(varchar(10),zip_av2) is null then mail_zip
+				   		when convert(varchar(10),zip) is null then convert(varchar(10),zip_av2)
+				   		when convert(varchar(10),zip) like '%[A-Z]%' then '0'  -- added 5/20 to remove values like Lebanon, VI-31856
+				   		else convert(varchar(10),zip)
+				   		end zip_calc,
+				   zip, zip_og,  zip_av2,
+				   county_og,
+				   mail_address1,	mail_address1_og,	mail_address2, 	mail_address2_og,
+				   mail_city,		mail_city_og,		mail_state,  	mail_state_og,
+				   mail_zip, 	    mail_zip_og,
+				   commaCount_address1, commaCount_address2, commaCount_mail_address1, commaCount_mail_address2
+			from cte_ho_address_step5 a
+			left join cte_ho_address_av2 b on a.quote_no = b.policynumber
+			where 1=1
+			and (case when city like '%[0-9]%' then 1 else 0 end) = 0 -- gets rid of HOX10000868 written at Douglas Scovanner St
+		)
+		select  cast(getdate() as date) asofdate,
+				UPPER(CONCAT(m.address1_calc,COALESCE(m.address2_calc,''),m.city_calc,CAST(m.zip_calc as varchar(10)),m.state_calc)) geocode_lu,
+				source_system,
+				quote_no, 
+				quote_status,
+				quote_create,
+				days_since_created, 
+				address1_calc as address1, 
+				address2_calc as address2,
+				city_calc as city,
+				state_calc as state,
+				zip_calc as zip,
+				county_og as county,
+				g.latitude, 
+				g.longitude
+		into edw_cat_model.cte_ho_quote_address
+		from cte_ho_address_combined m 
+		left join edw_cat_model.catmodel_geocoding g on UPPER(g.geocode_lu) = UPPER(CONCAT(m.address1_calc,COALESCE(m.address2_calc,''),m.city_calc,CAST(m.zip_calc as varchar(10)),m.state_calc))
+		where 1=1
+--		and quote_no like 'HO100169308%'
+		and (case 
+--				  when quote_status not in ('Declined') and days_since_created > 30 					then 1
+				  when len(state_calc) > 2																then 1 			-- this gets rid of a FL risk
+				  when concat(coalesce(address1_calc,''),coalesce(address2_calc,'')) not like '%[A-Z]%' then 1
+				  when concat(coalesce(address1_calc,''),coalesce(address2_calc,'')) not like '%[0-9]%' then 1
+				  when city_calc in ('Toronto')															then 1
+				  when state_calc is null then 1
+				 else 0 end) = 0
+	;
+	END;
+	COMMIT;
+
+
+
+
+	IF @update_cte_quote_coverage = 1 BEGIN TRANSACTION BEGIN
+	
+		DROP TABLE IF EXISTS edw_cat_model.cte_ho_quote_coverage ; 
+
+		with 
+		lou as 
+		(
+			select a.* ,
+                        round(case when lou_pc_a <= 0.3 then lou_pc_a 		-- this step is necessary because lou_pc = .39 when it should = .0039
+								   when lou_pc_a < 1   then lou_pc_a/100
+								   else lou_pc_a end,4) lou_pc
+			from 
+				 (				
+				 	 select distinct 
+				 	 		c.quote_history_sk,
+							base_quote_no,
+							q.quote_no ,
+							risk_state_cd ,
+							s.source_system_nm ,
+							residence_type,
+							coalesce(fac.covA_reins, dwelling_limit_amt) covA, 
+							other_structures_limit_amt as covB,
+							contents_limit_amt covC,
+							case when residence_type like 'condo%' then contents_limit_amt
+								 when residence_type like 'home%' then coalesce(fac.covA_reins, dwelling_limit_amt)
+								 else greatest(coalesce(fac.covA_reins, dwelling_limit_amt),contents_limit_amt,0) 
+								 end covMax,
+							coalesce(case when lud2.lou_limit_amt is not null then lud2.lou_limit_amt_lu else cast(c.loss_of_use_limit_amt as float) end,0) as lou_limit_amt,
+							coalesce(lud1.lou_option_lu,0) 																								  as lou_option,
+							coalesce(case when lud3.lou_pc is not null then lud3.lou_pc_lu else round(cast(replace(replace(replace(c.loss_of_use_pc,'ErrValue',''),'NaN',''),'%','') as float),4) end,0) as lou_pc_a,
+							round(loss_of_use_derived_pc,4) 																							  as loss_of_use_derived_pc
+							,fac.undcovamt_WF, fac.undcovamt_AOP, fac.huded_reins, fac.wfded_reins, fac.waterded_reins, fac.riskshareded
+					FROM #quote_status q
+					LEFT JOIN edw_cat_model.cte_ho_quote_address 			a on a.quote_no = q.quote_no
+--					left join edw_core.tquote_home_coverage 	 			c on q.first_offered_quote_history_sk   = c.quote_history_sk  
+					LEFT JOIN edw_core.tquote_home_coverage 				c on c.quote_no = q.quote_no and c.transaction_seq_no = q.transaction_seq_no
+					JOIN edw_core.tsource_system  							s on q.source_system_sk 	= s.source_system_sk 
+				    LEFT JOIN edw_cat_model.cte_ho_pif_coverages_fac  fac on fac.base_policy_no 	    = LEFT(q.quote_no, CHARINDEX('-', q.quote_no + '-') - 1)
+					left join edw_cat_model.lu_metal_lou_option			lud1 on c.loss_of_use_option 	= lud1.lou_option
+					left join edw_cat_model.lu_metal_lou_limit_amt		lud2 on c.loss_of_use_limit_amt = lud2.lou_limit_amt
+					left join edw_cat_model.lu_metal_lou_pc				lud3 on c.loss_of_use_pc 		= lud3.lou_pc
+					where q.product_cd IN('HO','CO')
+				 ) a
+		) ,
+		covd as 
+		(
+			select distinct 
+				   undcovamt_WF, undcovamt_AOP, huded_reins, wfded_reins, waterded_reins, riskshareded,
+				   quote_history_sk,
+				   base_quote_no ,
+				   quote_no,
+				   source_system_nm ,
+				   risk_state_cd ,
+				   residence_type,
+				   covA, covB, covc, covMax,
+				   round(lou_option*covMax,0) lou_dollar_option, 
+				   lou_option as lou_percent_option,
+				   lou_pc_a,
+				   round(case when lou_pc > 1 		 then lou_pc 		else lou_pc * covMax 		end,0) lou_dollar_pc,
+				   round(case when lou_pc < 1 		 then lou_pc 		else lou_pc/greatest(covMax,1)	end,4) lou_percent_pc,	-- why can't I round to 4? policy_history_sk = 1242
+				   round(case when lou_limit_amt > 1 then lou_limit_amt else lou_limit_amt * covMax end,0) lou_dollar_limit_amt,
+				   round(case when lou_limit_amt < 1 then lou_limit_amt else lou_limit_amt/greatest(covMax,1) 	end,4) lou_percent_limit_amt,
+				   round(case when loss_of_use_derived_pc = 1 then .01 	else loss_of_use_derived_pc end * covMax,0) lou_dollar_derived ,
+				   		 case when loss_of_use_derived_pc = 1 then .01 	else loss_of_use_derived_pc end as lou_percent_derived
+			from lou a
+		),
+		covd_calc as 
+		(
+			select distinct 
+				   quote_history_sk,
+				   source_system_nm ,
+				   c.covA, c.covB, c.covC, covMax,
+				   lou_dollar_option, 
+				   lou_dollar_limit_amt,
+				   lou_dollar_pc, 
+				   lou_dollar_derived,
+				   case 
+				    	 when c.cova is null 																						then NULL 
+				    	 when lou_percent_pc = 0 	 and  lou_percent_limit_amt = 0 	and lou_percent_option > 0 					then lou_dollar_option
+				    	 when lou_percent_option = 0 and  lou_percent_pc = 0  			and lou_percent_limit_amt > 0 				then lou_dollar_limit_amt
+				    	 when lou_percent_option = 0 and  lou_percent_limit_amt = 0  	and lou_percent_pc > 0 						then lou_dollar_pc
+				    	 when lou_percent_option = lou_percent_pc 						and lou_percent_pc = lou_percent_limit_amt 	then lou_dollar_option
+				    	 when abs(lou_percent_option - lou_percent_pc) < 0.02 			and lou_percent_limit_amt = 0 				then greatest(lou_dollar_option,lou_dollar_pc)
+				    	 when abs(lou_percent_option - lou_percent_limit_amt) < 0.02 	and lou_percent_pc = 0 						then greatest(lou_dollar_option,lou_dollar_limit_amt)
+				    	 when abs(lou_percent_limit_amt - lou_percent_pc) < 0.02		and lou_percent_option = 0 					then greatest(lou_dollar_limit_amt,lou_dollar_pc)
+				    	 else null
+				    	 end as lou_dollar_calc, 
+				   lou_percent_option,
+				   lou_percent_limit_amt,
+	--			   lou_pc_a as loss_of_use_pc,		-- orginial value for loss_of_use_pc
+				   lou_percent_pc,
+				   lou_percent_derived,
+				    case 
+				    	 when c.cova is null 																						then NULL 
+				    	 when lou_percent_pc = 0 	 and  lou_percent_limit_amt = 0 	and lou_percent_option > 0 					then lou_percent_option
+				    	 when lou_percent_option = 0 and  lou_percent_pc = 0  			and lou_percent_limit_amt > 0 				then lou_percent_limit_amt
+				    	 when lou_percent_option = 0 and  lou_percent_limit_amt = 0  	and lou_percent_pc > 0 						then lou_percent_pc
+				    	 when lou_percent_option = lou_percent_pc 						and lou_percent_pc = lou_percent_limit_amt 	then lou_percent_option
+				    	 when abs(lou_percent_option - lou_percent_pc) < 0.02 			and lou_percent_limit_amt = 0 				then greatest(lou_percent_option,lou_percent_pc)
+				    	 when abs(lou_percent_option - lou_percent_limit_amt) < 0.02 	and lou_percent_pc = 0 						then greatest(lou_percent_option,lou_percent_limit_amt)
+				    	 when abs(lou_percent_limit_amt - lou_percent_pc) < 0.02		and lou_percent_option = 0 					then greatest(lou_percent_limit_amt,lou_percent_pc)
+				    	 else null
+				    	 end as lou_percent_calc
+				   , c.undcovamt_WF, c.undcovamt_AOP, c.huded_reins, c.wfded_reins, c.waterded_reins, c.riskshareded 
+			from covd	c
+		)
+		select -- round(covA + covB + covC + lou_dollar_calc,0) as tiv_total, 
+				lou_dollar_calc as covD,
+				c.*
+		into edw_cat_model.cte_ho_quote_coverage
+		from covd_calc c
+		where 1=1
+		;
+	END;
+	COMMIT;
+
+
+
+		
+	IF @update_cte_ho_quote = 1 BEGIN TRANSACTION BEGIN 
+	
+		DROP TABLE IF EXISTS edw_cat_model.cte_ho_quote_base ;
+	
+			with 
+			cte_latest_term AS 
+			(
+					select distinct LAST_VALUE(p.quote_no) OVER (
+									PARTITION BY LEFT(p.quote_no, CHARINDEX('-', p.quote_no + '-') - 1)
+									ORDER BY p.effective_dt ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) quoteno
+					from edw_core.tquote p
+					WHERE 1=1
+			)
+			SELECT distinct
+				cast(getdate() as date) as inforce_dt,
+				q.product_nm , 
+				q.product_cd, 
+				a.source_system, 
+		       	h.underwriter_nm as underwriter,
+		       	h.created_by_nm  as created_by, 
+		       	h.referred_by_nm as referred_by,
+		       	h.reviewed_by_nm as reviewed_by,
+		 	    b.broker_id 																	as agency_id, 
+		 	    concat(b.broker_id,' - ' ,trim(b.broker_nm), ', ',b.primary_address_state_cd ) 	as agency_lu,
+		 	    b.primary_address_state_cd 														as agency_state,
+		 	    original_policy_no , 
+		 	    original_policy_effective_dt , 
+		 	    COALESCE(case when LEFT(q.quote_no , CHARINDEX('-', q.quote_no + '-') - 1)  =
+						      	   LEFT(prior_policy_no, CHARINDEX('-', prior_policy_no + '-') - 1) 
+					     	  then null  
+					     	  else  LEFT(prior_policy_no, CHARINDEX('-', prior_policy_no + '-') - 1)  
+					     	  end,
+	  					 case when LEFT(q.quote_no, CHARINDEX('-', q.quote_no + '-') - 1)  =
+								   LEFT(prior_term_policy_no, CHARINDEX('-', prior_term_policy_no + '-') - 1) 
+					     	  then null  
+					     	  else LEFT(prior_term_policy_no, CHARINDEX('-', prior_term_policy_no + '-') - 1) 
+					     	  end) 
+					     	 base_prior_policy_no,
+		 	    prior_policy_no ,
+		 	    prior_term_policy_no ,
+				LEFT(q.quote_no, CHARINDEX('-', q.quote_no + '-') - 1)							as base_quote_no,
+				q.quote_no , 
+				quote_term,
+				case when q.quote_no not like '%-%' then 0 
+								else cast(right(q.quote_no, len(q.quote_no) - CHARINDEX('-', q.quote_no + '-')) as int) 
+								end term_no,
+				q.program_type , 
+				quote_calc_status,
+				q.quote_status , 
+				q.quote_source_status, -- don't use this,
+				REPlACE(REPlACE(h.transaction_status,'_',' '),'nottaken','Not Taken') transaction_status ,
+				h.transaction_seq_no,
+				h.latest_transaction_in , 
+				h.transaction_desc ,
+				COALESCE(h.approval_note,'') + COALESCE(h.deny_note,'') 						as note_approval_or_denial,
+				h.not_taken_reason_desc 														as note_not_taken_reason,
+				close_reason_desc ,
+				quote_create,
+				a.days_since_created,
+				q.effective_dt , 
+				q.expiration_dt ,
+				q.insured_nm 																	as insured_name,
+				c1.vip_in ,
+				a.geocode_lu,
+				a.address1, 
+				a.address2,
+				a.city,
+				a.state,
+				a.zip,
+				a.county, 
+				s.region_old as region,
+				a.latitude,
+				a.longitude,
+				coalesce(c.covA,0) covA,
+				coalesce(c.covB,0) covB, 
+				coalesce(c.covC,0) covC, 
+				coalesce(c.covD,0) covD,
+				coalesce(c.covA,0) + coalesce(c.covB,0) + coalesce(c.covC,0) + coalesce(c.covD,0) as TIV,
+				coalesce(h.annual_premium_amt,0) annual_premium_amt ,
+				case when (coalesce(c.covA,0) + coalesce(c.covB,0) + coalesce(c.covC,0) + coalesce(c.covD,0))= 0 then 0 
+					 else h.annual_premium_amt /greatest(((coalesce(c.covA,0) + coalesce(c.covB,0) + coalesce(c.covC,0) + coalesce(c.covD,0))/100),1)
+					 end as ROL, 
+				h.home_policy_credit_in , 
+			    h.auto_policy_credit_in ,
+				h.collection_policy_credit_in , 
+				h.excess_liability_policy_credit_in ,
+		 	    concat(b.broker_id,' - Tier ' ,b.broker_tier , ' - ' ,trim(b.broker_nm), ', ',b.primary_address_state_cd ) 	as broker_lu,
+			    producer_nm as producer,
+			    bdm.team_member_nm as bdm,
+	 	   		b.broker_tier as broker_tier, 
+		 	   	b.broker_type, 
+--		       	b.national_agency_in as broker_national, -- all NULLs
+		 	    b.broker_id, 
+		 	    b.broker_nm 				as broker_name, 
+		 	    b.primary_address_line_1 	as broker_address1,
+		 	    b.primary_address_line_2 || 
+		 	   	case when primary_address_unit_no is not null then ' Unit ' || primary_address_unit_no  
+		 	   		 else null end 			as broker_address2,
+		 	    b.primary_address_city_nm 	as broker_city,
+		 	    b.primary_address_state_cd 	as broker_state,
+		 	    b.primary_address_zip_cd 	as broker_zip, 
+		 	   	b.broker_status, 
+		 	   	b.broker_terminated_dt, 
+		 	   	case when b.primary_contact_nm = '' then null else b.primary_contact_nm end as broker_contact,
+	 	   		b.broker_phone_no, 
+	 	   		coalesce(b.broker_email, b.claims_contact_email) broker_email,
+		       	c1.email  			as customer_email,
+		       	c1.home_phone_no 	as customer_home_phone_no,
+		       	c1.mobile_phone_no  as customer_mobile_phone_no
+		INTO edw_cat_model.cte_ho_quote_base
+		FROM #quote_status q
+		LEFT JOIN edw_cat_model.cte_ho_quote_address 	a on a.quote_no 		= q.quote_no
+		LEFT JOIN edw_cat_model.cte_ho_quote_coverage 	c on c.quote_history_sk = q.first_offered_quote_history_sk
+		LEFT JOIN edw_core.tbroker 						b on q.broker_id 		=  b.broker_id
+		left JOIN (
+				select h.*
+				from edw_core.tquote_history h
+--				where h.quote_no like 'HO100154224%' order by quote_no, transaction_seq_no
+				join (		
+						select distinct quote_no,  LAST_VALUE(transaction_seq_no) OVER (PARTITION BY quote_no
+													ORDER BY transaction_seq_no  ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) maxseq
+						from edw_core.tquote_history h
+						where 1=1 
+						and coalesce(h.transaction_desc,'') not like '%do not use%'
+						and coalesce(h.transaction_desc,'') not like '%disregard%'
+--						where latest_transaction_in =  'y' -- can't use this per HO100128923, HO10010453-02
+						-- see example with HO200025288
+						-- see example with HO200027145, how to get referral required to show up?
+					) 								  seq on seq.quote_no = h.quote_no  and seq.maxseq = h.transaction_seq_no 
+			 )											h on q.quote_sk 			= h.quote_sk 
+		LEFT JOIN edw_cat_model.lu_states 				s on a.state 				= s.stateabbr 
+--			left join edw_core.tquote_home_coverage 	 c on q.first_offered_quote_history_sk   = c.quote_history_sk 
+		LEFT JOIN edw_core.tcustomer 				  c1 on q.customer_id 	 		= c1.customer_id 
+		LEFT JOIN edw_core.tbroker_vault_team 		  bdm on 	  bdm.broker_id 	= q.broker_id
+						                                      and bdm.product_nm 	= q.product_nm
+						                                      and bdm.team_member_type = 'BusinessDevelopmentManager'
+						                                      and coalesce(bdm.state_cd, q.risk_state_cd) = q.risk_state_cd
+						                                      and bdm.program_type = q.program_type  
+		where 1=1
+		and coalesce(b.broker_id,'') NOT IN ('56689', '56500', '56721', '57454', '57519', '57518', '57511', '56625')
+--		and q.quote_no like 'HO100169308%'
+	;
+	END;
+	COMMIT;
+	
+
+
+
+-------------------------  CURRENTLY IN ESRI AS OF 24-03-26 -----------------------------------
+
+	IF @update_cte_quote_esri_v1 = 1 BEGIN TRANSACTION BEGIN
+		
+		DROP TABLE IF EXISTS edw_cat_model.cte_ho_quote_esri_v1;
+	
+		SELECT distinct
+			   dateadd(d,1,inforce_dt) inforce_dt , 
+			   product_cd, 
+			   source_system, 
+			   underwriter, 
+			   created_by , 
+			   referred_by , 
+			   reviewed_by ,
+			   case when quote_no like '%-%' then 'Renewal' else 'New Business' end quote_term,
+			   base_prior_policy_no,
+			   prior_policy_no,
+			   base_quote_no, 
+			   quote_no, 
+			   program_type, 
+			   quote_calc_status as quote_status, 
+			   quote_source_status,
+			   transaction_status,
+			   latest_transaction_in,
+			   transaction_seq_no,
+			   transaction_desc ,
+			   note_approval_or_denial,
+			   note_not_taken_reason,
+			   dateadd(d,1,quote_create) as created_dt,
+			   days_since_created, 
+			   dateadd(d,1,effective_dt) effective_dt , 
+			   dateadd(d,1,expiration_dt) expiration_dt , 
+			   insured_name, 
+--			   geocode_lu, 
+			   address1, 
+			   address2, 
+			   city, 
+			   state,
+			   zip, 
+			   county, 
+			   region, 
+			   latitude, 
+			   longitude,
+			   covA, 
+			   covB, 
+			   covC, 
+			   covD, 
+			   TIV, 
+			   round(annual_premium_amt,0) as premium, 
+			   round(ROL,4) ROL,
+			   agency_id, 
+			   agency_lu, 
+			   agency_state, 
+			   case when home_policy_credit_in = 'yes' then 1 else 0 end as pif_ho, 			-- fix/validate
+			   case when auto_policy_credit_in = 'yes' then 1 else 0 end as pif_au, 			-- fix/validate
+			   case when collection_policy_credit_in = 'yes' then 1 else 0 end as pif_pel,		-- fix/validate
+			   case when excess_liability_policy_credit_in = 'yes' then 1 else 0 end as pif_lux,-- fix/validate
+			   close_reason_desc as dummy_string_1,
+			   case when quote_source_status in ('Closed','Cancelled','Canceled') and close_reason_desc = 'Expired' then 'Metal Closed'
+			   		else quote_source_status end as dummy_string_2,
+			   0 as dummy_number_1,
+			   0 as dummy_number_2
+		INTO edw_cat_model.cte_ho_quote_esri_v1
+		FROM edw_cat_model.cte_ho_quote_base q
+		WHERE 1=1
+		 and product_cd IN('HO','CO')
+		 and case when quote_calc_status <> 'Declined' and days_since_created > 150 then 1  else 0 end = 0
+		 
+	END;		 
+	COMMIT;
+	
+
+
+
+----------------------------------  NOT YET IN ESRI ------------------------------------------
+
+	IF @update_cte_quote_esri_v2 = 1 BEGIN TRANSACTION BEGIN
+		
+		DROP TABLE IF EXISTS edw_cat_model.cte_ho_quote_esri_v2;
+	
+		with 
+		esri_new as 
+		(
+			SELECT distinct
+				   b.inforce_dt , 
+				   product_nm, 
+				   source_system, 
+				   underwriter, 
+				   created_by , 
+				   referred_by , 
+				   reviewed_by ,
+				   case when quote_no like '%-%' then 'Renewal' else 'New Business' end quote_term,		-- is this accuracte?
+	--			   original_policy_no , 																-- matches base_quote_no 
+	--			   original_policy_effective_dt,			-- don't trust yet
+				   b.base_prior_policy_no,
+				   prior_policy_no,
+				   base_quote_no, 
+				   quote_no, 
+				   program_type, 
+				   quote_status, 
+				   quote_calc_status as quote_status_calc,
+				   quote_source_status as quote_status_source,
+				   transaction_status,
+	--			   latest_transaction_in,
+				   transaction_seq_no,
+				   transaction_desc ,
+				   note_approval_or_denial,
+				   note_not_taken_reason,
+				   close_reason_desc as close_reason,	-- new field
+				   quote_create as created_dt,
+				   days_since_created, 
+				   effective_dt effective_dt , 
+				   expiration_dt expiration_dt , 
+				   insured_name as customer_name, 
+				   vip_in as customer_vip, 
+				   address1, 
+				   address2, 
+				   city, 
+				   state,
+				   zip, 
+				   county, 
+				   0 as fips, 					-- calculate
+				   region, 
+				   latitude, 
+				   longitude,
+				   covA, 
+				   covB, 
+				   covC, 
+				   covD, 
+				   TIV, 
+				   round(annual_premium_amt,0) as premium, 
+				   round(ROL,4) ROL,
+				   0 as TIV_expiring, 			-- calculate
+				   0 as premium_expiring, 		-- calculate
+				   0 as ROL_expiring, 			-- calculate
+				   0 as aop__ded, 				-- calculate
+				   0 as hu_ded, 				-- calculate
+				   0 as wh_ded, 				-- calculate
+				   0 as wf_ded, 				-- calculate
+				   0 as wtr_ded, 				-- calculate
+				   0 as aop_ded$, 				-- calculate
+				   0 as hu_ded$, 				-- calculate
+				   0 as wh_ded$, 				-- calculate
+				   0 as wf_ded$, 				-- calculate
+				   0 as wtr_ded$, 				-- calculate
+				   'tbd' as aop_ded_sort, 			-- calculate
+				   'tbd' as hu_ded_sort, 			-- calculate
+				   'no' as exclude_wind,			-- calculate
+				   'tbd' as exclude_water,			-- calculate
+				   'tbd' as water_limit,			-- calculate
+				   'tbd' as ded_largeLossWaiver,	-- calculate
+				   'tbd' as construction_type, 		-- calculate
+				   'tbd' as occupancy, 				-- calculate
+				   'tbd' as dwelling_type,			-- calculate
+				   0 as year_built,					-- calculate
+				   0 as year_roof,					-- calculate
+				   0 as total_st_ft,				-- calculate
+				   i.inspection_status, 
+				   inspection_completed_dt,	
+				   (select max(inspection_update_dt) from edw_cat_model.Insp_Combined ic) as inspection_update_dt, 	
+				   'tbd' as wildfire_score,
+				   0 as aon_hurricane_aal_amt,								-- calculate
+				   0 as aon_hurricane_cat_score_amt,						-- calculate
+				   0 as aon_hurricane_cat_score_to_premium_ratio,			-- calculate
+				   0 as aon_hurricane_aal_to_premium_ratio,					-- calculate
+				   'tbd' as cape_roof_condition_rating,						-- calculate
+				   0 as cape_roof_condition_rating_confidence,				-- calculate
+				   '2024-04-21' as cape_roof_condition_rating_date,			-- calculate
+				   'tbd' as cape_roof_condition_reasons,					-- calculate
+				   agency_id, 
+				   agency_lu, 
+				   agency_state, 
+				   case when home_policy_credit_in = 'yes' then 1 else 0 end as pif_ho, 			-- fix/validate
+				   case when auto_policy_credit_in = 'yes' then 1 else 0 end as pif_au, 			-- fix/validate
+				   case when collection_policy_credit_in = 'yes' then 1 else 0 end as pif_pel, 		-- fix/validate
+				   case when excess_liability_policy_credit_in = 'yes' then 1 else 0 end as pif_lux,-- fix/validate
+				   'hello' as dummy_string_1,
+				   'hello' as dummy_string_2,
+				   'hello' as dummy_string_3,
+				   0 as dummy_number_1,
+				   0 as dummy_number_2,
+				   0 as dummy_number_3
+			FROM vault_edw.edw_cat_model.cte_ho_quote_base b
+			LEFT JOIN edw_cat_model.Insp_Combined i on b.base_quote_no = i.base_policy_no 
+			WHERE 1=1
+			 and product_nm IN('Homeowners','Condo')
+			 and address1 is not null 
+			 and case when quote_calc_status <> 'Declined' and days_since_created > 150  then 1 
+	--				   when coalesce(latest_transaction_in,'y') = 'n' then 1 
+	--				   when case when transaction_status = 'revised' coalesce(latest_transaction_in,'y') = 'n' then 1 
+					   else 0 end = 0
+		),
+		quotes_to_policies as 
+		(
+			select distinct
+				 coalesce(b.policy_no, bp.policy_no) policy_no , 
+				 COALESCE(b.policy_status , bp.policy_status) policy_status, 
+				 COALESCE(b.term_no , bp.term_no) policy_term_no, 
+				 case when q.quote_no not like '%-%' then 0 else cast(right(q.quote_no, len(q.quote_no) - CHARINDEX('-', q.quote_no + '-')) as int) end quote_term_no, q.*
+			from edw_cat_model.cte_all_quote q
+			LEFT JOIN edw_cat_model.cte_ho_pif_base  b on b.base_policy_no  = q.base_quote_no 
+			LEFT JOIN edw_cat_model.cte_ho_pif_base bp on bp.base_policy_no = q.base_prior 	  and b.base_policy_no is null
+			where 1=1 
+	--			and (case when b.policy_no is not null then case when max_quote_no is null then 0 else 1 end 
+	--				  else 1 end) = 1
+		),
+		quotes_to_remove as 
+		(
+			select *
+			from quotes_to_policies
+			where 1=1
+			and coalesce(policy_term_no,-1) >= quote_term_no
+		),
+		quotes as 
+		(
+			select e.*
+			from esri_new e
+			left join quotes_to_remove q on e.quote_no = q.quote_no 
+			where 1=1
+			and q.quote_no is null 
+		)
+			select *
+			INTO edw_cat_model.cte_ho_quote_esri_v2
+			from quotes
+			where 1=1
+			order by 2 desc
+			
+	END;		
+	COMMIT;
+	
+
+
+
+	IF @delete_intermediary_tables = 1 BEGIN
+		
+   	 	DROP TABLE IF EXISTS edw_cat_model.cte_ho_quote_address;
+   	 	DROP TABLE IF EXISTS edw_cat_model.cte_ho_quote_coverage;
+--   		DROP TABLE IF EXISTS edw_cat_model.cte_ho_quote_esri_v1;
+--   		DROP TABLE IF EXISTS edw_cat_model.cte_ho_quote_esri_v2;
+    END;   	
+
+   
+
+
+END;

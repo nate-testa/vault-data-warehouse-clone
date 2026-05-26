@@ -16,6 +16,7 @@
 -- 01/05/26		Architha Gudimalla		   10. Updated merge logic for customer_midterm_review_eligibility_feed
 -- 01/05/26		Architha Gudimalla		   11. Updated logic for primary and non primary home monoline
 -- 01/05/26		Architha Gudimalla		   12. Removed updating buy auto and others since we now use messages table
+-- 05/14/26		Architha Gudimalla		   13. Update customer state to use risk state
 -- ================================================================================================================================
  
 CREATE OR ALTER PROCEDURE [edw_core].[sp_customer_midterm_review_recommendation]
@@ -114,7 +115,17 @@ and a.PrimaryInsuredId=b.id
                                                 and quote_term = 'Renewal');*/
 		
         If @last_source_extract_ts = '1900-01-01'  
-        set @last_source_extract_ts = (select Dateadd(dd,-1,cast(getdate() as date)));
+        set @last_source_extract_ts = (select Dateadd(dd,-1,cast(getdate() as date))); 
+
+		drop table if exists edw_temp.customer_midterm_review_ghostdraft_feed_temp3;
+		
+		select  distinct customer_id , quote_no, prior_term_policy_no
+		into edw_temp.customer_midterm_review_ghostdraft_feed_temp3
+            from    edw_core.tquote
+			where   renewal_quote_review_start_dt > @last_source_extract_ts --Added renewal_quote_review_start_dt filter added by Sandeep Gundreddy on 09/11/25 to filter only recent renewal quotes
+			and     renewal_quote_review_start_dt < cast(getdate() as date) 
+			and     quote_status not in ('Issued', 'Declined by Vault', 'Expired', 'No Response by Broker/Producer', 'Not Needed', 'Not Taken by Insured')
+			and     quote_term = 'Renewal' ;
        
         with cust as
 		(
@@ -405,13 +416,15 @@ and a.PrimaryInsuredId=b.id
                 hac.backup_generator_in,
                 cl.total_limit total_collection_limit_amt, 
 				y.no_of_years_with_vault,  
+                y.customer_since_dt,
 				-- Yunus 09/25/2025 (Multiple Yrs with Vault)
-				case 
+				/*case 
 					when y.no_of_years_with_vault > 1 then
 						concat_ws('','Thank you for allowing us to serve you for '+ cast(y.no_of_years_with_vault as varchar(255)) ,' years')
 					else 
 						'Thank you for allowing us to serve you this year. We''re glad you''re with us!'
-				end
+				end*/
+                null
 				as no_of_years_with_vault_tx,
 				apc.emergency_movement_coverage_in,
 				avl.auto_vehicle_list, 
@@ -470,7 +483,9 @@ and a.PrimaryInsuredId=b.id
                    group by policy_no,policy_history_sk) pel_veh on pel_veh.policy_no = pol.policy_no and ph.policy_history_sk = pel_veh.policy_history_sk
         left join 
 		(
-			select customer_id,cast(datediff(dd,min(original_policy_effective_dt),GETDATE())/365.25 as int) as no_of_years_with_vault
+			select customer_id,
+                    cast(datediff(dd,min(original_policy_effective_dt),GETDATE())/365.25 as int) as no_of_years_with_vault,
+                    min(original_policy_effective_dt) customer_since_dt
 			from edw_core.tpolicy
 			group by customer_id
 		) as y on y.customer_id = pol.customer_id
@@ -556,6 +571,7 @@ and a.PrimaryInsuredId=b.id
 			backup_generator_in,
 			total_collection_limit_amt,
 			no_of_years_with_vault,
+            customer_since_dt,
 			no_of_years_with_vault_tx,
 			emergency_movement_coverage_in,
 			auto_vehicle_list, 
@@ -625,6 +641,7 @@ and a.PrimaryInsuredId=b.id
 				backup_generator_in,
 				total_collection_limit_amt,
 				no_of_years_with_vault,
+                customer_since_dt,
 				no_of_years_with_vault_tx,
 				emergency_movement_coverage_in,
 				auto_vehicle_list, 
@@ -719,14 +736,32 @@ and a.PrimaryInsuredId=b.id
                 getdate() create_ts,
                 getdate() update_ts-- into edw_integration.customer_midterm_review_recommendation --select *
 				
-        from (select distinct a.customer_id, a.mailing_address_state_cd--, b.uw_company_cd
+        from (  
+              -- this is based on customer homerisk state eligibility
+              select a.customer_id, b.risk_address_state_cd mailing_address_state_cd, occupancy_type, total_insured_value_amt, 
+                    rank() over (partition by a.customer_id order by case b.occupancy_type
+                                                                        when 'Primary' then '1_Primary'
+                                                                        else '2_Non_Primary' 
+                                                                    end, b.total_insured_value_amt desc, b.policy_no) rnk
               from edw_core.tcustomer a, edw_integration.customer_midterm_review_policy_detail b
               where a.customer_id = b.customer_id 
               and renewal_year =  datepart(yyyy, getdate())
+			  and b.product_nm in ('Homeowners','Condo')
 			  and a.customer_id  in ( Select customer_id  
 									from edw_integration.customer_midterm_review_eligibility_feed 
 									where midterm_review_process_in = 'Yes'
-								)
+								) 
+                /*-- this is based on customer mailing state eligibility
+                select distinct a.customer_id, a.mailing_address_state_cd--, b.uw_company_cd
+                from edw_core.tcustomer a, edw_integration.customer_midterm_review_policy_detail b
+                where a.customer_id = b.customer_id 
+                and renewal_year =  datepart(yyyy, getdate())
+                and a.customer_id  in ( Select customer_id  
+                                        from edw_integration.customer_midterm_review_eligibility_feed 
+                                        where midterm_review_process_in = 'Yes'
+                                    )
+                */
+         
               ) cust
         cross join (select product_cd, product_nm, product_category_nm from edw_core.tproduct
 					union all
@@ -745,7 +780,8 @@ and a.PrimaryInsuredId=b.id
                                 where product_nm = 'Marine Boat & Yacht'
                                 and renewal_year =  datepart(yyyy, getdate())
                               ) marine on marine.customer_id = cust.customer_id
-        where pr.product_category_nm = 'PersonalLines' 
+        where cust.rnk = 1
+        and pr.product_category_nm = 'PersonalLines' 
 		and  (cf.policy_no is not null or (pos.offered_in = 'Yes'
                                             -- Yunus - 09/24/2025 Changes made to handle below 2 scenerios
                                             -- If collections is available in a state, we should not recommend Lux on endorsement, because we will have collections boilerplate in the current coverage section
