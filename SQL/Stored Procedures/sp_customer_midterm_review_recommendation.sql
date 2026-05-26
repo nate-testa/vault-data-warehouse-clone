@@ -742,7 +742,7 @@ and a.PrimaryInsuredId=b.id
                     rank() over (partition by a.customer_id order by case b.occupancy_type
                                                                         when 'Primary' then '1_Primary'
                                                                         else '2_Non_Primary' 
-                                                                    end, b.total_insured_value_amt desc) rnk
+                                                                    end, b.total_insured_value_amt desc, b.policy_no) rnk
               from edw_core.tcustomer a, edw_integration.customer_midterm_review_policy_detail b
               where a.customer_id = b.customer_id 
               and renewal_year =  datepart(yyyy, getdate())
