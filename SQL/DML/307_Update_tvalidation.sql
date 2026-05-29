@@ -1,5 +1,5 @@
 -- 94	Written premium validation
-UPDATE edw_core.tvalidation_result
+UPDATE edw_core.tvalidation_sql
 SET source_sql = '
 select @source_ct =   
 (  
@@ -25,7 +25,7 @@ WHERE
 
 -- 95	Inforce premium/Unearned Premium validation
 
-UPDATE edw_core.tvalidation_result
+UPDATE edw_core.tvalidation_sql
 SET source_sql = '
 select @source_ct = sum(tpts.premium_amt)    
 from    
@@ -45,7 +45,7 @@ WHERE
 
 -- 96	Inforce count/Unearned policy count validation
 
-UPDATE edw_core.tvalidation_result
+UPDATE edw_core.tvalidation_sql
 SET source_sql = '
 select @source_ct = count(distinct dip.policy_sk)    
 from edw_core.tdate d  
@@ -58,7 +58,7 @@ WHERE
 
 -- 114	tpolicy_summary - total earned premium comparison to tpolicy_transaction_summary
 
-UPDATE edw_core.tvalidation_result
+UPDATE edw_core.tvalidation_sql
 SET source_sql = '
 select @source_ct=  count(*)  
 from  (     
@@ -86,6 +86,3 @@ where a.ep-b.ep not between -0.1 and 0.1 or a.policy_sk is null or b.policy_sk i
 '
 WHERE
     validation_sql_desc = 'tpolicy_summary - total earned premium comparison to tpolicy_transaction_summary'
-
-
-
