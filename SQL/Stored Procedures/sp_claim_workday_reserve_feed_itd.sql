@@ -20,6 +20,7 @@
 -- 12/09/25		Yunus Mohammed				11. AD-11945 Modified stored procedure to run proc on same date again
 -- 02/04/26		Yunus Mohammed				12. AD-12461 Used product_nm for 'Marine Boat & Yacht' instead of product_cd
 -- 04/08/26		Yunus Mohammed				13. AD-13068 Removed distinct from select clause
+-- 05/27/26		Yunus Mohammed				14. AD-13341 Product code for GRPEL updated to Group_Umbrella
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_workday_reserve_feed_itd]
@@ -57,12 +58,13 @@ BEGIN
 		DELETE rpi
         FROM edw_integration.claim_workday_itd_reserve_feed AS rpi
         INNER JOIN edw_core.tproduct AS p ON rpi.product =  CASE
-																				WHEN p.product_nm = 'Group Personal Excess Liability' THEN 'Group_Umbrella'
-																				WHEN p.product_nm = 'Auto' THEN 'Automobile'
-																				WHEN p.product_nm = 'Excess Liability' THEN 'Excess_Liability'
-																				WHEN p.product_nm = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
-																			ELSE p.product_nm 
-																		END
+															WHEN p.product_nm = 'Group Personal Excess Liability' THEN 'Group_Umbrella'
+															WHEN p.product_nm = 'Auto' THEN 'Automobile'
+															WHEN p.product_nm = 'Excess Liability' THEN 'Excess_Liability'
+															WHEN p.product_nm = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
+															WHEN p.product_nm = 'Group Personal Excess Liability' THEN 'Group_Umbrella'
+														ELSE p.product_nm 
+													END
         WHERE monthend = @last_day_month
         AND p.product_category_nm = 'PersonalLines'; 
 		
@@ -93,6 +95,7 @@ BEGIN
 				WHEN tprd.product_nm = 'Excess Liability' THEN 'Excess_Liability'
 				WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
 				WHEN tprd.product_nm = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
+				WHEN tprd.product_nm = 'Group Personal Excess Liability' THEN 'Group_Umbrella'
 			ELSE tprd.product_nm END AS product,
 			tcf.claim_coverage_desc AS policycoveragetype,
 			CASE

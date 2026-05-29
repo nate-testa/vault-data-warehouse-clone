@@ -23,6 +23,8 @@
 -- 11/10/25		Yunus Mohammed				14. AD11647 - Excluded NFP policies
 -- 12/09/25		Yunus Mohammed				15. AD-11945 Modified stored procedure to run proc on same date again
 -- 04/07/25		Yunus Mohammed				16. AD-13025 Included GRPEL policies (PEX policies) and excluded NFP policies.
+-- 05/27/26		Yunus Mohammed				17. AD-13341 Update Commission query where clause
+--												Product code for GRPEL updated to Group_Umbrella
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_written_premium_feed]
@@ -85,6 +87,7 @@ BEGIN
 					WHEN product = 'Auto' THEN 'Automobile'
 					WHEN product = 'Condo' THEN 'Homeowners'
 					WHEN product = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
+					WHEN product = 'Group Personal Excess Liability' THEN 'Group_Umbrella'
 					ELSE product
 				END AS product,
 				transaction_sequence,company,transaction_date,
@@ -227,6 +230,7 @@ BEGIN
 					WHEN product = 'Auto' THEN 'Automobile'
 					WHEN product = 'Condo' THEN 'Homeowners'
 					WHEN product = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
+					WHEN product = 'Group Personal Excess Liability' THEN 'Group_Umbrella'
 					ELSE product
 				END AS product,
 				transaction_sequence,company,transaction_date,
@@ -301,6 +305,7 @@ BEGIN
 				WHEN tp.product_cd = 'PEL' THEN 'PEL Commission'
 				WHEN tp.product_cd = 'LUX' THEN 'LUX Commission'
 				WHEN tp.product_cd = 'BY' THEN 'Marine_Boat&Yacht Commission'
+				WHEN tp.product_cd = 'GRPEL' THEN 'GRPEL Commission'
 				END
 				as subcategory,
 				tic.internal_coverage_sk as financial_category_id,
@@ -351,7 +356,7 @@ BEGIN
 										)
 				WHERE
 				tpt.accouting_month_sk=@acounting_date_sk
-				AND tp.product_cd != 'GRPEL'
+				AND NOT (tp.product_cd = 'GRPEL' and tp.source_system_sk =6)
 				AND tpt.commission_amt!=0
 				) as temp
 				GROUP BY

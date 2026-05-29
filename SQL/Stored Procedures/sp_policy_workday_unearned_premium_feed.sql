@@ -25,6 +25,7 @@
 --													Delete stmt modified to delete personal line data only
 -- 02/04/26		Yunus Mohammed				15. AD-12461 Used product_nm for 'Marine Boat & Yacht' instead of product_cd
 -- 04/07/25		Yunus Mohammed				16. AD-13025 Included GRPEL policies (PEX policies) and excluded NFP policies.
+-- 05/27/26		Yunus Mohammed				17. AD-13341 Product code for GRPEL updated to Group_Umbrella
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_policy_workday_unearned_premium_feed]
@@ -116,6 +117,7 @@ BEGIN
 					WHEN tprd.product_nm = 'Auto' THEN 'Automobile'
 					WHEN tprd.product_nm = 'Condo' THEN 'Homeowners'
 					WHEN tprd.product_nm = 'Marine Boat & Yacht' THEN 'Marine_Boat&Yacht'
+					WHEN tprd.product_nm = 'Group Personal Excess Liability' THEN 'Group_Umbrella'
 					ELSE tprd.product_nm
 				END AS [product],
 				CASE WHEN tp.uw_company_nm='Vault E & S Insurance Company' THEN 'Vault E&S Insurance Company' 
