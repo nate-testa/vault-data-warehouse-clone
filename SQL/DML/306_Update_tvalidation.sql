@@ -5,7 +5,7 @@ where validation_sql_desc= 'tclaim_feature - claim_coverage_desc is null'
 
   -- 87 tclaim_feature snapsheet claims - missing item_sk
 update edw_core.tvalidation_sql 
-set target_sql = 'select 44'
+set target_sql = 'select 47'
 where validation_sql_desc= 'tclaim_feature snapsheet claims - missing item_sk'
 
 
