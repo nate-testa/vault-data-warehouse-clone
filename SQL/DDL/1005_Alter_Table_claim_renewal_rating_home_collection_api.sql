@@ -3,11 +3,11 @@ IF NOT EXISTS (
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = 'edw_integration'
       AND TABLE_NAME = 'claim_renewal_rating_home_collection_api'
-      AND COLUMN_NAME = 'contact_nm'
+      AND COLUMN_NAME = 'NotifierName'
 )
 BEGIN
     ALTER TABLE edw_integration.claim_renewal_rating_home_collection_api
-     ADD contact_nm Varchar(255);
+     ADD NotifierName Varchar(255);
 END;
  
  
@@ -16,11 +16,11 @@ IF NOT EXISTS (
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = 'edw_integration'
       AND TABLE_NAME = 'claim_renewal_rating_home_collection_api'
-      AND COLUMN_NAME = 'contact_type'
+      AND COLUMN_NAME = 'NotifierRelationshipToInsured'
 )
 BEGIN
     ALTER TABLE edw_integration.claim_renewal_rating_home_collection_api
-    ADD contact_type Varchar(255);
+    ADD NotifierRelationshipToInsured Varchar(255);
 END;
  
 IF NOT EXISTS (
@@ -28,11 +28,11 @@ IF NOT EXISTS (
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = 'edw_integration'
       AND TABLE_NAME = 'claim_renewal_rating_home_collection_api'
-      AND COLUMN_NAME = 'contact_person_email'
+      AND COLUMN_NAME = 'NotifierEmail'
 )
 BEGIN
     ALTER TABLE edw_integration.claim_renewal_rating_home_collection_api
-    ADD contact_person_email Varchar(255);
+    ADD NotifierEmail Varchar(255);
 END;
  
  
@@ -41,9 +41,11 @@ IF NOT EXISTS (
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = 'edw_integration'
       AND TABLE_NAME = 'claim_renewal_rating_home_collection_api'
-      AND COLUMN_NAME = 'contact_phone'
+      AND COLUMN_NAME = 'NotifierPhoneNumber'
 )
 BEGIN
     ALTER TABLE edw_integration.claim_renewal_rating_home_collection_api
-    ADD contact_phone Varchar(255);
+    ADD NotifierPhoneNumber Varchar(255);
 END;
+
+
