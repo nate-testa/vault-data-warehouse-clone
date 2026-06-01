@@ -58,6 +58,8 @@ BEGIN
 				edw_core.tgrpel_master_coverage gmc
 				INNER JOIN edw_core.tpolicy p ON gmc.grpel_master_policy_no = p.grpel_master_policy_no
 				INNER JOIN edw_core.tpolicy_transaction pt ON p.policy_sk = pt.policy_sk
+			WHERE
+				gmc.effective_dt < = @last_day_month
 			GROUP BY gmc.grpel_master_policy_no, gmc.insured_nm, gmc.effective_dt,  gmc.expiration_dt
 		)
               
@@ -78,9 +80,26 @@ BEGIN
 			'Group Personal Excess Liability' as [product],
 			pivottable.premium_amt as total_participant_premium,
 			sum(bap.payment_amt) as payments_received,
-			pivottable.premium_amt - sum(bap.payment_amt) -(cast(pivottable.MinimumPremium as decimal(15,2)) * cast(pivottable.CommissionPercentage as decimal(15,2)) /100.00) as net_amount_due_to_vault,
+			case when pivottable.premium_amt = 0 then 0
+			else
+			GREATEST
+			(
+				cast(pivottable.MinimumPremium as decimal(15,2)),
+				pivottable.premium_amt
+			) - isnull( sum(bap.payment_amt),0) - (
+			GREATEST(
+			cast(pivottable.MinimumPremium as decimal(15,2)),pivottable.premium_amt
+			)
+			
+			* cast(pivottable.CommissionPercentage as decimal(15,2)) /100.00)
+			end as net_amount_due_to_vault,
 			pivottable.MinimumPremium as group_minimum_premium,
-			(cast(pivottable.MinimumPremium as decimal(15,2)) * cast(pivottable.CommissionPercentage as decimal(15,2)) /100.00) as broker_commission,
+			(
+				GREATEST
+				(
+					cast(pivottable.MinimumPremium as decimal(15,2)),
+					pivottable.premium_amt
+				) * cast(pivottable.CommissionPercentage as decimal(15,2)) /100.00) as broker_commission,
 			@last_day_month AS month_end,
 			GETDATE() as create_ts,
 			GETDATE() as update_ts,
@@ -98,10 +117,10 @@ BEGIN
 		FROM
 		billing_grpel_payment_due_feed_temp as pt
 		INNER JOIN edw_stage.Account acc ON acc.PolicyNumber = pt.grpel_master_policy_no
-				and acc.EffectiveDate  = pt.effective_dt
+				AND acc.EffectiveDate  = pt.effective_dt
 		INNER JOIN edw_stage.AccountObject acco ON acc.Id = acco.AccountId
 		INNER JOIN edw_stage.AccountObjectField accof ON acco.Id = accof.ObjectId
-		and accof.Field in ('MinimumPremium','CommissionPercentage')
+		AND accof.Field in ('MinimumPremium','CommissionPercentage')
 		) as t
 
 		pivot 
@@ -111,8 +130,8 @@ BEGIN
 			MinimumPremium,CommissionPercentage
 			)
 		) as pivottable
-		inner join edw_core.tbilling_account_payment bap on bap.grpel_master_policy_no = pivottable.grpel_master_policy_no
-		group by pivottable.grpel_master_policy_no, pivottable.insured_nm, pivottable.effective_dt,  pivottable.expiration_dt, 
+		LEFT JOIN edw_core.tbilling_account_payment bap on bap.grpel_master_policy_no = pivottable.grpel_master_policy_no
+		GROUP BY pivottable.grpel_master_policy_no, pivottable.insured_nm, pivottable.effective_dt,  pivottable.expiration_dt, 
 		bap.bill_type,pivottable.premium_amt,pivottable.MinimumPremium,pivottable.CommissionPercentage
 		
 		SET @rows_affected=@@ROWCOUNT;
