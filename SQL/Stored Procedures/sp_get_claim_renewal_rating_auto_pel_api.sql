@@ -11,6 +11,7 @@
 -- 06/10/2025			Yunus Mohammed				5. AD-9744 Add Litigation Tag Indicator  (Litigation_In and Litigation_Complete_In)
 -- 10/11/2025			Yunus Mohammed				6. AD-10933 Added new columns
 -- 05/12/2026			Yunus Mohammed				7. AD-13339 Added TotalLoss new column
+-- 06/02/2026			Yunus Mohammed				8. AD-13458 Added new columns
 -- ================================================================================================= 
 CREATE OR ALTER PROCEDURE [edw_integration].[sp_get_claim_renewal_rating_auto_pel_api]
 (
@@ -30,7 +31,7 @@ BEGIN
 		crra.UnderinsuredMotoristPayment,crra.ViolationPointClass,FirstPartyDriverName,
 		crra.FaultDecision,crra.ResponsibleParty,crra.AtFaultPercent,AdjusterName,FirstPartyDriverRelationshipToInsured,
 		crra.Litigation,crra.LitigationComplete,crra.LargeLoss,crra.IncidentDescription2,crra.TotalIncurred,
-		crra.TotalLoss
+		crra.TotalLoss,crra.NotifierName,crra.NotifierRelationshipToInsured,crra.NotifierEmail,crra.NotifierPhoneNumber
 	FROM
 		edw_integration.claim_renewal_rating_auto_pel_api AS crra
 		INNER JOIN

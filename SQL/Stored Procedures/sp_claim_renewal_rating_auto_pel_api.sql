@@ -15,6 +15,7 @@
 -- 11/10/2025		Yunus Mohammed				9. AD-11838 Used product sk instead of claim no like 'NFP'
 -- 05/11/2026		Yunus Mohammed				10. AD-13339 Added throw statement in catch block
 -- 05/12/2026		Yunus Mohammed				11. AD-13339 Added TotalLoss new column
+-- 06/02/2026		Yunus Mohammed				12. AD-13458 Added new columns
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_auto_pel_api]
@@ -62,7 +63,11 @@ BEGIN
 		cl.first_party_driver_relationship_to_insured as FirstPartyDriverRelationshipToInsured,
 		cl.litigation_in as Litigation, cl.litigation_complete_in as LitigationComplete,
 		cl.large_loss_in as LargeLoss,cl.loss_location_desc  as IncidentDescription2,
-		CASE WHEN ctg.claim_sk IS NOT NULL THEN 'Yes' END AS TotalLoss
+		CASE WHEN ctg.claim_sk IS NOT NULL THEN 'Yes' END AS TotalLoss,
+		cl.contact_nm as NotifierName,
+		cl.contact_type as NotifierRelationshipToInsured,
+		cl.contact_person_email	as NotifierEmail,
+		cl.contact_phone as	NotifierPhoneNumber
 		FROM
 		edw_core.tclaim cl
 		LEFT JOIN edw_core.tcause_of_loss l on cl.cause_of_loss_sk = l.cause_of_loss_sk 
@@ -124,7 +129,7 @@ BEGIN
 			PersonalInjuryProtectionPayment,RentalReimbursementPayment,SpousalLiabilityPayment,TowingAndLaborPayment,UninsuredMotoristPayment,
 			UnderinsuredMotoristPayment,ViolationPointClass,FirstPartyDriverName,FaultDecision,ResponsibleParty,AtFaultPercent,
 			AdjusterName,FirstPartyDriverRelationshipToInsured,Litigation,LitigationComplete,LargeLoss,IncidentDescription2,TotalIncurred,
-			TotalLoss,
+			TotalLoss,NotifierName,NotifierRelationshipToInsured,NotifierEmail,NotifierPhoneNumber,
 			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -136,7 +141,7 @@ BEGIN
 			NULL, -- ViolationPointClass
 			FirstPartyDriverName,FaultDecision,ResponsibleParty,AtFaultPercent,AdjusterName,FirstPartyDriverRelationshipToInsured,
 			Litigation,LitigationComplete,LargeLoss,IncidentDescription2,TotalIncurred,
-			TotalLoss,
+			TotalLoss,NotifierName,NotifierRelationshipToInsured,NotifierEmail,NotifierPhoneNumber,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -177,6 +182,10 @@ BEGIN
 			Target.IncidentDescription2 = Source.IncidentDescription2,
 			Target.TotalIncurred = Source.TotalIncurred,
 			Target.TotalLoss = Source.TotalLoss,
+			Target.NotifierName = Source.NotifierName,
+			Target.NotifierRelationshipToInsured = Source.NotifierRelationshipToInsured,
+			Target.NotifierEmail = Source.NotifierEmail,
+			Target.NotifierPhoneNumber = Source.NotifierPhoneNumber,
 			Target.update_ts = GETDATE();
 			
 		SET @rows_affected=@@ROWCOUNT;

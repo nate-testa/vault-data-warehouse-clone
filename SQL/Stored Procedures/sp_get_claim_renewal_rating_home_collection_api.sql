@@ -29,7 +29,7 @@ BEGIN
 		crrh.SourceOfFire,crrh.SourceOfWater,
 		crrh.ReserveExpense,crrh.ReserveIndemnity,crrh.PaidExpense,crrh.PaidIndemnity,crrh.AdjusterName,
 		crrh.Litigation,crrh.LitigationComplete,crrh.LargeLoss,crrh.LossDescription2,crrh.TotalIncurred,
-		crrh.TotalLoss
+		crrh.TotalLoss,crrh.NotifierName,crrh.NotifierRelationshipToInsured,crrh.NotifierEmail,crrh.NotifierPhoneNumber
 	FROM
 		edw_integration.claim_renewal_rating_home_collection_api AS crrh
 		INNER JOIN

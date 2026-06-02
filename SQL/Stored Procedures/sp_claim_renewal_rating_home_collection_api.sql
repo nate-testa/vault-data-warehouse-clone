@@ -13,6 +13,7 @@
 -- 10/09/2025		Yunus Mohammed				6. AD-10933 Added new columns and updated definition of other columns
 -- 05/11/2026		Yunus Mohammed				7. AD-13339 Added throw statement in catch block
 -- 05/12/2026		Yunus Mohammed				8. AD-13339 Added TotalLoss new column
+-- 06/02/2026		Yunus Mohammed				9. AD-13458 Added new columns
 -- ================================================================================================= 
 
 CREATE OR ALTER PROCEDURE [edw_core].[sp_claim_renewal_rating_home_collection_api]
@@ -83,6 +84,10 @@ BEGIN
 	,cl.litigation_complete_in as LitigationComplete
 	,cl.large_loss_in as LargeLoss,cl.loss_location_desc  as LossDescription2
 	,CASE WHEN ctg.claim_sk IS NOT NULL THEN 'Yes' END AS TotalLoss
+	,cl.contact_nm as NotifierName
+	,cl.contact_type as NotifierRelationshipToInsured
+	,cl.contact_person_email as NotifierEmail
+	,cl.contact_phone as NotifierPhoneNumber
 	FROM
 	edw_core.tclaim cl
 	inner join edw_core.tproduct tp on tp.product_sk=cl.product_sk
@@ -124,7 +129,7 @@ BEGIN
 			LossDescription,PolicyType,CatIndicator,CatCode,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressZipCode,
 			AddressState,AddressCounty,AddressCountry,Coverage,ReserveExpense,ReserveIndemnity,PaidExpense,PaidIndemnity,
 			SourceOfFire,SourceOfWater,AdjusterName,Litigation,LitigationComplete,LargeLoss,LossDescription2,TotalIncurred,
-			TotalLoss,
+			TotalLoss,NotifierName,NotifierRelationshipToInsured,NotifierEmail,NotifierPhoneNumber,
 			create_ts,update_ts,etl_audit_sk
 		)
 	VALUES
@@ -133,7 +138,7 @@ BEGIN
 			LossDescription,PolicyType,CatIndicator,CatCode,AddressLine1,AddressLine2,AddressLineUnit,AddressCity,AddressZipCode,
 			AddressState,AddressCounty,AddressCountry,Coverage,ReserveExpense,ReserveIndemnity,PaidExpense,PaidIndemnity,
 			SourceOfFire,SourceOfWater,AdjusterName,Litigation,LitigationComplete,LargeLoss,LossDescription2,TotalIncurred,
-			TotalLoss,
+			TotalLoss,NotifierName,NotifierRelationshipToInsured,NotifierEmail,NotifierPhoneNumber,
 			GETDATE(),GETDATE(),@etl_audit_sk
 		)
 	-- For Updates
@@ -173,6 +178,10 @@ BEGIN
 		Target.LossDescription2 = Source.LossDescription2,
 		Target.TotalIncurred = Source.TotalIncurred,
 		Target.TotalLoss = Source.TotalLoss,
+		Target.NotifierName = Source.NotifierName,
+		Target.NotifierRelationshipToInsured = Source.NotifierRelationshipToInsured,
+		Target.NotifierEmail = Source.NotifierEmail,
+		Target.NotifierPhoneNumber = Source.NotifierPhoneNumber,
 		Target.update_ts = GETDATE();
 
 		SET @rows_affected=@@ROWCOUNT;
